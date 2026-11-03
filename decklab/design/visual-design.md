@@ -400,7 +400,7 @@ Lab: a table (opponent, win rate, 95% range, a 6 px range bar, games, flag) sort
 - Search results in a plain labelled list (not a listbox with buttons inside), the highlighted one `aria-current`. A result already in the deck shows its stepper on `--accent-soft` instead of Add.
 - Show the cost with `manaCost()` in each row as now; MV is a sortable column. (The drawing dropped costs for MV only; that loses information the editor has today.)
 - The curve keeps the deck's gradient; a grown bar gets a dashed white line at its old height, a shrunk one a dashed `--ink-4` cap; deltas neutral.
-- The Forge panel uses the unsaved badge (4.9), "Test this change" (secondary) and a "re-test against the field after saving" checkbox. No primary there.
+- The Forge panel uses the unsaved badge (4.9), "Test this change" (secondary) and a "re-test against the field after saving" checkbox; on the Planned list, a second, "Test against popular decks after saving (same 20 opponents)" (E3-S37), once the catalogue answers. No primary there.
 - Sideboard group: `--surface-2` band, `--ink-2` heading, "not counted in the 60".
 - Deck details: selects and segmented controls (Played by, Status), with fit facts under them in mono 11 `--ink-3` ("64 cards to sleeve · 100 sleeves").
 - Casual: header "Editing" (13 / 600) over the deck name (20 / 800) with the 5 px stripe above; 44 × 44 stepper buttons; the docked search sheet; an 84 px action bar above the tab bar, which stays (decided, section 6); Deck details folded into a 60 px row.

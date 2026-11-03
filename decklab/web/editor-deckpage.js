@@ -61,6 +61,10 @@ function savedBox(id) {
         : el("p", { text: a.marked ? "Saved in Deck Lab: the deck has your changes, and the stats, practice hands and owned vs needed below follow the new list."
           : "Saved in Deck Lab: the deck has your changes to its details." }),
     a.after_save_test ? saved.testNotice = el("p", { class: "sub", role: "status", text: a.after_save_test.text }) : null,
+    // E3-S37: the popular-decks run after the save, with the deck's Testing tab (its popular-decks part).
+    a.after_save_popular ? el("p", { class: "sub", role: "status" },
+      saved.popularNotice = el("span", { text: a.after_save_popular.text }), " ",
+      el("a", { href: `${deckHref(id, "target")}&tab=matchups&part=gauntlet`, text: "Popular decks view" })) : null,
     // Added from a precon (collection.js, addPrecon): its cards went into the collection in the same save.
     a.precon ? el("p", { text: a.precon.cards
       ? `With it, ${plural(a.precon.cards, "card")} from the ${a.precon.name} precon went into ${a.precon.whose}.`

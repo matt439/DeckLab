@@ -654,7 +654,9 @@ function drawReview(sheet, a) {
       !isNew && a.changes.decklist && !marker ? el("li", { text: "Adds a line saying the list changed in Deck Lab today, so the write-up (the Notes tab) can be brought up to date later." }) : null,
       isNew || a.changes.decklist || a.changes.fields.length ? el("li", { text: isNew ? "Works out the deck's owned-vs-needed table from the list, with today's prices."
         : `Works out the deck's owned-vs-needed table again, from the ${listName("target", true)}, with today's prices.` }) : null,
-      el("li", { text: `The change is kept in the deck's history, under your name (${who}).` }))));
+      el("li", { text: `The change is kept in the deck's history, under your name (${who}).` }),
+      !isNew && typeof editorPopularReviewLine === "function" && editorPopularReviewLine(ed)
+        ? el("li", { text: editorPopularReviewLine(ed) }) : null)));
   sheetActions(sheet, [
     { text: isNew ? "Create" : "Save", kind: "primary", disabled: blocks.length > 0 || promotionAck, value: "save",
       onclick: (e) => doSave(sheet, e.currentTarget, { viewAfter: !!ed.viewAfter }) },
@@ -704,10 +706,14 @@ async function doSave(sheet, button, { viewAfter = false } = {}) {
     if (button) unbusy(button);
     return;
   }
-  let retestTask = null;
-  if (retest) {
+  let retestTask = null, popularTask = null;
+  if (retest?.field) {
     answer.after_save_test = { kind: "info", text: "The deck was saved. Requesting its field re-test..." };
     retestTask = queueEditorRetest(retest, answer);
+  }
+  if (retest?.popular) {
+    answer.after_save_popular = { kind: "info", text: "The deck was saved. Starting its popular-decks test..." };
+    popularTask = queueEditorPopularTest(retest, answer);
   }
   if (button) unbusy(button);
   state.library = null;               // the library's counts changed
@@ -724,6 +730,7 @@ async function doSave(sheet, button, { viewAfter = false } = {}) {
     if (sheet) sheet.close();
     location.hash = hash;
     if (retestTask) observeEditorRetest(retestTask, answer, { saved: state.saved });
+    if (popularTask) observeEditorRetest(popularTask, answer, { saved: state.saved }, "popular");
     return;
   }
   // Stay in the editor, on the saved deck. When this browser couldn't remove the old draft, continue from
@@ -743,9 +750,11 @@ async function doSave(sheet, button, { viewAfter = false } = {}) {
   const now = editor;
   Object.assign(now, keep);
   now.afterSaveTest = answer.after_save_test || null;
+  now.afterSavePopular = answer.after_save_popular || null;
   if (answer.stale_tables && answer.stale_tables.length) now.notice = { kind: "saved", stale: answer.stale_tables };
   drawEditor();
   if (retestTask) observeEditorRetest(retestTask, answer, { ed: now });
+  if (popularTask) observeEditorRetest(popularTask, answer, { ed: now }, "popular");
   if (!removed) {
     toast("The deck was saved in Deck Lab. This browser couldn't remove its old draft; the saved version is open below.");
     return;

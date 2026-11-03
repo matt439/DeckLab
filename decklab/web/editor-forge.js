@@ -1,5 +1,6 @@
-/* Saved Forge evidence matches the loaded playable baseline. A separate unchecked choice can request
-   one guarded field run after a confirmed save; reading summaries alone never starts games. */
+/* Saved Forge evidence matches the loaded playable baseline. Separate unchecked choices can request one
+   guarded field run, and one standard-sample popular-decks run (E3-S37, the Planned list only, its tick
+   remembered per profile on this device), after a confirmed save; reading summaries alone never starts games. */
 "use strict";
 
 function editorSavedForgeFingerprint(ed) {
@@ -42,6 +43,7 @@ function mountEditorForgeSummary(ed = editor) {
       syncEditorForgeSummary(ed);
     });
     context.panel.append(context.choice);
+    if (ed.version === "target") mountEditorPopularChoice(ed, context);
   }
   syncEditorForgeSummary(ed);
   if (!editorForgeBaseline(ed)) return; // Commander can re-test, but has no Constructed-field summary.
@@ -82,6 +84,15 @@ function syncEditorForgeSummary(ed = editor) {
     context.input.disabled = !!ed.saving || !!ed.asking || !gate.may;
     context.reason.hidden = gate.may;
     context.reason.textContent = gate.why || "";
+    const popular = context.popular;
+    if (popular) {
+      // Offered only once the catalogue answered with a standard sample, read once the list is first
+      // changed (no read for a page only looked at); the gate's reason line is shared.
+      if (!context.choice.hidden && !popular.asked) editorPopularCatalogue(ed, context);
+      popular.choice.hidden = context.choice.hidden || !popular.size;
+      popular.input.checked = !!popular.checked;
+      popular.input.disabled = context.input.disabled;
+    }
   }
   context.panel.hidden = !numbers && !!ed.dom.forgeTest?.hidden && (!context.choice || context.choice.hidden);
 }
@@ -89,13 +100,15 @@ function syncEditorForgeSummary(ed = editor) {
 /** Capture one explicit choice before the save request; the choice is transient, outside the draft. */
 function editorRetestIntent(ed) {
   const context = ed?.dom?.forgeSummary;
-  return editorForgeSummaryCurrent(context) && context.input && !ed.readOnly && ed.dirty && ed.retestAfterSave
-    ? { context, profile: ed.profile, used: false } : null;
+  if (!editorForgeSummaryCurrent(context) || !context.input || ed.readOnly || !ed.dirty) return null;
+  const field = !!ed.retestAfterSave, popular = editorPopularTicked(context);
+  return field || popular ? { context, profile: ed.profile, used: false, field, popular, popularUsed: false,
+    size: popular ? context.popular.size : null } : null;
 }
 
 /** Only a confirmed successful save can submit. A queue failure never retries or changes that save. */
 async function queueEditorRetest(intent, answer) {
-  if (!intent || intent.used) return null;
+  if (!intent || intent.used || intent.field === false) return null;
   intent.used = true;
   const context = intent.context, ed = context.ed;
   const refused = text => ({ kind: "warn", text });
@@ -117,37 +130,143 @@ async function queueEditorRetest(intent, answer) {
 }
 
 function editorRetestNotice(ed) {
-  const notice = ed.afterSaveTest;
-  if (!notice) return null;
-  const text = el("p", { text: notice.text });
-  const root = el("div", { class: `box box-${notice.kind} banner`, role: "status" },
-    el("h2", { text: "Deck saved" }), text);
-  ed.dom.afterSaveTestNotice = { root, text };
+  const notice = ed.afterSaveTest, popular = ed.afterSavePopular;
+  if (!notice && !popular) return null;
+  const warn = [notice, popular].some(n => n?.kind === "warn");
+  const root = el("div", { class: `box box-${warn ? "warn" : "info"} banner`, role: "status" },
+    el("h2", { text: "Deck saved" }));
+  if (notice) {
+    const text = el("p", { text: notice.text });
+    root.append(text);
+    ed.dom.afterSaveTestNotice = { root, text };
+  }
+  if (popular) {
+    const line = editorPopularLine(popular);
+    root.append(line.root);
+    ed.dom.afterSavePopularNotice = { root, text: line.text, link: line.link };
+  }
   return root;
 }
 
 /** A field response changes only its confirmation. The saved UI and later edits never wait for it. */
-function observeEditorRetest(task, answer, owner) {
+function observeEditorRetest(task, answer, owner, slot = "test") {
   if (!task) return;
   const profile = state.profile?.id, ed = owner.ed, saved = owner.saved;
   const view = ed?.view, frame = ed && keyboardEditorFrame(ed);
+  const popular = slot === "popular";
   const publish = notice => {
-    answer.after_save_test = notice;
+    if (popular) answer.after_save_popular = notice; else answer.after_save_test = notice;
     if (!notice || state.profile?.id !== profile) return;
     if (saved) {
-      if (state.saved === saved && saved.hash === location.hash && saved.testNotice?.isConnected)
-        saved.testNotice.textContent = notice.text;
+      const node = popular ? saved.popularNotice : saved.testNotice;
+      if (state.saved === saved && saved.hash === location.hash && node?.isConnected) node.textContent = notice.text;
       return;
     }
     if (!editorKeyboardCurrent(ed) || ed.leaving || ed.view !== view || keyboardEditorFrame(ed) !== frame) return;
-    ed.afterSaveTest = notice;
-    const nodes = ed.dom.afterSaveTestNotice;
+    if (popular) ed.afterSavePopular = notice; else ed.afterSaveTest = notice;
+    const nodes = popular ? ed.dom.afterSavePopularNotice : ed.dom.afterSaveTestNotice;
     if (nodes?.root.isConnected && ed.dom.page.contains(nodes.root)) {
       nodes.text.textContent = notice.text;
-      nodes.root.classList.toggle("box-info", notice.kind === "info");
-      nodes.root.classList.toggle("box-warn", notice.kind === "warn");
+      if (nodes.link) {
+        nodes.link.hidden = !notice.link;
+        if (notice.link) nodes.link.setAttribute("href", notice.link);
+      }
+      const warn = [ed.afterSaveTest, ed.afterSavePopular].some(n => n?.kind === "warn");
+      nodes.root.classList.toggle("box-info", !warn);
+      nodes.root.classList.toggle("box-warn", warn);
     }
   };
-  task.then(publish, () => publish({ kind: "warn",
+  task.then(publish, () => publish(popular ? editorPopularUnconfirmed(answer.id) : { kind: "warn",
     text: "The deck was saved; its field re-test could not be confirmed. Check Testing before starting another run." }));
+}
+
+// ============================================================ E3-S37: popular decks after saving
+
+/** This device's remembered tick, one per profile; never part of the draft, its history or another profile's. */
+function editorPopularKey(profile) { return `editor.testPopular.${profile}`; }
+
+/** The choice is drawn hidden and offered only once the format's catalogue answers with a standard sample. */
+function mountEditorPopularChoice(ed, context) {
+  const format = ed.kind === "commander" ? "commander" : "constructed";
+  const input = el("input", { type: "checkbox", "aria-describedby": "editor-retest-reason" });
+  const words = el("span", { text: "Test against popular decks after saving" });
+  const popular = context.popular = { input, words, format, size: null, profile: ed.profile,
+    checked: local.get(editorPopularKey(ed.profile)) === "1",
+    choice: el("div", { class: "edit-retest edit-retest-popular", hidden: true }, el("label", {}, input, words)) };
+  input.addEventListener("change", () => {
+    if (editorForgeSummaryCurrent(context) && popular.size && !popular.choice.hidden && !input.disabled
+        && !ed.saving && !ed.asking && !ed.readOnly && mayStartRuns() && popular.profile === state.profile?.id) {
+      popular.checked = input.checked;
+      local.set(editorPopularKey(popular.profile), input.checked ? "1" : "0");
+    }
+    syncEditorForgeSummary(ed);
+  });
+  context.panel.append(popular.choice);
+}
+
+/** One catalogue read per mount: its standard sample's opponents give the choice its "same N opponents". */
+function editorPopularCatalogue(ed, context) {
+  const popular = context.popular;
+  popular.asked = true;
+  Promise.resolve().then(() => api(`/api/gauntlet/catalogue?format=${popular.format}`)).then(answer => {
+    if (!editorForgeSummaryCurrent(context) || context.popular !== popular || !answer?.built) return;
+    const size = answer.standard?.opponents;
+    if (!Number.isSafeInteger(size) || size <= 0) return;
+    popular.size = size;
+    popular.words.textContent = `Test against popular decks after saving (same ${plural(size, "opponent")})`;
+    syncEditorForgeSummary(ed);
+  }).catch(() => {});
+}
+
+function editorPopularTicked(context) {
+  const popular = context?.popular;
+  return !!(popular && popular.size && popular.checked && !popular.choice.hidden && context.version === "target");
+}
+
+/** The review sheet's words, or null when this save won't ask for a popular-decks run. */
+function editorPopularReviewLine(ed) {
+  const context = ed?.dom?.forgeSummary;
+  if (!editorForgeSummaryCurrent(context) || ed.readOnly || !ed.dirty || !editorPopularTicked(context)) return null;
+  const size = context.popular.size;
+  return `Then tests the saved list against the same ${plural(size, "popular deck")} (about ${thousands(size * 100)} games).`;
+}
+
+function editorPopularHref(id) { return `${deckHref(id, "target")}&tab=matchups&part=gauntlet`; }
+
+function editorPopularUnconfirmed(id) {
+  return { kind: "warn", link: editorPopularHref(id),
+    text: "The deck was saved; its popular-decks test couldn't be confirmed. Check its Testing tab before starting another run." };
+}
+
+/** One standard-sample run (the board's Play: no budget or sample, so fixed:100) after a confirmed save.
+ *  A refusal or failure never retries, and never changes the save or the later draft. */
+async function queueEditorPopularTest(intent, answer) {
+  if (!intent?.popular || intent.popularUsed) return null;
+  intent.popularUsed = true;
+  const context = intent.context, link = editorPopularHref(answer.id);
+  const refused = text => ({ kind: "warn", text, link });
+  if (!editorForgeSummaryCurrent(context) || intent.profile !== state.profile?.id || answer.id !== context.id)
+    return refused("The deck was saved; its popular-decks test wasn't started after the page or person changed.");
+  const gate = simulationsGate();
+  if (!gate.may) return refused(`The deck was saved; its popular-decks test wasn't started. ${gate.why}`);
+  const expected = answer.deck?.forge_lists?.target;
+  if (typeof expected !== "string" || !/^[a-f0-9]{64}$/.test(expected))
+    return refused("The deck was saved, but its list couldn't be confirmed for testing. Start it from its Testing tab.");
+  try {
+    await apiWrite("/api/gauntlet/run", { profile: intent.profile, id: answer.id, version: "target",
+      expected_card_sha: expected });
+    return { kind: "info", link, text: `Popular-decks test requested for the saved list (${
+      plural(intent.size, "opponent")}). Its Testing tab shows progress.` };
+  } catch (error) {
+    // A lost response may follow a queued run: say so rather than retry into a second run.
+    if (!(error instanceof ApiError) || !error.status) return editorPopularUnconfirmed(answer.id);
+    return refused(`The deck was saved; its popular-decks test wasn't started. ${error.message || "The server refused it."}`);
+  }
+}
+
+/** A notice line with its Testing tab link. */
+function editorPopularLine(notice) {
+  const text = el("span", { text: notice.text });
+  const link = el("a", { href: notice.link || "#", text: "Popular decks view", hidden: !notice.link });
+  return { root: el("p", {}, text, " ", link), text, link };
 }

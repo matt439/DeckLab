@@ -258,6 +258,10 @@ class GauntletViewTests(GauntletApiTestCase):
         found = self.call("user2", gauntlet_page.catalogue_view, "constructed")
         self.assertEqual((found["playable"], found["styles"]), (3, {"aggro": 1, "control": 1, "midrange": 1}))
         self.assertIn("EDHREC", found["credit"])
+        # E3-S37: the standard sample's size, for the editor's "same N opponents" (drawn, never saved).
+        self.assertEqual((found["standard"]["id"], found["standard"]["size"], found["standard"]["opponents"]),
+                         (SAMPLE, 24, 3))
+        self.assertEqual(self.g.saved, {})
         self.assertEqual(self.call("user2", gauntlet_page.catalogue_view, "modern"), 400)
 
     def test_filters_are_checked(self):

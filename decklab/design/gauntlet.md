@@ -159,7 +159,7 @@ Defaults:
 - Controls: sample size, colour and style filters and budget, the estimate, then **Play**.
 - API:
   - `GET /api/gauntlet?id=&version=&sample=&profile=`
-  - `GET /api/gauntlet/catalogue?format=`: public data, filters and counts
+  - `GET /api/gauntlet/catalogue?format=`: public data, filters and counts, and the standard sample (`standard`, with its `opponents`; E3-S37)
   - `POST /api/gauntlet/run`
   - `POST /api/gauntlet/stop`
 - These are lazy routes in `feature_routes.py` (pattern at `feature_routes.py:14-29,60,110`).
@@ -246,7 +246,9 @@ Matt decided on 2026-11-03 that Against popular decks is Deck Lab's lead feature
 - Built (E3-S33): first among a Commander deck's Overview strength panels (after Forge field for a 60-card deck), and first on a Commander deck's Matchups tab, its headline above the groups and the results before the play box.
 - Built (E3-S34): the old figure kept, muted, as out of date when the list, Forge or the catalogue changes, and before/after on the same opponents after a re-test (below, **Kept through a change**). Built ahead of `FG#2` (mid-November), which re-keys every result.
 - Built (E3-S35): Matchups renamed **Testing** and moved next to Decks (Decks, Testing, Collection, Shopping; Matt, 2026-11-03), the route staying `#/matchups` (`#/testing` rewritten to it) and the deck page's tab called Testing too, with a **Popular decks** board as the Testing page's first and default view, beside Matchups and Rankings: one row per deck the viewer may see (`GET /api/gauntlet/board`, `api/gauntlet_board.py`; hidden decks never counted), its standing sorted best first, each with Details and its own Play of the standard sample, no Play all.
-- Later: the library's Forge slots and a strength sort (E3-S36), an editor choice to re-test after saving (E3-S37), and Test this change against the standard sample (E3-S30).
+- Built (E3-S36): the library's Forge slots for Commander decks, a 60-card deck's second line and a strength sort (`GET /api/library/gauntlet`).
+- Built (E3-S37): the editor's unticked, remembered "Test against popular decks after saving (same 20 opponents)", one standard-sample run after a confirmed save.
+- Later: Test this change against the standard sample (E3-S30).
 
 **Kept through a change** (E3-S34; `api/gauntlet_before.py`, `forge/gauntlet.compare`, `older`): results are keyed by the list's `card_sha`, the engine (Forge release, settings, AI pilot) and each opponent's list, so an edit, a Forge upgrade or a catalogue rebuild used to empty the figure without a word. Nothing is deleted; the answers now say what happened.
 - **The previous list:** the most recent earlier saved revision of the deck whose playable list (`card_sha`'s sections) differs from today's and has standard-sample games. Revisions are read newest first, 25 at a time, at most 200 of them and 20 distinct earlier lists; a revision whose lists and headings match the newer one's (a table refresh, a reprice, a kit or prose save) isn't parsed again, so they don't use up the bound. At most 3 lists are viewed, only those with run notes in the deck's space. When a bound ends the search before a figure is found the answer says "The list's older versions weren't all looked at."; if the revisions can't be read, "The list's earlier versions can't be read now."; either way it goes on. The history stops at a deletion unless the next revision restores exactly the deleted text (a retired deck restored): a deck made again under the same id is another deck, and its results are never "before". The run-independent parts are kept a minute, since Matchups polls while a run plays.

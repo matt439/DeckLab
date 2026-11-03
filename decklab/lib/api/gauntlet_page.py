@@ -209,8 +209,9 @@ def _build_command(fmt, seen):
 
 def catalogue_view(format="commander"):
     """GET /api/gauntlet/catalogue?format=: the format's catalogue counts (public data: no deck is
-    involved), or {"built": None, "build_command"} before one is built (the command for an admin,
-    None for anyone else). 400 for another format."""
+    involved) and its standard sample ({"id", "size", "tiers", "opponents"}, drawn but never saved;
+    None when it can't be drawn), or {"built": None, "build_command"} before one is built (the command
+    for an admin, None for anyone else). 400 for another format."""
     if format not in TIERS:
         raise ApiError(400, "format must be commander or constructed")
     forge = forge_runs._forge_module()
@@ -220,7 +221,12 @@ def catalogue_view(format="commander"):
         cat = g.catalogue(format)
     except forge.ForgeError:
         return {**out, "built": None}
-    return {**out, **_catalogue_json(cat)}
+    try:
+        standard = g.standard(format, cat=cat)
+        found = {**standard_json(standard), "opponents": len(standard.get("decks") or [])}
+    except (forge.ForgeError, ValueError):
+        found = None
+    return {**out, **_catalogue_json(cat), "standard": found}
 
 
 # ============================================================ the answer
