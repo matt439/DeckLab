@@ -321,8 +321,8 @@ All Forge numbers are mono. None of these is accent except the controls that sta
 - **Run activity** (`runs-pill.js`, in `#shell-status`). The details (below) use `--accent-soft` with a 1 px `rgb(98 54 196 / .28)` border. A progress ring (16 px lab, 24 px casual): track `--ring-track`, arc `--accent`, `role="progressbar"` with `aria-valuenow`. Text `--accent-strong`: **Forge playing:** A vs B · `game 37 of 200` (mono) · about 6 min left. Then a secondary Stop with a square glyph, its name "Stop the Forge run". `role="status"` on the details' summary line.
   - **Decided (Matt, 2026-10-24): no progress shown at all times.** While anything runs, the header (casual) or top bar (lab) shows one **activity icon**: a small animated mark (a slowly turning ring in `--accent`, 24 px casual, 20 px lab) in a 44 px button, its spoken name "Forge is playing: show progress". It doesn't move under `prefers-reduced-motion` (a static ring with a dot instead). Nothing shows when nothing runs.
   - Tapping or clicking it opens the details: a popover under the icon in lab, a bottom sheet on a phone. It holds the pill's contents above (A vs B, the progress ring with `game 37 of 200`, about 6 min left, Stop), any queued runs, and a link to Matchups. The same sheet serves any other long job later.
-  - The icon is the same at both densities and in both orientations, so it never stacks with the tab bar or a page's bar. The Matchups tab may keep an 8 px accent dot while a run is going.
-  - The simulations setting isn't part of the pill. On Matchups it's a neutral chip near the title ("Simulations: Admins only", `--surface-chip`, lock icon). No page-wide banner, as UI-KIT says.
+  - The icon is the same at both densities and in both orientations, so it never stacks with the tab bar or a page's bar. The Testing tab (Matchups until 2026-11-03) may keep an 8 px accent dot while a run is going.
+  - The simulations setting isn't part of the pill. On Testing it's a neutral chip near the title ("Simulations: Admins only", `--surface-chip`, lock icon). No page-wide banner, as UI-KIT says.
 
 ### 4.10 Other pieces the round needed
 
