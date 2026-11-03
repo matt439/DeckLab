@@ -931,20 +931,20 @@ function cardNames(entries, group = "names") {
 
 /** The deck's sleeves and deck box (summary.kit, accessories.kit() on the server): a tile each with its
  * picture, name and how it fits ("75 needed · 100 owned · 25 spare"), and Choose…, which opens
- * accessories.js's kitPicker and so works on a phone too. A built deck can choose; a product only when it's
- * owned and kept intact, which the accessories list says (its holders_options), so a product's Choose…
- * buttons come when that answer does. An editable unbuilt deck explains when to choose its kit;
+ * accessories.js's kitPicker and so works on a phone too. A deck being built or built can choose; a product
+ * only when it's owned and kept intact, which the accessories list says (its holders_options), so a product's
+ * Choose… buttons come when that answer does. An editable deck idea explains when to choose its kit;
  * a pairing gets nothing. info (free text Deck Lab can't check) is a note under the tiles. */
 function deckKit(data) {
   const s = data.summary, kit = s.kit;
   if (!kit || (s.space || deckSpaceOf(s.id)) !== HOME_SPACE
     || s.id.startsWith("pairing/") || !mayDo("see_accessories")) return null;
   const product = s.id.startsWith("product/");
-  if (!product && s.status !== "built") {
+  if (!product && !holdsKit(s.status)) {
     if (!canEditDeck(s)) return null;
     return el("section", { class: "deck-section deck-kit", "aria-labelledby": "h-kit" },
       el("h2", { id: "h-kit", text: "Sleeves and deck box" }),
-      el("p", { class: "sub" }, "Choose sleeves and a deck box when you mark this deck built in the ",
+      el("p", { class: "sub" }, "An idea has no sleeves or deck box: choose them once you start building it, or when you mark it built in the ",
         el("a", { href: `#/assembly?deck=${encodeURIComponent(s.id)}&version=${data.version}`, text: "Packing plan" }), "."));
   }
   const box = el("section", { class: "deck-section deck-kit", "aria-labelledby": "h-kit" },

@@ -442,10 +442,13 @@ class DeckKitTests(ApiTestCase):
         self.assertEqual(view["summary"]["holder_sha256"], hashlib.sha256(self.gruul.read_bytes()).hexdigest())
         json.dumps(view, allow_nan=False)
 
-    def test_a_deck_that_isnt_built_counts_the_shown_version(self):
-        _write(self.gruul, GRUUL)
+    def test_a_deck_idea_counts_the_shown_version_and_a_building_deck_its_planned_list(self):
+        _write(self.gruul, GRUUL.replace("- **Status:** building", "- **Status:** idea"))
         kit = api.deck_view("casual/gruul-test", "owned")["summary"]["kit"]
         self.assertEqual((kit["need"], kit["sleeves"], kit["deck_box"], kit["warnings"]), (4, None, None, []))
+        _write(self.gruul, GRUUL)                   # building: its kit is for its Planned list, every section
+        kit = api.deck_view("casual/gruul-test", "owned")["summary"]["kit"]
+        self.assertEqual((kit["need"], kit["sleeves"], kit["deck_box"], kit["warnings"]), (25, None, None, []))
 
     def test_a_product_kept_intact(self):
         view = api.deck_view("product/fdn-beginner-box/elves")

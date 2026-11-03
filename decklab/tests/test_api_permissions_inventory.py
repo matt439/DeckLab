@@ -12,6 +12,7 @@ class AccessoryVisibilityTests(permission_tests.PermissionTestCase):
 
     SEE = {"user1", "local", "script"}           # direct no-viewer script fixtures see all
     SEE_SHARED = {"matt", "user1", "local", "script"}
+    STATUS = "built"
 
     def setUp(self):
         super().setUp()
@@ -31,10 +32,11 @@ class AccessoryVisibilityTests(permission_tests.PermissionTestCase):
         gruul = self.box.magic / "decks" / "casual" / "gruul-test.md"
         permission_tests._write(gruul, gruul.read_text(encoding="utf-8").replace(
             "- **Status:** building\n",
-            "- **Status:** built\n- **Built version:** target\n- **Sleeves:** grey-sleeves\n"))
+            f"- **Status:** {self.STATUS}\n" + ("- **Built version:** target\n" if self.STATUS == "built" else "")
+            + "- **Sleeves:** grey-sleeves\n"))
         path = self.box.magic / "decks" / "commander" / "elf-commander.md"
         permission_tests._write(path, path.read_text(encoding="utf-8").replace(
-            "- **Status:** idea\n", "- **Status:** built\n- **Sleeves:** black-sleeves\n- **Deck box:** blue box\n"))
+            "- **Status:** idea\n", f"- **Status:** {self.STATUS}\n- **Sleeves:** black-sleeves\n- **Deck box:** blue box\n"))
 
     def answer(self, who, call):
         identity = None if who in permission_tests.HOME_WRITERS else {"profile": who, "email": "", "remote": True}
@@ -192,10 +194,12 @@ class AccessoryVisibilityTests(permission_tests.PermissionTestCase):
         with permission_tests.access.using({"profile": "matt", "email": "", "remote": True}):
             saved = permission_tests.api.save_deck(self.body("matt", id=gruul, sha256=self.sha(gruul), fields={"player": "user"}))
         self.assertTrue(saved["changed"])
-        # Taking a deck apart as it changes hands frees its kit: nothing to choose.
+        # Taking a deck apart (a deck being built: making it an idea) as it changes hands frees its kit:
+        # nothing to choose.
+        freed = "building" if self.STATUS == "built" else "idea"
         with permission_tests.access.using({"profile": "matt", "email": "", "remote": True}):
             saved = permission_tests.api.save_deck(self.body("matt", id=deck, sha256=self.sha(deck),
-                                            fields={"player": "user", "status": "building"}))
+                                            fields={"player": "user", "status": freed}))
         self.assertNotIn("black-sleeves", path.read_text(encoding="utf-8"))
 
     def test_a_revision_and_the_packing_plan(self):
@@ -272,6 +276,11 @@ class AccessoryVisibilityTests(permission_tests.PermissionTestCase):
         text = path.read_text(encoding="utf-8")
         self.assertIn("- **Sleeves:** red", text)
         self.assertIn("- **Archetype:** Elves", text)
+
+
+class BuildingAccessoryVisibilityTests(AccessoryVisibilityTests):
+    """The same owner rules for decks being built that hold kit: no status widens who sees it."""
+    STATUS = "building"
 
 class InventoryReadTests(permission_tests.PermissionTestCase):
     """Who may read the inventory (permissions.sees_inventory, guard.require_sees_inventory): home's

@@ -39,10 +39,10 @@ The CSV has the columns FIELDS, one row per accessory:
 The older headers without owner, crop or capacity are still read (those
 columns blank, and owner "shared"), and the next save writes FIELDS.
 
-A holder is a built deck (its Sleeves and Deck box header lines) or an owned
-product kept intact (its status.csv columns). A value that isn't an id is
-older free text, shown as written and never matched by name. Only kit.set
-changes either.
+A holder is a building or built deck (its Sleeves and Deck box header lines;
+a building deck's need is its Planned list) or an owned product kept intact
+(its status.csv columns). A value that isn't an id is older free text, shown
+as written and never matched by name. Only kit.set changes either.
 
 The list's concurrency token is per viewer (view_sha256): the sha256 of the
 rows that viewer sees, rendered as the file would be, so a change to another
@@ -563,10 +563,13 @@ def status_sha256():
 
 def _scan(warnings):
     """(holders, strays): every holder as {holder, title, kind: "deck" |
-    "product", owner (player_owner; SHARED for a product), sleeves,
-    deck_box, sections}, and the accessory values written
-    where nothing holds them, as (where, field, value): a deck that isn't
-    built (where: its id), or a product status that isn't owned and intact
+    "product", status (a deck's: "building" or "built"), owner (player_owner;
+    SHARED for a product), sleeves, deck_box, sections}, and the accessory
+    values written where nothing holds them, as (where, field, value). A
+    built deck's sections are its built version (or Assembled snapshot), a
+    building deck's its Planned list, every section; every building deck is
+    listed, kit or not. Strays are a deck that isn't built or being built (an
+    idea; where: its id), or a product status that isn't owned and intact
     (where: "Product <stem>"). Problems reading
     them go in warnings. Reads one inventory snapshot (the request's or
     command's, else one pinned for this call)."""
@@ -581,25 +584,35 @@ def _scan(warnings):
             continue
         values = {"sleeves": (summary.get("sleeves") or "").strip(),
                   "deck_box": (summary.get("deck_box") or "").strip()}
-        if summary.get("status") != "built":
+        status = summary.get("status")
+        if status not in decks.HOLDER_STATUSES:
             strays.extend((summary["id"], f, v) for f, v in values.items() if v)
             continue
+        # A deck being built holds kit only once some is chosen: one without any is listed (so a
+        # picker can offer it) but never makes a reading problem of its own.
+        quiet = status != "built" and not any(values.values())
         if summary.get("error"):
-            warnings.append(f"{inventory_paths.place(summary['source'])} can't be read: {summary['error']}")
+            if not quiet:
+                warnings.append(f"{inventory_paths.place(summary['source'])} can't be read: {summary['error']}")
             continue
         try:
-            from decklab.lib.decks import assembled
-            stored = inventory.current().deck(summary["id"])
-            parsed = decks.parse_deck(stored.data, stored.slug, stored.kind, space=stored.space) if stored else None
-            if parsed is not None and assembled.get(parsed):
-                sections = assembled.sections(parsed)
+            if status == "built":
+                from decklab.lib.decks import assembled
+                stored = inventory.current().deck(summary["id"])
+                parsed = (decks.parse_deck(stored.data, stored.slug, stored.kind, space=stored.space)
+                          if stored else None)
+                if parsed is not None and assembled.get(parsed):
+                    sections = assembled.sections(parsed)
+                else:
+                    version = pool._built_version(summary, warnings)
+                    sections = decks.load_deck(summary["id"], version)
             else:
-                version = pool._built_version(summary, warnings)
-                sections = decks.load_deck(summary["id"], version)
+                sections = decks.load_deck(summary["id"], "target")     # being built: its Planned list
         except (decks.DeckNotFound, decks.DeckFileError, OSError) as e:
-            warnings.append(f"{inventory_paths.place(summary['source'])} can't be read: {e}")
+            if not quiet:
+                warnings.append(f"{inventory_paths.place(summary['source'])} can't be read: {e}")
             continue
-        found.append({"holder": summary["id"], "title": summary["title"], "kind": "deck",
+        found.append({"holder": summary["id"], "title": summary["title"], "kind": "deck", "status": status,
                       "owner": player_owner(summary.get("player"), listed), **values, "sections": sections})
     inv = inventory.current()
     statuses = _statuses(inv, warnings)
@@ -634,8 +647,8 @@ def _usage(found, inv):
 
 def holders(inv=None, warnings=None):
     """{value: [{holder, title, kind: "deck" | "product", owner, field, need,
-    value, state}]}: who holds each accessory value. Holders are built deck files
-    (with their built version's list) and owned products kept intact (all
+    value, state}]}: who holds each accessory value. Holders are built decks
+    (with their built version's list), building decks (their Planned list) and owned products kept intact (all
     their decks; holder "product/<stem>"). A linked value is its id, so
     holders(inv)[row_id] (see used_by) lists who uses a row; free text is
     keyed as written, with runs of spaces made one. need is sleeve_need() of
@@ -702,6 +715,7 @@ def _own(holder_id, warnings):
     if summary is None:
         raise decks.DeckNotFound(f"no deck {holder_id!r}")
     built = summary.get("status") == "built"
+    can_hold = summary.get("status") in decks.HOLDER_STATUSES
     values = {"sleeves": summary.get("sleeves") or "", "deck_box": summary.get("deck_box") or ""}
     sections = None
     if built:
@@ -715,7 +729,7 @@ def _own(holder_id, warnings):
         version = pool._built_version(summary, warnings) if built else "target"
         sections = decks.load_deck(holder_id, version)
     return (summary["title"], "deck", player_owner(summary.get("player")), values,
-            sections, built)
+            sections, can_hold)
 
 
 def kit(holder_id, sections=None, inv=None, usage=None, *, values=None, owner=None, owners=None,
@@ -730,7 +744,7 @@ def kit(holder_id, sections=None, inv=None, usage=None, *, values=None, owner=No
     ("product/<stem>"), which needs sleeves for all its decks, so sections is
     ignored for products. For a deck, sections is the list to count (the
     editor's draft, assembly's selected version, the deck page's shown list);
-    by default its built version when built, else its target. values
+    by default its built version when built, else its target (a building deck's Planned list). values
     ({"sleeves", "deck_box"}, keyword only) stands in for the values in the
     holder's file, as for an editor draft. inv and usage (from holders())
     save reading them again. owner (keyword only) stands in for the
@@ -878,8 +892,8 @@ def check(root=None):
             problems.append(f"The picture {name} belongs to no accessory (image remove {name} takes it away)")
 
     for where, f, value in strays:
-        problems.append(f"{where} has {_FIELD_WORDS[f]} {value!r} but isn't "
-                        f"{'owned and kept intact' if where.startswith(_STATUS_STRAY) else 'built'}; remove it")
+        held = "owned and kept intact" if where.startswith(_STATUS_STRAY) else "built or being built"
+        problems.append(f"{where} has {_FIELD_WORDS[f]} {value!r} but isn't {held}; remove it")
     for value, entries in sorted(usage.items()):
         for h in entries:
             if h["state"] == "kind_mismatch":

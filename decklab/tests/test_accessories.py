@@ -336,6 +336,41 @@ class HolderTests(AccessoriesTestCase):
         row = accessories.read().rows_by_id["dragon-shield-matte-black"]
         self.assertEqual([h["holder"] for h in accessories.used_by(usage, row)], ["casual/otters"])
 
+    def test_building_decks_hold_their_planned_list(self):
+        # A deck being built may have its kit chosen: its need is its Planned list, every section, never
+        # its Play-now list; an idea's lines are still strays.
+        self.inventory(BLACK.format(qty=100), BOX.format(qty=2))
+        self.deck("otters", "Izzet Otters", status="building", deck="60 Shock\n", sideboard="15 Shock\n",
+                  sleeves="dragon-shield-matte-black", deck_box="ultimate-guard-boulder-100-black",
+                  owned="40 Shock\n")
+        self.deck("idea", "Idea Deck", status="idea", sleeves="dragon-shield-matte-black")
+        self.deck("bare", "Bare", status="building")
+        usage = accessories.holders()
+        self.assertEqual(usage["dragon-shield-matte-black"], [
+            {"holder": "casual/otters", "title": "Izzet Otters", "kind": "deck", "owner": "shared",
+             "field": "sleeves", "need": 75, "value": "dragon-shield-matte-black", "state": "linked"}])
+        self.assertEqual(usage["ultimate-guard-boulder-100-black"][0]["holder"], "casual/otters")
+        found, strays = accessories._scan([])
+        self.assertEqual({(h["holder"], h["status"]) for h in found},
+                         {("casual/otters", "building"), ("casual/bare", "building")})
+        self.assertEqual(strays, [("casual/idea", "sleeves", "dragon-shield-matte-black")])
+        k = accessories.kit("casual/otters")
+        self.assertEqual((k["need"], k["warnings"]), (75, []))
+        # Sharing names a building deck too (E8-S20).
+        self.deck("gruul", "Gruul", sleeves="dragon-shield-matte-black")
+        self.assertIn("Izzet Otters", accessories.sharing_warning("casual/gruul", "dragon-shield-matte-black"))
+
+    def test_holder_statuses_agree(self):
+        from decklab.lib.inventory import ops_decks
+        self.assertEqual(decks.HOLDER_STATUSES, ("building", "built"))
+        self.assertEqual(ops_decks.HOLDER_STATUSES, decks.HOLDER_STATUSES)
+        self.assertTrue(decks.frees_kit("built", "building"))
+        self.assertTrue(decks.frees_kit("building", "idea"))
+        self.assertTrue(decks.frees_kit("built", "idea"))
+        self.assertFalse(decks.frees_kit("building", "built"))
+        self.assertFalse(decks.frees_kit("building", "building"))
+        self.assertFalse(decks.frees_kit("idea", "building"))
+
     def test_a_built_deck_without_built_version_uses_its_target(self):
         self.deck("otters", "Izzet Otters", deck="60 Shock\n", sideboard="15 Shock\n", sleeves="red")
         self.assertEqual(accessories.holders()["red"][0]["need"], 75)
@@ -487,6 +522,31 @@ class KitTests(AccessoriesTestCase):
         self.inventory(BOX.format(qty=2))
         self.assertEqual(accessories.kit("casual/gruul")["warnings"], [])
 
+    def test_a_building_deck_counts_toward_a_deck_box(self):
+        self.inventory(BOX.format(qty=1))
+        self.deck("otters", "Izzet Otters", deck_box="ultimate-guard-boulder-100-black")
+        self.deck("gruul", "Gruul Ramp", status="building", deck_box="ultimate-guard-boulder-100-black")
+        self.assertEqual(accessories.kit("casual/gruul")["warnings"],
+                         ["2 decks use Ultimate Guard Boulder 100+ (black) but 1 is recorded."])
+        self.assertEqual(accessories.check(self.root),
+                         ["2 decks use Ultimate Guard Boulder 100+ (black) but 1 is recorded"])
+
+    def test_a_building_deck_too_big_or_short_is_checked_against_its_planned_list(self):
+        self.inventory(BLACK.format(qty=60), BOX.format(qty=1).replace(",,,,,,", ",60,,,,,"))
+        self.deck("otters", "Izzet Otters", status="building", deck="60 Shock\n", sideboard="15 Shock\n",
+                  owned="40 Shock\n", sleeves="dragon-shield-matte-black",
+                  deck_box="ultimate-guard-boulder-100-black")
+        self.assertEqual(sorted(accessories.check(self.root)), [
+            "Izzet Otters has 75 sleeved cards and Ultimate Guard Boulder 100+ (black) holds 60",
+            "Izzet Otters needs 75 sleeves and Dragon Shield Matte (black) has 60"])
+
+    def test_a_building_deck_without_kit_makes_no_problem(self):
+        self.inventory(BLACK.format(qty=1))
+        self.deck("otters", "Izzet Otters", status="building", deck="60 Shock\n")
+        self.write("decks/casual/broken.md", "# Broken\n\n- **Status:** building\n")       # no decklist, no kit
+        self.assertEqual(accessories.check(self.root), [])
+        self.assertEqual(accessories.kit("casual/otters")["warnings"], [])
+
     def test_deck_box_too_small(self):
         self.inventory(BOX.format(qty=1).replace(",,,,,,", ",60,,,,,"))
         self.deck("otters", "Izzet Otters", deck_box="ultimate-guard-boulder-100-black", sideboard="15 Shock\n")
@@ -601,7 +661,7 @@ class CheckTests(AccessoriesTestCase):
             "dragon-shield-matte-black: its picture dragon-shield-matte-black.png is missing "
             "(image put dragon-shield-matte-black.png to store it)",
             "The picture orphan.jpg belongs to no accessory (image remove orphan.jpg takes it away)",
-            "casual/idea has Sleeves 'red' but isn't built; remove it",
+            "casual/idea has Sleeves 'red' but isn't built or being built; remove it",
             "Product test-product has Sleeves 'red' but isn't owned and kept intact; remove it",
             "Typo: Sleeves 'dragon-shield-matte-blak' isn't an accessory id (accessories list shows them)",
             "Mixed: Sleeves “ultimate-guard-boulder-100-black” is a deck box in the accessories list, not sleeves.",

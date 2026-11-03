@@ -236,12 +236,36 @@ class _Ops:
         self.assertIn("- **Deck box:** Old red box\n", self.text("casual/either"))
         self.apply("kit.set", holders=[self.holder("casual/mine")], owners=MATT_OWNERS, changes=[
             {"holder": "casual/mine", "field": "deck_box", "value": "a-sleeves", "loose": True}])
-        # Still refused: an id the asker doesn't see, one the deck may not use, a deck that isn't built.
+        # Still refused: an id the asker doesn't see, one the deck may not use, a deck idea.
         for holder, value, code in (("casual/mine", "d-sleeves", 400), ("casual/either", "a-sleeves", 400),
                                     ("casual/idea", "Green", 400)):
             with self.subTest(holder=holder, value=value):
                 self.refused("kit.set", code, holders=[self.holder(holder)], owners=MATT_OWNERS, changes=[
                     {"holder": holder, "field": "sleeves", "value": value, "loose": True}])
+
+    def test_a_building_deck_holds_kit_and_its_deck_box(self):
+        text = deck_md("Wip", status="building", deck="60 Shock\n", sideboard="15 Shock\n", owned="40 Shock\n")
+        inventory.apply(Op("deck.create", {"space": "home", "kind": "casual", "slug": "wip", "text": text}), MATT,
+                        "new deck Wip")
+        self.apply("kit.set", holders=[self.holder("casual/wip")], owners=MATT_OWNERS, changes=[
+            {"holder": "casual/wip", "field": "sleeves", "value": "c-sleeves"},
+            {"holder": "casual/wip", "field": "deck_box", "value": "b-box"}])
+        self.assertIn("- **Sleeves:** c-sleeves\n", self.text("casual/wip"))
+        self.assertIn("- **Deck box:** b-box\n", self.text("casual/wip"))
+        self.assertEqual(accessories.kit("casual/wip")["need"], 75)            # its Planned list, every section
+        # The only box is held: another deck can't take it, and the row can't go.
+        e = self.refused("kit.set", 409, "taken", holders=[self.holder("casual/either")], owners=MATT_OWNERS,
+                         changes=[{"holder": "casual/either", "field": "deck_box", "value": "b-box"}])
+        self.assertEqual(e.extra["taken_by"], [{"holder": "casual/wip", "title": "Wip"}])
+        e = self.refused("accessory.remove", 409, "blocks", id="c-sleeves", sha256=self.token(None), owners=None)
+        self.assertEqual(e.extra["blocks"], [{"id": "casual/wip", "title": "Wip"}])
+        # Choosing its own box again takes nothing new.
+        self.apply("kit.set", holders=[self.holder("casual/wip")], owners=MATT_OWNERS, changes=[
+            {"holder": "casual/wip", "field": "deck_box", "value": "b-box"}])
+        self.assertEqual(accessories.check(), [])
+        # An idea still can't take kit.
+        self.refused("kit.set", 400, holders=[self.holder("casual/idea")], owners=MATT_OWNERS,
+                     changes=[{"holder": "casual/idea", "field": "sleeves", "value": "c-sleeves"}])
 
     def test_a_used_row_cant_be_removed_change_kind_or_owner(self):
         self.apply("kit.set", holders=[self.holder("casual/either")],

@@ -238,6 +238,51 @@ class DeckOpTests(_Tree):
         self.assertIsNone(after.deck("casual/test"))
         self.assertFalse((self.magic / "decks/casual/test.md").exists())
 
+    def test_delete_refuses_a_building_deck_with_a_kit(self):
+        building = support.deck_md("Kit", "building", "Deck\n1 Opt\n").replace(
+            "- **Status:** building\n", "- **Status:** building\n- **Deck box:** b-box\n")
+        self.put("decks/casual/kit.md", building.encode())
+        with self.assertRaises(ops_decks.DeckRefused) as refused:
+            self.apply("deck.delete", deck_id="casual/kit", base_sha256=self.sha("casual/kit"))
+        self.assertEqual((refused.exception.code, refused.exception.reason), (409, "kit"))
+        self.assertIn("clear its sleeves and deck box first", str(refused.exception))
+        # An idea's leftover line holds nothing: it deletes.
+        self.put("decks/casual/idea.md", building.replace("Status:** building", "Status:** idea").encode())
+        after, _ = self.apply("deck.delete", deck_id="casual/idea", base_sha256=self.sha("casual/idea"))
+        self.assertIsNone(after.deck("casual/idea"))
+
+    def test_a_building_deck_keeps_its_kit_until_it_is_made_an_idea(self):
+        building = support.deck_md("Kit", "building", "Deck\n1 Opt\n").replace(
+            "- **Status:** building\n", "- **Status:** building\n- **Sleeves:** a-sleeves\n")
+        self.put("decks/casual/kit.md", building.encode())
+        # Built with its kit kept: allowed (nothing freed).
+        built = building.replace("Status:** building", "Status:** built")
+        self.apply("deck.save", deck_id="casual/kit", text=built, base_sha256=self.sha("casual/kit"))
+        # Taken apart keeping the line: refused, as ever (its cards go back unsleeved).
+        with self.assertRaises(ops_decks.DeckRefused) as refused:
+            self.apply("deck.save", deck_id="casual/kit", text=building, base_sha256=self.sha("casual/kit"))
+        self.assertEqual(refused.exception.reason, "kit")
+        self.put("decks/casual/kit.md", building.encode())
+        # Made an idea keeping the line: refused (an idea holds no kit).
+        with self.assertRaises(ops_decks.DeckRefused) as refused:
+            self.apply("deck.save", deck_id="casual/kit", text=building.replace("Status:** building", "Status:** idea"),
+                       base_sha256=self.sha("casual/kit"))
+        self.assertEqual((refused.exception.code, refused.exception.reason), (409, "kit"))
+        # Its prose still saves.
+        self.apply("deck.save", deck_id="casual/kit", text=building + "\nProse.\n", base_sha256=self.sha("casual/kit"))
+
+    def test_create_refuses_kit_on_an_idea(self):
+        idea = support.deck_md("Kit", "idea", "Deck\n1 Opt\n").replace(
+            "- **Status:** idea\n", "- **Status:** idea\n- **Sleeves:** a-sleeves\n")
+        with self.assertRaises(ops_decks.DeckRefused) as refused:
+            self.apply("deck.create", space="home", kind="casual", slug="idea-kit", text=idea, owners=None)
+        self.assertEqual((refused.exception.code, refused.exception.reason), (400, "kit"))
+        building = idea.replace("Status:** idea", "Status:** building").replace("Played by:** either",
+                                                                                 "Played by:** user")
+        after, _ = self.apply("deck.create", space="home", kind="casual", slug="building-kit", text=building,
+                              owners=None)
+        self.assertIn("- **Sleeves:** a-sleeves\n", after.deck("casual/building-kit").text)
+
     def test_precon_add_is_one_change(self):
         row = {"name": "Llanowar Elves", "set": "fdn", "collector_number": "227", "finish": "nonfoil",
                "quantity": "2"}

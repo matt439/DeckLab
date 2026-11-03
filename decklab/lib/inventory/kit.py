@@ -27,7 +27,7 @@ from . import Summary, files, paths, register
 
 KIND = "product.set-kit"
 FIELDS = ("sleeves", "deck_box")
-CANT_HOLD = "Only a built deck or a product kept intact has sleeves or a deck box"
+CANT_HOLD = "Only a deck being built or built, or a product kept intact, has sleeves or a deck box"
 # How refusals name the products' statuses (the database's product_status rows, not the old
 # products/status.csv) and a product without one (by the stem product kit takes).
 STATUS_WORDS = "The products' status list"

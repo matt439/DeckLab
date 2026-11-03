@@ -8,7 +8,7 @@ rewrites the parts it owns (PLAN.md part 2):
 - the header fields Format, Archetype, Played by, Status, Built version,
   Target bracket, Sleeves and Deck box ("Built version: target" or
   "owned-only" says which list a built deck holds, when the file has both;
-  Sleeves and Deck box are a built deck's accessories, each an id from
+  Sleeves and Deck box are a building or built deck's accessories (HOLDER_STATUSES), each an id from
   magic/accessories.csv or older free text such as a colour);
 - the fenced decklist blocks (the target list under a "## Decklist" heading
   and the list under "### Owned-only version"). A file with no "## Decklist"
@@ -125,11 +125,11 @@ from .considering import format_considering, parse_considering
 from .trial import TRIAL_FIELD, format_trial, parse_trial, set_trial, trial_of
 from .deckfile import (
     _ABOUT, _AMOUNT_AFTER_RE, _AMOUNT_BEFORE_RE, _CONTEXT_START_RE, _CUR, _NUM, _ONE, _QUOTE_CUT_RE,
-    BUILT_VERSIONS, COUNT_RE, DATE_RE, FIELD_RE, FORMATS, HEADING_RE, KINDS, MARKER, MARKER_RE,
+    BUILT_VERSIONS, COUNT_RE, DATE_RE, FIELD_RE, FORMATS, HEADING_RE, HOLDER_STATUSES, KINDS, MARKER, MARKER_RE,
     OWNED_FIELDS, PLAYERS, PRICE_NOTE, PRICE_STAMP, PRICE_STAMP_RE, RATE_CONTEXT_RE, RATE_FORMS,
     RATE_NEAR, STATUSES, TABLE_COLUMNS, TABLE_HEADER, TABLE_RULE, TOTAL_RE, DeckFile, HeaderField,
     PriceStamp, TableRow, TotalRow, _count, _find_block, _headings, _leading_word, _Line, _lines,
-    _one_line, _paragraphs, _parse_row, _rate_in, _section_end, _unbold, _without_stamp, parse_deck,
+    _one_line, _paragraphs, _parse_row, _rate_in, _section_end, _unbold, _without_stamp, frees_kit, parse_deck,
     read_deck_file)
 from .decklist import (
     _BASIC_KEYS, BASIC_LANDS, CATEGORY_MAX, LINE_RE, MAIN_SECTIONS, SECTIONS, SET_IN_NAME_RE, DeckFileError,

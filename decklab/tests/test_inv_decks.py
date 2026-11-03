@@ -443,6 +443,58 @@ class AccessoriesCliTests(_Tree):
         with inventory.pinned():
             self.assertFalse([p for p in accessories.check() if "s-sleeves" in p or "Matte (blue)" in p])
 
+    def test_push_gives_a_building_deck_kit_and_refuses_an_idea_kit(self):
+        # The real kit.set: a deck being built (commander/other) may hold kit, an idea (casual/test) may not.
+        building = OTHER.replace("- **Status:** building\n", "- **Status:** building\n- **Deck box:** b-box\n")
+        code, out, err = run("deck", "push", "commander/other", self.file("b.md", building), "--expect",
+                             self.sha("commander/other"), "-m", "Box it")
+        self.assertEqual(code, 0, err)
+        self.assertIn("- **Status:** building\n- **Deck box:** b-box\n", inventory.current().deck("commander/other").text)
+        idea = TEXT.replace("- **Status:** idea\n", "- **Status:** idea\n- **Deck box:** b-box\n")
+        code, _, err = run("deck", "push", "casual/test", self.file("i.md", idea), "--expect", self.sha(), "-m", "x")
+        self.assertEqual(code, 1)
+        self.assertIn("Only a deck being built or built", err)
+        self.assertEqual(self.text(), TEXT.encode("utf-8"))
+        # An idea made building with kit in one push: saved building first, then the kit chosen.
+        code, _, err = run("deck", "push", "casual/test", self.file("w.md", idea.replace("Status:** idea",
+                                                                                          "Status:** building")),
+                           "--expect", self.sha(), "-m", "Start building")
+        self.assertEqual(code, 0, err)
+        self.assertIn("- **Status:** building\n- **Deck box:** b-box\n", inventory.current().deck("casual/test").text)
+        # Made an idea keeping the line: refused; with the line removed, it saves.
+        text = inventory.current().deck("casual/test").text
+        code, _, err = run("deck", "push", "casual/test", self.file("x.md", text.replace("Status:** building",
+                                                                                          "Status:** idea")),
+                           "--expect", self.sha(), "-m", "Back to an idea")
+        self.assertEqual(code, 1)
+        code, _, err = run("deck", "push", "casual/test", self.file("y.md", text.replace(
+            "Status:** building", "Status:** idea").replace("- **Deck box:** b-box\n", "")),
+            "--expect", self.sha(), "-m", "Back to an idea")
+        self.assertEqual(code, 0, err)
+        self.assertNotIn("Deck box", inventory.current().deck("casual/test").text)
+
+    def test_push_shared_sleeves_warning_names_a_building_holder(self):
+        self.write("accessories.csv", ACCESSORIES + "s-sleeves,sleeves,shared,DS,Matte,blue,100,,,,,,\n")
+        building = OTHER.replace("- **Status:** building\n", "- **Status:** building\n- **Sleeves:** s-sleeves\n")
+        code, _, err = run("deck", "push", "commander/other", self.file("b.md", building), "--expect",
+                           self.sha("commander/other"), "-m", "Sleeve it")
+        self.assertEqual(code, 0, err)
+        built = TEXT.replace("- **Status:** idea\n", "- **Status:** built\n- **Sleeves:** s-sleeves\n")
+        code, out, err = run("deck", "push", "casual/test", self.file("t.md", built), "--expect", self.sha(),
+                             "-m", "Sleeve it")
+        self.assertEqual(code, 0, err)
+        self.assertIn("Warning: Other uses DS Matte (blue) already.", out)
+
+    def test_new_refuses_kit_on_an_idea(self):
+        idea = TEXT.replace("# Test", "# Fresh").replace("- **Status:** idea\n",
+                                                         "- **Status:** idea\n- **Deck box:** b-box\n")
+        code, _, err = run("deck", "new", "casual", "fresh", "--from", self.file("n.md", idea), "-m", "x")
+        self.assertEqual(code, 1)
+        self.assertIn("not a deck idea", err)
+        code, _, err = run("deck", "new", "casual", "fresh", "--from",
+                           self.file("m.md", idea.replace("Status:** idea", "Status:** building")), "-m", "x")
+        self.assertEqual(code, 0, err)
+
     def test_add_and_edit_run_the_real_operations(self):
         code, out, err = run("accessories", "add", "--kind", "playmat", "--name", "Mat", "--brand", "UP",
                              "--expect", inv_accessories.listed().sha256[:12], "-m", "Add a mat")

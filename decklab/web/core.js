@@ -25,6 +25,9 @@ const BOX_PREFIX = "product/fdn-beginner-box/";     // ids of the ten Beginner B
 const SHELL_TOP = 56;               // px of the sticky top bar (48 on a phone): shell.css's --shell-top
 const NAV_SPACE = 60 + SHELL_TOP;   // px at the top of a deck page under the top bar and its sticky section nav
 const STATUS_WORDS = { idea: "Idea", building: "Building", built: "Built" };
+/** Whether a deck of this status may hold sleeves and a deck box: one being built or built, never an idea
+ * (lib/decks HOLDER_STATUSES). */
+function holdsKit(status) { return status === "building" || status === "built"; }
 const FORMAT_WORDS = { casual: "60-card", commander: "Commander", product: "Products" };
 const COLOUR_WORDS = { W: "white", U: "blue", B: "black", R: "red", G: "green", C: "colourless" };
 const POLL_MS = 1000;           // how often to ask how a practice run or a matchup is getting on

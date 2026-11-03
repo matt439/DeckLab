@@ -4,8 +4,8 @@ Loaded after editor.js and editor-screen.js and before editor-lines.js, editor-c
 and editor-deckpage.js (then matchups.js and the page's other scripts, core.js to app.js). It holds the
 Deck details part: a new deck's title and format, a saved deck's folded "Deck details" line and its
 summary, the status, player, archetype and bracket fields, the Sleeves and Deck box tile pickers (with
-"+ Add new ..." and the sleeves each deck needs), setField() and the stray lines a deck that isn't built
-keeps only as Keep / Remove. It uses editor.js's constants, `editor`, fields and sheets, editor-screen.js's
+"+ Add new ..." and the sleeves each deck needs), setField() and the stray lines a deck idea keeps only
+as Keep / Remove. It uses editor.js's constants, `editor`, fields and sheets, editor-screen.js's
 FILE_FIELDS and changed(), and accessories.js's rows and Accessories sheet.
 */
 "use strict";
@@ -75,13 +75,15 @@ function drawDetails() {
   }
   // Not for a person-space profile, who doesn't see the home's sleeves (the server still clears the lines).
   const kitSeen = mayDo("see_accessories");
+  // Taken apart, its cards go back into storage unsleeved; an idea has no sleeves or deck box at all.
+  const toIdea = !holdsKit(f.status);
   if (kitSeen && kitGo("sleeves")) {
     status_.append(el("small", { class: "field-hint field-note", text: `Its Sleeves line (${fieldValueWords("sleeves",
-      ed.base.fields.sleeves)}) goes too when it's saved: its cards go back into storage unsleeved.` }));
+      ed.base.fields.sleeves)}) goes too when it's saved: ${toIdea ? "an idea has no sleeves" : "its cards go back into storage unsleeved"}.` }));
   }
   if (kitSeen && kitGo("deck_box")) {
     status_.append(el("small", { class: "field-hint field-note", text: `Its Deck box line (${fieldValueWords("deck_box",
-      ed.base.fields.deck_box)}) goes too when it's saved: only a built deck has one.` }));
+      ed.base.fields.deck_box)}) goes too when it's saved: ${toIdea ? "an idea has no deck box" : "its cards go back into storage"}.` }));
   }
   (ed.quick && ed.mode === "edit" ? host : rest).append(status_);
   // A person's deck has no Played by (unless its text has one); at home a member picks only their own.
@@ -142,17 +144,17 @@ function fileWords(key) {
   return `The deck says “${text.trim().replace(/[.!?]$/, "")}”.` + (value ? " Picking another changes only its first word." : "");
 }
 
-/** Sleeves: a tile picker of the accessories list's sleeves for a built deck, or Keep / Remove for a line
- * left on a deck that isn't built. */
+/** Sleeves: a tile picker of the accessories list's sleeves for a deck being built or built, or Keep / Remove
+ * for a line left on a deck idea. */
 function sleevesField() { return kitField("sleeves"); }
 
 /** Deck box: the same for the accessories list's deck boxes. */
 function deckBoxField() { return kitField("deck_box"); }
 
 const KIT_PICK_WORDS = {
-  sleeves: { add: "+ Add new sleeves", stray: "The deck has a Sleeves line, but it isn't built: only a built deck has sleeves.",
+  sleeves: { add: "+ Add new sleeves", stray: "The deck has a Sleeves line, but it's an idea: choose its sleeves once you start building it.",
     loading: "Loading your sleeves…", what: "Your sleeves" },
-  deck_box: { add: "+ Add a new deck box", stray: "The deck has a Deck box line, but it isn't built: only a built deck has one.",
+  deck_box: { add: "+ Add a new deck box", stray: "The deck has a Deck box line, but it's an idea: choose its deck box once you start building it.",
     loading: "Loading your deck boxes…", what: "Your deck boxes" },
 };
 
@@ -303,7 +305,7 @@ function loadKitRows() {
 
 /** The edit view's owner-filtered, ownerless rows cannot serve a different player after resume/rebase. */
 function editorPlayerKitCatalogNeeded(ed) {
-  return editorPlayerKitEditable(ed) && ed.fields.status === "built" && !ed.playerKitItems
+  return editorPlayerKitEditable(ed) && holdsKit(ed.fields.status) && !kitLeaves() && !ed.playerKitItems
     && norm("player", ed.fields.player) !== norm("player", ed.base.fields.player);
 }
 function editorPlayerKitKnownId(ed, id) {
@@ -469,7 +471,7 @@ function editorPlayerKitEditable(ed) {
 }
 /** Hidden null kit fields never prove a held kit exists. Only an editable visible kit prompts here. */
 function editorPlayerKitVisible(ed) {
-  return editorPlayerKitEditable(ed) && ed.fields.status === "built"
+  return editorPlayerKitEditable(ed) && holdsKit(ed.fields.status) && !kitLeaves()
     && KIT_FIELDS.some(key => norm(key, ed.fields[key]) || norm(key, ed.base.fields[key]));
 }
 
@@ -477,10 +479,11 @@ function editorPlayerKitVisible(ed) {
 function editorPlayerKitFields(ed, fields, body) {
   const marked = Object.hasOwn(ed, "playerKitRows");
   const rows = marked ? copiedPlayerKitRows(ed.playerKitRows) : null;
-  // A valid marker is irrelevant while taking the deck apart, when its kit is cleared.
-  // Keep it locally for Undo/toggling back; a damaged marker always stays a blocking request.
-  if (body && marked && (rows === null || ed.fields.status === "built")) body.kit_rows = rows;
-  if (editorPlayerKitEditable(ed) && ed.fields.status === "built"
+  // A valid marker is irrelevant while the save frees the kit (taking a built deck apart, or making it an
+  // idea: kitLeaves). Keep it locally for Undo/toggling back; a damaged marker always stays a blocking request.
+  const holds = holdsKit(ed.fields.status) && !kitLeaves();
+  if (body && marked && (rows === null || holds)) body.kit_rows = rows;
+  if (editorPlayerKitEditable(ed) && holds
       && (marked || norm("player", ed.fields.player) !== norm("player", ed.base.fields.player))) {
     fields.player = norm("player", ed.fields.player);
     for (const key of KIT_FIELDS) fields[key] = norm(key, ed.fields[key]);
@@ -641,8 +644,8 @@ async function reviewPlayerKit(player) {
   return sheet;
 }
 
-/** Back from Built to a status that isn't: a line the file has though the deck isn't built is offered
- * only as Keep / Remove, so a value picked or typed while it was Built goes back to the file's. */
+/** Back to Idea: a line the file has though the deck is an idea is offered only as Keep / Remove, so a
+ * value picked or typed while it was Building or Built goes back to the file's. */
 function resetStrayFields() {
   const ed = editor;
   for (const key of KIT_FIELDS) {

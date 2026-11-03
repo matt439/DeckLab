@@ -211,6 +211,18 @@ class WebReceiptTests(FilesReceiptCase):
             self.assertEqual(receipts.receipt_view("test")["kits"], {})
             indexed.assert_not_called()
 
+    def test_sleeves_show_for_building_decks_too_but_never_ideas(self):
+        from decklab.lib.api import deck_page, guard
+        kit = {"sleeves": {"name": "Black matte", "image_url": None, "state": "ok"}, "deck_box": None, "short": 0}
+        kits = mock.patch.object(deck_page, "_index_kits", return_value=lambda summary: kit)
+        for status, expected in (("building", {"casual/test": {"sleeves": "Black matte"}}), ("idea", {})):
+            with self.subTest(status=status):
+                self.deck("test", "Test", status, "Deck\n2 Llanowar Elves (FDN) 227\n58 Forest\n",
+                          table="| Llanowar Elves | 2 | 0 | **2** | | | |\n| **Total** | | | **2** | | | |\n")
+                with mock.patch.object(guard, "accessory_readers", return_value=None), \
+                        mock.patch.object(guard, "sees_kit", return_value=True), kits:
+                    self.assertEqual(receipts.receipt_view("test")["kits"], expected)
+
     def test_the_view_is_home_records_only(self):
         from decklab.lib.api import guard
         with mock.patch.object(guard, "sees_home_records", return_value=False), \

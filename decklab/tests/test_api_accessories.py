@@ -479,11 +479,51 @@ class AssignTests(AccessoriesApiTestCase):
         self.assign("product/test-product", BLACK)
         self.assertIn(BLACK, (self.magic / "products/status.csv").read_text(encoding="utf-8"))
 
-    def test_a_deck_that_isnt_built_is_400(self):
+    def test_a_deck_idea_is_400(self):
         e = self.error(api_acc.assign_accessory, holder="casual/idea", field="sleeves", id=BLACK,
                        holder_sha256=self.deck_sha("idea"))
         self.assertEqual((e.status, e.message),
-                         (400, "Only a built deck or a product kept intact has sleeves or a deck box"))
+                         (400, "Only a deck being built or built, or a product kept intact, has sleeves or a "
+                               "deck box"))
+
+    def write_building(self):
+        self.write("decks/casual/wip.md", deck_md("Work in Progress", status="building", deck="60 Shock\n",
+                                                  sideboard="15 Shock\n", owned="40 Shock\n"))
+
+    def test_a_building_deck_takes_kit_for_its_planned_list(self):
+        self.write_building()
+        answer = self.assign("casual/wip", BLACK)
+        self.assertIn(f"Sleeves:** {BLACK}", self.deck_text("wip"))
+        self.assertIn("- **Status:** building", self.deck_text("wip"))
+        self.assertEqual((answer["holder"]["need"], answer["holder"]["warnings"]), (75, []))  # Planned, every section
+        self.assign("casual/wip", BOX, field="deck_box")
+        self.assertIn(f"Deck box:** {BOX}", self.deck_text("wip"))
+        item = next(i for i in answer["data"]["items"] if i["id"] == BLACK)
+        self.assertEqual([u["holder"] for u in item["used_by"]], ["casual/wip"])
+
+    def test_the_deck_page_counts_a_building_decks_planned_list_whichever_list_is_shown(self):
+        from decklab.lib.api import deck_page
+        self.write_building()
+        self.assign("casual/wip", BLACK)
+        with access.viewing("matt"), inventory.pinned():
+            summary = decks.find_summary("casual/wip")
+            kit, holder_sha = deck_page._view_kit(summary, decks.load_deck("casual/wip", "owned"), [])
+            idea, _ = deck_page._view_kit(decks.find_summary("casual/idea"), decks.parse_decklist("Deck\n7 Shock\n"), [])
+        self.assertEqual((kit["need"], kit["editable"], holder_sha), (75, True, self.deck_sha("wip")))
+        self.assertEqual(idea["need"], 7)                   # an idea: the shown list's "would need"
+
+    def test_a_building_deck_holds_a_deck_box_against_its_quantity(self):
+        # The last box held by a deck being built can't be taken by another deck, nor its row removed.
+        self.write_building()
+        self.assign("casual/wip", BOX, field="deck_box")
+        e = self.error(api_acc.assign_accessory, holder="casual/gruul", field="deck_box", id=BOX,
+                       holder_sha256=self.deck_sha("gruul"))
+        self.assertEqual(e.status, 409)
+        self.assertEqual(e.extra["taken_by"], [{"holder": "casual/wip", "title": "Work in Progress"}])
+        e = self.error(api_acc.save_accessory, sha256=self.view()["sha256"], action="remove", id=BOX)
+        self.assertEqual((e.status, e.extra["blocks"]), (409, [{"id": "casual/wip", "title": "Work in Progress"}]))
+        # The building deck may choose the box it already has again.
+        self.assign("casual/wip", BOX, field="deck_box")
 
     def test_the_wrong_kind_or_an_unknown_id_is_400(self):
         for value, field in ((BOX, "sleeves"), ("nothing-here", "sleeves"), (BLACK, "playmat")):
@@ -533,11 +573,23 @@ class ViewTests(AccessoriesApiTestCase):
         options = {o["id"]: o for o in view["holders_options"]}
         self.assertEqual(sorted(options), ["casual/gruul", "casual/otters", "product/test-product"])
         self.assertEqual(options["casual/otters"]["need"], 75)
+        self.assertEqual((options["casual/otters"]["status"], options["product/test-product"]["status"]),
+                         ("built", None))
         self.assertEqual(options["casual/otters"]["holder_sha256"],
                          sha((self.magic / "decks/casual/otters.md").read_bytes()))
         self.assertEqual(view["products"][0]["need"], 60)
         for key in ("uncommitted", "commit_pending"):
             self.assertNotIn(key, view)
+
+    def test_holders_options_list_building_decks_with_their_status(self):
+        self.write("decks/casual/wip.md", deck_md("Work in Progress", status="building", deck="60 Shock\n",
+                                                  sideboard="15 Shock\n", owned="40 Shock\n"))
+        options = {o["id"]: o for o in self.view()["holders_options"]}
+        self.assertEqual(sorted(options), ["casual/gruul", "casual/otters", "casual/wip", "product/test-product"])
+        self.assertEqual((options["casual/wip"]["status"], options["casual/wip"]["need"],
+                          options["casual/wip"]["sleeves"]), ("building", 75, None))
+        self.assertIsNotNone(options["casual/wip"]["holder_sha256"])
+        self.assertNotIn("casual/idea", options)
 
     def test_a_status_file_the_os_wont_read_is_a_500_that_says_so(self):
         root = self.root

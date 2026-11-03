@@ -17,6 +17,17 @@ from .decklist import DeckFileError, DecklistError, parse_decklist
 KINDS = ("casual", "commander")
 PLAYERS = ("user", "wife", "either")
 STATUSES = ("idea", "building", "built")
+# The statuses whose deck may hold sleeves and a deck box (its Sleeves and Deck box lines): a deck
+# being built may have its kit chosen, an idea never (lib/accessories, ops_accessories' kit.set).
+HOLDER_STATUSES = ("building", "built")
+
+
+def frees_kit(before, after):
+    """Whether a deck going from Status before to after gives up its sleeves and deck box: a built
+    deck taken apart (its cards go back into storage unsleeved), or any deck made an idea."""
+    return (before == "built" and after != "built") or after not in HOLDER_STATUSES
+
+
 BUILT_VERSIONS = ("target", "owned")        # "Built version: target" / "owned-only"
 OWNED_FIELDS = ("Format", "Archetype", "Played by", "Status", "Built version", "Target bracket", "Sleeves",
                 "Deck box")
@@ -219,7 +230,7 @@ class DeckFile:
 
     @property
     def sleeves(self):
-        """A built deck's sleeves as written (the Sleeves field, trimmed), else
+        """A building or built deck's sleeves as written (the Sleeves field, trimmed), else
         None: an accessory id from magic/accessories.csv, or older free text
         such as a colour."""
         value = (self.get_field("Sleeves") or "").strip()
@@ -227,7 +238,7 @@ class DeckFile:
 
     @property
     def deck_box(self):
-        """A built deck's deck box as written (the Deck box field, trimmed),
+        """A building or built deck's deck box as written (the Deck box field, trimmed),
         else None: an accessory id, or free text."""
         value = (self.get_field("Deck box") or "").strip()
         return value or None

@@ -293,6 +293,24 @@ class SlotTests(SlotFolder, unittest.TestCase):
         with mock.patch.dict(os.environ, {slots.ENV: str(self.slots_dir / "never")}):
             self.assertEqual(slots.waiting(), 0)
 
+    def test_a_want_that_waiting_deletes_before_its_lock_is_made_again(self):
+        # waiting() may look at a new want's file between its open and its lock, find it
+        # unlocked and delete it; the want must not then hold a lock on a file nobody sees.
+        lock, raced = slots._lock, []
+
+        def racing_lock(fd):
+            if not raced:
+                raced.append(None)
+                raced[0] = slots.waiting()                      # finds the file unlocked: deletes it
+            return lock(fd)
+
+        with mock.patch.object(slots, "_lock", racing_lock):
+            mine = slots.want("a pool")
+        self.addCleanup(mine.release)
+        self.assertEqual(raced, [0])
+        self.assertTrue(mine.path.exists())
+        self.assertEqual(slots.waiting(), 1)
+
     def test_status_says_who_holds_each_slot(self):
         self.assertEqual(slots.status(2)["slots"], [
             {"id": 0, "held": False, "pid": None, "what": None, "since": None, "checkout": None},

@@ -31,14 +31,16 @@ as a deck file (decks.parse_deck; DeckFileError's words, as Invalid). A save or 
 gives the text the deck already has changes nothing; deck.update_tables names each deck once. A
 new deck's slug must be a valid one and not be taken in its space by a deck of either kind,
 compared without case (decks.existing_deck_id's rule, checked inside the operation). A deck that
-is built and holds sleeves or a deck box can't be deleted (take it apart first).
+is building or built and holds sleeves or a deck box can't be deleted (clear them, or take a built
+deck apart, first).
 
 The kit (the foundation review's H3). The Sleeves and Deck box header lines are written only by
 kit.set, which checks who may choose them (owners: permissions.accessory_owners of whoever asks;
 None for everything, a local command line). deck.save, deck.update_tables and the in-op table
 refresh refuse a text whose (Sleeves, Deck box) differ from the deck's now, or that takes a built
-deck holding them apart (its Status leaving "built"): DeckRefused, code 409, reason "kit"; kit.set
-clears them first. deck.create (and precon.add) may give a new deck kit lines, checked as kit.set
+deck holding them apart (its Status leaving "built") or makes a building deck holding them an idea:
+DeckRefused, code 409, reason "kit"; kit.set clears them first. deck.create (and precon.add) may
+give a new building or built deck kit lines (an idea's are refused, code 400), checked as kit.set
 checks a choice (each value an accessory id the owners see and the deck's owner may use, or older
 free text: guard.require_kit_choice's rule; refused with code 400 or 403, reason "kit"). A deck in
 a person's own space has no Played by, Sleeves or Deck box line (drafts._HOME_ONLY): a text adding
@@ -67,6 +69,8 @@ HOME_ONLY = {"Played by": "a deck in a person's own space has no Played by: it's
              "Deck box": "deck boxes are recorded only for the home decks (the accessories are home's)",
              "Printings in box": "printings in box are recorded only for the home decks (Build decks is home's)"}
 KIT_FIELDS = ("sleeves", "deck_box")    # kit.set's fields, the header lines Sleeves and Deck box
+HOLDER_STATUSES = ("building", "built")  # the statuses that may hold them (decks.HOLDER_STATUSES)
+NOT_A_HOLDER = "only a deck being built or built has sleeves or a deck box, not a deck idea."
 KIT_ONLY = ("{deck_id}: the Sleeves and Deck box lines are chosen on their own (kit.set), not in a save "
             "of the deck's text")
 
@@ -142,9 +146,13 @@ def _parse(deck_id, text, space, kind, slug, before=None):
 
 def same_kit(deck_id, before, after):
     """DeckRefused (code 409, reason "kit") when after (a DeckFile) has other Sleeves or Deck box
-    values than before, or stops a built deck holding them being built: only kit.set changes them."""
+    values than before, or frees a deck holding them while keeping the lines: a built deck taken
+    apart (its Status leaving "built", its cards back in storage unsleeved), or a building deck
+    made an idea (no longer a holder). Only kit.set changes them, so it clears them first."""
     held = any(kit_of(before))
-    if kit_of(after) != kit_of(before) or (held and before.status == "built" and after.status != "built"):
+    from decklab.lib import decks
+    if kit_of(after) != kit_of(before) or (held and before.status in HOLDER_STATUSES
+                                           and decks.frees_kit(before.status, after.status)):
         raise DeckRefused(KIT_ONLY.format(deck_id=deck_id), 409, "kit", [deck_id])
 
 
@@ -341,6 +349,8 @@ def create(inv, *, space, kind, slug, text, owners=frozenset()):
     if former is not None:
         raise DeckRefused("That deck id is retained as a former name of another deck.", 409, "exists", [former])
     parsed = _parse(deck.id, text, space, kind, slug)
+    if parsed.status not in HOLDER_STATUSES and any(kit_of(parsed)):
+        raise DeckRefused(f"{deck.id}: {NOT_A_HOLDER}", 400, "kit", [deck.id])
     check_kit(inv, deck.id, parsed, _owners(owners))
     if parsed.status != "built" and _field(parsed, "Printings in box"):
         raise DeckRefused(f"{deck.id}: only a built deck has printings in its box.", 400, "printings", [deck.id])
@@ -402,13 +412,13 @@ def _save_many(inv, kind, when, items, field):
 
 @register("deck.delete")
 def delete(inv, *, deck_id, base_sha256):
-    """The deck removed (its history stays with the backend's revisions). Refuses a built deck
-    that holds sleeves or a deck box."""
+    """The deck removed (its history stays with the backend's revisions). Refuses a building or
+    built deck that holds sleeves or a deck box (an idea's leftover lines hold nothing)."""
     deck = _current(inv, deck_id, base_sha256)
     parsed = _parse(deck_id, deck.text, deck.space, deck.kind, deck.slug, parsed_deck(deck))
-    if parsed.status == "built" and (parsed.sleeves or parsed.deck_box):
-        raise DeckRefused(f"{parsed.title} is built and holds sleeves or a deck box: take it apart first.",
-                          409, "kit", [deck_id])
+    if parsed.status in HOLDER_STATUSES and (parsed.sleeves or parsed.deck_box):
+        first = "take it apart first" if parsed.status == "built" else "clear its sleeves and deck box first"
+        raise DeckRefused(f"{parsed.title} holds sleeves or a deck box: {first}.", 409, "kit", [deck_id])
     return inv.without_deck(deck_id), Summary(f"Deleted {parsed.title}", {"decks": 1}, {deck.path: ["deleted"]},
                                               {"deck": deck_id})
 

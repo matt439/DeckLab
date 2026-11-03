@@ -282,7 +282,7 @@ inventory writes answer 503 with "reason": "database":
                                          change one row, with its picture (409 + "conflict" and
                                          "latest", or + "blocks" for a row a deck uses)
     POST /api/accessories/assign         body {"profile", "holder", "field", "id", "holder_sha256",
-                                         "move_from"?}: a built deck's or intact product's sleeves or
+                                         "move_from"?}: a building or built deck's or intact product's sleeves or
                                          deck box (409 + "taken_by" when they're in use)
     GET  /accessory-img/<id>.<jpg|png|webp>?v=<hash>[&viewer=<id>]   an accessory's picture (v
                                          required: the first 8 hex digits of its sha256), cached

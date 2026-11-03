@@ -48,9 +48,9 @@ may use one design.
 from decklab.lib.state import Invalid
 
 from . import Summary, paths, register, rules
-from .ops_decks import KIT_FIELDS, DeckRefused, parsed_deck
+from .ops_decks import HOLDER_STATUSES, KIT_FIELDS, DeckRefused, parsed_deck
 
-CANT_HOLD = "Only a built deck or a product kept intact has sleeves or a deck box"
+CANT_HOLD = "Only a deck being built or built, or a product kept intact, has sleeves or a deck box"
 _KIND_WORDS = {"sleeves": "sleeves", "deck_box": "deck box", "playmat": "playmat"}
 _HEADER = {"sleeves": "Sleeves", "deck_box": "Deck box"}
 
@@ -378,7 +378,7 @@ class _Holder:
                     raise AccessoryRefused(why, 403, ids=[holder_id])
             self.deck, self.parsed = deck, parsed
             self.title = parsed.title
-            self.can_hold = parsed.status == "built"
+            self.can_hold = parsed.status in HOLDER_STATUSES     # building or built, never an idea
             self.owner = accessories.player_owner(parsed.player)
         if not accessories.visible(self.owner, owners):
             raise AccessoryRefused(f"{self.title}'s sleeves and deck box are {accessories.owner_name(self.owner)}'s "
@@ -428,7 +428,8 @@ def set_kit(inv, *, holders, changes, owners=frozenset(), editor=None):
     Refusals (AccessoryRefused): a holder that isn't there (404), a person's deck (400), a holder
     changed since it was read (409 "changed"), a holder whose kit isn't the owners' to choose
     (403), a deck the editor may not edit (403, with permissions' reason); a value that isn't
-    an accessory of that kind the owners see, or one the holder's owner may not use, or a holder that isn't a built deck or a product kept intact (400); a deck box
+    an accessory of that kind the owners see, or one the holder's owner may not use, or a holder
+    that isn't a building or built deck or a product kept intact (400); a deck box
     with quantity 0 (409), or a deck box every one of which is held (409 with extra taken_by),
     unless the holder already has it (neither for a loose change)."""
     from decklab.lib import accessories, decks

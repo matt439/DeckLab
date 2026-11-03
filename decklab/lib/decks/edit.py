@@ -94,10 +94,11 @@ def set_built_version(deck, version):
     set_field(deck, "Built version", {"target": "target", "owned": "owned-only"}.get(version))
 
 
-def _set_built_line(deck, key, value):
-    """Set one of a built deck's accessory lines (Sleeves or Deck box) to one
-    line of text, trimmed: an accessory id or free text. None removes the
-    field. A field that already says that value is left as written."""
+def _set_kit_line(deck, key, value):
+    """Set one of a building or built deck's (HOLDER_STATUSES) accessory
+    lines (Sleeves or Deck box) to one line of text, trimmed: an accessory id
+    or free text. None removes the field. A field that already says that
+    value is left as written."""
     if value is None:
         set_field(deck, key, None)
         return
@@ -110,15 +111,15 @@ def _set_built_line(deck, key, value):
 
 
 def set_sleeves(deck, sleeves):
-    """Set a built deck's sleeves (an accessory id, or a colour as free text),
+    """Set a building or built deck's sleeves (an accessory id, or a colour as free text),
     or None to remove the field."""
-    _set_built_line(deck, "Sleeves", sleeves)
+    _set_kit_line(deck, "Sleeves", sleeves)
 
 
 def set_deck_box(deck, box):
-    """Set a built deck's deck box (an accessory id, or free text), or None to
+    """Set a building or built deck's deck box (an accessory id, or free text), or None to
     remove the field."""
-    _set_built_line(deck, "Deck box", box)
+    _set_kit_line(deck, "Deck box", box)
 
 
 def set_target_bracket(deck, number, name=None):
@@ -224,10 +225,10 @@ def apply_edit(deck, target=None, owned=None, fields=None, date=None, bracket_na
             name = EDIT_FIELDS[key]
             if value is None:
                 if deck.get_field(name) is not None:
-                    _set_built_line(deck, name, None)
+                    _set_kit_line(deck, name, None)
                     changes["fields"].append(key)
             elif (deck.get_field(name) or "").strip() != value.strip():
-                _set_built_line(deck, name, value)
+                _set_kit_line(deck, name, value)
                 changes["fields"].append(key)
         elif key == "target_bracket":
             if deck.kind != "commander" and value is not None:

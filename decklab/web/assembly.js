@@ -404,8 +404,8 @@ function assemblyKitName(ref) { return ref.state === "linked" ? ref.label : `“
 
 /** A deck panel's sleeves: a 64 px picture and "Sleeve with Dragon Shield Matte (black): 75 needed, 100
  * owned", and the kit's warnings (too few sleeves, a deck box too small) in a box under it. A deck with
- * none recorded gets Choose sleeves (accessories.js kitPicker) when it's built and the visitor may choose,
- * else a link to the deck. view (optional): the plan, worked out again once sleeves are chosen. */
+ * none recorded gets Choose sleeves (accessories.js kitPicker) when it's being built or built and the visitor
+ * may choose, else a link to the deck. view (optional): the plan, worked out again once sleeves are chosen. */
 function assemblyKit(deck, need, view = null) {
   if (!mayDo("see_accessories")) return null;      // the home's sleeves aren't shown to a person-space profile
   const kit = deck.kit, sleeves = kit && kit.sleeves;
@@ -417,12 +417,12 @@ function assemblyKit(deck, need, view = null) {
     words = `Sleeves: ${assemblyKitName(sleeves)} (not in the accessories list)` + (need ? `, ${need} needed` : "");
   } else {
     const choice = view && (view.choices || []).find(c => c.id === deck.id);
-    const built = choice && choice.status === "built";
-    action = built && mayDo("accessories") && typeof kitPicker === "function"
+    const holds = Boolean(choice) && holdsKit(choice.status);
+    action = holds && mayDo("accessories") && typeof kitPicker === "function"
       ? el("button", { type: "button", class: "btn", text: "Choose sleeves", onclick: () => kitPicker({ holder: deck.id,
         field: "sleeves", need, title: deck.title, onPicked: () => { if (view && view.run) view.run(); } }) })
       : String(deck.id).startsWith("product/") ? el("a", { class: "btn btn-quiet", href: "#/accessories", text: "Choose sleeves" })
-        : el("a", { class: "btn btn-quiet", href: deckHref(deck.id, deck.version), text: built ? "Choose on the deck page" : "Open the deck" });
+        : el("a", { class: "btn btn-quiet", href: deckHref(deck.id, deck.version), text: holds ? "Choose on the deck page" : "Open the deck" });
   }
   return el("div", { class: "assembly-kit" },
     el("div", { class: "pack-kit-row" }, accessoryThumb(sleeves || { label: "Sleeves" }, 64), el("p", { text: words }), action),

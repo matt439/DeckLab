@@ -373,15 +373,21 @@ def _read_draft(data, kind, deck=None, source=None, space=None):
             draft.fields["built_version"] = None
         for key, header, held in (("sleeves", "Sleeves", deck.sleeves), ("deck_box", "Deck box", deck.deck_box)):
             value = draft.fields.get(key)
-            if key in draft.fields and value is not None and value != held and status != "built":
+            if key in draft.fields and value is not None and value != held and status not in decks.HOLDER_STATUSES:
                 draft.block(_BUILT_ONLY[key], field=key)
-            elif status != "built" and deck.get_field(header) is not None and deck.status == "built" \
-                    and draft.fields.get(key, held) == held:
-                # Taken apart, its cards go back into storage unsleeved: the sleeves and box go too.
+            elif key in draft.fields and value is not None and value != held                     and deck.status in decks.HOLDER_STATUSES and decks.frees_kit(deck.status, status):
+                # Taken apart (built -> building), its cards go back into storage unsleeved: a new
+                # choice in the same save would leave kit on it, which the save itself refuses.
+                draft.block(_TAKEN_APART[key], field=key)
+            elif deck.status in decks.HOLDER_STATUSES and decks.frees_kit(deck.status, status) \
+                    and deck.get_field(header) is not None and draft.fields.get(key, held) == held:
+                # Taken apart, its cards go back into storage unsleeved, or made an idea, which holds
+                # no kit: the sleeves and box go too.
                 draft.fields[key] = None
     else:
         for key in ("sleeves", "deck_box"):
-            if draft.fields.get(key) is not None and (draft.fields.get("status") or "idea") != "built":
+            status = draft.fields.get("status") or "idea"
+            if draft.fields.get(key) is not None and status not in decks.HOLDER_STATUSES:
                 draft.block(_BUILT_ONLY[key], field=key)
     if space != spaces.HOME:
         # A person's deck is theirs by where it lives, and accessories are home's:
@@ -394,9 +400,18 @@ def _read_draft(data, kind, deck=None, source=None, space=None):
     return draft
 
 
-# The block for a Sleeves or Deck box value on a deck that isn't built.
-_BUILT_ONLY = {"sleeves": "Sleeves is the colour of a built deck's sleeves, so it's only for a built deck",
-               "deck_box": "Deck box is the box a built deck is kept in, so it's only for a built deck"}
+# The block for a Sleeves or Deck box value on a deck idea (only a deck being built or built holds kit).
+_BUILT_ONLY = {"sleeves": "Sleeves are a deck's sleeves, so they're only for a deck being built or built, "
+                          "not a deck idea",
+               "deck_box": "Deck box is the box a deck is kept in, so it's only for a deck being built or built, "
+                           "not a deck idea"}
+
+
+# The block for a new Sleeves or Deck box value in the save that takes a built deck apart.
+_TAKEN_APART = {"sleeves": "Taken apart, a deck's cards go back into storage unsleeved, so it keeps no sleeves: "
+                           "choose them again in a later save",
+                "deck_box": "Taken apart, a deck's cards go back into storage, so it keeps no deck box: "
+                            "choose one again in a later save"}
 
 
 # The blocks for fields a deck in a person's space doesn't have (lib/spaces.py).
@@ -429,7 +444,7 @@ def _final(draft, deck):
 
 def built_sleeves(exclude=None, inv=None, usage=None, owners=None):
     """[{"id", "title", "sleeves"}]: the sleeves of each holder that records
-    some (built deck files, then owned products kept intact as
+    some (building and built decks, then owned products kept intact as
     "product/<stem>"), except the holder exclude (a deck id). sleeves is the
     accessory's label ("Dragon Shield Matte (black)") for a linked id, else
     the value as written (spaces made one). inv and usage
@@ -453,7 +468,11 @@ def built_sleeves(exclude=None, inv=None, usage=None, owners=None):
 
 
 def _built_sections(draft, deck):
-    """The list a built deck holds, as the draft would save it (pool._built_version's rule)."""
+    """The list a built deck holds, as the draft would save it (pool._built_version's rule); a
+    deck being built (or an idea) counts its Planned list, every section."""
+    status = draft.fields.get("status") or (deck.status if deck is not None else None)
+    if status != "built":
+        return _final(draft, deck)[0]
     if deck is not None and deck.status == "built" and draft.fields.get("status", "built") == "built":
         from decklab.lib.decks import assembled
         if (assembled.get(deck) is not None
@@ -468,14 +487,18 @@ def _built_sections(draft, deck):
 
 
 def _sleeve_warnings(draft, deck):
-    """A built deck's Sleeves and Deck box, as the draft would save them: a
-    warning when it has no sleeves, and accessories.kit's for its built list
-    (too few sleeves, a deck box used by more decks than there are, an id
-    of the wrong kind; sleeves other holders also use are fine)."""
+    """A building or built deck's Sleeves and Deck box, as the draft would
+    save them: for a built deck a warning when it has no sleeves, and
+    accessories.kit's for its built list (a building deck's Planned list:
+    too few sleeves, a deck box used by more decks than there are, an id
+    of the wrong kind; sleeves other holders also use are fine). A deck
+    being built with no kit chosen gets no warning."""
     values = {key: draft.fields[key] if key in draft.fields else (getattr(deck, key) if deck is not None else None)
               for key in ("sleeves", "deck_box")}
+    status = draft.fields.get("status") or (deck.status if deck is not None else None)
     if not values["sleeves"]:
-        draft.warnings.append("This deck is built: set Sleeves to the colour of its sleeves")
+        if status == "built":
+            draft.warnings.append("This deck is built: set Sleeves to the colour of its sleeves")
         if not values["deck_box"]:
             return
     player = draft.fields["player"] if "player" in draft.fields else (deck.player if deck is not None else None)
@@ -512,7 +535,7 @@ def _rule_warnings(draft, deck):
     # stored Sleeves and Deck box (another owner's) resolved for it.
     player = draft.fields["player"] if "player" in draft.fields else (deck.player if deck is not None else None)
     sees_stored = deck is None or guard.sees_kit({"space": deck.space, "player": deck.player})
-    if (status == "built" and draft.space == spaces.HOME and sees_stored
+    if (status in decks.HOLDER_STATUSES and draft.space == spaces.HOME and sees_stored
             and guard.sees_kit({"space": draft.space, "player": player})):
         _sleeve_warnings(draft, deck)
     bracket = None
