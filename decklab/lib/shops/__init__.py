@@ -16,10 +16,12 @@ shop that can't be read leaves only its own prices unknown:
      "crawl_delay": seconds, "cards": {name: {"status": "ok" | "not_listed" | "error",
        "at": ISO, "listings": [{"set", "number", "finish", "price", "stock", "condition", "url"}],
        "error": words}},
-     "previous": {name: {"at": ISO, "listings": [...]}}}
+     "previous": {name: {"at": ISO, "listings": [...]}},
+     "history": {name: [{"on": "YYYY-MM-DD", "at": ISO, "listings": [...]}]}}
 
 "previous" is the snapshot before (its names that were read), so a row can say it is newly
-in stock. Prices are each shop's own, in AUD (a listing's price None when it showed none).
+in stock. "history" keeps one reading a day of each name still on the queue for 90 days
+(history.py, E5-S29); a file without it loads as before. Prices are each shop's own, in AUD (a listing's price None when it showed none).
 
 How it asks: one request per card name, the shop's page of every printing with that name
 (the adapter's name_url; MTGMate's NAME_PATH, the same page its card links lead to), never its
@@ -47,6 +49,8 @@ Shopping only reads the files (match() below), so a page load never reaches a sh
     python -m decklab.lib.shops lookup NAME [--shop KEY]
         one name's listings at one shop (MTGMate unless --shop), printed (one request after
         robots.txt; nothing saved)
+    python -m decklab.lib.shops history NAME [--shop KEY] [--json]
+        a queued name's dated price and stock at each shop, the last 90 days (no network)
 """
 import argparse
 import contextlib
@@ -61,6 +65,7 @@ from pathlib import Path
 
 from decklab.lib import config
 from decklab.lib.shops import gamesportal, mtgmate
+from decklab.lib.shops import history as _history
 from decklab.lib.shops.base import (FINISHES, LISTING_FIELDS, MAX_PAGE, TIMEOUT, USER_AGENT,  # noqa: F401 (the package's names)
                                     Adapter, Disallowed, ShopError, allowed, fetch_page, robots_rules)
 from decklab.lib.shops.mtgmate import NAME_PATH, name_url, parse_name_page  # noqa: F401 (as before the split)
@@ -213,8 +218,9 @@ def oldest_first(names, previous):
 OUT_OF_TIME = "out of time"
 
 
-def take(names, *, session=None, previous=None, now=None, progress=None, budget=None, started=None):
-    """A new snapshot of names. previous is the snapshot before (or None). budget: the most
+def take(names, *, session=None, previous=None, now=None, progress=None, budget=None, started=None, queued=None):
+    """A new snapshot of names. previous is the snapshot before (or None). queued: the queue's
+    names, the only ones whose daily readings are kept (history.py; names by default). budget: the most
     seconds of requests after robots.txt; a name the run can't reach in it keeps what the
     snapshot before read, with its time ("carried"), else is unknown. started(delay) is told
     the delay robots.txt gave, once it's read."""
@@ -269,8 +275,10 @@ def take(names, *, session=None, previous=None, now=None, progress=None, budget=
     for name, entry in ((previous or {}).get("cards") or {}).items():
         if isinstance(entry, dict) and entry.get("status") in ("ok", "not_listed"):
             kept[name] = {"at": entry.get("at"), "listings": entry.get("listings") or []}
-    return {"version": 1, "shop": shop.name, "site": shop.site, "started_at": _iso(begun), "fetched_at": _iso(now()),
-            "crawl_delay": session.delay, "cards": cards_out, "previous": kept}
+    finished = now()
+    kept_history = _history.record(previous, cards_out, names if queued is None else queued, finished.date())
+    return {"version": 1, "shop": shop.name, "site": shop.site, "started_at": _iso(begun), "fetched_at": _iso(finished),
+            "crawl_delay": session.delay, "cards": cards_out, "previous": kept, "history": kept_history}
 
 
 # --- matching a queue row --------------------------------------------------------------------
@@ -451,6 +459,7 @@ def refresh(*, force=False, say=print, progress=True, session=None, budget=None,
         try:
             queued = _queue()
             names = tuple(queue_names(queued))
+            on_queue = names
         except (inventory.Unavailable, ValueError) as error:
             say(f"The purchase queue couldn't be read: {error}")
             return 2
@@ -505,7 +514,7 @@ def refresh(*, force=False, say=print, progress=True, session=None, budget=None,
                     words = f"not reached; kept the result read {entry.get('at')}"
                 say(f"  {count}/{total} {name}: {words}")
             data = take(names, session=session or Session(adapter=adapter), previous=previous,
-                        progress=step if progress else None, budget=budget, started=started)
+                        progress=step if progress else None, budget=budget, started=started, queued=on_queue)
             _write(data, snapshot_path(adapter))
         finally:
             _unlock(lock)
@@ -641,6 +650,17 @@ def _lookup(args):
     return 0
 
 
+def _history_command(args):
+    adapters = _chosen(args)
+    answer = _history.report(args.name, [(adapter, load(adapter=adapter) or {}) for adapter in adapters], pick)
+    if args.json:
+        print(json.dumps(answer, indent=1))
+    else:
+        for line in _history.lines(answer):
+            print(line)
+    return 0
+
+
 def main(argv=None):
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(errors="replace")
@@ -659,5 +679,10 @@ def main(argv=None):
     look.add_argument("--shop", choices=sorted(ADAPTERS), default=ADAPTER.key,
                       help=f"the shop to ask (default {ADAPTER.key})")
     look.set_defaults(func=_lookup)
+    past = sub.add_parser("history", help="a queued name's dated price and stock at each shop, kept 90 days (no network)")
+    past.add_argument("name")
+    past.add_argument("--shop", choices=sorted(ADAPTERS), help="only this shop (default: every shop)")
+    past.add_argument("--json", action="store_true", help="print it as JSON")
+    past.set_defaults(func=_history_command)
     args = parser.parse_args(argv)
     return args.func(args)
