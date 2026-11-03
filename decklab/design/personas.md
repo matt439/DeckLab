@@ -60,7 +60,7 @@ Operator duties (the server and tunnel, which start at his logon since 2026-10-1
 
 ### Background
 
-Australian, thinks in AUD. Plays casual 60-card 1v1 at home with User1 from a shared pool, with Commander at a local shop's social nights as the next step. No home deck is built yet. His decks on 2026-10-13: Izzet Otters (casual, building), Gruul Ramp (casual, idea), Finneas, Ace Archer (Commander, building) and Alela Faeries (Commander, idea, Bracket 2). The only thing kept intact at home is the Lightning Aggro product.
+Australian, thinks in AUD. Plays mostly Commander now (Matt, 2026-10-31), including a local shop's social Commander nights, and casual 60-card 1v1 at home with User1 from a shared pool. No home deck is built yet. His decks on 2026-10-13: Izzet Otters (casual, building), Gruul Ramp (casual, idea), Finneas, Ace Archer (Commander, building) and Alela Faeries (Commander, idea, Bracket 2). The only thing kept intact at home is the Lightning Aggro product.
 
 ### Goals
 
@@ -127,6 +127,8 @@ Contexts: at the PC with Claude for building and buying; on a tablet for editing
 | Wants to change the purchase queue (state, quantity, remove, add) and record orders on the pages himself, not only through Claude at the PC. | Matt, 2026-10-13 |
 | Wants his own command-line writes shown as his on Activity, separate from Claude's. | Matt, 2026-10-13 |
 | Thinks the household will aim for Bracket 2 at Commander nights. | Matt, 2026-10-13 |
+| Plays mostly Commander now, so Commander comes first when a choice serves both formats. | Matt, 2026-10-31; `AGENTS.md` ("How Magic gets played") |
+| Against popular decks (the gauntlet) is Deck Lab's lead feature. | Matt, 2026-11-03; [stories.md](stories.md), E3-S33 |
 | One sleeve design should be usable by several decks; it's up to the players not to play two decks in the same sleeves against each other. This reversed the old one-holder rule; E8-S20 built it. | Matt, 2026-10-13; [stories.md](stories.md), E8-S20 |
 | Orders shouldn't get an expected arrival date; naming the order is enough. | Matt, 2026-10-13 |
 | When the PC is off, a friendly "Deck Lab is off" message is enough; cached deck lists aren't wanted. | Matt, 2026-10-13 |

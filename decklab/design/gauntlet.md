@@ -1,4 +1,4 @@
-# Deck Lab gauntlet: design (E3-S28 to E3-S31)
+# Deck Lab gauntlet: design (E3-S28 to E3-S38)
 
 ## 1. What it is
 
@@ -125,7 +125,7 @@ Usage: `gauntlet build [--format commander|constructed|all] [--source edhrec,pre
 4. **Fill:** fill to N by popularity.
 
 Defaults:
-- Commander: N=20 (core), or `--tier upgraded`.
+- Commander: N=20 from `core` and `upgraded` (since 2026-11-03; it was `core` only). With seed `''` this is the standard sample (section 11).
 - 60-card: N=24 from medium and hard duels.
 - The sample id is `sample:<12 hex>`, a sha of the catalogue version, filters, N and seed. It's saved, so the page and the command line play the same set.
 
@@ -181,7 +181,7 @@ Defaults:
 - At 100 games per opponent, each opponent's range is about ±10 points; a group of 5 is about ±4–5 points from game noise alone.
 - `plan` prints `estimate.rates()` (`estimate.py:51`) once rates are saved, and says "not yet measured" until then.
 - Recommended: Commander gauntlets on the dev PC by command line.
-- The page defaults to 12 Commander opponents × `fixed:100`, under the worker limit (`simulations.py:79`).
+- The page defaults to the standard sample (section 11): 20 Commander or 24 60-card opponents × `fixed:100`, under the worker limit (`simulations.py:79`). It offers larger runs too, up to All for Commander, and says when a run is an overnight one.
 - Slice C includes a one-off qualification run that measures parallel Commander throughput. It isn't a CI test.
 
 ## 8. Privacy and permissions
@@ -227,3 +227,27 @@ Before the slices start, one commit adds `decklab/design/gauntlet.md` with secti
 - D builds against the contract's function signatures using a fake `forge.gauntlet` module.
 - E lands last so the stories match what was built.
 - No two slices own the same file.
+
+## 11. The standard sample, the headline and where it shows (E3-S33 to E3-S38)
+
+Matt decided on 2026-11-03 that Against popular decks is Deck Lab's lead feature. A deck's result is only comparable with another's, or with its own before an edit, when both faced the same opponents, so every deck of a format is scored against one **standard sample**.
+
+**The standard sample** (`sample.STANDARD`, `sample.standard_sample`, `forge/gauntlet.standard`; E3-S33):
+- Commander: 20 opponents from `core` and `upgraded`, seed `''` (Matt, 2026-11-03: not the page's earlier 12 `core`). 60-card: 24 `medium` and `hard` duels, seed `''`, as before.
+- It's the format's default draw on the page, in the API and on the command line (`gauntlet play <deck-id> --standard`, which refuses `--sample`, `--size`, the filters and `--seed` beside it). The draw is deterministic for one catalogue, and `test_gauntlet_sample.py` pins its decks.
+- Other samples still play and their results still show when chosen (the page keeps one in the address as `&gsample=<id>`, with **Back to the standard sample**). The headline and the summary use only the standard sample.
+- A new catalogue (a rebuild after EDHREC's lists move) may draw a different standard sample; its id names the catalogue version.
+
+**The headline** (`forge/gauntlet.view`): `overall`, the equal-weight average over every opponent of the sample with its range and spread (the groups' `seqstats.field_average`); `played` of `of` opponents; `tally`, the opponents ahead, even, behind and not settled, from each opponent's `verdict`; and `updated`, the newest result's date. It's a summary of these sampled opponents, never a rating, and never joins Rankings.
+
+**The summary** (`GET /api/gauntlet/summary?id=&version=&profile=`): the headline of the standard sample from saved games only, with up to three hardest opponents and the state (`no_catalogue`, `untested`, `partial`, `done`) and whether a run is playing. It never plans, estimates, saves a sample, plays or polls, so the Overview can read it on every visit. The deck-visibility 404 comes first; it names no house deck, file path or starter, and only an admin gets the build command.
+
+**Where it shows:**
+- Built (E3-S33): first among a Commander deck's Overview strength panels (after Forge field for a 60-card deck), and first on a Commander deck's Matchups tab, its headline above the groups and the results before the play box.
+- Next (E3-S34): the old figure kept, muted, as out of date when the list, Forge or the catalogue changes, and before/after on the same opponents after a re-test. Wanted before `FG#2` (mid-November), which re-keys every result.
+- Then (E3-S35): Matchups renamed **Testing** and moved next to Decks (Decks, Testing, Collection, Shopping; Matt, 2026-11-03), the route staying `#/matchups`, with a **Popular decks** board beside Matchups and Rankings: one row per deck the viewer may see, each with its own Play of the standard sample, no Play all.
+- Later: the library's Forge slots and a strength sort (E3-S36), an editor choice to re-test after saving (E3-S37), and Test this change against the standard sample (E3-S30).
+
+**Larger runs** (E3-S38; Matt, 2026-11-03): Commander offers 6, 12, 20, 40 or **All**, every playable deck of the chosen tiers, colours and styles with both of a commander's decks included (about 201 in the dev PC's catalogue: 59 core, 110 upgraded, 32 precon); 60-card offers 12, 24, 36, 72 or 144 (no All: about 1,280 decks). Games an opponent stay 50, 100 or 200. The API takes 1 to 300 (`MAX_SIZE`) or `all`. An All sample hashes `every` into its id, so it never shares an id with a normal sample. The page shows the run's opponents, new games and time above Play, and over 2 hours (`OVERNIGHT_MINUTES`) says it's an overnight run and that Deck Lab keeps the PC awake while it plays: gauntlet runs are coordinator jobs, which the keep-awake provider (`server_run._forge_runs_busy`) counts as busy. Drawing and estimating All costs what a normal sample does.
+
+**Open:** whether the nightly task should top up stale or untested built Commander decks on the standard sample (a recommendation, not decided): only once the live server has a catalogue and a measured throughput (TODO.md, `FG#4`), at most a deck or two a night, skipped when simulations are paused.
