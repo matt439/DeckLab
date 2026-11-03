@@ -38,17 +38,17 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 18 | 17 | 1 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 18 | 2 | 0 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 23 | 17 | 3 | 3 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 23 | 19 | 1 | 2 | 1 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 23 | 19 | 1 | 1 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 29 | 22 | 3 | 2 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 21 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 29 | 28 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 24 | 18 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 53 | 37 | 5 | 8 | 3 |
-| **Total** | **297** | **244** | **18** | **21** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 53 | 37 | 5 | 7 | 4 |
+| **Total** | **297** | **244** | **18** | **19** | **16** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48 was built the same day, in three slices. Matt's expansion review of 2026-10-31 added twelve missing stories for work no story covered: E1-S29, E4-S27, E5-S27 to E5-S30, E9-S28, E9-S29 and E11-S54 to E11-S57. Matt's request of 2026-11-01 to run the live server on Linux added E11-S58, built the same day. Matt's deck-page question of 2026-11-02 added E5-S31, built the same day. Recounted 2026-11-02: E7-S33 (built 2026-11-02) was missing from the E7 row. The gauntlet design of 2026-11-02 added E3-S28 to E3-S31; E3-S28 and E3-S29 were built the same day, and E3-S30 and E3-S31 are missing. Later on 2026-11-02 the first slices of E5-S27 (Shopping's Baskets), E5-S28 (Build decks together) and E9-S29 (tutors on the Stats tab) made them partial, as the first slices of E1-S29 (the card viewer's decks line) and E5-S30 (the Wishlist page's short decks) made them, and E11-S56 (an empty space's start) was built. Matt's report of 2026-11-02 that the Against popular decks box is too wide added E3-S32, missing.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48 was built the same day, in three slices. Matt's expansion review of 2026-10-31 added twelve missing stories for work no story covered: E1-S29, E4-S27, E5-S27 to E5-S30, E9-S28, E9-S29 and E11-S54 to E11-S57. Matt's request of 2026-11-01 to run the live server on Linux added E11-S58, built the same day. Matt's deck-page question of 2026-11-02 added E5-S31, built the same day. Recounted 2026-11-02: E7-S33 (built 2026-11-02) was missing from the E7 row. The gauntlet design of 2026-11-02 added E3-S28 to E3-S31; E3-S28 and E3-S29 were built the same day, and E3-S30 and E3-S31 are missing. Later on 2026-11-02 the first slices of E5-S27 (Shopping's Baskets), E5-S28 (Build decks together) and E9-S29 (tutors on the Stats tab) made them partial, as the first slices of E1-S29 (the card viewer's decks line) and E5-S30 (the Wishlist page's short decks) made them, and E11-S56 (an empty space's start) was built. Matt's report of 2026-11-02 that the Against popular decks box is too wide added E3-S32, missing. On 2026-11-03 Matt decided E5-S29 is wanted (it stays missing, now ready) and E11-S54 and E4-S27 aren't (not wanted).
 
 ---
 
@@ -1494,7 +1494,7 @@ Compatibility: existing v1 aggregate counters remain explicitly labelled legacy.
 
 Rules: [Wizards' current Comprehensive Rules](https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt), checked via [the official rules page](https://magic.wizards.com/en/rules) on 2026-10-29, keep damage from each commander separate (903.10a and 702.124d); stable own-source identities also cover control changes. The counter is bookkeeping, not a card-rules engine. Actual browser/device and Commander-night acceptance remain separate; E2-S22 owns the household hardware check.
 
-**E4-S27** · User1 · could · S · missing
+**E4-S27** · User1 · wont · S · not_wanted
 
 As a player who packed two decks for a game at home, I want Deck Lab to offer to record the result the next time I open it, so that the Game log gets filled without my remembering to open it.
 
@@ -1503,9 +1503,7 @@ As a player who packed two decks for a game at home, I want Deck Lab to offer to
 - Given the two decks aren't both the viewer's to see, then no notice is shown.
 - Given nothing was packed, then nothing changes.
 
-Review note: needs Matt first. The Game log held no games on 2026-10-31, though the life counters, pod records, sideboard plans, tonight's pairs and last played all rest on it; Matt is to ask the household whether games at home happen and go unrecorded. If games at home are rare, this story isn't wanted.
-
-Gap: nothing links packing to recording. The Packing plan's ticks are on the server (`lib/api/assembly_ticks.py`), and the arrival notices (E6-S19, `lib/api/arrivals.py`) are the pattern for a dismissable per-player notice. First slice, once decided: the notice from the last packing session, on the library.
+Decided (Matt, 2026-11-03): recording games isn't necessary, so nothing prompts for it. The Game log stays as it is, for whoever chooses to use it; features that read it (last played, tonight's pairs, pod records) stay empty without games.
 
 ---
 
@@ -1949,13 +1947,15 @@ Built (2026-11-02): the first slice. GET `/api/shopping/combined?decks=ID,ID[,..
 
 **E5-S29** · Matt · could · S · missing
 
-As a buyer reading a shop's price, I want to see what a queued card's price and stock were on earlier days, so that I can tell a usual price from a dear one before ordering.
+As a buyer reading a shop's price, I want to see what a queued card's price and stock were on earlier days, so that I can tell whether its price is trending up or down, and a usual price from a dear one, before ordering.
 
 - Given a queued card the nightly snapshot has checked more than once, when I open its row on Shopping, then it shows the dated prices and stock seen at each shop over the kept period (each day's reading kept 90 days), lowest first.
 - Given the card leaves the queue (bought or removed), then its history goes with the next prune; nothing is ever kept for cards in the collection.
 - Given no history, then the row says only today's reading, as now.
 
-Review note: needs Matt first. E5-S21 rules out tracking owned cards' prices; this is only for cards still to buy, and Matt is to say whether even that is wanted.
+Decided (Matt, 2026-11-03): wanted, to see whether a queued card's price is trending up or down. It stays inside E5-S21, which rules out tracking owned cards' prices: only cards still to buy have history, and it goes when they leave the queue.
+
+First slice: the nightly snapshot keeps each day's reading per shop and card name for 90 days (pruned with the queue), and `python -m decklab.lib.shops history NAME` prints it; Shopping's row comes next.
 
 Gap: `lib/shops/__init__.py` keeps one `previous` snapshot beside the current one, enough for Back in stock (E5-S19) and nothing older.
 
@@ -5241,7 +5241,7 @@ Decided (Matt, 2026-10-31): currency and shops become settings, defaulting to AU
 
 Gap: AUD is written into the table header and rate statement (`| ~AUD each |`) and appears in about 69 files under `lib/` and `web/`; `db/nightly.py` always runs the MTGMate and Games Portal snapshot.
 
-**E11-S54** · Matt · could · L · missing
+**E11-S54** · Matt · wont · L · not_wanted
 
 As the household admin, I want to be told on my phone when something I'm waiting for happens, so that a card back in stock, a delivery recorded or a finished Forge run doesn't wait until someone opens a page.
 
@@ -5250,9 +5250,7 @@ As the household admin, I want to be told on my phone when something I'm waiting
 - Given a member, then only events of their own space can reach them, and nothing about home.
 - Given the device revoked permission, or the push service refuses, then the subscription is dropped quietly and the in-app notices carry on as now.
 
-Review note: needs Matt first. He is to say whether the in-app notices (the arrival notice, Back in stock, the run pill, the restart banner) are enough; if so this story becomes not wanted.
-
-Gap: there is a web manifest but no service worker, so Web Push is new ground (a VAPID key pair in `config.json`, subscriptions in the database, a sender in the server); E5-S19's Gap line says nothing is pushed or e-mailed. First slice, once decided: the service worker and the back-in-stock notice for home admins.
+Decided (Matt, 2026-11-03): no push notices. The in-app notices (the arrival notice, Back in stock, the run pill, the restart banner) are enough.
 
 **E11-S55** · Matt · could · M · missing
 
