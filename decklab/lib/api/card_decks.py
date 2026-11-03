@@ -29,8 +29,10 @@ def _name(name):
     return name.strip()
 
 
-def _wanted(summary, name, unresolved):
-    """Copies of name in a deck's Planned list, else its Play-now list (the Considering list is neither), or 0."""
+def _lists(summary, unresolved):
+    """Each saved list's copies of every non-basic card, the Planned list first, then the Play-now list (the
+    Considering list is neither); a list that can't be read is left out."""
+    found = []
     for version in ("target", "owned"):
         if version not in summary.get("versions", ()):
             continue
@@ -38,10 +40,60 @@ def _wanted(summary, name, unresolved):
             sections = decks.load_deck(summary["id"], version)
         except (decks.DeckNotFound, decks.DeckFileError, OSError):
             continue
-        copies = pool._count_sections(sections, summary["id"], unresolved)[name]
-        if copies:
-            return copies
-    return 0
+        found.append(pool._count_sections(sections, summary["id"], unresolved))
+    return found
+
+
+def deck_use(p, summaries, names, space, sees=None, records=None):
+    """{name: {"holds", "wants", "owned", "incoming", "free"}} for each exact non-basic card name in names, in
+    space's pool p over the deck summaries (decks.list_decks()), as card_decks answers one card (uncut lists).
+
+    Each deck's lists are read at most once, however many names are asked about, so a search's shown results
+    cost one read of the space's decks. A deck the viewer may not see (sees: guard.deck_reader(); records:
+    guard.sees_home_records()) is never in holds or wants, but its copies still leave the shelf."""
+    from .inventory_views import named_holder
+    sees = guard.deck_reader() if sees is None else sees
+    records = guard.sees_home_records() if records is None else records
+    use, holding, unresolved, read = {}, {}, {}, {}
+    for name in names:
+        holds, held = [], 0
+        for deck in p.in_use:
+            copies = deck.cards[name]
+            if not copies:
+                continue
+            held += copies
+            holding.setdefault(name, set()).add(deck.id)
+            if named_holder(deck.id, sees, records):
+                holds.append({"id": deck.id, "title": deck.title, "why": deck.why, "copies": copies})
+        holds.sort(key=lambda d: (d["why"] != "built", d["title"].casefold(), d["id"]))
+        incoming = sum(qty for _, qty in p.on_the_way.get(name, []))
+        owned = max(0, p.owned[name] - incoming)
+        use[name] = {"holds": holds, "wants": [], "owned": owned, "incoming": incoming,
+                     "free": max(0, owned - held)}
+    order = {"building": 0, "idea": 1}
+    for summary in summaries:
+        deck_id = summary["id"]
+        if summary.get("space", spaces.HOME) != space or summary.get("error"):
+            continue
+        try:
+            kind = spaces.split_deck_id(deck_id)[1]
+        except ValueError:
+            continue
+        # Deck files only: a product's list is what came in the box, not a want; an intact one holds.
+        if kind not in decks.KINDS or not sees(summary):
+            continue
+        for name in use:
+            if deck_id in holding.get(name, ()):
+                continue
+            if deck_id not in read:
+                read[deck_id] = _lists(summary, unresolved)
+            copies = next((counts[name] for counts in read[deck_id] if counts[name]), 0)
+            if copies:
+                use[name]["wants"].append({"id": deck_id, "title": summary.get("title") or deck_id,
+                                           "status": summary.get("status"), "copies": copies})
+    for found in use.values():
+        found["wants"].sort(key=lambda d: (order.get(d["status"], 2), d["title"].casefold(), d["id"]))
+    return use
 
 
 def card_decks(name, space=None):
@@ -56,7 +108,6 @@ def card_decks(name, space=None):
     400 for a bad name, 404 for one that isn't a card, 403 for a space whose inventory the viewer may not see
     (the same 403 for one that doesn't exist), 409 when the pool can't be read, 503 without card data."""
     from .collection import space_param
-    from .inventory_views import named_holder
     name = _name(name)
     space = space_param(space)
     guard.require_sees_inventory(space)
@@ -76,38 +127,9 @@ def card_decks(name, space=None):
         if space == spaces.HOME and not guard.sees_home_records():
             raise ApiError(409, "The collection couldn't be read.") from None
         raise ApiError(409, f"The collection couldn't be read: {_public(error)}") from None
-    sees, records = guard.deck_reader(), guard.sees_home_records()
-    holds, holding, held = [], set(), 0
-    for deck in p.in_use:
-        copies = deck.cards[exact]
-        if not copies:
-            continue
-        held += copies
-        holding.add(deck.id)
-        if named_holder(deck.id, sees, records):
-            holds.append({"id": deck.id, "title": deck.title, "why": deck.why, "copies": copies})
-    holds.sort(key=lambda d: (d["why"] != "built", d["title"].casefold(), d["id"]))
-    wants, unresolved = [], {}
-    order = {"building": 0, "idea": 1}
-    for summary in summaries:
-        deck_id = summary["id"]
-        if summary.get("space", spaces.HOME) != space or summary.get("error") or deck_id in holding:
-            continue
-        try:
-            kind = spaces.split_deck_id(deck_id)[1]
-        except ValueError:
-            continue
-        # Deck files only: a product's list is what came in the box, not a want; an intact one holds.
-        if kind not in decks.KINDS or not sees(summary):
-            continue
-        copies = _wanted(summary, exact, unresolved)
-        if copies:
-            wants.append({"id": deck_id, "title": summary.get("title") or deck_id, "status": summary.get("status"),
-                          "copies": copies})
-    wants.sort(key=lambda d: (order.get(d["status"], 2), d["title"].casefold(), d["id"]))
-    incoming = sum(qty for _, qty in p.on_the_way.get(exact, []))
-    owned = max(0, p.owned[exact] - incoming)
+    found = deck_use(p, summaries, [exact], space)[exact]
+    holds, wants = found["holds"], found["wants"]
     answer.update(holds=holds[:MAX_DECKS], wants=wants[:MAX_DECKS],
                   more=len(holds) > MAX_DECKS or len(wants) > MAX_DECKS,
-                  owned=owned, incoming=incoming, free=max(0, owned - held))
+                  owned=found["owned"], incoming=found["incoming"], free=found["free"])
     return answer

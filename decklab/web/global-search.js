@@ -4,7 +4,8 @@ One search from any page, over GET /api/search?q=: the decks the viewer may see,
 (with free and in-use counts, as the Collection page counts them) and every other Scryfall card, in that order,
 about 5 of each with a See all (Decks: the library filtered by title; In your collection: the Collection page's
 search; Other cards: the card viewer over up to 50 matches). The server leaves out what the viewer may not
-see, so nothing here filters or names anything itself.
+see, so nothing here filters or names anything itself. To a viewer who may see the space's inventory, a card
+result also says its deck use in short form ("in 2 decks · 1 free", E1-S29); a basic land's "in decks not tracked".
 
   A search field before the avatar in the lab from 1000 px and the casual header from 600 px (300 px on the
   iPad in portrait, 16 px text so iOS doesn't zoom), its results in a panel under it; under 600 px, and on a
@@ -233,16 +234,29 @@ function gsItem(box, group, item) {
     return el("a", { class: "gs-item gs-pick", href: deckHref(item.id), onclick: () => gsDone(box) },
       el("span", { class: "gs-name", text: item.title }), meta ? el("span", { class: "gs-meta", text: meta }) : null);
   }
-  const meta = group.id === "collection" ? gsCounts(item) : (item.card && item.card.type_line) || "";
+  const meta = group.id === "collection" ? gsCounts(item)
+    : [gsUse(item), (item.card && item.card.type_line) || ""].filter(Boolean).join(" · ");
   return el("button", { type: "button", class: "gs-item gs-pick", disabled: item.card ? null : true,
     onclick: (e) => { if (item.card) openCard(item.card, e.currentTarget); } },
   el("span", { class: "gs-name", text: item.name }), meta ? el("span", { class: "gs-meta", text: meta }) : null);
 }
 
-/** "3 free · 2 in decks · 1 on the way"; a tracked basic land has only its copies. */
+/** A card's deck use in short form (E1-S29, the card viewer's use line shortened): "in 2 decks · 1 free",
+ * "in no decks · none free"; a basic land "in decks not tracked", as the Card list says; "" when the server
+ * sent none (a viewer outside the space's inventory, or a deck list it couldn't read). */
+function gsUse(item) {
+  if (item.basic === true) return "in decks not tracked";
+  if (item.decks == null) return "";
+  const decks = item.decks ? `in ${plural(item.decks, "deck")}` : "in no decks";
+  return `${decks} · ${item.free ? `${num(item.free)} free` : "none free"}`;
+}
+
+/** "in 2 decks · 3 free · 1 on the way" ("3 free · 2 in decks" without the decks' count); a tracked basic land
+ * has only its copies, its copies in decks not tracked. */
 function gsCounts(item) {
-  const parts = item.basic || item.free == null ? [`${item.owned} owned`]
-    : [`${item.free} free`, item.in_use ? `${item.in_use} in decks` : null];
+  const parts = item.basic || item.free == null ? [`${item.owned} owned`, item.basic ? "in decks not tracked" : null]
+    : item.decks != null ? [gsUse(item)]
+      : [`${item.free} free`, item.in_use ? `${item.in_use} in decks` : null];
   if (item.incoming) parts.push(`${item.incoming} on the way`);
   return parts.filter(Boolean).join(" · ");
 }

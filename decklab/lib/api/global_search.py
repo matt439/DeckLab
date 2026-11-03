@@ -14,6 +14,12 @@ Decided (Matt, 2026-10-31): three sources, grouped in this order:
 - "cards" ("Other cards"): every Scryfall card in the local card index (cards.search_names, paper cards),
   leaving out every name the viewer's collection holds, so an owned card never shows as another card.
 
+To a viewer who may see the space's inventory, each card shown under "collection" and "cards" also carries
+its deck use in short form (E1-S29): "decks", how many of the space's decks the viewer may see hold or want
+it (card_decks.deck_use, the card viewer's line), and under "cards" its "free" copies (none: it isn't
+owned) and "basic". A basic land has no "decks": its copies in decks aren't tracked. A deck the viewer may
+not see is never counted. Only the results shown are worked out, and to anyone else the fields are absent.
+
 Each group gives at most `limit` items (5 by default), its "total" (counted up to TOTAL_CAP) and "more".
 With `group`, only that group comes back, up to 50 items (its See all). The text is at most MAX_QUERY
 characters; blank text answers empty groups. Nothing here names a space, person or deck the viewer can't
@@ -129,7 +135,7 @@ def _collection(space, key, limit):
     except (ValueError, OSError, csv.Error):
         group = _group("collection", [], 0, limit)
         group.update(space=space, error=UNREADABLE)
-        return group, set()
+        return group, set(), None
     sees = guard.deck_reader()
     names = set(p.owned) | set(special) | set(special_incoming)
     matched = []
@@ -151,7 +157,29 @@ def _collection(space, key, limit):
                       "card": _card_json(card, _shown_printing(card)) if card else None})
     group = _group("collection", items, len(matched), limit)
     group["space"] = space
-    return group, names
+    return group, names, p
+
+
+def _deck_use(space, p, groups):
+    """Each shown card's short deck use (the module's docstring), for an inventory reader of space; an
+    unreadable deck list leaves the fields out."""
+    from .card_decks import deck_use
+    shown = [item for group in groups if group["id"] in ("collection", "cards") for item in group["items"]]
+    for item in shown:
+        if "basic" not in item:
+            item["basic"] = decks.is_basic_land(item["name"])
+    names = sorted({item["name"] for item in shown if not item["basic"]})
+    if not names:
+        return
+    try:
+        use = deck_use(p, decks.list_decks(), names, space)
+    except (ValueError, OSError, csv.Error, decks.DeckFileError):
+        return
+    for item in shown:
+        found = None if item["basic"] else use.get(item["name"])
+        if found is not None:
+            item["decks"] = len(found["holds"]) + len(found["wants"])
+            item.setdefault("free", found["free"])
 
 
 def _cards(q, skip, limit):
@@ -176,16 +204,18 @@ def search_view(q=None, group=None, limit=None):
     key = cards.fold(q)
     profile, is_script = _viewer()
     wanted = (group,) if group else GROUPS
-    groups, owned = [], set()
+    groups, owned, p = [], set(), None
     space = _own_space(profile, is_script)
     if "decks" in wanted and space is not None:
         groups.append(_decks(space, q, limit))
     if space is not None and not guard.sees_inventory(space):
         space = None
     if space is not None and ("collection" in wanted or "cards" in wanted):
-        found, owned = _collection(space, key, limit)
+        found, owned, p = _collection(space, key, limit)
         if "collection" in wanted:
             groups.append(found)
     if "cards" in wanted:
         groups.append(_cards(q, owned, limit))
+    if p is not None:
+        _deck_use(space, p, groups)
     return {"q": q, "groups": groups}
