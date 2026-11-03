@@ -386,10 +386,24 @@ def want(what=None):
     while True:
         path = where / f"want-{os.getpid()}-{next(_want_numbers)}.lock"
         fd = _open(path)
-        if _lock(fd):
+        if _lock(fd) and _still_there(fd, path):
             _note(fd, None, what)
             return Want(path, fd)
-        os.close(fd)            # (a name this process can't have used: try the next)
+        _drop(fd)               # (a name this process can't have used, or one waiting() deleted
+                                # before it was locked: try the next)
+
+
+def _still_there(fd, path):
+    """Whether path is still fd's file. Between want()'s open and its lock, waiting() may find
+    the new file unlocked and delete it (on Windows it can't: the file is open), and a lock on
+    a deleted file is a want nobody sees."""
+    if sys.platform == "win32":
+        return True
+    try:
+        mine, named = os.fstat(fd), os.stat(path)
+    except OSError:
+        return False
+    return (mine.st_dev, mine.st_ino) == (named.st_dev, named.st_ino)
 
 
 def waiting(exclude=None):
