@@ -82,6 +82,23 @@ class GlobalSearchUiTests(unittest.TestCase):
           assert(box().status.textContent.includes("3 results"));
         ''')
 
+    def test_results_say_their_deck_use_in_short_form(self):
+        self.run_js(r'''
+          start(); box().input.focus(); await type("elv");
+          const data = structuredClone(ANSWER);
+          Object.assign(data.groups[1].items[0], { decks: 2, free: 1 });
+          data.groups[1].items.push({ name: "Plains", owned: 3, incoming: 0, in_use: null, free: null, basic: true, card: null });
+          data.groups[2].items = [{ name: "Elvish Mystic", decks: 1, free: 0, basic: false, card: MYSTIC },
+            { name: "Lone Card", decks: 0, free: 0, basic: false, card: { name: "Lone Card", type_line: "Instant" } },
+            { name: "Forest", basic: true, card: { name: "Forest", type_line: "Basic Land — Forest" } },
+            { name: "Hidden", card: { name: "Hidden", type_line: "Sorcery" } }];
+          await answer(data);
+          const meta = box().results.querySelectorAll(".gs-item").slice(1).map((b) => b.querySelector(".gs-meta").textContent);
+          same(meta, ["in 2 decks · 1 free · 1 on the way", "3 owned · in decks not tracked",
+            "in 1 deck · none free · Creature — Elf Druid", "in no decks · none free · Instant",
+            "Basic Land — Forest", "Sorcery"]);
+        ''')
+
     def test_collection_see_all_goes_to_the_collection_search(self):
         self.run_js(r'''
           start("matt"); box().input.focus(); await type("sol");
