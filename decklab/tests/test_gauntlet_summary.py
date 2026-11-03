@@ -148,7 +148,8 @@ class SummaryStateTests(SummaryTestCase):
         self.assertNotIn("file", found["hardest"][0]["source"])
         self.assertIn("sampled opponents only", found["note"])
         self.assertEqual(set(found), {"deck", "format", "state", "playing", "overall", "played", "of", "games",
-                                      "tally", "hardest", "updated", "sample", "note", "notes", "build_command"})
+                                      "tally", "hardest", "updated", "sample", "note", "notes", "build_command", "before",
+                                      "compare", "older"})
 
     def test_a_commander_deck_with_no_standard_decks(self):
         found = self.summary("matt", ELVES)

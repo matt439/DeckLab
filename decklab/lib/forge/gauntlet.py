@@ -23,12 +23,20 @@ range covers those sampled opponents only.
                             the run (field.run_field over the sample); its note
     view(deck_entry, sample, keep=None)
                             the deck against the sample: per opponent, per group and overall
+    compare(deck_entry, before_entry, sample, keep_now, keep_before)
+                            two lists' figures over the opponents both have rates against (E3-S34)
+    has_notes(deck_entry, space), notes_keys(deck_entry, space, limit)
+                            whether a list has run notes in the space, and the keys its runs played
+    older(deck_entry, sample, keep, today_keys, space)
+                            the list's results under an older engine, pilot or catalogue (E3-S34):
+                            why they aren't shown, and the newest single-engine group's figure
 
 The catalogue and sample modules (decklab/lib/gauntlet) are reached only through the small
 wrappers below, which the tests replace."""
+import json
 from pathlib import Path
 
-from . import common, field, lists, seqstats
+from . import common, engine, field, lists, saved, seqstats
 from .common import ForgeError
 
 RESULTS_DIR = common.DATA_DIR / "gauntlet" / "results"
@@ -246,9 +254,13 @@ def run(deck_entry, chosen, budget=DEFAULT_BUDGET, inflight=None, progress=None,
             raise common.Stopped("Stopped")
         if progress is not None:
             progress(done, total, detail)
+    # Which sample the run played (E3-S34): nothing reads it yet; a later slice can tell a rebuilt
+    # standard sample's runs apart.
+    extra = {"sample": chosen.get("id"), "catalogue_sha": chosen.get("catalogue_sha"),
+             "standard": chosen.get("id") == standard(chosen["format"])["id"]}
     return field.run_field(deck_entry, budget, by=by, progress=watched, results_dir=folder, pool=pool,
                            local=local, seed_base=seed_base, log_dir=log_dir, log_every=log_every,
-                           inflight=inflight, space=space, opponent_entries=opponents)
+                           inflight=inflight, space=space, opponent_entries=opponents, note_extra=extra)
 
 
 # ============================================================ the view
@@ -349,15 +361,14 @@ def view(deck_entry, chosen, keep=None, cat=None):
     _check(deck_entry, chosen)
     fmt = chosen["format"]
     cat = cat if cat is not None else catalogue(fmt)
-    pairs, missing = _picked(cat, chosen.get("decks") or [])
+    missing, members = _members(deck_entry, chosen, keep, cat)
     notes = []
     if missing:
         notes.append(f"{len(missing)} of the sample's decks aren't playable in the catalogue now, so they're "
                      "left out.")
     if chosen.get("catalogue_sha") != cat.get("sha"):
         notes.append("The catalogue was rebuilt after this sample was drawn.")
-    rows = field._rows(deck_entry, [e for _, e in pairs], results_dir(), keep)
-    members = [(deck, row) for (deck, _), row in zip(pairs, rows)]
+    rows = [row for _, row in members]
     opponents = [_opponent(deck, row) for deck, row in members]
     opponents.sort(key=lambda o: (o["rate"] is None, (o["rate"] or {}).get("low") or 0, o["title"].casefold()))
     dates = [o["updated"] for o in opponents if isinstance(o.get("updated"), str)]
@@ -366,6 +377,149 @@ def view(deck_entry, chosen, keep=None, cat=None):
             "played": sum(1 for r in rows if r["n"]), "of": len(members), "tally": _tally(opponents),
             "updated": max(dates) if dates else None, "games": sum(r["n"] for r in rows),
             "note": CAVEAT.format(m=len(members)), "notes": notes}
+
+
+def _members(deck_entry, chosen, keep, cat):
+    """([sample ids not playable in cat], [(catalogue entry, field._rows row)] in the sample's order)."""
+    pairs, missing = _picked(cat, chosen.get("decks") or [])
+    rows = field._rows(deck_entry, [e for _, e in pairs], results_dir(), keep)
+    return missing, [(deck, row) for (deck, _), row in zip(pairs, rows)]
+
+
+# ============================================================ before and after (E3-S34)
+
+def _figure(group):
+    return {"rate": group["rate"], "low": group["low"], "high": group["high"]}
+
+
+def _rated(row):
+    return not row["not_meaningful"] and _rate(row["numbers"]) is not None
+
+
+def compare(deck_entry, before_entry, chosen, keep_now=None, keep_before=None, cat=None):
+    """Two lists of a deck against the same sample: {"same": N, "ids": [the N opponents' ids],
+    "before": {"rate", "low", "high"}, "now": {...}}, each figure the equal-weight average over
+    those N opponents only (the ones both lists have rates against); None when there are none.
+    No claim is made about the difference."""
+    _check(deck_entry, chosen)
+    cat = cat if cat is not None else catalogue(chosen["format"])
+    _, now = _members(deck_entry, chosen, keep_now, cat)
+    _, before = _members(before_entry, chosen, keep_before, cat)
+    rated = {deck["id"] for deck, row in before if _rated(row)}
+    common_ids = [deck["id"] for deck, row in now if _rated(row) and deck["id"] in rated]
+    if not common_ids:
+        return None
+    pick = set(common_ids)
+    return {"same": len(common_ids), "ids": common_ids,
+            "before": _figure(_group("all", "", [m for m in before if m[0]["id"] in pick])),
+            "now": _figure(_group("all", "", [m for m in now if m[0]["id"] in pick]))}
+
+
+def has_notes(deck_entry, space="home"):
+    """True when a list ({"card_sha", "kind"} will do) has gauntlet run notes in the space."""
+    return field._notes_path(deck_entry, results_dir(), space=space).exists()
+
+
+def notes_keys(deck_entry, space="home", limit=300):
+    """The matchup keys the list's gauntlet runs in the space played (its run notes, newest run
+    first), at most limit distinct ones; [] when it has none. Only this space's notes are read."""
+    try:
+        found = json.loads(field._notes_path(deck_entry, results_dir(), space=space).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    runs = found.get("runs") if isinstance(found, dict) else None
+    out, seen = [], set()
+    for note in reversed(runs if isinstance(runs, list) else []):
+        for key in (note.get("per_opponent") or {}) if isinstance(note, dict) else ():
+            if isinstance(key, str) and key not in seen:
+                seen.add(key)
+                out.append(key)
+                if len(out) >= limit:
+                    return out
+    return out
+
+
+REASONS = ("forge", "settings", "catalogue", "pilot")   # older()'s reasons; on a tie the first
+
+
+def _opponent_side(result, card_sha):
+    """(a stored result's side that isn't the list's, its newest seen_as id), or (None, None)."""
+    for side in result.get("sides") or []:
+        if isinstance(side, dict) and side.get("card_sha") != card_sha:
+            seen = [s for s in side.get("seen_as") or [] if isinstance(s, dict)]
+            return side, (seen[-1].get("id") if seen else side.get("id"))
+    return None, None
+
+
+def _why(result, side, opponent, eng, deck_entry):
+    """Why a stored result isn't under today's key: "catalogue" (the opponent's list changed in a
+    rebuild), "forge" (another Forge release or engine kind), "settings" (other engine settings or
+    card-script overrides) or "pilot" (the AI profile or its file changed)."""
+    if side.get("card_sha") != opponent["card_sha"]:
+        return "catalogue"
+    stored = result.get("engine") if isinstance(result.get("engine"), dict) else {}
+    now = engine._fields(eng)
+    if any(stored.get(k) != now.get(k) for k in ("forge", "kind")):
+        return "forge"
+    if any(stored.get(k) != now.get(k) for k in engine.ENGINE_FIELDS if k != "overrides"):
+        return "settings"
+    try:
+        overrides = engine._matchup_overrides(eng, [deck_entry, opponent])
+    except Exception:           # the overrides can't be told now: they aren't the reason claimed
+        overrides = stored.get("overrides")
+    return "settings" if stored.get("overrides") != overrides else "pilot"
+
+
+def _when(result):
+    return str(result.get("updated") or "")
+
+
+def older(deck_entry, chosen, keep=None, cat=None, today_keys=(), space="home", limit=300):
+    """The list's saved results against the sample's decks that today's keys don't find (an older
+    Forge, other settings, another pilot, or an opponent's list changed in a rebuild), from its
+    run notes in the space (at most limit keys): None when there are none; {"reason": "unknown",
+    ...} when today's engine can't be confirmed; else {"reason", "opponents", "of", "updated",
+    "overall"} of the newest group of one engine (the newest result per opponent; "overall" its
+    equal-weight figure {"rate", "low", "high"}, None without a rate). Several engines are never
+    mixed into one figure. keep as view's; today_keys the view's keys, left out."""
+    _check(deck_entry, chosen)
+    cat = cat if cat is not None else catalogue(chosen["format"])
+    pairs, _ = _picked(cat, chosen.get("decks") or [])
+    by_id = {deck["id"]: (deck, e) for deck, e in pairs}
+    skip = set(today_keys or ())
+    stale = []
+    for key in notes_keys(deck_entry, space, limit):
+        if key in skip:
+            continue
+        result = saved.load(key, results_dir())
+        if result is None or (keep is not None and not keep(result)):
+            continue
+        side, deck_id = _opponent_side(result, deck_entry["card_sha"])
+        if side is not None and deck_id in by_id:
+            stale.append((result, side, deck_id))
+    if not stale:
+        return None
+    eng = engine.today()
+    if not eng.get("complete"):
+        return {"reason": "unknown", "opponents": None, "of": len(pairs), "updated": None, "overall": None}
+    groups = {}
+    for found in stale:
+        stored = found[0].get("engine") if isinstance(found[0].get("engine"), dict) else {}
+        groups.setdefault(engine._canonical(stored), []).append(found)
+    newest = max(groups.values(), key=lambda group: max(_when(r) for r, _, _ in group))
+    picked = {}
+    for result, side, deck_id in newest:
+        if deck_id not in picked or _when(result) > _when(picked[deck_id][0]):
+            picked[deck_id] = (result, side)
+    reasons = [_why(r, s, by_id[i][1], eng, deck_entry) for i, (r, s) in picked.items()]
+    reason = max(REASONS, key=lambda name: (reasons.count(name), -REASONS.index(name)))
+    members = [(by_id[i][0], field._row(deck_entry, by_id[i][1],
+                                        field._numbers({"key": r.get("key")}, deck_entry, r)))
+               for i, (r, _) in picked.items()]
+    group = _group("all", "", members)
+    dates = [_when(r) for r, _ in picked.values() if r.get("updated")]
+    return {"reason": reason, "opponents": len(picked), "of": len(pairs), "updated": max(dates) if dates else None,
+            "overall": _figure(group) if group["rate"] is not None else None}
 
 
 def verdict(lead):

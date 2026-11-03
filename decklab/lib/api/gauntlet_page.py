@@ -15,7 +15,9 @@ own results folder, so Rankings and the ratings never see its games).
                         "error", "catalogue" (None until one is built: "build_command" says how),
                         "sample", "standard" (the standard sample: {"id", "size", "tiers"}),
                         "is_standard", "options", "budgets", "default_budget", "default_size" and
-                        "forge". With no choices it's the standard sample (E3-S33).
+                        "forge". With no choices it's the standard sample (E3-S33). For the standard
+                        sample, "before", "compare" and "older" (E3-S34, gauntlet_summary's) and each
+                        opponent's "before" and "moved"; None and False for any other sample.
     gauntlet_summary(deck_id, version="target", profile=None)
                         the deck's headline against the standard sample, from saved games only (no
                         estimate, no sample saved, nothing played; its docstring has the answer)
@@ -32,6 +34,7 @@ and no answer names another house deck. Jobs are space-scoped; a starter or stop
 space is "someone" (forge_runs._Seen.mask). Stop follows the field's run.stop rule (its starter,
 its deck's space, or an admin). Nothing here writes the database, so nothing is audited.
 """
+import contextlib
 import importlib
 import re
 import threading
@@ -42,7 +45,7 @@ from decklab.lib import jobs, permissions
 from decklab.lib.gauntlet import is_gauntlet_id
 from decklab.lib.gauntlet.sample import STANDARD
 
-from . import common, field_page, forge_runs, guard
+from . import common, field_page, forge_runs, gauntlet_before, guard
 from .common import MAX_BODY, MAX_EDIT_BODY, ApiError, _keys, _parse_body, _public, _SHA_RE
 from .library import check_deck_id
 from .settings import _writer
@@ -221,9 +224,17 @@ def catalogue_view(format="commander"):
 
 # ============================================================ the answer
 
+def _side_ids(side):
+    """The deck ids a stored side was played as: its own "id" (a test's) and its seen_as ids (the
+    runner's, runner._seen)."""
+    ids = {side.get("id")} | {s.get("id") for s in side.get("seen_as") or [] if isinstance(s, dict)}
+    return {i for i in ids if i is not None}
+
+
 def _keep(entry):
     """Saved results the view may use: this list's games against a gauntlet deck (by card_sha, so no
-    house deck's id or title is ever read from them)."""
+    house deck's title is ever read from them). The other side's ids must all be gauntlet ids, and
+    there must be one (E3-S34 fixed this: real sides keep their ids under seen_as only)."""
     sha = entry["card_sha"]
 
     def keep(result):
@@ -232,8 +243,21 @@ def _keep(entry):
             return False
         mine = [s for s in sides if s.get("card_sha") == sha]
         other = [s for s in sides if s.get("card_sha") != sha]
-        return bool(mine) and len(other) <= 1 and all(is_gauntlet_id(s.get("id")) for s in other)
+        if not mine or len(other) > 1:
+            return False
+        return all(bool(ids) and all(is_gauntlet_id(i) for i in ids) for ids in map(_side_ids, other))
     return keep
+
+
+def _held(forge):
+    """forge.engine.held(): today's engine worked out once for the request (a stand-in without it: none)."""
+    held = getattr(getattr(forge, "engine", None), "held", None)
+    return held() if held is not None else contextlib.nullcontext()
+
+
+def _kept(forge, g, summary, entry, standard, cat, found):
+    """gauntlet_before.fields for the standard sample's view found."""
+    return gauntlet_before.fields(forge, g, summary, entry, standard, cat, found, _keep)
 
 
 def _sees_job(seen, job):
@@ -319,11 +343,13 @@ def _base(forge, entry, fmt, seen):
             "catalogue": None, "sample": None, "standard": None, "is_standard": False, "opponents": [], "groups": {},
             "games": 0, "note": None, "notes": [], "status": "none", "job": None, "notice": None, "error": None,
             "budgets": {}, "overall": None, "played": 0, "of": 0,
-            "tally": {"ahead": 0, "even": 0, "behind": 0, "unsettled": 0}, "updated": None}
+            "tally": {"ahead": 0, "even": 0, "behind": 0, "unsettled": 0}, "updated": None,
+            "before": None, "compare": None, "older": None}
 
 
-def _answer(forge, g, entry, choices, seen):
-    """gauntlet_view's answer for entry and the request's choices, as seen may see it."""
+def _answer(forge, g, entry, choices, seen, summary=None):
+    """gauntlet_view's answer for entry and the request's choices, as seen may see it (summary,
+    the deck's library summary, for the standard sample's before-figure: none without it)."""
     fmt = _format(entry)
     out = _base(forge, entry, fmt, seen)
     job, snap = _find_job(entry, choices["sample"], seen)
@@ -343,16 +369,26 @@ def _answer(forge, g, entry, choices, seen):
                      "saved": bool(choices["sample"]) or job is not None or _is_saved(g, chosen["id"])}
     out.update(standard=standard_json(standard), is_standard=chosen["id"] == standard["id"])
     if chosen.get("decks"):
+        kept = None
         try:
-            found = g.view(entry, chosen, keep=_keep(entry), cat=cat)
+            with _held(forge):
+                found = g.view(entry, chosen, keep=_keep(entry), cat=cat)
+                if out["is_standard"] and summary is not None:
+                    kept = _kept(forge, g, summary, entry, standard, cat, found)
         except (ValueError, forge.ForgeError) as e:
             raise ApiError(400, _public(e)) from None
         except Exception:
             common._log(f"The gauntlet view of {entry['id']} can't be worked out:\n{traceback.format_exc()}")
             raise ApiError(500, NO_VIEW) from None
-        out.update(opponents=[dict(o, source=_source(o.get("source"))) for o in found.get("opponents") or []],
+        rows = (kept or {}).get("rows") or {}
+        out.update(opponents=[dict(o, source=_source(o.get("source")),
+                                   before=(rows.get(o.get("id")) or {}).get("before"),
+                                   moved=bool((rows.get(o.get("id")) or {}).get("moved")))
+                              for o in found.get("opponents") or []],
                    groups=found.get("groups") or {}, games=found.get("games") or 0, note=found.get("note"),
-                   notes=list(found.get("notes") or []))
+                   notes=list(found.get("notes") or []) + list((kept or {}).get("notes") or []))
+        if kept:
+            out.update(before=kept["before"], compare=kept["compare"], older=kept["older"])
         played = int(found.get("played") or 0)      # the headline's (E3-S33), as the summary gives it
         out.update(overall=found.get("overall") if played else None, played=played, of=int(found.get("of") or 0),
                    tally=found.get("tally") or out["tally"], updated=found.get("updated"))
@@ -391,7 +427,7 @@ def gauntlet_view(deck_id, version="target", sample=None, size=None, colours=Non
     summary, entry = field_page._field_entry(forge, deck_id, version or "target")
     g = _gauntlet(forge)
     choices = _choices(_format(entry), sample, size, colours, styles, tiers)
-    return _answer(forge, g, entry, choices, forge_runs._Seen())
+    return _answer(forge, g, entry, choices, forge_runs._Seen(), summary)
 
 
 # ============================================================ the summary (E3-S33)
@@ -435,7 +471,9 @@ def gauntlet_summary(deck_id, version="target", profile=None):
 
         {"deck": {"id", "version"}, "format",
          "state": "no_catalogue" | "untested" (no opponent has games) | "partial" | "done" (every
-                  opponent has games),
+                  opponent has games) | "stale_list" (no games for this list, but an earlier saved
+                  list has standard games: "before") | "stale_older" (no games under today's keys,
+                  but older-engine, other-pilot or rebuilt-catalogue results exist: "older"),
          "playing": None | {"status": "queued"|"running", "done", "total", "standard": bool},
          "overall": None | forge.gauntlet.view's "overall" ({"rate", "low", "high", "spread",
                     "note", "opponents", "games", ...}),
@@ -444,7 +482,19 @@ def gauntlet_summary(deck_id, version="target", profile=None):
          "updated": the newest result's time or None, "sample": {"id", "size", "tiers"} or None,
          "note": the view's caveat (these sampled opponents only) or None,
          "notes": the view's notes, "build_command": the catalogue's build command for an admin
-                  (None for anyone else)}
+                  (None for anyone else),
+         E3-S34 (gauntlet_before):
+         "before": None | {"rate", "low", "high", "played", "of", "games", "updated"}: the previous
+                   saved list's figure with today's engine (its most recent earlier revision whose
+                   playable list has standard games),
+         "compare": None | {"same": N, "before": {"rate", "low", "high"}, "now": {...}, "moved"}:
+                    both lists over the N opponents both have rates against ("moved": how many of
+                    them have ranges that don't overlap); only when N >= 1,
+         "older": None | {"reason": "forge" | "settings" | "pilot" | "catalogue" | "unknown",
+                  "opponents", "of", "updated", "overall": {"rate", "low", "high"} | None}: the
+                  list's results today's keys don't find, the newest single-engine group}
+
+    No revision number, who saved a revision, message, run starter or other house deck is in it.
 
     ApiError 404 first for a deck the viewer may not see (the raw id, an alias included, before it's
     resolved), then deck_view's for the id or version, 400 for a Beginner Box half, 500 when the
@@ -463,7 +513,7 @@ def gauntlet_summary(deck_id, version="target", profile=None):
            "playing": None, "overall": None, "played": 0, "of": 0, "games": 0,
            "tally": {"ahead": 0, "even": 0, "behind": 0, "unsettled": 0}, "hardest": [], "updated": None,
            "sample": None, "note": None, "notes": [],
-           "build_command": _build_command(fmt, seen)}
+           "build_command": _build_command(fmt, seen), "before": None, "compare": None, "older": None}
     try:
         cat = g.catalogue(fmt)
         standard = g.standard(fmt, cat=cat)
@@ -475,18 +525,25 @@ def gauntlet_summary(deck_id, version="target", profile=None):
         out["state"] = "untested"
         return out
     try:
-        found = g.view(entry, standard, keep=_keep(entry), cat=cat)
+        with _held(forge):
+            found = g.view(entry, standard, keep=_keep(entry), cat=cat)
+            kept = _kept(forge, g, summary, entry, standard, cat, found)
     except (ValueError, forge.ForgeError) as e:
         raise ApiError(400, _public(e)) from None
     except Exception:
         common._log(f"The gauntlet summary of {entry['id']} can't be worked out:\n{traceback.format_exc()}")
         raise ApiError(500, NO_VIEW) from None
     played, of = int(found.get("played") or 0), int(found.get("of") or 0)
+    state = "partial" if played and played < of else "done" if played else "untested"
+    if not played and kept["before"]:
+        state = "stale_list"
+    elif not played and kept["older"]:
+        state = "stale_older"
     out.update(overall=found.get("overall") if played else None, played=played, of=of,
                games=found.get("games") or 0, tally=found.get("tally") or out["tally"],
                hardest=_hardest(found.get("opponents") or []), updated=found.get("updated"),
-               note=found.get("note"), notes=list(found.get("notes") or []),
-               state="untested" if not played else "partial" if played < of else "done")
+               note=found.get("note"), notes=list(found.get("notes") or []) + kept["notes"], state=state,
+               before=kept["before"], compare=kept["compare"], older=kept["older"])
     return out
 
 
@@ -572,7 +629,7 @@ def run_gauntlet(body):
             forge_runs.COORD_JOBS.submit(key, run, rerun=True)
         except jobs.Busy as e:
             raise ApiError(503, forge_runs.MATCHUP_STOPPING if e.stopping else GAUNTLET_BUSY) from None
-    return _answer(forge, g, entry, dict(choices, sample=chosen["id"]), seen)
+    return _answer(forge, g, entry, dict(choices, sample=chosen["id"]), seen, summary)
 
 
 def stop_gauntlet(body):
@@ -597,4 +654,4 @@ def stop_gauntlet(body):
             job.wait(forge_runs.STOP_WAIT)
     if playing:
         choices["sample"] = playing[0].fn.sample["id"]
-    return _answer(forge, g, entry, choices, seen)
+    return _answer(forge, g, entry, choices, seen, summary)
