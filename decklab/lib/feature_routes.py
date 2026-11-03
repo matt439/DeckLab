@@ -73,6 +73,12 @@ def _gauntlet_view(**params):
     return gauntlet_view(**params)
 
 
+def _gauntlet_summary(**params):
+    """A deck's headline against the standard sample (api/gauntlet_page.py), saved games only."""
+    from decklab.lib.api.gauntlet_page import gauntlet_summary
+    return gauntlet_summary(**params)
+
+
 def _gauntlet_catalogue(**params):
     from decklab.lib.api.gauntlet_page import catalogue_view
     return catalogue_view(**params)
@@ -153,6 +159,7 @@ def dispatch(handler, route, query):
         ("search",): (_global_search, ("q", "group", "limit")),
         ("cards", "decks"): (_card_decks, ("name", "space")),
         ("gauntlet",): (_gauntlet_view, ("id", "version", "sample", "size", "colours", "styles", "tiers", "profile")),
+        ("gauntlet", "summary"): (_gauntlet_summary, ("id", "version", "profile")),
         ("gauntlet", "catalogue"): (_gauntlet_catalogue, ("format",)),
         ("shopping", "combined"): (_shopping_combined, ("decks",)),
     }

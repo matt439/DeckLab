@@ -1,6 +1,6 @@
 """The deck page's "Against popular decks" API (decklab/design/gauntlet.md sections 6 and 8):
-GET /api/gauntlet, GET /api/gauntlet/catalogue, POST /api/gauntlet/run and POST /api/gauntlet/stop.
-Imported when first asked for, by feature_routes.dispatch.
+GET /api/gauntlet, GET /api/gauntlet/summary, GET /api/gauntlet/catalogue, POST /api/gauntlet/run and
+POST /api/gauntlet/stop. Imported when first asked for, by feature_routes.dispatch.
 
 A gauntlet run is a coordinator job in api.forge_runs.COORD_JOBS (key
 "gauntlet:<space>:<card_sha>:<sample id>") that plays the deck's list against a saved sample of
@@ -13,7 +13,12 @@ own results folder, so Rankings and the ratings never see its games).
                         filters and not saved): forge.gauntlet.view's opponents and groups with
                         "status" ("none", "queued", "running", "done" or "error"), "job", "notice",
                         "error", "catalogue" (None until one is built: "build_command" says how),
-                        "sample", "options", "budgets", "default_budget", "default_size" and "forge"
+                        "sample", "standard" (the standard sample: {"id", "size", "tiers"}),
+                        "is_standard", "options", "budgets", "default_budget", "default_size" and
+                        "forge". With no choices it's the standard sample (E3-S33).
+    gauntlet_summary(deck_id, version="target", profile=None)
+                        the deck's headline against the standard sample, from saved games only (no
+                        estimate, no sample saved, nothing played; its docstring has the answer)
     catalogue_view(format)
                         a catalogue's public counts and credit, or "built": None
     run_gauntlet(body)  body {"profile", "id", "version"?, "budget"?, "expected_card_sha"?, "sample"?,
@@ -43,9 +48,13 @@ from .settings import _writer
 
 BUDGETS = ("fixed:50", "fixed:100", "fixed:200")
 DEFAULT_BUDGET = "fixed:100"
-SIZES = {"commander": (6, 12, 20), "constructed": (12, 24, 36)}
-DEFAULT_SIZE = {"commander": 12, "constructed": 24}      # the page's (design section 7)
-MAX_SIZE = 60
+# The page's sizes (E3-S38, Matt 2026-11-03): up to every playable deck of the chosen tiers for
+# Commander ("all"), run overnight; 60-card's catalogue is too big for "all".
+ALL = "all"
+SIZES = {"commander": (6, 12, 20, 40, ALL), "constructed": (12, 24, 36, 72, 144)}
+DEFAULT_SIZE = {"commander": 20, "constructed": 24}      # the standard sample's (lib/gauntlet/sample.STANDARD)
+MAX_SIZE = 300
+OVERNIGHT_MINUTES = 120         # a run whose high estimate is longer is an overnight run
 STYLES = ("aggro", "midrange", "control", "combo", "ramp")
 TIERS = {"commander": ("core", "upgraded", "precon"),
          "constructed": ("precon", "easy", "medium", "hard", "very hard")}
@@ -113,12 +122,17 @@ def _choices(fmt, sample=None, size=None, colours=None, styles=None, tiers=None)
     """The request's sample choices, checked: {"sample", "size", "colours", "styles", "tiers"}."""
     if sample is not None and (not isinstance(sample, str) or not SAMPLE_RE.fullmatch(sample)):
         raise ApiError(400, "sample must be a saved sample's id (sample: and 12 hexadecimal characters)")
+    every = ALL in SIZES[fmt]
     if size is None or size == "":
         size = DEFAULT_SIZE[fmt]
+    elif isinstance(size, str) and size.strip().lower() == ALL:
+        size = ALL
     elif isinstance(size, str) and size.isascii() and size.isdigit():
         size = int(size)
-    if isinstance(size, bool) or not isinstance(size, int) or not 1 <= size <= MAX_SIZE:
-        raise ApiError(400, f"size must be a number of opponents from 1 to {MAX_SIZE}")
+    if (size != ALL or not every) and (isinstance(size, bool) or not isinstance(size, int)
+                                       or not 1 <= size <= MAX_SIZE):
+        raise ApiError(400, f"size must be a number of opponents from 1 to {MAX_SIZE}"
+                       + (", or all" if every else ""))
     if colours is not None and not isinstance(colours, str):
         raise ApiError(400, "colours must be colour letters, such as WU")
     letters = (colours or "").upper()
@@ -226,24 +240,29 @@ def _source(src):
 
 
 def _budgets(forge, g, entry, chosen):
-    """{budget: {"games", "new_games", "minutes": [low, high] or None}}; {} when no plan can be
-    worked out (logged)."""
+    """{budget: {"games", "new_games", "minutes": [low, high] or None, "overnight"}}; {} when no
+    plan can be worked out (logged). One plan, at the largest budget: a fixed:N budget tops every
+    opponent up to N, so each budget's games follow from what each opponent has (an "all" sample
+    reads its saved games once, not once a budget). "overnight" is True when the high estimate is
+    over OVERNIGHT_MINUTES: the page says it's an overnight run and that the PC is kept awake."""
+    try:
+        planned = g.plan(entry, chosen, BUDGETS[-1])
+    except Exception:
+        common._log(f"The gauntlet budgets of {entry['title']} can't be worked out:\n{traceback.format_exc()}")
+        return {}
+    have = [(p["opponent"], int(p.get("have") or 0)) for p in planned.get("pairs") or []]
     out = {}
     for budget in BUDGETS:
-        try:
-            planned = g.plan(entry, chosen, budget)
-        except Exception:
-            common._log(f"The gauntlet budgets of {entry['title']} can't be worked out:\n{traceback.format_exc()}")
-            return {}
+        per = int(budget.split(":", 1)[1])
+        pairs = [(entry, opponent, per - n) for opponent, n in have if per > n]
         minutes = None
-        pairs = [(entry, p["opponent"], p["games"]) for p in planned.get("pairs") or [] if p.get("games")]
         try:
             found = forge.estimate.minutes(pairs, results_dir=g.results_dir()) if pairs else (0, 0)
             minutes = [found[0], found[1]] if found else None
         except Exception:
             common._log(f"The gauntlet run's time can't be estimated:\n{traceback.format_exc()}")
-        out[budget] = {"games": planned.get("per_opponent"), "new_games": planned.get("new_games"),
-                       "minutes": minutes}
+        out[budget] = {"games": per, "new_games": sum(games for _, _, games in pairs), "minutes": minutes,
+                       "overnight": bool(minutes) and minutes[1] > OVERNIGHT_MINUTES}
     return out
 
 
@@ -261,10 +280,12 @@ def _base(forge, entry, fmt):
     return {"deck": {k: entry[k] for k in ("id", "version", "title", "card_sha")}, "format": fmt,
             "build_command": BUILD.format(fmt=fmt), "credit": CREDIT,
             "options": {"sizes": list(SIZES[fmt]), "colours": "WUBRG", "styles": list(STYLES),
-                        "tiers": list(TIERS[fmt]), "budgets": list(BUDGETS)},
+                        "tiers": list(TIERS[fmt]), "budgets": list(BUDGETS),
+                        "overnight_minutes": OVERNIGHT_MINUTES},
             "default_budget": DEFAULT_BUDGET, "default_size": DEFAULT_SIZE[fmt], "forge": forge.status(),
-            "catalogue": None, "sample": None, "opponents": [], "groups": {}, "games": 0, "note": None,
-            "notes": [], "status": "none", "job": None, "notice": None, "error": None, "budgets": {}}
+            "catalogue": None, "sample": None, "standard": None, "is_standard": False, "opponents": [], "groups": {},
+            "games": 0, "note": None, "notes": [], "status": "none", "job": None, "notice": None, "error": None,
+            "budgets": {}}
 
 
 def _answer(forge, g, entry, choices, seen):
@@ -282,7 +303,9 @@ def _answer(forge, g, entry, choices, seen):
         job, snap = _find_job(entry, chosen["id"], seen)
     out["catalogue"] = _catalogue_json(cat)
     out["sample"] = {"id": chosen["id"], "size": chosen.get("size"), "filters": chosen.get("filters"),
-                     "decks": len(chosen.get("decks") or [])}
+                     "decks": len(chosen.get("decks") or []), "all": bool(chosen.get("all"))}
+    standard = g.standard(fmt)
+    out.update(standard=standard_json(standard), is_standard=chosen["id"] == standard["id"])
     if chosen.get("decks"):
         try:
             found = g.view(entry, chosen, keep=_keep(entry))
@@ -308,6 +331,12 @@ def _answer(forge, g, entry, choices, seen):
     return out
 
 
+def standard_json(standard):
+    """A standard sample as the answers give it: {"id", "size", "tiers"}."""
+    return {"id": standard["id"], "size": standard.get("size"),
+            "tiers": list((standard.get("filters") or {}).get("tiers") or [])}
+
+
 def gauntlet_view(deck_id, version="target", sample=None, size=None, colours=None, styles=None, tiers=None,
                   profile=None):
     """GET /api/gauntlet?id=&version=[&sample=|&size=&colours=&styles=&tiers=][&profile=]: the list
@@ -315,7 +344,8 @@ def gauntlet_view(deck_id, version="target", sample=None, size=None, colours=Non
     saved until it's played. ApiError as deck_view for the id or version (404 first for a deck the
     viewer may not see), 400 for a Beginner Box half or a choice that isn't one, 404 for a sample id
     that isn't saved, 500 when the gauntlet can't be loaded or worked out. profile is accepted for
-    the page's usual query and changes nothing."""
+    the page's usual query and changes nothing. With no choices, the sample is the standard one
+    (forge.gauntlet.standard: the default draw)."""
     if deck_id is None:
         raise ApiError(400, "The request needs id")
     forge = forge_runs._forge_module()
@@ -323,6 +353,101 @@ def gauntlet_view(deck_id, version="target", sample=None, size=None, colours=Non
     g = _gauntlet(forge)
     choices = _choices(_format(entry), sample, size, colours, styles, tiers)
     return _answer(forge, g, entry, choices, forge_runs._Seen())
+
+
+# ============================================================ the summary (E3-S33)
+
+HARDEST = 3
+
+
+def _hardest(opponents):
+    """The first HARDEST opponents with a rate (the view lists them hardest first), as the summary
+    gives them."""
+    out = []
+    for o in opponents:
+        rate = o.get("rate")
+        if not rate or rate.get("value") is None:
+            continue
+        out.append({"title": o.get("title"), "tier": o.get("tier"), "style": o.get("style"), "rate": rate["value"],
+                    "low": rate.get("low"), "high": rate.get("high"), "verdict": o.get("verdict"),
+                    "source": _source(o.get("source"))})
+        if len(out) == HARDEST:
+            break
+    return out
+
+
+def _playing(entry, standard_id, seen):
+    """None, or {"status", "done", "total", "standard"} of the list's gauntlet run waiting or playing
+    (any sample) that the viewer sees: never who started it."""
+    job = next((j for j in _active(entry) if _sees_job(seen, j)), None)
+    if job is None:
+        return None
+    snap = forge_runs.COORD_JOBS.snapshot(job)
+    if snap["status"] not in forge_runs.MATCHUP_WAITING:
+        return None
+    return {"status": snap["status"], "done": snap["progress"]["done"], "total": snap["progress"]["total"],
+            "standard": job.fn.sample.get("id") == standard_id}
+
+
+def gauntlet_summary(deck_id, version="target", profile=None):
+    """GET /api/gauntlet/summary?id=&version=[&profile=]: the list's headline against its format's
+    standard sample, read from saved games only (it never plays, saves a sample, plans or
+    estimates; the page asks once, without a timer):
+
+        {"deck": {"id", "version"}, "format",
+         "state": "no_catalogue" | "untested" (no opponent has games) | "partial" | "done" (every
+                  opponent has games),
+         "playing": None | {"status": "queued"|"running", "done", "total", "standard": bool},
+         "overall": None | forge.gauntlet.view's "overall" ({"rate", "low", "high", "spread",
+                    "note", "opponents", "games", ...}),
+         "played", "of", "games", "tally": {"ahead", "even", "behind", "unsettled"},
+         "hardest": [up to 3 {"title", "tier", "style", "rate", "low", "high", "verdict", "source"}],
+         "updated": the newest result's time or None, "sample": {"id", "size", "tiers"} or None,
+         "note": the view's caveat (these sampled opponents only) or None,
+         "notes": the view's notes, "build_command": the catalogue's build command for an admin
+                  (None for anyone else)}
+
+    ApiError 404 first for a deck the viewer may not see (the raw id, an alias included, before it's
+    resolved), then deck_view's for the id or version, 400 for a Beginner Box half, 500 when the
+    gauntlet can't be loaded or worked out. profile is accepted for the page's usual query and
+    changes nothing."""
+    if deck_id is None:
+        raise ApiError(400, "The request needs id")
+    check_deck_id(deck_id)
+    guard.require_sees_deck(deck_id)
+    forge = forge_runs._forge_module()
+    summary, entry = field_page._field_entry(forge, deck_id, version or "target")
+    g = _gauntlet(forge)
+    fmt = _format(entry)
+    seen = forge_runs._Seen()
+    out = {"deck": {"id": entry["id"], "version": entry["version"]}, "format": fmt, "state": "no_catalogue",
+           "playing": None, "overall": None, "played": 0, "of": 0, "games": 0,
+           "tally": {"ahead": 0, "even": 0, "behind": 0, "unsettled": 0}, "hardest": [], "updated": None,
+           "sample": None, "note": None, "notes": [],
+           "build_command": BUILD.format(fmt=fmt) if seen.admin else None}
+    try:
+        standard = g.standard(fmt)
+    except forge.ForgeError:
+        return out
+    out["sample"] = standard_json(standard)
+    out["playing"] = _playing(entry, standard["id"], seen)
+    if not standard.get("decks"):
+        out["state"] = "untested"
+        return out
+    try:
+        found = g.view(entry, standard, keep=_keep(entry))
+    except (ValueError, forge.ForgeError) as e:
+        raise ApiError(400, _public(e)) from None
+    except Exception:
+        common._log(f"The gauntlet summary of {entry['id']} can't be worked out:\n{traceback.format_exc()}")
+        raise ApiError(500, NO_VIEW) from None
+    played, of = int(found.get("played") or 0), int(found.get("of") or 0)
+    out.update(overall=found.get("overall") if played else None, played=played, of=of,
+               games=found.get("games") or 0, tally=found.get("tally") or out["tally"],
+               hardest=_hardest(found.get("opponents") or []), updated=found.get("updated"),
+               note=found.get("note"), notes=list(found.get("notes") or []),
+               state="untested" if not played else "partial" if played < of else "done")
+    return out
 
 
 # ============================================================ run and stop

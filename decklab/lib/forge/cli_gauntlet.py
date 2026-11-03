@@ -25,20 +25,31 @@ def _budget(text):
     raise shared.argparse.ArgumentTypeError(f"must be fixed:<games> or a number of games, not {text!r}")
 
 
+def _size(text):
+    """argparse's type for --size: a number of opponents (1 or more), or "all" (every deck the
+    filters allow)."""
+    if text.strip().lower() == "all":
+        return "all"
+    return shared._positive(text)
+
+
 def _words(text):
     return [w.strip().lower() for w in (text or "").split(",") if w.strip()] or None
 
 
 def _sample_args(parser):
-    """--sample, or the filters and seed of a sample drawn now (and saved)."""
+    """--sample or --standard, or the filters and seed of a sample drawn now (and saved)."""
     parser.add_argument("--sample", help="a saved sample's id (sample:<12 hex>); otherwise one is drawn and saved")
-    parser.add_argument("--size", type=shared._positive, help="opponents in the sample (default 20 Commander, "
-                                                              "24 constructed)")
+    parser.add_argument("--standard", action="store_true",
+                        help="the standard sample, the deck page's default (20 core and upgraded Commander decks, "
+                             "24 medium and hard constructed ones); no other sample option goes with it")
+    parser.add_argument("--size", type=_size, help="opponents in the sample, or all (default 20 Commander, "
+                                                   "24 constructed)")
     parser.add_argument("--colours", help="only decks whose colour identity is within these letters, such as WUB")
     parser.add_argument("--styles", help="only these styles, comma-separated: aggro, midrange, control, combo, "
                                          "ramp")
-    parser.add_argument("--tier", help="only these tiers, comma-separated (default core for Commander, medium "
-                                       "and hard for constructed)")
+    parser.add_argument("--tier", help="only these tiers, comma-separated (default core and upgraded for "
+                                       "Commander, medium and hard for constructed)")
     parser.add_argument("--seed", default="", help="the sample's seed (default none)")
 
 
@@ -179,7 +190,15 @@ def _show(args):
 
 
 def _draw(args, fmt):
-    """The sample a command names (--sample) or one drawn now with its filters (and saved)."""
+    """The sample a command names (--sample), the standard one (--standard), or one drawn now with its
+    filters (and saved)."""
+    if getattr(args, "standard", False):
+        given = [flag for flag, value in (("--sample", args.sample), ("--size", args.size),
+                                          ("--colours", args.colours), ("--styles", args.styles),
+                                          ("--tier", args.tier), ("--seed", args.seed)) if value]
+        if given:
+            raise shared._CliError(f"--standard is a fixed sample: leave out {', '.join(given)}.")
+        return _g().standard(fmt, save=True)
     if args.sample:
         found = _g().sample(args.sample)
         if found.get("format") != fmt:

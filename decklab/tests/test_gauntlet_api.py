@@ -23,6 +23,7 @@ from decklab.tests.test_api_permissions import PermissionTestCase
 
 GRUUL, ELVES, R_ELVES = "casual/gruul-test", "commander/elf-commander", "user2/casual/r-elves"
 SAMPLE = "sample:0123456789ab"
+ALL_SAMPLE = "sample:a11a11a11a11"
 WAIT = 5
 POPULAR = [("gauntlet:forge/duels/goblins", "Goblin Rush", "R", "aggro", "medium"),
            ("gauntlet:forge/duels/wall-of-ice", "Wall of Ice", "U", "control", "hard"),
@@ -37,8 +38,9 @@ class FakeGauntlet:
         self.forge, self.results = forge, results
         self.built = True
         self.gate, self.started = threading.Event(), threading.Event()
+        self.plans, self.have = [], {}
         self.gate.set()
-        self.runs, self.saved, self.keeps, self.games = [], {}, [], 0
+        self.runs, self.saved, self.keeps, self.games, self.draws = [], {}, [], 0, []
 
     def results_dir(self):
         return self.results
@@ -58,15 +60,25 @@ class FakeGauntlet:
                 "sha": "c" * 64, "decks": decks}
 
     def draw(self, fmt, size=None, colours=None, styles=None, tiers=None, seed="", save=True):
+        self.draws.append(size)
+        size = size or 24
         decks = [d for d in self.catalogue(fmt)["decks"] if (not styles or d["style"]["primary"] in styles)
-                 and (not colours or set(d["identity"]) <= set(colours))][:size]
-        found = {"id": SAMPLE if not (colours or styles) else "sample:fedcba987654", "format": fmt,
+                 and (not colours or set(d["identity"]) <= set(colours))]
+        decks = decks if size == "all" else decks[:size]
+        sid = ("sample:fedcba987654" if colours or styles else SAMPLE if size == 24
+               else ALL_SAMPLE if size == "all" else f"sample:{size:012d}")
+        found = {"id": sid, "format": fmt,
                  "catalogue_sha": "c" * 64, "filters": {"colours": colours, "styles": styles,
                                                         "tiers": list(tiers or ["medium", "hard"])},
                  "size": size, "seed": seed, "decks": [d["id"] for d in decks]}
+        if size == "all":
+            found.update(size=len(decks), all=True)
         if save:
             self.saved[found["id"]] = found
         return found
+
+    def standard(self, fmt):
+        return self.draw(fmt, size=24, save=False)
 
     def sample(self, sample_id):
         if sample_id not in self.saved:
@@ -79,8 +91,9 @@ class FakeGauntlet:
     def plan(self, entry, chosen, budget):
         per = int(budget.split(":")[1])
         opps = self.entries(chosen["format"], chosen["decks"])
+        self.plans.append(budget)
         return {"per_opponent": per, "new_games": per * len(opps),
-                "pairs": [{"opponent": o, "games": per} for o in opps]}
+                "pairs": [{"opponent": o, "have": self.have.get(o["id"], 0), "games": per} for o in opps]}
 
     def view(self, entry, chosen, keep=None):
         self.keeps.append(keep)
@@ -183,7 +196,14 @@ class GauntletViewTests(GauntletApiTestCase):
         self.assertEqual(answer["sample"]["decks"], 3)
         self.assertEqual(answer["catalogue"]["playable"], 3)
         self.assertEqual(sorted(answer["budgets"]), ["fixed:100", "fixed:200", "fixed:50"])
-        self.assertEqual(answer["budgets"]["fixed:100"], {"games": 100, "new_games": 300, "minutes": [3.0, 5.0]})
+        self.assertEqual(answer["budgets"]["fixed:100"], {"games": 100, "new_games": 300, "minutes": [3.0, 5.0],
+                                                          "overnight": False})
+        self.assertEqual(self.g.plans, ["fixed:200"])        # one plan for the three budgets
+        self.assertEqual((answer["standard"], answer["is_standard"]),
+                         ({"id": SAMPLE, "size": 24, "tiers": ["medium", "hard"]}, True))
+        self.assertEqual(answer["default_size"], 24)
+        self.assertEqual(answer["options"]["sizes"], [12, 24, 36, 72, 144])
+        self.assertEqual(answer["options"]["overnight_minutes"], 120)
         self.assertEqual(set(self.estimated), {self.g.results})       # the gauntlet's own results folder
         self.assertEqual(answer["deck"]["id"], GRUUL)
         self.assertEqual(self.g.saved, {})          # a sample drawn for the view isn't saved
@@ -222,6 +242,31 @@ class GauntletViewTests(GauntletApiTestCase):
         self.assertEqual(self.call("matt", view, GRUUL, "target", sample=SAMPLE), 404)    # not saved
         narrowed = self.call("matt", view, GRUUL, "target", styles="control")
         self.assertEqual(narrowed["sample"]["decks"], 1)
+
+    def test_sizes_up_to_all_and_overnight_runs(self):
+        # E3-S38: Commander offers "all" (every playable deck of the tiers), 60-card up to 144; any
+        # number up to MAX_SIZE is accepted.
+        view = gauntlet_page.gauntlet_view
+        self.assertEqual(gauntlet_page.SIZES["commander"], (6, 12, 20, 40, "all"))
+        self.assertEqual(gauntlet_page._choices("commander", size="All")["size"], "all")
+        self.assertEqual(gauntlet_page._choices("constructed", size="300")["size"], 300)
+        for size in ("all", "301", "0"):
+            with self.subTest(size=size):
+                self.assertEqual(self.call("matt", view, GRUUL, "target", size=size), 400)
+        elves = self.call("matt", view, ELVES, "target", size="all")
+        self.assertEqual((elves["sample"]["id"], elves["sample"]["all"], elves["is_standard"]),
+                         (ALL_SAMPLE, True, False))
+        self.assertEqual(elves["options"]["sizes"], [6, 12, 20, 40, "all"])
+        self.assertEqual(elves["default_size"], 20)
+        self.assertIn("all", self.g.draws)
+        big = self.call("matt", view, GRUUL, "target", size="144")
+        self.assertEqual((big["sample"]["all"], big["is_standard"]), (False, False))
+        # A run whose high estimate is over two hours is an overnight one.
+        self.forge.estimate = types.SimpleNamespace(minutes=lambda pairs, results_dir=None: (100.0, 130.0))
+        self.g.have = {POPULAR[0][0]: 100}
+        found = self.call("matt", view, GRUUL, "target")["budgets"]
+        self.assertEqual({b: (v["new_games"], v["overnight"]) for b, v in found.items()},
+                         {"fixed:50": (100, True), "fixed:100": (200, True), "fixed:200": (500, True)})
 
     def test_a_hidden_deck_answers_as_a_missing_one_first(self):
         view = gauntlet_page.gauntlet_view
@@ -376,6 +421,20 @@ class GauntletRunTests(GauntletApiTestCase):
             hidden = api.forge_runs._running_items()
         self.assertEqual([(i["kind"], i["hidden"], i["link"]) for i in hidden], [("gauntlet", True, None)])
         self.assertNotIn("R Elves", json.dumps(hidden))
+
+
+    def test_a_gauntlet_run_keeps_the_pc_awake(self):
+        # The server's keep-awake provider (server_run._forge_runs_busy) counts COORD_JOBS, where a
+        # gauntlet run (an overnight "All" one too) waits and plays.
+        from decklab.lib import server_run
+        self.assertIsNone(server_run._forge_runs_busy())
+        self.set_mode("everyone")
+        self.playing()
+        self.run_as("matt", GRUUL)
+        self.assertTrue(self.g.started.wait(WAIT))
+        self.assertEqual(server_run._forge_runs_busy(), "a Forge run is going")
+        self.finish()
+        self.assertIsNone(server_run._forge_runs_busy())
 
 
 class GauntletRouteTests(GauntletApiTestCase):

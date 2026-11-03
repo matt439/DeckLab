@@ -12,13 +12,17 @@ range covers those sampled opponents only.
     RESULTS_DIR             <data>/forge/gauntlet/results
     catalogue(fmt)          the format's catalogue (lib/gauntlet/catalogue.load), or ForgeError
     entries(fmt, ids)       the catalogue decks with those ids as Forge entries (lists.entry_from_cards)
-    draw(fmt, ...)          a sample chosen and saved (lib/gauntlet/sample)
+    draw(fmt, ...)          a sample chosen and saved (lib/gauntlet/sample); size "all" is every
+                            playable deck the filters allow (sample.every)
+    standard(fmt, save=False)
+                            the format's standard sample (lib/gauntlet/sample.STANDARD, E3-S33): the
+                            default draw, the one every deck's headline figure is against
     plan(deck_entry, sample, budget="fixed:100")
                             what a run would play now (field.plan over the sample)
     run(deck_entry, sample, budget="fixed:100", inflight=None, progress=None, stop=None, ...)
                             the run (field.run_field over the sample); its note
     view(deck_entry, sample, keep=None)
-                            the deck against the sample: per opponent and per group
+                            the deck against the sample: per opponent, per group and overall
 
 The catalogue and sample modules (decklab/lib/gauntlet) are reached only through the small
 wrappers below, which the tests replace."""
@@ -30,7 +34,7 @@ from .common import ForgeError
 RESULTS_DIR = common.DATA_DIR / "gauntlet" / "results"
 FORMATS = ("commander", "constructed")          # lib/gauntlet's FORMATS
 DEFAULT_BUDGET = "fixed:100"
-DEFAULT_TIERS = {"commander": ("core",), "constructed": ("medium", "hard")}
+DEFAULT_TIERS = {"commander": ("core", "upgraded"), "constructed": ("medium", "hard")}    # sample.STANDARD's
 GROUPS = ("colour", "identity_size", "style", "tier")
 COLOURS = (("W", "White"), ("U", "Blue"), ("B", "Black"), ("R", "Red"), ("G", "Green"))
 SIZES = (("colourless", "Colourless"), ("mono", "Mono-colour"), ("two", "Two colours"),
@@ -66,9 +70,9 @@ def _choose(decks, size, **filters):
     return sample.choose(decks, size, **filters)
 
 
-def _sample_id(catalogue_sha, filters, size, seed):
+def _sample_id(catalogue_sha, filters, size, seed, **every):
     from decklab.lib.gauntlet import sample
-    return sample.sample_id(catalogue_sha, filters, size, seed)
+    return sample.sample_id(catalogue_sha, filters, size, seed, **every)
 
 
 def _save_sample(fmt, found):
@@ -79,6 +83,11 @@ def _save_sample(fmt, found):
 def _load_sample(sample_id):
     from decklab.lib.gauntlet import sample
     return sample.load_sample(sample_id)
+
+
+def _every(decks, **filters):
+    from decklab.lib.gauntlet import sample
+    return sample.every(decks, **filters)
 
 
 def _default_size(fmt):
@@ -165,17 +174,34 @@ def filters(fmt, colours=None, styles=None, tiers=None):
 def draw(fmt, size=None, colours=None, styles=None, tiers=None, seed="", save=True):
     """A sample of the format's catalogue (lib/gauntlet/sample.choose with these filters; the
     default tiers and size when not given), saved unless save is False: the contract's sample
-    dict. ForgeError when there's no catalogue."""
+    dict. size "all" is every playable deck the filters allow, near-duplicates included
+    (sample.every; the dict's size their number, and "all": True). ForgeError when there's no
+    catalogue."""
     cat = catalogue(fmt)
-    size = int(size) if size else _default_size(fmt)
     chosen_filters = filters(fmt, colours, styles, tiers)
-    chosen = _choose(cat.get("decks") or [], size, seed=seed or "", **chosen_filters)
-    found = {"id": _sample_id(cat.get("sha"), chosen_filters, size, seed or ""), "format": fmt,
-             "catalogue_sha": cat.get("sha"), "filters": chosen_filters, "size": size, "seed": seed or "",
+    every = size == "all"
+    if every:
+        chosen = _every(cat.get("decks") or [], seed=seed or "", **chosen_filters)
+        size = len(chosen)
+    else:
+        size = int(size) if size else _default_size(fmt)
+        chosen = _choose(cat.get("decks") or [], size, seed=seed or "", **chosen_filters)
+    sid = _sample_id(cat.get("sha"), chosen_filters, size, seed or "", **({"every": True} if every else {}))
+    found = {"id": sid, "format": fmt, "catalogue_sha": cat.get("sha"), "filters": chosen_filters, "size": size,
+             "seed": seed or "",
              "decks": [d["id"] for d in chosen]}
+    if every:
+        found["all"] = True
     if save:
         _save_sample(fmt, found)
     return found
+
+
+def standard(fmt, save=False):
+    """The format's standard sample: the default draw (DEFAULT_TIERS, the default size, no colour or
+    style filter, seed ""), the same deck set as lib/gauntlet/sample.standard_sample. Not saved
+    unless save. ForgeError when there's no catalogue."""
+    return draw(fmt, seed="", save=save)
 
 
 def sample(sample_id):
@@ -235,12 +261,29 @@ def _rate(numbers):
 
 
 def _opponent(deck, row):
-    """One sampled opponent's row of the view."""
+    """One sampled opponent's row of the view: "verdict" its lead in words (verdict()), "updated"
+    when its games were last added to."""
     return {"id": deck["id"], "title": deck["title"], "tier": deck.get("tier"),
             "identity": deck.get("identity") or "", "colours": deck.get("colours") or "",
             "style": (deck.get("style") or {}).get("primary"), "key": row["key"], "games": row["n"],
-            "rate": _rate(row["numbers"]), "lead": row["lead"], "not_meaningful": row["not_meaningful"],
-            "problem": row["problem"], "source": deck.get("source")}
+            "rate": _rate(row["numbers"]), "lead": row["lead"], "verdict": verdict(row["lead"]),
+            "not_meaningful": row["not_meaningful"], "problem": row["problem"], "updated": row.get("updated"),
+            "source": deck.get("source")}
+
+
+TALLY = {"ahead": "ahead", "slightly ahead": "ahead", "about even": "even", "behind": "behind",
+         "slightly behind": "behind", "not settled": "unsettled"}
+
+
+def _tally(opponents):
+    """{"ahead", "even", "behind", "unsettled"}: how many opponents' verdicts are each (none counted
+    without games)."""
+    out = {"ahead": 0, "even": 0, "behind": 0, "unsettled": 0}
+    for o in opponents:
+        key = TALLY.get(o.get("verdict"))
+        if key:
+            out[key] += 1
+    return out
 
 
 def _group(key, label, members, extra=None):
@@ -297,9 +340,12 @@ def _groups(members):
 
 def view(deck_entry, chosen, keep=None):
     """deck_entry against the sample (it never plays a game): {"deck": id, "sample": id, "format",
-    "opponents": [rows, hardest first (lowest range low)], "groups" (_groups), "games", "note"
-    (the caveat: these sampled opponents only), "notes" (decks gone from the catalogue, a rebuilt
-    catalogue)}. ValueError for a sample of the other format, ForgeError with no catalogue."""
+    "opponents": [rows, hardest first (lowest range low)], "groups" (_groups), "overall" (a group
+    row over every opponent: the equal-weight average), "played" (opponents with games), "of" (the
+    sample's opponents in the catalogue now), "tally" (_tally), "updated" (the newest opponent's
+    "updated", or None), "games", "note" (the caveat: these sampled opponents only), "notes" (decks
+    gone from the catalogue, a rebuilt catalogue)}. ValueError for a sample of the other format,
+    ForgeError with no catalogue."""
     _check(deck_entry, chosen)
     fmt = chosen["format"]
     cat = catalogue(fmt)
@@ -314,8 +360,11 @@ def view(deck_entry, chosen, keep=None):
     members = [(deck, row) for (deck, _), row in zip(pairs, rows)]
     opponents = [_opponent(deck, row) for deck, row in members]
     opponents.sort(key=lambda o: (o["rate"] is None, (o["rate"] or {}).get("low") or 0, o["title"].casefold()))
+    dates = [o["updated"] for o in opponents if isinstance(o.get("updated"), str)]
     return {"deck": deck_entry["id"], "sample": chosen["id"], "format": fmt, "opponents": opponents,
-            "groups": _groups(members), "games": sum(r["n"] for r in rows),
+            "groups": _groups(members), "overall": _group("all", "All these opponents", members),
+            "played": sum(1 for r in rows if r["n"]), "of": len(members), "tally": _tally(opponents),
+            "updated": max(dates) if dates else None, "games": sum(r["n"] for r in rows),
             "note": CAVEAT.format(m=len(members)), "notes": notes}
 
 

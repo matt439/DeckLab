@@ -268,6 +268,15 @@ def _forge_slots_busy():
     return "Forge games are playing" if any(row["held"] for row in slots.status()["slots"]) else None
 
 
+def _forge_runs_busy():
+    """"a Forge run is going" while any Forge job waits or plays: a matchup or variant test
+    (FORGE_JOBS), or a field run, a gauntlet run (an overnight "All" one included) or a test of a
+    change (COORD_JOBS); else None."""
+    if api.forge_runs.FORGE_JOBS.active() or api.forge_runs.COORD_JOBS.active():
+        return "a Forge run is going"
+    return None
+
+
 def _start_keep_awake(settings):
     """The KeepAwake controller (lib/keepawake.py), installed for server_http's requests and
     started: busy while a Forge run, practice hands or the card data's update is going on,
@@ -275,8 +284,7 @@ def _start_keep_awake(settings):
     the tunnel's restart on waking and stops it."""
     controller = keepawake.KeepAwake(keepawake.idle_minutes_of(settings),
                                      log=lambda text: server_http.log(f"{_stamp()} {text}"))
-    controller.add_provider(lambda: "a Forge run is going" if (api.forge_runs.FORGE_JOBS.active()
-                                                               or api.forge_runs.COORD_JOBS.active()) else None)
+    controller.add_provider(_forge_runs_busy)
     controller.add_provider(lambda: "practice hands are playing" if api.practice.JOBS.active() else None)
     controller.add_provider(lambda: "the card data is updating" if api.carddata.UPDATE["running"] else None)
     controller.add_provider(_forge_slots_busy)
