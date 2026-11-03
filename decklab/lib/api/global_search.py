@@ -128,10 +128,11 @@ def _decks(space, q, limit):
 
 def _collection(space, key, limit):
     """The collection group and every name the collection holds (left out of Other cards)."""
-    from .collection import _holders, _special_basics
+    from .collection import _holders, _special_basics, recorded_printings
     try:
         p = pool.load_pool() if space == spaces.HOME else pool.load_pool(space)
         special, special_incoming = _special_basics(space)
+        recorded = recorded_printings(space)
     except (ValueError, OSError, csv.Error):
         group = _group("collection", [], 0, limit)
         group.update(space=space, error=UNREADABLE)
@@ -154,7 +155,7 @@ def _collection(space, key, limit):
         card = cards.card(name)
         items.append({"name": name, "owned": owned, "incoming": incoming, "in_use": in_use,
                       "free": None if in_use is None else max(0, owned - in_use), "basic": basic,
-                      "card": _card_json(card, _shown_printing(card)) if card else None})
+                      "card": _card_json(card, recorded.get(name) or _shown_printing(card)) if card else None})
     group = _group("collection", items, len(matched), limit)
     group["space"] = space
     return group, names, p
