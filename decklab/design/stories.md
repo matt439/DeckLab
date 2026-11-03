@@ -35,20 +35,20 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 18 | 17 | 0 | 1 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 18 | 17 | 1 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 18 | 2 | 0 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 22 | 17 | 3 | 2 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 23 | 17 | 3 | 3 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 23 | 19 | 1 | 2 | 1 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 29 | 22 | 2 | 3 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 29 | 22 | 3 | 2 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 21 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 29 | 28 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 19 | 16 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 24 | 18 | 1 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 53 | 36 | 5 | 9 | 3 |
-| **Total** | **296** | **243** | **16** | **23** | **14** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 53 | 37 | 5 | 8 | 3 |
+| **Total** | **297** | **244** | **18** | **21** | **14** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48 was built the same day, in three slices. Matt's expansion review of 2026-10-31 added twelve missing stories for work no story covered: E1-S29, E4-S27, E5-S27 to E5-S30, E9-S28, E9-S29 and E11-S54 to E11-S57. Matt's request of 2026-11-01 to run the live server on Linux added E11-S58, built the same day. Matt's deck-page question of 2026-11-02 added E5-S31, built the same day. Recounted 2026-11-02: E7-S33 (built 2026-11-02) was missing from the E7 row. The gauntlet design of 2026-11-02 added E3-S28 to E3-S31; E3-S28 and E3-S29 were built the same day, and E3-S30 and E3-S31 are missing. Later on 2026-11-02 the first slices of E5-S27 (Shopping's Baskets), E5-S28 (Build decks together) and E9-S29 (tutors on the Stats tab) made them partial.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48 was built the same day, in three slices. Matt's expansion review of 2026-10-31 added twelve missing stories for work no story covered: E1-S29, E4-S27, E5-S27 to E5-S30, E9-S28, E9-S29 and E11-S54 to E11-S57. Matt's request of 2026-11-01 to run the live server on Linux added E11-S58, built the same day. Matt's deck-page question of 2026-11-02 added E5-S31, built the same day. Recounted 2026-11-02: E7-S33 (built 2026-11-02) was missing from the E7 row. The gauntlet design of 2026-11-02 added E3-S28 to E3-S31; E3-S28 and E3-S29 were built the same day, and E3-S30 and E3-S31 are missing. Later on 2026-11-02 the first slices of E5-S27 (Shopping's Baskets), E5-S28 (Build decks together) and E9-S29 (tutors on the Stats tab) made them partial, as the first slices of E1-S29 (the card viewer's decks line) and E5-S30 (the Wishlist page's short decks) made them, and E11-S56 (an empty space's start) was built. Matt's report of 2026-11-02 that the Against popular decks box is too wide added E3-S32, missing.
 
 ---
 
@@ -336,7 +336,7 @@ Built (2026-10-29): `decklab/lib/play_pairs.py` `suggest(decks, games, forge_pai
 
 Known low issues: the real record counts every game between the two decks, whatever lists they were played with, while Forge's share is of today's built lists; Forge's point share is used without its interval; one pool warning (any unreadable deck) leaves every deck unconfirmed, as the library's chips do; no browser or device check.
 
-**E1-S29** · Matt · could · S · missing
+**E1-S29** · Matt · could · S · partial
 
 As a deck builder sharing one pool, I want any card I open, from the card viewer or a global search result, to say which of our decks hold or want it and how many copies are free, so that I can judge a swap or a buy from wherever I see the card.
 
@@ -346,6 +346,8 @@ As a deck builder sharing one pool, I want any card I open, from the card viewer
 - Given a basic land, then the line says its copies in decks aren't tracked, as the Card list does.
 
 Gap: `web/card-viewer.js` shows only what the opening list said about the card, and `lib/api/global_search.py` answers names and printings without deck use; the Card list's In decks column (`web/collection-rows.js`) and `deck_line` already hold the answer. First slice: the card viewer's line on the deck page and the Collection page, from the Card list's In decks calculation.
+
+Built (2026-11-02): the first slice. GET `/api/cards/decks` (`lib/api/card_decks.py`) answers one card's use in a space, only to viewers who may see that space's inventory (the Collection page's 403 otherwise), never naming or counting a deck the viewer can't see. Opened from the deck page or the Collection page, the card viewer shows it in a row of its own under Previous and Next: the decks that hold the card (built decks first, then intact products) or want it, with copies, and its free copies; a basic land says its copies in decks aren't tracked. Left: global search's short form ("in 2 decks · 1 free") and the viewer opened from other pages. Tests: `decklab/tests/test_card_decks.py`, `test_card_viewer_use_ui.py`. See [HISTORY.md](../HISTORY.md#card-viewer-which-decks-use-the-card-2026-11-02-e1-s29-first-slice).
 
 ---
 
@@ -1106,6 +1108,15 @@ As a player preparing against a space member's Public decks, I want E3-S19's gro
 - Given the results, when shown, then one view gives the deck's average against the chosen group, as the gauntlet's view does.
 
 Gap: no page, API or command passes chosen house decks as `opponent_entries` yet; this closes E3-S19's criterion 2.
+
+**E3-S32** · Matt · could · S · missing
+
+As a deck builder reading the Matchups tab, I want the "Against popular decks" part to sit at a sensible width, so that it reads like the tab's other parts instead of stretching across the page.
+
+- Given a deck page's Matchups tab on a wide screen, when "Against popular decks" is shown (its play box, groups and opponents), then it is no wider than the tab's other parts, its lines stay at a readable length, and the page never scrolls sideways because of it (today it does).
+- Given a phone or a narrow window, then the part still fills the column as it does now.
+
+Gap: Matt reported on 2026-11-02 that the box is too wide, so the whole page scrolls sideways (`decklab/web/gauntlet.css`, `.gt-*`, mounted from `decklab/web/deck.js`). One slice: find which box overflows or stretches at desktop widths, cap or match its width to the tab's other parts, and check both densities and themes.
 
 ## E4: Get ready, play and learn
 
@@ -1948,7 +1959,7 @@ Review note: needs Matt first. E5-S21 rules out tracking owned cards' prices; th
 
 Gap: `lib/shops/__init__.py` keeps one `previous` snapshot beside the current one, enough for Back in stock (E5-S19) and nothing older.
 
-**E5-S30** · User1 · could · S · missing
+**E5-S30** · User1 · could · S · partial
 
 As a themed-deck player with a wishlist, I want my wishlist cards shown while I build and my decks' needs shown on my wishlist, so that the cards I'd like and the decks that want them meet without my asking Matt.
 
@@ -1957,6 +1968,8 @@ As a themed-deck player with a wishlist, I want my wishlist cards shown while I 
 - Given anyone else, then nothing of my wishlist shows: both views read only the signed-in profile's own list (E5-S14, E10-S11).
 
 Gap: the Add panel's ticks are Free copies only, My collection and EDHREC ideas (`web/editor-cards.js`); the Wishlist page (`web/wishlist.js`) doesn't read decks. Owner-only reads keep it inside E10-S11. First slice: the Wishlist page's "short of this card" line.
+
+Built (2026-11-02): the first slice. Each wishlist entry carries `short_in` (`lib/api/wishlist_short.py`), the owner's own space's decks they may see whose Planned list is short of the card, worked out against the one pool the wishlist already loads, only when the owner may see that space's collection; a deck it can't fully count is skipped and `short_warnings` says some couldn't be counted, naming none. The page shows a "Short in N decks" chip and, in the card's sheet, "A (2 copies) and B are short of this card." with each deck linked. Left: the editor Add panel's My wishlist tick. Tests: `decklab/tests/test_wishlist_short.py`, `test_wishlist_short_ui.py`. See [HISTORY.md](../HISTORY.md#wishlist-decks-short-of-a-wished-card-2026-11-02-e5-s30-first-slice).
 
 **E5-S31** · Matt · should · S · built
 
@@ -5252,7 +5265,7 @@ As the household admin whose members use phones and whose pages serve beginners,
 
 Gap: UI-KIT.md covers focus, announcements and reduced motion for the card viewer and the run pill and gives the tiles' screen-reader words, but no page-wide audit exists and no test checks contrast. First slice: the audit of the library, the deck page and the Game log on a phone, written up before any fix.
 
-**E11-S56** · Matt · could · S · missing
+**E11-S56** · Matt · could · S · built
 
 As a newcomer who has just installed Deck Lab and sees an empty library, I want the empty state to say how to get my first cards and deck in, so that I see Deck Lab working before I've typed anything.
 
@@ -5262,6 +5275,8 @@ As a newcomer who has just installed Deck Lab and sees an empty library, I want 
 - Given a space with decks or cards, then nothing changes.
 
 Gap: `web/library.js`'s empty state says "You don't play any decks yet." and offers Show every deck or New deck; Add a precon and Import cards are reachable only from the Collection page's More menu. Independent of the installer (E11-S50) and the first-run page (E11-S52), which names only the players. One slice.
+
+Built (2026-11-02): GET `/api/decks` says `own_collection_empty` only to a named viewer who may see their own space's collection. With no deck in the viewer's own space, an empty collection and no filter or search, the library shows "There are no decks or cards here yet." with Add a precon, Import cards and New deck, a line each, each offered only when allowed; the first two open the Collection page's sheets through `#/collection?open=precon|import`, which opens once and drops the parameter. Members' empty spaces get the same. Tests: `decklab/tests/test_library_start_api.py`, `test_library_start_ui.py`. See [HISTORY.md](../HISTORY.md#an-empty-spaces-library-shows-how-to-start-2026-11-02-e11-s56).
 
 **E11-S57** · Matt · could · L · missing
 

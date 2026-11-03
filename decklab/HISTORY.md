@@ -2,6 +2,28 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## An empty space's library shows how to start (2026-11-02; E11-S56)
+
+- A newcomer's empty library said only "You don't play any decks yet." With no deck in the visitor's own space, no cards in its collection and no filter or search, the library now lists Add a precon, Import cards and New deck, a line each, each offered only to whoever may do it (`libStartBox` in `web/library.js`).
+- Add a precon and Import cards open the Collection page's own sheets through `#/collection?open=precon|import`, which opens the sheet once the page has drawn, only if the collection is editable, and drops the parameter.
+- `GET /api/decks` says whether the viewer's own collection is empty (`own_collection_empty`) only to that collection's own people; a script, nobody chosen or a failed read gets no flag, so nothing is learned about another space. Members' empty spaces get the same start; filtered views and spaces with decks or cards are unchanged.
+- Tests: `test_library_start_api.py` (4) and `test_library_start_ui.py` (5).
+
+## Wishlist: decks short of a wished card (2026-11-02; E5-S30 first slice)
+
+- The Wishlist page says when the owner's own decks are short of a wished card: a "Short in N decks" chip on the tile, and in the card's sheet "A (2 copies) and B are short of this card." with each deck linked.
+- The server works it out from each deck's Planned list against the one pool the wishlist already loads, as Shopping counts missing cards (`lib/api/wishlist_short.py`, each entry's `short_in`). Only the owner's own space's decks they may see count, only when they may see that space's collection; it says nothing while the pool is incomplete, and skips a deck it can't fully count, with a separate `short_warnings` box that names none.
+- The inventory goldens' normaliser drops `short_in` and the new warnings, as it drops `source_deck`.
+- Tests: `test_wishlist_short.py` (13) and `test_wishlist_short_ui.py` (4).
+- Not done yet: the editor Add panel's My wishlist tick.
+
+## Card viewer: which decks use the card (2026-11-02; E1-S29 first slice)
+
+- Opened from the deck page or the Collection page, the card viewer shows a line in its own row under Previous, the counter and Next: the decks of that space that hold the card (built decks first, then intact products) or want it (Planned, else Play-now list), each with its copies, and the card's free copies there, as the Card list's In decks counts them; a basic land says its copies in decks aren't tracked.
+- It comes from the new GET `/api/cards/decks` (`lib/api/card_decks.py`), answered only to viewers who may see that space's inventory (the Collection page's 403 otherwise), asked only when the page knows the viewer may; a deck the viewer can't see is never named or counted.
+- Tests: `test_card_decks.py` and `test_card_viewer_use_ui.py`.
+- Not done yet: global search's short form ("in 2 decks · 1 free").
+
 ## Shopping's Baskets from the daily snapshot (2026-11-02; E5-S27 first slice)
 
 - Sharing postage was hand work in Claude's buylists. GET `/api/shopping` now carries a `baskets` field (`lib/api/shop_baskets.py`), only for home-record readers and only while some shop has a saved snapshot, built from the snapshot capture Shopping already makes, so no shop is contacted.

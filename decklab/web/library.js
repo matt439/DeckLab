@@ -644,7 +644,10 @@ function drawLibraryResults(target, data, filters, view = {}, redraw = null) {
         drawLibrary(state.library || data, filters); } });
     // A blocking check-date filter is already explained by the guidance line above: clear only that filter.
     // The head has the page's New deck primary, so the empty state's is a plain button.
-    results.append(checkIssue.blocking
+    // An empty space (no decks, no cards: E11-S56) gets the ways to start instead, unless a filter emptied it.
+    const start = chosen ? null : libStartBox(data);
+    if (start) results.append(start);
+    else results.append(checkIssue.blocking
       ? emptyBox("No decks shown.", reset("Clear the check-date filter", { box_check: "", checked_before: "" }), { live: true })
       : chosen || !filters.all
         ? emptyBox(chosen ? "No decks match these filters." : "You don't play any decks yet.",
@@ -657,6 +660,29 @@ function drawLibraryResults(target, data, filters, view = {}, redraw = null) {
   if (state.profile && ownSpace() !== HOME_SPACE && !others) {
     results.append(el("p", { class: "result-count lib-nothing-public", text: "Nothing else is public yet." }));
   }
+}
+
+/** The empty-space start (E11-S56): with no deck in the visitor's own space and no cards in its collection
+ * (/api/decks' own_collection_empty, sent only to that collection's own people), the ways to get a first
+ * deck in, a line each: Add a precon and Import cards (the Collection page's sheets, opened by its ?open=)
+ * where the visitor may change that collection, then New deck where they may make one. Null otherwise. */
+function libStartBox(data) {
+  const space = ownSpace();
+  if (!state.profile || data.own_collection_empty !== true
+      || data.decks.some((d) => (d.space || deckSpaceOf(d.id)) === space)) return null;
+  const cards = canEditSpace(space);
+  const ways = [
+    cards ? ["Add a precon", "#/collection?open=precon",
+      "Adds a published precon's cards to your collection and makes its deck, ready to play."] : null,
+    cards ? ["Import cards", "#/collection?open=import",
+      "Adds the cards you already have from a ManaBox, Moxfield or Deckbox export."] : null,
+    createTargets().some((t) => t.space === space) ? ["New deck", newDeckHref(),
+      "Starts a deck of your own, by searching for cards or pasting a list."] : null].filter(Boolean);
+  if (!ways.length) return null;
+  return el("div", { class: "empty lib-start" },
+    el("p", { text: "There are no decks or cards here yet. Start with one of these:" }),
+    el("ul", { class: "lib-start-ways" }, ways.map(([words, href, line]) => el("li", {},
+      el("a", { class: "btn", href, text: words }), el("span", { class: "lib-start-line", text: line })))));
 }
 
 /** "Foundations Beginner Box" for "Cats (Foundations Beginner Box)". */

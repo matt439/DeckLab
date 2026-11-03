@@ -6,7 +6,10 @@
  * The list is a grid of card tiles (cards-ui.js cardTile). A tap opens the card's sheet: its picture (Zoom
  * opens the card viewer over the whole list, to swipe through), its notes, printing and source to change
  * ("set"), and Remove at the bottom, which happens at once with an Undo toast that puts the card back with
- * its notes, printing and source at its old place. A source naming a deck shows as the deck's title, linked. */
+ * its notes, printing and source at its old place. A source naming a deck shows as the deck's title, linked.
+ * A card your own decks' Planned lists are short of says so (E5-S30's "short_in", worked out on the server for
+ * your own space's decks only, and only when you may see its collection): a chip on its tile, and the decks,
+ * linked, in its sheet. */
 "use strict";
 
 const WISH_NOTES_MAX = 2000;        // the store's limits (lib/state/rules.py)
@@ -94,10 +97,55 @@ function wishlistSource(entry, leave = null) {
   return el("span", { class: "wishlist-source", title: source, text: `Suggested in ${label}` });
 }
 
+const WISH_SHORT_NAMED = 3;          // decks a "short of this card" line names before "and N more decks"
+
+/** The decks of your own space short of a wished card ("short_in": [{id, title, missing}], most short first);
+ * [] when none are, or when it can't be said. */
+function wishlistShortDecks(entry) {
+  return entry && Array.isArray(entry.short_in) ? entry.short_in.filter((deck) => deck && deck.id && deck.title) : [];
+}
+
+/** The "short of this card" sentence's parts: each named deck's [title, " (2 copies)" when more than one], then
+ * "N more decks" when there are more than WISH_SHORT_NAMED. */
+function wishlistShortParts(decks) {
+  const named = decks.slice(0, WISH_SHORT_NAMED);
+  const parts = named.map((deck) => ({ deck, copies: deck.missing > 1 ? ` (${deck.missing} copies)` : "" }));
+  if (decks.length > named.length) parts.push({ text: plural(decks.length - named.length, "more deck") });
+  return parts;
+}
+
+/** Joins items as "A", "A and B" or "A, B and C" (each item a list of nodes or strings). */
+function wishlistJoin(items) {
+  return items.flatMap((item, i) => [i === 0 ? null : i === items.length - 1 ? " and " : ", ", ...item]).filter(Boolean);
+}
+
+/** The sentence as text, for the tile's label and chip title: "Mono-Green Elves is short of this card", "A (2 copies)
+ * and B are short of this card", "A, B, C and 2 more decks are short of this card". null when no deck is. */
+function wishlistShortText(entry) {
+  const decks = wishlistShortDecks(entry);
+  if (!decks.length) return null;
+  const words = wishlistJoin(wishlistShortParts(decks).map((part) => [part.deck ? part.deck.title + part.copies : part.text]));
+  return `${words.join("")} ${decks.length === 1 ? "is" : "are"} short of this card`;
+}
+
+/** The sheet's line: the same sentence, each named deck linked to its page. leave: run before following a link. */
+function wishlistShort(entry, leave = null) {
+  const decks = wishlistShortDecks(entry);
+  if (!decks.length) return null;
+  const items = wishlistShortParts(decks).map((part) => (part.deck
+    ? [el("a", { href: deckHref(part.deck.id), text: part.deck.title, onclick: leave }), part.copies]
+    : [part.text]));
+  return el("p", { class: "wishlist-short" }, ...wishlistJoin(items),
+    ` ${decks.length === 1 ? "is" : "are"} short of this card.`);
+}
+
 function updateWishlist(view) {
   clear(view.warnings);
   const warning = warningsBox(view.data.warnings, "Some card details aren't available");
   if (warning) view.warnings.append(warning);
+  // E5-S30: why the decks short of these cards can't all be said, apart from the card details.
+  const short = warningsBox(view.data.short_warnings, "Some decks short of these cards may not be shown");
+  if (short) view.warnings.append(short);
   const entries = view.data.entries || [];
   view.count.textContent = entries.length ? `${plural(entries.length, "card")}` : "Your wishlist";
   clear(view.cards);
@@ -118,9 +166,15 @@ function wishlistTile(view, entry) {
   const have = wishlistAvailability(entry.have);
   const source = entry.source_deck ? el("a", { class: "chip chip-plain wishlist-deck-chip", href: deckHref(entry.source_deck.id),
     title: `From ${entry.source_deck.title}`, text: entry.source_deck.title }) : null;
+  const shortDecks = wishlistShortDecks(entry), shortText = wishlistShortText(entry);
+  const short = shortDecks.length ? status("warn", `Short in ${plural(shortDecks.length, "deck")}`) : null;
+  if (short) {
+    short.setAttribute("class", `${short.getAttribute("class")} wishlist-short-chip`);
+    short.setAttribute("title", `${shortText}.`);
+  }
   const tile = cardTile(card || null, { name: entry.name, meta: have,
-    chips: [card ? null : status("warn", "Card details unavailable"), source].filter(Boolean),
-    label: `${entry.name}${have ? `, ${have}` : ""}. Notes, printing and remove`,
+    chips: [card ? null : status("warn", "Card details unavailable"), short, source].filter(Boolean),
+    label: `${entry.name}${have ? `, ${have}` : ""}${shortText ? `. ${shortText}` : ""}. Notes, printing and remove`,
     onclick: () => openWishlistSheet(view, entry) });
   tile.setAttribute("data-name", entry.name);
   const open = tile.querySelector(".card-tile-open");
@@ -172,6 +226,7 @@ function openWishlistSheet(view, entry) {
       el("div", { class: "wishlist-sheet-facts" },
         entry.card ? el("p", { class: "sub", text: entry.card.type_line }) : null,
         el("p", { text: wishlistAvailability(entry.have) || "None in your collection yet" }),
+        wishlistShort(entry, leave),
         wishlistSource(entry, leave))),
     el("label", { class: "field", for: notes.id }, el("span", { text: "Notes" }), notes),
     el("div", { class: "field wishlist-printing" }, el("span", { text: "Printing" }),

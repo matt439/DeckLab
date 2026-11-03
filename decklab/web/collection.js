@@ -190,7 +190,20 @@ function showCollection(params, token) {
   if (query.has("color")) { const color = colIdentityValue(query.get("color")); if (color) query.set("color", color); else query.delete("color"); }
   const asked = new URLSearchParams(query);
   asked.set("limit", String(colPageSize()));
-  return load(colPath("/api/collection", space, asked), token, (data) => drawCollection(data, query, space, token));
+  const open = params.get("open");
+  return load(colPath("/api/collection", space, asked), token, (data) => colOpenAsked(drawCollection(data, query, space, token), open));
+}
+
+/** #/collection?open=precon or ?open=import, the empty library's ways to start (E11-S56): that sheet, once, where the
+ * visitor may change this collection, after load() has focused the page; the address loses ?open= first, so
+ * Back or a reload doesn't reopen it. */
+function colOpenAsked(cv, open) {
+  if (open) setTimeout(() => {
+    if (!colActive(cv)) return;
+    history.replaceState(history.state, "", colHash(cv.space, "find", cv.query));
+    const sheet = { precon: openPreconSheet, import: openImportSheet }[open];
+    if (sheet && cv.editable && !cv.unsupported) sheet(cv);
+  });
 }
 
 /** What a page of the collection holds for its writes: cv ("collection view"). */

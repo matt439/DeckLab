@@ -47,7 +47,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E2-S16` | OPEN | could | L | Kept-for-later drafts built, the Quick edit's and new decks' too (migrations 0018 and 0019 applied by 2026-10-30). Left: real-device checks. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
-| `E1-S29` | OPEN | could | S | A card opened anywhere names the decks that hold or want it and its free copies; first slice, the card viewer's line on the deck page and Collection, from the Card list's In decks calculation. |
+| `E1-S29` | OPEN | could | S | The card viewer's decks line on the deck page and Collection built (2026-11-02). Left: global search's short form ("in 2 decks · 1 free"). |
 | `E4-S27` | DECISION | could | S | Offer to record last night's game after a Packing plan pulled two decks; first Matt asks the household why the Game log holds no games (none by 2026-10-31). |
 
 ## Deck Lab: collection, orders and buying
@@ -61,7 +61,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E5-S27` | OPEN | should | M | Shopping's Baskets built without postage (2026-11-02). Left: postage rules per shop as a setting (with `E11-S53`), add-ons that reach a free-postage threshold, and the fewest-shops plan. |
 | `E5-S28` | OPEN | should | M | Build decks together's read-only combined list built (2026-11-02). Left: Queue these (one reviewed queue change, `for` naming the decks) and each card's matching queue rows. |
 | `E5-S29` | DECISION | could | S | Dated price and stock history for queued cards only (the snapshot keeps one previous reading); Matt decides whether it's wanted beside `E5-S21`. |
-| `E5-S30` | OPEN | could | S | A My wishlist tick in the editor's Add panel and "short of this card" on the owner's Wishlist page; first slice, the Wishlist page's line. |
+| `E5-S30` | OPEN | could | S | The Wishlist page's "short of this card" built (2026-11-02). Left: a My wishlist tick in the editor's Add panel. |
 
 ## Deck Lab: Commander nights
 
@@ -80,6 +80,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E3-S23` | OPEN | could | M | Membership view, exclusion counts, policy persistence, its use in home's field selection, the home-admin preview/save with Change the field, and failing closed when saved choices can't be read built (0017 applied by 2026-10-30). Next: browser use of a saved field choice in a real run. |
+| `E3-S32` | OPEN | could | S | The Matchups tab's "Against popular decks" box is too wide and makes the page scroll sideways (Matt, 2026-11-02); cap or match its width to the tab's other parts. |
 | `E3-S19` | DEFERRED | could | M | Group run against chosen opponents: the page/API lacks an opponents subset for field runs (`field.opponents` has it); `E3-S31` would reuse the gauntlet's `opponent_entries`. Useful only once a member deck is Public. |
 | `E3-S30` | OPEN | could | M+pc | Gauntlet built (`E3-S28`, `E3-S29`). Left: a variant test against a sample (`E3-S30`), E3-S19's chosen-group run through `opponent_entries` (`E3-S31`), a fuller parallel Commander throughput measurement (a first one, 4 opponents on the dev PC, played about 40 games a minute), and building the catalogue on the spare PC. |
 | `E11-S28` | DECISION | should | M | Run the user-testing session with User2 from the prepared [checklist](decklab/design/user-testing-user2.md) (confirm his device first), then the follow-up review and stories. |
@@ -104,7 +105,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
 | `E11-S54` | DECISION | could | L | Notices pushed to a phone (back in stock, a delivery recorded, a Forge run finished, restart needed); Matt decides first whether the in-app notices are enough. |
 | `E11-S55` | OPEN | could | M | An accessibility pass: contrast, names, focus and reduced motion over every page in both densities and themes; first slice, the audit of the library, deck page and Game log on a phone. |
-| `E11-S56` | OPEN | could | S | An empty space's library offers Add a precon, Import cards and New deck, with a line each; one slice. |
 | `E11-S57` | DEFERRED | could | L | A Linux install route (a script or container); after `E11-S50` (Windows first, Matt, 2026-10-31) and `E11-S49`. |
 
 ## Areas with no open rows

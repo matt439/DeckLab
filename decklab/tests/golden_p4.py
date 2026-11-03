@@ -33,7 +33,8 @@ older code (the committed tests/fixtures/inventory_goldens):
   the new words.
 - "ui-additions": the fields the UI redesign added to the page answers (ui_additions()): a deck's
   "cover", "colors", "revision", "cover_card" and "edited" in the library and the deck page, the
-  packing plan's "cards" and a wishlist entry's "source_deck" are dropped.
+  packing plan's "cards", a wishlist entry's "source_deck" and "short_in" (E5-S30) and the wishlist
+  view's "short_warnings" (E5-S30) are dropped.
 - "kit-editability": E10-S33 adds Boolean summary.kit.editable to deck-view answers so public
   kit readers get no Choose controls. Only that exact additive field is dropped; every kit value,
   warning and other editable field still compares. test_golden_kit_editability checks this boundary
@@ -390,6 +391,9 @@ def ui_additions(dump):
             for entry in (view.get("entries") or []) if isinstance(view, dict) else []:
                 if isinstance(entry, dict):
                     entry.pop("source_deck", None)
+                    entry.pop("short_in", None)         # E5-S30: the owner's decks short of the card
+            if isinstance(view, dict):
+                view.pop("short_warnings", None)    # E5-S30: why the decks short of them can't be said
 
 
 def kit_editability(dump):

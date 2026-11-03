@@ -424,3 +424,9 @@ button.deck-row { cursor: pointer; }
 .cover-tile-zoom:hover { filter: brightness(1.3); }
 .cover-printing { color: var(--ink-2); font-size: var(--fs-sm); margin: var(--s-3) 0 0; }
 .cover-printing:empty { display: none; }
+
+/* An empty space's ways to start (E11-S56): each way's button with its one line beside it (under it on a phone). */
+.lib-start-ways { display: grid; gap: var(--s-3); margin: 0; padding: 0; list-style: none; }
+.lib-start-ways > li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); }
+.lib-start-ways .btn { min-width: 9.5em; justify-content: center; }
+.lib-start-line { flex: 1 1 18em; }

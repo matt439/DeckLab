@@ -225,8 +225,8 @@ dialog.viewer {
 dialog.viewer[open] {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  grid-template-areas: "head head head" "stage stage stage" "prev count next";
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "head head head" "stage stage stage" "prev count next" "use use use";
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 dialog.viewer::backdrop { background: var(--scrim-strong); }
@@ -272,6 +272,16 @@ dialog.viewer::backdrop { background: var(--scrim-strong); }
 .viewer-marks { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-1); }
 .viewer-marks[hidden] { display: none; }
 .viewer-marks .status { white-space: normal; text-align: center; }
+/* Which of the space's decks hold or want the card, and its free copies (card-viewer.js viewerUsePart): a row
+   of its own under Previous and Next, as wide as the screen allows, so a long line never runs under the buttons.
+   While its answer loads the row keeps one line's height, so the card isn't drawn smaller after it's shown. */
+.viewer-use {
+  grid-area: use; justify-self: center; min-width: 0;
+  margin: 0 0 var(--s-2); max-width: 40rem; padding: 0 var(--s-4);
+  color: var(--on-scrim); font-size: var(--fs-sm); text-align: center; overflow-wrap: anywhere;
+}
+.viewer-use.is-loading { visibility: hidden; }
+.viewer-use[hidden] { display: none; }
 .viewer-swipe-hint { margin: 0; color: var(--on-scrim-2); font-size: var(--fs-sm); }
 @media (hover: hover) and (pointer: fine) { .viewer-swipe-hint { display: none; } }
 .viewer.is-single .viewer-nav, .viewer.is-single .viewer-count, .viewer.is-single .viewer-swipe-hint { display: none; }
@@ -327,8 +337,8 @@ dialog.viewer::backdrop { background: var(--scrim-strong); }
 
 /* The card's words: under the card, which shrinks to fit above them (a swipe on them turns the card too). */
 dialog.viewer.show-text[open] {
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
-  grid-template-areas: "head head head" "stage stage stage" "text text text" "prev count next";
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  grid-template-areas: "head head head" "stage stage stage" "text text text" "prev count next" "use use use";
 }
 .viewer-text {
   grid-area: text; z-index: 2;
@@ -401,8 +411,8 @@ dialog.viewer.show-text[open] {
     --viewer-card-w: min(1000px, calc((100dvh - 150px) * 488 / 680 + 24px),
       calc(100vw - 2 * 84px - var(--viewer-panel-w) - 2 * var(--s-5)));
     grid-template-columns: minmax(0, 1fr) 84px var(--viewer-card-w) 84px var(--viewer-panel-w) minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    grid-template-areas: "head head head head head head" ". prev stage next text ." ". . count . text .";
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "head head head head head head" ". prev stage next text ." ". . count . text ." ". . use . text .";
   }
   .viewer-head { padding: var(--s-3) var(--s-3) var(--s-2) var(--s-5); }
   .viewer-text-btn { display: none; }
@@ -422,17 +432,19 @@ dialog.viewer.show-text[open] {
     --viewer-card-w: min(calc((100dvh - 44px) * 488 / 680 + 24px), calc(100vw - 2 * 64px - 280px));
     grid-template-columns: 64px var(--viewer-card-w) minmax(0, 1fr) 64px;
     grid-template-rows: auto minmax(0, 1fr) auto;
-    grid-template-areas: "prev stage head next" "prev stage text next" "prev count text next";
+    grid-template-areas: "prev stage head next" "prev stage text next" "prev count use next";
   }
   .viewer-head { padding: var(--s-1) 0 var(--s-1) var(--s-2); }
   .viewer-text-btn { display: none; }
   .viewer-text, .viewer.show-text .viewer-text {
     grid-area: text; align-self: start;
-    display: block; max-height: calc(100dvh - 70px);
+    display: block; max-height: min(calc(100dvh - 70px), 100%);
     margin: 0 0 var(--s-2) var(--s-2);
     padding: var(--s-3);
   }
   .viewer-slide { padding: var(--s-2) var(--s-3) var(--s-1); }
+  /* The use line beside the counter, under the words, where the column is wide enough for it. */
+  .viewer-use { justify-self: start; align-self: center; margin: 0 0 var(--s-1) var(--s-2); padding: 0; text-align: left; }
   .viewer-prev, .viewer-next { grid-row: 1 / -1; align-self: center; justify-self: center; margin: 0; }
 }
 /* QHD: the words a size up beside a card drawn this big. */
@@ -444,8 +456,8 @@ dialog.viewer.show-text[open] {
 /* Portrait: keep the picture full-sized when Text is opened. */
 @media (orientation: portrait) and (max-width: 999.98px) {
   dialog.viewer.show-text[open] {
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    grid-template-areas: "head head head" "stage stage stage" "prev count next";
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "head head head" "stage stage stage" "prev count next" "use use use";
   }
   .viewer.show-text .viewer-text {
     grid-area: stage; align-self: end;
