@@ -60,6 +60,17 @@ function isMyDevice(profile = state.profile) {
 }
 
 /** Turn "This is my device" on or off for the profile chosen. */
+/** The avatar menu offers Keyboard shortcuts only where a mouse or trackpad is attached (any fine pointer, so an
+ * iPad with a trackpad keyboard keeps it): a phone or touch-only tablet has no keyboard to use them with. Follows a
+ * pointer plugged in or taken away. ? still opens help wherever a real keyboard sends it. */
+function offerShortcutsWithPointer(entry) {
+  if (typeof window.matchMedia !== "function") return;
+  const fine = window.matchMedia("(any-pointer: fine)");
+  const show = () => { entry.hidden = !fine.matches; };
+  show();
+  if (typeof fine.addEventListener === "function") fine.addEventListener("change", show);
+}
+
 function toggleMyDevice() {
   const profile = state.profile;
   if (!profile || state.remote) return;
@@ -85,7 +96,10 @@ function setUpShell() {
   const device = byId("my-device");
   if (device) device.addEventListener("click", toggleMyDevice);
   const shortcuts = byId("menu-shortcuts");
-  if (shortcuts) shortcuts.addEventListener("click", () => showKeyboardHelp(byId("avatar-button")));
+  if (shortcuts) {
+    shortcuts.addEventListener("click", () => showKeyboardHelp(byId("avatar-button")));
+    offerShortcutsWithPointer(shortcuts);
+  }
   const reload = byId("menu-reload");
   if (reload) reload.addEventListener("click", reloadDeckLab);
   const sheet = byId("more-sheet");

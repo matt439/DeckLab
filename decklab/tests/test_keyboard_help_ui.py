@@ -12,6 +12,7 @@ from decklab.tests.test_workspace_ui import NODE, RUNNER, WEB
 
 
 HELP = shell_ui.SETUP + r'''
+  window.matchMedia('(any-pointer: fine)').matches=true;   // a mouse: the avatar menu offers help
   const helpEntry=byId('menu-shortcuts')||el('button',{id:'menu-shortcuts',type:'button',text:'Keyboard shortcuts'});
   helpEntry.textContent='Keyboard shortcuts';helpEntry.remove();
   byId('avatar-menu').append(helpEntry);

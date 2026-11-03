@@ -35,6 +35,12 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* While any dialog is open the page behind it stays still, sideways too: a swipe or wheel inside a sheet that
+   reaches its edge doesn't carry on into the page. Every Deck Lab dialog is modal (showModal). With a mouse the
+   scrollbar's gutter is kept so the page doesn't jump sideways as the bar goes. */
+:root:has(dialog[open]) { overflow: hidden; }
+dialog[open] { overscroll-behavior: contain; }
+@media (hover: hover) and (pointer: fine) { :root:has(dialog[open]) { scrollbar-gutter: stable; } }
 
 body {
   margin: 0;
