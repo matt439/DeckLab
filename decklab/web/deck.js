@@ -221,7 +221,11 @@ function deckTabParts(name, data, screen) {
   if (name === "cards") return cardsParts(data, screen);
   if (name === "stats") return [statsSection(data)];
   if (name === "practice") return [manualHandsSection(data), practiceSection(data)];
-  return [deckMatchupsPart(data), fieldSection(data), gauntletSection(data), variantTestsSection(data)];     // deck-tools.js, field.js, gauntlet.js, variant.js
+  // deck-tools.js, field.js, gauntlet.js, variant.js; a Commander deck's popular decks first (E3-S33)
+  if (data.summary.kind === "commander") {
+    return [gauntletSection(data), deckMatchupsPart(data), fieldSection(data), variantTestsSection(data)];
+  }
+  return [deckMatchupsPart(data), fieldSection(data), gauntletSection(data), variantTestsSection(data)];
 }
 
 /** Write the tab (and the Cards filter) into the address in place: Back still leaves the deck in one step. */
@@ -405,7 +409,7 @@ function overviewParts(data) {
     commanderReadiness(data),
     deckAssemblySection(data),
     deckOverviewPlayed(data),
-    el("div", { class: "deck-overview-panels" }, deckOverviewForge(data), deckOverviewCurve(data), deckOverviewSwap(data)),
+    el("div", { class: "deck-overview-panels" }, deckOverviewStrength(data), deckOverviewCurve(data), deckOverviewSwap(data)),
     verdict ? el("section", { class: "deck-section deck-overview-stats", "aria-label": "At a glance" }, verdict,
       el("button", { type: "button", class: "btn btn-quiet deck-more-link", text: "All the stats",
         onclick: () => openDeckTab("stats", { to: "deck-panel-stats" }) })) : null,

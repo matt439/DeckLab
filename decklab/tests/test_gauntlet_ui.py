@@ -161,3 +161,162 @@ class GauntletUiTests(unittest.TestCase):
           flushTimers();routeToken++;release(played());await settle();
           assert(node.textContent.includes('Waiting: 2 runs ahead of it'));
         """)
+
+    # ------------------------------------------------------------------ E3-S33: the standard sample and headline
+
+    def test_a_commander_decks_matchups_tab_leads_with_popular_decks(self):
+        self.run_js("""
+          answers=[base()];
+          const ids=()=>panel('matchups').children.map(n=>n.getAttribute('id'));
+          open('#/deck?id=casual%2Ftest&v=target&tab=matchups');await settle();
+          same(ids(),['sec-matchups','sec-field','sec-gauntlet','sec-tests']);
+          clear(main);location.hash='#/deck?id=commander%2Ftest&v=target&tab=matchups';
+          const page=makePage();page.summary={...page.summary,id:'commander/test',kind:'commander'};
+          drawDeck(page,deckViewOf(parseHash().params));await settle();
+          same(ids(),['sec-gauntlet','sec-matchups','sec-field','sec-tests']);
+        """)
+
+    def test_the_headline_and_verdicts_come_before_the_play_box(self):
+        self.run_js("""
+          const a=played();
+          a.opponents[0].verdict='behind';a.opponents[0].updated=new Date().toISOString();
+          a.opponents[1].verdict='about even';a.opponents[2].verdict='slightly ahead';
+          Object.assign(a,{overall:{key:'all',label:'All these opponents',opponents:3,games:300,rate:.47,low:.39,high:.55},
+            played:3,of:3,tally:{ahead:1,even:1,behind:1,unsettled:0},updated:new Date().toISOString(),
+            standard:{id:'sample:0123456789ab',size:24,tiers:['hard','medium']},is_standard:true});
+          answers=[a];
+          const node=await draw();
+          const layout=node.querySelector('.gt-layout');
+          same(layout.children.map(n=>n.getAttribute('class')),['gt-main','gt-side']);
+          const head=node.querySelector('.gt-headline');
+          assert.equal(layout.querySelector('.gt-main').children[0],head);
+          assert(head.textContent.includes('Against 3 popular 60-card decks:'),head.textContent);
+          assert(head.textContent.includes('47'));assert(head.textContent.includes('300 games'));
+          assert.equal(head.querySelector('.gt-tally').textContent,'Ahead of 1 · even with 1 · behind 1');
+          assert(head.querySelector('.fresh'));assert(!head.textContent.includes('tested so far'));
+          const rows=node.querySelector('.gt-rows').querySelectorAll('.gt-row');
+          assert(rows[0].textContent.includes('Behind · Aggro · Medium · 100 games'),rows[0].textContent);
+          assert(rows[0].querySelector('.fresh'));assert(!rows[1].querySelector('.fresh'));
+          assert(rows[2].textContent.includes('Slightly ahead'));
+          assert(node.textContent.includes('The standard sample: the same 24 hard and medium opponents for every 60-card deck, so their results compare.'));
+          assert(!buttonText(node,'Back to the standard sample'));
+          // Some opponents still untested: the headline says how many so far.
+          answers=[{...a,played:2,tally:{ahead:1,even:0,behind:1,unsettled:1}}];
+          const again=await draw();
+          assert(again.querySelector('.gt-headline').textContent.includes('2 of 3 opponents tested so far.'));
+          assert.equal(again.querySelector('.gt-tally').textContent,'Ahead of 1 · behind 1 · not settled against 1');
+        """)
+
+    def test_a_run_before_any_games_shows_only_the_play_box(self):
+        self.run_js("""
+          answers=[base({status:'running',job:{status:'running',done:0,total:100,ahead:0,pairs:{}},budgets:{}})];
+          const node=await draw();
+          same(node.querySelector('.gt-layout').children.map(n=>n.getAttribute('class')),['gt-side']);
+          assert(!node.querySelector('.gt-headline'));
+        """)
+
+    def test_another_sample_stays_in_the_address_and_back_to_the_standard_sample(self):
+        self.run_js("""
+          const std={id:'sample:ffffffffffff',size:24,tiers:['hard','medium']};
+          const other=base({standard:std,is_standard:false});
+          answers=[other];
+          open('#/deck?id=casual%2Ftest&v=target&tab=matchups&gsample=sample:0123456789ab');await settle();
+          const asked=calls.filter(c=>c.startsWith('/api/gauntlet?'));
+          assert(asked[0].includes('sample=sample%3A0123456789ab'),asked[0]);
+          assert(!asked[0].includes('size='));
+          assert(location.hash.includes('gsample=sample%3A0123456789ab'),location.hash);
+          // The tabs' address keeps it (deckAddress), so a reload asks for the same sample.
+          tab('overview').click();assert(location.hash.includes('gsample=sample%3A0123456789ab'),location.hash);
+          tab('matchups').click();
+          const node=main.querySelector('#sec-gauntlet');
+          assert(node.textContent.includes('Not the standard sample.'));
+          // Playing it plays the saved sample by its id.
+          buttonText(node,'Play them').click();await settle();
+          same(writes.at(-1).body,{id:'casual/test',version:'target',budget:'fixed:100',sample:'sample:0123456789ab',
+            expected_card_sha:sha});
+          // A choice draws again from the filters.
+          answers=[base({standard:std,is_standard:false,sample:{id:'sample:aaaaaaaaaaaa',size:24,
+            filters:{colours:null,styles:['control'],tiers:['hard','medium']},decks:3}})];
+          buttonText(node,'Control').click();await settle();
+          assert(!calls.at(-1).includes('sample='));assert(calls.at(-1).includes('styles=control'));
+          assert(location.hash.includes('gsample=sample%3Aaaaaaaaaaaaa'),location.hash);
+          // Back to the standard sample: no choices, so the server's standard sample, and none in the address.
+          answers=[base({standard:{...std,id:'sample:0123456789ab'},is_standard:true})];
+          buttonText(node,'Back to the standard sample').click();await settle();
+          same([...new URLSearchParams(calls.at(-1).split('?')[1]).keys()],['id','version','profile']);
+          assert(!location.hash.includes('gsample'),location.hash);
+          assert(node.textContent.includes('The standard sample: the same 24'));
+        """)
+
+    def test_a_sample_that_isnt_saved_falls_back_to_the_standard_sample(self):
+        self.run_js("""
+          location.hash='#/deck?id=casual%2Ftest&v=target&tab=matchups&gsample=sample:0123456789ab';
+          answers=[new ApiError(404,"There's no saved gauntlet sample with that id."),
+            base({standard:{id:'sample:0123456789ab',size:24,tiers:['hard','medium']},is_standard:true})];
+          const node=await draw();
+          assert(calls[0].includes('sample=sample%3A0123456789ab'));assert(!calls[1].includes('sample='));
+          assert(!node.textContent.includes("couldn't be loaded"));
+          assert(!location.hash.includes('gsample'),location.hash);
+          // A bad id in the address isn't asked for at all.
+          calls.length=0;location.hash='#/deck?id=casual%2Ftest&v=target&gsample=nonsense';
+          answers=[base()];await draw();
+          assert(!calls[0].includes('sample='));
+        """)
+
+    # ------------------------------------------------------------------ E3-S38: larger runs
+
+    def test_commander_sizes_include_all_and_play_it(self):
+        self.run_js("""
+          const cmd=(extra={})=>base({format:'commander',default_size:20,options:{...base().options,
+            sizes:[6,12,20,40,'all'],tiers:['core','upgraded','precon'],overnight_minutes:120},
+            sample:{id:'sample:0123456789ab',size:20,filters:{colours:null,styles:null,tiers:['core','upgraded']},decks:20},
+            ...extra});
+          answers=[cmd()];
+          const node=await draw();
+          const sizes=node.querySelector('.gt-choices').querySelector('.segmented').querySelectorAll('button').map(b=>b.textContent);
+          same(sizes,['6','12','20','40','All']);
+          answers=[cmd({sample:{id:'sample:bbbbbbbbbbbb',size:169,all:true,
+            filters:{colours:null,styles:null,tiers:['core','upgraded']},decks:169}})];
+          buttonText(node,'All').click();await settle();
+          assert(calls.at(-1).includes('size=all'),calls.at(-1));
+          assert(node.querySelector('.gt-choices').querySelector('summary').textContent.startsWith('169 opponents'));
+          assert(node.textContent.includes('All: every playable deck of the chosen tiers'));
+          buttonText(node,'Play them').click();await settle();
+          assert.equal(writes.at(-1).body.size,'all');
+          assert.equal(gtChoiceOf(cmd()).size,20);
+        """)
+
+    def test_the_run_time_is_plain_and_says_when_its_an_overnight_run(self):
+        self.run_js("""
+          answers=[base({budgets:{'fixed:50':{games:50,new_games:1200,minutes:[20,40],overnight:false},
+            'fixed:100':{games:100,new_games:2400,minutes:[180,300],overnight:true},
+            'fixed:200':{games:200,new_games:0,minutes:[0,0],overnight:false}}})];
+          const node=await draw();
+          const time=()=>node.querySelector('.gt-time-part');
+          assert.equal(time().querySelector('.gt-time').textContent,'This run: 3 opponents · 2,400 new games · about 3–5 hours.');
+          const night=time().querySelector('.gt-overnight');
+          assert(night);assert(night.getAttribute('class').split(' ').includes('note'));
+          assert.equal(night.textContent,"That's an overnight run: start it in the evening and leave the PC on. Deck Lab keeps the PC awake while it plays.");
+          assert(node.textContent.includes('About 100 games a deck, about 3–5 hours.'));
+          // The run's time follows the budget chosen, without asking the server again.
+          const before=calls.length;
+          buttonText(node,'Quick look').click();
+          assert.equal(calls.length,before);
+          assert.equal(time().textContent,'This run: 3 opponents · 1,200 new games · about 20–40 minutes.');
+          buttonText(node,'Precise').click();
+          assert.equal(time().textContent,'Nothing new to play: every opponent has these games.');
+          // Without the server's overnight flag, the minutes over overnight_minutes still say it.
+          same(gtRunTime({budgets:{x:{games:1,new_games:5,minutes:[100,121]}},options:{overnight_minutes:120},
+            sample:{decks:1}},'x').filter(Boolean).length,2);
+          assert.equal(gtMinutesWords([0,0.5]),'under a minute');
+          assert.equal(gtMinutesWords([60,60]),'about 60 minutes');
+          assert.equal(gtMinutesWords([300,600]),'about 5–10 hours');
+        """)
+
+    def test_no_run_time_when_runs_arent_allowed(self):
+        self.run_js("""
+          mayStartRuns=()=>false;
+          answers=[base({budgets:{'fixed:100':{games:100,new_games:2400,minutes:[180,300],overnight:true}}})];
+          const node=await draw();
+          assert.equal(node.querySelector('.gt-time-part').hidden,true);
+        """)

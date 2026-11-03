@@ -54,11 +54,27 @@ empty state keep to the widths of the matchup controls (.mu-run-buttons, .card-g
 .gt-credit { margin-top: var(--s-2); }
 .gt-muted { opacity: 0.6; }
 
+/* E3-S33: the headline over the sample's opponents (also the Overview's panel), in ink like every win rate. */
+.gt-headline, .gt-headline-panel { display: grid; gap: var(--s-2); min-width: 0; max-width: 46rem; }
+.gt-headline > p, .gt-headline-panel > p { margin: 0; }
+.gt-headline-what { font-size: var(--fs-md); }
+.gt-figure { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); min-width: 0; }
+.gt-tally { font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
+.gt-standard { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--s-1); }
+/* E3-S38: the run's time above Play, said plainly; an overnight run's note under it. */
+.gt-time-part { display: grid; gap: var(--s-2); }
+.gt-time { margin: 0; font-size: var(--fs-md); overflow-wrap: anywhere; }
+.gt-overnight { margin: 0; overflow-wrap: anywhere; }
+
 @media (min-width: 1000px) {
   .gt-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+/* The results stay first: the play box sits to their right. */
 @media (min-width: 1600px) {
-  .gt-layout { grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); align-items: start; }
+  .gt-layout { grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); align-items: start; }
   .gt-play { max-width: none; }
+  /* A run playing before any games: the play box alone, at its one-column width. */
+  .gt-side:only-child { grid-column: 1 / -1; }
+  .gt-side:only-child > .gt-play { max-width: 40rem; }
 }

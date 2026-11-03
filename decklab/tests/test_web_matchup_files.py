@@ -62,8 +62,12 @@ class MatchupFileTests(unittest.TestCase):
         # deck's collection.
         tabs = re.search(r"const DECK_TABS = \[(.*?)\];", app, re.S).group(1)
         self.assertLess(tabs.index('"practice"'), tabs.index('["matchups", "Matchups"]'))
+        parts = _function(app, "deckTabParts")
         self.assertIn("return [deckMatchupsPart(data), fieldSection(data), gauntletSection(data), variantTestsSection(data)];",
-                      _function(app, "deckTabParts"))
+                      parts)
+        # E3-S33: a Commander deck's popular decks come first.
+        self.assertIn("return [gauntletSection(data), deckMatchupsPart(data), fieldSection(data), variantTestsSection(data)];",
+                      parts)
         self.assertIn("ownedSection(data)", _function(app, "cardsParts"))
         self.assertIn('if (!("owned" in data)) return null;', _function(app, "ownedSection"))
         self.assertIn('id: "sec-matchups"', _function(_scripts(["deck-tools.js"]), "deckMatchupsPart"))
