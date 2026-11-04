@@ -164,7 +164,9 @@ svg.icon-more { stroke-width: 4; }
   display: grid; place-items: center;
   width: 34px; height: 34px; border-radius: 50%;
   background: var(--accent); color: var(--accent-ink);
-  font-weight: var(--fw-bold); font-size: var(--fs-md); line-height: 1;
+  /* The initial is a picture of the person (the button's name says who): it stops growing at 18 px, so a
+     phone's large text never spills it out of the circle (E11-S55). */
+  font-weight: var(--fw-bold); font-size: var(--fs-avatar); line-height: 1;
 }
 .avatar-1 { background: var(--avatar-1); color: var(--avatar-ink); }
 .avatar-2 { background: var(--avatar-2); color: var(--avatar-ink); }
@@ -245,7 +247,8 @@ svg.icon-more { stroke-width: 4; }
   body.has-shell .tabbar:not([hidden]) {
     display: flex;
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
-    height: var(--shell-bottom);
+    /* At least 56 px; taller when large text wraps a label (shell.js keeps --shell-bottom at its height). */
+    min-height: calc(56px + env(safe-area-inset-bottom));
     padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     background: var(--surface);
     border-top: 1px solid var(--border);
@@ -258,9 +261,9 @@ svg.icon-more { stroke-width: 4; }
     position: relative;
     flex: 1 1 0; min-width: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    padding: 0; border: 0; background: none;
+    padding: 6px 0; border: 0; background: none;
     color: var(--ink-2);
-    font: inherit; font-size: var(--fs-xs); font-weight: var(--fw-semibold);
+    font: inherit; font-size: var(--fs-tab); font-weight: var(--fw-semibold);
     text-decoration: none;
     cursor: pointer;
   }
@@ -269,7 +272,9 @@ svg.icon-more { stroke-width: 4; }
     content: ""; position: absolute; top: 0; left: 28%; right: 28%;
     height: 3px; border-radius: 0 0 var(--r-sm) var(--r-sm); background: var(--accent);
   }
-  .tab .tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* A label wraps rather than cutting off ("Testi…") when the phone's text is large (E11-S55); at the usual
+     sizes every label fits on one line. */
+  .tab .tab-label { max-width: 100%; text-align: center; line-height: 1.15; overflow-wrap: anywhere; hyphens: auto; }
   .tab .nav-badge { position: absolute; top: 4px; left: calc(50% + 6px); box-shadow: 0 0 0 2px var(--surface); }
   /* The Matchups tab's dot while Forge plays (runs-pill.js): the activity icon in the header has the words. */
   .tab.has-run::after {

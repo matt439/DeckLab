@@ -73,7 +73,7 @@ function rcptBuildBar(view) {
   view.blanks = el("button", { type: "button", class: "rcpt-blanks", hidden: true, onclick: () => {
     rcptSetFilter(view, "attention");
     const first = view.comps.find((c) => c.selected && c.kind === "cards");
-    if (first && first.section) first.section.scrollIntoView({ block: "start", behavior: "smooth" });
+    if (first && first.section) first.section.scrollIntoView({ block: "start", behavior: scrollBehaviour() });
   } });
   view.recordReason = el("span", { id: "rcpt-record-reason", class: "rcpt-record-reason", "aria-live": "polite" });
   view.primary = el("button", { type: "button", class: "btn btn-primary", text: "Record arrival",
@@ -224,14 +224,14 @@ function rcptGoTo(view, item) {
     const target = item.comp.rows[0]?.tile?.querySelector(".rcpt-tick") || item.comp.section;
     if (target) {
       if (target === item.comp.section) target.setAttribute("tabindex", "-1");
-      target.scrollIntoView({ block: "center", behavior: "smooth" }); target.focus();
+      target.scrollIntoView({ block: "center", behavior: scrollBehaviour() }); target.focus();
     }
     return;
   }
   if (item.comp && item.row) {
     if (view.filter !== "all") rcptSetFilter(view, "all");
     const tile = item.row.tile;
-    if (tile) tile.scrollIntoView({ block: "center", behavior: "smooth" });
+    if (tile) tile.scrollIntoView({ block: "center", behavior: scrollBehaviour() });
     rcptOpenSheet(view, item.comp, item.row);
     return;
   }
@@ -242,7 +242,7 @@ function rcptGoTo(view, item) {
     view.dateInput.value = view.date.value || "";
     view.dateInput.hidden = false;
     rcptChanged(view);
-    view.dateInput.scrollIntoView({ block: "center", behavior: "smooth" });
+    view.dateInput.scrollIntoView({ block: "center", behavior: scrollBehaviour() });
     view.dateInput.focus();
     return;
   }
@@ -253,7 +253,7 @@ function rcptGoTo(view, item) {
     if (/^(section|div)$/i.test(target.tagName || target.tag || "") && !target.getAttribute("tabindex")) {
       target.setAttribute("tabindex", "-1");
     }
-    target.scrollIntoView({ block: "center", behavior: "smooth" });
+    target.scrollIntoView({ block: "center", behavior: scrollBehaviour() });
     target.focus();
   }
 }

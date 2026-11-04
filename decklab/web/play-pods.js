@@ -59,18 +59,22 @@ function podShownRecord(record) {
 
 function podCard(entry, data, editable = true) {
   const record = entry.record;
+  // As a two-player game's card (play.js playGameCard): the heading names the pod for a screen reader (E11-S55).
+  const headId = `play-pod-${record.id}`;
   const card = el("article", { class: "panel play-record play-pod-record" },
-    el("div", { class: "play-record-head" }, el("h3", { text: podResult(record) }),
-      el("span", { class: "sub", text: playDay(record.date) })),
+    el("div", { class: "play-record-head" },
+      el("h3", { id: headId }, podResult(record),
+        el("span", { class: "sr-only", text: `: ${record.seats.length}-player pod, ${playDay(record.date)}` })),
+      el("span", { class: "sub", "aria-hidden": "true", text: playDay(record.date) })),
     el("p", { class: "sub", text: `${record.seats.length}-player Commander pod` }),
     el("ul", { class: "play-pod-seats" }, record.seats.map((seat, i) => el("li", {},
       el("strong", { text: podSeatName(seat, i) }), ": ",
       seat.type === "deck" ? (podList(seat.deck) ? playListWords(seat.deck) : seat.deck?.title || "A deck")
         : seat.commander || "External opponent"))),
     record.notes ? el("p", { class: "play-note", text: record.notes }) : null,
-    playSnapshotDetails(record.seats.filter(seat => seat.type === "deck").map(seat => seat.deck).filter(Boolean)));
+    playSnapshotDetails(record.seats.filter(seat => seat.type === "deck").map(seat => seat.deck).filter(Boolean), headId));
   if (editable && entry.can?.edit === true && podSha(entry.sha256)) {
-    const button = el("button", { type: "button", class: "btn btn-quiet", text: "Correct this pod game" });
+    const button = el("button", { type: "button", class: "btn btn-quiet", text: "Correct this pod game", "aria-describedby": headId });
     card.append(button);
     const owner = podOwnerContext(data, button, card, entry);
     button.addEventListener("click", () => { if (podOwner(owner) && !button.disabled) podForm(owner); });

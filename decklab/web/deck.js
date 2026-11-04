@@ -646,7 +646,10 @@ function cardsParts(data, screen) {
   screen.cardsHost = list;
   screen.cardsBar = el("div", { class: "toolbar deck-cards-bar" });
   redrawCards(screen);
-  return [screen.cardsBar, list, deckConsideringSection(data), deckEdhrecSection(data), deckSwapsSection(data), tokensSection(data),
+  // The list's own heading, for a screen reader's outline: the type groups under it are h3s (E11-S55). The
+  // switch above the tabs already shows which list it is.
+  const heading = el("h2", { class: "sr-only", text: listName(data.version) });
+  return [heading, screen.cardsBar, list, deckConsideringSection(data), deckEdhrecSection(data), deckSwapsSection(data), tokensSection(data),
     deckPrintingsSection(data), ownedSection(data)];
 }
 

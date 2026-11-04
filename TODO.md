@@ -101,7 +101,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S53` | OPEN | could | M | Currency and price-check shops as settings, default AUD. The shops setting (`config.json`'s `"shops"`) is built (2026-11-04); left: the currency, and a Settings control. |
 | `E11-S59` | DECISION | could | L | Wake-on-request built in code (2026-11-01): Matt sets up the NAS gate, the service token, the Worker's secrets and the PC's wake settings, then times a real wake. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
-| `E11-S55` | OPEN | could | M | An accessibility pass: contrast, names, focus and reduced motion over every page in both densities and themes; first slice, the audit of the library, deck page and Game log on a phone. |
+| `E11-S55` | OPEN | could | M | An accessibility pass: contrast, names, focus and reduced motion over every page in both densities and themes. The phone audit of the library, deck page and Game log and its fixes are done (2026-11-04); next, the other pages and the lab density, then a real screen reader. |
 | `E11-S57` | DEFERRED | could | L | A Linux install route (a script or container); after `E11-S50` (Windows first, Matt, 2026-10-31) and `E11-S49`. |
 
 ## Areas with no open rows
