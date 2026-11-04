@@ -130,6 +130,14 @@ class SettingsTests(PgApiTestCase):
 
 class SimulationsTests(PgApiTestCase):
 
+    def setUp(self):
+        super().setUp()
+        # The PC's ceiling depends on its cores (2 on a 4-vCPU CI runner, where 2 workers would
+        # mean "no limit"): pin it, so a limit of 2 is a real limit everywhere.
+        patcher = mock.patch.object(api.simulations, "_max_workers", return_value=16)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_the_default_with_nothing_saved(self):
         seen = api.simulations_view(None)
         self.assertEqual((seen["mode"], seen["by"], seen["since"]), ("admins", None, None))
