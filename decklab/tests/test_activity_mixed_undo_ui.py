@@ -15,8 +15,8 @@ class ActivityMixedUndoUiTests(unittest.TestCase):
             collection:{removed:[removedRow()],reduced:[{current:collectionRow({quantity:4}),restored:collectionRow({quantity:2})}]},
             tokens:{removed:[],reduced:[]},components:[],products:[],uploads:['upload.csv'],...extra});
           const receiptPreview=(extra={})=>mixedPreview({action:'receipt_undo',label:'Receipt of order 2026-10-20-shop (cards, tokens)',uploads:[],
-            components:[{order:'2026-10-20-shop',component:'cards',kind:'cards',received_on:'2026-10-25',checks:['Confirm the Elves are near mint']},
-                        {order:'2026-10-20-shop',component:'tokens',kind:'tokens',received_on:'2026-10-25',checks:[]}],
+            components:[{order:'2026-10-20-shop',component:'cards',kind:'cards',received_on:'2026-10-25',checks:['Confirm the Elves are near mint'],corrected:null},
+                        {order:'2026-10-20-shop',component:'tokens',kind:'tokens',received_on:'2026-10-25',checks:[],corrected:null}],
             products:[{product:'fdc-test-precon',status:'preordered',intact:'yes'}],
             tokens:{removed:[tokenRow({front:'Treasure',back:'',quantity:2})],reduced:[]},...extra});
           const mixedSaved=(p,extra={})=>({saved:true,source_id:p.id,expect:p.expect,kind:'mixed',space:p.space,action:p.action,cards:p.cards,
@@ -48,6 +48,14 @@ class ActivityMixedUndoUiTests(unittest.TestCase):
           assert(!text.includes('Upload kept'));
         ''')
 
+    def test_a_corrected_part_says_its_rows_go_back_as_ordered(self):
+        self.run_js(r'''
+          const components=[{order:'2026-10-20-shop',component:'tokens',kind:'tokens',received_on:'2026-10-25',checks:[],corrected:{ordered:1,received:2}}];
+          const {sheet}=await openMixed(receiptPreview({components})),text=sheet.body.textContent;
+          assert(text.includes('its rows corrected on arrival go back as ordered (2 → 1 row)'),text);
+          giveReason(sheet);assert(!save(sheet).disabled);
+        ''')
+
     def test_save_sends_only_id_receipt_and_reviewed_reason_and_checks_the_answer(self):
         self.run_js(r'''
           const {sheet,p}=await openMixed();const sent=[];apiWrite=async(path,body)=>{sent.push([path,body]);return mixedSaved(p);};
@@ -76,11 +84,14 @@ class ActivityMixedUndoUiTests(unittest.TestCase):
     def test_malformed_previews_never_offer_save(self):
         self.run_js(r'''
           const bad=[{kind:'collection'},{space:'user2'},{reason_required:false},{action:'batch_remove'},{cards:-1},{uploads:[]},
-            {components:[{order:'x',component:'cards',kind:'cards',received_on:'',checks:[]}]},{extra:1},
+            {components:[{order:'x',component:'cards',kind:'cards',received_on:'',checks:[],corrected:null}]},{extra:1},
             {collection:{removed:[{...removedRow(),quantity:0}],reduced:[]}},{collection:{removed:[],reduced:[{current:collectionRow({quantity:2}),restored:collectionRow({quantity:4})}]}},
             {tokens:{removed:[tokenRow()],reduced:[]}}];
           for(const extra of bad){const {sheet}=await openMixed(mixedPreview(extra));assert(!save(sheet),JSON.stringify(extra));}
-          for(const extra of [{products:[{product:'x',status:'owned',intact:'yes'}]},{components:[]},{uploads:['upload.csv']}]){
+          const part=corrected=>[{order:'x',component:'cards',kind:'cards',received_on:'2026-10-25',checks:[],corrected}];
+          for(const extra of [{products:[{product:'x',status:'owned',intact:'yes'}]},{components:[]},{uploads:['upload.csv']},
+              {components:[{order:'x',component:'cards',kind:'cards',received_on:'',checks:[]}]},{components:part(0)},{components:part({ordered:0,received:1})},
+              {components:part({ordered:1})},{components:part({ordered:1,received:2,extra:1})},{components:part({ordered:'1',received:2})}]){
             const {sheet}=await openMixed(receiptPreview(extra));assert(!save(sheet),JSON.stringify(extra));}
         ''')
 
