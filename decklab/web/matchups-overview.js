@@ -528,8 +528,8 @@ function drawMatchups(library, matchups, params, token) {
   const play = gate.may ? el("button", { type: "button", class: "btn btn-primary", text: "Play a matchup",
     onclick: opener }) : null;
   add(main, [
-    pageHead({ title: routeH1("matchups"), description: "Forge, a free Magic rules engine, plays your decks on " +
-      "the PC, hundreds of times: against popular decks from outside the house and against each other, and counts who wins.", primary: play, badge: simulationsChip() }),
+    pageHead({ title: routeH1("matchups"), description: "Forge plays your decks hundreds of times on the PC, against each other " +
+      "and popular decks, and counts who wins.", primary: play, badge: simulationsChip() }),
     gate.may ? null : el("p", { class: "run-blocked mu-gate", text: gate.why }),
     forgeBox(data.forge),
     updates.node, lists]);

@@ -105,9 +105,15 @@ function remainingIntentPart(rows, title = "Still intended for this deck", folde
 }
 
 function assembledStateWords(info) {
-  return `Physically assembled: ${plural(info.main_count, "main-deck card")}`
+  return `In the box: ${plural(info.main_count, "main-deck card")}`
     + (info.sideboard_intended || info.sideboard_count
-      ? ` + ${info.sideboard_count} of ${info.sideboard_intended} intended sideboard cards` : "");
+      ? ` + ${info.sideboard_count} of ${info.sideboard_intended} sideboard` : "");
+}
+
+/** True when the box holds the whole intended list: then "In the box" says nothing a Built chip doesn't. */
+function assembledComplete(info) {
+  return Boolean(info) && !info.changed && !info.remaining_count
+    && (info.sideboard_count || 0) >= (info.sideboard_intended || 0);
 }
 
 function deckAssemblySection(data) {
@@ -115,8 +121,8 @@ function deckAssemblySection(data) {
   const info = data.assembled || data.summary.assembled;
   if (!info) return null;
   return el("section", { class: "deck-section deck-assembly", "aria-label": "Physically assembled cards" },
-    el("h2", { text: "Physically assembled" }), el("p", { text: assembledStateWords(info) + "." }),
-    info.changed ? el("p", { class: "box box-warn", text: "The physical assembly differs from the intended list. Review the packing plan before changing the physical deck." }) : null,
+    el("h2", { text: "In its box" }), el("p", { text: capitalise(assembledStateWords(info).replace(/^In the box: /, "")) + "." }),
+    info.changed ? el("p", { class: "box box-warn", text: "The box differs from the intended list. Check the packing plan before changing it." }) : null,
     remainingIntentPart(info.remaining),
     el("a", { class: "btn", href: `#/assembly?deck=${encodeURIComponent(data.summary.id)}&version=${info.intended_version || info.version}`,
       text: "Review the packing plan" }));

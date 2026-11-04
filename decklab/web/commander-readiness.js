@@ -163,13 +163,18 @@ function commanderReadiness(data) {
   effects.append(comboFindings(br, "commander-readiness"));
   effects.append(el("p", { class: "sub", text: "Mass land denial means removing or locking down many lands. " +
     "Community tags can miss cards or flag effects you don't intend to use." }));
-  section.append(effects,
-    el("p", { class: "sub", text: COMMANDER_CHECK_LIMITS }),
-    commanderDataNote(br));
-  if (target === 2) section.append(el("p", { class: "sub", text: "Bracket 2 aims for a straightforward, social game with time to develop; " +
+  // The checks' limits and data dates fold away: they're the fine print, not the answer (a phone showed
+  // six paragraphs of them under the one-line summary). Out-of-date data still says so on the fold's line.
+  const dataNote = commanderDataNote(br);
+  const stale = /may be out of date|update the card data|is unknown/.test(dataNote.textContent);
+  const about = el("details", { class: "more commander-about" },
+    el("summary", { text: stale ? "About these checks (data may be out of date)" : "About these checks" }),
+    el("p", { class: "sub", text: COMMANDER_CHECK_LIMITS }), dataNote);
+  if (target === 2) about.append(el("p", { class: "sub", text: "Bracket 2 aims for a straightforward, social game with time to develop; " +
     "expect at least eight turns before a win or loss. A few extra-turn cards can fit, but chaining them cannot." }));
   const source = data.stats.sources && data.stats.sources["wizards-commander"];
-  if (source) section.append(el("a", { href: source.url, target: "_blank", rel: "noopener", text: "Commander brackets and Game Changers" }));
+  if (source) about.append(el("p", {}, el("a", { href: source.url, target: "_blank", rel: "noopener", text: "Commander brackets and Game Changers" })));
+  section.append(effects, about);
   return section;
 }
 

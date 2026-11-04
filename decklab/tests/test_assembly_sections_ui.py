@@ -165,8 +165,8 @@ class AssemblySectionsUiTests(unittest.TestCase):
           const data={summary:{id:'casual/a',assembled},version:'target'};
           assert.equal(deckAssemblySection(data),null);
           const node=deckAssemblySection({...data,owned:{},assembled});
-          assert(node.textContent.includes('60 main-deck cards + 1 of 3 intended sideboard cards'));
-          assert(node.textContent.includes('physical assembly differs from the intended list'));
+          assert(node.textContent.includes('60 main-deck cards + 1 of 3 sideboard'));
+          assert(node.textContent.includes('box differs from the intended list'));
           assert(node.textContent.includes('availability needs checking'));
           assert(!node.textContent.includes('0 to get'));
           assert.equal(node.querySelector('a').getAttribute('href'),'#/assembly?deck=casual%2Fa&version=owned');
@@ -179,6 +179,6 @@ class AssemblySectionsUiTests(unittest.TestCase):
             assembled:{main_count:60,sideboard_count:0,sideboard_intended:3,remaining_count:3}};
           const node=availabilityBanner(data,{view:{tab:'overview'}});
           assert(node.querySelector('.deck-avail-head').textContent.includes('Intended list: 2 missing'));
-          assert(node.querySelector('.deck-avail-assembled').textContent.includes('60 main-deck cards + 0 of 3 intended sideboard cards'));
+          assert(node.querySelector('.deck-avail-assembled').textContent.includes('In the box: 60 main-deck cards + 0 of 3 sideboard'));
           delete data.owned; assert.equal(availabilityBanner(data,{view:{tab:'overview'}}),null);
         """)

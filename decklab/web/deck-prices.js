@@ -34,8 +34,7 @@ function ownedSection(data) {
     const summary = t.missing ? `${t.missing} missing${cost}` : `${coming} on the way`;
     const details = el("details", { class: "more deck-price-table" },
       el("summary", { text: `Price table: ${summary}` }),
-      el("p", { class: "sub", text: "Cards on the way (ordered or preordered) count as owned. A card can only be in " +
-        "one deck at a time, so copies held by built decks or by products kept together aren't free for this one. " +
+      el("p", { class: "sub", text: "On the way counts as owned. Copies in built decks or intact products aren't free. " +
         "Basic lands aren't counted." }));
     details.append(ownedTable(o, { frame: details, owner: section, data }), priceNote);
     section.append(details);

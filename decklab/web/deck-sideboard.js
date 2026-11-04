@@ -135,5 +135,7 @@ function deckSideboardNotes(data) {
   if (!parts.length) return null;
   return el("div", { class: "deck-sideboard-notes" },
     data.guide.changed_on ? el("p", { class: "note note-warn", text: `The list changed on ${data.guide.changed_on}, so these notes may be out of date.` }) : null,
-    parts.map(part => el("div", {}, el("h3", { text: part.title }), guideMarkdown(part.markdown))));
+    // Folded like How to play's topics (where the same notes are too), so the plan's picker isn't buried.
+    parts.map(part => el("details", { class: "guide-topic" }, el("summary", {}, el("h3", { text: part.title })),
+      guideMarkdown(part.markdown))));
 }

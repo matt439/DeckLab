@@ -38,7 +38,7 @@ function commanderNightSettings() {
   if (!commanderNightAdmin()) return null;
   return el("section", { class: "panel settings-part", id: "settings-commander-night", "aria-labelledby": "settings-night-title" },
     el("h2", { id: "settings-night-title", text: "Commander night" }),
-    el("p", { class: "sub", text: "Record the household's usual night and what its table expects. Everyone at home sees these notes on home Commander deck pages. Only home admins change them." }),
+    el("p", { class: "sub", text: "Your usual night and what its table expects, shown on home Commander deck pages. Only home admins change it." }),
     el("div", { id: "commander-night-settings" }, loadingBox("Loading the recorded Commander night…")));
 }
 
