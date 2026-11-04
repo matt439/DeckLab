@@ -47,7 +47,8 @@ const FIND_TYPES = [["", "Any type"], ["creature", "Creature"], ["instant", "Ins
 function addPart(onPaste = editorSearchPaste) {
   const ed = editor;
   ed.dom.addTo = el("div", { class: "segmented", role: "group", "aria-label": "Add cards to" });
-  const part = el("section", { class: "edit-add", id: "edit-add", "aria-label": "Add cards" },
+  // A plain group: the lab's pane (or the phone's sheet) around it already names it "Add cards" (E11-S55).
+  const part = el("div", { class: "edit-add", id: "edit-add", role: "group", "aria-label": "Add cards" },
     el("div", { class: "add-to" }, el("span", { class: "add-to-label", text: "Add to" }), ed.dom.addTo),
     cardSearch(),
     el("div", { class: "add-paste" },

@@ -163,7 +163,7 @@ function shopQueuePresentation(groups, view, {showFor = true, group = "to-buy", 
     el("caption", {class: "sr-only", text: group === "long-term" ? "Long-term purchase queue" : "Purchase queue by category"}),
     el("thead", {}, el("tr", {}, headers.map(([key, text]) => el("th", {scope: "col", class: `shop-q-head-${key}`,
       "aria-label": key === "stock" ? "Stock when checked" : null, text})))));
-  const wrap = el("div", {class: "shop-queue-table-wrap", tabindex: "0", role: "region", "aria-label": "Purchase queue table, scroll for more columns"}, table);
+  const wrap = el("div", {class: "shop-queue-table-wrap", tabindex: "0", role: "region", "aria-label": `${group === "long-term" ? "Long-term plan" : "Purchase queue"} table, scroll for more columns`}, table);
   let lab = null, order = null;
   const savedOrder = new Map((view.data.to_buy || []).map((card, index) => [card, index]));
   const records = [], destinations = [];

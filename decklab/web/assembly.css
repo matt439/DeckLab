@@ -109,7 +109,7 @@
 .pack-deck { display: grid; gap: var(--s-4); }
 .pack-deck-head h2 { margin: 0; font-size: var(--fs-xl); overflow-wrap: break-word; }
 .pack-deck-head h2, .pack-deck-choice { scroll-margin-top: calc(var(--shell-top) + var(--s-3));
-  scroll-margin-bottom: calc(var(--bar-h) + var(--shell-bottom, 0px) + var(--s-3)); }
+  scroll-margin-bottom: calc(max(var(--bar-h), var(--page-bar-h, 0px)) + var(--shell-bottom, 0px) + var(--s-3)); }
 .pack-deck-head .sub { margin: var(--s-1) 0 0; }
 .pack-bulk { display: grid; justify-items: start; gap: var(--s-2); }
 .pack-bulk[hidden] { display: none; }

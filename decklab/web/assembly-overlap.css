@@ -24,6 +24,8 @@
 .pack-tiles .pack-printing { justify-self: start; align-self: start; max-width: 100%; width: fit-content;
   min-height: 32px; padding: 2px var(--s-2); font-size: var(--fs-meta); white-space: normal; overflow-wrap: anywhere;
   text-align: left; color: var(--ink-2); font-weight: var(--fw-regular); }
+/* A touch screen keeps the 44 px floor here too, the iPad on its side (lab layout, touch sizes) included (E11-S55). */
+@media (pointer: coarse) { .pack-tiles .pack-printing { min-height: var(--tap); } }
 .pack-tiles .pack-printing.is-chosen { color: var(--ink); }
 .pack-printing-choices, .deck-printings-choices { display: grid; gap: var(--s-2); }
 .pack-printing-choices input, .deck-printings-choices input { width: 6ch; }

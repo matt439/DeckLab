@@ -42,7 +42,7 @@ function gsBox(inSheet) {
   const id = inSheet ? "gs-sheet" : "gs-bar";
   const input = el("input", { type: "search", class: "gs-input", id: `${id}-input`, autocomplete: "off", spellcheck: "false",
     enterkeyhint: "search", placeholder: "Search decks and cards", "aria-label": "Search decks and cards",
-    "aria-controls": `${id}-results`, "aria-expanded": "false", maxlength: "100" });
+    "aria-controls": `${id}-results`, maxlength: "100" });
   const hint = el("span", { class: "kbd gs-kbd", text: "/", "aria-hidden": "true", hidden: true });
   const status = el("p", { class: "sr-only", role: "status", "aria-live": "polite" });
   const results = el("div", { class: "gs-results", id: `${id}-results`, hidden: true });
@@ -117,8 +117,9 @@ function gsReset(box) {
 
 function gsShow(box, on) {
   const shown = Boolean(on) && box.results.children.length > 0;
+  // No aria-expanded: a search field (role searchbox) may not carry it, and the results aren't a listbox, so the
+  // field isn't a combobox either; the status line says what was found (E11-S55).
   box.results.hidden = !shown;
-  box.input.setAttribute("aria-expanded", String(shown));
 }
 
 // ------------------------------------------------------------------ keys

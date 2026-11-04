@@ -4,7 +4,7 @@
 .acc-message:empty { display: none; }
 .acc-message { margin: var(--s-3) 0; }
 .acc-section { margin-top: var(--s-5); }
-.acc-section > h2 { font-size: var(--fs-lg); }
+.acc-section > h3 { font-size: var(--fs-lg); }
 /* Each owner's group starts clear of the last group's chips (the first sits under the filter as before). */
 .acc-section + .acc-owner-title { margin-top: var(--s-7); }
 /* The tiles: two a row on a phone, the picture first, one line under the name, then chips. */

@@ -352,8 +352,10 @@ function mainTabs() {
   // A new deck's Cards heading needs no tab bar.
   return el("div", { class: "edit-main-head" },
     notes ? el("div", { class: "tabs edit-tabs", role: "tablist", "aria-label": "Edit", onkeydown: tabArrows },
-      tab("cards", "Cards"), tab("notes", "Notes"))
-      : el("h2", { class: ed.quick ? "sr-only" : "edit-cards-title", text: ed.mode === "edit" ? listName(ed.version) : "Cards" }),
+      tab("cards", "Cards"), tab("notes", "Notes")) : null,
+    // The tabs aren't a heading: the list still gets its h2 over the sections' h3s (E11-S55), hidden while tabs show.
+    ed.tab === "notes" && notes ? null
+      : el("h2", { class: ed.quick || notes ? "sr-only" : "edit-cards-title", text: ed.mode === "edit" ? listName(ed.version) : "Cards" }),
     lookOffered ? editorManaSortButton() : null,
     lookOffered ? ed.dom.look : null);
 }

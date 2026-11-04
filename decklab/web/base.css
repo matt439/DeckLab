@@ -81,7 +81,7 @@ body {
   --focus-clear-bottom: var(--shell-bottom, 0px);
 }
 body:has(#main .deck-tabs) { --focus-clear-top: calc(var(--shell-top) + var(--tap)); }
-body:is(.has-edit-bar, :has(#main .action-bar)) { --focus-clear-bottom: calc(var(--shell-bottom, 0px) + var(--bar-h)); }
+body:is(.has-edit-bar, :has(#main .action-bar)) { --focus-clear-bottom: calc(var(--shell-bottom, 0px) + max(var(--bar-h), var(--page-bar-h, 0px))); }
 :where(a[href], button, input, select, textarea, summary, [tabindex]) {
   scroll-margin-top: calc(var(--focus-clear-top) + var(--s-2));
   scroll-margin-bottom: calc(var(--focus-clear-bottom) + var(--s-2));

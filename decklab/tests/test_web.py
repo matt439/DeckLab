@@ -629,9 +629,10 @@ class WebFileTests(unittest.TestCase):
         # Review findings from the phone review (390 px wide).
         css = _styles()
         script = _scripts()
-        # "Target list | Owned-only version (none yet)" stays one row; "(none yet)" wraps inside its button.
+        # "Target list | Owned-only version (none yet)" stays one row; "(none yet)" wraps inside its button, and at
+        # 200 % text the words wrap too rather than widening the page (E11-S55).
         self.assertRegex(css, r"\.edit-head \.version-pick \.segmented \{[^}]*flex-wrap: nowrap")
-        self.assertRegex(css, r"\.edit-head \.version-pick \.segmented > \* \{[^}]*flex-wrap: wrap[^}]*white-space: nowrap")
+        self.assertRegex(css, r"\.edit-head \.version-pick \.segmented > \* \{[^}]*flex-wrap: wrap[^}]*white-space: normal")
         # The collapsed "Deck details": chevron and words in the middle of its 44 px; the words wrap together.
         summary = re.search(r"details\.edit-details > summary \{([^}]*)\}", css).group(1)
         self.assertIn("align-items: center", summary)

@@ -63,7 +63,7 @@ class GlobalSearchUiTests(unittest.TestCase):
           await answer();
           const results = box().results;
           assert.equal(results.hidden, false);
-          assert.equal(box().input.getAttribute("aria-expanded"), "true");
+          assert.equal(box().input.getAttribute("aria-expanded"), null);
           same(results.querySelectorAll("h3").map((h) => h.textContent), ["Decks", "In your collection", "Other cards"]);
           const deck = results.querySelector("a");
           assert.equal(deck.getAttribute("href"), "#/deck?id=user2%2Fcasual%2Fr-elves&v=target");

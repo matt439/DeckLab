@@ -287,14 +287,17 @@ function updateAccessories(view) {
   for (const owner of owners) {
     const owned = items.filter((item) => (item.owner || "shared") === owner);
     if (!owned.some((item) => view.filter === "all" || item.kind === view.filter)) continue;
-    view.lists.append(el("h2", { class: "acc-owner-title", text: owner === "shared" ? "Shared" : owned[0].owner_name || capitalise(owner) }));
+    // Each owner's kinds are h3s under the owner's h2, and each part is named "Matt Sleeves (1)", so two owners'
+    // Sleeves parts aren't two landmarks of the same name (E11-S55).
+    const ownerId = `acc-${owner}-title`;
+    view.lists.append(el("h2", { class: "acc-owner-title", id: ownerId, text: owner === "shared" ? "Shared" : owned[0].owner_name || capitalise(owner) }));
     for (const [kind, words] of Object.entries(ACC_KINDS)) {
     if (view.filter !== "all" && view.filter !== kind) continue;
     const mine = owned.filter((item) => item.kind === kind);
     if (!mine.length) continue;
     const id = `acc-${owner}-${kind}-title`;
-    view.lists.append(el("section", { class: "acc-section", "aria-labelledby": id },
-      el("h2", { id, text: `${words.title} (${mine.length})` }),
+    view.lists.append(el("section", { class: "acc-section", "aria-labelledby": `${ownerId} ${id}` },
+      el("h3", { id, text: `${words.title} (${mine.length})` }),
       el("ul", { class: "acc-grid" }, mine.map((item) => accCard(view, item)))));
     }
   }
