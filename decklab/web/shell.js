@@ -69,6 +69,31 @@ function watchTabbarHeight(bar) {
   }).observe(bar);
 }
 
+/** Keeps --page-bar-h at the height of the page's own action bar (Build decks', Receive delivery's), which grows
+ * past its usual --bar-h with a status line, warnings or wrapping buttons, so a focused control stops above the
+ * whole bar, not just its first 72 px (base.css's --focus-clear-bottom; E11-S55, WCAG 2.4.11). Cleared while the
+ * page has no bar. Watches #main once, for bars that come and go with the pages. */
+function watchPageBar() {
+  const main = byId("main");
+  if (!main || main.dataset.barWatched || typeof ResizeObserver !== "function" || typeof MutationObserver !== "function") return;
+  main.dataset.barWatched = "1";
+  let watched = null;
+  const sync = () => {
+    const height = watched && watched.isConnected ? Math.ceil(watched.getBoundingClientRect().height) : 0;
+    if (height > 0) document.body.style.setProperty("--page-bar-h", `${height}px`);
+    else document.body.style.removeProperty("--page-bar-h");
+  };
+  const sizer = new ResizeObserver(sync);
+  new MutationObserver(() => {
+    const bar = main.querySelector(".action-bar");
+    if (bar === watched) return;
+    if (watched) sizer.unobserve(watched);
+    watched = bar;
+    if (bar) sizer.observe(bar);
+    sync();
+  }).observe(main, { childList: true, subtree: true });
+}
+
 /** True when this device is the profile's own: it skips "Who are you?" and isn't forgotten while away. */
 function isMyDevice(profile = state.profile) {
   return Boolean(profile) && !state.remote && myDeviceId() === profile.id;
@@ -102,6 +127,7 @@ function toggleMyDevice() {
 /** Wire the shell's fixed parts in index.html once, at start. */
 function setUpShell() {
   setUpKeyboardHelp();
+  watchPageBar();
   if (typeof setUpGlobalSearch === "function") setUpGlobalSearch();
   const avatar = byId("avatar-button"), menu = byId("avatar-menu");
   if (avatar && menu) wireMenu(avatar, menu);

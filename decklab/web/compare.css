@@ -6,6 +6,8 @@
 .compare-head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-1); min-width: 0;
   padding: var(--s-2) var(--s-3); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); }
 .compare-title { font-size: var(--fs-md); font-weight: var(--fw-semibold); line-height: var(--lh-tight); overflow-wrap: anywhere; }
+/* The title is the head's link to its deck: a full target where there's no fine pointer (E11-S55). */
+@media (pointer: coarse) { .compare-title { display: inline-flex; align-items: center; min-height: var(--tap); } }
 .compare-facts { margin: 0; color: var(--ink-2); font-size: var(--fs-sm); overflow-wrap: anywhere; }
 .compare-part { margin: 0 0 var(--s-4); }
 .compare-part > h2 { margin: 0 0 var(--s-2); font-size: var(--fs-lg); }

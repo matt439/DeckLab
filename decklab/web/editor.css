@@ -30,7 +30,8 @@
    its button. It's a flex item, whose leading space doesn't show (it stays in the link's name for screen
    readers), so the gap is the button's. */
 .edit-head .version-pick .segmented { flex-wrap: nowrap; }
-.edit-head .version-pick .segmented > * { flex-wrap: wrap; column-gap: 0.3em; white-space: nowrap; line-height: 1.2; text-align: center; }
+/* Its words wrap only when the row can't hold them (200 % text), rather than pushing the page wider (E11-S55). */
+.edit-head .version-pick .segmented > * { flex-wrap: wrap; column-gap: 0.3em; min-width: 0; white-space: normal; line-height: 1.2; text-align: center; }
 .edit-head .none-yet { font-weight: var(--fw-regular); color: var(--ink-3); }
 @media (max-width: 599px) { .edit-head .version-pick .segmented > * { padding: var(--s-2) var(--s-3); } }
 /* From a tablet up, the list switch sits on the title's row: one row fewer above the list. */
@@ -608,6 +609,13 @@ button.edit-card:hover { background: var(--hover); }
 .is-quick .edit-row .edit-print-words { grid-area: print; display: inline-flex; align-items: center; gap: var(--s-2); color: var(--ink-2); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .is-quick .edit-row .edit-badge-slot { grid-area: badge; justify-self: start; min-width: 0; }
 .is-quick .edit-row .edit-more { grid-area: more; }
+/* A narrow list (a 320 px phone, or large text): the badge ("2 missing") takes a line of its own under the
+   printing, so it never pushes the page wider than the screen (E11-S55, WCAG 1.4.10). */
+.is-quick .edit-list { container: quick-list / inline-size; }
+@container quick-list (max-width: 20em) {
+  .is-quick .edit-list > .edit-row { grid-template-areas: "step card card more" "step print print more" "step badge badge more"; }
+  .is-quick .edit-row .edit-badge-slot:empty { display: none; }
+}
 .is-quick .edit-row .edit-problem, .is-quick .edit-row .edit-block, .is-quick .edit-row .edit-warn { grid-column: 2 / -1; }
 /* The search sheet: Add to and the search box stay at the top; only the results scroll. */
 dialog.sheet-search .sheet-inner { height: 90vh; height: 90dvh; }

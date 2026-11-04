@@ -114,7 +114,8 @@ function compareTable(caption, labels, rows) {
   return el("table", { class: "data compare-table" },
     el("caption", { class: "sr-only", text: caption }),
     el("colgroup", {}, el("col", { class: "c-what" }), el("col"), el("col")),
-    el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "" }),
+    // The row headers' column is named for a screen reader only (an empty header is read as nothing, E11-S55).
+    el("thead", {}, el("tr", {}, el("th", { scope: "col" }, el("span", { class: "sr-only", text: "Figure" })),
       labels.map((label) => el("th", { scope: "col", class: "num", text: label })))),
     el("tbody", {}, rows.filter(Boolean).map(([what, ...cells]) => el("tr", {},
       el("th", { scope: "row", text: what }),
