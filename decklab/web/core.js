@@ -498,6 +498,12 @@ function setTitle(text) {
   if (shown) shown.textContent = text || "Deck Lab";
 }
 
+/** The behavior for a scrollIntoView or scrollTo the page makes itself: "smooth", or "auto" (a jump) when the
+ * device asks for reduced motion (E11-S55). */
+function scrollBehaviour() {
+  return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+}
+
 /* The two lists a deck can have, in all of the page's wording (decision 2 of the review). The deck text's own
 headings ("## Decklist", "### Substitute version (owned and incoming cards)") and the version keys (target,
 owned) don't change. */

@@ -73,6 +73,23 @@ code { font-family: var(--font-mono); font-size: .9em; }
   outline-offset: 2px;
 }
 
+/* E11-S55: a control that takes focus stops clear of the sticky header (and the deck page's tab strip) and of the
+   phone's tab bar and a page's bottom bar, so Tab and Shift+Tab never leave it under them (WCAG 2.4.11). :where
+   keeps it at no specificity, so a part's own scroll-margin wins; inside a sheet or the viewer nothing sticks. */
+body {
+  --focus-clear-top: var(--shell-top);
+  --focus-clear-bottom: var(--shell-bottom, 0px);
+}
+body:has(#main .deck-tabs) { --focus-clear-top: calc(var(--shell-top) + var(--tap)); }
+body:is(.has-edit-bar, :has(#main .action-bar)) { --focus-clear-bottom: calc(var(--shell-bottom, 0px) + var(--bar-h)); }
+:where(a[href], button, input, select, textarea, summary, [tabindex]) {
+  scroll-margin-top: calc(var(--focus-clear-top) + var(--s-2));
+  scroll-margin-bottom: calc(var(--focus-clear-bottom) + var(--s-2));
+}
+:where(dialog, [role="dialog"], .menu) :where(a[href], button, input, select, textarea, summary, [tabindex]) {
+  scroll-margin: var(--s-2);
+}
+
 .sr-only {
   position: absolute !important;
   width: 1px; height: 1px;
@@ -81,11 +98,13 @@ code { font-family: var(--font-mono); font-size: .9em; }
 }
 
 .skip {
-  position: absolute; left: var(--s-2); top: -60px; z-index: 50;
+  position: absolute; left: var(--s-2); top: 0; z-index: 50;
   background: var(--accent); color: var(--accent-ink);
   padding: var(--s-3) var(--s-4); border-radius: var(--r-md);
+  /* Off the top by its own height, however large the text makes it (a fixed -60 px left it peeking out). */
+  transform: translateY(calc(-100% - var(--s-2)));
 }
-.skip:focus { top: var(--s-2); }
+.skip:focus { transform: translateY(var(--s-2)); }
 
 .wrap {
   width: 100%;

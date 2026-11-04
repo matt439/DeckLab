@@ -354,13 +354,14 @@ async function playQuickSave({ data, sides, date, notes, outcomes, error, button
   showToast(`Saving the game: ${words}`, { undo });
 }
 
-function playSnapshotDetails(snapshots) {
+function playSnapshotDetails(snapshots, describedBy) {
   const lineText = line => `${line.qty} ${line.name}`
     + (line.set ? ` (${line.set.toUpperCase()})${line.number ? ` ${line.number}` : ""}` : "")
     + (line.finish === "foil" ? " *F*" : line.finish === "etched" ? " *E*" : "");
   const shown = snapshots.filter(list => !list.hidden && !list.removed && list.sections);
   if (!shown.length) return null;
-  return el("details", { class: "play-snapshots" }, el("summary", { text: "Recorded decklists" }),
+  return el("details", { class: "play-snapshots" },
+    el("summary", { text: "Recorded decklists", "aria-describedby": describedBy || null }),
     shown.map(list => el("div", {}, el("h4", { text: playListWords(list) }),
       el("pre", { text: Object.entries(list.sections).map(([section, lines]) => section + "\n"
         + lines.map(lineText).join("\n")).join("\n\n") }))));
@@ -370,15 +371,20 @@ function playGameCard(entry, data) {
   const record = entry.record;
   const mulligans = record.sides.filter((side) => side.mulligans)
     .map((side) => `${side.player} took ${plural(side.mulligans, "mulligan")}`);
+  // The heading names the game, not only its result, so a screen reader's list of headings tells the games
+  // apart; the game's own buttons are described by it (E11-S55). The words shown are unchanged.
+  const headId = `play-game-${record.id}`;
+  const decks = record.sides.map((side) => side.title || "a deck").join(" vs ");
   return el("article", { class: "panel play-record" },
-    el("div", { class: "play-record-head" }, el("h3", { text: playResult(record) }),
-      el("span", { class: "sub", text: playDay(record.date) })),
+    el("div", { class: "play-record-head" },
+      el("h3", { id: headId }, playResult(record), el("span", { class: "sr-only", text: `: ${decks}, ${playDay(record.date)}` })),
+      el("span", { class: "sub", "aria-hidden": "true", text: playDay(record.date) })),
     el("p", {}, record.sides.map((side, i) => [i ? " vs " : "", el("strong", { text: side.title }), side.player ? ` (${side.player})` : "",
       side.version === "owned" ? `, ${listName("owned", true)}` : "", side.plan_id ? ", sideboarded" : ""])),
     mulligans.length ? el("p", { class: "sub", text: mulligans.join("; ") + "." }) : null,
     record.notes ? el("p", { class: "play-note", text: record.notes }) : null,
-    playSnapshotDetails(record.sides),
-    playMayCorrect(entry) ? el("button", { class: "btn btn-quiet", type: "button", text: "Correct this game",
+    playSnapshotDetails(record.sides, headId),
+    playMayCorrect(entry) ? el("button", { class: "btn btn-quiet", type: "button", text: "Correct this game", "aria-describedby": headId,
       onclick: () => playGameForm(data, "", entry) }) : null);
 }
 

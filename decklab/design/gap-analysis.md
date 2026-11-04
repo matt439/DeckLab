@@ -6,7 +6,7 @@ Story ids (such as E7-S09) are those in [stories.md](stories.md). Each story the
 
 ## Headline
 
-Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 116 built, 6 partial and none missing; User1 has 33 built, 1 partial and 1 missing; Claude Code has 25 built and none missing; User5 has 4 built, the space members 4 and the Commander table 1, with no gaps for those last three; the self-hoster (added 2026-11-04) has only could stories. Across all 307 stories there are 254 built, 20 partial, 17 missing and 16 not wanted (recounted from the story headers on 2026-11-04, after the persona and story review added E11-S59 and E11-S60 for built work no story covered and moved six self-hosting stories to the self-hoster).
+Deck Lab already does most of what Matt and User1 need. Of the must and should stories, Matt has 116 built, 6 partial and none missing; User1 has 33 built, 1 partial and 1 missing; Claude Code has 25 built and none missing; User5 has 4 built, the space members 4 and the Commander table 1, with no gaps for those last three; the self-hoster (added 2026-11-04) has only could stories. Across all 307 stories there are 254 built, 21 partial, 16 missing and 16 not wanted (recounted from the story headers on 2026-11-04, with E11-S55 partial since its phone audit's fixes, after the persona and story review added E11-S59 and E11-S60 for built work no story covered and moved six self-hosting stories to the self-hoster).
 
 Matt's answers moved the work towards three things:
 

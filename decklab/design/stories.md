@@ -5405,7 +5405,7 @@ As the household admin, I want to be told on my phone when something I'm waiting
 
 Decided (Matt, 2026-11-03): no push notices. The in-app notices (the arrival notice, Back in stock, the run pill, the restart banner) are enough.
 
-**E11-S55** · Matt · could · M · missing
+**E11-S55** · Matt · could · M · partial
 
 As the household admin whose members use phones and whose pages serve beginners, I want Deck Lab's pages checked for accessibility as one pass, so that every control can be reached, named and read by anyone, in both densities and themes.
 
@@ -5417,6 +5417,8 @@ As the household admin whose members use phones and whose pages serve beginners,
 Gap: UI-KIT.md covers focus, announcements and reduced motion for the card viewer and the run pill and gives the tiles' screen-reader words, but no page-wide audit exists and no test checks contrast. First slice: the audit of the library, the deck page and the Game log on a phone, written up before any fix.
 
 Audited (2026-11-04): the library, the deck page and the Game log on a phone, in [accessibility-audit-phone-2026-11-04.md](accessibility-audit-phone-2026-11-04.md): contrast, names, touch targets and reduced motion pass there; five findings (focus hidden under the bars, the Game log's look-alike headings, 200 % text, a skipped heading level on Cards, long library tile names) each with a proposed fix slice.
+
+Fixed (2026-11-04, Matt: "Do all"): every focusable control stops clear of the header, the deck tabs, the tab bar and a page's bar (`base.css`, `--focus-clear-top`/`-bottom`); a game's heading in the Game log names its decks and date for a screen reader and describes its buttons, as a pod's does; the tab bar's labels wrap at large text (`shell.js` keeps `--shell-bottom` at the bar's height), the skip link hides by its own height, the avatar's initial is capped (`--fs-avatar`); the Cards tab has a hidden h2 over its type groups; a library tile says its title before its colours; Collection's paging and Receive delivery's scrolls jump under reduced motion (`scrollBehaviour()`). UI-KIT.md has an Accessibility section. Test: `decklab/tests/test_phone_accessibility.py`. Still to do: the other pages, both densities, and a real screen reader.
 
 **E11-S56** · Self-hoster · could · S · built
 

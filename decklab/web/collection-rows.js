@@ -131,7 +131,7 @@ function drawColRowList(cv) {
   cv.page = Math.min(Math.max(1, cv.page), pages);
   const go = (page, control) => {
     if (!colRowControlCurrent(cv, control)) return;
-    cv.page = page; drawColRowList(cv); cv.list.scrollIntoView({ block: "start", behavior: "smooth" });
+    cv.page = page; drawColRowList(cv); cv.list.scrollIntoView({ block: "start", behavior: scrollBehaviour() });
   };
   clear(cv.list);
   if (!rows.length) {

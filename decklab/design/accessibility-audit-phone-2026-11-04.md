@@ -24,7 +24,7 @@ Not checked: a real screen reader (VoiceOver, TalkBack), real card art, and the 
 
 ## Findings
 
-Ordered by how much they get in the way. Each has a proposed fix slice; none is fixed yet.
+Ordered by how much they get in the way. Matt asked for all of them (2026-11-04), and all are fixed in the same change, as described under each; `decklab/tests/test_phone_accessibility.py` keeps them fixed.
 
 ### 1. Focus hides under the header, the deck tabs and the tab bar (WCAG 2.4.11, AA)
 
@@ -32,13 +32,13 @@ When Tab moves to a control near the bottom of the screen, the browser scrolls o
 
 Screenshots: `findings/testing-link-focus-under-tabbar.png`, `findings/gamelog-focus-under-tabbar.png`, `findings/cards-row-focus-under-tabbar.png`.
 
-Fix (S): `scroll-padding-top` and `scroll-padding-bottom` on the root, from `--shell-top` (plus the deck tab strip on the deck page) and the tab bar's height with the safe area, so focus and in-page links stop clear of the bars. A stylesheet test pins them.
+Fixed: every focusable control has `scroll-margin-top` and `-bottom` from `--focus-clear-top` (the header, plus the deck tab strip on the deck page) and `--focus-clear-bottom` (the tab bar, plus a page's own bar), at no specificity so a part's own scroll margin still wins (`base.css`). Root `scroll-padding` was the first idea, but it would have doubled the scroll margins several parts already set.
 
 ### 2. The Game log's games are hard to tell apart by ear
 
 Each game is an h3 naming only the result ("Matt won", "Matt won", "Sam won"…), with the date and decks after it, so a screen reader's heading list is fourteen near-identical lines; every game's "Correct this game" button and "Recorded decklists" disclosure has the same name too.
 
-Fix (S): put the decks and date in the heading ("Matt won: Gruul Ramp vs Izzet Prowess, 31 Oct", the words shown staying as they are), and describe each game's buttons by that heading (`aria-describedby`).
+Fixed: the heading says "Matt won: Gruul Ramp vs Izzet Prowess, 31 Oct" to a screen reader (the decks and date in a hidden span; the words shown are unchanged), and each game's Recorded decklists and Correct this game are described by it (`aria-describedby`). A Commander pod's card does the same.
 
 ### 3. Large text (the phone's browser text size at 200 %)
 
@@ -46,26 +46,28 @@ The tab bar's labels truncate ("Testi…", "Colle…", "Shop…"), the skip link
 
 Screenshots: `findings/text-200-gamelog.png`, `findings/text-200-deck-overview.png`.
 
-Fix (S): let the tab bar's labels wrap to two lines or hide them under the icons past a size, move the skip link off-screen by its own height rather than a fixed 60 px, and size the avatar's letter to its circle.
+Fixed: the tab bar's labels wrap (hyphenated) and the bar grows, with `shell.js` keeping `--shell-bottom` at its height so the page's padding and the focus clearance follow; the skip link hides by its own height (a transform); the avatar's initial stops growing at 18 px (`--fs-avatar`), as it's a picture of the person and the button's name says who. The tab labels themselves grow only to 15 px (`--fs-tab`), where "Collection" still fits a phone's tab; past that they wrap.
+
+Found while checking the fix: the deck page's own layout grew wider than the screen at 200 % text, pushing the fixed tab bar off it (the earlier reflow check missed it, as the phone's layout viewport widened with the page). Four parts did it: the sleeves tile's "66 needed · 200 owned · 134 spare" chip (now wraps), the Cards tab's price table (its number columns are capped at a share of the width), Practice's colour-source table (now its own sideways-scrolling region, keyboard-reachable and named) and Practice's reading list (long titles wrap).
 
 ### 4. The Cards tab skips a heading level (axe: heading-order, moderate)
 
 The deck's h1 is followed straight by h3 type groups ("Creatures (26)"), with no h2 for the list. Flagged in all four Cards runs.
 
-Fix (S): an h2 for the list ("Planned list", visually hidden where the page already shows it), or the groups as h2.
+Fixed: a visually hidden h2 naming the list ("Planned list" or "Play-now list") comes first on the Cards tab.
 
 ### 5. Library tiles read as one long sentence
 
 Each deck tile is one link whose name is the whole tile, about 30 words with the sleeves and deck box ("Colours: red, green Gruul Ramp Matt 60 + 6 sideboard Last played 2026-10-31 6 games 53 owned 13 to get Sleeves Dragon Shield Matte (black) Deck box Ultimate Guard Boulder 100+ (black)"). Nothing is missing, but the title isn't heard first and the list is slow to skim.
 
-Fix (S, optional): name the link by the deck's title and describe it by the rest (`aria-describedby`), so the title comes first and the details follow after a pause.
+Fixed: the cover's pips are hidden from screen readers and the colours are said after the title instead ("Gruul Ramp (Colours: red, green) Matt …"). The rest of the tile is still in the link's name: shortening it further would hide facts people use.
 
 ### 6. Smaller points
 
-- The deck Overview has two h3s with the same text ("Sideboard: only against stronger opponents"), one in Sideboard plan and one in How to play.
-- Outside this slice's pages: Collection's paging and Receive delivery scroll smoothly even when reduced motion is asked for (`collection-rows.js`, `collection.js`, `receipt-workflow.js` pass `behavior: "smooth"`). Fix (S): a shared helper that uses `"auto"` under reduced motion.
+- The deck Overview has two h3s with the same text ("Sideboard: only against stronger opponents"), one in Sideboard plan and one in How to play. Left as it is: the same notes are deliberately shown in both places, each under its own h2.
+- Outside this slice's pages: Collection's paging and Receive delivery scroll smoothly even when reduced motion is asked for (`collection-rows.js`, `collection.js`, `receipt-workflow.js` pass `behavior: "smooth"`). Fixed: `scrollBehaviour()` in core.js gives `"auto"` under reduced motion, and those scrolls use it.
 
 ## Notes for the next runs
 
 - Playwright's full-page screenshot under mobile emulation switches the page to `(pointer: fine)` afterwards, so measure before taking one, or screenshot by resizing the viewport instead (the scripts do).
-- The story's remaining parts (every page in both densities, UI-KIT's Accessibility section, a fixture test per fix) follow the fix slices.
+- UI-KIT.md now has an Accessibility section. The story's remaining parts are every other page, the lab density, and a check with a real screen reader.

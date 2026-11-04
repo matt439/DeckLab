@@ -585,7 +585,7 @@ async function colLoadFind(cv, query, paging) {
     cv.data = { ...cv.data, ...pageData };
     colTakeLocations(cv, data);
     drawCollectionResults(cv, data);
-    if (paging) cv.results.scrollIntoView({ block: "start", behavior: "smooth" });
+    if (paging) cv.results.scrollIntoView({ block: "start", behavior: scrollBehaviour() });
   } catch (error) {
     if (!colActive(cv) || seq !== cv.findSeq) return;
     clear(cv.results).append(errorBox("The cards couldn't be loaded", error, () => colLoadFind(cv, query, paging)));
