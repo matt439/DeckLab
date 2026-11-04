@@ -84,8 +84,7 @@ class TouchTargetTests(unittest.TestCase):
                       "min-height: var(--tap); } }", _text("compare.css"))
 
     def test_which_printing_is_a_full_target_on_touch(self):
-        self.assertIn("@media (pointer: coarse) { .pack-tiles .pack-printing { min-height: var(--tap); } }",
-                      _text("assembly-overlap.css"))
+        self.assertRegex(_text("assembly-overlap.css"), r"\.pack-printing-select \{[^}]*min-height: var\(--tap\);")
 
 
 if __name__ == "__main__":

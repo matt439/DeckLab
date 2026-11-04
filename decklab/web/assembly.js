@@ -300,6 +300,9 @@ function assemblyTick(text, count = 1, context = null, key = text) {
       "data-pack-context": context ? JSON.stringify(context) : "" }), el("span", { text })));
 }
 
+// Tiles are at least 220 px from a tablet up (assembly.css), so a retina iPad takes the 488 px picture, not the small one.
+const PACK_TILE_SIZES = "(max-width: 599px) 50vw, 300px";
+
 /** A card to pull as a picture tile with a tick on its corner; id is its key for the saved ticks. */
 function packTile(view, name, { qty, meta, caption, id, finishes = [], overlap = null, printing = null }) {
   const card = (view.cards || {})[name] || null;
@@ -314,18 +317,9 @@ function packTile(view, name, { qty, meta, caption, id, finishes = [], overlap =
   const tick = el("button", { type: "button", class: "tile-tick pack-tick", "aria-pressed": "false",
     "aria-label": `${qty > 1 ? `${qty} × ` : ""}${name}: done`, "data-pack-tick": id, "data-pack-count": qty,
     "data-pack-context": JSON.stringify(finishes.map(f => [f.finish, f.quantity]).sort()) });
-  const tile = cardTile(card, { qty, name: frontName(name), meta, finish, chips, state: tick,
+  const tile = cardTile(card, { qty, name: frontName(name), meta, finish, chips, state: tick, sizes: PACK_TILE_SIZES,
     onclick: card ? event => packOpenCard(view, event.currentTarget) : null,
     viewerGroup: "packing", caption: description, label: finishWords ? `${name}. ${description}` : card ? null : name });
-  const open = tile.querySelector(".card-tile-open");
-  open.append(el("span", { class: "pack-row-qty", "aria-hidden": "true", text: String(qty) }));
-  if (finishWords) {
-    const intent = el("span", { class: "pack-row-finish", "aria-hidden": "true", title: `Deck list: ${finishWords}`,
-      text: `List: ${finishWords}` });
-    const metaNode = open.querySelector(".card-tile-meta");
-    if (metaNode) metaNode.append(intent);
-    else open.append(el("span", { class: "card-tile-meta pack-row-meta", "aria-hidden": "true" }, intent));
-  }
   packRegisterCard(view, tile, card, description);
   const pill = packOverlapPill(view, name, overlap);
   if (pill) tile.append(pill);
@@ -687,6 +681,7 @@ async function packMarkBuilt(view) {
 /** All participants contribute copies; optional kit/token steps keep their own unit. */
 function packProgress(view) {
   packChooserSync(view);
+  packViewerSync(view);
   if (!view.bar) return;
   packBulkProgress(view);
   const ticks = view.ticks || [];

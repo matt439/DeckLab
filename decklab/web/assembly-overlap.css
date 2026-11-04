@@ -14,23 +14,43 @@
 .pack-overlap-full { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
   clip-path: inset(50%); white-space: nowrap; }
 @media (min-width: 1000px) {
-  .pack-tiles .pack-overlap-pill { grid-column: 1 / -1; margin: 0 44px var(--s-1) 36px; }
   .pack-overlap-number { font-family: var(--font-mono); }
   .pack-overlap-short { display: none; }
   .pack-overlap-full { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none; white-space: normal; }
 }
 
-/* Printings in box: the pull tile's "Which printing?" (printings-in-box.js), outside the card and tick hit areas. */
-.pack-tiles .pack-printing { justify-self: start; align-self: start; max-width: 100%; width: fit-content;
-  min-height: 32px; padding: 2px var(--s-2); font-size: var(--fs-meta); white-space: normal; overflow-wrap: anywhere;
-  text-align: left; color: var(--ink-2); font-weight: var(--fw-regular); }
-/* A touch screen keeps the 44 px floor here too, the iPad on its side (lab layout, touch sizes) included (E11-S55). */
-@media (pointer: coarse) { .pack-tiles .pack-printing { min-height: var(--tap); } }
-.pack-tiles .pack-printing.is-chosen { color: var(--ink); }
+/* Printings in box: the pull tile's "Which printing?" (printings-in-box.js), outside the card and tick hit areas.
+   16 px text, so iOS doesn't zoom the page when the select is tapped. */
+.pack-printing { display: grid; gap: 2px; min-width: 0; margin: 0; font-size: var(--fs-meta); color: var(--ink-2); overflow-wrap: anywhere; }
+p.pack-printing { color: var(--ink); }
+.pack-printing-select { width: 100%; min-width: 0; min-height: var(--tap); font-size: max(16px, 1rem); color: var(--ink-2); }
+.pack-printing-select.is-chosen { color: var(--ink); }
+.pack-printing-note[hidden] { display: none; }
 .pack-printing-choices, .deck-printings-choices { display: grid; gap: var(--s-2); }
 .pack-printing-choices input, .deck-printings-choices input { width: 6ch; }
 .deck-printings-choices > li { display: grid; gap: var(--s-1); }
 .deck-printings-name { font-weight: var(--fw-medium); }
-@media (min-width: 1000px) {
-  .pack-tiles .pack-printing { grid-column: 1 / -1; margin: 0 44px var(--s-1) 36px; }
+
+/* The big view's tick and printing (assembly-switcher.js), side by side where there's room, so the card stays large. */
+.pack-viewer-controls { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--s-2);
+  width: min(560px, calc(100vw - 2 * 84px)); }
+.viewer-btn.pack-viewer-tick { flex: 1 1 200px; gap: var(--s-2); min-height: 56px; font-size: var(--fs-lg); }
+.pack-viewer-tick::before { content: ""; flex: none; width: 28px; height: 28px; border-radius: 50%;
+  box-shadow: inset 0 0 0 2px currentColor; }
+.pack-viewer-tick[aria-pressed="true"]::before { box-shadow: none; background: var(--icon-tick-on-accent) center / 28px no-repeat; }
+.pack-viewer-tick:disabled { opacity: .55; cursor: default; }
+.pack-viewer-printing { flex: 1 1 240px; min-width: 0; }
+.pack-viewer-printing[hidden], .pack-viewer-note[hidden] { display: none; }
+.pack-viewer-printing .pack-printing, .pack-viewer-note { color: var(--on-scrim); }
+.pack-viewer-printing .pack-printing-select { min-height: 56px; background-color: var(--surface); color: var(--ink); }
+.pack-viewer-note { flex: 1 1 100%; margin: 0; font-size: var(--fs-sm); text-align: center; }
+.viewer:has(.pack-viewer-controls) .viewer-swipe-hint { display: none; }
+/* A phone on its side has no height to spare: the controls go in the column beside the card, for the use line. */
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 999.98px) {
+  dialog.viewer[open]:has(.pack-viewer-controls), dialog.viewer.show-text[open]:has(.pack-viewer-controls) {
+    grid-template-areas: "prev stage head next" "prev stage text next" "prev stage count next";
+  }
+  .viewer:has(.pack-viewer-controls) .viewer-use { display: none; }
+  .pack-viewer-controls { width: 100%; }
+  .viewer-btn.pack-viewer-tick, .pack-viewer-printing .pack-printing-select { min-height: var(--tap); }
 }

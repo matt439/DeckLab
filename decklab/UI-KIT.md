@@ -71,6 +71,17 @@ focus, with exact return-panel ownership and listener disposal on route/person c
 Queued reveal only scrolls current focus. Unknown colour identity stays neutral;
 strict known identity uses the shared deck pieces, including known colourless.
 
+Build decks' cards are picture tiles at every width (at least 220px from a tablet
+up, two across on a phone). While the viewer is open over the plan, each item's
+`status()` shows one panel (`packViewerPanel`): a large tick and the card's
+"Which printing?". It holds no state: a press clicks the current tile's tick found
+by its shared id, and `packProgress` redraws it after every tick, poll, Clear, Undo,
+save and re-render. A task gone from the plan disables it. The printing control
+(`packPrintingMake`) is a native select on the tile and in the panel, or plain words
+when storage holds one printing; a choice updates both in place and never re-renders
+the plan. Options are rebuilt only when they change, so a poll can't shut an open
+picker. Split between printings opens the sheet, over the viewer when asked from there.
+
 `assembly-steps.js` follows the finish helper; its CSS follows `assembly.css`.
 One native details/summary/body retains original tasks across toggle, polling and
 resize. Done derives from a nonempty exact subset of existing ticks. Only casual
