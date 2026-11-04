@@ -31,6 +31,12 @@ def _field_choice_save(body):
     return save(body)
 
 
+def _price_history(**params):
+    """A queued card's daily shop readings (api/shop_history.py, E5-S29); writes nothing."""
+    from decklab.lib.api.shop_history import price_history_view
+    return price_history_view(**params)
+
+
 def _global_search(**params):
     """The top bar's global search (api/global_search.py, E11-S31): visible decks, the viewer's own
     collection and every Scryfall card; writes nothing."""
@@ -196,6 +202,7 @@ def dispatch(handler, route, query):
         ("gauntlet", "catalogue"): (_gauntlet_catalogue, ("format",)),
         ("gauntlet", "board"): (_gauntlet_board, ("format", "profile")),
         ("shopping", "combined"): (_shopping_combined, ("decks",)),
+        ("shopping", "price-history"): (_price_history, ("name",)),
     }
     posts = {
         ("activity", "undo"): activity_undo.apply_undo,

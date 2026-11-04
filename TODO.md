@@ -60,7 +60,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E7-S32` | OPEN | could | L | Scan cards sheet and `POST /api/collection/scan` built, with each pending card's printing picker and language, and Tokens' Scan token cards (`POST /api/tokens/scan`, one-change add) (fixture-tested); next real phone photos of cards and token cards on the household's phones. |
 | `E5-S27` | OPEN | should | M | Shopping's Baskets built without postage (2026-11-02). Left: postage rules per shop as a setting (with `E11-S53`), add-ons that reach a free-postage threshold, and the fewest-shops plan. |
 | `E5-S28` | OPEN | should | M | Build decks together's read-only combined list built (2026-11-02). Left: Queue these (one reviewed queue change, `for` naming the decks) and each card's matching queue rows. |
-| `E5-S29` | OPEN | could | S | 90 days of queued cards' readings and `shops history NAME` built (2026-11-03). Left: Shopping's row showing the history. |
 
 ## Deck Lab: Commander nights
 

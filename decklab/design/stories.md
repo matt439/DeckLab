@@ -2072,7 +2072,7 @@ Gap: Queue these (one reviewed queue change, each row's `for` naming the decks) 
 
 Built (2026-11-02): the first slice. GET `/api/shopping/combined?decks=ID,ID[,...]` (`lib/api/shopping_combined.py`; the readers of GET `/api/shopping`, anyone else 403 before any read; a hidden or missing deck the usual 404; 2 to 12 home decks, no products, pairings or member decks) adds the chosen decks' Planned lists and compares them once with home's pool: each free copy counted once, other built decks' and intact products' copies not free, a chosen built deck keeping its own, cards on the way counted and labelled, plain basics left out, no prices. Each card gives the combined want, free and missing, the single-deck shortfalls' sum, the chosen decks that want it and the other holders (a hidden deck as "one of the home decks"); an incomplete pool or an unreadable deck makes the answer not ready rather than too low. Shopping's Build decks together (`web/shopping-combined.js`), under Missing cards across decks, chooses the decks in a sheet and draws the list. Left: Queue these (one reviewed queue change, each row's `for` naming the decks) and the matching queue rows beside each card. Tests: `decklab/tests/test_shopping_combined.py`, `test_shopping_combined_ui.py`. See [HISTORY.md](../HISTORY.md#build-decks-together-on-shopping-2026-11-02-e5-s28-first-slice).
 
-**E5-S29** · Matt · could · S · partial
+**E5-S29** · Matt · could · S · built
 
 As a buyer reading a shop's price, I want to see what a queued card's price and stock were on earlier days, so that I can tell whether its price is trending up or down, and a usual price from a dear one, before ordering.
 
@@ -2084,9 +2084,9 @@ Decided (Matt, 2026-11-03): wanted, to see whether a queued card's price is tren
 
 First slice: the nightly snapshot keeps each day's reading per shop and card name for 90 days (pruned with the queue), and `python -m decklab.lib.shops history NAME` prints it; Shopping's row comes next.
 
-Gap: Shopping's row doesn't show the history yet; only `python -m decklab.lib.shops history NAME` on the PC prints it.
-
 Built (2026-11-03): the first slice. Each nightly snapshot also keeps the day's reading of every queued name in a compact history file beside that shop's snapshot (`mtgmate.history.json`, `gamesportal.history.json`; `lib/shops/history.py`), one reading a day (a second run that day replaces it), 90 days, and only while the name is on the queue: a name that leaves it, and everything once the queue is empty, goes at the next run. The snapshot readers (Shopping, deck Prices, Baskets) never load it. `python -m decklab.lib.shops history NAME [--shop KEY] [--json]` prints each day's price and stock at each shop, the lowest in-stock price marked. Left: Shopping's row showing the history. Tests: `decklab/tests/test_shops_history.py`. See [HISTORY.md](../HISTORY.md#a-queued-cards-price-history-2026-11-03-e5-s29-first-slice).
+
+Built (2026-11-04): Shopping's row. GET `/api/shopping/price-history?name=` (`lib/api/shop_history.py`) answers Shopping's readers only (home's record readers, checked first) with `shops history NAME --json`'s report for a name on the purchase queue (one not queued has no days); it reads the history files only when asked, so Shopping's overview still never loads them. A queued row with a snapshot has **Price history** beside its snapshot line (`web/shopping-history.js`; in the wide table it moves with the snapshot into the row's details), opening a sheet with each shop's lowest in-stock price and day(s) first, then each day kept, newest first, with price, stock (Games Portal's without a count) and printing; a shop with no readings says the row shows today's. Tests: `decklab/tests/test_shop_price_history.py`, `test_shopping_snapshot_ui.py`. See [HISTORY.md](../HISTORY.md#price-history-on-shoppings-queued-rows-2026-11-04-e5-s29).
 
 **E5-S30** · User1 · could · S · built
 

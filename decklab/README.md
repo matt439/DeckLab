@@ -656,6 +656,7 @@ The files are caches, and Shopping and deck Prices only read them, so a page loa
 - `python -m decklab.lib.shops show`: the queue's rows beside each shop's snapshot, with no network.
 - `python -m decklab.lib.shops lookup NAME [--shop gamesportal]`: one name's MTGMate listings (or Games Portal's), printed and not saved.
 - `python -m decklab.lib.shops history NAME [--shop KEY] [--json]`: a queued name's price and stock each day at each shop, its lowest in-stock price marked, from each shop's history file beside its snapshot (`mtgmate.history.json`; each day's reading is kept 90 days, and only while the name is on the queue; no network).
+- **On Shopping:** a queued row with a snapshot has **Price history** beside its snapshot line (in the wide table, under the row's … details). It opens a sheet with each shop's lowest in-stock price first, then every day kept, newest first, with its price, stock and printing (GET `/api/shopping/price-history?name=`, Shopping's readers only, asked only when opened; a name not on the queue has none).
 
 The view uses the same pool of owned and incoming cards as deck planning, read in one inventory snapshot. The added buying views follow the same home-inventory visibility rule; they do not place an order or change the queue.
 
