@@ -18,6 +18,15 @@ What each milestone and feature built, the decisions made along the way, and the
 - Tests: `test_commander_readiness_ui.py` (2 new) and `test_commander_print_ui.py` (1 new).
 - Not done yet: the official bracket text on tutors (it would need reading from Wizards' own page) and a Checks warning where that text sets a number.
 
+## Undo a receipt that corrected its rows (2026-11-04; E11-S08 slice)
+
+- Activity's whole-change Undo of a receipt (`receipt_undo`, PR #23) refused a receipt whose arriving rows were corrected at the door (`receive --rows`, the Receive delivery page's corrections), though corrected token receipts are common. It now puts those rows back as they were ordered.
+- **Shape** (`lib/inventory/undo_receipt_rows.py`): the database rewrites a changed payload list whole, so the change holds a DELETE of every ordered row and an INSERT of every corrected one, keyed by (order, part, position), plus, for an order with a fulfilment ledger, one `purchase_order` UPDATE of `audit_notes` alone. Each list must be whole on both sides (positions 0..n-1, each once), belong to a part the receipt marked received, and each position's latest audit row must be this change's; the rows there now must be exactly the corrected list, and the order record exactly as the receipt left it.
+- **Inverse:** after the parts go back to pending, `set_component_rows` restores the ordered rows and the ledger's notes come back; `_verify` checks every order list and record is as before except those (they left `KEPT_TABLES`).
+- **Preview:** each part carries `corrected`, `null` or `{"ordered", "received"}` row counts; Activity's review says "its rows corrected on arrival go back as ordered (2 → 1 row)". The API and page validate the new field strictly.
+- Still unsupported: receipts that split a part or confirmed extra copies.
+- Tests: `test_inventory_undo_receipt_rows.py` (11 fixture cases: tokens with a ledger, cards, an uncorrected part, later correction or record edit, rows outside received parts, a missing position, a record change beyond the ledger, the Activity hint), `test_inventory_undo_receipt_rows_pg.py` (2 cases through the real audit trail, run against a disposable PostgreSQL 16 in a cloud session) and `test_activity_mixed_undo_ui.py` (the new line and malformed `corrected` values).
+
 ## Price-check shops as a setting (2026-11-04; E11-S53 first slice)
 
 - Matt's decision of 2026-10-31: currency and the price-check shops become settings, for self-hosters outside Australia. This first slice is the shops.

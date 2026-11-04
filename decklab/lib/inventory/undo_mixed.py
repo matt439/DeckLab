@@ -6,8 +6,9 @@ product owned, and refreshes the deck tables; a trade (collection.trade) lowers 
 rows whose copies left and adds the copies that came in. Undo is offered only for the complete
 original change, never part of it, and only when:
 
-- the change is exactly one of those shapes (a receipt of whole parts with no corrected rows:
-  no new components, order notes, payload or product-list rows; a trade only collection rows of
+- the change is exactly one of those shapes (a receipt of whole parts: no new components or
+  product-list rows; rows corrected at the door, `receive --rows`, come back as ordered, with the
+  order's fulfilment notes, undo_receipt_rows.py; a trade only collection rows of
   one space, saved by collection.trade: its reason "Traded" or "Traded with T" and its message
   ending in that trade's words, "Trade[ with T]: gave ...; got ...", whose lowered rows changed
   only their count);
@@ -29,6 +30,7 @@ import hashlib
 import json
 
 from . import Summary, backend, current, paths, register, rules
+from . import undo_receipt_rows as corrected
 from .model import Order
 from decklab.lib.state import Invalid
 from .undo import (COLLECTION, COLLECTION_SCHEMAS, SHA, TOKEN_FIELDS, TOKENS, UndoConflict, UndoMissing,
@@ -45,7 +47,7 @@ RAW_IMPORT = "collection_import"
 DECK = "deck"
 HOME = paths.HOME
 KEYS = {COLLECTION: ("space_id", "set_code", "collector_number", "finish"), TOKENS: ("id",),
-        COMPONENT: ("order_id", "id"), STATUS: ("file",), RAW_IMPORT: ("id",), DECK: ("id",)}
+        COMPONENT: ("order_id", "id"), STATUS: ("file",), RAW_IMPORT: ("id",), DECK: ("id",), **corrected.KEYS}
 COLLECTION_CHANGES = {"quantity", "condition", "language", "notes"}
 TOKEN_CHANGES = {"quantity", "notes", "position"}
 COMPONENT_CHANGES = {"status", "received_on", "checks", "verified_checks", "check_links"}
@@ -53,7 +55,9 @@ STATUS_CHANGES = {"status", "intact", "notes"}
 INCOMING = ("ordered", "preordered")
 # The inventory tables an inverse may change, and those it must leave exactly as they are.
 RESTORED_TABLES = (COLLECTION, TOKENS, COMPONENT, STATUS)
-KEPT_TABLES = ("product", "product_item", "purchase_order", "order_card_item", "order_token_item", "watchlist_item")
+# (A corrected receipt's order rows and fulfilment notes are undo_receipt_rows.verify's.)
+KEPT_TABLES = ("product", "product_item", "watchlist_item")
+RECEIPT_TABLES = {COMPONENT, STATUS, COLLECTION, TOKENS, DECK, *corrected.TABLES}
 CHECKED = "This changed after the selected change. Nothing was undone."
 
 
@@ -105,14 +109,14 @@ def looks_like(rows, past, space, reason=None, message=None):
                    and isinstance(row.get("before"), dict) and isinstance(row.get("after"), dict)
                    and row["before"].get("status") == "pending" and row["after"].get("status") == "received"
                    for row in rows)
-    if received and space == HOME and seen <= {COMPONENT, STATUS, COLLECTION, TOKENS, DECK}:
+    if received and space == HOME and seen <= RECEIPT_TABLES:
         return RECEIPT
     return None
 
 
 def _space_of(row):
     image = row.get("after") if isinstance(row.get("after"), dict) else row.get("before")
-    if row.get("table") in (COMPONENT, STATUS):
+    if row.get("table") in (COMPONENT, STATUS, *corrected.TABLES):
         return HOME                     # orders and products are home's
     return image.get("space_id") if isinstance(image, dict) else None
 
@@ -137,6 +141,10 @@ def _check_row(row, kind):
     """One original row of a supported shape, or UndoUnsupported naming why not."""
     table, op, before, after = row["table"], row["op"], row["before"], row["after"]
     _identifier(row.get("id"))
+    if table in corrected.TABLES:
+        if kind != RECEIPT:
+            raise UndoUnsupported("Only a receipt can put order rows back.")
+        return                          # undo_receipt_rows.groups checks them as whole lists
     if table == DECK:
         if op != "UPDATE" or kind != RECEIPT:
             raise UndoUnsupported("Only a deck table refresh can be part of an undoable receipt.")
@@ -215,7 +223,7 @@ def _source(raw, space, said=None):
         raise UndoUnsupported("This change touches data an import, receipt or trade Undo doesn't restore.")
     if RAW_IMPORT in tables and tables <= {COLLECTION, RAW_IMPORT}:
         kind = IMPORT
-    elif COMPONENT in tables and space == HOME and tables <= {COMPONENT, STATUS, COLLECTION, TOKENS, DECK}:
+    elif COMPONENT in tables and space == HOME and tables <= RECEIPT_TABLES:
         kind = RECEIPT
     elif tables == {COLLECTION} and trade_change(*(said or (None, None))):
         kind = TRADE
@@ -224,6 +232,8 @@ def _source(raw, space, said=None):
     seen = set()
     for row in raw:
         _check_row(row, kind)
+        if row["table"] in corrected.ITEMS:
+            continue                    # a rewritten list's position is DELETEd and INSERTed: groups() checks it
         identity = (row["table"], json.dumps(row["key"], sort_keys=True))
         if identity in seen:
             raise UndoUnsupported("The change names one row twice.")
@@ -236,7 +246,18 @@ def _source(raw, space, said=None):
         products = {row["after"]["file_name"] for row in raw if row["table"] == COMPONENT and row["after"]["kind"] == "product"}
         if {row["key"]["file"] for row in raw if row["table"] == STATUS} != products:
             raise UndoUnsupported("The receipt's product status rows don't match its products.")
+        _corrected(raw)
     return kind
+
+
+def _corrected(raw):
+    """undo_receipt_rows.groups() of a receipt's rows: (corrected lists, order note rows)."""
+    received = {(row["after"]["order_id"], row["after"]["id"]): row["after"]["kind"]
+                for row in raw if row["table"] == COMPONENT}
+    try:
+        return corrected.groups(raw, received)
+    except corrected.Refused as error:
+        raise UndoUnsupported(str(error)) from None
 
 
 def _space_of_unknown(row, space):
@@ -324,6 +345,8 @@ def _row_label(row):
         return "product " + image["file"].removesuffix(".csv")
     if table == RAW_IMPORT:
         return "upload " + image["file_name"]
+    if table in corrected.TABLES:
+        return corrected.label(table, row["key"])
     return "deck " + str(image.get("id"))
 
 
@@ -426,6 +449,8 @@ def _inverse(snapshot, raw, space):
     for row in raw:
         if row["table"] == COMPONENT:
             after = _restore_component(after, row["before"])
+    if any(row["table"] in corrected.TABLES for row in raw):
+        after = corrected.inverse(after, *_corrected(raw))
     return after
 
 
@@ -454,6 +479,8 @@ def _verify(snapshot, settled, raw):
     for table in KEPT_TABLES:
         if before_t[table] != after_t[table]:
             raise ValueError(f"{table} changed")
+    found, orders = _corrected(raw) if any(row["table"] in corrected.TABLES for row in raw) else ({}, [])
+    corrected.verify(before_t, after_t, found, orders)
     if settled.imports != snapshot.imports or settled.decks != snapshot.decks \
             or settled.accessories != snapshot.accessories or settled.accessory_images != snapshot.accessory_images:
         raise ValueError("Other data changed")
@@ -578,21 +605,29 @@ def _token_proof(snapshot, after, raw, label):
 
 def _latest(store, raw):
     """Every restored row must still be the latest audit row for its key."""
-    keyed = [row for row in raw if row["table"] in (COLLECTION, TOKENS, COMPONENT, STATUS)]
-    found = store.undo_latest_rows([(row["table"], row["key"]) for row in keyed])
+    keyed = [(row["table"], row["key"], row["id"], _row_label(row))
+             for row in raw if row["table"] in (COLLECTION, TOKENS, COMPONENT, STATUS)]
+    if any(row["table"] in corrected.TABLES for row in raw):
+        keyed += [(table, key, rid, corrected.label(table, key)) for table, key, rid in corrected.latest(*_corrected(raw))]
+    found = store.undo_latest_rows([(table, key) for table, key, _, _ in keyed])
     if not isinstance(found, dict):
         raise UndoMissing()
-    for row in keyed:
-        if found.get((row["table"], json.dumps(row["key"], sort_keys=True))) != row["id"]:
-            raise UndoConflict("This was changed after the selected change. Nothing was undone.", _row_label(row))
+    for table, key, rid, label in keyed:
+        if found.get((table, json.dumps(key, sort_keys=True))) != rid:
+            raise UndoConflict("This was changed after the selected change. Nothing was undone.", label)
 
 
 def _current(snapshot, raw, space):
     from .table_rows import Unrepresentable, tables
     try:
-        images = _images(tables(snapshot))
+        t = tables(snapshot)
+        images = _images(t)
     except Unrepresentable:
         raise UndoConflict("The current inventory cannot be checked. Reload and try again.") from None
+    if any(row["table"] in corrected.TABLES for row in raw):
+        changed = corrected.current(t, *_corrected(raw))
+        if changed is not None:
+            raise UndoConflict(CHECKED, changed)
     for row in raw:
         if row["table"] in images and row["op"] == "DELETE":
             if _canon(row["table"], row["before"]) in images[row["table"]]:
@@ -622,6 +657,7 @@ def _describe(raw, kind, space):
     tokens = {"removed": [], "reduced": []}
     returned = {"added": [], "raised": []}
     components, products, uploads = [], [], []
+    fixed = corrected.corrections(_corrected(raw)[0]) if kind == RECEIPT else {}
     for row in raw:
         table, after, before = row["table"], row["after"], row["before"]
         if table == COLLECTION and kind == TRADE and _gave(row):
@@ -641,7 +677,8 @@ def _describe(raw, kind, space):
                 tokens["reduced"].append({"current": token(after), "restored": token(before)})
         elif table == COMPONENT:
             components.append({"position": after.get("position", 0), "order": after["order_id"], "component": after["id"], "kind": after["kind"],
-                               "received_on": after["received_on"], "checks": list(before["checks"])})
+                               "received_on": after["received_on"], "checks": list(before["checks"]),
+                               "corrected": fixed.get((after["order_id"], after["id"]))})
         elif table == STATUS:
             products.append({"product": after["file"].removesuffix(".csv"), "status": before["status"],
                              "intact": after["intact"]})
