@@ -11,6 +11,15 @@ What each milestone and feature built, the decisions made along the way, and the
 - **The page:** the editor offers Sleeves and Deck box for building home decks (hidden, and sent as cleared, when the save takes a built deck apart or makes a deck an idea); the deck page's Overview shows the kit tiles with **Choose…** (the hint now only on ideas); the Packing plan offers Choose sleeves, and Finish building prefills a building deck's kit without counting its own box against it; Receive delivery's **Where these go** names building decks' sleeves; `holders_options` carries `status`. On the deck page a building deck's need is its Planned list whichever list is shown.
 - Tests: new and repeated cases in `test_accessories`, `test_api_accessories`, `test_inventory_accessories`, `test_inventory_decks`, `test_inv_decks`, `test_editor`, `test_editor_contracts`, `test_editor_player_kit` (every case again on a building deck), `test_api_permissions_inventory`, `test_assembly_kit`, `test_deck_retirement`, `test_receipts_api`, `test_collection_assembly`, `test_api_decks`, `test_deck_kit_ui`, `test_feature_ui` and `test_feature_ui_accessories`; `golden_p4.py`'s `building-holders` entry drops the new `status` field, kit-less building holders and a kit-less building deck page's need from the inventory goldens. Fixtures only: no server restart or database writes. Not yet checked on the household's devices.
 
+## Shorter Settings maintenance, shop-price and Missing cards wording (2026-11-04)
+
+The three places "Less text on phones" left alone because tests pinned their words, now shortened, with the tests checking what the words mean rather than whole sentences.
+
+- **Settings, Database maintenance:** each job is two or three short lines instead of five: its status with the latest run ("Succeeded, <when>."; "Overdue. Last run: Succeeded, <when>." when they differ), the last success only when the latest run wasn't one, and "Due every 36 hours; last success on time." (export adds "the nightly grace period"). Every run's start and finish stay under **Recent runs**. "No recorded attempts" is now "Never run" and "Outcome unavailable" "Outcome unknown". The intro is one short sentence. Whether the interval counts from a run's start or finish is no longer spelled out.
+- **Deck prices:** the saved-shop note under a missing card is "Saved shop checks: any nonfoil printing, maybe not yours. Price per card." (each shop line already shows its own fetch time and stock).
+- **Shopping, Missing cards across decks:** "Every home deck's Planned shortfall, added up; a shared copy may count twice. Shop lines are saved checks."
+- Tests: `test_settings_maintenance_ui`, `test_deck_shop_prices_ui`, `test_shops_two_shops_ui`, `test_shopping_buying_ui`, `test_shopping_missing_snapshot_ui`. Fixtures only: no server restart or database writes.
+
 ## Less text on phones (2026-11-04)
 
 - Matt asked for every page to be checked for walls of text, most of all on a phone, and noted pictures help break them up. Every page was shot at 390px wide on a full-data sandbox; before and after pictures are in the project's `verbosity/` folder.
