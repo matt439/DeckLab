@@ -237,8 +237,10 @@ function shopByShop(view) {
   if (!seesHomeInventory(state.may) || !(view.data.to_buy || []).length) return null;
   shopNormalizeChoice(view);
   const choices = shopChoices(view);
+  // E11-S53: a household whose config.json turns every price-check shop off gets no daily snapshot.
+  const off = typeof view.data.shops_off === "string" ? " No price-check shop is set up, so there's no daily shop snapshot." : "";
   return shopSection("shop-by-shop", "By shop", 0,
-    "Mark queue rows last seen at a shop, including long-term plans. Prices and stock are dated references; check the shop before ordering.",
+    `Mark queue rows last seen at a shop, including long-term plans. Prices and stock are dated references; check the shop before ordering.${off}`,
     el("fieldset", {class: "shop-store-choices"}, el("legend", {class: "sr-only", text: "Mark queue rows by shop"}),
       choices.map((choice, index) => {
         const radio = el("input", {type: "radio", class: "shop-store-radio", name: "shopping-shop", value: choice.value,
