@@ -13,6 +13,12 @@ from scripts import ci_changes
 
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "ci_changes.py"
+REPOSITORY = {"default_branch": "main"}
+
+
+def pull_request_event(base, head, ref="main"):
+    return {"pull_request": {"base": {"sha": base, "ref": ref}, "head": {"sha": head}},
+            "repository": REPOSITORY}
 
 
 class DocumentationPathsTests(unittest.TestCase):
@@ -108,9 +114,22 @@ class ChangeHistoryTests(GitHistoryCase):
         self.git("checkout", "-q", "--detach", self.first)
         self.write("decklab/server.py", "VERSION = 2\n")
         target = self.commit()
-        event = {"pull_request": {"base": {"sha": target}, "head": {"sha": feature}}}
-        self.assertFalse(self.run_selection("pull_request", event))
+        self.assertFalse(self.run_selection("pull_request", pull_request_event(target, feature)))
         self.assertTrue(self.run_selection("push", self.push(target, feature)))
+
+    def test_pull_request_into_another_branch_never_skips(self):
+        # Its pass would count on the same head once the pull request is retargeted to main.
+        self.git("checkout", "-q", "-b", "feature")
+        self.write("TODO.md")
+        feature = self.commit()
+        for event in (
+            pull_request_event(self.first, feature, ref="work/base"),
+            {"pull_request": {"base": {"sha": self.first}, "head": {"sha": feature}}, "repository": REPOSITORY},
+            {"pull_request": {"base": {"sha": self.first, "ref": "main"}, "head": {"sha": feature}}},
+            dict(pull_request_event(self.first, feature), repository={"default_branch": ""}),
+        ):
+            with self.subTest(event=event):
+                self.assertTrue(self.run_selection("pull_request", event))
 
     def test_push_checks_all_commits_in_the_pushed_range(self):
         self.write("decklab/server.py", "VERSION = 2\n")
@@ -158,7 +177,8 @@ class ChangeHistoryTests(GitHistoryCase):
         ):
             with self.subTest(event=event):
                 self.assertTrue(self.run_selection("push", event))
-        self.assertTrue(self.run_selection("pull_request", {"pull_request": {"base": {"sha": self.first}}}))
+        self.assertTrue(self.run_selection("pull_request", {"pull_request": {"base": {"sha": self.first, "ref": "main"}},
+                                                            "repository": REPOSITORY}))
 
     def test_empty_comparison_runs_suite_even_with_a_new_commit(self):
         self.assertTrue(self.run_selection("push", self.push(self.first, self.first)))
@@ -201,15 +221,27 @@ class PullRequestAlreadyTestedTests(GitHistoryCase):
         before = main or self.first
         self.git("checkout", "-q", "--detach", before)
         self.git("merge", "-q", "--no-ff", "--no-edit", self.head)
-        return {"before": before, "after": self.git("rev-parse", "HEAD")}
+        return {"before": before, "after": self.git("rev-parse", "HEAD"), "repository": REPOSITORY}
 
-    def fake_api(self, event, runs=None, pulls=None):
+    SUITE_JOBS = [{"name": "changes", "conclusion": "success"},
+                  {"name": "Linux shard 1 of 4", "conclusion": "success"},
+                  {"name": "Linux database 1 of 2", "conclusion": "success"},
+                  {"name": "linux-services", "conclusion": "success"},
+                  {"name": "tests", "conclusion": "success"}]
+
+    def passing_run(self, **changes):
+        return dict({"id": 41, "path": ci_changes.TESTS_WORKFLOW, "head_sha": self.head, "conclusion": "success",
+                     "pull_requests": [{"number": 7, "base": {"ref": "main"}}]}, **changes)
+
+    def fake_api(self, event, runs=None, pulls=None, jobs=None):
         calls = []
         if runs is None:
-            runs = [{"path": ci_changes.TESTS_WORKFLOW, "head_sha": self.head, "conclusion": "success"}]
+            runs = [self.passing_run()]
         if pulls is None:
-            pulls = [{"number": 7, "merged_at": "2026-10-30T00:00:00Z",
+            pulls = [{"number": 7, "merged_at": "2026-10-30T00:00:00Z", "base": {"ref": "main"},
                       "merge_commit_sha": event["after"], "head": {"sha": self.head}}]
+        if jobs is None:
+            jobs = self.SUITE_JOBS
 
         def api(path):
             calls.append(path)
@@ -219,6 +251,8 @@ class PullRequestAlreadyTestedTests(GitHistoryCase):
                 self.assertIn(f"head_sha={self.head}", path)
                 self.assertIn("event=pull_request", path)
                 return {"workflow_runs": runs}
+            if path.startswith("/actions/runs/41/jobs"):
+                return {"jobs": jobs}
             raise AssertionError(path)
         return api, calls
 
@@ -236,14 +270,36 @@ class PullRequestAlreadyTestedTests(GitHistoryCase):
             [{"path": ".github/workflows/lint.yml", "head_sha": self.head, "conclusion": "success"}],
             [{"path": ci_changes.TESTS_WORKFLOW, "head_sha": self.first, "conclusion": "success"}],
             [{"path": ci_changes.TESTS_WORKFLOW, "head_sha": self.head, "conclusion": "failure"}],
+            [self.passing_run(pull_requests=[])],
+            [self.passing_run(pull_requests=[{"number": 8, "base": {"ref": "main"}}])],
+            [self.passing_run(pull_requests=[{"number": 7, "base": {"ref": "work/base"}}])],
         ):
             with self.subTest(runs=runs):
                 api, _ = self.fake_api(event, runs=runs)
                 self.assertTrue(ci_changes.should_run_tests("push", event, api)[0])
 
+    def test_a_run_that_skipped_the_suite_is_not_trusted(self):
+        # A documentation-only decision made against another base passes without testing anything.
+        event = self.merge_pull_request()
+        skipped = [job if job["name"] in ("changes", "tests") else dict(job, conclusion="skipped")
+                   for job in self.SUITE_JOBS]
+        for jobs in ([], skipped, [job for job in self.SUITE_JOBS if "shard" not in job["name"]]):
+            with self.subTest(jobs=jobs):
+                api, _ = self.fake_api(event, jobs=jobs)
+                self.assertTrue(ci_changes.should_run_tests("push", event, api)[0])
+
+    def test_merge_into_another_branch_or_unknown_repository_runs_suite(self):
+        event = self.merge_pull_request()
+        pull = {"number": 7, "merged_at": "2026-10-30T00:00:00Z", "base": {"ref": "work/base"},
+                "merge_commit_sha": event["after"], "head": {"sha": self.head}}
+        api, _ = self.fake_api(event, pulls=[pull])
+        self.assertTrue(ci_changes.should_run_tests("push", event, api)[0])
+        api, _ = self.fake_api(event)
+        self.assertTrue(ci_changes.should_run_tests("push", dict(event, repository={}), api)[0])
+
     def test_push_that_is_not_one_merged_pull_request_runs_suite(self):
         event = self.merge_pull_request()
-        merged = {"number": 7, "merged_at": "2026-10-30T00:00:00Z",
+        merged = {"number": 7, "merged_at": "2026-10-30T00:00:00Z", "base": {"ref": "main"},
                   "merge_commit_sha": event["after"], "head": {"sha": self.head}}
         for pulls in (
             [], [dict(merged, merged_at=None)], [dict(merged, merge_commit_sha=self.first)],
@@ -278,12 +334,12 @@ class PullRequestAlreadyTestedTests(GitHistoryCase):
         def broken(path):
             raise OSError("no network")
         self.assertTrue(ci_changes.should_run_tests("push", event, broken)[0])
-        pull_event = {"pull_request": {"base": {"sha": self.first}, "head": {"sha": self.head}}}
+        pull_event = pull_request_event(self.first, self.head)
         self.assertTrue(ci_changes.should_run_tests("pull_request", pull_event, broken)[0])
 
     def test_documentation_only_push_needs_no_api(self):
         self.write("TODO.md")
-        event = {"before": self.first, "after": self.commit()}
+        event = {"before": self.first, "after": self.commit(), "repository": REPOSITORY}
 
         def unused(path):
             raise AssertionError(path)

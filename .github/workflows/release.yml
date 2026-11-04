@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: write           # create the draft release (and, by hand, its tag)
+  checks: read              # the commit's tests and ruff checks must have passed
 
 concurrency:
   group: release
@@ -30,10 +31,11 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.14"
-      - name: Work out the version and check it's on main
+      - name: Work out the version and check it's on main and passed CI
         id: version
         env:
           GIVEN: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ "$GITHUB_EVENT_NAME" = "push" ]; then
             version="${GITHUB_REF_NAME#v}"
@@ -44,9 +46,22 @@ jobs:
           if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]{0,30})?$'; then
             echo "::error::$version isn't a release version like 1.2.0"; exit 1
           fi
-          if ! git merge-base --is-ancestor HEAD origin/main; then
-            echo "::error::v$version isn't on main"; exit 1
+          if [ "$GITHUB_EVENT_NAME" != "push" ] && [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::Run the release from main, not $GITHUB_REF"; exit 1
           fi
+          # A commit main itself was at (a pull request's merge), not one inside a merged branch.
+          if ! git rev-list --first-parent origin/main | grep -qx "$(git rev-parse HEAD)"; then
+            echo "::error::v$version isn't a commit main was at"; exit 1
+          fi
+          # GitHub Actions' (app 15368) latest run of each required check on exactly this commit
+          sha="$(git rev-parse HEAD)"
+          for check in tests ruff; do
+            conclusion="$(gh api "repos/$GITHUB_REPOSITORY/commits/$sha/check-runs?check_name=$check&per_page=100" \
+              --jq '[.check_runs[] | select(.app.id == 15368)] | sort_by(.started_at) | last | .conclusion // "none"')"
+            if [ "$conclusion" != success ]; then
+              echo "::error::$check on $sha is '$conclusion', not success: wait for main's CI, or fix it"; exit 1
+            fi
+          done
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Build the zip, its SHA-256 and its manifest
         run: python scripts/make_release.py "${{ steps.version.outputs.version }}" --out dist
