@@ -398,6 +398,12 @@ big, swiping between cards), its notes, the printing you'd like and its source (
 linked), with **Save**. **Remove** at the bottom of the sheet takes the card off your wishlist at once,
 with an **Undo** that puts it back at its old place with its notes, printing and source.
 
+**While building a deck:** the editor's Add panel (a casual or Commander deck, saved or new) has a
+**My wishlist** tick. Ticked, it lists your own wishlist's cards that fit the deck (a Commander deck's:
+inside its commander's colour identity and legal in Commander), in your list's order, each marked free,
+in other decks or to buy when you may see the deck's collection. A card you add keeps the printing you
+wished for. Only your own list is ever read (GET `/api/deck/wishlist`).
+
 **A wishlist is private:** only its owner sees it, on the Wishlist page or the Activity page. Not
 another home profile, not a person with their own space, and not an admin (as with each person's
 accessories, Matt's admin role doesn't override it). The page only ever opens the chosen profile's

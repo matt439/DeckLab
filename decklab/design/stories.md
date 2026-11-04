@@ -2088,7 +2088,7 @@ Gap: Shopping's row doesn't show the history yet; only `python -m decklab.lib.sh
 
 Built (2026-11-03): the first slice. Each nightly snapshot also keeps the day's reading of every queued name in a compact history file beside that shop's snapshot (`mtgmate.history.json`, `gamesportal.history.json`; `lib/shops/history.py`), one reading a day (a second run that day replaces it), 90 days, and only while the name is on the queue: a name that leaves it, and everything once the queue is empty, goes at the next run. The snapshot readers (Shopping, deck Prices, Baskets) never load it. `python -m decklab.lib.shops history NAME [--shop KEY] [--json]` prints each day's price and stock at each shop, the lowest in-stock price marked. Left: Shopping's row showing the history. Tests: `decklab/tests/test_shops_history.py`. See [HISTORY.md](../HISTORY.md#a-queued-cards-price-history-2026-11-03-e5-s29-first-slice).
 
-**E5-S30** · User1 · could · S · partial
+**E5-S30** · User1 · could · S · built
 
 As a themed-deck player with a wishlist, I want my wishlist cards shown while I build and my decks' needs shown on my wishlist, so that the cards I'd like and the decks that want them meet without my asking Matt.
 
@@ -2096,9 +2096,9 @@ As a themed-deck player with a wishlist, I want my wishlist cards shown while I 
 - Given my Wishlist page, when a listed card is in the Planned list of a deck I may see and that deck is short of it, then the entry says so ("The Free Peoples is short of this card"), under the inventory rule for counts.
 - Given anyone else, then nothing of my wishlist shows: both views read only the signed-in profile's own list (E5-S14, E10-S11).
 
-Gap: the editor's Add panel has no My wishlist tick yet.
-
 Built (2026-11-02): the first slice. Each wishlist entry carries `short_in` (`lib/api/wishlist_short.py`), the owner's own space's decks they may see whose Planned list is short of the card, worked out against the one pool the wishlist already loads, only when the owner may see that space's collection; a deck it can't fully count is skipped and `short_warnings` says some couldn't be counted, naming none. The page shows a "Short in N decks" chip and, in the card's sheet, "A (2 copies) and B are short of this card." with each deck linked. Left: the editor Add panel's My wishlist tick. Tests: `decklab/tests/test_wishlist_short.py`, `test_wishlist_short_ui.py`. See [HISTORY.md](../HISTORY.md#wishlist-decks-short-of-a-wished-card-2026-11-02-e5-s30-first-slice).
+
+Built (2026-11-04): the editor's My wishlist tick. GET `/api/deck/wishlist` (`lib/api/wishlist_ideas.py`) reads only the signed-in profile's own wishlist (403 for a request naming nobody; a hidden deck the usual 404) and gives the cards that fit the deck: in a Commander deck, inside the draft commander's colour identity (or the saved Commander section's) and legal in Commander; in a casual deck, every card; never a basic land or the commander. Each carries its wished printing and, only to a viewer who may see the deck's space's inventory, the EDHREC ideas' marks (free, in use, to buy with its AUD estimate, on the way). The Add panel of a saved or new casual or Commander deck (`web/editor-wishlist.js`) has a **My wishlist** tick beside EDHREC ideas when a profile is chosen, asked once per editor, revision, kind and draft commander, narrowed by the typed name and filters on the page, without the draft's cards; a card added keeps its wished printing, as one change. Tests: `decklab/tests/test_wishlist_ideas.py`, `test_editor_wishlist_ui.py`. See [HISTORY.md](../HISTORY.md#my-wishlist-in-the-editors-add-panel-2026-11-04-e5-s30).
 
 **E5-S31** · Matt · should · S · built
 
