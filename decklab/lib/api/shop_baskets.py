@@ -1,7 +1,7 @@
 """Shopping's Baskets (E5-S27, first slice): a proposed basket a shop from the daily snapshots.
 
 Read only, from the same capture shop_prices.enrich used (lib/shops' files, never a shop):
-for each snapshot shop (lib/shops.SNAPSHOT_ADAPTERS, in that order),
+for each snapshot shop config.json checks (lib/shops.enabled_adapters(), in that order),
 
   - "rows": the ready queue rows the snapshot found in stock there, each with the listing it
     found (price in AUD as the shop gave it, None when it showed none) and its fetch time;
@@ -189,7 +189,7 @@ def build(rows, captured, revision=None, rules=None, adapters=None):
     found = shop_prices.by_shop(captured)
     if not found:
         return None
-    adapters = list(shops.SNAPSHOT_ADAPTERS if adapters is None else adapters)
+    adapters = list(shops.enabled_adapters() if adapters is None else adapters)   # config.json's shops (E11-S53)
     rows = [row for row in rows or () if isinstance(row, dict)]
     baskets = [basket(adapter, found.get(adapter.key), rows, rules) for adapter in adapters]
     unavailable = []

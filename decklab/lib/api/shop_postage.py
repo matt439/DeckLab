@@ -3,7 +3,7 @@
     GET /api/shop-postage   home's record readers (permissions.sees_home_records), anyone else 403
                             before any read: {"revision", "shops": [{key, shop, site,
                             postage_aud, free_over_aud}], "can_edit"}, one entry for each
-                            price-check shop (lib/shops.SNAPSHOT_ADAPTERS), None when not known
+                            price-check shop config.json checks (lib/shops.enabled_adapters()), None when not known
     PUT /api/shop-postage   {"profile", "expect": revision, "shops": {key: {postage_aud,
                             free_over_aud}}}: postage.edit (a home admin); the whole record is
                             replaced after checking its revision (409 when it changed since)
@@ -26,9 +26,8 @@ def _sees():
 
 
 def adapters():
-    """The shops whose postage can be set: the price-check shops, in their order."""
-    enabled = getattr(shops, "enabled_adapters", None)
-    return list(enabled()) if callable(enabled) else list(shops.SNAPSHOT_ADAPTERS)
+    """The shops whose postage can be set: the price-check shops config.json checks, in order."""
+    return list(shops.enabled_adapters())
 
 
 def _answer(saved):
