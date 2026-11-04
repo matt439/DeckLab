@@ -20,7 +20,7 @@ class FixtureRunnerTests(unittest.TestCase):
         # TEMP may use an 8.3 spelling on Windows. Match the copied runner's
         # resolved project root before deriving any fake config or environment.
         self.root = Path(self.temp.name).resolve()
-        for name in ("fixture_runtime.py", "test_fixtures.py", "test_shard.py"):
+        for name in ("fixture_runtime.py", "test_fixtures.py", "test_shard.py", "test_report.py"):
             self.write("scripts/" + name, (ROOT / "scripts" / name).read_text(encoding="utf-8"))
         for name in ("decklab/__init__.py", "decklab/lib/__init__.py"):
             self.write(name, "")
@@ -262,6 +262,7 @@ class FixtureRunnerTests(unittest.TestCase):
     def run_fake(self, mode, *args, broken_driver=False):
         env = dict(os.environ)
         env.pop("PYTHONPATH", None)
+        env.pop("GITHUB_STEP_SUMMARY", None)        # the fake shard's report stays out of CI's summary
         env.update({"HOME": str(self.root / "home"), "USERPROFILE": str(self.root / "home"),
                     "APPDATA": str(self.root / "roaming"), "FAKE_HOME": str(self.root / "home"),
                     "FAKE_ROAMING": str(self.root / "roaming"), "FAKE_PACKAGES": str(self.root / "packages"),

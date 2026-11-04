@@ -1,13 +1,18 @@
 # The whole unittest suite on code changes, weekly and by hand (Actions, tests, Run workflow),
 # once per change: a pull request's merge into main doesn't run it again when the pull request's own
-# run passed on exactly the merged files (scripts/ci_changes.py),
-# split across 4 parallel jobs (scripts/test_shard.py) so it takes about 5 minutes instead of 15, on
-# Windows (where the household runs Deck Lab) and on Linux (where self-hosters may: E11-S33). The
-# linux-services job installs the nightly timer and the server's service under a real systemd user
-# manager (scripts/linux_services_check.sh). Standard GitHub-hosted runners are free on a public
-# repo; the 9 jobs count against the account's 20 concurrent jobs. There's no PostgreSQL service,
-# .venv or card data in the shards: the database tests skip (decklab/tests/db_support.py), as do the
-# real-Forge games.
+# run passed on exactly the merged files (scripts/ci_changes.py). A pull request that passes it needs
+# no further test run on the PC: everything the PC's default fixture run covers runs here too.
+# - shard: the fixture suite split across 4 parallel jobs (scripts/test_shard.py, balanced by
+#   scripts/test_weights.json) on Windows (where the household runs Deck Lab) and on Linux (where
+#   self-hosters may: E11-S33), with the .venv's psycopg and tzdata as on the PC (the fixture
+#   guards still block every database connection). There's no card data or Forge in the shards.
+#   Each prints its skips by reason and its slowest modules, also in the run's summary.
+# - database: the database integration tests (scripts/test_db.py) against a throwaway PostgreSQL 18
+#   service container in the job's own VM, never the household's database; 2 jobs on Linux.
+# - linux-services: the nightly timer and the server's service under a real systemd user
+#   manager (scripts/linux_services_check.sh).
+# Standard GitHub-hosted runners are free on a public repo; the 11 jobs count against the
+# account's 20 concurrent jobs. Real-Forge games still don't run here.
 name: tests
 
 on:
@@ -67,8 +72,78 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
+      - name: The .venv with psycopg and tzdata, as on the PC (connections stay blocked)
+        shell: bash
+        run: |
+          python -m venv .venv
+          if [ "$RUNNER_OS" = Windows ]; then VENV_PY=.venv/Scripts/python; else VENV_PY=.venv/bin/python; fi
+          "$VENV_PY" -m pip install -q -r decklab/requirements.txt tzdata
       - name: Tests (no database)
-        run: python scripts/test_shard.py ${{ matrix.index }} 4 --hang-after 600
+        run: >-
+          python scripts/test_shard.py ${{ matrix.index }} 4 --hang-after 600
+          --timings-out timings-${{ runner.os == 'Windows' && 'windows' || 'linux' }}-${{ matrix.index }}.json
+      - name: Keep the module timings (python scripts/test_shard.py --merge-timings DIR)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: timings-${{ runner.os == 'Windows' && 'windows' || 'linux' }}-${{ matrix.index }}
+          path: timings-*.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+  database:
+    needs: changes
+    if: needs.changes.outputs.run_tests == 'true'
+    name: Linux database ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        index: [0, 1]
+        include:
+          - { index: 0, name: 1 of 2 }
+          - { index: 1, name: 2 of 2 }
+    services:
+      postgres:
+        image: postgres:18           # the server's version (decklab/README.md, "Database")
+        env:
+          POSTGRES_PASSWORD: ci-only-not-a-secret   # a throwaway container reachable only in this VM
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -h 127.0.0.1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PG_SUPER_PASSWORD: ci-only-not-a-secret
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: The .venv with psycopg
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -q -r decklab/requirements.txt
+      - name: PostgreSQL 18's pg_dump and pg_restore, to match the server (the runner has 16)
+        run: |
+          sudo apt-get install -y -q postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q --no-install-recommends postgresql-client-18
+          python -c "from decklab.db import conn; print(conn.pg_bin('pg_dump'))" | grep '/18/'
+      - name: Roles and database, as python -m decklab.db setup makes them
+        run: |
+          umask 077
+          printf 'localhost:5432:*:postgres:%s\n' "$PG_SUPER_PASSWORD" > ~/.pgpass
+          chmod 600 ~/.pgpass
+          python -m decklab.db setup
+      - name: Database integration tests
+        run: python scripts/test_db.py ${{ matrix.index }} 2 --require-db --hang-after 900
 
   linux-services:
     needs: changes
@@ -100,7 +175,7 @@ jobs:
 
   # Keep this required check present for docs-only PRs, without starting the shards.
   tests:
-    needs: [changes, shard, linux-services]
+    needs: [changes, shard, linux-services, database]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -111,13 +186,16 @@ jobs:
           RUN_TESTS: ${{ needs.changes.outputs.run_tests }}
           SHARD_RESULT: ${{ needs.shard.result }}
           SERVICES_RESULT: ${{ needs.linux-services.result }}
+          DATABASE_RESULT: ${{ needs.database.result }}
         run: |
           test "$CHANGES_RESULT" = success
           if [ "$RUN_TESTS" = false ]; then
             test "$SHARD_RESULT" = skipped
             test "$SERVICES_RESULT" = skipped
+            test "$DATABASE_RESULT" = skipped
           else
             test "$RUN_TESTS" = true
             test "$SHARD_RESULT" = success
             test "$SERVICES_RESULT" = success
+            test "$DATABASE_RESULT" = success
           fi
