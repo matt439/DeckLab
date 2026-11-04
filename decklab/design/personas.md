@@ -550,7 +550,7 @@ Unknown beyond the decision: a Magic player who plays with physical cards and li
 ### Frustrations
 
 - Today the only route is SELF-HOSTING.md's manual steps: Python, PostgreSQL, a git clone, a hand-edited `config.json` (assumption that this is a barrier: no stranger has tried it yet).
-- Prices are AUD and the nightly shop check reads two Australian shops (E11-S53, missing).
+- Prices are AUD (E11-S53, partial). The nightly shop check reads two Australian shops unless `config.json`'s `"shops"` turns them off (built 2026-11-04).
 - The reference docs name Matt's PC's folders and people (SELF-HOSTING.md says so).
 
 ### Behaviours

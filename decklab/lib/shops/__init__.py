@@ -3,7 +3,8 @@
 The shop-specific part is an adapter (base.py's interface; mtgmate.py and gamesportal.py,
 ADAPTERS below): where a shop's page of a card name is and how to read it. This package does
 the rest the same for any shop: asks politely (Session), keeps the snapshot file and matches
-the queue's rows. SNAPSHOT_ADAPTERS are the shops the snapshot reads (both, Matt 2026-10-31).
+the queue's rows. SNAPSHOT_ADAPTERS are the shops the snapshot reads (both, Matt 2026-10-31),
+less any config.json's "shops" setting leaves out (enabled_adapters(), E11-S53: [] turns it off).
 
 Once a day at most, `snapshot` looks up each distinct card name on the purchase queue
 (the watchlist: its rows only) at each shop. The nightly step also includes confirmed missing
@@ -78,7 +79,8 @@ else:
 
 ADAPTERS = {adapter.key: adapter for adapter in (mtgmate.ADAPTER, gamesportal.ADAPTER)}
 ADAPTER = ADAPTERS["mtgmate"]               # the first shop: the old single-shop names and answers are its
-SNAPSHOT_ADAPTERS = tuple(ADAPTERS.values())  # the shops the snapshot reads, in the order pages show them
+SNAPSHOT_ADAPTERS = tuple(ADAPTERS.values())  # every shop the snapshot can read, in the order pages show them;
+                                            # enabled_adapters() is those config.json's "shops" turns on (E11-S53)
 SHOP = ADAPTER.name
 SITE = ADAPTER.site
 ROBOTS_PATH = ADAPTER.robots_path
@@ -92,6 +94,38 @@ LOCK_AT = 1 << 20                           # the lock file's byte locked (as li
 NIGHTLY_BUDGET = 45 * 60                    # seconds of requests a night: the task stops after two (schedule.py)
 MAX_SNAPSHOT_NAMES = 5000                   # optional queue + home-missing union; never truncates queued intent
 MISSING_UNAVAILABLE = "Saved home missing names could not be confirmed; the purchase queue is unchanged."
+SETTING = "shops"                           # config.json's list of the shops to check (E11-S53)
+_said = set()                               # the settings problems already said, once a process
+
+
+def _say_once(text):
+    if text not in _said:
+        _said.add(text)
+        print(text, file=sys.stderr, flush=True)
+
+
+def enabled_adapters(settings=None):
+    """The shops the snapshot checks, in SNAPSHOT_ADAPTERS order (E11-S53): config.json's "shops",
+    a list of shop keys ("mtgmate", "gamesportal"), or every shop when it isn't set. [] turns the
+    shop check off (a household that can't buy from these shops). An unknown key is left out, and
+    a value that isn't a list counts as unset, each said once on stderr. settings: config.load()'s."""
+    value = (config.load() if settings is None else settings).get(SETTING)
+    if value is None:
+        return SNAPSHOT_ADAPTERS
+    if not isinstance(value, list) or not all(isinstance(key, str) for key in value):
+        _say_once(f'config.json\'s "{SETTING}" isn\'t a list of shop keys, so every shop is checked '
+                  f"({', '.join(ADAPTERS)}).")
+        return SNAPSHOT_ADAPTERS
+    wanted = {key.strip().lower() for key in value}
+    unknown = sorted(wanted - set(ADAPTERS))
+    if unknown:
+        _say_once(f'config.json\'s "{SETTING}" names shops Deck Lab doesn\'t know: {", ".join(unknown)} '
+                  f"(known: {', '.join(ADAPTERS)}); they're left out.")
+    return tuple(adapter for adapter in SNAPSHOT_ADAPTERS if adapter.key in wanted)
+
+
+def shops_off_words():
+    return f'No price-check shop is set (config.json\'s "{SETTING}" is empty), so no shop is checked.'
 
 
 def _now():
@@ -586,13 +620,15 @@ def _not_due(previous, say, shop=SHOP):
 
 
 def refresh_shops(adapters=None, *, say_for, on_error=None, sessions=None, **options):
-    """refresh() at each shop (SNAPSHOT_ADAPTERS by default) side by side: one thread a shop when
+    """refresh() at each shop (enabled_adapters() by default) side by side: one thread a shop when
     there are several, so the time they take together is the slowest shop's, not their sum, and
     each keeps its own robots.txt pace, lock and file. A shop's failure or exception is its own:
     the others still run and save. say_for(adapter) gives that shop's say; on_error(adapter,
     error) reports an exception (re-raised without it, when one shop alone was asked). sessions:
     {key: Session} (the tests' fake shops). The worst of their exit codes."""
-    adapters = tuple(adapters or SNAPSHOT_ADAPTERS)
+    adapters = tuple(enabled_adapters() if adapters is None else adapters)
+    if not adapters:
+        return 0
     sessions = sessions or {}
     codes = {}
 
@@ -622,16 +658,22 @@ def refresh_shops(adapters=None, *, say_for, on_error=None, sessions=None, **opt
 
 
 def nightly(log, *, sessions=None):
-    """The nightly job's step (decklab/db/nightly.py): refresh_shops() of every snapshot shop, side
-    by side, each within NIGHTLY_BUDGET, with its words in log. Always 0: a shop that can't be
-    reached is no failure of the database's night, and the log says why."""
+    """The nightly job's step (decklab/db/nightly.py): refresh_shops() of every enabled shop, side
+    by side, each within NIGHTLY_BUDGET, with its words in log (none when config.json's "shops" is
+    [], E11-S53: skipped, and the log says so). Always 0: a shop that can't be reached is no
+    failure of the database's night, and the log says why."""
+    adapters = enabled_adapters()
+    if not adapters:
+        log(f"Nightly: shop prices skipped: {shops_off_words()}")
+        return 0
+
     def say_for(adapter):
         return lambda words: log(f"Nightly: {adapter.name} prices: {words.strip()}")
 
     def failed(adapter, error):     # a broken shop page must not mark the backup night failed
         log(f"Nightly: {adapter.name} prices failed: {type(error).__name__}: {error}")
     try:
-        refresh_shops(say_for=say_for, on_error=failed, sessions=sessions, progress=False,
+        refresh_shops(adapters, say_for=say_for, on_error=failed, sessions=sessions, progress=False,
                       budget=NIGHTLY_BUDGET, include_missing=True)
     except Exception as error:
         log(f"Nightly: shop prices failed: {type(error).__name__}: {error}")
@@ -640,11 +682,14 @@ def nightly(log, *, sessions=None):
 
 def _chosen(args):
     key = getattr(args, "shop", None)
-    return (ADAPTERS[key],) if key else SNAPSHOT_ADAPTERS
+    return (ADAPTERS[key],) if key else enabled_adapters()     # --shop asks that one even when it's off
 
 
 def _snapshot(args):
     adapters = _chosen(args)
+    if not adapters:
+        print(f"{shops_off_words()} (--shop KEY asks one anyway.)")
+        return 0
     where = " and ".join(adapter.name for adapter in adapters)
     if args.dry_run:
         from decklab.lib.inventory import Unavailable
@@ -669,7 +714,11 @@ def _snapshot(args):
 
 def _show(_args):
     from decklab.lib.inventory import Unavailable
-    snapshots = [(adapter, load(adapter=adapter)) for adapter in SNAPSHOT_ADAPTERS]
+    adapters = enabled_adapters()
+    if not adapters:
+        print(shops_off_words())
+        return 0
+    snapshots = [(adapter, load(adapter=adapter)) for adapter in adapters]
     snapshots = [(adapter, data) for adapter, data in snapshots if data is not None]
     if not snapshots:
         print("No shop snapshot yet: python -m decklab.lib.shops snapshot")

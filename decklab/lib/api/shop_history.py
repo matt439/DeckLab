@@ -41,8 +41,9 @@ def price_history_view(name=None):
     exact = queued.get(name.casefold())
     if exact is None:
         return {"name": name, "queued": False, "shops": []}
-    # load_history reads a missing or unreadable file as an empty history.
-    snapshots = [(adapter, {"history": shops.load_history(adapter)}) for adapter in shops.SNAPSHOT_ADAPTERS]
+    # Only the shops config.json checks (E11-S53), as Shopping's snapshot lines; load_history reads a missing
+    # or unreadable file as an empty history.
+    snapshots = [(adapter, {"history": shops.load_history(adapter)}) for adapter in shops.enabled_adapters()]
     answer = _history.report(exact, snapshots, shops.pick)
     answer["queued"] = True
     return answer

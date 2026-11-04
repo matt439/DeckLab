@@ -28,7 +28,8 @@ class PriceHistoryTests(unittest.TestCase):
         for target, name, value in (
                 (guard, "require_sees_home_records", lambda: None),
                 (shops, "_queue", lambda: [{"name": "Sol Ring"}, {"name": "Sol Ring"}, {"name": "Opt"}]),
-                (shops, "load_history", lambda adapter=None, path=None: HISTORY[adapter.key])):
+                (shops, "load_history", lambda adapter=None, path=None: HISTORY[adapter.key]),
+                (shops, "enabled_adapters", lambda settings=None: shops.SNAPSHOT_ADAPTERS)):
             patcher = mock.patch.object(target, name, value)
             patcher.start()
             self.addCleanup(patcher.stop)
@@ -43,6 +44,12 @@ class PriceHistoryTests(unittest.TestCase):
                          [("2026-11-01", "4.00", True, False), ("2026-11-02", "3.50", True, True),
                           ("2026-11-03", "3.00", False, False)])
         self.assertEqual(portal["days"], [])
+
+    def test_only_the_shops_config_checks(self):
+        with mock.patch.object(shops, "enabled_adapters", lambda settings=None: shops.SNAPSHOT_ADAPTERS[:1]):
+            self.assertEqual([s["shop"] for s in shop_history.price_history_view("Sol Ring")["shops"]], ["MTGMate"])
+        with mock.patch.object(shops, "enabled_adapters", lambda settings=None: ()):
+            self.assertEqual(shop_history.price_history_view("Sol Ring")["shops"], [])
 
     def test_a_name_not_queued_has_no_history(self):
         self.assertEqual(shop_history.price_history_view("Black Lotus"),
