@@ -158,6 +158,7 @@ def dispatch(handler, route, query):
         ("precons", "coverage", "deck"): (precon_coverage.coverage_deck, ("file", "space")),
         ("precons", "trial"): (_trial_view, ("file", "space")),
         ("commanders", "candidates"): (commander_candidates.candidates_view, ("space", "limit")),
+        ("commanders", "candidate"): (commander_candidates.candidate_view, ("name", "space")),
         ("assembly",): (assembly.assembly_view, ("deck", "version")),
         ("compare", "shared"): (compare.shared_view, ("a", "av", "b", "bv")),
         ("play",): (play_records.play_overview, ("id",)),

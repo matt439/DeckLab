@@ -2,8 +2,11 @@
  * the space's free legendary creatures (and other cards that may be a commander) ranked by how much of a
  * Commander deck the rest of the free pool covers in each one's colours, counted by the Command Zone
  * template's role targets (ramp, card advantage, targeted and mass disruption), best first. Opening one shows
- * each category's free cards against its target, the free non-basic lands and other cards that fit. Nothing
- * here changes anything; EDHREC ideas and New deck from it are later slices. */
+ * each category's free cards against its target, then (E9-S28's second slice) asks for its free cards by
+ * name (GET /api/commanders/candidate): each category's, the free non-basic lands and the other non-land
+ * cards that fit. It also offers New deck from it (the new-deck editor with it as the commander, in this
+ * space, for a viewer who may add decks there) and See EDHREC ideas (deck-edhrec.js's sheet, asked for
+ * this commander and space only when opened). Nothing here changes anything. */
 "use strict";
 
 /** Open the ranking for the Collection page's space (any viewer the page loaded for: it sees the inventory). */
@@ -90,6 +93,61 @@ function backToCandidates(ctx) {
   if (ctx.ranking) drawCandidates(ctx, ctx.ranking); else rankCandidates(ctx);
 }
 
+/** "#/new?kind=commander&commander=…" in the candidate's space, or null when the viewer may not add decks there. */
+function candidateNewDeckHref(ctx, c) {
+  if (!createTargets().some((t) => t.space === ctx.cv.space)) return null;
+  const params = new URLSearchParams({ kind: "commander", commander: c.name });
+  if (ctx.cv.space !== HOME_SPACE) params.set("space", ctx.cv.space);
+  return `#/new?${params}`;
+}
+
+/** New deck from it and See EDHREC ideas. */
+function candidateActions(ctx, c) {
+  const href = candidateNewDeckHref(ctx, c);
+  return el("div", { class: "ccand-actions" },
+    href ? el("a", { class: "btn btn-primary", href, text: "New deck from it" }) : null,
+    el("button", { type: "button", class: "btn", text: "See EDHREC ideas…",
+      onclick: () => openEdhrecSheet(null, { commander: c.name, space: ctx.cv.space }) }));
+}
+
+/** The candidate's free cards by name, asked once it's opened. */
+async function loadCandidateCards(ctx, c) {
+  const seq = ++ctx.seq;
+  clear(ctx.cards).append(loadingBox("Finding its free cards…"));
+  try {
+    const params = new URLSearchParams({ name: c.name });
+    if (ctx.cv.space !== HOME_SPACE) params.set("space", ctx.cv.space);
+    const answer = await api(`/api/commanders/candidate?${params}`);
+    if (!candidatesAlive(ctx, seq) || ctx.detail !== c) return;
+    drawCandidateCards(ctx, answer);
+  } catch (error) {
+    if (!candidatesAlive(ctx, seq) || ctx.detail !== c) return;
+    clear(ctx.cards).append(loadFailed("Its free cards", error, () => loadCandidateCards(ctx, c)));
+  }
+}
+
+/** One list of free cards: a heading with its count (and target), the cards, and how many more aren't listed. */
+function candidateCardGroup(heading, rows, more, words) {
+  return el("section", { class: "ccand-group" }, el("h3", {}, heading, " ", el("small", { class: "sub", text: words })),
+    rows.length ? el("div", {}, rows.map((r) => cardRow(r.card || null, { name: r.name, caption: r.name,
+      meta: r.free > 1 ? `${num(r.free)} free` : "Free", viewerGroup: "commander-candidate" })))
+      : el("p", { class: "sub", text: "None free in its colours." }),
+    more ? el("p", { class: "result-count", text: `${plural(more, "more card")} not listed.` }) : null);
+}
+
+function drawCandidateCards(ctx, answer) {
+  const groups = (answer.categories || []).map((p) => candidateCardGroup(p.label, p.cards || [], p.more,
+    p.in_coverage ? `${num(p.count)} of ${num(p.target)}${p.short ? `, ${num(p.target - p.count)} short` : ""}`
+      : `${plural(p.count, "free non-basic land")}; basics fill the rest`));
+  const others = answer.others || { cards: [], more: 0, count: 0 };
+  add(clear(ctx.cards), [
+    el("h2", { class: "ccand-cards-head", text: "Free cards by role" }),
+    el("p", { class: "sub", text: "Most-printed first. A card in two categories is listed in both." }),
+    groups,
+    candidateCardGroup("Other free cards", others.cards || [], others.more,
+      `${num(others.count || 0)} that fit no counted category: creatures and the deck's plan`)]);
+}
+
 /** One candidate: its card, each template category's free cards beside its target, and what else fits. */
 function openCandidate(ctx, c) {
   ctx.detail = c;
@@ -109,12 +167,15 @@ function openCandidate(ctx, c) {
         el("p", { class: "precon-summary" }, candidateShare(c)),
         el("p", { text: candidateShort(c) + "." }),
         el("p", { class: "sub", text: `${plural(c.cards, "other free non-land card")} and ${plural(c.lands, "free non-basic land")} in its colours. A Commander deck plays one of each, so extra copies don't count.` }),
-        c.partner && c.partner.length ? el("p", { class: "box box-info", text: `It has ${c.partner.join(" and ")}: a second commander would widen its colours, which isn't counted here.` }) : null)),
+        c.partner && c.partner.length ? el("p", { class: "box box-info", text: `It has ${c.partner.join(" and ")}: a second commander would widen its colours, which isn't counted here.` }) : null,
+        candidateActions(ctx, c))),
     el("table", { class: "data ccand-table" },
       el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "Template category" }), el("th", { scope: "col", class: "num", text: "Target" }),
         el("th", { scope: "col", class: "num", text: "Free" }), el("th", { scope: "col", text: "" }))),
       el("tbody", {}, rows)),
     el("p", { class: "result-count", text: "Free cards count as the Stats tab counts the roles (Scryfall's oracle tags): card advantage is the draw role only, targeted disruption is removal or counterspells that aren't board wipes." }),
+    ctx.cards = el("div", { class: "ccand-cards" }),
     candidateSource(ctx.ranking && ctx.ranking.source)]);
   sheetActions(ctx.sheet, [ctx.back]);
+  loadCandidateCards(ctx, c);
 }

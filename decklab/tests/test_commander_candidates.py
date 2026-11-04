@@ -153,3 +153,68 @@ class RankingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CandidateCardsApiTests(CandidatesTestCase):
+    """E9-S28's second slice: GET /api/commanders/candidate, one candidate's free cards by name."""
+
+    @staticmethod
+    def names(part):
+        return [c["name"] for c in part["cards"]]
+
+    def test_each_categorys_free_cards_by_name(self):
+        answer = api.candidate_view("Abaddon the Despoiler")
+        self.assertEqual((answer["space"], answer["name"], answer["colours"]), ("home", "Abaddon the Despoiler", ["U", "B", "R"]))
+        parts = {p["category"]: p for p in answer["categories"]}
+        self.assertNotIn("plan", parts)
+        self.assertEqual(self.names(parts["ramp"]), ["Sol Ring"])
+        self.assertEqual(sorted(self.names(parts["card advantage"])), ["Fire // Ice", "Rhystic Study"])
+        self.assertEqual(self.names(parts["targeted disruption"]), ["Fire // Ice"])
+        self.assertEqual((parts["mass disruption"]["count"], parts["mass disruption"]["short"]), (0, True))
+        self.assertEqual(parts["ramp"]["cards"][0]["card"]["name"], "Sol Ring")
+        self.assertEqual(answer["others"]["count"], 0)
+        self.assertEqual(answer["source"]["id"], role_targets.SOURCE_ID)
+
+    def test_a_name_in_any_case_resolves(self):
+        self.assertEqual(api.candidate_view("ghalta, primal hunger")["name"], "Ghalta, Primal Hunger")
+
+    def test_not_a_candidate(self):
+        self.assertApiError(400, api.candidate_view, None)
+        self.assertApiError(400, api.candidate_view, "x" * 151)
+        self.assertApiError(404, api.candidate_view, "Sol Ring")              # may not lead
+        self.write("holder", base.deck_text(roles.GHALTA, title="Secret Holder", fmt="Commander", status="built"),
+                   kind="commander")
+        error = self.assertApiError(404, api.candidate_view, "Ghalta, Primal Hunger")
+        self.assertNotIn("Secret Holder", error.message)
+
+    def test_the_route(self):
+        from decklab.lib import feature_routes
+        handler = mock.Mock(command="GET")
+        handler._query.return_value = {"name": "Abaddon the Despoiler"}
+        self.assertTrue(feature_routes.dispatch(handler, ["commanders", "candidate"], ""))
+        status, answer = handler._send_json.call_args[0]
+        self.assertEqual((status, answer["name"]), (200, "Abaddon the Despoiler"))
+
+    def test_only_the_spaces_own_people(self):
+        _write(self.box.root / "config.json", json.dumps(ROLES))
+        with _as("user2"):
+            error = self.assertApiError(403, api.candidate_view, "Ghalta, Primal Hunger", "home")
+        self.assertEqual(error.message, guard.COLLECTION_HIDDEN)
+
+
+class CardsForTests(unittest.TestCase):
+
+    def test_lists_capped_and_others(self):
+        known = {"Lead": _card("Lead", "G", leads=True), "Grove": _card("Grove", "G", type_line="Land — Forest"),
+                 "Bear": _card("Bear", "G"), "Red": _card("Red", "R", ("ramp",))}
+        known.update({f"Ramp {i}": _card(f"Ramp {i}", "G", ("ramp",)) for i in range(5)})
+        free = {name: 1 for name in known} | {"Ramp 0": 3}
+        found = commander_pool.cards_for("Lead", free, known.get, lambda c: c["leads"], role_targets.CATEGORIES, limit=3)
+        parts = {p["category"]: p for p in found["categories"]}
+        self.assertEqual((parts["ramp"]["count"], len(parts["ramp"]["cards"]), parts["ramp"]["more"]), (5, 3, 2))
+        self.assertEqual(parts["ramp"]["cards"][0], {"name": "Ramp 0", "free": 3})
+        self.assertEqual([c["name"] for c in parts["lands"]["cards"]], ["Grove"])
+        self.assertFalse(parts["lands"]["in_coverage"])
+        self.assertEqual(found["others"], {"cards": [{"name": "Bear", "free": 1}], "more": 0, "count": 1})
+        self.assertIsNone(commander_pool.cards_for("Bear", free, known.get, lambda c: c["leads"], role_targets.CATEGORIES))
+        self.assertIsNone(commander_pool.cards_for("Nope", free, known.get, lambda c: c["leads"], role_targets.CATEGORIES))

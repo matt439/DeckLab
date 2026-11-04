@@ -1,4 +1,5 @@
-/* Deck Lab's editor: Paste/replace and Start from workflows (E11-S37).
+/* Deck Lab's editor: Paste/replace and Start from workflows (E11-S37), and a new deck started from a
+ * commander (#/new?kind=commander&commander=<name>: Commanders we could build's New deck from it, E9-S28).
  * Loaded directly after editor-cards.js and editor-edhrec.js. These functions use the editor state,
  * list/draft helpers and sheets from editor.js, changed() from editor-screen.js,
  * Deck details from editor-details.js, and Add controls from editor-cards.js.
@@ -161,6 +162,40 @@ function afterBulkChange(sections) {
 
 
 // --------------------------------------------------------------- starting from
+
+/** A new Commander deck started from a commander (E9-S28's New deck from it): the card goes in the Commander
+ * section as one change (one Undo step, kept in the draft), titled with its name when the title is empty.
+ * A draft of a new deck already holding cards is kept as it is, and says why the commander wasn't added.
+ * The address loses commander= either way, so a reload brings back the draft and never adds it twice. */
+async function startFromCommander(name) {
+  const ed = editor;
+  const params = new URLSearchParams({ kind: "commander" });
+  if (ed.space && ed.space !== HOME_SPACE) params.set("space", ed.space);
+  if (location.hash.startsWith("#/new?")) history.replaceState(history.state, "", `#/new?${params}`);
+  const lines = Object.values(ed.lists).reduce((n, list) => n + list.length, 0);
+  if (lines) {
+    const already = (ed.lists.Commander || []).some((l) => l.name === name);
+    if (!already) toast(`Your unsaved new deck is still here, so ${name} wasn't added. Save or discard it, then start from the commander again.`);
+    return false;
+  }
+  let found;
+  try {
+    found = await api(`/api/cards/search?q=${encodeURIComponent(name)}&limit=20&detail=1`);
+  } catch (e) {
+    if (!(e instanceof ApiError)) throw e;
+    if (editor === ed) toast(`${name} couldn't be looked up: ${e.message}`);
+    return false;
+  }
+  const card = ((found && found.cards) || []).find((c) => c.name === name);
+  if (editor !== ed || ed.mode !== "new") return false;
+  if (!card) { toast(`${name} isn't a card Deck Lab knows. Add the commander with the search.`); return false; }
+  if (ed.fields.kind !== "commander") setField("kind", "commander", false);
+  if (!norm("title", ed.fields.title)) ed.fields.title = name.split(" // ")[0];
+  ed.addSection = "Commander";
+  addCard(card, "Commander");
+  drawDetails();
+  return true;
+}
 
 /** A new deck with no cards yet: start from a paste, a precon or another deck. */
 function startFromPart() {

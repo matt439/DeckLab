@@ -263,6 +263,12 @@ button.col-find-open { cursor: pointer; }
 .ccand-words p { margin: 0 0 var(--s-2); }
 .ccand-table { width: 100%; }
 .ccand-short th, .ccand-short td:last-child { font-weight: var(--fw-semibold); }
+.ccand-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-2); }
+.ccand-cards { margin-top: var(--s-4); }
+.ccand-cards-head { font-size: var(--fs-lg); margin: 0 0 var(--s-1); }
+.ccand-group { margin-top: var(--s-3); }
+.ccand-group h3 { margin: 0 0 var(--s-1); }
+.ccand-group h3 small { font-weight: normal; }
 /* Try a precon (precon-trial.js, E3-S39): the sheet, a trial deck's Overview notice and the saved box's offer. */
 .ptr-search { display: grid; gap: var(--s-2); }
 .ptr-search .sub, .ptr-meta { margin: 0; }
