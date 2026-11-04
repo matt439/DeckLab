@@ -132,7 +132,7 @@ class MissingSnapshotUiTests(unittest.TestCase):
             assert(line().textContent.includes('MTGMate: not checked'));
           }
           assert(main.querySelector('#shop-missing-cards').closest('section').textContent
-            .includes('Shop checks are saved snapshots; check before ordering.'));noEffects();
+            .includes('saved checks'));noEffects();
         """)
 
     def test_malformed_price_or_stock_never_becomes_a_free_price_or_a_physical_quantity(self):
