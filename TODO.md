@@ -101,7 +101,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S50` | DEFERRED | could | L | One Windows installer (winget Python and PostgreSQL, release zip, generated postgres password, config questions, services, one firewall prompt, phone address); after `E11-S49`. |
 | `E11-S51` | DEFERRED | could | M | Update command for release installs (backup, replace, migrate, restart); after `E11-S49`. |
 | `E11-S52` | DEFERRED | could | L | First-run setup page on the PC (home profiles, optional Enable simulations); after `E11-S50`. |
-| `E11-S53` | OPEN | could | M | Currency and price-check shops as settings, default AUD; first slice, a shops setting the nightly task honours. |
+| `E11-S53` | OPEN | could | M | Currency and price-check shops as settings, default AUD. The shops setting (`config.json`'s `"shops"`) is built (2026-11-04); left: the currency, and a Settings control. |
 | `E11-S59` | DECISION | could | L | Wake-on-request built in code (2026-11-01): Matt sets up the NAS gate, the service token, the Worker's secrets and the PC's wake settings, then times a real wake. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
 | `E11-S55` | OPEN | could | M | An accessibility pass: contrast, names, focus and reduced motion over every page in both densities and themes. The phone audit of the library, deck page and Game log and its fixes are done (2026-11-04); next, the other pages and the lab density, then a real screen reader. |
