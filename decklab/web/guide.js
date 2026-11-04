@@ -61,6 +61,7 @@ function guideInline(text) {
  * within a topic retain their hierarchy; unrecognised Markdown stays text. */
 function guideMarkdown(markdown) {
   const root = el("div", { class: "guide-prose" });
+  const names = typeof cardNamePattern === "function" ? cardNamePattern() : null;
   const stack = [];
   let paragraph = null;
   let blank = false;
@@ -81,6 +82,7 @@ function guideMarkdown(markdown) {
         stack.push(top);
       }
       top.last = el("li", {}, guideInline(item[3]));
+      guideLeadArt(top.last, item[3], names);
       top.list.append(top.last);
       paragraph = null;
     } else {
@@ -103,4 +105,25 @@ function guideMarkdown(markdown) {
     blank = false;
   }
   return root;
+}
+
+
+/** A point that starts with one of the deck's cards ("Scavenging Ooze. Spend spare green mana...") gets that
+ * card's art beside it, so a long guide reads as cards and not one wall of words. Decorative: the name in the
+ * words is still the link that opens the viewer. */
+function guideLeadArt(li, text, names) {
+  if (!names) return;
+  const lead = text.replace(/^[*_\s]+/, "");
+  names.lastIndex = 0;
+  const match = names.exec(lead);
+  names.lastIndex = 0;
+  if (!match || match.index !== 0) return;
+  const card = state.cards.get(match[0]);
+  const art = card && typeof cardImageSize === "function" ? cardImageSize(card.img_small, "art_crop") : null;
+  if (!art) return;
+  const img = el("img", { class: "guide-art", src: art, alt: "", "aria-hidden": "true", loading: "lazy", decoding: "async",
+    width: 64, height: 47 });
+  img.onerror = () => { img.onerror = null; img.src = card.img_small; img.classList.add("is-small"); };
+  li.classList.add("has-art");
+  li.prepend(img);
 }

@@ -774,7 +774,7 @@ function drawShopping(data) {
     for (const row of later) if (row.deck) planned.set(row.deck.id, (planned.get(row.deck.id) || 0) + (row.quantity || 0));
     clear(buySlot);
     if (immediate.length) buySlot.append(shopSection("shop-to-buy", "To buy", immediate.length,
-      "Cards we've decided to buy. Prices are the lowest seen when checked, not live stock.",
+      "Cards we've decided to buy, with the lowest price seen when checked.",
       shopQueueControls(view), shopQueueGroups(immediate, view)));
     clear(deckSlot);
     if (decks.length) deckSlot.append(shopSection("shop-decks", "Decks still missing cards", decks.length,

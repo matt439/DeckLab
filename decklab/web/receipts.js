@@ -237,7 +237,7 @@ function rcptSection(view, comp) {
     rcptProductGrid(view, comp, true);
     return comp.section;
   }
-  comp.body.append(el("p", { class: "sub", text: "Tick only the cards that arrived. Unticked cards stay on the way. Split copies into separate tiles if only some arrived." }));
+  comp.body.append(el("p", { class: "sub", text: "Tick the cards that arrived; the rest stay on the way. Split a tile if only some copies came." }));
   comp.body.append(rcptPartActions(view, comp));
   if (comp.checks.length) comp.body.append(rcptChecksCard(view, comp));
   comp.body.append(rcptToolbar(view, comp));

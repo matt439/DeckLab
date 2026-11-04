@@ -124,7 +124,8 @@ function availabilityBanner(data, screen) {
       a && a.missing > 0 && a.aud != null ? asListedLine(data.owned) : null,
       a && a.coming ? incomingBannerSources(data.owned) : null,
       boxCheckDateNote(data),
-      assembled ? el("p", { class: "sub deck-avail-assembled", text: assembledStateWords(assembled) + "." }) : null),
+      assembled && !assembledComplete(assembled)
+        ? el("p", { class: "sub deck-avail-assembled", text: assembledStateWords(assembled) + "." }) : null),
     action, picker);
 }
 

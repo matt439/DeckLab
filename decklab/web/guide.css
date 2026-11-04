@@ -15,6 +15,11 @@
 .guide-prose :is(ul, ol) + p, .guide-prose p + :is(ul, ol) { margin-top: var(--s-3); }
 .guide-prose a { overflow-wrap: anywhere; }
 .guide-prose .sym { width: 1em; height: 1em; }
+/* A point that starts with a card has its art beside it (guide.js guideLeadArt). */
+.guide-prose li.has-art::after { content: ""; display: block; clear: both; }
+.guide-art { float: left; width: 64px; height: 47px; object-fit: cover; margin: .3em var(--s-3) var(--s-1) 0;
+  border-radius: var(--r-sm); background: var(--surface-2); }
+.guide-art.is-small { object-position: 50% 20%; }
 .guide-stale, .guide-departed { margin-bottom: var(--s-3); }
 /* One readable column at every width: the open Game plan, then the folded topics under it (two columns left an
    open topic's text in a narrow box beside a column of one-line folds). */

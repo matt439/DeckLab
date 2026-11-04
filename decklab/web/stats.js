@@ -28,6 +28,14 @@ const ROLE_WORDS = {
 
 const chartJobs = [];     // charts to draw once their containers are on the page
 
+/** A tile's line for the deck rules: the first problem up to its reason (the Stats tab has the whole of it),
+ * and how many more there are. */
+function ruleProblemShort(problems) {
+  if (!problems || !problems.length) return null;
+  const first = String(problems[0]).split(/: /)[0].replace(/\.$/, "");
+  return problems.length > 1 ? `${first}, and ${plural(problems.length - 1, "more problem")}` : first;
+}
+
 function drawCharts() {
   while (chartJobs.length) {
     const [host, draw] = chartJobs.shift();
@@ -88,14 +96,15 @@ function statsVerdict(st, summary) {
     const short = c.colours.filter((x) => x.ok === false);
     const known = c.colours.every((x) => x.ok != null);
     items.push(short.length
-      ? verdictItem("Colour sources", capitalise(short.map((x) => x.name).join(", ")), "too few to cast on time",
+      ? verdictItem("Colour sources", short.length > 2 ? `${short.length} short` : capitalise(short.map((x) => x.name).join(", ")),
+        "too few to cast on time",
         status("warn", "Short"))
       : verdictItem("Colour sources", known ? "Enough" : "Not checked", known ? `for ${plural(c.colours.length, "colour")}` : null));
   }
   const k = st.commander;
   if (k) {
     items.push(verdictItem("Deck rules", k.ok ? "Followed" : "Broken", k.ok ? "100 cards, one of each, in colour"
-      : (k.problems && k.problems[0]) || "see Commander rules", k.ok ? null : status("crit", "Breaks a rule")));
+      : ruleProblemShort(k.problems) || "see Commander rules", k.ok ? null : status("crit", "Breaks a rule")));
     const br = k.bracket || {};
     if (br.label) {
       const aim = summary && summary.target_bracket;
@@ -764,7 +773,6 @@ function drawOddsPanel(data) {
   const lands = boxes.some(([, line]) => typeGroup(line.card) === "Lands");
   const panel = el("section", { class: "panel wide", "aria-labelledby": "h-odds" },
     el("h3", { id: "h-odds", text: "Chance to draw" }),
-    el("p", { class: "sub", text: "Tick a card, or several to count any of them, then choose the turn." }),
     el("div", { class: "odds-settings" },
       el("label", { class: "field odds-turn" }, el("span", { text: `By turn (1 to ${ODDS_MAX_TURN})` }), turnInput),
       seat),
@@ -786,7 +794,7 @@ function drawOddsPanel(data) {
     clear(result);
     const ticked = lines.filter((line) => picked.has(line.name));
     if (!ticked.length) {
-      result.append(noneSelected("Tick a card below to see the chance of drawing it."));
+      result.append(noneSelected("Tick a card below, or several to count any of them."));
       return;
     }
     const hits = copies(ticked);

@@ -814,7 +814,7 @@ function deckCard(d, product, compact, kitShown = false, ctx = {}) {
       compact ? null : deckMeta(d, ctx.person),
       compact ? null : deckPlayed(d),
       deckStatusPill(d),
-      d.assembled && "missing" in d && (d.assembled.sideboard_intended || d.assembled.sideboard_count || d.assembled.changed)
+      d.assembled && "missing" in d && !assembledComplete(d.assembled)
         ? el("span", { class: "deck-assembled", text: assembledStateWords(d.assembled) }) : null,
       owned,
       d.error ? el("span", { class: "deck-error", text: `Can't be read: ${d.error}` })
@@ -911,7 +911,7 @@ function libDetail(d, ctx) {
         owned,
         d.error ? el("p", { class: "deck-error", text: `Can't be read: ${d.error}` })
           : chip ? el("div", { class: "deck-missing" }, chip) : null,
-        d.assembled && "missing" in d && (d.assembled.sideboard_intended || d.assembled.sideboard_count || d.assembled.changed)
+        d.assembled && "missing" in d && !assembledComplete(d.assembled)
           ? el("p", { class: "deck-assembled", text: assembledStateWords(d.assembled) }) : null,
         d.error ? null : libDetailForge(d),
         d.error ? null : libDetailGauntlet(d),

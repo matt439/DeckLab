@@ -117,7 +117,13 @@ function blockedTablesPart({ blocked, held, alone }) {
   }
   for (const h of held) {
     const whose = h.space === HOME_SPACE ? "the home decks'" : `${spaceName(h.space)}'s decks'`;
-    out.push(el("p", { class: "note note-warn", text: `Update all, receipts and orders leave ${whose} tables as they are until this is fixed: ${heldWords(h)}.` }));
+    const why = heldWords(h);
+    // A long reason (a pool warning, usually also shown at the top of the page) folds away under a short line.
+    out.push(why && why.length > 140
+      ? el("div", { class: "note note-warn" }, el("div", {},
+          el("p", { text: `Update all, receipts and orders leave ${whose} tables as they are until the collection is fixed.` }),
+          el("details", { class: "more" }, el("summary", { text: "Why" }), el("p", { text: `${why}.` }))))
+      : el("p", { class: "note note-warn", text: `Update all, receipts and orders leave ${whose} tables as they are until this is fixed: ${why}.` }));
   }
   return out;
 }
