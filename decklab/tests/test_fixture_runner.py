@@ -141,6 +141,16 @@ class FixtureRunnerTests(unittest.TestCase):
                     fixture.write_text('temporary configuration')
                     self.assertEqual(fixture.read_text(), 'temporary configuration')
                     with builtins.open(file=fixture, mode='r') as stream: self.assertEqual(stream.read(), 'temporary configuration')
+                    import shutil, tempfile
+                    shutil.rmtree(fixture.parent)
+                    self.assertFalse(fixture.parent.exists())
+                    folder = tempfile.TemporaryDirectory()
+                    (Path(folder.name) / 'nested').mkdir()
+                    for leaf in ('config.json', 'nested/config.json', 'nested/.pgpass'):
+                        (Path(folder.name) / leaf).write_text('temporary')
+                    folder.cleanup()
+                    self.assertFalse(os.path.exists(folder.name))
+                    with self.assertRaises(FileNotFoundError): private.unlink()
                 def test_saved_script_spawn(self):
                     import multiprocessing
                     from fake_worker import worker

@@ -31,6 +31,12 @@ def _field_choice_save(body):
     return save(body)
 
 
+def _price_history(**params):
+    """A queued card's daily shop readings (api/shop_history.py, E5-S29); writes nothing."""
+    from decklab.lib.api.shop_history import price_history_view
+    return price_history_view(**params)
+
+
 def _global_search(**params):
     """The top bar's global search (api/global_search.py, E11-S31): visible decks, the viewer's own
     collection and every Scryfall card; writes nothing."""
@@ -134,8 +140,8 @@ def _status(key, answer):
 
 
 def dispatch(handler, route, query):
-    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, dice, edhrec, editor, history,
-                                 library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_undo)
+    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, commander_candidates, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, dice, edhrec, editor, history,
+                                 library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_ideas, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
     gets = {
@@ -151,6 +157,7 @@ def dispatch(handler, route, query):
         ("precons", "coverage"): (precon_coverage.coverage_view, ("space", "format", "type", "limit")),
         ("precons", "coverage", "deck"): (precon_coverage.coverage_deck, ("file", "space")),
         ("precons", "trial"): (_trial_view, ("file", "space")),
+        ("commanders", "candidates"): (commander_candidates.candidates_view, ("space", "limit")),
         ("assembly",): (assembly.assembly_view, ("deck", "version")),
         ("compare", "shared"): (compare.shared_view, ("a", "av", "b", "bv")),
         ("play",): (play_records.play_overview, ("id",)),
@@ -171,6 +178,7 @@ def dispatch(handler, route, query):
         ("deck", "draft"): (deck_drafts.draft_view, ("id", "version")),
         ("deck", "new-draft"): (deck_drafts.new_draft_view, ("space", "source")),
         ("deck", "edhrec"): (edhrec.edhrec_view, ("id", "commander", "commander2", "space", "page")),
+        ("deck", "wishlist"): (wishlist_ideas.wishlist_ideas_view, ("id", "commander", "commander2", "space", "kind")),
         ("receipt",): (receipts.receipt_view, ("order",)),
         ("arrivals",): (arrivals.arrivals_view, ()),
         ("rankings",): (rankings.rankings_view, ("format",)),
@@ -195,6 +203,7 @@ def dispatch(handler, route, query):
         ("gauntlet", "catalogue"): (_gauntlet_catalogue, ("format",)),
         ("gauntlet", "board"): (_gauntlet_board, ("format", "profile")),
         ("shopping", "combined"): (_shopping_combined, ("decks",)),
+        ("shopping", "price-history"): (_price_history, ("name",)),
     }
     posts = {
         ("activity", "undo"): activity_undo.apply_undo,

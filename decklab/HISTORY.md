@@ -20,6 +20,36 @@ What each milestone and feature built, the decisions made along the way, and the
 - Left for later: Settings saying a newer release exists (checked at most once a day), and an update command for release installs (E11-S51).
 - Tests: `decklab/tests/test_release.py` (manifest, unchanged and changed installs, bad manifests, a checkout ignoring it, the zip's layout, and HEAD packaged twice the same and read back as an install), plus cases in `test_server_restart.py` and `test_version_ui.py`.
 
+## Shorter Settings maintenance, shop-price and Missing cards wording (2026-11-04)
+
+The three places "Less text on phones" left alone because tests pinned their words, now shortened, with the tests checking what the words mean rather than whole sentences.
+
+- **Settings, Database maintenance:** each job is two or three short lines instead of five: its status with the latest run ("Succeeded, <when>."; "Overdue. Last run: Succeeded, <when>." when they differ), the last success only when the latest run wasn't one, and "Due every 36 hours; last success on time." (export adds "the nightly grace period"). Every run's start and finish stay under **Recent runs**. "No recorded attempts" is now "Never run" and "Outcome unavailable" "Outcome unknown". The intro is one short sentence. Whether the interval counts from a run's start or finish is no longer spelled out.
+- **Deck prices:** the saved-shop note under a missing card is "Saved shop checks: any nonfoil printing, maybe not yours. Price per card." (each shop line already shows its own fetch time and stock).
+- **Shopping, Missing cards across decks:** "Every home deck's Planned shortfall, added up; a shared copy may count twice. Shop lines are saved checks."
+- Tests: `test_settings_maintenance_ui`, `test_deck_shop_prices_ui`, `test_shops_two_shops_ui`, `test_shopping_buying_ui`, `test_shopping_missing_snapshot_ui`. Fixtures only: no server restart or database writes.
+
+## Commanders we could build (2026-11-04; E9-S28 first slice)
+
+- The Collection page's More has **Commanders we could build…** (`web/commander-candidates.js`), beside Precons we could build: every card with a copy free in the space (owned or on the way, not held by a built deck or an intact product) that may be a commander on its own (`lib/stats/commander.py`'s `_can_be_commander`, CR 903.3) and is legal in Commander, ranked by how much of a deck the rest of the free pool covers in its colour identity.
+- **The measure** (`lib/decks/commander_pool.py`, `candidates`): the Command Zone template's categories as the Stats tab counts them (`lib/stats/role_targets.py`, E9-S26): ramp, card advantage (the draw role), targeted disruption (removal or counterspell, not board wipes) and mass disruption (board wipes), each counted by card name (a Commander deck plays one of each) up to its target; the share is the sum over the four, of 40. Free non-basic lands are shown but don't count (basics fill the lands), and plan cards aren't counted; the free non-land cards that fit break ties. A card that fits two categories counts in both, as the template's do. A candidate with a partner ability says so; a partner or Background isn't counted, and a Background is never a candidate alone.
+- **The answer** (`lib/api/commander_candidates.py`): `GET /api/commanders/candidates?space=&limit=` (50 by default, at most 200), with the Collection page's reading rule (`guard.require_sees_inventory`: 403 "That collection isn't public.") and no deck holding copies named. It says when the card data holds no role tags. Opening a candidate lists each category's free cards beside its target, with the template's source and dates.
+- Left for later (E9-S28): EDHREC ideas on demand, New deck from a candidate, the free cards by role listed by name, a pair of partners or a Background counted together, and a held commander's row naming its deck.
+- Tests: `decklab/tests/test_commander_candidates.py` (the ranking's rules on test cards, and the API in the fixture sandbox: colours, held and on-the-way copies, a built deck's commander left out, the limit, the route, a member's own space and the 403s) and `test_commander_candidates_ui.py` (the sheet under Node).
+
+## The fixture suite runs clean in a cloud session (2026-11-04)
+
+- In a cloud session the whole `scripts/test_fixtures.py` run showed about 415 errors that CI never had. They were all one cause, not missing PostgreSQL, data files or a `.venv`: the container's Python is 3.13, and there `import importlib.abc` (in `scripts/fixture_runtime.py`) imports `tempfile` and so `shutil` before the guards are installed. That `shutil` kept its descriptor-based `rmtree`, which unlinks bare leaf names with `dir_fd`; the guard refuses any `config.json` reached that way (it fails closed rather than resolve a descriptor), `rmtree` took the refusal as "already gone", and every test whose temporary folder held its own `config.json` failed its cleanup with "Directory not empty". Python 3.14 (CI and the PC) imports `shutil` after the guards, so it already used the path-based walk.
+- **Fix** (`fixture_runtime._lexical_rmtree`): after patching, the guards make `shutil.rmtree` take its path-based walk whatever the import order, so the guards check full paths and refuse only the real private files. No test was changed or skipped; `test_fixture_runner` now also removes temporary folders holding `config.json` and `.pgpass` with `shutil.rmtree` and `TemporaryDirectory`, and checks the private config still can't be removed.
+- Result: all four shards pass on the cloud container's Python 3.13 with no `.venv`, PostgreSQL or card data (database integration and the named native checks skip with their stated reasons, as on CI), and on 3.14. The tracebacks about "no state store was installed" in the output are logged by passing tests, not errors.
+
+## Tutors named on the Overview and the printout (2026-11-04; E9-S29)
+
+- The first slice counted tutors only on the Stats tab. Now `commander-readiness.js` reads the same `bracket["tutors"]` (no server change): the Overview's At the Commander table ends its bracket sentence with "Tutors: A, B." (card links into the readiness viewer), What opponents will face has a Tutors line (the names, "none found in the checked cards." or "not counted (tutor tag data unavailable).") and its note adds that land searches aren't counted and tutors don't change the bracket, and the printed play sheet's At the table carries the sentence and line as text with the same note.
+- Tutors only inform: the lead's words, the bracket and whether What opponents will face opens are unchanged, and an answer without `tutors` (an older server) shows no tutor line at all.
+- Tests: `test_commander_readiness_ui.py` (2 new) and `test_commander_print_ui.py` (1 new).
+- Not done yet: the official bracket text on tutors (it would need reading from Wizards' own page) and a Checks warning where that text sets a number.
+
 ## Undo a receipt that corrected its rows (2026-11-04; E11-S08 slice)
 
 - Activity's whole-change Undo of a receipt (`receipt_undo`, PR #23) refused a receipt whose arriving rows were corrected at the door (`receive --rows`, the Receive delivery page's corrections), though corrected token receipts are common. It now puts those rows back as they were ordered.
@@ -36,6 +66,25 @@ What each milestone and feature built, the decisions made along the way, and the
 - **Who honours it:** the nightly shop step (skipped with a log line when off), `shops snapshot` and `shops show` (each says no shop is set; `snapshot --shop KEY` still asks one by hand), and the pages' readers: `shop_prices.capture()` reads only enabled shops' files, Shopping's answer gains `shops_off` and no shop lines when off (By shop says so), and Baskets and missing cards' shop lines cover only enabled shops. A shop left out is never shown, even with an old file in `decklab/data/shops/`.
 - Left for later slices: the currency (AUD is still in the tables' header and rate statement) and a Settings-page control. Postage per shop is E5-S27's, in the database.
 - Tests: `decklab/tests/test_shops_setting.py`. Fixtures only.
+
+## The card viewer's decks line on every page (2026-11-04; E1-S29)
+
+- The story's last slice. The line under the card viewer's chips (which of the space's decks hold or want the card, and its free copies; GET `/api/cards/decks`, unchanged) showed only when the viewer was opened from the deck page or the Collection page. `card-viewer.js` `viewerUseSpace` now names a space everywhere: the deck page's or editor's deck's, the Collection page's, else the page's own `space` parameter, else the viewer's own space. It still asks only when the viewer may see that space's inventory, and the server's refusal shows nothing.
+- Tests: `test_card_viewer_use_ui.py` (every other page asks for the viewer's own space; a member's own space; a page naming a space the viewer can't see asks nothing).
+
+## Price history on Shopping's queued rows (2026-11-04; E5-S29)
+
+- The story's last slice: the 90-day readings the nightly snapshot keeps (2026-11-03's first slice) are now on the page. **GET `/api/shopping/price-history?name=`** (`lib/api/shop_history.py`) checks Shopping's readers first (`guard.require_sees_home_records`), then answers only for a name on the purchase queue (case-insensitively; one that isn't has `queued` false and no days), with `lib/shops/history.report`'s per-shop days and the lowest in-stock day marked. The history files are read only for this request; Shopping's overview still never loads them.
+- **The page** (`web/shopping-history.js`, after `shopping-snapshot.js`): a queued row with a shop snapshot has **Price history** beside its snapshot line; in the wide table it moves with the snapshot into the row's … details. Its sheet shows each shop's lowest in-stock price and day(s) first, then every day kept, newest first, with its price, stock (Games Portal's only in stock or not) and printing; a shop without readings says the row shows today's. Nothing is saved, and an answer after the sheet closed is dropped.
+- Tests: `test_shop_price_history.py`, `test_shopping_snapshot_ui.py`.
+
+## My wishlist in the editor's Add panel (2026-11-04; E5-S30)
+
+- The story's last slice: wished cards shown while building a deck. **GET `/api/deck/wishlist`** (`lib/api/wishlist_ideas.py`) answers with the viewer's own wishlist only: no parameter names a profile, and a request naming nobody (a script too) is 403. A saved deck is seen first (a hidden deck the missing deck's 404); a new deck's editor sends `kind` (casual or commander) and its `space`, checked as a new deck's space is.
+- **What fits:** a Commander deck's cards are those inside the draft commander's colour identity (`commander`/`commander2`, as the EDHREC ideas send them; else the saved Commander section's) and legal in Commander; one with no commander yet isn't filtered by colour (`identity` null). A casual deck takes every wished card. Basic lands and the commander itself are never offered; `left_out` counts what didn't fit.
+- **Marks:** only to a viewer who may see the deck's space's inventory, as the EDHREC ideas: in the deck, free, in other decks, or to buy with its AUD estimate, and copies on the way. No answer names a deck.
+- **The editor** (`web/editor-wishlist.js`, after `editor-edhrec.js`): a **My wishlist** tick beside EDHREC ideas for a saved or new casual or Commander deck (never a product or pairing) when a profile is chosen. It asks once per editor, revision, kind and draft commander; the typed name and the colour, type and mana value filters narrow the list on the page, the draft's cards are left out, and More pages it. A card added keeps its wished printing (the line's set and number; none means Save picks one), as one change and one Undo step.
+- Tests: `test_wishlist_ideas.py`, `test_editor_wishlist_ui.py`.
 
 ## Less text on phones (2026-11-04)
 
