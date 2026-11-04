@@ -5416,6 +5416,8 @@ As the household admin whose members use phones and whose pages serve beginners,
 
 Gap: UI-KIT.md covers focus, announcements and reduced motion for the card viewer and the run pill and gives the tiles' screen-reader words, but no page-wide audit exists and no test checks contrast. First slice: the audit of the library, the deck page and the Game log on a phone, written up before any fix.
 
+Audited (2026-11-04): the library, the deck page and the Game log on a phone, in [accessibility-audit-phone-2026-11-04.md](accessibility-audit-phone-2026-11-04.md): contrast, names, touch targets and reduced motion pass there; five findings (focus hidden under the bars, the Game log's look-alike headings, 200 % text, a skipped heading level on Cards, long library tile names) each with a proposed fix slice.
+
 **E11-S56** · Self-hoster · could · S · built
 
 As a newcomer who has just installed Deck Lab and sees an empty library, I want the empty state to say how to get my first cards and deck in, so that I see Deck Lab working before I've typed anything.
