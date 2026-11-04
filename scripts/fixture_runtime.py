@@ -134,6 +134,24 @@ def _file_guards(root):
             check(destination, kwargs.get("dst_dir_fd"))
             return _original(source, destination, *args, **kwargs)
         setattr(os, name, two_paths)
+    _lexical_rmtree()
+
+
+def _lexical_rmtree():
+    """Make shutil.rmtree remove by full path, so the guards above see what it removes.
+
+    rmtree's descriptor walk unlinks bare leaf names, which the dir_fd check refuses for
+    any `config.json`; rmtree reads that refusal as "already gone" and then can't remove
+    the folder, so a test's own temporary config breaks its cleanup. Python 3.14 imports
+    shutil after these guards and so already picks the path walk (the patched functions
+    aren't in os.supports_dir_fd); 3.13 imports it earlier, through importlib.abc and
+    tempfile, and kept the descriptor walk. Choose the path walk whatever the import order.
+    """
+    import shutil
+    shutil._use_fd_functions = False
+    if hasattr(shutil, "_rmtree_unsafe") and hasattr(shutil, "_rmtree_impl"):
+        shutil._rmtree_impl = shutil._rmtree_unsafe
+    shutil.rmtree.avoids_symlink_attacks = False
 
 
 def _raw_open_guard():
