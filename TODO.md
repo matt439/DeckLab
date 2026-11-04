@@ -48,7 +48,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E2-S16` | OPEN | could | L | Kept-for-later drafts built, the Quick edit's and new decks' too (migrations 0018 and 0019 applied by 2026-10-30). Left: real-device checks. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
-| `E1-S29` | OPEN | could | S | The card viewer's decks line (deck page, Collection) and global search's short form built (2026-11-03). Left: the viewer's line when opened from other pages. |
 
 ## Deck Lab: collection, orders and buying
 
