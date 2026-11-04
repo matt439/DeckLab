@@ -804,13 +804,18 @@ function deckCard(d, product, compact, kitShown = false, ctx = {}) {
   const ready = d.error ? { chip: null, missing: 0 } : deckReadiness(d);
   const colours = libColours(d);
   const banner = deckCover(d, colours);
+  // The tile is one link named by everything in it: the title is said first, then its colours, rather than
+  // the cover's pips before the title (E11-S55). The pips stay as they look.
+  const pips = banner && banner.querySelector(".deck-pips");
+  if (pips) pips.setAttribute("aria-hidden", "true");
   const owned = d.error ? null : deckOwned(d);
   const chip = owned ? deckOwnedExtra(d) : ready.chip;
   const body = [
     colours ? colours.stripe() : null,
     banner,
     el("span", { class: "deck-body" + (colours ? " deck-tint" : ""), style: colours ? colours.vars(135) : null },
-      el("span", { class: "deck-title-row" }, el("span", { class: "deck-title", text: title })),
+      el("span", { class: "deck-title-row" }, el("span", { class: "deck-title", text: title }),
+        pips ? el("span", { class: "sr-only", text: ` (${colours.label})` }) : null),
       compact ? null : deckMeta(d, ctx.person),
       compact ? null : deckPlayed(d),
       deckStatusPill(d),

@@ -86,8 +86,8 @@ function showSettings(params, token) {
 // ------------------------------------------------------- maintenance history
 
 const MAINTENANCE_JOBS = [["dump", "Backup"], ["export", "Export"], ["check", "Integrity check"], ["restore_check", "Restore check"]];
-const MAINTENANCE_HEALTH = { success: "Succeeded", failure: "Failed", stale: "Overdue", never: "No recorded attempts", unknown: "Outcome unavailable" };
-const MAINTENANCE_OUTCOMES = { success: "Succeeded", failure: "Failed", unknown: "Outcome unavailable" };
+const MAINTENANCE_HEALTH = { success: "Succeeded", failure: "Failed", stale: "Overdue", never: "Never run", unknown: "Outcome unknown" };
+const MAINTENANCE_OUTCOMES = { success: "Succeeded", failure: "Failed", unknown: "Outcome unknown" };
 
 function settingsMaintenanceAdmin() {
   return typeof state.profile?.id === "string" && Boolean(state.profile.id) && state.profile.role === "admin" && isAdminProfile();
@@ -103,7 +103,7 @@ function settingsMaintenancePanel(token) {
     } });
   return el("section", { class: "panel settings-part", id: "settings-maintenance", "aria-labelledby": "settings-maintenance-title" },
     el("h2", { id: "settings-maintenance-title", text: "Database maintenance" }),
-    el("p", { class: "sub", text: "Recorded backup, export, integrity check and restore check results. Refreshing only reads history." }),
+    el("p", { class: "sub", text: "The nightly jobs' recorded results. Refreshing only reads them." }),
     el("div", { class: "settings-fields", id: "settings-maintenance-content" }, loadingBox("Loading maintenance history.", { small: true })),
     el("div", { class: "actions" }, button));
 }
@@ -182,25 +182,37 @@ function settingsMaintenanceWhen(value) {
   return settingsMaintenanceDate(value) ? new Date(value).toLocaleString("en-AU") : "Date unavailable";
 }
 
-function settingsMaintenanceRun(row) {
-  return `${MAINTENANCE_OUTCOMES[row.outcome]}. Started: ${settingsMaintenanceWhen(row.started_at)}. Finished: ${settingsMaintenanceWhen(row.finished_at)}.`;
+/** When a run finished (or started), never an invented date; with both, its start and finish. */
+function settingsMaintenanceTime(row, both = false) {
+  const when = value => settingsMaintenanceDate(value) ? settingsMaintenanceWhen(value) : "date unavailable";
+  return both && row.started_at ? `${when(row.started_at)} to ${when(row.finished_at)}` : when(row.finished_at || row.started_at);
 }
 
+function settingsMaintenanceRun(row, both = false) {
+  return `${MAINTENANCE_OUTCOMES[row.outcome]}, ${settingsMaintenanceTime(row, both)}`;
+}
+
+/** Each job in two or three short lines: its status with the latest run, the last success when the latest
+ * wasn't one, and how often it's due; every run's start and finish stay under Recent runs. */
 function renderSettingsMaintenance(host, data) {
   clear(host).append(el("p", { class: "sub", text: `History checked: ${settingsMaintenanceWhen(data.checked_at)}.` }));
   for (const [index, job] of data.jobs.entries()) {
     const interval = job.interval, period = interval.value === null ? null : `${interval.value} ${interval.unit}`;
-    const policy = job.kind === "export" ? "Export uses the nightly grace period" : "Freshness interval";
-    const freshness = { current: "Last success is within its freshness interval.", stale: "Last success is overdue.",
-      never: "No successful run is recorded.", unknown: "Freshness is unknown." }[job.freshness];
-    host.append(el("section", { "data-maintenance-job": job.kind },
+    const health = MAINTENANCE_HEALTH[job.health], latest = job.latest;
+    // "Succeeded, <when>." when the status is the latest run's outcome; "Overdue. Last run: Succeeded, <when>." when not.
+    const status = !latest ? `${health}.` : MAINTENANCE_OUTCOMES[latest.outcome] === health
+      ? `${settingsMaintenanceRun(latest)}.` : `${health}. Last run: ${settingsMaintenanceRun(latest)}.`;
+    const success = latest && latest.outcome !== "success"
+      ? (job.last_success ? `Last success: ${settingsMaintenanceTime(job.last_success)}.` : "No success recorded.") : null;
+    const fresh = { current: "last success on time", stale: "overdue", never: null, unknown: "freshness unknown" }[job.freshness];
+    const due = period ? `Due every ${period}${job.kind === "export" ? " (the nightly grace period)" : ""}` : "Due interval unknown";
+    host.append(el("section", { "data-maintenance-job": job.kind, "data-maintenance-health": job.health },
       el("h3", { text: MAINTENANCE_JOBS[index][1] }),
-      el("p", { text: `Latest status: ${MAINTENANCE_HEALTH[job.health]}.` }),
-      el("p", { text: job.latest ? `Latest attempt: ${settingsMaintenanceRun(job.latest)}` : "Latest attempt: No recorded attempts." }),
-      el("p", { text: job.last_success ? `Last successful run: ${settingsMaintenanceRun(job.last_success)}` : "Last successful run: None recorded." }),
-      el("p", { class: "sub", text: `${freshness} ${period ? `${policy}: ${period}, from ${interval.basis === "started_at" ? "start" : "finish"}.` : "Freshness interval unavailable."}` }),
-      job.recent.length ? el("details", {}, el("summary", { text: `Recent attempts (${job.recent.length})` }),
-        el("ol", {}, job.recent.map(row => el("li", { text: settingsMaintenanceRun(row) })))) : null));
+      el("p", { text: status }),
+      success ? el("p", { text: success }) : null,
+      el("p", { class: "sub", "data-maintenance-due": "", text: `${due}${fresh ? `; ${fresh}` : ""}.` }),
+      job.recent.length ? el("details", {}, el("summary", { text: `Recent runs (${job.recent.length})` }),
+        el("ol", {}, job.recent.map(row => el("li", { text: `${settingsMaintenanceRun(row, true)}.` })))) : null));
   }
 }
 

@@ -17,7 +17,7 @@ more than them where the decks compete for the same copies.
 
 Shopping's readers only (home's records and inventory, as GET /api/shopping); a deck
 the viewer may not see answers as a missing deck (404), before anything is counted.
-Nothing is written and nothing is queued: Queue these is a later slice.
+Nothing is written: Queue these is shopping_queue_combined.py.
 """
 import contextlib
 

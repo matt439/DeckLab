@@ -224,6 +224,17 @@ class VersionInteractionTests(unittest.TestCase):
           assert.match(newEdit.messages.join(" "), /server code has changed/i);
         """)
 
+    def test_a_release_install_names_its_version(self):
+        # E11-S49: a release (no git) says its version, and its local changes are files changed since it.
+        self.run_js("""
+          const release = versionInfo({...currentBuild, version: "1.2.0", latest_version: "1.2.0"}, "page-at-load");
+          assert.match(release.label, /^Release 1\\.2\\.0 · Server a1234567/);
+          assert.match(release.label, /Server code current/);
+          const changed = versionInfo({...currentBuild, version: "1.2.0", running_dirty: true}, "page-at-load");
+          assert.match(changed.messages.join(" "), /changed since its release/);
+          assert.doesNotMatch(versionInfo({...currentBuild, version: null}, "page-at-load").label, /Release/);
+        """)
+
     def test_reload_bypasses_html_cache_without_losing_route_or_options(self):
         self.run_js("""
           reloadDeckLab();

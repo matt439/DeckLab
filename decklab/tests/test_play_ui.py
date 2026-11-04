@@ -204,7 +204,15 @@ class PlayUiTests(unittest.TestCase):
           const record={id:'r',revision:2,updated_by:'Matt',date:'2026-10-08',result:'b',notes:'',
             sides:[{...list('casual/a','Alpha'),player:'Matt',mulligans:0},{...list('casual/b','Beta'),player:'User1',mulligans:1}]};
           const card=playGameCard({record,sha256:'s'},{lists:[],sideboards:[]});
-          assert.equal(card.querySelector('h3').textContent,'User1 won');
+          // The result is shown; a screen reader also hears which game it was (E11-S55), and its buttons are
+          // described by that heading.
+          const h3=card.querySelector('h3');
+          assert.ok(h3.textContent.startsWith('User1 won'));
+          assert.equal(h3.textContent,'User1 won: Alpha vs Beta, 8 Oct');
+          assert.equal(h3.querySelector('.sr-only').textContent,': Alpha vs Beta, 8 Oct');
+          assert.equal(card.querySelector('summary').getAttribute('aria-describedby'),h3.id);
+          const correct=[...card.querySelectorAll('button')].find(b=>b.textContent==='Correct this game');
+          if(correct)assert.equal(correct.getAttribute('aria-describedby'),h3.id);
           assert.ok(card.textContent.includes('Alpha (Matt) vs Beta (User1)'));
           assert.ok(card.textContent.includes('User1 took 1 mulligan'));
           assert.ok(!card.textContent.includes('Matt took'));

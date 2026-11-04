@@ -106,6 +106,20 @@ class CommanderPrintUiTests(unittest.TestCase):
           assert.equal(fetched, 0);
         """)
 
+    def test_tutors_print_as_text_or_say_they_were_not_counted(self):
+        self.run_js("""
+          const data = readinessPage({tutors:{checked:true, count:1, tags_date:'2026-10-13',
+            cards:[{name:'Demonic Tutor',qty:1}], land_searches:[]}});
+          const sheet = printSheet(data);
+          const part = tablePart(sheet);
+          assert(sheet.querySelector('.commander-table-summary').textContent.endsWith('Tutors: Demonic Tutor.'));
+          assert(part.includes('Tutors: Demonic Tutor.'), part);
+          assert(part.includes("tutors don't change the bracket here"), part);
+          const unread = tablePart(printSheet(readinessPage({tutors:{checked:false}})));
+          assert(unread.includes('Tutors: not counted (tutor tag data unavailable).'), unread);
+          assert(!tablePart(printSheet(readinessPage())).includes('Tutors'));
+        """)
+
     def test_a_casual_deck_prints_no_commander_part(self):
         self.run_js("""
           const data = readinessPage();

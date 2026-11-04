@@ -50,8 +50,8 @@ class DeckShopPricesUiTests(unittest.TestCase):
           assert(facts(table).textContent.includes('A$9.75 each; 1 copy of this printing in stock when fetched.'));
           assert(facts(table).textContent.includes('Cheapest nonfoil in saved snapshot'));
           assert(facts(table).textContent.includes('CMM 648 nonfoil'));
-          assert(evidence(table).textContent.includes('It may differ from the printing or finish in your list.'));
-          assert(evidence(table).textContent.includes('Price is per card'));assert(!table.textContent.includes('A$39.00'));
+          assert(/nonfoil printing, maybe not yours/.test(evidence(table).textContent));
+          assert(/per card/i.test(evidence(table).textContent));assert(!table.textContent.includes('A$39.00'));
           assert(priceBody.textContent.includes('A$2.00 each (estimate)'));assert.equal(priceBody.querySelectorAll('td')[3].textContent,'8.00');
           assert(table.querySelector('tfoot').textContent.includes('A$28.00'));assert(main.textContent.includes('1.43 AUD'));
           assert.equal(JSON.stringify(owned),before);noEffects();

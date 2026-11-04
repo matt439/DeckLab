@@ -49,6 +49,8 @@ cd DeckLab
 
 Run every command in this guide from that folder, the repo root.
 
+Without git, download a release instead: `decklab-VERSION.zip` from the repository's [Releases](https://github.com/matt439/DeckLab/releases), checked against its `decklab-VERSION.zip.sha256` (`sha256sum -c decklab-VERSION.zip.sha256` on Linux, `Get-FileHash decklab-VERSION.zip` in PowerShell), and unzip it. Its `decklab-VERSION` folder takes the repo root's place in this guide. Deck Lab reads its version from the release's `decklab/release.json`, and Settings shows it. There's no update command for a release yet: `python -m decklab.update` needs a git checkout, so for now unzip the next release beside it, copy `decklab/config.json` across and run `python -m decklab.db migrate`.
+
 On Linux, clone it there; don't copy a checkout from a Windows PC (a USB disk, a share or `rsync`). A copied folder usually arrives with every file executable, and sometimes with Windows line endings, so git shows every file changed and `python -m decklab.update` refuses to run.
 
 ## 3. Install psycopg into a `.venv`

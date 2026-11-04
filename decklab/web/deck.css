@@ -181,6 +181,7 @@
 .deck-kit-text strong { overflow-wrap: break-word; hyphens: auto; }
 .deck-kit-none { color: var(--ink-2); font-weight: var(--fw-semibold); }
 .deck-kit-chip:empty { display: none; }
+.deck-kit-chip .status { white-space: normal; }   /* "66 needed · 200 owned · 134 spare" wraps at large text */
 .deck-kit-shared { color: var(--ink-2); overflow-wrap: break-word; }
 .deck-kit-choose { margin-top: var(--s-1); }
 .deck-kit .note { margin-top: var(--s-2); }
@@ -293,10 +294,12 @@
 .deck-prices-none { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); margin: 0; color: var(--ink-2); }
 .deck-price-table > .sub { margin: var(--s-2) 0; max-width: 72ch; }
 .deck-prices > .box { margin-top: var(--s-3); }
-.owned-table col.c-need { width: 3.1em; }
-.owned-table col.c-have { width: 3.5em; }
-.owned-table col.c-miss { width: 4.4em; }
-.owned-table col.c-price { width: 4.4em; }
+/* Each number column is capped at a share of the width, so a phone's large text can't push the table (and the
+   page with it) wider than the screen (E11-S55); at the usual sizes the em widths apply. */
+.owned-table col.c-need { width: min(3.1em, 13%); }
+.owned-table col.c-have { width: min(3.5em, 14%); }
+.owned-table col.c-miss { width: min(4.4em, 17%); }
+.owned-table col.c-price { width: min(4.4em, 18%); }
 .owned-table .th-sort { max-width: 100%; flex-wrap: wrap; }
 .owned-table .price-each { display: block; color: var(--ink-2); font-weight: var(--fw-regular); }
 table.data tr.is-missing td, table.data tr.is-missing th,

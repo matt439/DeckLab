@@ -32,6 +32,8 @@
   --fs-xs: .75rem;     /* chips and badges only */
   --fs-sm: .875rem;    /* meta, captions: the smallest size anyone reads */
   --fs-md: 1rem;       /* body, inputs (16 px stops iOS zooming on focus) */
+  --fs-avatar: min(var(--fs-md), 18px);
+  --fs-tab: min(var(--fs-xs), 15px);     /* the tab bar's labels: grow with large text until "Collection" would break in a phone's tab, then wrap */  /* an avatar's initial: stops growing at 18 px, so large text keeps it in its circle */
   --fs-lg: 1.25rem;    /* panel and section titles */
   --fs-xl: 1.5rem;     /* page sections, deck title on a phone */
   --fs-2xl: 2rem;      /* page title */

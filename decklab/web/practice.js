@@ -403,12 +403,14 @@ function practiceColourPanel(r) {
     row.chances.map(cell)));
   panel.append(
     el("p", { class: "sub", text: "Chance of having at least one source of each colour, by turn:" }),
+    el("div", { class: "chance-scroll", role: "region", tabindex: "0",
+      "aria-label": `Chance of a source of each colour on turns 1 to ${turns.length}` },
     el("table", { class: "data chance-table" },
       el("caption", { class: "sr-only", text: `Chance of a source of each colour on turns 1 to ${turns.length}` }),
       el("colgroup", {}, el("col"), turns.map(() => el("col", { class: "c-turn" }))),
       el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "Turn" }),
         turns.map((t) => el("th", { scope: "col", class: "num", text: String(t) })))),
-      el("tbody", {}, rows)),
+      el("tbody", {}, rows))),
     el("ul", { class: "stat-rows" },
       statRow(pct(c.screw_turns), "of turns", "Colour screw",
         "You had enough mana in all for a spell in your hand, but not the colours it needs (you may still have " +
