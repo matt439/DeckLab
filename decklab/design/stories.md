@@ -3808,9 +3808,11 @@ As a player bringing a deck to a social bracket, I want the bracket check to cou
 - Given a tutor count, then nothing is blocked: it informs the sentence, and the Checks panel warns only where the official text sets a number.
 - Given a casual deck, then nothing changes.
 
-Gap: the tutors found show only on the Stats tab: the Overview's bracket sentence, What opponents will face and the printout don't name them; the official text on tutors isn't read from a source yet, and so no Checks warning where it sets a number.
+Gap: the official text on tutors isn't read from a source yet, and so no Checks warning where it sets a number.
 
 Built (2026-11-02): the first slice. `lib/stats/tutors.py` counts a card as a tutor when Scryfall's oracle tags put it anywhere under `tutor`, other than only under `tutor-land` (land searches, named apart; the `tutor-to` tags never make a land search a tutor), through a new `cards.tag_branches`; `commander.py` adds `bracket["tutors"]`, and the Stats tab's Minimum bracket shows "Tutors found: N", the cards and the tag data's date. It never raises the minimum bracket or blocks anything. Without the tag file the reasons say tutors weren't counted, with mass land denial and extra turns; a file without a `tutor` tag says so too. Casual decks are unchanged. Left: the Overview's bracket sentence, What opponents will face and the printout; what the official bracket text says about tutors (Deck Lab keeps only the announcement's date and link, not its text); and a Checks warning where that text sets a number. Tests: `decklab/tests/test_stats.py`, `test_stats_tutors_ui.py`. See [HISTORY.md](../HISTORY.md#tutors-counted-in-the-bracket-check-2026-11-02-e9-s29-first-slice).
+
+Built (2026-11-04): the second slice. The Overview's At the Commander table names the tutors found at the end of its bracket sentence (as card links), What opponents will face has a Tutors line (the names, none found, or not counted when the tag data can't be read) with a note that land searches aren't counted and tutors don't change the bracket, and the printed play sheet's At the table carries the same sentence and line as text. Tutors never change the lead's words, the bracket or whether What opponents will face opens; an answer without tutors (an older server) says nothing about them. Tests: `test_commander_readiness_ui.py`, `test_commander_print_ui.py`. See [HISTORY.md](../HISTORY.md#tutors-named-on-the-overview-and-the-printout-2026-11-04-e9-s29).
 
 ---
 

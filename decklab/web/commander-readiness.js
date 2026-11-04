@@ -105,8 +105,33 @@ function commanderTableFacts(data) {
     : combos.matches.length ? ": no Game Changers, extra turns or mass land denial found; the two-card combos it holds don't raise the bracket."
       : ": no Game Changers, extra turns, mass land denial or two-card combos found.";
   else lead += ".";
-  return { k, br, groups, found, unknown, combos, raising, target, lead };
+  return { k, br, groups, found, unknown, combos, raising, target, lead, tutors: tutorFacts(br) };
 }
+
+/** The bracket answer's tutors (E9-S29): null when the answer has none (an older server), else whether
+ * they were counted and the distinct names found. They inform only: the lead and the bracket don't move. */
+function tutorFacts(br) {
+  const t = br && br.tutors;
+  if (!t || typeof t !== "object") return null;
+  if (t.checked !== true) return { checked: false, names: [] };
+  return { checked: true, names: [...new Set((Array.isArray(t.cards) ? t.cards : []).map((c) => c.name))] };
+}
+
+/** The tutors' line for What opponents will face and the printout: none found, not counted, or the
+ * names, each drawn by name(). */
+function tutorLine(tutors, name) {
+  const line = el("p", {}, el("b", { text: "Tutors: " }));
+  if (!tutors.checked) line.append("not counted (tutor tag data unavailable).");
+  else if (!tutors.names.length) line.append("none found in the checked cards.");
+  else {
+    tutors.names.forEach((n, i) => { if (i) line.append(", "); line.append(name(n)); });
+    line.append(".");
+  }
+  return line;
+}
+
+const TUTOR_NOTE = "Tutors are cards that search the library for a card; searches for lands only aren't counted, " +
+  "and tutors don't change the bracket here.";
 
 /** The lead sentence with the cards found and the floor-raising combos named, each name drawn by name(). */
 function commanderTableSentence(facts, name) {
@@ -128,6 +153,14 @@ function commanderTableSentence(facts, name) {
         if (j) sentence.append(" + ");
         sentence.append(name(piece));
       });
+    });
+    sentence.append(".");
+  }
+  if (facts.tutors && facts.tutors.names.length) {
+    sentence.append(" Tutors: ");
+    facts.tutors.names.forEach((n, i) => {
+      if (i) sentence.append(", ");
+      sentence.append(name(n));
     });
     sentence.append(".");
   }
@@ -160,9 +193,10 @@ function commanderReadiness(data) {
       list == null ? "not checked (effect data unavailable)." : list.length ? null : "none found in the checked cards."),
       list && list.length ? cardNames(list) : null));
   }
+  if (facts.tutors) effects.append(tutorLine(facts.tutors, (name) => cardLink({ name }, "commander-readiness", { inline: true })));
   effects.append(comboFindings(br, "commander-readiness"));
   effects.append(el("p", { class: "sub", text: "Mass land denial means removing or locking down many lands. " +
-    "Community tags can miss cards or flag effects you don't intend to use." }));
+    (facts.tutors ? `${TUTOR_NOTE} ` : "") + "Community tags can miss cards or flag effects you don't intend to use." }));
   // The checks' limits and data dates fold away: they're the fine print, not the answer (a phone showed
   // six paragraphs of them under the one-line summary). Out-of-date data still says so on the fold's line.
   const dataNote = commanderDataNote(br);
@@ -195,6 +229,7 @@ function commanderPrintPart(data) {
   for (const [label, list] of groups) parts.push(el("p", {}, el("b", { text: `${label}: ` }),
     list == null ? "not checked (effect data unavailable)."
       : list.length ? `${[...new Set(list.map((entry) => entry.name))].join(", ")}.` : "none found in the checked cards."));
+  if (facts.tutors) parts.push(tutorLine(facts.tutors, (name) => name), el("p", { text: TUTOR_NOTE }));
   // Each combo as text: on paper there's no viewer or link to follow.
   parts.push(comboFindings(facts.br, null, true, (m) => el("li", { text: `${(m.names || []).join(" + ")}${comboWords(m)}` })));
   parts.push(el("p", { text: COMMANDER_CHECK_LIMITS }), commanderDataNote(facts.br));
