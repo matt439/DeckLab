@@ -20,6 +20,14 @@ What each milestone and feature built, the decisions made along the way, and the
 - Left for later: Settings saying a newer release exists (checked at most once a day), and an update command for release installs (E11-S51).
 - Tests: `decklab/tests/test_release.py` (manifest, unchanged and changed installs, bad manifests, a checkout ignoring it, the zip's layout, and HEAD packaged twice the same and read back as an install), plus cases in `test_server_restart.py` and `test_version_ui.py`.
 
+## Price-check shops as a setting (2026-11-04; E11-S53 first slice)
+
+- Matt's decision of 2026-10-31: currency and the price-check shops become settings, for self-hosters outside Australia. This first slice is the shops.
+- **The setting:** `config.json`'s optional `"shops"`, a list of shop keys (`"mtgmate"`, `"gamesportal"`). Unset, both are checked as before; `[]` turns the check off. `lib/shops.enabled_adapters()` reads it (in `SNAPSHOT_ADAPTERS` order; an unknown key is left out and a non-list counts as unset, each said once on stderr).
+- **Who honours it:** the nightly shop step (skipped with a log line when off), `shops snapshot` and `shops show` (each says no shop is set; `snapshot --shop KEY` still asks one by hand), and the pages' readers: `shop_prices.capture()` reads only enabled shops' files, Shopping's answer gains `shops_off` and no shop lines when off (By shop says so), and Baskets and missing cards' shop lines cover only enabled shops. A shop left out is never shown, even with an old file in `decklab/data/shops/`.
+- Left for later slices: the currency (AUD is still in the tables' header and rate statement) and a Settings-page control. Postage per shop is E5-S27's, in the database.
+- Tests: `decklab/tests/test_shops_setting.py`. Fixtures only.
+
 ## Less text on phones (2026-11-04)
 
 - Matt asked for every page to be checked for walls of text, most of all on a phone, and noted pictures help break them up. Every page was shot at 390px wide on a full-data sandbox; before and after pictures are in the project's `verbosity/` folder.

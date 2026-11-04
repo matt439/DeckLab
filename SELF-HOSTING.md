@@ -106,6 +106,8 @@ Two optional settings matter most on Linux:
 - **`"timezone"`:** the household's time zone, such as `"Australia/Sydney"`. The Linux nightly timer runs at 03:30 in that zone, a receipt's arrival date and a game's date are worked out in it, and the smoke test and doctor warn when the PC's own clock keeps another zone. Without it they follow the PC's clock (and those two dates use UTC+10).
 - **Folders:** on Linux and macOS, `records_repo` and the `"database"` block's `backup_dir`, `staging_dir`, `export_repo` and `pg_bin` must be absolute paths such as `/mnt/nas-backups/DeckLab`; `~` works on every system. A Windows path (`\\NAS\...`, `D:\...`, any backslash) is refused with a message naming the setting: the backup and export fail and say so, and so does the smoke test. Give `forge_dir`, `forge_java` and the tunnel's `config` as absolute paths too.
 
+**Price-check shops:** each night Deck Lab looks the purchase queue's cards up at two Australian shops, MTGMate and Games Portal, and shows their prices in AUD. If you can't buy from them, turn the check off with `"shops": []`, or keep one with `"shops": ["mtgmate"]` (the keys are `mtgmate` and `gamesportal`). Without the setting both are checked.
+
 On Linux and macOS, `chmod 600 decklab/config.json`: it holds the household's emails.
 
 ## 5. Set up the database
