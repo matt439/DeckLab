@@ -129,7 +129,7 @@ class ViewerUseLineTests(unittest.TestCase):
           assert.equal(shown(), "In no decks \\u00b7 3 free");
         """)
 
-    def test_no_request_without_the_spaces_inventory_or_off_the_two_pages(self):
+    def test_no_request_without_the_spaces_inventory(self):
         self.run_js("""
           // A public deck of a space whose inventory the viewer can't see: nothing asked, nothing shown.
           state.may = {see_inventory: ["user2"]};
@@ -139,14 +139,37 @@ class ViewerUseLineTests(unittest.TestCase):
           assert.deepEqual(reads, []);
           assert.equal(shown(), null);
           shut();
+          // Another page names a space whose inventory the viewer can't see: nothing either.
+          location.hash = "#/tokens?space=home";
+          show([elves]);
+          await flush();
+          assert.deepEqual(reads, []);
+        """)
+
+    def test_every_other_page_asks_for_the_pages_or_the_viewers_own_space(self):
+        self.run_js("""
+          answers[path("Llanowar Elves")] = answer();
           state.may = {see_inventory: ["home"]};
-          for (const hash of ["#/library", "#/wishlist", "#/shopping", "#/edit?id=casual/gruul-test"]) {
+          for (const hash of ["#/library", "#/wishlist", "#/shopping", "#/edit?id=casual/gruul-test", "#/play"]) {
+            location.hash = hash;
+            show([elves]);
+            await flush();
+            assert.equal(shown(), "In decks: Elf Stompy holds 1, Cats holds 1, Gruul Test wants 6 \\u00b7 3 free", hash);
+            shut();
+          }
+          assert.deepEqual(reads, Array(5).fill(path("Llanowar Elves")));
+          // A member's own space wherever they open a card; the editor of their deck asks its space too.
+          reads.length = 0;
+          state.profile = state.profiles[1];
+          state.may = {see_inventory: ["user2"]};
+          answers[path("Llanowar Elves", "user2")] = answer({space: "user2", holds: [], wants: []});
+          for (const hash of ["#/library", "#/edit?id=user2/casual/r-elves"]) {
             location.hash = hash;
             show([elves]);
             await flush();
             shut();
           }
-          assert.deepEqual(reads, []);
+          assert.deepEqual(reads, [path("Llanowar Elves", "user2"), path("Llanowar Elves", "user2")]);
         """)
 
     def test_a_quick_swipe_never_shows_another_cards_decks(self):

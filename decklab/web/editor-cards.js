@@ -2,7 +2,7 @@
 
 Loaded after editor.js, editor-screen.js, editor-details.js and editor-lines.js, before editor-import.js,
 editor-save.js and editor-deckpage.js. It holds the Add panel (the side panel's Add tab, or Quick edit's
-search sheet): search, "My collection" and a Commander deck's "EDHREC ideas" (editor-edhrec.js), adding a
+search sheet): search, "My collection", a Commander deck's "EDHREC ideas" (editor-edhrec.js) and "My wishlist" (editor-wishlist.js), adding a
 card and a line's printing sheet. Paste/replace
 and a new deck's Start from workflows live in editor-import.js. It uses editor.js's constants, `editor`, lines, drafts and sheets,
 editor-screen.js's changed(), editor-details.js's setField() and drawDetails(), and editor-lines.js's
@@ -211,7 +211,7 @@ function addTip() {
 function filterCount(ac) { return (ac.colors.size ? 1 : 0) + (ac.type ? 1 : 0) + (ac.mv !== "" ? 1 : 0); }
 
 /** True when the results come from the filters (or My collection, EDHREC ideas or Free only), with or without a name. */
-function browsing(ac) { return ac.mode === "collection" || ac.mode === "edhrec" || ac.owned || filterCount(ac) > 0; }
+function browsing(ac) { return ac.mode === "collection" || ac.mode === "edhrec" || ac.mode === "wishlist" || ac.owned || filterCount(ac) > 0; }
 
 /** The search's filters on one row: My collection (a tick, not a second switch beside Add to's: every card
  * when it's off), Free only, then "Filters" (colours, type and mana value, folded away until opened). */
@@ -249,6 +249,7 @@ function drawSearchControls(ac) {
   add(clear(ac.filters), [
     mine,
     editorEdhrecToggle(ac),
+    editorWishlistToggle(ac),
     ac.sees && ac.mode === "search" ? el("label", { class: "choice ac-owned",
       title: "Only cards with a copy free for this deck: owned or on the way, and not held by another built deck" },
     el("input", { type: "checkbox", checked: ac.owned || null,
@@ -257,7 +258,7 @@ function drawSearchControls(ac) {
     el("div", { class: "ac-filter-more", id: "ac-filter-more", hidden: !ac.filtersOpen || null },
       el("div", { class: "ac-colours", role: "group", "aria-label": "Colours the cards fit" }, colourButtons),
       type, mv)]);
-  if (ac.mode !== "edhrec") drawEditorEdhrecNote(ac);
+  if (ac.mode !== "edhrec" && ac.mode !== "wishlist") drawEditorEdhrecNote(ac);
 }
 
 function refilter(ac) {
@@ -307,6 +308,7 @@ function findUrl(ac, q) {
 
 async function lookUp(ac, q, more = false) {
   if (ac.mode === "edhrec") return editorEdhrecLookUp(ac, q, more);
+  if (ac.mode === "wishlist") return editorWishlistLookUp(ac, q, more);
   if (!editorSearchCurrent(ac) || (more && ac.morePending)) return;
   const seq = ++ac.seq;
   const scope = editorSearchScope(ac);
@@ -421,7 +423,7 @@ function showResults(ac) {
   if (ac.items.length) { drawOptions(ac); return; }
   if (browsing(ac)) {
     listMessage(ac, ac.mode === "collection" ? "Looking through your collection…"
-      : ac.mode === "edhrec" ? "Asking EDHREC…" : "Looking up cards…", { kind: "loading" });
+      : ac.mode === "edhrec" ? "Asking EDHREC…" : ac.mode === "wishlist" ? "Reading your wishlist…" : "Looking up cards…", { kind: "loading" });
     schedule(ac, 0);
     return;
   }
@@ -477,13 +479,14 @@ function ownedBadge(c) {
 function searchResultSide(c, words = null) {
   if (words) return [el("span", { class: "ac-added", text: words })];
   if (c.edhrec) return editorEdhrecSide(c);
+  if (c.wish) return editorWishlistSide(c);
   return [c.aud != null ? el("span", { class: "ac-price", text: `A$${c.aud.toFixed(2)}` }) : null, ownedBadge(c)];
 }
 
 function drawOptions(ac) {
   if (!editorSearchCurrent(ac, true) || (ac.resultScope && ac.resultScope !== editorSearchScope(ac))) return;
   if (!ac.items.length) {
-    listMessage(ac, ac.mode === "edhrec" ? editorEdhrecEmpty(ac) : ac.mode === "collection" || ac.owned
+    listMessage(ac, ac.mode === "edhrec" ? editorEdhrecEmpty(ac) : ac.mode === "wishlist" ? editorWishlistEmpty(ac) : ac.mode === "collection" || ac.owned
       ? (ac.query ? `None of your free cards have “${ac.query}” in their name with these filters.` : "No free cards with these filters.")
       : !ac.query ? "No cards fit these filters."
         : filterCount(ac) ? `No card names with “${ac.query}” in them fit these filters.`
@@ -796,7 +799,7 @@ if (window.visualViewport) {
 
 /** The card data of a search answer, as a decklist line has it. */
 function cardData(c) {
-  const { default: _, have: __, aud: ___, free: ____, edhrec: _____, ...card } = c;
+  const { default: _, have: __, aud: ___, free: ____, edhrec: _____, wish: ______, ...card } = c;
   return card;
 }
 
