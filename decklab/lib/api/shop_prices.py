@@ -8,7 +8,8 @@ state without a saved check.
 
 A capture is {shop key: snapshot} of the shops with one, or None when no shop has. The
 answers keep their first, single-shop form for MTGMate ("shop_snapshot") and give every shop
-in "shop_snapshots", a list in lib/shops' SNAPSHOT_ADAPTERS order.
+in "shop_snapshots", a list in lib/shops' SNAPSHOT_ADAPTERS order. Only the shops config.json's
+"shops" turns on are read (enabled_adapters(), E11-S53); with none, Shopping's answer says so ("shops_off").
 """
 from decklab.lib import shops
 
@@ -24,7 +25,7 @@ def capture():
 
 def _snapshot():
     found = {}
-    for adapter in shops.SNAPSHOT_ADAPTERS:
+    for adapter in shops.enabled_adapters():   # a shop config.json turns off isn't shown (E11-S53)
         try:
             data = shops.load(adapter=adapter)
         except Exception as error:  # optional evidence: Shopping still answers without it
@@ -46,7 +47,7 @@ def by_shop(data):
 
 def _present(data):
     found = by_shop(data)
-    return [(adapter, found[adapter.key]) for adapter in shops.SNAPSHOT_ADAPTERS if adapter.key in found]
+    return [(adapter, found[adapter.key]) for adapter in shops.enabled_adapters() if adapter.key in found]
 
 
 def for_row(row, data=None):
@@ -66,6 +67,9 @@ def enrich(answer, *, data=_NOT_CAPTURED):
     answer's (each snapshot's shop and fetch time), only while some shop has a snapshot: without
     one the answer stays exactly as it was. The queue itself never changes."""
     data = capture() if data is _NOT_CAPTURED else data
+    if not shops.enabled_adapters():
+        answer["shops_off"] = shops.shops_off_words()
+        return answer
     present = _present(data)
     if not present:
         return answer
