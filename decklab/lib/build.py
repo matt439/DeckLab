@@ -10,9 +10,16 @@ content hashes, including untracked files and deletions, detect edits after
 startup. Web assets have a separate hash because the server reads them on each
 request. A loaded page can compare its original hash with web_revision to know
 when it needs refreshing. Unknown version information is never reported current.
+
+A release install (E11-S49: an unzipped release, with no .git) reads its identity from the
+manifest the release workflow writes, decklab/release.json (scripts/make_release.py): its
+version, commit and the fingerprints of the files it shipped. Its files count as changed
+("dirty") when their fingerprints no longer match the manifest's. A git checkout never reads
+the manifest, so everything there behaves as before.
 """
 
 import hashlib
+import json
 import os
 import re
 import subprocess
@@ -28,6 +35,10 @@ _DEFAULT_ROOT = Path(__file__).resolve().parents[2]
 _TEXT = {".py", ".java", ".json", ".js", ".css", ".html", ".svg", ".webmanifest"}
 _WEB = _TEXT - {".py", ".java"} | {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".woff", ".woff2"}
 _SHA = re.compile(r"[0-9a-f]{40,64}\Z")
+_DIGEST = re.compile(r"[0-9a-f]{64}\Z")
+_VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z][0-9A-Za-z.-]{0,30})?\Z")
+MANIFEST = Path("decklab") / "release.json"     # a release's identity (scripts/make_release.py)
+MANIFEST_KEYS = {"version", "commit", "runtime", "web", "migrations", "built_at"}
 _lock = threading.Lock()
 _root = None
 _running = None
@@ -47,6 +58,7 @@ class _Snapshot:
     runtime: str | None = None
     web: str | None = None
     error: str | None = None
+    version: str | None = None
 
 
 def _kind(name):
@@ -142,7 +154,47 @@ def _git(root, *args):
     return done.stdout.decode("utf-8", errors="surrogateescape")
 
 
+def read_manifest(root):
+    """A release's manifest (decklab/release.json) as a dict, or _Unavailable saying why it can't be used."""
+    try:
+        data = json.loads((Path(root) / MANIFEST).read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise _Unavailable("This copy of Deck Lab is neither a git checkout nor a release, so its version "
+                           "cannot be checked.") from None
+    except (OSError, UnicodeError, ValueError):
+        raise _Unavailable("The release's version file (decklab/release.json) cannot be read.") from None
+    if not isinstance(data, dict) or set(data) != MANIFEST_KEYS or not isinstance(data["version"], str) \
+            or not _VERSION.fullmatch(data["version"]) or not isinstance(data["commit"], str) \
+            or not _SHA.fullmatch(data["commit"]) or any(not isinstance(data[k], str) or not _DIGEST.fullmatch(data[k])
+                                                         for k in ("runtime", "web")) \
+            or not isinstance(data["migrations"], list) or not all(isinstance(m, str) for m in data["migrations"]) \
+            or not isinstance(data["built_at"], str):
+        raise _Unavailable("The release's version file (decklab/release.json) isn't a Deck Lab release manifest.")
+    return data
+
+
+def is_release(root=None):
+    """Whether root (this install by default) is an unzipped release rather than a git checkout."""
+    root = Path(root or _root or _DEFAULT_ROOT)
+    return not (root / ".git").exists() and (root / MANIFEST).is_file()
+
+
+def _release_snapshot(root):
+    """A release install's snapshot: the manifest's commit and version, dirty when the files differ from it."""
+    try:
+        manifest = read_manifest(root)
+        fingerprints, _ = _fingerprints(root)
+        dirty = fingerprints != {"runtime": manifest["runtime"], "web": manifest["web"]}
+        return _Snapshot(manifest["commit"], dirty, fingerprints["runtime"], fingerprints["web"],
+                         version=manifest["version"])
+    except (_Unavailable, OSError, UnicodeError) as error:
+        message = str(error) if isinstance(error, _Unavailable) else "Application files could not be read to check their version."
+        return _Snapshot(error=message)
+
+
 def _snapshot(root):
+    if is_release(root):
+        return _release_snapshot(root)
     try:
         commit = _git(root, "rev-parse", "--verify", "HEAD").strip()
         if not _SHA.fullmatch(commit):
@@ -217,6 +269,8 @@ def status():
         assets = running.web != current_web if known and current_web is not None else None
         changed = True if restart is True or assets is True else (None if None in (restart, assets) else False)
         return {
+            "version": running.version,          # a release's (E11-S49); None in a git checkout
+            "latest_version": latest.version,
             "running_commit": running.commit,
             "latest_commit": latest.commit,
             "started_at": _started_at,
