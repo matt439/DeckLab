@@ -1,7 +1,7 @@
 """Shopping's Baskets (E5-S27, first slice): a proposed basket a shop from the daily snapshots.
 
 Read only, from the same capture shop_prices.enrich used (lib/shops' files, never a shop):
-for each snapshot shop (lib/shops.SNAPSHOT_ADAPTERS, in that order),
+for each snapshot shop config.json checks (lib/shops.enabled_adapters(), in that order),
 
   - "rows": the ready queue rows the snapshot found in stock there, each with the listing it
     found (price in AUD as the shop gave it, None when it showed none) and its fetch time;
@@ -177,18 +177,19 @@ def build(rows, captured, revision=None):
     if not found:
         return None
     rows = [row for row in rows or () if isinstance(row, dict)]
-    baskets = [basket(adapter, found.get(adapter.key), rows) for adapter in shops.SNAPSHOT_ADAPTERS]
+    adapters = shops.enabled_adapters()         # only the shops config.json checks (E11-S53)
+    baskets = [basket(adapter, found.get(adapter.key), rows) for adapter in adapters]
     unavailable = []
     for row in rows:
         if row.get("state") != READY:
             continue
-        at = [line(row, adapter, found.get(adapter.key)) for adapter in shops.SNAPSHOT_ADAPTERS]
+        at = [line(row, adapter, found.get(adapter.key)) for adapter in adapters]
         if any(item["status"] == "in_stock" for item in at):
             continue
         shown = {key: row.get(key) for key in ROW_FIELDS}
         shown["is_token"] = bool(row.get("is_token"))
         shown["shops"] = [{"shop": adapter.name, "status": item["status"], "fetched_at": item.get("fetched_at")}
-                          for adapter, item in zip(shops.SNAPSHOT_ADAPTERS, at)]
+                          for adapter, item in zip(adapters, at)]
         unavailable.append(shown)
     return {"queue_revision": revision, "shops": baskets, "unavailable": unavailable}
 

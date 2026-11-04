@@ -231,14 +231,14 @@ def enrich(rows, data, resolve):
 
 
 def enrich_shops(rows, captured, resolve):
-    """enrich() at every snapshot shop: "shop_snapshots", one entry a shop in SNAPSHOT_ADAPTERS
+    """enrich() at every snapshot shop: "shop_snapshots", one entry a shop in enabled_adapters()
     order (a shop without a snapshot not checked), and MTGMate's again as "shop_snapshot".
     captured is {shop key: snapshot} (shop_prices.by_shop)."""
-    if not rows:
+    if not rows or not shops.enabled_adapters():    # no shop checked (E11-S53): no shop facts at all
         return
     captured = captured if isinstance(captured, dict) else {}
     projections = [(adapter, _project(captured.get(adapter.key), resolve, adapter))
-                   for adapter in shops.SNAPSHOT_ADAPTERS]
+                   for adapter in shops.enabled_adapters()]
     for number, row in enumerate(rows):
         every = [_for_row(projection, adapter, row, number) for adapter, projection in projections]
         row["shop_snapshots"] = every
