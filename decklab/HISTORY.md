@@ -28,6 +28,14 @@ What each milestone and feature built, the decisions made along the way, and the
 - Left for later (E9-S28): a pair of partners or a Background counted together, and a held commander's row naming its deck.
 - Tests: `test_commander_candidates.py` (`cards_for`'s lists and caps, and the new route in the fixture sandbox: categories by name, any-case names, the 400s and 404s with no holder named, a member's 403), `test_commander_candidates_ui.py` (the cards by role, New deck's address and who gets it, the EDHREC sheet's request) and `test_commander_start_ui.py` (the editor's commander start, a kept draft and an unknown name). Fixtures only: no migration, server restart or database writes.
 
+
+## Build deck on the deck page's head (2026-11-04)
+
+- Matt, building a deck on an iPad, couldn't find the way to Build decks: it was only an item in the deck page's More. The head now has it beside Edit on every tab (`deck.js`'s `deckBuildLink`), under the same condition: a viewer who sees home's inventory, on a home deck. It links to `#/assembly?deck=<id>&version=<list shown>`, and the More item is gone.
+- **Build deck** for a deck not yet built, as the head's one primary, so Edit steps back to a secondary beside it. **Review build** for a built deck, a secondary beside a primary Edit. A product or pairing keeps Save as a new deck as its primary and has a secondary Build deck.
+- Under 768 px the buttons take their own row under the title, More at its end; up to 1280 px Edit's list words stay only in its accessible name, and on an iPad on its side the title leaves them room over the art. Measured in headless Chrome with a touch pointer from 320 to 1366 px with the real stylesheets: no sideways scroll, no overlap, every button 44 px tall.
+- An idea's sleeves note now names Build decks, not the Packing plan.
+- Tests: `test_deck_page_ui.py` (the head's link, its wording and primary, More, who sees it; the stylesheet rules) and `test_deck_kit_ui.py`.
 ## Shop postage and the fewest-shops plan (2026-11-04; E5-S27)
 
 - Shopping's Baskets (2026-11-02) listed what each shop has but couldn't say which shops to order from, since postage wasn't known. Each price-check shop's postage is now a home admin's setting: Settings' **Shops' postage** (`web/settings-postage.js`) sets a flat postage and a free-postage total per shop in A$, blank meaning not known (0 postage: always free). It's one audited household record saved whole with a revision, like the Commander-night notes: migration `0021_shop_postage.sql`, `lib/state/shop_postage.py` (rules), the stores' `shop_postage()`/`shop_postage_put()`, GET/PUT `/api/shop-postage` (`lib/api/shop_postage.py`; home's record readers read it, `postage.edit` is a home admin's, a stale save is 409). Activity shows "Shops' postage updated" to home's record readers only, never the amounts; the export writes `tables/public.shop_postage.csv`, and the nightly check validates the record.
