@@ -20,6 +20,14 @@ The three places "Less text on phones" left alone because tests pinned their wor
 - **Shopping, Missing cards across decks:** "Every home deck's Planned shortfall, added up; a shared copy may count twice. Shop lines are saved checks."
 - Tests: `test_settings_maintenance_ui`, `test_deck_shop_prices_ui`, `test_shops_two_shops_ui`, `test_shopping_buying_ui`, `test_shopping_missing_snapshot_ui`. Fixtures only: no server restart or database writes.
 
+## Price-check shops as a setting (2026-11-04; E11-S53 first slice)
+
+- Matt's decision of 2026-10-31: currency and the price-check shops become settings, for self-hosters outside Australia. This first slice is the shops.
+- **The setting:** `config.json`'s optional `"shops"`, a list of shop keys (`"mtgmate"`, `"gamesportal"`). Unset, both are checked as before; `[]` turns the check off. `lib/shops.enabled_adapters()` reads it (in `SNAPSHOT_ADAPTERS` order; an unknown key is left out and a non-list counts as unset, each said once on stderr).
+- **Who honours it:** the nightly shop step (skipped with a log line when off), `shops snapshot` and `shops show` (each says no shop is set; `snapshot --shop KEY` still asks one by hand), and the pages' readers: `shop_prices.capture()` reads only enabled shops' files, Shopping's answer gains `shops_off` and no shop lines when off (By shop says so), and Baskets and missing cards' shop lines cover only enabled shops. A shop left out is never shown, even with an old file in `decklab/data/shops/`.
+- Left for later slices: the currency (AUD is still in the tables' header and rate statement) and a Settings-page control. Postage per shop is E5-S27's, in the database.
+- Tests: `decklab/tests/test_shops_setting.py`. Fixtures only.
+
 ## Less text on phones (2026-11-04)
 
 - Matt asked for every page to be checked for walls of text, most of all on a phone, and noted pictures help break them up. Every page was shot at 390px wide on a full-data sandbox; before and after pictures are in the project's `verbosity/` folder.
