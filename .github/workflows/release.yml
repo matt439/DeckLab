@@ -1,0 +1,60 @@
+# A Deck Lab release (E11-S49): on a version tag on main (v1.2.0), or by hand with a version, build
+# decklab-VERSION.zip, its .sha256 and its manifest (scripts/make_release.py) and attach them to a
+# DRAFT GitHub release. Nothing is published: Matt reads the draft and clicks Publish himself.
+name: release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, such as 1.2.0 (tags main's tip as v1.2.0)"
+        required: true
+
+permissions:
+  contents: write           # create the draft release (and, by hand, its tag)
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - name: Work out the version and check it's on main
+        id: version
+        env:
+          GIVEN: ${{ inputs.version }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="${GIVEN#v}"
+            git checkout --quiet origin/main
+          fi
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]{0,30})?$'; then
+            echo "::error::$version isn't a release version like 1.2.0"; exit 1
+          fi
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::error::v$version isn't on main"; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Build the zip, its SHA-256 and its manifest
+        run: python scripts/make_release.py "${{ steps.version.outputs.version }}" --out dist
+      - name: Attach them to a draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "v$VERSION" dist/* --draft --target "$(git rev-parse HEAD)" \
+            --title "Deck Lab $VERSION" \
+            --notes "Deck Lab $VERSION. Download decklab-$VERSION.zip and check it against decklab-$VERSION.zip.sha256. decklab-$VERSION.json lists its commit and database migrations. See SELF-HOSTING.md."

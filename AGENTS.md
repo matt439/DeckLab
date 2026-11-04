@@ -38,7 +38,7 @@ Deck Lab is a self-hosted web app for one household's **Magic: The Gathering** c
 This is the planned layout. Create files as they're needed instead of scaffolding empty ones.
 
 ```
-.github/workflows/       # CI (see "CI" under Conventions): tests.yml, the whole suite in 4 parallel shards each on Windows and Linux, and Linux's systemd services, except documentation-only changes; lint.yml, ruff for real errors and the source-length guard
+.github/workflows/       # CI (see "CI" under Conventions): tests.yml, the whole suite in 4 parallel shards each on Windows and Linux, and Linux's systemd services, except documentation-only changes; lint.yml, ruff for real errors and the source-length guard; release.yml, a draft GitHub release of the zip on a version tag (E11-S49)
 TODO.md                 # the index of open work: NOW (the order) and one row per item, each pointing to its owner (a design story, PLAN.md); start a fresh thread here
 magic/
                         # NOT files any more: the inventory (every space's collection, token cards and raw imports, the orders,
@@ -52,7 +52,7 @@ magic/
 pokemon/
   collection.csv        # owned full-art singles
   wishlist.csv
-scripts/                # helpers (decklab.cmd starts Deck Lab from any folder, decklab on Linux and macOS; audit_source_lengths.py; test_fixtures.py, the default fixture checks; test_shard.py, one of CI's 4 parallel fixture jobs; linux_services_check.sh, Linux's systemd timer and service end to end)
+scripts/                # helpers (decklab.cmd starts Deck Lab from any folder, decklab on Linux and macOS; audit_source_lengths.py; test_fixtures.py, the default fixture checks; test_shard.py, one of CI's 4 parallel fixture jobs; linux_services_check.sh, Linux's systemd timer and service end to end; make_release.py, a release zip with its SHA-256 and decklab/release.json manifest)
 decklab/                # Deck Lab, the home-network deck page: what is still to do and the design in decklab/PLAN.md, what was built in decklab/HISTORY.md, how to run it in decklab/README.md
   design/               # the design model (2026-10-13): personas, journeys, user stories with built/partial/missing status, gap analysis; flip a story's status when its feature ships
   wakegate/             # the NAS's wake gate for a server PC that sleeps when idle (wake-on-request: decklab/README.md, "Sleeping and waking on request"): wakegate.py (stdlib, runs in a container), compose.yaml, README.md; its .env is gitignored

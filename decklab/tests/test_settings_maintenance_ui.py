@@ -24,6 +24,9 @@ SETUP = SHELL + r'''
     await flush();return byId('settings-maintenance-content');};
   const job=kind=>main.querySelector(`[data-maintenance-job="${kind}"]`);
   const refresh=()=>byId('settings-maintenance-refresh');
+  // A job's status line (its first paragraph) and its due line, checked for meaning rather than whole sentences.
+  const status=kind=>job(kind).querySelector('p').textContent;
+  const due=kind=>job(kind).querySelector('[data-maintenance-due]').textContent;
 '''
 
 
@@ -41,45 +44,45 @@ class SettingsMaintenanceUiTests(unittest.TestCase):
           const host=await openHistory();same(reads,[{path:'/api/settings/maintenance'}]);
           same(host.querySelectorAll('[data-maintenance-job]').map(node=>node.dataset.maintenanceJob),['dump','export','check','restore_check']);
           for(const kind of ['dump','export','check','restore_check']){const row=job(kind);
-            assert(row.textContent.includes('Latest status: Succeeded.'));assert(row.textContent.includes('Latest attempt: Succeeded.'));
-            assert(row.textContent.includes('Last successful run: Succeeded.'));assert(row.querySelector('details'));}
+            assert(status(kind).startsWith('Succeeded, '));assert.equal(row.dataset.maintenanceHealth,'success');
+            assert(!row.textContent.includes('Last success:'));assert(row.querySelector('details'));}
           assert.equal(byId('settings-maintenance').getAttribute('aria-labelledby'),'settings-maintenance-title');
           assert(byId('settings-maintenance-title').textContent.includes('Database maintenance'));assert(!refresh().disabled);
-          assert(host.textContent.includes('History checked:'));assert(main.textContent.includes('Refreshing only reads history.'));
+          assert(host.textContent.includes('History checked:'));assert(main.textContent.includes('Refreshing only reads'));
         ''')
 
     def test_failed_latest_never_presents_older_success_as_current_health(self):
         self.run_js(r'''
           const failed={...succeeded(),outcome:'failure'};answer.jobs[0]={...answer.jobs[0],latest:failed,
             last_success:succeeded('26'),recent:[failed,succeeded('26')],health:'failure',freshness:'stale'};
-          await openHistory();const row=job('dump');assert(row.textContent.includes('Latest status: Failed.'));
-          assert(row.textContent.includes('Latest attempt: Failed.'));assert(row.textContent.includes('Last successful run: Succeeded.'));
-          assert(row.textContent.includes('Last success is overdue.'));assert(!row.textContent.includes('Latest status: Succeeded.'));
+          await openHistory();const row=job('dump');assert(status('dump').startsWith('Failed, '));
+          assert(row.textContent.includes(`Last success: ${settingsMaintenanceWhen('2026-10-26T03:31:00Z')}.`));
+          assert(due('dump').endsWith('; overdue.'));assert(!status('dump').includes('Succeeded'));
           assert.equal(row.querySelectorAll('li').length,2);
         ''')
 
     def test_restore_check_uses_its_own_interval_and_export_names_nightly_policy(self):
         self.run_js(r'''
           answer.jobs[3]={...answer.jobs[3],latest:succeeded('10'),last_success:succeeded('10'),recent:[succeeded('10')]};
-          await openHistory();assert(job('restore_check').textContent.includes('Latest status: Succeeded.'));
-          assert(job('restore_check').textContent.includes('28 days, from start.'));assert(!job('restore_check').textContent.includes('overdue'));
-          assert(job('export').textContent.includes('Export uses the nightly grace period: 36 hours, from finish.'));
-          assert(job('check').textContent.includes('36 hours, from start.'));
+          await openHistory();assert(status('restore_check').startsWith('Succeeded, '));
+          assert(due('restore_check').includes('every 28 days'));assert(!job('restore_check').textContent.includes('overdue'));
+          assert(due('export').includes('every 36 hours'));assert(due('export').includes('nightly grace period'));
+          assert(due('check').includes('every 36 hours'));assert(!due('check').includes('grace'));
         ''')
 
     def test_overdue_success_and_latest_failure_with_current_older_success_stay_distinct(self):
         self.run_js(r'''
           answer.jobs[3]={...answer.jobs[3],health:'stale',freshness:'stale'};
           answer.jobs[1]={...answer.jobs[1],latest:{...succeeded(),outcome:'failure'},health:'failure'};
-          await openHistory();assert(job('restore_check').textContent.includes('Latest status: Overdue.'));
-          assert(job('export').textContent.includes('Latest status: Failed.'));assert(job('export').textContent.includes('within its freshness interval'));
+          await openHistory();assert(status('restore_check').startsWith('Overdue. Last run: Succeeded, '));
+          assert(status('export').startsWith('Failed, '));assert(due('export').endsWith('; last success on time.'));
         ''')
 
     def test_never_run_is_explicit_for_all_jobs_and_does_not_invent_running(self):
         self.run_js(r'''
           answer.jobs=answer.jobs.map(row=>({...row,latest:null,last_success:null,recent:[],health:'never',freshness:'never'}));
           const host=await openHistory();for(const kind of ['dump','export','check','restore_check']){
-            assert(job(kind).textContent.includes('Latest attempt: No recorded attempts.'));assert(job(kind).textContent.includes('Last successful run: None recorded.'));}
+            assert.equal(status(kind),'Never run.');assert(!job(kind).textContent.includes('Last success'));}
           assert(!host.textContent.includes('Running'));assert.equal(host.querySelectorAll('details').length,0);
         ''')
 
@@ -87,17 +90,17 @@ class SettingsMaintenanceUiTests(unittest.TestCase):
         self.run_js(r'''
           const unknown={started_at:null,finished_at:null,outcome:'unknown'};
           answer.jobs[0]={...answer.jobs[0],latest:unknown,recent:[unknown],health:'unknown',freshness:'unknown',interval:{...answer.jobs[0].interval,value:null}};
-          await openHistory();const row=job('dump');assert(row.textContent.includes('Latest status: Outcome unavailable.'));
-          assert(row.textContent.includes('Started: Date unavailable. Finished: Date unavailable.'));assert(row.textContent.includes('Freshness is unknown.'));
-          assert(row.textContent.includes('Freshness interval unavailable.'));assert(!row.textContent.includes('Running'));assert(!row.textContent.includes('Invalid Date'));
+          await openHistory();const row=job('dump');assert.equal(status('dump'),'Outcome unknown, date unavailable.');
+          assert(row.textContent.includes('Last success: '));assert(!row.textContent.includes('Invalid'));
+          assert.equal(due('dump'),'Due interval unknown; freshness unknown.');assert(!row.textContent.includes('Running'));assert(!row.textContent.includes('Invalid Date'));
         ''')
 
     def test_last_success_can_be_older_than_bounded_recent_failures(self):
         self.run_js(r'''
           const failed={...succeeded(),outcome:'failure'};answer.jobs[0]={...answer.jobs[0],latest:failed,
             recent:Array.from({length:5},()=>failed),last_success:succeeded('01'),health:'failure',freshness:'stale'};
-          await openHistory();const row=job('dump');assert(row.textContent.includes('Last successful run: Succeeded.'));
-          assert(row.textContent.includes(settingsMaintenanceWhen('2026-10-01T03:31:00Z')));assert.equal(row.querySelectorAll('li').length,5);
+          await openHistory();const row=job('dump');
+          assert(row.textContent.includes(`Last success: ${settingsMaintenanceWhen('2026-10-01T03:31:00Z')}.`));assert.equal(row.querySelectorAll('li').length,5);
         ''')
 
     def test_initial_loading_is_announced_without_success_until_answer_arrives(self):
@@ -105,7 +108,7 @@ class SettingsMaintenanceUiTests(unittest.TestCase):
           let resolve;api=path=>{reads.push({path});return new Promise(done=>{resolve=done;});};
           const host=await openHistory();assert(host.textContent.includes('Loading maintenance history.'));
           assert(host.querySelector('[role="status"]'));assert(refresh().disabled);assert(!host.textContent.includes('Succeeded'));
-          resolve(answer);await flush();assert(host.textContent.includes('Latest status: Succeeded.'));assert(!refresh().disabled);
+          resolve(answer);await flush();assert(host.textContent.includes('Succeeded, '));assert(!refresh().disabled);
         ''')
 
     def test_manual_refresh_clears_old_health_coalesces_clicks_and_keeps_its_button(self):
@@ -114,7 +117,7 @@ class SettingsMaintenanceUiTests(unittest.TestCase):
           api=path=>{reads.push({path});return new Promise(done=>{resolve=done;});};button.click();button.click();loadSettingsMaintenance(routeToken);
           assert.equal(reads.length,2);assert(host.textContent.includes('Loading maintenance history.'));assert(!host.textContent.includes('Succeeded'));
           assert.equal(refresh(),button);assert(button.disabled);resolve(answer);await flush();assert.equal(refresh(),button);
-          assert(!button.disabled);assert.equal(document.activeElement,button);assert(host.textContent.includes('Latest status: Succeeded.'));
+          assert(!button.disabled);assert.equal(document.activeElement,button);assert(host.textContent.includes('Succeeded, '));
         ''')
 
     def test_failed_refresh_removes_old_claims_and_never_prints_raw_errors(self):
@@ -123,7 +126,7 @@ class SettingsMaintenanceUiTests(unittest.TestCase):
           refresh().click();await flush();assert(host.textContent.includes('Maintenance history is unavailable.'));
           assert(host.querySelector('[role="alert"]'));assert(!refresh().disabled);
           for(const text of ['Succeeded','private','password','secret','503'])assert(!host.textContent.includes(text),text);
-          api=async path=>{reads.push({path});return answer;};refresh().click();await flush();assert(host.textContent.includes('Latest status: Succeeded.'));
+          api=async path=>{reads.push({path});return answer;};refresh().click();await flush();assert(host.textContent.includes('Succeeded, '));
         ''')
 
     def test_unavailable_and_malformed_answers_fail_closed_without_private_extras(self):
@@ -165,7 +168,7 @@ class SettingsMaintenanceUiTests(unittest.TestCase):
           pending.shift()(answer);await flush();assert.equal(main.textContent,'Library');assert(!old.textContent.includes('Succeeded'));
           const first=await openHistory(),second=await openHistory();pending[1](answer);await flush();
           assert(second.textContent.includes('Succeeded'));const failed=history();failed.jobs[0]={...failed.jobs[0],health:'failure',latest:{...succeeded(),outcome:'failure'}};
-          pending[0](failed);await flush();assert(second.textContent.includes('Latest status: Succeeded.'));assert(!first.textContent.includes('Succeeded'));
+          pending[0](failed);await flush();assert(second.textContent.includes('Succeeded, '));assert(!first.textContent.includes('Succeeded'));
         ''')
 
     def test_same_token_profile_replacement_and_permission_loss_ignore_private_reply(self):
@@ -187,15 +190,15 @@ class SettingsMaintenanceUiTests(unittest.TestCase):
         self.run_js(r'''
           const first=await openHistory();assert(job('dump'));answer=history();answer.jobs=answer.jobs.map(row=>({...row,latest:null,last_success:null,recent:[],health:'never',freshness:'never'}));
           const second=await openHistory();assert.notEqual(first,second);assert.equal(reads.length,2);assert(!second.textContent.includes('Succeeded'));
-          assert(second.textContent.includes('No recorded attempts.'));
+          assert(second.textContent.includes('Never run.'));
         ''')
 
     def test_zero_interval_is_valid_and_server_freshness_is_authoritative(self):
         self.run_js(r'''
           answer.jobs=answer.jobs.map(row=>({...row,interval:{...row.interval,value:0},health:'stale',freshness:'stale'}));
-          await openHistory();assert(job('dump').textContent.includes('Freshness interval: 0 hours, from finish.'));
-          assert(job('restore_check').textContent.includes('Freshness interval: 0 days, from start.'));
-          assert(job('restore_check').textContent.includes('Latest status: Overdue.'));
+          await openHistory();assert.equal(due('dump'),'Due every 0 hours; overdue.');
+          assert.equal(due('restore_check'),'Due every 0 days; overdue.');
+          assert(status('restore_check').startsWith('Overdue.'));
         ''')
 
     def test_inconsistent_success_claims_and_malformed_dates_or_policy_never_show_healthy(self):
@@ -233,7 +236,7 @@ class SettingsMaintenanceUiTests(unittest.TestCase):
           answer=history();answer.checked_at='2026-10-28T09:00:00.123456+00:00';
           const leap={started_at:'2024-02-29T03:30:00+00:00',finished_at:'2024-02-29T03:31:00.123456+00:00',outcome:'success'};
           answer.jobs[3]={...answer.jobs[3],latest:leap,last_success:leap,recent:[leap],health:'stale',freshness:'stale'};
-          await openHistory();assert(job('restore_check').textContent.includes('Latest status: Overdue.'));
+          await openHistory();assert(status('restore_check').startsWith('Overdue.'));
         ''')
 
     def test_in_place_selected_id_change_rejects_reply_and_retired_refresh_control(self):

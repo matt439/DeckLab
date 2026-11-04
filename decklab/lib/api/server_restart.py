@@ -94,6 +94,9 @@ def _code_problem():
     found = build.status()
     if found.get("error") or found.get("latest_dirty") is None:
         return "Deck Lab couldn't check its code's version, so it isn't restarted from here. Restart it on the PC."
+    if found["latest_dirty"] and found.get("latest_version"):     # a release install (E11-S49)
+        return ("Deck Lab's files on the PC were changed after its release was installed, so it isn't "
+                "restarted from here. Restart it on the PC.")
     if found["latest_dirty"]:
         return ("Deck Lab's code on the PC has changes that aren't committed. Commit them first: "
                 "a restart would run them.")

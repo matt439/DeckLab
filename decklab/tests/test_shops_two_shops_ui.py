@@ -140,7 +140,8 @@ class TwoShopDeckPricesTests(unittest.TestCase):
           assert.equal(lines.length,2);
           assert(lines[0].textContent.includes('MTGMate: A$9.75 each'));
           assert(lines[1].textContent.includes('Games Portal: A$8.50 each; this printing in stock when fetched.'));
-          assert(shopRow.textContent.includes('each shop with its own fetch time'));
+          // Each shop line carries its own fetch time, so the note above them needn't say so.
+          assert(lines.every(line=>line.querySelector('time')));
           noEffects();
         """)
 
