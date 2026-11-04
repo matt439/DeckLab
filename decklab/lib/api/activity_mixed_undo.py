@@ -20,7 +20,7 @@ UNSUPPORTED = ("This change cannot be undone here. Whole-change Undo covers a co
                "of whole order parts and a trade, while nothing they touched has changed since.")
 SHA = re.compile(r"[a-f0-9]{64}")
 ACTIONS = ("import_undo", "receipt_undo", "trade_undo")
-COMPONENT_FIELDS = ("order", "component", "kind", "received_on", "checks")
+COMPONENT_FIELDS = ("order", "component", "kind", "received_on", "checks", "corrected")
 PRODUCT_FIELDS = ("product", "status", "intact")
 
 
@@ -136,7 +136,12 @@ def _project(plan):
     for item in plan.get("components") or ():
         if not isinstance(item, dict) or set(item) != set(COMPONENT_FIELDS):
             raise ApiError(503, UNCONFIRMED)
-        components.append({field: item[field] for field in COMPONENT_FIELDS})
+        fixed = item["corrected"]       # rows corrected at the door going back as ordered, or None
+        if fixed is not None and (not isinstance(fixed, dict) or set(fixed) != {"ordered", "received"}
+                                  or any(type(fixed[k]) is not int or fixed[k] < 1 for k in fixed)):
+            raise ApiError(503, UNCONFIRMED)
+        components.append({field: (dict(fixed) if field == "corrected" and fixed else item[field])
+                           for field in COMPONENT_FIELDS})
     for item in plan.get("products") or ():
         if not isinstance(item, dict) or set(item) != set(PRODUCT_FIELDS):
             raise ApiError(503, UNCONFIRMED)
