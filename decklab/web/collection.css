@@ -257,6 +257,12 @@ button.col-find-open { cursor: pointer; }
 .pcov-pick-words small, .pcov-missing { color: var(--ink-2); font-size: var(--fs-sm); }
 .pcov-share { display: block; font-variant-numeric: tabular-nums; }
 .pcov-rate { margin-top: 0; }
+/* Commanders we could build (commander-candidates.js, E9-S28) */
+.ccand-head { display: grid; gap: var(--s-3); margin-bottom: var(--s-3); }
+@media (min-width: 640px) { .ccand-head { grid-template-columns: minmax(140px, 200px) 1fr; align-items: start; } }
+.ccand-words p { margin: 0 0 var(--s-2); }
+.ccand-table { width: 100%; }
+.ccand-short th, .ccand-short td:last-child { font-weight: var(--fw-semibold); }
 /* Try a precon (precon-trial.js, E3-S39): the sheet, a trial deck's Overview notice and the saved box's offer. */
 .ptr-search { display: grid; gap: var(--s-2); }
 .ptr-search .sub, .ptr-meta { margin: 0; }

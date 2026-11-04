@@ -82,6 +82,13 @@ class ServerRestartTests(unittest.TestCase):
                 self.assertFalse(server_restart.view()["may_restart"])
         self.launch.assert_not_called()
 
+    def test_a_release_install_restarts_by_its_manifest(self):
+        # E11-S49: a release's version comes from its manifest, so its restart isn't unverifiable.
+        self.build.return_value = {**CLEAN, "version": "1.2.0", "latest_version": "1.2.0"}
+        self.assertTrue(server_restart.view()["may_restart"])
+        self.build.return_value = {**CLEAN, "latest_dirty": True, "latest_version": "1.2.0"}
+        self.assertIn("changed after its release", self.refused(409, self.post).message)
+
     def test_only_the_background_server_on_its_usual_port(self):
         for found in (None, {"pid": os.getpid() + 1, "port": 8642, "background": True},
                       {"pid": os.getpid(), "port": 8642, "background": False},

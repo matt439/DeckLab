@@ -54,6 +54,21 @@ function byId(id) { return document.getElementById(id); }
 /** The profile whose device this is ("This is my device"), or null. */
 function myDeviceId() { return local.get(MY_DEVICE); }
 
+/** Keeps --shell-bottom (the page's padding and what focus stops above, base.css) at the tab bar's height when
+ * large text wraps a label and the bar grows past its usual 56 px (E11-S55); back to the stylesheet's value
+ * otherwise, and while the bar is away (the on-screen keyboard, the lab). Watched once per bar. */
+function watchTabbarHeight(bar) {
+  if (bar.dataset.watched || typeof ResizeObserver !== "function") return;
+  bar.dataset.watched = "1";
+  new ResizeObserver(() => {
+    const body = document.body;
+    body.style.removeProperty("--shell-bottom");
+    const usual = parseFloat(getComputedStyle(bar).minHeight) || 0;
+    const height = bar.getBoundingClientRect().height;
+    if (height > usual + 1) body.style.setProperty("--shell-bottom", `${Math.ceil(height)}px`);
+  }).observe(bar);
+}
+
 /** True when this device is the profile's own: it skips "Who are you?" and isn't forgotten while away. */
 function isMyDevice(profile = state.profile) {
   return Boolean(profile) && !state.remote && myDeviceId() === profile.id;
@@ -153,6 +168,7 @@ function drawShell() {
         "aria-haspopup": "dialog", "aria-controls": "more-sheet", onclick: openMoreSheet },
         shellIcon("more"), el("span", { class: "tab-label", text: "More" })) : null]);
     bar.hidden = false;
+    watchTabbarHeight(bar);
   }
   const list = byId("more-list");
   if (list) {

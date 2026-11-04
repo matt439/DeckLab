@@ -133,6 +133,7 @@ details.explain > p, details.explain > .formula { max-width: 72ch; }
 .curve-table col { width: auto; }
 
 .sources-list { list-style: none; font-size: var(--fs-sm); color: var(--ink-2); display: grid; gap: var(--s-2); }
+.sources-list > li { min-width: 0; overflow-wrap: anywhere; }   /* a long title wraps at large text (E11-S55) */
 
 .bracket-list { list-style: none; display: grid; gap: var(--s-3); margin: var(--s-1) 0 var(--s-2); }
 .bracket-list > li { padding: var(--s-3); border-radius: var(--r-md); background: var(--surface-2); }
@@ -168,6 +169,10 @@ details.explain > p, details.explain > .formula { max-width: 72ch; }
 .share-list .row, .bar-list.share-list .row { grid-template-columns: minmax(70px, 30%) minmax(0, 1fr) 4.4em; cursor: default; }
 
 .chance-table col.c-turn { width: 3.4em; }
+/* Its own sideways scroll when large text makes it wider than the screen, rather than widening the page (E11-S55). */
+.chance-scroll { overflow-x: auto; }
+.chance-scroll > .chance-table { min-width: 100%; width: auto; }
+.chance-scroll .chance-table th { position: static; }   /* a short table: no sticky header inside its scroller */
 .chance-table th, .chance-table td { padding: var(--s-2) 3px; }
 .chance-table th:first-child { padding-left: 0; }
 .chance-table td { font-size: var(--fs-sm); }

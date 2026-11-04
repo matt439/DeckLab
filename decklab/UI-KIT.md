@@ -875,3 +875,15 @@ overlays retain ownership. The ordinary Save path is unchanged. Current F/help
 registration follows lazy Quick mount; nontext Dock Undo resolves a fresh visible
 launcher/Cards fallback, while input Undo remains native. Target sizing reads
 the shared --tap/--btn-h and panel/font rules; keyboard-up tab policy is unchanged.
+
+## Accessibility
+
+What every component must do, from E11-S55's phone audit ([design/accessibility-audit-phone-2026-11-04.md](design/accessibility-audit-phone-2026-11-04.md)); `test_phone_accessibility.py` keeps its fixes, and Keyboard ownership above has the keys.
+
+- **Contrast:** text and chips meet WCAG AA (4.5:1, 3:1 for large text) in both themes, against what they're drawn on; text over card art sits on its own backing (the ×N badge, the viewer's panel). New colours come from `tokens.css`.
+- **Names:** every control has an accessible name; an icon button carries `aria-label`, a colour pip set is an image named "Colours: …", a mark shown only as colour has hidden words ("Missing"). A link or button repeated per item (a game's Correct this game) is described by its item's heading (`aria-describedby`). A tile that is one link says its title first.
+- **Headings:** one h1 a page and no skipped level; a list drawn under the page title without a visible heading gets a visually hidden h2 (`.sr-only`). A heading of one of many look-alike items names the item (a game's heading: its result, then its decks and date for a screen reader).
+- **Focus:** every focusable control shows `:focus-visible`'s ring (or its wrapper's), and stops clear of the sticky header, the deck page's tab strip, the tab bar and a page's bottom bar: `base.css` gives every focusable element `scroll-margin-top`/`-bottom` from `--focus-clear-top` and `--focus-clear-bottom`, at no specificity, so a part's own `scroll-margin` still wins. Sheets, menus and the viewer take focus in and give it back.
+- **Touch:** 44 px targets wherever there's no fine pointer (the density tokens' floor).
+- **Large text:** pages reflow at 320 px and at 200 % text; labels wrap rather than cut off (the tab bar's labels wrap, and `shell.js` keeps `--shell-bottom` at the bar's height). A decorative glyph standing for a person (the avatar's initial, `--fs-avatar`) may stop growing; words may not.
+- **Motion:** every animation and transition has a `prefers-reduced-motion: reduce` form, and a scroll the page makes itself uses `scrollBehaviour()` (core.js), which jumps instead of gliding under reduced motion.

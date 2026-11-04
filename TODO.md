@@ -58,8 +58,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
 | `E7-S32` | OPEN | could | L | Scan cards sheet and `POST /api/collection/scan` built, with each pending card's printing picker and language, and Tokens' Scan token cards (`POST /api/tokens/scan`, one-change add) (fixture-tested); next real phone photos of cards and token cards on the household's phones. |
 | `E5-S27` | OPEN | should | M | Shopping's Baskets built without postage (2026-11-02). Left: postage rules per shop as a setting (with `E11-S53`), add-ons that reach a free-postage threshold, and the fewest-shops plan. |
-| `E5-S29` | OPEN | could | S | 90 days of queued cards' readings and `shops history NAME` built (2026-11-03). Left: Shopping's row showing the history. |
-| `E5-S30` | OPEN | could | S | The Wishlist page's "short of this card" built (2026-11-02). Left: a My wishlist tick in the editor's Add panel. |
 
 ## Deck Lab: Commander nights
 
@@ -68,7 +66,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E9-S11` | DEFERRED | could | L+pc | Four-player pod runs from the page (with `E9-S21` win shares and `E9-S22` why-not by Start); after `FG#2`. First `lib/forge/pods.py` from the prototype, fixtures only. |
-| `E9-S28` | OPEN | could | M | Commanders we could build: free legendary creatures ranked by the free pool's role coverage in their colours, EDHREC on demand; first slice, the ranked list without EDHREC. |
+| `E9-S28` | OPEN | could | M | Commanders we could build: free legendary creatures ranked by the free pool's role coverage in their colours, EDHREC on demand. First slice built 2026-11-04 (the ranked list without EDHREC); next, a candidate's free cards by role, New deck from it and See EDHREC ideas. |
 | `E9-S29` | OPEN | should | S | Tutors on the Stats tab (2026-11-02), the Overview's sentence, What opponents will face and the printout (2026-11-04) built. Left: the official text on tutors (needs its source); a Checks warning where it sets a number. |
 
 ## Deck Lab: testing and Forge
@@ -95,14 +93,14 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S31` | DECISION | could | M | Global search in the top bar ([stories.md](decklab/design/stories.md#e11-s31)) is built and its `/` decided (2026-10-31): Matt checks the iPad field and phone sheet on devices. |
 | `E11-S58` | DECISION | should | L | Live server on Linux ([stories.md](decklab/design/stories.md#e11-s58)) is built and fixture-tested (2026-11-01): WSL qualified the database, backups, the services, `systemd-inhibit` under polkit and real Forge games (2026-11-02); still to qualify on the real Linux PC: suspend and wake, phones, and Tesseract on real card photos. |
 | `E11-S08` | OPEN | could | L | Token deletions and 2-50 added token rows undo together (2026-10-29); 1-50 purchase-queue value edits restore in place (2026-10-30); 1-50 added queue rows are removed and removed ones restored as new rows (2026-10-31); 1-50 edited token-card rows restore in place (2026-10-31); queue changes mixing 2-50 updated, added and removed rows undo whole (2026-10-31); 2-50 collection-row restores and removals are proved before commit (2026-10-31). Mixed token-card changes have no producer (2026-10-31). Receipts that corrected their rows undo whole (2026-11-04). Still open: queue changes with orders, token-card changes that moved or renumbered rows, other multi-row and mixed changes, other accessory/wishlist inverses. |
-| `E11-S49` | OPEN | could | M | Versioned release zips with a SHA-256 and version manifest; first slice, the release workflow and `build.py` reading the manifest without git. |
+| `E11-S49` | OPEN | could | M | Versioned release zips with a SHA-256 and version manifest. The release workflow (draft releases), `scripts/make_release.py` and `build.py` reading the manifest without git are built (2026-11-04); left: Settings saying a newer release exists, and Matt publishing the first release. |
 | `E11-S50` | DEFERRED | could | L | One Windows installer (winget Python and PostgreSQL, release zip, generated postgres password, config questions, services, one firewall prompt, phone address); after `E11-S49`. |
 | `E11-S51` | DEFERRED | could | M | Update command for release installs (backup, replace, migrate, restart); after `E11-S49`. |
 | `E11-S52` | DEFERRED | could | L | First-run setup page on the PC (home profiles, optional Enable simulations); after `E11-S50`. |
 | `E11-S53` | OPEN | could | M | Currency and price-check shops as settings, default AUD. The shops setting (`config.json`'s `"shops"`) is built (2026-11-04); left: the currency, and a Settings control. |
 | `E11-S59` | DECISION | could | L | Wake-on-request built in code (2026-11-01): Matt sets up the NAS gate, the service token, the Worker's secrets and the PC's wake settings, then times a real wake. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
-| `E11-S55` | OPEN | could | M | An accessibility pass: contrast, names, focus and reduced motion over every page in both densities and themes; first slice, the audit of the library, deck page and Game log on a phone. |
+| `E11-S55` | OPEN | could | M | An accessibility pass: contrast, names, focus and reduced motion over every page in both densities and themes. The phone audit of the library, deck page and Game log and its fixes are done (2026-11-04); next, the other pages and the lab density, then a real screen reader. |
 | `E11-S57` | DEFERRED | could | L | A Linux install route (a script or container); after `E11-S50` (Windows first, Matt, 2026-10-31) and `E11-S49`. |
 
 ## Areas with no open rows
