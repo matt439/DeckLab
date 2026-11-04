@@ -299,6 +299,17 @@ deck as source and its title as `for`; an identical request's quantity is raised
 row, keeping that row's state, which the sheet names and warns about). The cards are worked out again in the change: a stale revision or any difference answers
 409 and asks for a new review. Both need a home admin who sees home's records.
 
+Shopping's Build decks together has the same for its chosen decks: **Queue these…** (E5-S28,
+`lib/api/shopping_queue_combined.py`) asks `POST /api/shopping/queue/combined` (`{"profile",
+"decks": [ID, ...]}`, 2 to 12 home decks, nothing written) for each card of the combined shortfall
+with the copies already queued for any chosen deck (its source, its title as `for`, or a
+decks-together `for` naming it; each row once), the copies to add, `joins`, the decks that want it
+and the `revision`. `POST /api/shopping/queue` with `{"profile", "action": "add_combined", "expect",
+"decks", "state", "cards"}` saves one audited `watchlist.add_many` change: any nonfoil printing,
+`for` the decks' titles sorted and joined by ` + ` (such as `Alpha + Beta`), no source and the deck
+ids in the notes. A single deck's Queue missing cards… counts a row whose `for` names that deck
+this way, so the same copies aren't queued twice. Stale or changed reviews answer 409.
+
 `POST /api/shopping/order/change/preview` takes `profile`, Shopping's exact
 `expect` revision, `order`, and either `action: "record"` with the changed
 `values` (`seller`, `ordered_on`, `notes`, `sources`), or `action: "checks"`

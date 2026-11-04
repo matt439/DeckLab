@@ -1,4 +1,5 @@
-"""Shopping's Build decks together (E5-S28): choosing decks, the read-only combined list and late answers.
+"""Shopping's Build decks together (E5-S28): choosing decks, the combined list with each card's queue rows,
+Queue these and late answers.
 Run with python scripts/test_fixtures.py decklab.tests.test_shopping_combined_ui."""
 import unittest
 
@@ -66,8 +67,9 @@ class ShoppingCombinedTests(unittest.TestCase):
           assert(card.textContent.includes("1 more because the decks share it"));
           assert(card.textContent.includes("1 on the way (order incoming)"));
           assert(card.textContent.includes("Held by Holding ×1"));
-          // Read-only: no queue action in the combined list.
-          assert.equal(section().querySelectorAll(".shop-queue-write").length, 0);
+          // Nothing queued for it yet; an admin is offered Queue these… (the only write control here).
+          assert(card.textContent.includes("Not queued"));
+          same(section().querySelectorAll(".shop-queue-write").map(button => button.textContent), ["Queue these…"]);
           // A local redraw keeps the answer; Change decks… reopens with the choice ticked.
           section().querySelector(".shop-combined-choose").click();
           same(sheet().querySelectorAll("input").filter(input => input.checked).map(input => input.value),
@@ -182,6 +184,78 @@ class ShoppingCombinedTests(unittest.TestCase):
           finish(answer);
           await null; await null;
           assert.equal(main.textContent, "Another page");
+        """)
+
+    def test_each_card_shows_its_matching_queue_rows(self):
+        self.run_combined_js("""
+          api = async () => answer;
+          drawShopping(data({to_buy: [row("Llanowar Elves", {quantity: 2, for: "Alpha", state: "long_term"}),
+            row("Llanowar Elves", {quantity: 1, for: "Beta + Gamma"}), row("Opt", {for: "Alpha"})]}));
+          section().querySelector(".shop-combined-choose").click();
+          tick("casual/alpha"); tick("casual/beta"); primary().click();
+          await null; await null; await null;
+          const card = section().querySelector(".shop-combined-card");
+          assert(card.textContent.includes("3 queued"), card.textContent);
+          same(card.querySelector(".shop-missing-queue").querySelectorAll("li").map(li => li.textContent),
+               ["2 queued · Long-term plan · Alpha · Any printing", "1 queued · Ready to buy · Beta + Gamma · Any printing"]);
+        """)
+
+    def test_queue_these_reviews_saves_once_and_reloads_with_the_same_decks(self):
+        self.run_combined_js("""
+          const reads = [], writes = [], toasts = [];
+          toast = text => toasts.push(text);
+          api = async path => {reads.push(path); return path === "/api/shopping" ? data() : answer;};
+          const review = {ready: true, decks: answer.decks.map(({id, title}) => ({id, title})), for: "Alpha + Beta",
+            revision: "rev-1", states: ["ready", "long_term"], totals: {cards: 1, copies: 3},
+            rows: [{name: "Llanowar Elves", missing: 7, queued: 4, copies: 3, joins: null, decks: ["Alpha", "Beta"], card: null},
+                   {name: "Elvish Mystic", missing: 2, queued: 2, copies: 0, joins: null, decks: ["Alpha"], card: null}]};
+          apiWrite = async (path, body) => {
+            writes.push([path, body]);
+            return path === "/api/shopping/queue/combined" ? review
+              : {saved: true, action: "add_combined", cards: 1, copies: 3, for: "Alpha + Beta", decks: ["casual/alpha", "casual/beta"]};
+          };
+          drawShopping(data());
+          section().querySelector(".shop-combined-choose").click();
+          tick("casual/alpha"); tick("casual/beta"); primary().click();
+          await null; await null; await null;
+          section().querySelector(".shop-combined-queue").click();
+          await null; await null; await null;
+          same(writes, [["/api/shopping/queue/combined", {decks: ["casual/alpha", "casual/beta"]}]]);
+          const text = sheet().textContent;
+          assert(text.includes("Queue these: Alpha + Beta"), text);
+          assert(text.includes("3 copies to queue · 7 missing · 4 already queued for these decks · for Alpha, Beta"), text);
+          assert(text.includes("Already queued (1)"), text);
+          sheet().querySelectorAll("button").find(b => b.textContent === "Long-term").click();
+          primary().click();
+          for (let i = 0; i < 12; i++) await null;
+          same(writes[1], ["/api/shopping/queue", {action: "add_combined", expect: "rev-1", decks: ["casual/alpha", "casual/beta"],
+            state: "long_term", cards: [{name: "Llanowar Elves", copies: 3, joins: null}]}]);
+          same(writes.map(w => w[0]).filter(path => path !== "/api/visit"), ["/api/shopping/queue/combined", "/api/shopping/queue"]);
+          same(toasts, ["Queued 3 copies of 1 card for Alpha + Beta."]);
+          // Shopping reloads (its queue now holds the rows) and works the same decks out again, once.
+          same(reads, ["/api/shopping/combined?decks=" + encodeURIComponent("casual/alpha,casual/beta"), "/api/shopping",
+                       "/api/shopping/combined?decks=" + encodeURIComponent("casual/alpha,casual/beta")]);
+          assert(section().textContent.includes("7 copies to buy"));
+          same(shopCombinedCarry, null);
+        """)
+
+    def test_queue_these_is_not_offered_without_the_queue_right_or_a_ready_answer(self):
+        self.run_combined_js("""
+          api = async () => answer;
+          state.may = {admin: false, orders: false, see_inventory: ["home"]};
+          state.profile.role = "admin";
+          drawShopping(data());
+          section().querySelector(".shop-combined-choose").click();
+          tick("casual/alpha"); tick("casual/beta"); primary().click();
+          await null; await null; await null;
+          assert(section().textContent.includes("7 copies to buy"));
+          assert(!section().querySelector(".shop-combined-queue"));
+          state.may = {admin: true, orders: true, see_inventory: ["home"]};
+          api = async () => ({...answer, ready: false, rows: [], errors: [{message: "Not ready."}]});
+          section().querySelector(".shop-combined-choose").click();
+          primary().click();
+          await null; await null; await null;
+          assert(!section().querySelector(".shop-combined-queue"));
         """)
 
 

@@ -19,6 +19,22 @@ function shopMissingQueue(item, queue) {
   return queue.filter(row => !row.is_token && (names.has(key(row.card?.name)) || names.has(key(row.name))));
 }
 
+/** "N queued" (or "Not queued") for a card's matching queue rows. */
+function shopQueuedChip(queued) {
+  const copies = queued.reduce((sum, entry) => sum + (Number(entry.quantity) || 0), 0);
+  return queued.length ? status("info", `${copies} queued`) : status("outline", "Not queued");
+}
+
+/** A card's matching queue rows, one small line each: copies, state, what for, printing and research. */
+function shopQueuedList(queued) {
+  return queued.length ? el("ul", {class: "shop-missing-queue"}, queued.map(entry => el("li", {},
+    el("span", {text: [queued.length > 1 ? `${entry.quantity} queued` : null, SHOPPING_STATES[entry.state] || entry.state || "State not recorded",
+      entry.deck?.title || entry.for, shopPrinting(entry)].filter(Boolean).join(" · ")}),
+    shopReference(entry),
+    entry.in_stock === "no" ? status("warn", "Out of stock when checked") : null)))
+    : null;
+}
+
 function shopMissingCard(item, queue) {
   const queued = shopMissingQueue(item, queue);
   const row = cardRow(item.card || null, {name: item.name, qty: item.missing, aside: null,
@@ -29,16 +45,9 @@ function shopMissingCard(item, queue) {
     el("a", {href: `${deckHref(deck.id)}&tab=cards&filter=missing`, text: deck.title}),
     deck.missing > 1 ? el("span", {class: "shop-missing-count", text: ` ×${deck.missing}`}) : null)));
   // The queue's state leads the facts line; each queued row's details follow, one small line each.
-  const queuedCopies = queued.reduce((sum, entry) => sum + (Number(entry.quantity) || 0), 0);
-  const facts = el("div", {class: "shop-missing-facts"},
-    queued.length ? status("info", `${queuedCopies} queued`) : status("outline", "Not queued"),
+  const facts = el("div", {class: "shop-missing-facts"}, shopQueuedChip(queued),
     shopMissingSnapshotLine(item, {short: true}));
-  const intent = queued.length ? el("ul", {class: "shop-missing-queue"}, queued.map(entry => el("li", {},
-    el("span", {text: [queued.length > 1 ? `${entry.quantity} queued` : null, SHOPPING_STATES[entry.state] || entry.state || "State not recorded",
-      entry.deck?.title || entry.for, shopPrinting(entry)].filter(Boolean).join(" · ")}),
-    shopReference(entry),
-    entry.in_stock === "no" ? status("warn", "Out of stock when checked") : null)))
-    : null;
+  const intent = shopQueuedList(queued);
   return el("article", {class: "shop-missing-card", "data-missing-card": item.name}, row, wants,
     facts, intent, reprintInfo(item));
 }

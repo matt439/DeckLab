@@ -338,8 +338,13 @@ picture and describe recorded research rather than live retailer stock.
 decks: Choose decks… ticks 2 to 12 in a sheet (Show what to buy stays `aria-disabled`
 until enough are ticked), then GET `/api/shopping/combined` lists what to buy to build
 them all at once, each free copy counted once, with each card's decks, copies on the way
-and other holders. It is read-only (no queue action yet); the choice and answer survive a
-local queue redraw, not navigation, and a late answer checks its view, route and profile.
+and other holders, and each card's matching queue rows (`shopQueuedChip` and
+`shopQueuedList`, shared with Missing cards). A home admin's Queue these… (a
+`shop-queue-write` button, so it greys while the queue saves) opens deck-queue-missing.js's
+reviewed sheet for the chosen decks (`openQueueCombinedSheet`); after its save Shopping
+reloads and chooses the same decks again (`shopCombinedCarry`, used once). Otherwise the
+choice and answer survive a local queue redraw, not navigation, and a late answer checks its
+view, route and profile.
 Show what to buy and Try again put focus on the redrawn Change decks… (an answer arriving
 after focus moved elsewhere leaves it there). A deck link filters to Missing only when that
 deck misses something on its own. The section counts as Shopping's content only once decks
