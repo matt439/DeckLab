@@ -154,77 +154,24 @@
   .pack-decks { grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); }
   .pack-results > .box { max-width: none; }
 }
-/* There the deck columns are narrow, so their card tiles are smaller than the page's usual 196 px. */
-@media (min-width: 2200px) {
-  .pack-decks .card-tiles { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-}
 
-/* The original viewer/tick nodes project as compact rows only in the lab. */
-.pack-row-qty, .pack-row-finish, .pack-row-meta { display: none; }
-.pack-tiles .card-tile.is-ticked :is(.card-tile-name, .card-tile-meta, .pack-row-qty, .card-tile-text b) {
+/* Cards are big picture tiles at every width, so they can be read at arm's length: at least 220 px from a tablet
+   up, two across on a phone. The sizes in assembly.js's PACK_TILE_SIZES follow this. */
+.card-tiles.pack-tiles { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+@media (max-width: 599px) { .card-tiles.pack-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* "From a long deck title" wraps rather than being cut off. */
+.pack-tiles .card-tile-meta, .pack-tiles .card-tile-meta .meta-part { white-space: normal; overflow-wrap: anywhere; }
+/* A tick to hit with a thumb, on the picture's corner: the tile's words keep clear of it. */
+.pack-tiles .pack-tick { width: 56px; height: 56px; margin: 0; }
+.pack-tiles .pack-tick::before { width: 40px; height: 40px; margin: 8px; background-size: 26px; }
+.pack-tiles .card-tile-text { padding-bottom: 64px; }
+.pack-tiles .card-tile.is-ticked :is(.card-tile-name, .card-tile-meta, .card-tile-text b) {
   color: var(--ink-3); font-weight: var(--fw-medium);
 }
-.pack-tiles .card-tile.is-ticked .card-tile-img { opacity: .42; filter: none; }
+.pack-tiles .card-tile.is-ticked .card-tile-img { opacity: .5; filter: none; }
 .pack-tiles .card-tile.is-ticked .card-tile-pic:has(> .card-tile-img) > .card-tile-text { visibility: hidden; }
 .pack-tiles .card-tile.is-ticked .card-tile-pic:has(> .card-tile-img)::before {
   content: ""; position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  width: 40px; height: 40px; border-radius: 50%; pointer-events: none;
-  background: var(--accent) var(--icon-tick-on-accent) center / 24px no-repeat;
-}
-@media (min-width: 1000px) {
-  .pack-step-n { width: 20px; height: 20px; }
-  .pack-decks .pack-tiles { grid-template-columns: minmax(0, 1fr); gap: 0; }
-  .pack-tiles > .card-tile {
-    display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: center; gap: 0;
-    min-height: 46px; box-sizing: border-box; border-bottom: 1px solid var(--border); border-radius: var(--r-sm);
-  }
-  .pack-tiles .card-tile-open {
-    display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; grid-template-rows: auto auto;
-    align-items: center; gap: 0 var(--s-2); min-height: 44px; padding: 2px var(--s-2) 2px 0;
-    box-sizing: border-box; border-radius: var(--r-sm);
-  }
-  .pack-tiles > .card-tile:has(> .card-tile-open:focus-visible) { outline: 2px solid var(--focus); outline-offset: -2px; }
-  .pack-tiles .card-tile-open:focus-visible .card-tile-pic { outline: none; }
-  .pack-tiles .card-tile-pic {
-    grid-column: 1; grid-row: 1 / 3; width: 28px; height: calc(28px * 680 / 488);
-    border: 1px solid var(--border); box-sizing: border-box; background: var(--track); border-radius: var(--r-sm); box-shadow: none;
-  }
-  .pack-tiles .card-tile.is-ticked .card-tile-pic { box-shadow: none; }
-  .pack-tiles .card-tile-text {
-    inset: 0 auto auto 0; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%);
-  }
-  .pack-tiles .card-tile-name {
-    grid-column: 2; grid-row: 1; display: block; -webkit-line-clamp: unset; -webkit-box-orient: initial;
-    max-height: none; padding: 0; font-size: var(--fs-row); overflow: visible; white-space: normal; overflow-wrap: anywhere;
-  }
-  .pack-tiles .card-tile-open:not(:has(> .card-tile-meta)) .card-tile-name { grid-row: 1 / 3; }
-  .pack-tiles .card-tile-meta {
-    grid-column: 2; grid-row: 2; padding: 0; font-size: var(--fs-meta); white-space: normal; overflow: visible;
-    overflow-wrap: anywhere;
-  }
-  .pack-tiles .card-tile-meta .meta-part { white-space: normal; overflow-wrap: anywhere; }
-  .pack-tiles .pack-row-finish, .pack-tiles .pack-row-meta { display: inline; }
-  .pack-tiles .card-tile-meta:not(.pack-row-meta) > .pack-row-finish::before { content: " · "; }
-  .pack-tiles .pack-row-qty {
-    display: block; grid-column: 3; grid-row: 1 / 3; min-width: 2ch; text-align: right;
-    font-family: var(--font-mono); font-size: var(--fs-row); font-variant-numeric: tabular-nums;
-  }
-  /* Keep the old quantity words accessible while the separate mono column is decorative. */
-  .pack-tiles .card-tile-qty {
-    top: auto; left: auto; width: 1px; min-width: 0; height: 1px; padding: 0; overflow: hidden;
-    clip-path: inset(50%); white-space: nowrap;
-  }
-  .pack-tiles .card-tile-chips { display: none; }
-  .pack-tiles .card-tile-state:has(> .pack-tick) {
-    position: static; grid-column: 2; grid-row: 1; width: 44px; height: 44px; aspect-ratio: auto;
-    align-items: center; justify-content: center; padding: 0; pointer-events: auto;
-  }
-  .pack-tiles .pack-tick { width: 44px; height: 44px; margin: 0; border-radius: var(--r-sm); }
-  .pack-tiles .pack-tick::before {
-    width: 18px; height: 18px; margin: 13px; border-radius: var(--r-sm); background-size: 12px;
-    box-shadow: 0 0 0 1.5px var(--border-strong);
-  }
-  .pack-tiles .pack-tick[aria-pressed="true"]::before { box-shadow: 0 0 0 1.5px var(--accent); }
-  .pack-tiles .card-tile.is-ticked .card-tile-img { opacity: 1; filter: none; }
-  .pack-tiles .card-tile.is-ticked .card-tile-pic:has(> .card-tile-img)::before { display: none; }
+  width: 72px; height: 72px; border-radius: 50%; pointer-events: none;
+  background: var(--accent) var(--icon-tick-on-accent) center / 44px no-repeat;
 }

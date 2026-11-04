@@ -25,6 +25,78 @@ function packViewerForget(view, expected = view.packingViewer) {
   entry.dialog?.removeEventListener("close", entry.capture, true);
   entry.dialog?.removeEventListener("close", entry.close);
   view.packingViewer = null;
+  view.viewerPanel = null;
+}
+
+/** The tile's own tick for a viewer entry, found afresh by its shared id: a re-render makes new tiles. */
+function packViewerTick(view, entry) {
+  return (view.ticks || []).find(t => t.tile && t.id === entry.tickId) || null;
+}
+
+/** A tile tick's own guards, so the big view shows when its press would do nothing. */
+function packViewerMay(view) {
+  return Boolean(assemblyActive(view) && packProgressOwner(view) && !view.saving && !view.previewing);
+}
+
+function packViewerNote(view, tick) {
+  const p = view.progress;
+  if (!tick) return "This card's task is no longer in the plan.";
+  if (view.saving) return "Saving the decks…";
+  if (view.previewing) return "Working out the plan…";
+  if (p?.error) return p.pending.size ? "These ticks haven't been saved. Close this view to retry."
+    : p.loaded ? "Shared ticks couldn't be checked." : "Shared ticks couldn't load, so this card may be ticked already.";
+  return p?.loaded ? "" : "Loading shared ticks…";
+}
+
+/** The big view's tick and printing for the card shown: they hold no state of their own. A press clicks the
+ * current tile's tick (the same id, guards and shared queue), and everything is drawn from the plan's ticks and
+ * picks here, which runs with every tick, poll, Clear, Undo, save and re-render (packProgress). */
+function packViewerPanel(view) {
+  const panel = { entry: null, source: null, printing: null };
+  panel.tick = el("button", { type: "button", class: "viewer-btn pack-viewer-tick", "aria-pressed": "false", onclick: () => {
+    const tick = view.viewerPanel === panel && panel.entry && packViewerMay(view) ? packViewerTick(view, panel.entry) : null;
+    tick?.node.click();
+  } });
+  panel.slot = el("div", { class: "pack-viewer-printing" });
+  panel.note = el("p", { class: "pack-viewer-note", role: "status", hidden: true });
+  panel.node = el("div", { class: "pack-viewer-controls" }, panel.tick, panel.slot, panel.note);
+  return panel;
+}
+
+function packViewerPrinting(view, panel, entry) {
+  const source = entry.printing ? packPrintingListed(view, entry.printing.deck.id, entry.printing.name) : null;
+  if (source !== panel.source) {
+    panel.source = source;
+    panel.printing = source ? packPrintingMake(view, source.deck, source.name, source.qty) : null;
+    clear(panel.slot);
+    if (panel.printing) panel.slot.append(panel.printing.node);
+  } else if (panel.printing) packPrintingDraw(view, panel.printing);
+  panel.slot.hidden = !panel.printing;
+}
+
+function packViewerSync(view) {
+  const panel = view.viewerPanel, entry = panel?.entry;
+  if (!entry) return;
+  const tick = packViewerTick(view, entry), may = packViewerMay(view), done = Boolean(tick?.done);
+  packViewerPrinting(view, panel, entry);
+  const select = panel.printing?.select, focus = document.activeElement;
+  if ((focus === panel.tick && !(tick && may)) || (focus === select && !may)) viewerDom?.close.focus({ preventScroll: true });
+  panel.tick.disabled = !tick || !may;
+  if (select) select.disabled = !may;
+  panel.tick.setAttribute("aria-pressed", String(done));
+  panel.tick.setAttribute("aria-label", tick?.node.getAttribute("aria-label") || `${entry.card.name}: done`);
+  panel.tick.textContent = !tick ? "Not in this plan" : `${done ? "Ticked" : "Tick off"}${tick.count > 1 ? ` ×${tick.count}` : ""}`;
+  const note = packViewerNote(view, tick);
+  if (panel.note.textContent !== note) panel.note.textContent = note;
+  panel.note.hidden = !note;
+}
+
+/** What one card's item shows while it's the card in the viewer. */
+function packViewerShow(view, panel, entry) {
+  panel.entry = entry.tickId ? entry : null;
+  if (!panel.entry) return [];
+  packViewerSync(view);
+  return [panel.node];
 }
 
 /** Fresh focus may land far down a wide plan; delayed work only reveals the still-owned focused node. */
@@ -100,7 +172,13 @@ function packOpenCard(view, trigger) {
   const entry = entries[index];
   const panel = view.switcher.panels.find(p => p.node.contains(trigger));
   if (!entry || !panel || panel.node.hidden || !packStepTargetShown(view, trigger)) return;
-  const reply = openCardViewer(entries.map(({card, caption}) => ({card, caption})), index, { trigger });
+  const ids = new Map((view.ticks || []).filter(t => t.tile).map(t => [t.tile, t.id]));
+  const printings = new Map((view.printingControls || []).map(c => [c.node.closest(".card-tile"), c]));
+  const viewerPanel = view.viewerPanel = packViewerPanel(view);
+  const reply = openCardViewer(entries.map(item => {
+    const shown = { ...item, tickId: ids.get(item.tile) || null, printing: printings.get(item.tile) || null };
+    return { card: item.card, caption: item.caption, status: () => packViewerShow(view, viewerPanel, shown) };
+  }), index, { trigger });
   packViewerWatch(view, entry, reply);
 }
 
@@ -110,7 +188,7 @@ function packRegisterCard(view, tile, card, caption) {
   trigger.setAttribute("aria-haspopup", "dialog");
   viewerItem(trigger, card, "packing", caption);
   view.packViewerEntries ||= [];
-  view.packViewerEntries.push({ data: view.data, trigger, card, caption });
+  view.packViewerEntries.push({ data: view.data, trigger, tile, card, caption });
 }
 
 function packSwitcherBeforeRender(view) {
@@ -119,6 +197,7 @@ function packSwitcherBeforeRender(view) {
   const panel = ctx.panels.find(p => p.node.contains(active));
   const nav = ctx.panels.find(p => p.button === active);
   view.packViewerEntries = [];
+  view.printingControls = [];
   return { nav: nav ? packParticipantKey(nav.deck) : null, panel: panel ? packParticipantKey(panel.deck) : null };
 }
 
