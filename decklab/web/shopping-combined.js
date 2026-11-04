@@ -1,10 +1,16 @@
-/* Shopping's "Build decks together" (E5-S28, first slice): choose two or more home decks, then see what
- * to buy so all of them can be built at once (GET /api/shopping/combined). Read-only: no queue writes.
- * The choice and its answer live on Shopping's view, so a local queue redraw keeps them; navigation
- * and reload start again. A late answer checks its original view, route and profile before drawing. */
+/* Shopping's "Build decks together" (E5-S28): choose two or more home decks, then see what to buy so all
+ * of them can be built at once (GET /api/shopping/combined), each card with its matching purchase queue rows
+ * (any purpose or state, from Shopping's current local queue). A home admin's Queue these… opens the reviewed
+ * queue sheet (deck-queue-missing.js's openQueueCombinedSheet): the shortfall less the copies already queued
+ * for any chosen deck, saved as one change with "for" naming the decks. After that save Shopping reloads with
+ * the same decks chosen (shopCombinedCarry). Otherwise the choice and its answer live on Shopping's view, so a
+ * local queue redraw keeps them; navigation and reload start again. A late answer checks its original view,
+ * route and profile before drawing. */
 "use strict";
 
 const SHOP_COMBINED_MIN = 2, SHOP_COMBINED_MAX = 12;
+/** The decks chosen when Queue these saved: the reloaded Shopping (same profile) chooses them again, once. */
+let shopCombinedCarry = null;
 
 /** The decks offered: Shopping's visible home decks, each with its own shortfall when it has one. */
 function shopCombinedChoices(view) {
@@ -14,8 +20,34 @@ function shopCombinedChoices(view) {
 }
 
 function shopCombinedState(view) {
-  if (!view.combined) view.combined = {chosen: [], result: null, error: null, busy: false};
+  if (!view.combined) {
+    view.combined = {chosen: [], result: null, error: null, busy: false};
+    const carry = shopCombinedCarry;
+    shopCombinedCarry = null;
+    if (carry && carry.profile === view.profile && carry.chosen.length >= SHOP_COMBINED_MIN) {
+      const offered = new Set(shopCombinedChoices(view).map(deck => deck.id));
+      const ids = carry.chosen.filter(id => offered.has(id));
+      if (ids.length >= SHOP_COMBINED_MIN) Promise.resolve().then(() => shopCombinedLoad(view, ids));
+    }
+  }
   return view.combined;
+}
+
+/** True when this viewer may queue the combined list: a home admin with the queue's revision. */
+function shopCombinedQueueOffered(view) {
+  return isAdminProfile() && mayDo("orders") && Boolean(view.data.queue_revision);
+}
+
+/** Queue these…: the reviewed sheet; a save reloads Shopping with the same decks chosen. */
+function shopCombinedQueue(view) {
+  const combined = shopCombinedState(view);
+  const result = combined.result;
+  if (!shopQueueActive(view) || view.busy || view.stale || !result || !result.ready) return null;
+  return openQueueCombinedSheet(result.decks || [], () => {
+    if (!shopQueueActive(view)) return;
+    shopCombinedCarry = {profile: view.profile, chosen: [...combined.chosen]};
+    route();
+  });
 }
 
 /** The section under Missing cards across decks; absent with fewer than two decks to choose from. */
@@ -30,7 +62,7 @@ function shopCombinedSection(view) {
   if (combined.busy) content.append(loadingBox("Working out what to buy…", {small: true}));
   else if (combined.error) content.append(loadFailed("What to buy for these decks", combined.error,
     () => shopCombinedLoad(view, combined.chosen)));
-  else if (combined.result) add(content, [shopCombinedResult(combined.result)]);
+  else if (combined.result) add(content, [shopCombinedResult(combined.result, view)]);
   return shopSection("shop-combined", "Build decks together", 0,
     "Choose decks to build at the same time: each free copy counts once, and cards on the way count as yours.", content);
 }
@@ -137,7 +169,7 @@ function shopCombinedDeckHref(deck) {
 }
 
 /** The chosen decks, the totals beside the single-deck sum, then one row per card still to buy. */
-function shopCombinedResult(result) {
+function shopCombinedResult(result, view) {
   const out = [];
   const decks = result.decks || [];
   out.push(el("p", {class: "shop-combined-decks"}, "For ", ...decks.flatMap((deck, i) => [
@@ -164,11 +196,16 @@ function shopCombinedResult(result) {
       ? `, ${extra} more than the decks miss one at a time (${totals.copies_alone}), because they need the same copies.`
       : "."),
     totals.on_the_way ? el("span", {class: "chips"}, status("info", `${totals.on_the_way} on the way counted`)) : null));
-  out.push(el("div", {class: "shop-missing-rows shop-combined-rows"}, result.rows.map(shopCombinedRow)));
+  if (view && shopCombinedQueueOffered(view)) out.push(el("div", {class: "actions shop-combined-queue-line"},
+    el("button", {type: "button", class: "btn shop-combined-queue shop-queue-write", text: "Queue these…",
+      disabled: view.busy || view.stale, onclick: () => shopCombinedQueue(view)})));
+  const queue = (view && view.data.to_buy) || [];
+  out.push(el("div", {class: "shop-missing-rows shop-combined-rows"}, result.rows.map(item => shopCombinedRow(item, queue))));
   return out;
 }
 
-function shopCombinedRow(item) {
+function shopCombinedRow(item, queue = []) {
+  const queued = shopMissingQueue(item, queue);
   const competing = item.missing - (item.missing_alone || 0);
   const row = cardRow(item.card || null, {name: item.name, qty: item.missing, aside: null,
     meta: `${plural(item.missing, "copy", "copies")} to buy · ${item.need} wanted, ${item.available} free`,
@@ -176,10 +213,10 @@ function shopCombinedRow(item) {
   const wants = el("ul", {class: "shop-missing-decks"}, (item.decks || []).map(deck => el("li", {},
     el("a", {href: shopCombinedDeckHref(deck), text: deck.title}),
     el("span", {class: "shop-missing-count", text: ` ×${deck.need}`}))));
-  const chips = [competing > 0 ? status("warn", `${competing} more because the decks share it`) : null,
+  const chips = [shopQueuedChip(queued), competing > 0 ? status("warn", `${competing} more because the decks share it`) : null,
     ...(item.on_the_way || []).map(way => status("info", `${way.copies} on the way (${way.source})`))].filter(Boolean);
   const held = (item.held_elsewhere || []).length ? el("small", {class: "shop-combined-held",
     text: "Held by " + item.held_elsewhere.map(h => `${h.title} ×${h.copies}`).join(", ")}) : null;
   return el("article", {class: "shop-missing-card shop-combined-card", "data-combined-card": item.name}, row, wants,
-    chips.length ? el("div", {class: "shop-missing-facts"}, chips) : null, held);
+    el("div", {class: "shop-missing-facts"}, chips), shopQueuedList(queued), held);
 }

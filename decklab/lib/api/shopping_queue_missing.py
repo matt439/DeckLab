@@ -3,7 +3,8 @@
 POST /api/shopping/queue/missing (review_missing) writes nothing: for one ordinary home deck it
 lists each card its Planned list is missing (pool.owned_vs_needed, on-the-way copies already
 counted), less the copies already queued for that deck in any state (a row whose source is the
-deck, under any of its ids, or whose "for" is its title), with the inventory revision it read.
+deck, under any of its ids, whose "for" is its title, or whose "for" is a decks-together label naming
+it: E5-S28's Queue these, shopping_queue_combined.py), with the inventory revision it read.
 POST /api/shopping/queue with action "add_many" (shopping_queue.save_queue_state, which checks
 the revision first) saves the reviewed cards as one audited watchlist.add_many change: any
 nonfoil printing, the chosen state (To buy or Long-term), the deck as source and title as "for".
@@ -34,6 +35,16 @@ STATES = ("ready", "long_term")
 MAX_CARDS = 500
 CHANGED = "The deck, the collection or the purchase queue changed since this review. Review the missing cards again."
 NOT_HOME = "Only a home deck's missing cards can be queued from here."
+SEPARATOR = " + "     # between the titles of a decks-together row's "for" (shopping_queue_combined.label)
+
+
+def names_title(value, title):
+    """True when a row's "for" is the deck's title or a decks-together label naming it."""
+    title = title.strip().casefold()
+    if not title or not value.strip():
+        return False
+    return value.strip().casefold() == title or any(
+        part.strip().casefold() == title for part in value.split(SEPARATOR))
 
 
 def _authorized(data):
@@ -71,7 +82,7 @@ def _queued_for(inv, deck_id, title):
         item = {key: row.text(key) for key in ("name", "set", "collector_number", "source", "for")}
         if is_token(item):
             continue
-        mine = bool(title) and item["for"].strip().casefold() == title.strip().casefold()
+        mine = bool(title) and names_title(item["for"], title)
         found = paths.classify(item["source"]) if item["source"] else None
         if not mine and found is not None and found[0] == "deck":
             space, kind, slug = found[1]

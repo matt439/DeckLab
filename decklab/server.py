@@ -117,6 +117,10 @@ inventory writes answer 503 with "reason": "database":
     GET  /api/shopping/combined?decks=a,b two or more home decks' missing cards built together, each free
                                          copy counted once (read-only, Shopping's readers only;
                                          lib/api/shopping_combined.py)
+    POST /api/shopping/queue/combined    body {"profile", "decks": [ID, ...]}: Queue these' review of
+                                         that shortfall less what's queued for the decks (nothing
+                                         written; a home admin's; POST /api/shopping/queue's
+                                         add_combined saves it, lib/api/shopping_queue_combined.py)
     GET  /api/receipt?order=<id>         a recorded delivery for the Receipts page, with the inventory's
                                          revision as "fingerprint" (lib/api/receipts.py; home's)
     POST /api/receipt/preview            body {"profile", "order", "fingerprint", "received_on",

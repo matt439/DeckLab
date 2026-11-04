@@ -135,7 +135,7 @@ def _status(key, answer):
 
 def dispatch(handler, route, query):
     from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, dice, edhrec, editor, history,
-                                 library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_undo)
+                                 library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_combined, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
     gets = {
@@ -218,6 +218,7 @@ def dispatch(handler, route, query):
         ("shopping", "check"): shopping.resolve_check,
         ("shopping", "queue"): shopping_queue.save_queue_state,
         ("shopping", "queue", "missing"): shopping_queue_missing.review_missing,     # a review: nothing is written
+        ("shopping", "queue", "combined"): shopping_queue_combined.review_combined,  # a review: nothing is written
         ("variant", "queue", "preview"): variant_queue.preview_queue,
         ("variant", "queue"): variant_queue.apply_queue,
         ("shopping", "order", "preview"): shopping_orders.preview_order,

@@ -61,7 +61,7 @@ Each epic has a journey in [journeys.md](journeys.md) and its stories in [storie
 | E2 | Build and edit a deck | New deck, the editor and the phone Quick edit, Planned and Play-now lists, owned vs needed, history; `deck pull/push/new/tables` | 18 | 2 | 0 | 1 |
 | E3 | Test a deck | Stats, Practice, Forge matchups (`#/matchups`, `#/matchup`), field rank, Test this change (`#/variant`), the simulations setting | 25 | 3 | 2 | 0 |
 | E4 | Get ready, play and learn | The Packing plan (`#/assembly`), tokens to grab, How to play, practice hands, the Game log (`#/play`) and sideboard plans | 19 | 1 | 1 | 2 |
-| E5 | Decide what to buy | Missing cards and estimated costs, the purchase queue on `#/shopping`, AU shop checks, buylists, `watchlist` and `order add --fulfils` | 22 | 4 | 1 | 2 |
+| E5 | Decide what to buy | Missing cards and estimated costs, the purchase queue on `#/shopping`, AU shop checks, buylists, `watchlist` and `order add --fulfils` | 23 | 3 | 1 | 2 |
 | E6 | Record orders and receive cards | `order add\|edit\|checks\|split\|cancel`, products, on the way, Receive delivery (`#/receipt`), follow-ups, keeping a product intact | 21 | 0 | 0 | 2 |
 | E7 | Keep the collection accurate | The Collection page (`#/collection`), imports and Add a precon, `collection merge`, Tokens (`#/tokens`), removals, stale tables, `db check` | 28 | 1 | 0 | 0 |
 | E8 | Sleeves, boxes and storage | Sleeves & boxes (`#/accessories`), Sleeves and Deck box lines, the Choose… picker, kit warnings, put-back steps, the storage box | 17 | 0 | 1 | 2 |
@@ -72,8 +72,8 @@ Each epic has a journey in [journeys.md](journeys.md) and its stories in [storie
 ## Headline counts
 
 - **10 personas:** two primary, three secondary (User5, the space members and the self-hoster), one supplementary, one non-human actor and three anti-personas.
-- **11 epics, 307 stories:** 254 built, 20 partial, 17 missing and 16 not wanted (recounted from the story headers on 2026-11-04, after the persona and story review added E11-S59 and E11-S60; the epic rows above are from the same count).
-- **Must and should stories:** Matt has 116 built and 6 partial (E5-S27, E5-S28, E9-S29, E11-S02, E11-S28, E11-S30), none missing; User1 has 33 built, 1 partial (E2-S22) and 1 missing (E5-S15, deferred); Claude Code has 25 built; User5 and the space members 4 built each; the Commander table 1 built. The self-hoster's stories are all could. (Recounted from the story headers on 2026-11-04.)
+- **11 epics, 307 stories:** 255 built, 19 partial, 17 missing and 16 not wanted (recounted from the story headers on 2026-11-04, after the persona and story review added E11-S59 and E11-S60 and E5-S28 was built; the epic rows above are from the same count).
+- **Must and should stories:** Matt has 117 built and 5 partial (E5-S27, E9-S29, E11-S02, E11-S28, E11-S30), none missing; User1 has 33 built, 1 partial (E2-S22) and 1 missing (E5-S15, deferred); Claude Code has 25 built; User5 and the space members 4 built each; the Commander table 1 built. The self-hoster's stories are all could. (Recounted from the story headers on 2026-11-04.)
 
 Deck Lab already does most of what Matt and User1 need. Private by default and guarded member departure are built and live since 2026-10-19. The visual redesign (E11-S30) stays first, followed by the expanded reserve of deck-building, collection, buying, play and self-hosting work reviewed on 2026-10-28. [TODO.md](../../TODO.md) owns their order and readiness; each story owns its first slice and later gates. The other must and should gaps are the physical-device follow-up (E2-S22), the signed-in off-page check (E11-S02) and User2's testing session (E11-S28), which need the people involved; and User1's purchase requests (E5-S15), which are deferred. Stand-in suggestions, combo detection, official-list change detection, the Forge upgrade check, the prebuilt Forge release and Linux support are already built.
 

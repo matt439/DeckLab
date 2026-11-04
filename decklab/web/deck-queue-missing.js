@@ -8,7 +8,11 @@
  * then asks for a new review. A card whose identical request is already queued raises that row, which keeps its
  * own state: the review names it (joins), the row says so, a note warns when it isn't the chosen state, and the
  * save sends it back so the server checks it still holds. Never offered to User1, members, products or pairings; the server checks anyway.
- * Token cards are never queued here. */
+ * Token cards are never queued here.
+ *
+ * Shopping's Build decks together (E5-S28) opens the same sheet for its chosen decks (openQueueCombinedSheet):
+ * POST /api/shopping/queue/combined reviews the decks' combined shortfall less the copies queued for any of them,
+ * and add_combined saves it with "for" naming the decks. */
 "use strict";
 
 const QUEUE_MISSING_STATES = [["ready", "To buy"], ["long_term", "Long-term"]];
@@ -37,7 +41,18 @@ function deckQueueMissing(screen) {
 
 function openQueueMissingSheet(summary) {
   const ctx = { id: summary.id, title: summary.title, state: "ready", answer: null, seq: 0 };
-  ctx.sheet = openSheet(`Queue missing cards: ${summary.title}`, { wide: true });
+  return queueMissingOpen(ctx, `Queue missing cards: ${summary.title}`);
+}
+
+/** Queue these (E5-S28): the sheet for decks built together; onSaved(saved) runs after a save. */
+function openQueueCombinedSheet(decks, onSaved) {
+  const ctx = { decks: decks.map((deck) => deck.id), title: decks.map((deck) => deck.title).join(" + "),
+    state: "ready", answer: null, seq: 0, onSaved };
+  return queueMissingOpen(ctx, `Queue these: ${ctx.title}`);
+}
+
+function queueMissingOpen(ctx, title) {
+  ctx.sheet = openSheet(title, { wide: true });
   ctx.sheet.dialog.classList.add("queue-missing-sheet");
   ctx.message = el("div", { role: "status", "aria-live": "polite" });
   ctx.area = el("div", { class: "queue-missing-area" });
@@ -52,7 +67,8 @@ async function loadQueueMissing(ctx) {
   clear(ctx.message).append(loadingBox("Counting the missing cards…"));
   sheetActions(ctx.sheet, [{ text: "Close", value: "close", onclick: () => ctx.sheet.close() }]);
   try {
-    const answer = await apiWrite("/api/shopping/queue/missing", { deck: ctx.id });
+    const answer = ctx.decks ? await apiWrite("/api/shopping/queue/combined", { decks: ctx.decks })
+      : await apiWrite("/api/shopping/queue/missing", { deck: ctx.id });
     if (seq !== ctx.seq || ctx.sheet.closed) return;
     ctx.answer = answer;
     clear(ctx.message);
@@ -66,7 +82,8 @@ async function loadQueueMissing(ctx) {
 
 function queueMissingRow(row) {
   const meta = [row.copies ? `${plural(row.copies, "copy", "copies")} to queue` : "Nothing to queue",
-    `${num(row.missing)} missing`, row.queued ? `${num(row.queued)} already queued for this deck` : null,
+    `${num(row.missing)} missing`, row.queued ? `${num(row.queued)} already queued for ${row.decks ? "these decks" : "this deck"}` : null,
+    row.decks && row.decks.length ? `for ${row.decks.join(", ")}` : null,
     row.copies && row.joins ? `added to the existing ${queueMissingJoins(row.joins)} row` : null].filter(Boolean).join(" · ");
   return el("li", { class: "queue-missing-row" },
     cardRow(row.card || null, { name: row.name, meta, viewerGroup: "deck-queue-missing", caption: row.name }));
@@ -82,7 +99,8 @@ function drawQueueMissing(ctx) {
   const done = a.rows.filter((r) => !r.copies);
   if (!adding.length) {
     add(clear(ctx.area), [
-      emptyBox(a.rows.length ? "Every missing card is already on the purchase queue for this deck." : "Nothing is missing from the Planned list."),
+      emptyBox(a.rows.length ? `Every missing card is already on the purchase queue for ${ctx.decks ? "these decks" : "this deck"}.`
+        : ctx.decks ? "Nothing to buy: these decks can all be built at the same time." : "Nothing is missing from the Planned list."),
       done.length ? el("ul", { class: "card-list" }, done.map(queueMissingRow)) : null]);
     return;
   }
@@ -90,8 +108,11 @@ function drawQueueMissing(ctx) {
     QUEUE_MISSING_STATES.map(([key, words]) => el("button", { type: "button", "aria-pressed": String(ctx.state === key), text: words,
       onclick: () => { if (ctx.state !== key) { ctx.state = key; drawQueueMissing(ctx); } } })));
   add(clear(ctx.area), [
-    el("p", { class: "sub", text: `The ${listName("target", true)}'s missing copies, less those already queued for this deck. ` +
-      "Each is any nonfoil printing, with this deck as its source." }),
+    el("p", { class: "sub", text: ctx.decks
+      ? `What to buy to build ${a.for} together, less the copies already queued for any of them. ` +
+        `Each is any nonfoil printing, for "${a.for}".`
+      : `The ${listName("target", true)}'s missing copies, less those already queued for this deck. ` +
+        "Each is any nonfoil printing, with this deck as its source." }),
     el("div", { class: "toolbar" }, el("span", { text: "Queue them as" }), choices),
     el("ul", { class: "card-list" }, adding.map(queueMissingRow)),
     done.length ? el("details", {}, el("summary", { text: `Already queued (${num(done.length)})` }),
@@ -100,7 +121,7 @@ function drawQueueMissing(ctx) {
   const others = adding.filter((r) => r.joins && r.joins !== ctx.state);
   if (others.length) {
     ctx.area.insertBefore(el("p", { class: "box box-warn queue-missing-joins",
-      text: `${plural(others.length, "card")} already ${others.length === 1 ? "has" : "have"} a row for this deck in another state, ` +
+      text: `${plural(others.length, "card")} already ${others.length === 1 ? "has" : "have"} a row for ${ctx.decks ? "these decks" : "this deck"} in another state, ` +
         `and ${others.length === 1 ? "its" : "their"} copies are added there, keeping that state (not ${words}): ` +
         others.map((r) => `${r.name} (${queueMissingJoins(r.joins)})`).join(", ") + "." }), ctx.area.querySelector(".card-list"));
   }
@@ -116,11 +137,13 @@ async function saveQueueMissing(ctx, button) {
   const cards = a.rows.filter((r) => r.copies > 0).map((r) => ({ name: r.name, copies: r.copies, joins: r.joins || null }));
   busy(button, "Queueing…");
   try {
-    const saved = await apiWrite("/api/shopping/queue", { action: "add_many", expect: a.revision, deck: a.deck.id,
-      state: ctx.state, cards });
+    const saved = ctx.decks
+      ? await apiWrite("/api/shopping/queue", { action: "add_combined", expect: a.revision, decks: ctx.decks, state: ctx.state, cards })
+      : await apiWrite("/api/shopping/queue", { action: "add_many", expect: a.revision, deck: a.deck.id, state: ctx.state, cards });
     if (ctx.sheet.closed) return;
     ctx.sheet.close("saved");
-    toast(`Queued ${plural(saved.copies, "copy", "copies")} of ${plural(saved.cards, "card")} for ${a.deck.title}.`);
+    toast(`Queued ${plural(saved.copies, "copy", "copies")} of ${plural(saved.cards, "card")} for ${ctx.decks ? saved.for : a.deck.title}.`);
+    if (ctx.onSaved) ctx.onSaved(saved);
   } catch (error) {
     if (!(error instanceof ApiError)) throw error;
     if (ctx.sheet.closed) return;
