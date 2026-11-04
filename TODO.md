@@ -70,7 +70,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E9-S11` | DEFERRED | could | L+pc | Four-player pod runs from the page (with `E9-S21` win shares and `E9-S22` why-not by Start); after `FG#2`. First `lib/forge/pods.py` from the prototype, fixtures only. |
-| `E9-S28` | OPEN | could | M | Commanders we could build: free legendary creatures ranked by the free pool's role coverage in their colours, EDHREC on demand; first slice, the ranked list without EDHREC. |
+| `E9-S28` | OPEN | could | M | Commanders we could build: free legendary creatures ranked by the free pool's role coverage in their colours, EDHREC on demand. First slice built 2026-11-04 (the ranked list without EDHREC); next, a candidate's free cards by role, New deck from it and See EDHREC ideas. |
 | `E9-S29` | OPEN | should | S | Tutor count and list on the Stats tab built (2026-11-02). Left: the Overview's sentence, What opponents will face and the printout; the official text on tutors (needs its source); a Checks warning where it sets a number. |
 
 ## Deck Lab: testing and Forge
