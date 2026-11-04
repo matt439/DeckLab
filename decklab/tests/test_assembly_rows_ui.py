@@ -112,8 +112,8 @@ class AssemblyRowsSourceTests(unittest.TestCase):
 
     def test_tiles_are_big_at_every_width_and_load_a_sharp_picture(self):
         css=(WEB/'assembly.css').read_text(encoding='utf-8')
-        self.assertIn('.card-tiles.pack-tiles { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }',css)
-        self.assertIn('@media (max-width: 599px) { .card-tiles.pack-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }',css)
+        self.assertIn('.card-tiles.pack-tiles, .card-tiles.pack-token-tiles { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }',css)
+        self.assertIn('@media (max-width: 599px) { .card-tiles.pack-tiles, .card-tiles.pack-token-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }',css)
         self.assertNotIn('pack-row-qty',css);self.assertNotIn('pack-row-finish',css);self.assertNotIn('28px * 680',css)
         self.assertNotIn('minmax(150px',css)
         source=(WEB/'assembly.js').read_text(encoding='utf-8')

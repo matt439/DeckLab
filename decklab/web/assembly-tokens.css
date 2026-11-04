@@ -5,6 +5,9 @@
   display: flex; align-items: flex-end; padding: var(--s-1); pointer-events: none;
 }
 .card-tile-state > .pack-tick-optional { pointer-events: auto; }
+/* No picture: the frame says the name once, the line under it the rest, and the tick needs an edge on the pale card. */
+.pack-token-tiles .card-tile.is-text .card-tile-text small, .pack-token-tiles .card-tile.is-text .card-tile-name { display: none; }
+.pack-token-tiles .card-tile.is-text .tile-tick:not([aria-pressed="true"])::before { box-shadow: 0 0 0 2px var(--border-strong); }
 .pack-token-group { display: grid; gap: var(--s-2); }
 .pack-token-group > h4 { margin: 0; }
 .assembly-token-list[open] > .pack-token-tiles { margin-top: var(--s-3); }

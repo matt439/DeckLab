@@ -257,7 +257,7 @@ function facePicture(card, face) {
 }
 
 /** One of the three slides: item's picture (the small one shows at once, the normal one over it when it
- * comes), or its words when it has no picture. Only the middle one (current) is read out. */
+ * comes), or its words when it has no picture (card.no_image: what to say then, for a card with no text to read). Only the middle one (current) is read out. */
 function fillSlide(slide, item, face, current) {
   clear(slide);
   if (current) slide.removeAttribute("aria-hidden");
@@ -267,7 +267,7 @@ function fillSlide(slide, item, face, current) {
   const url = facePicture(card, face);
   if (!url) {
     add(slide, [el("div", { class: "viewer-frame viewer-wordcard" }, cardTextParts(card, face, null)),
-      current ? el("p", { class: "viewer-status", role: "status", text: "No image is available. You can still read the card text." }) : null]);
+      current ? el("p", { class: "viewer-status", role: "status", text: card.no_image || "No image is available. You can still read the card text." }) : null]);
     return;
   }
   const f = face === 1 ? card.faces[1] : card.faces && card.faces.length ? card.faces[0] : card;

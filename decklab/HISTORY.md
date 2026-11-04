@@ -29,6 +29,10 @@ What each milestone and feature built, the decisions made along the way, and the
 - Tests: `test_commander_candidates.py` (`cards_for`'s lists and caps, and the new route in the fixture sandbox: categories by name, any-case names, the 400s and 404s with no holder named, a member's 403), `test_commander_candidates_ui.py` (the cards by role, New deck's address and who gets it, the EDHREC sheet's request) and `test_commander_start_ui.py` (the editor's commander start, a kept draft and an unknown name). Fixtures only: no migration, server restart or database writes.
 
 
+## Build decks on an iPad (2026-11-04; E4-S28)
+
+- Matt's report from building a deck on an iPad, all of it: the Build deck button on the head (below), card tiles at least 220 px wide at every width in place of the lab's rows, the tick and a printing drop-down in the big view and a drop-down on the tile, tokens as an optional, unnumbered step of picture tiles that nothing waits for, and token failures on the server left out of the plan rather than stopping it. A review on iPad-sized touch emulation then added: a printing's copies shared between the plan's decks (`packPrintingRoom`; two decks on one printing made Mark as built refuse every time), an "only printing" pick dropped when more are offered, option words starting with the code and number, the big view saying the task and deck where Text is shut, tokens ticked from their big view and drawn as big as the cards with the normal picture, a trial with no Build deck button, and the last "packing plan" words on the pages' links. The tokens' approximate note moved into the folded All your token cards. Tests: `test_assembly_big_view_ui.py`, `test_assembly_tokens_ui.py`, `test_deck_page_ui.py`. Not yet tried on the iPad.
+
 ## Build deck on the deck page's head (2026-11-04)
 
 - Matt, building a deck on an iPad, couldn't find the way to Build decks: it was only an item in the deck page's More. The head now has it beside Edit on every tab (`deck.js`'s `deckBuildLink`), under the same condition: a viewer who sees home's inventory, on a home deck. It links to `#/assembly?deck=<id>&version=<list shown>`, and the More item is gone.

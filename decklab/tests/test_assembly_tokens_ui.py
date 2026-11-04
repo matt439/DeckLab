@@ -2,7 +2,7 @@
 import unittest
 
 from decklab.tests import test_assembly_completion_ui as completion
-from decklab.tests.test_workspace_ui import NODE
+from decklab.tests.test_workspace_ui import NODE, WEB
 
 
 SETUP = """
@@ -66,16 +66,60 @@ class AssemblyTokensUiTests(unittest.TestCase):
           assert.equal(main.querySelector('.pack-tiles').querySelector('.card-tile-open').getAttribute('data-viewer'), 'packing');
         """)
 
+    def test_a_token_tile_offers_the_normal_picture_at_the_cards_size(self):
+        self.run_js("""
+          openPlan([tokened()]); await settle();
+          const img = tokenStep().querySelector('.card-tile-img');
+          assert.equal(img.getAttribute('srcset'), '/img/tfdn/1/small 146w, /img/tfdn/1/normal 488w');
+          assert.equal(img.getAttribute('sizes'), PACK_TILE_SIZES);
+        """)
+
+    def test_a_token_ticks_from_the_big_view_as_a_card_does(self):
+        self.run_js("""
+          const v = openPlan([tokened([zombie, noCard, spirit])]); await settle();
+          const opens = tokenStep().querySelectorAll('.card-tile-open');
+          opens[0].click(); viewerDom.dialog.open = true; viewerDom.dialog.setAttribute('open', '');
+          const panel = v.viewerPanel, tick = v.ticks.find(t => t.optional);
+          // Only the tokens: their own group, not the cards.
+          assert.equal(viewerState.items.length, 3);
+          assert.equal(panel.task.textContent, 'Elves: Grab Zombie / Zombie Knight ×3 (Zombie side only, can be sleeved) for Zombie');
+          assert.equal(panel.tick.textContent, 'Tick off'); assert(panel.slot.hidden);
+          panel.tick.click(); await settle();
+          assert(tick.done); assert.equal(tokenTicks()[0].getAttribute('aria-pressed'), 'true');
+          assert.equal(panel.tick.textContent, 'Ticked');
+          // Still optional: the big view's tick counts for nothing either.
+          assert(v.bar.progress.other.hidden); assert.equal(tick.tile, null);
+          // No card, so no tick, but its words are in sight.
+          goViewer(1);
+          assert(panel.tick.hidden); assert(panel.note.hidden); assert(!viewerDom.marks.hidden);
+          assert(panel.task.textContent.startsWith('Elves: No Ape token.'));
+          goViewer(2); assert(!panel.tick.hidden); assert.equal(panel.tick.textContent, 'Tick off');
+        """)
+
+    def test_a_token_with_no_picture_doesnt_talk_about_rules_text(self):
+        self.run_js("""
+          openPlan([tokened([coming, monarch])]); await settle();
+          const items = viewerGroup(tokenStep().querySelector('.card-tile-open')).items;
+          assert.equal(items[0].card.oracle_text, undefined);
+          assert.equal(items[1].card.type_line, 'Reminder');
+          tokenStep().querySelector('.card-tile-open').click();
+          const words = viewerDom.dialog.textContent;
+          assert(words.includes('No picture of this token.'), words);
+          assert(!words.includes('read the card text')); assert(!words.includes("Card text isn't available"));
+        """)
+
     def test_check_by_hand_and_all_your_token_cards_are_closed_and_pictures(self):
         self.run_js("""
           const rows = [{quantity:2, front:'Zombie', back:'', notes:'', key:'2', img:'/img/tfdn/1/small', back_img:null, example_art:false}];
-          openPlan([tokened([zombie], {copies:['Gandalf'], unlisted:['Elrond']})], {tokens:rows, token_problems:['line 4: bad']}); await settle();
+          openPlan([tokened([zombie], {copies:['Gandalf'], unlisted:['Elrond']})], {tokens:rows, token_problems:['line 4: bad'],
+            token_note:'Worked out from links, so it is approximate.'}); await settle();
           const fold = tokenStep().querySelector('.pack-fold');
           assert.equal(fold.querySelector('summary').textContent, 'Check by hand (2 cards)');
           assert(!fold.open);
           const panel = main.querySelector('.assembly-token-list');
           assert(!panel.open);
           assert.equal(panel.querySelector('summary').textContent, 'All your token cards (1)');
+          assert(panel.querySelector('p').textContent.includes('approximate'), 'folded away with the list, not lost');
           assert.equal(panel.querySelector('.card-tile-img').getAttribute('src'), '/img/tfdn/1/small');
           assert.equal(panel.querySelector('.card-tile-open').getAttribute('data-viewer'), 'pack-token-cards');
           assert.equal(panel.querySelector('ul'), null);
@@ -201,3 +245,12 @@ class AssemblyTokensUiTests(unittest.TestCase):
           assert.equal(tokenTicks().length, 0);
           checkCards(); await settle(); assert(packCanFinish(v));
         """)
+
+
+class AssemblyTokensSourceTests(unittest.TestCase):
+    def test_token_tiles_are_as_big_as_the_cards_and_a_blank_one_says_its_words_once(self):
+        grid = (WEB / 'assembly.css').read_text(encoding='utf-8')
+        self.assertIn('.card-tiles.pack-tiles, .card-tiles.pack-token-tiles { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px)', grid)
+        css = (WEB / 'assembly-tokens.css').read_text(encoding='utf-8')
+        self.assertIn('.is-text .card-tile-name { display: none; }', css)
+        self.assertIn('.is-text .tile-tick:not([aria-pressed="true"])::before { box-shadow: 0 0 0 2px var(--border-strong); }', css)

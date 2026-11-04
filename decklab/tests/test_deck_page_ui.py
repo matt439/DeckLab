@@ -589,6 +589,10 @@ class DeckPageUiTests(unittest.TestCase):
           // The list shown is the list built.
           page.version = 'owned';
           assert.equal(buttons(page).build.getAttribute('href'), '#/assembly?deck=casual%2Ftest&version=owned');
+          // A trial is a precon not owned, and Build decks doesn't offer it.
+          page = makePage(); page.summary = {...page.summary, status: 'idea', trial: {file: 'X_Y'}};
+          assert.equal(buttons(page).build, null);
+          assert(classes(buttons(page).edit).includes('btn-primary'));
           // An idea is the same.
           page = makePage(); page.summary = {...page.summary, status: 'idea'};
           assert.equal(buttons(page).build.textContent, 'Build deck');

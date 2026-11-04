@@ -36,7 +36,7 @@ class AssemblyBigViewUiTests(unittest.TestCase):
           const v=await openPlan(),panel=openBig(v),tick=tileTick(v,'pull|Alpha');
           assert(viewerDom.marks.contains(panel.tick));assert(!viewerDom.marks.hidden);
           assert.equal(panel.tick.textContent,'Tick off ×3');assert.equal(panel.tick.getAttribute('aria-pressed'),'false');
-          assert.equal(panel.tick.getAttribute('aria-label'),tick.node.getAttribute('aria-label'));
+          assert.equal(panel.tick.getAttribute('aria-label'),'Tick off ×3: 3 × Alpha','the visible words start its name');
           panel.tick.click();await settle();
           assert(tick.done);assert.equal(tick.node.getAttribute('aria-pressed'),'true');assert(tick.tile.classList.contains('is-ticked'));
           assert.equal(panel.tick.textContent,'Ticked ×3');assert.equal(panel.tick.getAttribute('aria-pressed'),'true');
@@ -132,8 +132,8 @@ class AssemblyBigViewUiTests(unittest.TestCase):
         self.run_js("""
           const v=await openPlan(),node=select(v),tile=tileTick(v,'pull|Alpha').tile,cards=v.results.querySelector('.pack-tick');
           assert.equal(node.tag,'select');assert(tile.contains(node));assert(!tile.querySelector('.card-tile-open').contains(node));
-          same(node.children.map(o=>o.textContent),['Which printing?','Foundations · FDN 1 (2 free)','M19 2 (5 free)',
-            'Horizons · MH1 3 foil (1 free)','Split between printings…']);
+          same(node.children.map(o=>o.textContent),['Which printing?','FDN 1 · Foundations (2 free)','M19 2 (5 free)',
+            'MH1 3 foil · Horizons (1 free)','Split between printings…']);
           assert.equal(node.value,'');same(alphaRows(v),[]);
           let draws=0;const real=renderAssemblyPlan;renderAssemblyPlan=(...a)=>{draws++;return real(...a);};
           node.focus();choose(node,'1');
@@ -142,6 +142,7 @@ class AssemblyBigViewUiTests(unittest.TestCase):
           assert(node.parentNode.querySelector('.pack-printing-note').hidden);
           choose(node,'0');assert.equal(node.value,'0');
           const note=node.parentNode.querySelector('.pack-printing-note');assert(!note.hidden);assert.equal(note.textContent,'1 not recorded');
+          assert.equal(node.getAttribute('aria-describedby'),note.getAttribute('id'));assert(note.getAttribute('id'));
           same(alphaRows(v).map(r=>r.quantity),[2]);
           choose(node,'');assert(note.hidden);same(alphaRows(v),[]);assert.equal(draws,0);
         """)
@@ -168,7 +169,7 @@ class AssemblyBigViewUiTests(unittest.TestCase):
           assert.equal(only.node.textContent,'CMM 9 ×1 · 1 not recorded');
           assert(packPrintingsBody(v,v.data)['casual/a'].some(r=>r.name==='Beta'&&r.set==='cmm'&&r.quantity===1));
           const full=bigData();full.decks[0].steps[1].storage=1;const w=await openPlan(full);
-          assert.equal(w.printingControls.find(c=>c.name==='Beta').node.textContent,'Masters · CMM 9 (only printing in storage)');
+          assert.equal(w.printingControls.find(c=>c.name==='Beta').node.textContent,'CMM 9 · Masters (only printing in storage)');
         """)
 
     def test_the_big_view_and_the_tile_share_one_printing_choice(self):
@@ -201,6 +202,61 @@ class AssemblyBigViewUiTests(unittest.TestCase):
           same(packPrintingsBody(v,v.data)['casual/a'].filter(r=>r.name==='Alpha').map(r=>r.quantity),[2]);
         """)
 
+    def test_two_decks_share_a_printings_free_copies_so_finishing_is_never_refused(self):
+        self.run_js("""
+          const two=()=>{const data=bigData(),b={...structuredClone(data.decks[0]),id:'casual/b',title:'B'};
+            const fdn=option('fdn','1',2,'Foundations'),m19=option('m19','2',2);
+            for(const deck of [data.decks[0],b]){deck.steps=[{name:'Alpha',need:2,keep:0,storage:2,transfers:[],waiting:0,missing:0}];deck.basics=[];
+              deck.printing_choices={Alpha:{options:[fdn,m19],only:null}};}
+            data.decks.push(b);data.completion.decks.push({id:'casual/b',version:'target'});return data;};
+          const v=await openPlan(two()),[a,b]=v.printingControls,body=()=>packPrintingsBody(v,v.data);
+          same(b.select.children.slice(1,3).map(o=>o.textContent),['FDN 1 · Foundations (2 free)','M19 2 (2 free)']);
+          choose(a.select,'0');
+          // The other deck's list follows at once, in place, and can't reach for the same copies.
+          same(b.select.children.slice(1,3).map(o=>o.textContent),['FDN 1 · Foundations (0 free)','M19 2 (2 free)']);
+          assert.equal(b.select.children[1].getAttribute('disabled'),'');
+          same(a.select.children.slice(1,3).map(o=>o.textContent),['FDN 1 · Foundations (2 free)','M19 2 (2 free)']);
+          choose(b.select,'0');assert.equal(b.select.value,'');assert.equal(body()['casual/b'],undefined);
+          choose(a.select,'');assert.equal(b.select.children[1].getAttribute('disabled'),null);
+          // Half each is fine, and the rest shows on both.
+          choose(a.select,'split');let sheet=openDialog();let inputs=[...sheet.querySelectorAll('input')];
+          inputs[0].value='1';inputs[1].value='1';button(sheet,'Done').click();await settle();
+          choose(b.select,'0');same(body()['casual/b'].map(r=>[r.set,r.quantity]),[['fdn',1]]);
+          assert.equal(b.select.parentNode.querySelector('.pack-printing-note').textContent,'1 not recorded');
+          choose(b.select,'split');sheet=openDialog();inputs=[...sheet.querySelectorAll('input')];
+          assert.equal(inputs[0].getAttribute('max'),'1');assert(sheet.textContent.includes('FDN 1 (1 free)'));
+          button(sheet,'Cancel').click();await settle();
+          // Picks already over (a plan the free copies fell under) trim on the next draw, so Refresh clears them.
+          v.boxPrintings['casual/a'].Alpha=[{...option('fdn','1',2),quantity:2}];
+          v.boxPrintings['casual/b'].Alpha=[{...option('fdn','1',2),quantity:2}];
+          renderAssemblyPlan(v,two());await settle();
+          const total=Object.values(packPrintingsBody(v,v.data)).flat().filter(r=>r.set==='fdn').reduce((n,r)=>n+r.quantity,0);
+          assert.equal(total,2);
+        """)
+
+    def test_an_only_printing_goes_when_another_is_offered_as_nobody_chose_it(self):
+        self.run_js("""
+          const v=await openPlan(),betaRows=()=>packPrintingsBody(v,v.data)['casual/a'].filter(r=>r.name==='Beta');
+          same(betaRows().map(r=>r.set),['cmm']);
+          const next=bigData();next.decks[0].printing_choices={...offers,Beta:{options:[option('cmm','9',1,'Masters'),option('m19','2',1)],only:null}};
+          choose(select(v),'1');renderAssemblyPlan(v,next);await settle();
+          assert.equal(select(v,'Beta').value,'');same(betaRows(),[]);
+          // One the person did choose stays.
+          assert.equal(select(v).value,'1');
+        """)
+
+    def test_the_big_view_says_what_a_tick_means_and_for_which_deck(self):
+        self.run_js("""
+          const data=bigData();data.decks[0].steps[0].transfers=[{from:'casual/b',from_title:'B',quantity:1}];
+          data.decks[0].standins={rows:[{for:'Gamma',qty:1,using:false}]};
+          const v=await openPlan(data),panel=openBig(v);
+          assert(viewerDom.marks.contains(panel.task));
+          assert.equal(panel.task.textContent,'Pull 3 from storage for Elves');
+          const words=v.packViewerEntries.map((_,i)=>{goViewer(i);return panel.task.textContent;});
+          assert(words.includes('Move 1 from B to Elves; change sleeves'));assert(words.includes('1 for Elves'));
+          assert(words.includes('Elves: Use or keep 1 spare cards to stand for Gamma'),'a caption without the deck gets it');
+        """)
+
     def test_nothing_about_printings_blocks_finishing(self):
         self.run_js("""
           const v=await openPlan();v.ticks.forEach(t=>t.node.click());await settle();
@@ -209,6 +265,13 @@ class AssemblyBigViewUiTests(unittest.TestCase):
 
 
 class AssemblyBigViewSourceTests(unittest.TestCase):
+    def test_the_task_line_only_shows_where_the_words_are_hidden_and_wide_controls_clear_them(self):
+        css = (WEB / 'assembly-overlap.css').read_text(encoding='utf-8')
+        self.assertIn('.viewer.show-text .pack-viewer-task { display: none; }', css)
+        wide = css.split('@media (min-width: 1000px) and (orientation: landscape), (min-width: 1200px) {')[1].split('\n}')[0]
+        self.assertIn('.pack-viewer-task { display: none; }', wide)
+        self.assertIn('width: min(560px, calc(var(--viewer-card-w) + 2 * 84px));', wide)
+
     def test_select_text_stops_ios_zooming_and_the_big_controls_are_large(self):
         css = (WEB / 'assembly-overlap.css').read_text(encoding='utf-8')
         self.assertRegex(css, r"\.pack-printing-select \{[^}]*font-size: max\(16px, 1rem\)")

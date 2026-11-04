@@ -30,7 +30,7 @@ function packViewerForget(view, expected = view.packingViewer) {
 
 /** The tile's own tick for a viewer entry, found afresh by its shared id: a re-render makes new tiles. */
 function packViewerTick(view, entry) {
-  return (view.ticks || []).find(t => t.tile && t.id === entry.tickId) || null;
+  return (view.ticks || []).find(t => t.pictured && t.id === entry.tickId) || null;
 }
 
 /** A tile tick's own guards, so the big view shows when its press would do nothing. */
@@ -53,13 +53,14 @@ function packViewerNote(view, tick) {
  * picks here, which runs with every tick, poll, Clear, Undo, save and re-render (packProgress). */
 function packViewerPanel(view) {
   const panel = { entry: null, source: null, printing: null };
+  panel.task = el("p", { class: "pack-viewer-task" });
   panel.tick = el("button", { type: "button", class: "viewer-btn pack-viewer-tick", "aria-pressed": "false", onclick: () => {
     const tick = view.viewerPanel === panel && panel.entry && packViewerMay(view) ? packViewerTick(view, panel.entry) : null;
     tick?.node.click();
   } });
   panel.slot = el("div", { class: "pack-viewer-printing" });
   panel.note = el("p", { class: "pack-viewer-note", role: "status", hidden: true });
-  panel.node = el("div", { class: "pack-viewer-controls" }, panel.tick, panel.slot, panel.note);
+  panel.node = el("div", { class: "pack-viewer-controls" }, panel.task, panel.tick, panel.slot, panel.note);
   return panel;
 }
 
@@ -78,23 +79,26 @@ function packViewerSync(view) {
   const panel = view.viewerPanel, entry = panel?.entry;
   if (!entry) return;
   const tick = packViewerTick(view, entry), may = packViewerMay(view), done = Boolean(tick?.done);
+  panel.task.textContent = entry.task;
+  panel.tick.hidden = !entry.tickId;
   packViewerPrinting(view, panel, entry);
   const select = panel.printing?.select, focus = document.activeElement;
   if ((focus === panel.tick && !(tick && may)) || (focus === select && !may)) viewerDom?.close.focus({ preventScroll: true });
   panel.tick.disabled = !tick || !may;
   if (select) select.disabled = !may;
   panel.tick.setAttribute("aria-pressed", String(done));
-  panel.tick.setAttribute("aria-label", tick?.node.getAttribute("aria-label") || `${entry.card.name}: done`);
-  panel.tick.textContent = !tick ? "Not in this plan" : `${done ? "Ticked" : "Tick off"}${tick.count > 1 ? ` ×${tick.count}` : ""}`;
-  const note = packViewerNote(view, tick);
+  const words = !tick ? "Not in this plan" : `${done ? "Ticked" : "Tick off"}${tick.count > 1 ? ` ×${tick.count}` : ""}`;
+  // The visible words start the name, so Voice Control's "tap Tick off" finds it.
+  panel.tick.setAttribute("aria-label", `${words}: ${(tick?.node.getAttribute("aria-label") || entry.card.name).replace(/: done$/, "")}`);
+  panel.tick.textContent = words;
+  const note = entry.tickId ? packViewerNote(view, tick) : "";
   if (panel.note.textContent !== note) panel.note.textContent = note;
   panel.note.hidden = !note;
 }
 
 /** What one card's item shows while it's the card in the viewer. */
 function packViewerShow(view, panel, entry) {
-  panel.entry = entry.tickId ? entry : null;
-  if (!panel.entry) return [];
+  panel.entry = entry;
   packViewerSync(view);
   return [panel.node];
 }
@@ -163,32 +167,41 @@ function packViewerWatch(view, item, reply) {
   dialog.addEventListener("close", entry.close);         // after its normal original-trigger focus
 }
 
-/** Assembly's explicit group includes hidden plan panels, preserving task order and duplicate cards. */
+/** What a tile asks of whom, for the big view: its caption, led by the deck when the caption doesn't name it. */
+function packViewerTask(view, item) {
+  const title = view.switcher.panels.find(p => p.node.contains(item.trigger))?.deck.title;
+  return title && !item.caption.includes(title) ? `${title}: ${item.caption}` : item.caption;
+}
+
+/** Assembly's explicit group (the cards, or the tokens) includes hidden plan panels, preserving task order and
+ * duplicate cards. */
 function packOpenCard(view, trigger) {
   if (!packSwitcherHere(view) || view.previewing || view.saving || view.reviewing || document.querySelector("dialog[open]")) return;
   if (view.packingViewer) return; // native close may have removed open before its close event settles
-  const entries = view.packViewerEntries.filter(entry => packViewerCurrent(view, entry));
+  const group = view.packViewerEntries.find(entry => entry.trigger === trigger)?.group;
+  const entries = view.packViewerEntries.filter(entry => entry.group === group && packViewerCurrent(view, entry));
   const index = entries.findIndex(entry => entry.trigger === trigger);
   const entry = entries[index];
   const panel = view.switcher.panels.find(p => p.node.contains(trigger));
   if (!entry || !panel || panel.node.hidden || !packStepTargetShown(view, trigger)) return;
-  const ids = new Map((view.ticks || []).filter(t => t.tile).map(t => [t.tile, t.id]));
+  const ids = new Map((view.ticks || []).filter(t => t.pictured).map(t => [t.pictured, t.id]));
   const printings = new Map((view.printingControls || []).map(c => [c.node.closest(".card-tile"), c]));
   const viewerPanel = view.viewerPanel = packViewerPanel(view);
   const reply = openCardViewer(entries.map(item => {
-    const shown = { ...item, tickId: ids.get(item.tile) || null, printing: printings.get(item.tile) || null };
+    const shown = { ...item, tickId: ids.get(item.tile) || null, printing: printings.get(item.tile) || null,
+      task: packViewerTask(view, item) };
     return { card: item.card, caption: item.caption, status: () => packViewerShow(view, viewerPanel, shown) };
   }), index, { trigger });
   packViewerWatch(view, entry, reply);
 }
 
-function packRegisterCard(view, tile, card, caption) {
+function packRegisterCard(view, tile, card, caption, group = "packing") {
   const trigger = tile.querySelector(".card-tile-open");
   if (!card || !trigger) return;
   trigger.setAttribute("aria-haspopup", "dialog");
-  viewerItem(trigger, card, "packing", caption);
+  viewerItem(trigger, card, group, caption);
   view.packViewerEntries ||= [];
-  view.packViewerEntries.push({ data: view.data, trigger, tile, card, caption });
+  view.packViewerEntries.push({ data: view.data, trigger, tile, card, caption, group });
 }
 
 function packSwitcherBeforeRender(view) {

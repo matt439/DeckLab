@@ -73,37 +73,42 @@ function assemblyTokenItems(tokens, rows = []) {
   return (tokens.needs || []).map(need => assemblyTokenItem(need, faces, identity));
 }
 
-/** A token as a tile that opens in the viewer over group, with its long words as the caption. */
-function assemblyViewerTile(token, example, group, caption, opts) {
-  const card = tokViewerCard(token, null, example);
-  const tile = tokenTile(token, { ...opts, onclick: event => openCard(card, event.currentTarget) });
+/** A token as a tile that opens in the viewer over group, with its long words as the caption. A token has no rules
+ * text to miss, so the viewer doesn't say any is unavailable. type: the viewer's type line; view: a deck's plan, whose
+ * big view (packOpenCard) shows its task and tick as a card's. */
+function assemblyViewerTile(token, example, group, caption, opts, { type = null, view = null } = {}) {
+  const card = { ...tokViewerCard(token, type, example), oracle_text: undefined, no_image: "No picture of this token." };
+  const tile = tokenTile(token, { sizes: PACK_TILE_SIZES, ...opts,
+    onclick: event => view ? packOpenCard(view, event.currentTarget) : openCard(card, event.currentTarget) });
   const open = tile.querySelector(".card-tile-open");
   open.setAttribute("aria-haspopup", "dialog");
-  viewerItem(open, card, group, caption);
+  if (view) packRegisterCard(view, tile, card, caption, group);
+  else viewerItem(open, card, group, caption);
   return tile;
 }
 
-function assemblyTokenTile(item) {
+function assemblyTokenTile(item, view) {
   const theirs = item.group === "opponent" ? "For your opponent: " : "";
   const tick = item.tick ? el("button", { type: "button", class: "tile-tick pack-tick-optional", "aria-pressed": "false",
     "aria-label": `${theirs}${item.name}: done`, "data-pack-tick": item.tick.key, "data-pack-count": 1,
     "data-pack-context": JSON.stringify(item.tick.context) }) : null;
   const tile = assemblyViewerTile(item.picture.token, item.picture.example, "pack-tokens", item.caption, {
     name: item.name, qty: item.qty, meta: item.short, state: tick,
-    label: `${theirs}${[item.name, item.short].filter(Boolean).join(", ")}` });
+    label: `${theirs}${[item.name, item.short].filter(Boolean).join(", ")}` },
+  { type: item.group === "reminder" ? "Reminder" : null, view });
   if (!item.tick) tile.classList.add("is-missing");
   return tile;
 }
 
 /** The Tokens step's content: one sentence, the tiles, and what to check by hand folded away; a short line
  * when they can't be worked out. tokens: the deck's deck_tokens result, or null when there's none. */
-function assemblyTokenTasks(tokens, rows = []) {
+function assemblyTokenTasks(tokens, rows = [], view = null) {
   if (!tokens) return null;
   if (tokens.unavailable || tokens.error) return [el("p", { class: "sub assembly-pending", text: tokens.unavailable || tokens.error })];
   const items = assemblyTokenItems(tokens, rows);
   const others = [...(tokens.copies || []), ...(tokens.unlisted || [])];
   const groups = PACK_TOKEN_GROUPS.map(([key, title]) => {
-    const tiles = items.filter(item => item.group === key).map(assemblyTokenTile);
+    const tiles = items.filter(item => item.group === key).map(item => assemblyTokenTile(item, view));
     if (!tiles.length) return null;
     const grid = el("div", { class: "card-tiles pack-token-tiles" }, tiles);
     return title ? el("div", { class: "pack-token-group" }, el("h4", { text: title }), grid) : grid;
@@ -143,11 +148,12 @@ function assemblyOwnedToken(item) {
     Boolean(item.example_art), "pack-token-cards", caption, { name: tokLabel(item), qty: item.quantity });
 }
 
-/** "All your token cards": folded, and pictures too. */
+/** "All your token cards": folded, and pictures too, with why the steps' tokens are approximate. */
 function assemblyTokenPanel(data) {
   const tokens = data.tokens || [];
   return el("details", { class: "panel pack-extra assembly-token-list" },
     el("summary", { text: `All your token cards (${tokens.length})` }),
+    data.token_note ? el("p", { class: "sub", text: data.token_note }) : null,
     tokens.length ? el("div", { class: "card-tiles pack-token-tiles" }, tokens.map(assemblyOwnedToken))
       : emptyBox("No token cards recorded yet.", el("a", { class: "btn", href: "#/tokens", text: "Add token cards" })));
 }

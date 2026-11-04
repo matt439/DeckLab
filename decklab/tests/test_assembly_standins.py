@@ -256,7 +256,7 @@ class StandInPlanContextTests(StandInFixtures):
         self.assertEqual(other["standins"]["rows"], [{"for": "Elvish Mystic", "using": "Aerie Mystics", "qty": 1}])
         before = self.receiver_text()
         self.assertApiError(409, lambda: self.choose(deck_id=self.receiver, **context),
-                            contains="only 0 physically owned copies free in this packing plan")
+                            contains="only 0 physically owned copies free in this plan")
         self.assertEqual(self.receiver_text(), before)
 
     def test_replacing_own_choice_does_not_subtract_its_existing_marker_twice(self):

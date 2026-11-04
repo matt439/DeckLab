@@ -461,7 +461,7 @@ function packDeck(view, deck) {
     caption: `Take ${r.quantity} out of ${deck.title}`, id: `return|${r.name}` }));
   const kept = steps.filter(s => s.keep);
   const waiting = steps.filter(s => s.waiting || s.missing);
-  const tokenParts = assemblyTokenTasks(deck.tokens, view.data.tokens);
+  const tokenParts = assemblyTokenTasks(deck.tokens, view.data.tokens, view);
   let n = 0;
   const step = (kind, title, ...content) => {
     const node = packStep(n + 1, title, ...content);

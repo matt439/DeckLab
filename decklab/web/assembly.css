@@ -157,8 +157,8 @@
 
 /* Cards are big picture tiles at every width, so they can be read at arm's length: at least 220 px from a tablet
    up, two across on a phone. The sizes in assembly.js's PACK_TILE_SIZES follow this. */
-.card-tiles.pack-tiles { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
-@media (max-width: 599px) { .card-tiles.pack-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.card-tiles.pack-tiles, .card-tiles.pack-token-tiles { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+@media (max-width: 599px) { .card-tiles.pack-tiles, .card-tiles.pack-token-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* "From a long deck title" wraps rather than being cut off. */
 .pack-tiles .card-tile-meta, .pack-tiles .card-tile-meta .meta-part { white-space: normal; overflow-wrap: anywhere; }
 /* A tick to hit with a thumb, on the picture's corner: the tile's words keep clear of it. */

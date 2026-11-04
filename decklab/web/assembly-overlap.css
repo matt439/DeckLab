@@ -43,14 +43,23 @@ p.pack-printing { color: var(--ink); }
 .pack-viewer-printing[hidden], .pack-viewer-note[hidden] { display: none; }
 .pack-viewer-printing .pack-printing, .pack-viewer-note { color: var(--on-scrim); }
 .pack-viewer-printing .pack-printing-select { min-height: 56px; background-color: var(--surface); color: var(--ink); }
-.pack-viewer-note { flex: 1 1 100%; margin: 0; font-size: var(--fs-sm); text-align: center; }
+.pack-viewer-note, .pack-viewer-task { flex: 1 1 100%; margin: 0; font-size: var(--fs-sm); text-align: center; }
+/* The task and its deck, in sight while the Text panel is shut: it's what a tick means. */
+.pack-viewer-task { color: var(--on-scrim); font-size: var(--fs-md); }
+.viewer.show-text .pack-viewer-task { display: none; }
+/* Wide: the words are always in the column on the right, and the controls stay within the card and its arrows,
+   short of that column. */
+@media (min-width: 1000px) and (orientation: landscape), (min-width: 1200px) {
+  .pack-viewer-task { display: none; }
+  .pack-viewer-controls { width: min(560px, calc(var(--viewer-card-w) + 2 * 84px)); }
+}
 .viewer:has(.pack-viewer-controls) .viewer-swipe-hint { display: none; }
 /* A phone on its side has no height to spare: the controls go in the column beside the card, for the use line. */
 @media (orientation: landscape) and (max-height: 500px) and (max-width: 999.98px) {
   dialog.viewer[open]:has(.pack-viewer-controls), dialog.viewer.show-text[open]:has(.pack-viewer-controls) {
     grid-template-areas: "prev stage head next" "prev stage text next" "prev stage count next";
   }
-  .viewer:has(.pack-viewer-controls) .viewer-use { display: none; }
+  .viewer:has(.pack-viewer-controls) .viewer-use, .pack-viewer-task { display: none; }
   .pack-viewer-controls { width: 100%; }
   .viewer-btn.pack-viewer-tick, .pack-viewer-printing .pack-printing-select { min-height: var(--tap); }
 }

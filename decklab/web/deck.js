@@ -301,7 +301,8 @@ function deckBuildHref(data) {
  * there). A product or pairing has no status of its own and stays a secondary beside Save as a new deck. */
 function deckBuildLink(data) {
   const s = data.summary;
-  if (!seesInventory(HOME_SPACE) || deckSpaceOf(s.id) !== HOME_SPACE) return null;
+  // A trial is a precon not owned: Build decks never offers it (AGENTS.md).
+  if (s.trial || !seesInventory(HOME_SPACE) || deckSpaceOf(s.id) !== HOME_SPACE) return null;
   const built = s.status === "built";
   return el("a", { class: `btn${built || s.read_only ? "" : " btn-primary"} deck-build`, href: deckBuildHref(data),
     text: built ? "Review build" : "Build deck" });

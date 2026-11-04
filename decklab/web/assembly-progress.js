@@ -44,7 +44,7 @@ function wirePackTicks(view) {
     const optional = classes.includes("pack-tick-optional");
     const tile = classes.includes("pack-tick") ? node.closest(".card-tile") : null;
     const pictured = tile || (optional ? node.closest(".card-tile") : null);
-    const tick = { id, node, tile, optional, count, done: false };
+    const tick = { id, node, tile, pictured, optional, count, done: false };
     tick.set = done => {
       tick.done = done;
       if (pictured) {

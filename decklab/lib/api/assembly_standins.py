@@ -84,7 +84,7 @@ def _plan_available(deck, version, rows, selected, fingerprint, profile):
         raise ApiError(409, CHANGED)
     matching = [item for item in plan["decks"] if item["id"] == deck.deck_id and item["version"] == version]
     if len(matching) != 1:
-        raise ApiError(400, "Select this deck and list version exactly once in the packing plan.")
+        raise ApiError(400, "Select this deck and list version exactly once in this plan.")
     target = matching[0]
     free = Counter({item["name"]: item["free"] for item in target["standins"]["candidates"]})
     for item in plan["decks"]:
@@ -100,7 +100,7 @@ def _plan_available(deck, version, rows, selected, fingerprint, profile):
     for name, qty in needed.items():
         available = max(0, free[name])
         if qty > available:
-            raise ApiError(409, f"{name} has only {available} physically owned copies free in this packing plan; "
+            raise ApiError(409, f"{name} has only {available} physically owned copies free in this plan; "
                                 f"choose another stand-in or Any spare card.")
     snapshot = inventory.current()
     return snapshot.revision, snapshot.decks_revision
