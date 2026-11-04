@@ -1,4 +1,4 @@
-"""Lab row projection retains original physical tasks, viewer entries and list-only finish intent."""
+"""Picture tiles at every width retain original physical tasks, viewer entries and list-only finish intent."""
 import unittest
 
 from decklab.tests import test_assembly_completion_ui as completion
@@ -31,16 +31,15 @@ class AssemblyRowsUiTests(unittest.TestCase):
           const v=openRows();await settle();same(v.ticks.map(t=>t.count),[3,2,1,4,1,2,1]);
           assert.equal(v.bar.progress.copies.textContent,'0 / 14');
           for(const tick of v.ticks){assert(tick.tile.contains(tick.node));assert.equal(tick.node.getAttribute('data-pack-count'),String(tick.count));
-            assert.equal(tick.tile.querySelector('.pack-row-qty').textContent,String(tick.count));
-            assert.equal(tick.tile.querySelector('.pack-row-qty').getAttribute('aria-hidden'),'true');
+            assert.equal(tick.tile.querySelector('.card-tile-qty')?.textContent??null,tick.count>1?'×'+tick.count:null);
             assert.equal((tick.node.events.get('click')||[]).length,1);}
           const moved=v.ticks.find(t=>t.node.getAttribute('data-pack-tick').startsWith('move|'));
           assert(moved.tile.querySelector('.card-tile-meta').textContent.includes('From '+donor));
-          assert(moved.tile.querySelector('.pack-row-finish').textContent.includes('List: 2 foil'));
+          assert(moved.tile.querySelector('.card-tile-chips').textContent.includes('List: 2 foil'));
           const returned=v.ticks.find(t=>t.node.getAttribute('data-pack-tick').startsWith('return|'));
-          assert(!returned.tile.querySelector('.pack-row-finish'));assert(!returned.tile.querySelector('.card-tile-chips'));
+          assert(!returned.tile.querySelector('.card-tile-chips'));
           const basics=v.ticks.find(t=>t.node.getAttribute('data-pack-tick').startsWith('basic|'));
-          assert.equal(basics.tile.querySelector('.pack-row-finish').textContent,'List: etched');
+          assert.equal(basics.tile.querySelector('.card-tile-chips').textContent,'Etched');
           assert.equal(v.ticks[0].tile.querySelector('.card-tile-qty').textContent,String.fromCodePoint(0xd7)+'3');
         """)
 
@@ -64,13 +63,13 @@ class AssemblyRowsUiTests(unittest.TestCase):
     def test_bulk_done_and_undo_keep_projection_nodes_scope_and_open_steps(self):
         self.run_js("""
           const v=openRows(true);await settle();const scope=v.progress.scope,ids=v.ticks.map(t=>t.id);
-          const quantities=v.ticks.map(t=>t.tile.querySelector('.pack-row-qty')),fold=v.switcher.panels[0].node.querySelector('.pack-fold');
+          const nodes=v.ticks.map(t=>t.node),fold=v.switcher.panels[0].node.querySelector('.pack-fold');
           fold.open=true;let undo;showToast=(text,opts)=>{undo=opts?.undo;};v.bulk[0].button.click();await settle();
           assert(v.ticks.slice(0,6).every(t=>t.done&&t.tile.classList.contains('is-ticked')));assert(!v.ticks[6].done);
           assert.equal(v.bar.progress.copies.textContent,'13 / 14');assert(fold.open);assert(!packCanFinish(v));
           v.switcher.panels[1].button.click();undo();await settle();assert(v.ticks.every(t=>!t.done));assert(fold.open);
           assert.equal(v.progress.scope,scope);same(v.ticks.map(t=>t.id),ids);
-          assert(v.ticks.every((t,i)=>t.tile.querySelector('.pack-row-qty')===quantities[i]));
+          assert(v.ticks.every((t,i)=>t.node===nodes[i]));
           assert(v.switcher.panels.every(p=>p.node.isConnected));
         """)
 
@@ -80,8 +79,7 @@ class AssemblyRowsUiTests(unittest.TestCase):
           assert.equal(JSON.stringify(data),before);const mixed=v.packViewerEntries[0];
           assert.equal(mixed.trigger.getAttribute('aria-label'),'Alpha. Pull 3 from storage for Elves. Deck list: 2 foil · 3 nonfoil');
           assert.equal(viewerCards.get(mixed.trigger).caption,mixed.caption);
-          const intent=mixed.trigger.querySelector('.pack-row-finish');assert.equal(intent.getAttribute('aria-hidden'),'true');
-          assert.equal(intent.getAttribute('title'),'Deck list: 2 foil · 3 nonfoil');
+          assert.equal(mixed.tile.querySelector('.card-tile-chips').textContent,'List: 2 foil · 3 nonfoil');
           const tick=v.ticks[0],original=tick.node;tick.node.focus();tick.node.click();await settle();
           assert(tick.node===original&&document.activeElement===original);assert(tick.done);assert.equal(tick.node.getAttribute('aria-pressed'),'true');
         """)
@@ -112,38 +110,27 @@ class AssemblyRowsSourceTests(unittest.TestCase):
         self.assertEqual(rule.strip(),'visibility: hidden;')
         self.assertNotIn('.card-tile-text { visibility: hidden;',css.replace(selector+' { visibility: hidden; }',''))
 
-    def test_lab_projection_binds_owner_row_thumbnail_badges_and_full_row_focus(self):
+    def test_tiles_are_big_at_every_width_and_load_a_sharp_picture(self):
         css=(WEB/'assembly.css').read_text(encoding='utf-8')
-        lab=css.rsplit('@media (min-width: 1000px)',1)[1]
-        self.assertIn('min-height: 46px',lab)
-        self.assertIn('grid-template-columns: 28px minmax(0, 1fr) auto',lab)
-        self.assertIn('width: 20px; height: 20px',lab)
-        self.assertIn('font-family: var(--font-mono)',lab)
-        self.assertIn('.card-tile:has(> .card-tile-open:focus-visible)',lab)
-        self.assertIn('white-space: normal; overflow: visible',lab)
-        self.assertIn('width: 28px; height: 28px',css)
-        self.assertIn('background: var(--surface-chip); color: var(--ink-2)',css)
+        self.assertIn('.card-tiles.pack-tiles, .card-tiles.pack-token-tiles { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }',css)
+        self.assertIn('@media (max-width: 599px) { .card-tiles.pack-tiles, .card-tiles.pack-token-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }',css)
+        self.assertNotIn('pack-row-qty',css);self.assertNotIn('pack-row-finish',css);self.assertNotIn('28px * 680',css)
+        self.assertNotIn('minmax(150px',css)
+        source=(WEB/'assembly.js').read_text(encoding='utf-8')
+        self.assertIn('const PACK_TILE_SIZES = "(max-width: 599px) 50vw, 300px"',source)
+        self.assertIn('sizes: PACK_TILE_SIZES',source)
+        self.assertIn('.pack-tiles .pack-tick { width: 56px; height: 56px;',css)
 
     def test_done_styles_are_scoped_readable_and_do_not_dim_controls_or_auto_fold(self):
         css=(WEB/'assembly.css').read_text(encoding='utf-8')
-        projection=css.split('/* The original viewer/tick nodes',1)[1]
-        casual,lab=projection.split('@media (min-width: 1000px)',1)
-        self.assertIn('.card-tile-img { opacity: .42; filter: none; }',casual)
-        self.assertIn('width: 40px; height: 40px',casual)
-        self.assertIn(':has(> .card-tile-img)::before',casual)
-        self.assertNotIn('@media',casual)
-        self.assertIn('.card-tile-img { opacity: 1; filter: none; }',lab)
+        done=css.split('/* Cards are big picture tiles',1)[1]
+        self.assertIn('.card-tile-img { opacity: .5; filter: none; }',done)
+        self.assertIn('width: 72px; height: 72px',done)
+        self.assertIn(':has(> .card-tile-img)::before',done)
         self.assertIn('color: var(--ink-3); font-weight: var(--fw-medium)',css)
         self.assertNotIn('text-decoration: line-through',css)
         self.assertNotIn('.card-tile.is-ticked { opacity',css)
-        self.assertIn('.pack-row-qty, .pack-row-finish, .pack-row-meta { display: none; }',css)
 
-    def test_lab_long_context_and_placeholder_override_shared_tile_constraints(self):
+    def test_long_context_wraps_on_a_tile(self):
         css=(WEB/'assembly.css').read_text(encoding='utf-8')
-        lab=css.rsplit('@media (min-width: 1000px)',1)[1]
-        self.assertIn('.card-tile-meta .meta-part { white-space: normal; overflow-wrap: anywhere; }',lab)
-        self.assertIn('display: block; -webkit-line-clamp: unset; -webkit-box-orient: initial',lab)
-        self.assertIn('background: var(--track)',lab)
-        placeholder=lab.split('.pack-tiles .card-tile-text {',1)[1].split('}',1)[0]
-        self.assertIn('clip-path: inset(50%)',placeholder)
-        self.assertNotIn('display: none',placeholder)
+        self.assertIn('.pack-tiles .card-tile-meta, .pack-tiles .card-tile-meta .meta-part { white-space: normal; overflow-wrap: anywhere; }',css)

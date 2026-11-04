@@ -181,17 +181,23 @@ class _TokenPacking:
             self.inv = None
 
     def fill(self, deck, sections):
-        if self.inv is None or decks.has_token_cards(deck):
+        """Fill the deck's line, if it can be: tokens are optional, so whatever goes wrong here
+        leaves the deck without one and never stops it being marked built."""
+        if self.inv is None:
             return
         try:
-            holds = tokens.reserve.holds(self.inv, spaces.HOME, extra=self.extra)
-            result = tokens.deck_tokens(sections, self.inv, self.inc,
-                                        tokens.reserve.held_elsewhere(holds, deck.deck_id))
+            self._fill(deck, sections)
         except RuntimeError:    # the card index is missing or being rebuilt
             return
         except Exception:
             common._log(f"The token cards of {deck.deck_id} couldn't be worked out:\n" + traceback.format_exc())
+
+    def _fill(self, deck, sections):
+        if decks.has_token_cards(deck):
             return
+        holds = tokens.reserve.holds(self.inv, spaces.HOME, extra=self.extra)
+        result = tokens.deck_tokens(sections, self.inv, self.inc,
+                                    tokens.reserve.held_elsewhere(holds, deck.deck_id))
         rows = []
         for need in result["needs"]:
             if need["state"] not in ("ready", "check"):

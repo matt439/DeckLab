@@ -1,5 +1,7 @@
 # P1 Decks chooser drawing
 
+Since this was drawn (2026-11-04, E4-S28): a home deck page's head links straight to a plan of that deck (**Build deck**, or **Review build** once built), and the plan's cards are tiles at every width. The chooser itself is as below.
+
 `packing-chooser.svg` draws the chooser boundary before implementation, against `f9aa281`. All names and the **17 eligible choices** are illustrative. No real records, availability, deck colours or shortfall figures are represented. The self-contained SVG uses P1 light tokens and local font fallbacks. The drawing was reviewed before implementation; this does not claim Matt approval or device acceptance.
 
 - **393x700:** shared full-width bottom sheet, max 90dvh, 14px top corners; 52px native check labels and 44px controls. The header and dismiss footer stay visible while the body scrolls through all eligible choices.

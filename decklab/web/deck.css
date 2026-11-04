@@ -13,8 +13,9 @@
 .deck-head .deck-format { color: var(--ink-2); margin-bottom: var(--s-3); }
 .version-pick { margin: var(--s-1) 0; }
 
-/* The title row holds Edit and More at every width: the title and its pips on the left, the buttons on the
-   right; the facts, the editor's sentence and a half's pairings go under it across the whole width. */
+/* The title row holds Edit, Build deck and More: the title and its pips on the left, the buttons on the right
+   (on a phone or narrow tablet Build deck takes them under the title); the facts, the editor's sentence and a half's pairings go
+   under it across the whole width. */
 .deck-page-head {
   display: grid; gap: var(--s-2) var(--s-3); grid-template-columns: minmax(0, 1fr) auto; align-items: start; padding: 0;
 }
@@ -38,6 +39,7 @@
 .deck-facts a { color: var(--link); }
 .deck-head-actions { margin: 0; flex-wrap: nowrap; justify-content: flex-end; align-items: center; }
 .deck-head-actions .deck-actions { display: flex; align-items: center; gap: var(--s-2); margin: 0; }
+.deck-build { flex: none; white-space: nowrap; }
 /* More's menu opens under it, lined up with its right edge (it sits at the page's right). */
 .deck-head-actions .menu { top: calc(100% + var(--s-1)); right: 0; }
 .deck-more-dots { display: none; }
@@ -54,6 +56,19 @@
   .deck-edit-which { display: none; }
   .deck-page-head:has(.deck-actions-wide) > .deck-title-row { grid-column: 1 / -1; }
   .deck-page-head:has(.deck-actions-wide) > .deck-head-actions { grid-column: 1 / -1; grid-row: auto; justify-content: flex-start; }
+}
+@media (max-width: 767px) {
+  /* Beside Build deck the title would be a narrow column: the buttons go under it on a row of their own, wrapping
+     if they must, with More at the row's end so its menu fits. */
+  .deck-page-head:has(.deck-build) > .deck-title-row { grid-column: 1 / -1; }
+  .deck-page-head:has(.deck-build) > .deck-head-actions {
+    grid-column: 1 / -1; grid-row: auto; justify-content: flex-start; flex-wrap: wrap;
+  }
+  .deck-page-head:has(.deck-build) > .deck-head-actions > .menu-wrap { margin-left: auto; }
+}
+@media (max-width: 1280px) {
+  /* Edit's list stays in its accessible name, so the title keeps its width beside three buttons. */
+  .deck-page-head:has(.deck-build) .deck-edit-which { display: none; }
 }
 @media (min-width: 1000px) {
   /* The full deck page promotes the library's art to a hero. The editor keeps its own head. */
@@ -86,11 +101,14 @@
   .deck-page-head > .deck-title-row { min-height: 148px;
     padding: calc(var(--tap) + 2 * var(--s-3)) var(--s-3) var(--s-3); }
   .deck-page-head .deck-title-row h1 { max-width: calc(100% - 240px); }
+  .deck-page-head:has(.deck-build) .deck-title-row h1 { max-width: calc(100% - 320px); }
   .deck-page-head > .deck-head-actions {
     grid-column: 1 / -1; grid-row: 3; position: relative; z-index: 2; align-self: end; justify-self: end;
     margin: var(--s-3); padding: 0;
   }
-  .deck-head-actions > .deck-actions { outline: 2px solid var(--on-scrim); outline-offset: 2px; border-radius: var(--r-pill); }
+  .deck-head-actions > .deck-actions, .deck-head-actions > .deck-build {
+    outline: 2px solid var(--on-scrim); outline-offset: 2px; border-radius: var(--r-pill);
+  }
   .deck-page-head > .deck-meta { padding-inline: var(--s-3); }
 }
 @media (forced-colors: active) {

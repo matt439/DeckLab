@@ -562,6 +562,74 @@ class DeckPageUiTests(unittest.TestCase):
           same(keyCardsPart(page, 3).querySelectorAll('.card-tile-name').map((n) => n.textContent), ['Elf', 'Bolt', 'Big']);
         """)
 
+    def test_head_links_to_build_decks_beside_edit(self):
+        self.run_js("""
+          state.may = null;
+          const buttons = (page) => { const head = deckHeader(page);
+            return {head, build: head.querySelector('.deck-build'), edit: head.querySelector('.deck-actions')?.querySelector('a'),
+              more: head.querySelectorAll('[role=menuitem]').map((i) => i.textContent)}; };
+          const classes = (node) => node.getAttribute('class').split(' ');
+          // Not built yet: the head's one primary, in the row with Edit, with the deck and list in its address.
+          open('#/deck?id=casual%2Ftest&v=target');
+          const headRow = main.querySelector('.deck-head-actions');
+          const link = headRow.querySelector('.deck-build');
+          assert.equal(link.textContent, 'Build deck');
+          assert.equal(link.getAttribute('href'), '#/assembly?deck=casual%2Ftest&version=target');
+          assert(classes(link).includes('btn-primary'));
+          assert.equal(main.querySelector('.deck-page-head').querySelectorAll('.btn-primary').length, 1);
+          assert(!classes(headRow.querySelector('.deck-actions').querySelector('a')).includes('btn-primary'));
+          same(headRow.children.map((n) => classes(n)[0]), ['deck-actions', 'btn', 'menu-wrap']);
+          // The head stays over every tab.
+          tab('stats').click();
+          assert.equal(main.querySelector('.deck-build'), link);
+          // It's left More, which keeps the rest.
+          let page = makePage();
+          let seen = buttons(page);
+          assert(!seen.more.includes('Build decks')); assert(seen.more.includes('Game log'));
+          // The list shown is the list built.
+          page.version = 'owned';
+          assert.equal(buttons(page).build.getAttribute('href'), '#/assembly?deck=casual%2Ftest&version=owned');
+          // A trial is a precon not owned, and Build decks doesn't offer it.
+          page = makePage(); page.summary = {...page.summary, status: 'idea', trial: {file: 'X_Y'}};
+          assert.equal(buttons(page).build, null);
+          assert(classes(buttons(page).edit).includes('btn-primary'));
+          // An idea is the same.
+          page = makePage(); page.summary = {...page.summary, status: 'idea'};
+          assert.equal(buttons(page).build.textContent, 'Build deck');
+          // Built: reviewing it isn't the next step, so Edit keeps the primary.
+          page = makePage(); page.summary = {...page.summary, status: 'built'};
+          seen = buttons(page);
+          assert.equal(seen.build.textContent, 'Review build');
+          assert(!classes(seen.build).includes('btn-primary'));
+          assert(classes(seen.edit).includes('btn-primary'));
+          // A product keeps Save as a new deck as its primary.
+          page = makePage(); page.summary = {...page.summary, id: 'product/box', status: null, read_only: true};
+          seen = buttons(page);
+          assert.equal(seen.build.textContent, 'Build deck');
+          assert(!classes(seen.build).includes('btn-primary'));
+          // Only for those who see home's inventory, and only on a home deck, as More's item was.
+          page = makePage(); state.may = {see_inventory: ['user2']};
+          assert.equal(buttons(page).build, null);
+          page.summary = {...page.summary, id: 'user2/casual/elves'};
+          assert.equal(buttons(page).build, null);
+          state.may = {see_inventory: ['home', 'user2']};
+          assert.equal(buttons(page).build, null);
+        """)
+
+    def test_head_buttons_fit_a_phone_and_the_lab(self):
+        css = (WEB / "deck.css").read_text(encoding="utf-8")
+        # Beside three buttons a title would be a narrow column: under 768 px they take a row under it, wrapping
+        # only if they must, and More stays at the row's end so its right-aligned menu fits.
+        narrow = css[css.index("@media (max-width: 767px)"):css.index("@media (max-width: 1280px)")]
+        self.assertIn(".deck-page-head:has(.deck-build) > .deck-title-row { grid-column: 1 / -1; }", narrow)
+        self.assertIn("flex-wrap: wrap;", narrow)
+        self.assertIn("> .menu-wrap { margin-left: auto; }", narrow)
+        self.assertIn(".deck-build { flex: none; white-space: nowrap; }", css)
+        # On an iPad on its side the buttons sit over the art: the title leaves them room, and Build deck has
+        # Edit's outline there.
+        self.assertIn(".deck-page-head:has(.deck-build) .deck-title-row h1 { max-width: calc(100% - 320px); }", css)
+        self.assertIn(".deck-head-actions > .deck-actions, .deck-head-actions > .deck-build {", css)
+
     def test_head_keeps_the_title_row_and_links_keep_the_tab(self):
         self.run_js("""
           // The editor's sentence beside a product's button goes under the facts, not into the button row.

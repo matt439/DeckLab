@@ -1,0 +1,14 @@
+/* Build decks' tokens (assembly-tokens.js): picture tiles at every width, with an optional tick at the picture's
+   bottom-left as the cards' have. A tile with no card uses .is-missing's dimmed picture. */
+.card-tile-state:has(> .pack-tick-optional) {
+  top: 0; right: 0; left: 0; aspect-ratio: 488 / 680;
+  display: flex; align-items: flex-end; padding: var(--s-1); pointer-events: none;
+}
+.card-tile-state > .pack-tick-optional { pointer-events: auto; }
+/* No picture: the frame says the name once, the line under it the rest, and the tick needs an edge on the pale card. */
+.pack-token-tiles .card-tile.is-text .card-tile-text small, .pack-token-tiles .card-tile.is-text .card-tile-name { display: none; }
+.pack-token-tiles .card-tile.is-text .tile-tick:not([aria-pressed="true"])::before { box-shadow: 0 0 0 2px var(--border-strong); }
+.pack-token-group { display: grid; gap: var(--s-2); }
+.pack-token-group > h4 { margin: 0; }
+.assembly-token-list[open] > .pack-token-tiles { margin-top: var(--s-3); }
+.pack-token-problems > summary { cursor: pointer; }

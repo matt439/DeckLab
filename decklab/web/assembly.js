@@ -6,8 +6,8 @@ the card viewer over the whole plan ("packing"). A sticky bar says how far the p
 31 cards"); the ticks are shared through the server (assembly-progress.js) and never reserve or change
 inventory. Each deck's sleeves and deck box (its "kit") use accessories.js's accessoryThumb() and, where none
 are recorded, its kitPicker(); decks chosen together that share one design of sleeves get a note (sleeve_notes),
-never a block. Each deck's tokens come from the server's deck_tokens (lib/tokens). Once the card tasks are
-checked, Mark as built saves the selected lists together; ticks alone never change the deck's status. */
+never a block. Each deck's tokens come from the server's deck_tokens (lib/tokens) and are always optional
+(assembly-tokens.js). Once the card tasks are checked, Mark as built saves the selected lists together; ticks alone never change the deck's status. */
 "use strict";
 
 const PACK_MAX = 12;                    // decks in one plan (lib/api/assembly.py MAX_DECKS)
@@ -293,12 +293,15 @@ function packIntactProductsPart(view, data) {
       packProductReviewLink(view, data, product))));
 }
 
-/** A tick in a list; physical context distinguishes kit or token variants with the same label. */
+/** A tick in a list; physical context distinguishes kit variants with the same label. */
 function assemblyTick(text, count = 1, context = null, key = text) {
   return el("li", {}, el("label", { class: "pack-row" },
     el("input", { type: "checkbox", "data-pack-tick": key, "data-pack-count": count,
       "data-pack-context": context ? JSON.stringify(context) : "" }), el("span", { text })));
 }
+
+// Tiles are at least 220 px from a tablet up (assembly.css), so a retina iPad takes the 488 px picture, not the small one.
+const PACK_TILE_SIZES = "(max-width: 599px) 50vw, 300px";
 
 /** A card to pull as a picture tile with a tick on its corner; id is its key for the saved ticks. */
 function packTile(view, name, { qty, meta, caption, id, finishes = [], overlap = null, printing = null }) {
@@ -314,18 +317,9 @@ function packTile(view, name, { qty, meta, caption, id, finishes = [], overlap =
   const tick = el("button", { type: "button", class: "tile-tick pack-tick", "aria-pressed": "false",
     "aria-label": `${qty > 1 ? `${qty} × ` : ""}${name}: done`, "data-pack-tick": id, "data-pack-count": qty,
     "data-pack-context": JSON.stringify(finishes.map(f => [f.finish, f.quantity]).sort()) });
-  const tile = cardTile(card, { qty, name: frontName(name), meta, finish, chips, state: tick,
+  const tile = cardTile(card, { qty, name: frontName(name), meta, finish, chips, state: tick, sizes: PACK_TILE_SIZES,
     onclick: card ? event => packOpenCard(view, event.currentTarget) : null,
     viewerGroup: "packing", caption: description, label: finishWords ? `${name}. ${description}` : card ? null : name });
-  const open = tile.querySelector(".card-tile-open");
-  open.append(el("span", { class: "pack-row-qty", "aria-hidden": "true", text: String(qty) }));
-  if (finishWords) {
-    const intent = el("span", { class: "pack-row-finish", "aria-hidden": "true", title: `Deck list: ${finishWords}`,
-      text: `List: ${finishWords}` });
-    const metaNode = open.querySelector(".card-tile-meta");
-    if (metaNode) metaNode.append(intent);
-    else open.append(el("span", { class: "card-tile-meta pack-row-meta", "aria-hidden": "true" }, intent));
-  }
   packRegisterCard(view, tile, card, description);
   const pill = packOverlapPill(view, name, overlap);
   if (pill) tile.append(pill);
@@ -430,14 +424,16 @@ function assemblyKit(deck, need, view = null) {
       ? el("div", { class: "box box-warn" }, el("ul", {}, kit.warnings.map((w) => el("li", { text: w })))) : null);
 }
 
-/** One step of a deck's plan: a numbered heading and its content; nothing when it has none. */
+/** One step of a deck's plan: a numbered heading (number null: an optional step, with none) and its
+ * content; nothing when it has none. */
 function packStep(number, title, ...content) {
   const parts = content.flat(Infinity).filter(Boolean);
   if (!parts.length) return null;
-  return el("details", { class: "pack-step" },
+  const optional = number === null;
+  return el("details", { class: optional ? "pack-step is-optional" : "pack-step" },
     el("summary", { class: "pack-step-summary" },
-      el("h3", {}, el("span", { class: "pack-step-n", "aria-hidden": "true", text: String(number) }),
-        el("span", { class: "pack-step-spoken sr-only", text: `Step ${number}. ` }), title),
+      el("h3", {}, el("span", { class: "pack-step-n", "aria-hidden": "true", text: optional ? "" : String(number) }),
+        el("span", { class: "pack-step-spoken sr-only", text: optional ? "Optional step. " : `Step ${number}. ` }), title),
       el("span", { class: "pack-step-chevron", "aria-hidden": "true" })),
     el("div", { class: "pack-step-body" }, parts));
 }
@@ -465,11 +461,17 @@ function packDeck(view, deck) {
     caption: `Take ${r.quantity} out of ${deck.title}`, id: `return|${r.name}` }));
   const kept = steps.filter(s => s.keep);
   const waiting = steps.filter(s => s.waiting || s.missing);
-  const tokenLines = assemblyTokenTasks(deck.tokens, view.data.tokens);
+  const tokenParts = assemblyTokenTasks(deck.tokens, view.data.tokens, view);
   let n = 0;
   const step = (kind, title, ...content) => {
     const node = packStep(n + 1, title, ...content);
     if (node) { packRegisterStep(view, deck, kind, n + 1, node); n += 1; }
+    return node;
+  };
+  // Tokens are never required: no number in the sequence, and nothing here counts towards finishing.
+  const tokenStep = () => {
+    const node = packStep(null, "Tokens (optional)", tokenParts);
+    if (node) packRegisterStep(view, deck, "tokens", null, node);
     return node;
   };
   const cardStep = (kind, title, rows, ...intro) => {
@@ -495,9 +497,9 @@ function packDeck(view, deck) {
     cardStep("move", "Move from other decks", moves, el("p", { class: "sub", text: "Change their sleeves as you move them." })),
     view.order !== "storage" ? cardStep("basic", "Basic lands", basics) : null,
     cardStep("standin", "Spare-card stand-ins", markers),
-    view.order !== "storage" ? step("tokens", "Tokens", tokenLines && tokenLines.length ? el("ul", { class: "pack-list" }, tokenLines) : null) : null,
+    view.order !== "storage" ? tokenStep() : null,
     cardStep("return", "Put back", returns, el("p", { class: "sub", text: "Take these out of the deck and put them back in storage, unsleeved." })),
-    view.order === "storage" ? step("tokens", "Tokens", tokenLines && tokenLines.length ? el("ul", { class: "pack-list" }, tokenLines) : null) : null,
+    view.order === "storage" ? tokenStep() : null,
     step("box", "Pack", box ? el("ul", { class: "pack-list" },
       assemblyTick(`Pack into ${assemblyKitName(box)}`, 1, [box.id || box.value], "box")) : null),
     keptNode,
@@ -557,18 +559,7 @@ function renderAssemblyPlan(view, data) {
       row.held_elsewhere.map((holder, index) => [index ? "; " : "", `${holder.quantity} in `,
         el("a", { href: deckHref(holder.id), text: holder.title })]))))));
   add(view.results, [packIntactProductsPart(view, data)]);
-  add(view.results, [warningsBox(data.token_problems || [], "Some token rows can't be read"),
-    assemblySharedTokens(data)]);
-  const tokens = data.tokens || [];
-  view.results.append(el("details", { class: "panel pack-extra assembly-token-list" },
-    el("summary", { text: `All your token cards (${tokens.length})` }),
-    data.token_note ? el("p", { class: "sub", text: data.token_note }) : null,
-    tokens.length ? el("ul", { class: "pack-plain" }, tokens.map(item => el("li", { text:
-      `${item.quantity} physical ${item.quantity === 1 ? "card" : "cards"}: ${item.front}${item.front_details ? ` (${item.front_details})` : ""}`
-      + `${item.back ? ` / ${item.back}${item.back_details ? ` (${item.back_details})` : ""}`
-        : /single-sided verified/i.test(item.notes || "") ? " / single-sided (verified)" : " / reverse not recorded"}`
-      + `${item.notes ? `. ${item.notes}` : ""}` })))
-      : emptyBox("No token cards recorded yet.", el("a", { class: "btn", href: "#/tokens", text: "Add token cards" }))));
+  add(view.results, [assemblyTokenProblems(data.token_problems), assemblySharedTokens(data), assemblyTokenPanel(data)]);
   view.results.append(el("p", { class: "sub", text: data.note }));
   view.bar = packBuildBar(view);
   view.planMain.append(view.bar.node);
@@ -614,7 +605,7 @@ function packFinishError(view) {
 function packCanFinish(view) {
   return Boolean(view.data?.completion?.can_mark_built && view.data.completion.decks.length
     && !view.previewing && !view.saving && !view.reviewing && !view.finishError
-    && view.progress?.loaded && !view.progress.pending.size && !view.progress.error
+    && view.progress?.loaded && !packUnsavedTicks(view) && !packProgressFailed(view)
     && (view.ticks || []).filter(t => t.tile).every(t => t.done));
 }
 
@@ -684,82 +675,14 @@ async function packMarkBuilt(view) {
   }
 }
 
-/** All participants contribute copies; optional kit/token steps keep their own unit. */
+/** All participants contribute copies; kit steps keep their own unit, and token ticks are in neither. */
 function packProgress(view) {
   packChooserSync(view);
+  packViewerSync(view);
   if (!view.bar) return;
   packBulkProgress(view);
   const ticks = view.ticks || [];
-  packUpdateBar(view, ticks, ticks.filter(t => t.tile), ticks.filter(t => !t.tile));
+  packUpdateBar(view, ticks.filter(t => !t.optional), ticks.filter(t => t.tile), ticks.filter(t => !t.tile && !t.optional));
   const clearButton = view.bar.node.querySelector(".pack-clear");
   if (clearButton) clearButton.disabled = Boolean(view.saving) || !ticks.some(t => t.done);
-}
-
-/** "Zombie / Zombie Knight ×8 (Zombie side only, can be sleeved)": a token card and the face this deck
- * uses, and with faces (tokFacesUsed of the deck's needs) whether it needs the other side too:
- * "(Zombie side; both sides used)". */
-function assemblyTokenCard(card, faces = null) {
-  const face = card.side === "back" ? card.back : card.front;
-  const sides = tokSides(card, faces);
-  const side = !card.back || !face ? ""
-    : sides === "both sides used" ? ` (${face} side; both sides used)` : sides ? ` (${sides})` : ` (${face} side)`;
-  return `${card.back ? `${card.front} / ${card.back}` : card.front} ×${card.quantity}${side}`;
-}
-
-/** A deck's token lines: a tick to grab the cards for each kind it makes (or a stand-in, said to the
- * opponent), and a line, never ticked, for a kind with no card or still on the way. Nothing is reserved: two
- * decks may want the same card (assemblySharedTokens). A kind the cards' text gives only to the opponent
- * (E7-S23, approximate) comes after the deck's own, each line starting "For your opponent: " (its tick's id
- * unchanged); one that may be either player's stays with the deck's own. tokens: the deck's deck_tokens
- * result, or null when it couldn't be worked out. */
-function assemblyTokenTasks(tokens, rows = []) {
-  if (!tokens) return null;
-  if (tokens.unavailable || tokens.error) return [el("li", { class: "assembly-pending", text: tokens.unavailable || tokens.error })];
-  const lines = [];
-  const identity = card => {
-    const row = rows?.[card.row] || card;
-    return [card.side, ...["front", "back", "set", "front_collector_number", "back_collector_number",
-      "finish", "quantity", "front_details", "back_details"].map(key => row[key] ?? "")];
-  };
-  const faces = tokFacesUsed(tokens.needs);
-  const all = tokens.needs || [];
-  for (const need of [...all.filter(n => n.side !== "opponent"), ...all.filter(n => n.side === "opponent")]) {
-    const cards = need.cards || [], standIns = need.stand_ins || [];
-    const theirs = need.side === "opponent" ? "For your opponent: " : "";
-    if ((need.state === "ready" || need.state === "check") && cards.length) {
-      lines.push(assemblyTick(`${theirs}Grab ${cards.map((card) => assemblyTokenCard(card, faces)).join(" or ")} for ${need.name}`
-        + (need.state === "check" ? " (details not recorded)" : ""), 1,
-        need.packing_key || cards.map(identity), `token|${need.key || need.name}`));
-    } else if (need.state === "differs" && standIns.length) {
-      const card = standIns[0];
-      lines.push(assemblyTick(`${theirs}Stand-in for ${need.name}: ${card.back ? `${card.front} / ${card.back}` : card.front} ×${card.quantity}`
-        + ` (${card.why && card.why.length ? `${card.why[0]}; ` : ""}${tokSides(card, faces) ? `${tokSides(card, faces)}; ` : ""}tell your opponent)`, 1,
-        need.packing_key || identity(card), `token|${need.key || need.name}`));
-    } else if (need.state === "incoming") {
-      lines.push(el("li", { class: "assembly-pending", text: `${theirs}No ${need.name} token yet: ${need.on_the_way || 0} on the way` }));
-    } else {
-      lines.push(el("li", { class: "assembly-pending", text: `${theirs}No ${need.name} token: use a stand-in (a spare token card or a die)` }));
-    }
-  }
-  const others = [...(tokens.copies || []), ...(tokens.unlisted || [])];
-  if (others.length) {
-    lines.push(el("li", { class: "assembly-pending",
-      text: `Check by hand: ${others.join(", ")} may make copies or tokens Scryfall doesn't link` }));
-  }
-  return lines;
-}
-
-/** "Shared tokens": the token cards two or more of these decks want (token_plan), hidden when there are
- * none. One card shows one face at a time; nothing is shared out or reserved. */
-function assemblySharedTokens(data) {
-  const plan = data.token_plan || [];
-  if (!plan.length) return null;
-  return el("section", { class: "panel pack-extra assembly-tokens" }, el("h2", { text: "Shared tokens" }),
-    data.token_plan_note ? el("p", { text: data.token_plan_note }) : null,
-    el("ul", { class: "pack-plain" }, plan.map((item) => el("li", {},
-      el("b", { text: `${item.back ? `${item.front} / ${item.back}` : item.front} ×${item.quantity}` }), ": ",
-      (item.wanted_by || []).map((w, i) => {
-        const face = w.side === "back" ? item.back : item.front;
-        return `${i ? "; " : ""}${w.token} for ${w.title}${item.back && face ? ` (${face} side)` : ""}`;
-      })))));
 }

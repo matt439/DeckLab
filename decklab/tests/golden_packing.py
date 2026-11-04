@@ -170,7 +170,7 @@ def _default_library_box_check(summary):
             and isinstance(summary.get("box_check"), dict) and summary["box_check"] == {"checked_on": None})
 
 
-OPTION_KEYS = {"set", "collector_number", "finish", "label", "free"}
+OPTION_KEYS = {"set", "set_name", "collector_number", "finish", "label", "free"}
 
 
 def _printing_choices(value):

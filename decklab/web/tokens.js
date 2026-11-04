@@ -807,11 +807,6 @@ function tokRibbonOnLoad(tile) {
   img.addEventListener("load", () => { ribbon.hidden = false; });
 }
 
-/** A token's picture at the viewer's size: the normal image of the same /img/ printing as its small one. */
-function tokNormal(url) {
-  return typeof url === "string" && url.startsWith("/img/") ? url.replace(/\/small$/, "/normal") : null;
-}
-
 /** The card the viewer shows for a token: the normal pictures (the small ones while they load) and, for
  * example art, "Example art · " before its name, which the viewer shows over the picture on a phone too,
  * so it is never taken for the card's own printing. */

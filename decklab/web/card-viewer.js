@@ -141,7 +141,7 @@ function buildViewer() {
     onclick: () => stepViewer(1) }, arrow("M9 5l7 7-7 7"));
   d.count = el("p", { class: "viewer-count" });
   // What the list's tile said about the card (deck.js: "Missing", "1 on the way"), always in sight under the
-  // counter, so a missing card doesn't look owned once it's big.
+  // counter, so a missing card doesn't look owned once it's big. Build decks puts its tick and printing here too.
   d.marks = el("div", { class: "viewer-marks" });
   d.hint = el("p", { class: "viewer-swipe-hint", text: "Swipe left or right" });
   // Which of the space's decks hold or want the card, and its free copies (viewerUsePart): a row of its own
@@ -206,9 +206,12 @@ function drawViewer() {
   [-1, 0, 1].forEach((at, k) => fillSlide(d.slides[k], s.items[s.index + at], at === 0 ? s.face : 0, at === 0));
   add(clear(d.text), [cardTextParts(card, s.face, item.caption || (s.caption ? s.caption(card, s.index) : null)),
     viewerRulingsPart(card)]);
+  // A control in the marks keeps the focus from card to card when it's still there, else Close takes it.
+  const held = d.marks.contains(document.activeElement) ? document.activeElement : null;
   const marks = typeof item.status === "function" ? item.status() || [] : [];
   add(clear(d.marks), marks);
   d.marks.hidden = !marks.length;
+  if (held) (held.isConnected ? held : d.close).focus({ preventScroll: true });
   viewerUsePart(d.use, card);
   d.text.scrollTop = 0;
   d.live.textContent = n > 1 ? `Card ${s.index + 1} of ${n}: ${card.name}` : "";
@@ -254,7 +257,7 @@ function facePicture(card, face) {
 }
 
 /** One of the three slides: item's picture (the small one shows at once, the normal one over it when it
- * comes), or its words when it has no picture. Only the middle one (current) is read out. */
+ * comes), or its words when it has no picture (card.no_image: what to say then, for a card with no text to read). Only the middle one (current) is read out. */
 function fillSlide(slide, item, face, current) {
   clear(slide);
   if (current) slide.removeAttribute("aria-hidden");
@@ -264,7 +267,7 @@ function fillSlide(slide, item, face, current) {
   const url = facePicture(card, face);
   if (!url) {
     add(slide, [el("div", { class: "viewer-frame viewer-wordcard" }, cardTextParts(card, face, null)),
-      current ? el("p", { class: "viewer-status", role: "status", text: "No image is available. You can still read the card text." }) : null]);
+      current ? el("p", { class: "viewer-status", role: "status", text: card.no_image || "No image is available. You can still read the card text." }) : null]);
     return;
   }
   const f = face === 1 ? card.faces[1] : card.faces && card.faces.length ? card.faces[0] : card;

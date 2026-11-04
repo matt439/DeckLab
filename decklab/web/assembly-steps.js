@@ -104,8 +104,8 @@ function packStepsProgress(view) {
     }
     step.done = done;
     step.node.classList.toggle("is-done", done);
-    step.badge.textContent = done ? "" : String(step.number);
-    step.spoken.textContent = `Step ${step.number}${done ? ", done" : ""}. `;
+    step.badge.textContent = done || step.number === null ? "" : String(step.number);
+    step.spoken.textContent = `${step.number === null ? "Optional step" : `Step ${step.number}`}${done ? ", done" : ""}. `;
     if (!ctx.wide && done && step.auto && step.manual === null && packStepsCanChange(view, step)
         && progress?.loaded && !progress.busy && !progress.error && !ticks.some(tick => progress.pending.has(tick.id))
         && !packStepProtected(view, step)) {

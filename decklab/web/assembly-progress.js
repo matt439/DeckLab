@@ -38,18 +38,23 @@ function wirePackTicks(view) {
     const task = node.getAttribute("data-pack-tick");
     const where = packTaskPlace(view, deck?.getAttribute("data-pack-deck") || "plan", task);
     const id = JSON.stringify([where, task, count, node.getAttribute("data-pack-context") || ""]);
-    const tile = (node.getAttribute("class") || "").split(" ").includes("pack-tick") ? node.closest(".card-tile") : null;
-    const tick = { id, node, tile, count, done: false };
+    // tile: a required card task. optional: a token's tick, which looks the same (pictured) but
+    // nothing that counts or waits for card tasks ever reads it as one.
+    const classes = (node.getAttribute("class") || "").split(" ");
+    const optional = classes.includes("pack-tick-optional");
+    const tile = classes.includes("pack-tick") ? node.closest(".card-tile") : null;
+    const pictured = tile || (optional ? node.closest(".card-tile") : null);
+    const tick = { id, node, tile, pictured, optional, count, done: false };
     tick.set = done => {
       tick.done = done;
-      if (tile) {
+      if (pictured) {
         node.setAttribute("aria-pressed", String(done));
-        tile.classList.toggle("is-ticked", done);
+        pictured.classList.toggle("is-ticked", done);
       } else node.checked = done;
     };
-    node.addEventListener(tile ? "click" : "change", () => {
+    node.addEventListener(pictured ? "click" : "change", () => {
       if (!assemblyActive(view) || !packProgressOwner(view) || view.saving || view.previewing) return;
-      packQueueTicks(view, [{ id, done: tile ? !tick.done : Boolean(node.checked) }]);
+      packQueueTicks(view, [{ id, done: pictured ? !tick.done : Boolean(node.checked) }]);
     });
     return tick;
   });

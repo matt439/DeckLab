@@ -1,6 +1,6 @@
 /* Printings in box (lib/decks/printings.py): which physical printing of a built deck's cards went in
  * its box. The deck page's Cards tab shows the record and its sheet (POST /api/deck/printings); Build
- * decks' pull tiles ask "Which printing?" and Finish building writes the choices. A record reserves
+ * decks' pull tiles and big view ask "Which printing?" and Finish building writes the choices. A record reserves
  * nothing: cards are still counted by name. */
 "use strict";
 
@@ -95,52 +95,158 @@ function openDeckPrintings(data) {
   return sheet;
 }
 
+/** The copies of a printing this deck may still pick: its free ones less what the plan's other decks have picked,
+ * since Finish building saves every deck at once and the server refuses more than the collection has. */
+function packPrintingRoom(view, deck, option) {
+  let room = option.free;
+  for (const other of view.data?.decks || []) {
+    if (other.id === deck.id) continue;
+    for (const pick of Object.values(view.boxPrintings?.[other.id] || {}).flat()) {
+      if (pick.set === option.set && pick.collector_number === option.collector_number
+        && pick.finish === option.finish) room -= pick.quantity;
+    }
+  }
+  return Math.max(0, room);
+}
+
 /** Build decks' chosen printings: view.boxPrintings[deck id][card name] = [{label, set, collector_number,
- * finish, quantity}]. Kept only while the plan's offers still include them. */
-function packPrintingPicks(view, deck, name) {
+ * finish, quantity}]. Kept only while the plan's offers still include them, and within what qty (the copies
+ * the plan pulls now) and each printing's room allow. An "only printing" pick nobody chose goes when it stops
+ * being the only one. */
+function packPrintingPicks(view, deck, name, qty) {
   const offered = deck.printing_choices?.[name];
   if (!offered) return null;
   view.boxPrintings = view.boxPrintings || {};
   const picks = view.boxPrintings[deck.id] = view.boxPrintings[deck.id] || {};
-  const known = (pick) => offered.options.some((o) => o.set === pick.set
+  const option = (pick) => offered.options.find((o) => o.set === pick.set
     && o.collector_number === pick.collector_number && o.finish === pick.finish);
-  if (picks[name] && !picks[name].every(known)) delete picks[name];
+  if (picks[name] && (!picks[name].every(option) || (!offered.only && picks[name].some((pick) => pick.only)))) delete picks[name];
+  if (picks[name]) {
+    let room = qty;
+    picks[name] = picks[name].map((pick) => {
+      const quantity = Math.min(pick.quantity, packPrintingRoom(view, deck, option(pick)), room);
+      room -= quantity;
+      return { ...pick, quantity };
+    }).filter((pick) => pick.quantity > 0);
+  }
   return { offered, picks };
 }
 
-/** The pull tile's "Which printing?" line: the choice (filled in when storage can hold only one printing),
- * or a button that opens the picker. */
-function packPrintingControl(view, deck, name, qty) {
-  const found = packPrintingPicks(view, deck, name);
+/** "FDN 227 foil · Foundations": a printing in words, its set's name when the server has it. The label goes first,
+ * as a closed select cuts the end off and the label is what tells two printings apart. */
+function packPrintingName(option) {
+  return option.set_name ? `${option.label} · ${option.set_name}` : option.label;
+}
+
+/** Draws one "Which printing?" control from the picks, in place. Options are only rebuilt when they've changed,
+ * as this runs on every poll under an open viewer and a rebuild would shut a picker in use. */
+function packPrintingDraw(view, control) {
+  const { deck, name, qty, select, note } = control;
+  const found = packPrintingPicks(view, deck, name, qty);
+  if (!found) return;
+  const { options } = found.offered, chosen = found.picks[name] || [];
+  const total = chosen.reduce((n, c) => n + c.quantity, 0);
+  const left = total && total < qty ? `${qty - total} not recorded` : "";
+  if (!select) {
+    control.node.textContent = !chosen.length ? "Not recorded" : left ? `${boxPrintingWords(chosen)} \u00b7 ${left}`
+      : `${packPrintingName(chosen[0])} (only printing in storage)`;
+    return;
+  }
+  const index = chosen.length === 1 ? options.findIndex((o) => o.set === chosen[0].set
+    && o.collector_number === chosen[0].collector_number && o.finish === chosen[0].finish) : -1;
+  const rooms = options.map((o) => packPrintingRoom(view, deck, o));
+  const whole = index >= 0 && chosen[0].quantity === Math.min(qty, rooms[index]);
+  control.wanted = !chosen.length ? "" : whole ? String(index) : "made";
+  const items = [["", "Which printing?"],
+    ...options.map((o, i) => [String(i), `${packPrintingName(o)} (${num(rooms[i])} free)`, !rooms[i]]),
+    control.wanted === "made" ? ["made", boxPrintingWords(chosen), true] : null,
+    qty > 1 && options.length > 1 ? ["split", "Split between printings\u2026"] : null].filter(Boolean);
+  const key = JSON.stringify(items);
+  if (control.items !== key) {
+    control.items = key;
+    clear(select).append(...items.map(([value, text, disabled]) => el("option", { value, text, disabled })));
+  }
+  if (select.value !== control.wanted) select.value = control.wanted;
+  select.classList.toggle("is-chosen", total > 0);
+  note.textContent = left;
+  note.hidden = !left;
+}
+
+let packPrintingNotes = 0;
+
+/** One card's "Which printing?": plain words when storage can hold only one printing (it's certain, so it's
+ * filled in), else a native select. {deck, name, qty, node, select, note}, or null when nothing's offered. */
+function packPrintingMake(view, deck, name, qty) {
+  const found = packPrintingPicks(view, deck, name, qty);
   if (!found) return null;
   const { offered, picks } = found;
-  if (!picks[name] && offered.only) {
-    picks[name] = [{ ...offered.only, quantity: Math.min(qty, offered.only.free), only: true }];
+  const control = { deck, name, qty, select: null, note: null, wanted: "", items: null };
+  if (offered.only) {
+    const quantity = Math.min(qty, packPrintingRoom(view, deck, offered.only));
+    picks[name] = quantity ? [{ ...offered.only, quantity, only: true }] : [];
+    control.node = el("p", { class: "pack-printing is-chosen" });
+  } else {
+    const noteId = `pack-printing-note-${++packPrintingNotes}`;
+    control.select = el("select", { class: "pack-printing-select", "aria-label": `${name}: which printing`,
+      "aria-describedby": noteId, onchange: () => packPrintingChosen(view, control) });
+    control.note = el("span", { id: noteId, class: "pack-printing-note", hidden: true });
+    control.node = el("div", { class: "pack-printing" }, control.select, control.note);
   }
-  const chosen = picks[name] || [];
-  const total = chosen.reduce((n, c) => n + c.quantity, 0);
-  const words = !chosen.length ? "Which printing?"
-    : chosen[0].only && total === qty ? `${chosen[0].label} (only printing in storage)`
-    : boxPrintingWords(chosen) + (total < qty ? ` \u00b7 ${qty - total} not recorded` : "");
-  return el("button", { type: "button", class: `btn btn-quiet pack-printing${chosen.length ? " is-chosen" : ""}`,
-    "aria-label": `${name}: ${chosen.length ? `printing ${words}` : "choose which printing"}`, text: words,
-    onclick: () => { if (assemblyActive(view) && !view.saving) openPackPrinting(view, deck, name, qty); } });
+  packPrintingDraw(view, control);
+  return control;
+}
+
+/** A pull tile's control, kept in the plan's list for the big view to find. */
+function packPrintingControl(view, deck, name, qty) {
+  const control = packPrintingMake(view, deck, name, qty);
+  if (!control) return null;
+  (view.printingControls ||= []).push(control);
+  return control.node;
+}
+
+/** The current plan's tile control of a card, or null. */
+function packPrintingListed(view, deckId, name) {
+  return (view.printingControls || []).find((c) => c.deck.id === deckId && c.name === name
+    && view.data?.decks.includes(c.deck)) || null;
+}
+
+/** A pick changed: every control of that card follows in place, other decks' too as their room changed, and the
+ * plan isn't drawn again (nothing else shows it), so the scroll and the focus stay put. */
+function packPrintingRefresh(view, name) {
+  for (const control of view.printingControls || []) {
+    if (control.name === name && view.data?.decks.includes(control.deck)) packPrintingDraw(view, control);
+  }
+  packViewerSync(view);
+}
+
+/** The select's answer. A printing takes all the copies pulled, up to its free ones; Split opens the sheet. */
+function packPrintingChosen(view, control) {
+  const { deck, name, qty, select } = control, value = select.value;
+  const found = assemblyActive(view) && !view.saving && view.data?.decks.includes(deck)
+    ? packPrintingPicks(view, deck, name, qty) : null;
+  if (!found || value === "split" || value === "made") select.value = control.wanted;
+  if (!found || value === "made") return;
+  if (value === "split") { openPackPrinting(view, deck, name, qty); return; }
+  const option = value === "" ? null : found.offered.options[Number(value)];
+  const quantity = option ? Math.min(qty, packPrintingRoom(view, deck, option)) : 0;
+  found.picks[name] = quantity ? [{ ...option, quantity }] : [];
+  packPrintingRefresh(view, name);
 }
 
 function openPackPrinting(view, deck, name, qty) {
-  const found = packPrintingPicks(view, deck, name);
+  const found = packPrintingPicks(view, deck, name, qty);
   if (!found) return null;
   const { offered, picks } = found;
   const ctx = openAssemblySheet(view, `Which printing of ${name}?`);
   const current = picks[name] || [];
   const inputs = offered.options.map((option, index) => {
     const id = `pack-printing-${ctx.sheet.heading.id}-${index}`;
-    const max = Math.min(qty, option.free);
+    const room = packPrintingRoom(view, deck, option), max = Math.min(qty, room);
     const was = current.find((c) => c.set === option.set && c.collector_number === option.collector_number
       && c.finish === option.finish);
     const input = el("input", { id, type: "number", inputmode: "numeric", min: 0, max, step: 1,
       value: String(was ? Math.min(was.quantity, max) : 0) });
-    return { option, input, max, node: el("li", {}, el("label", { for: id, text: `${option.label} (${num(option.free)} not in other boxes)` }), " ", input) };
+    return { option, input, max, node: el("li", {}, el("label", { for: id, text: `${option.label} (${num(room)} free)` }), " ", input) };
   });
   const error = el("p", { class: "form-error", role: "alert" });
   ctx.sheet.body.append(el("p", { text: `You're pulling ${plural(qty, "copy", "copies")} for ${deck.title}. `
@@ -159,7 +265,7 @@ function openPackPrinting(view, deck, name, qty) {
     if (total > qty) { error.textContent = `You're pulling ${qty}, not ${total}.`; inputs[0].input.focus(); return; }
     if (chosen.length) picks[name] = chosen; else picks[name] = [];
     ctx.sheet.close();
-    renderAssemblyPlan(view, view.data);
+    packPrintingRefresh(view, name);
   };
   sheetActions(ctx.sheet, [{ text: "Done", kind: "primary", onclick: keep }, { text: "Cancel", onclick: () => ctx.sheet.close() }]);
   return ctx;

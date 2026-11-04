@@ -38,9 +38,10 @@ def _choices(p):
 
 
 def annotate(answer, p):
-    """Add printing_choices to each deck of the plan: {name: {"options": [{set, collector_number,
-    finish, label, free}], "only": the one printing storage can hold, else None}} for the cards it
-    pulls from storage (not basic lands)."""
+    """Add printing_choices to each deck of the plan: {name: {"options": [{set, set_name,
+    collector_number, finish, label, free}], "only": the one printing storage can hold, else None}}
+    for the cards it pulls from storage (not basic lands). set_name is blank when the card data
+    doesn't know the printing."""
     try:
         choices = _choices(p)
     except Exception:           # the choice is optional: a plan without it still packs
@@ -54,8 +55,9 @@ def annotate(answer, p):
             found = sorted(choices.get(name, []))
             if not found:
                 continue
-            options = [{"set": key[0], "collector_number": key[1], "finish": key[2], "label": _label(key),
-                        "free": free} for key, free in found]
+            options = [{"set": key[0], "set_name": (cards.printing(key[0], key[1]) or {}).get("set_name") or "",
+                        "collector_number": key[1], "finish": key[2], "label": _label(key), "free": free}
+                       for key, free in found]
             only = options[0] if len(options) == 1 else None
             offered[step["name"]] = {"options": options, "only": only}
         item["printing_choices"] = offered

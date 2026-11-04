@@ -8,6 +8,7 @@ import traceback
 from decklab.lib import accessories, cards, decks, inventory, pool, spaces, tokens
 from . import common
 from .assembly_ticks import token_packing_keys
+from .assembly_tokens import row_pictures, with_pictures
 from .carddata import _require_cards
 from .common import ApiError, _keys, _parse_body, _public, _scrub
 from .library import _deck_sections
@@ -20,8 +21,8 @@ MAX_DECKS = 12
 TOKEN_UNAVAILABLE = "Token data is being rebuilt; refresh in a minute."
 TOKEN_FAILED = "Tokens couldn't be worked out; the server log has the details."
 TOKEN_NOTE = tokens.NOTE + " Packing ticks don't reserve or change inventory."
-TOKEN_PLAN_NOTE = ("Both decks can use these cards. One card shows one face at a time; "
-                   "at home keep shared tokens in one pile on the table.")
+TOKEN_PLAN_NOTE = "Keep these in one pile: one card shows one face at a time."
+TOKEN_SOURCE_FAILED = "The token cards couldn't be read."
 
 
 def _deck_tokens(deck_id, version, sections, inv, inc, held=None):
@@ -38,6 +39,50 @@ def _deck_tokens(deck_id, version, sections, inv, inc, held=None):
     except Exception:           # the page still shows; the log has the details
         common._log(f"The tokens of {deck_id} ({version}) couldn't be worked out:\n" + traceback.format_exc())
         return {"error": TOKEN_FAILED}
+
+
+def _token_sources():
+    """(owned token cards, pending token rows, failed). Tokens are always optional, so a read
+    that fails is logged and the plan carries on with no token cards: failed says to show every
+    deck's tokens as unavailable rather than as none owned."""
+    try:
+        inv = tokens.read()
+        incoming, _ = tokens.incoming()
+        return inv, incoming, False
+    except Exception:
+        common._log("The token cards couldn't be read for the plan:\n" + traceback.format_exc())
+        return tokens.Inventory(), [], True
+
+
+def _participant_tokens(deck_id, version, sections, sources, holds):
+    """A participant's "tokens": _deck_tokens with its packing keys and tile pictures. Whatever
+    goes wrong here leaves that deck's tokens {"error": ...}, never a plan that can't be built."""
+    inv, incoming, failed = sources
+    if failed:
+        return {"error": TOKEN_FAILED}
+    try:
+        found = _deck_tokens(deck_id, version, sections, inv, incoming,
+                             tokens.reserve.held_elsewhere(holds, deck_id))
+        return with_pictures(token_packing_keys(found, inv.rows), inv.rows)
+    except Exception:
+        common._log(f"The tokens of {deck_id} ({version}) couldn't be shown:\n" + traceback.format_exc())
+        return {"error": TOKEN_FAILED}
+
+
+def _token_summary(participants, sources):
+    """The plan's whole-plan token fields, which never stop it: on a failure the lists are empty
+    and token_problems says so in one line."""
+    inv, _, failed = sources
+    answer = {"token_plan": [], "token_plan_note": TOKEN_PLAN_NOTE, "tokens": [], "token_note": TOKEN_NOTE,
+              "token_problems": [TOKEN_SOURCE_FAILED] if failed else _scrub(inv.problems)}
+    try:
+        answer["token_plan"] = _token_plan(participants, inv)
+        answer["tokens"] = [{**row, "quantity": int(row["quantity"]), "key": str(line), **row_pictures(row)}
+                            for row, line in zip(inv.rows, inv.lines)]
+    except Exception:
+        common._log("The plan's token cards couldn't be listed:\n" + traceback.format_exc())
+        answer.update(token_plan=[], tokens=[], token_problems=[TOKEN_SOURCE_FAILED])
+    return answer
 
 
 def held_tokens(inv, space=spaces.HOME):
@@ -144,9 +189,12 @@ def assembly_view(deck=None, version="target"):
     (see _deck_tokens for when it's {"unavailable"} or {"error"}). The answer
     has "token_plan" (_token_plan: token cards two or more selected decks
     would grab) with "token_plan_note", "tokens" (every owned token card, its
-    quantity an int and "key" the line it starts on in tokens.csv) with
-    "token_note", and "token_problems" (tokens.csv rows that can't be read;
-    the plan still works without them).
+    quantity an int, "key" the line it starts on in tokens.csv and its
+    assembly_tokens.row_pictures fields) with "token_note", and "token_problems"
+    (tokens.csv rows that can't be read). Tokens are always optional: when they
+    can't be read the plan still works, with every deck's tokens {"error"}
+    (_token_sources). The card or stand-in a need's tile shows has its pictures,
+    and a need with no "image" an "example" (assembly_tokens.with_pictures).
 
     "cards" is {name: card JSON} for the cards the plan names (_plan_cards),
     for its pictures and the card viewer. Each deck's "finishes" maps exact
@@ -229,9 +277,8 @@ def _preview(selected, profile=False):
     pictured = {}               # a name as a list writes it -> its first line, for the plan's pictures
     selections, recipes = [], {}
     inv = usage = None
-    token_inv = tokens.read()
-    token_inc, _ = tokens.incoming()
-    token_holds = held_tokens(token_inv)
+    token_sources = _token_sources()
+    token_holds = held_tokens(token_sources[0])
     from . import guard
     owners = guard.accessory_readers()
     sees = owners is None or bool(owners)
@@ -294,9 +341,8 @@ def _preview(selected, profile=False):
                              "basic_returns": [{"name": name, "quantity": qty}
                                                for name, qty in sorted((current_basics - basics).items())],
                              "sleeves": sleeves, "kit": kit, "sleeves_need": kit["need"] if kit else None,
-                             "tokens": token_packing_keys(_deck_tokens(
-                                 summary["id"], choice["version"], sections, token_inv, token_inc,
-                                 tokens.reserve.held_elsewhere(token_holds, summary["id"])), token_inv.rows),
+                             "tokens": _participant_tokens(summary["id"], choice["version"], sections,
+                                                           token_sources, token_holds),
                              "need": need, "current": held,
                              "basics": [{"name": name, "quantity": qty}
                                         for name, qty in sorted((basics - current_basics).items())],
@@ -339,12 +385,7 @@ def _preview(selected, profile=False):
                  for row in section if row["name"] is not None}
         answer["box_check_cards"] = _plan_cards({"rows": [{"name": name} for name in sorted(names)]}, [], {})
     answer["sleeve_notes"] = _sleeve_notes(participants)
-    answer["token_plan"] = _token_plan(participants, token_inv)
-    answer["token_plan_note"] = TOKEN_PLAN_NOTE
-    answer["tokens"] = [{**row, "quantity": int(row["quantity"]), "key": str(line)}
-                        for row, line in zip(token_inv.rows, token_inv.lines)]
-    answer["token_note"] = TOKEN_NOTE
-    answer["token_problems"] = _scrub(token_inv.problems)
+    answer.update(_token_summary(participants, token_sources))
     from .assembly_locations import annotate as locate
     locate(answer, inventory.current())
     from .assembly_completion import decorate

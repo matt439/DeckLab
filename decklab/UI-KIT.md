@@ -71,6 +71,21 @@ focus, with exact return-panel ownership and listener disposal on route/person c
 Queued reveal only scrolls current focus. Unknown colour identity stays neutral;
 strict known identity uses the shared deck pieces, including known colourless.
 
+Build decks' cards are picture tiles at every width (at least 220px from a tablet
+up, two across on a phone). While the viewer is open over the plan, each item's
+`status()` shows one panel (`packViewerPanel`): the tile's task with its deck
+(`.pack-viewer-task`, only where the Text panel is shut), a large tick and the card's
+"Which printing?". It holds no state: a press clicks the current tile's tick found
+by its shared id, and `packProgress` redraws it after every tick, poll, Clear, Undo,
+save and re-render. A task gone from the plan disables it. The printing control
+(`packPrintingMake`) is a native select on the tile and in the panel, or plain words
+when storage holds one printing; a choice updates both, and the same card's controls
+in other decks, in place and never re-renders the plan. An option's words start with
+its code and number, as a closed select cuts the end off. Each deck is offered only
+`packPrintingRoom`: free copies less the plan's other decks' picks, as Finish building
+saves them together and the server refuses more than the collection has. Options are rebuilt only when they change, so a poll can't shut an open
+picker. Split between printings opens the sheet, over the viewer when asked from there.
+
 `assembly-steps.js` follows the finish helper; its CSS follows `assembly.css`.
 One native details/summary/body retains original tasks across toggle, polling and
 resize. Done derives from a nonempty exact subset of existing ticks. Only casual
@@ -82,8 +97,20 @@ return expand their exact step first. One owned click toggle handles keyboard
 activation, and queued native toggle events read current desired state. Resize
 reveals the same focused current control through the existing guarded helper.
 
+`assembly-tokens.js` follows the steps helper; its CSS follows `assembly-steps.css`.
+Tokens are always optional: one unnumbered step of token tiles, each a picture (both
+faces, example art dimmed for a token with no card), name and at most one short line.
+Tiles are as big as the cards' (`.pack-token-tiles`, `PACK_TILE_SIZES`) and `tokenTile`
+offers the normal picture. Longer words are the caption in the `pack-tokens` viewer
+group, opened through `packOpenCard`, so a token's big view has the panel too: its task,
+and the tick when it has one. A tile with no picture says its name once. Reminders and the
+opponent's sit under their own small headings. Ticks keep their saved ids and contexts
+but are class `pack-tick-optional`: `tick.optional`, never `tick.tile` (`tick.pictured`
+is either kind's tile). They look like card ticks and join Clear, yet never count in the bar, "All packed.", bulk ticks or
+finishing, and their own save or its failure doesn't hold the finish back.
+
 `assembly-finish.js` follows the switcher helper. A retained bar under the stable
-plan column counts global card copies and separate optional steps. The visual meter
+plan column counts global card copies and separate kit steps. The visual meter
 has a spoken equivalent; no card tasks means no meter/max/value or 0/0. The primary
 uses aria-disabled with one retained described reason and stays keyboard reachable.
 Blocked activation only focuses current guidance or reveals the original unchecked
@@ -567,7 +594,7 @@ Groups wired so far:
 | Tokens | the token cards (`tokens`), the Missing and On the way tiles (`tokens-missing`) |
 | Wishlist | the cards (`wishlist`), the search results (`wishlist-search`) |
 | Shopping | a delivery's strip and its "+N" sheet (one group per delivery), the purchase queue |
-| Build decks | every tile of the plan (`packing`) |
+| Build decks | every card tile of the plan (`packing`), the plan's token tiles (`pack-tokens`), all your token cards (`pack-token-cards`) |
 | Activity, History | one group per change (`activity-<id>`), per revision, and the revision sheet (`history-sheet`) |
 
 ```js

@@ -122,8 +122,8 @@ function deckAssemblySection(data) {
   if (!info) return null;
   return el("section", { class: "deck-section deck-assembly", "aria-label": "Physically assembled cards" },
     el("h2", { text: "In its box" }), el("p", { text: capitalise(assembledStateWords(info).replace(/^In the box: /, "")) + "." }),
-    info.changed ? el("p", { class: "box box-warn", text: "The box differs from the intended list. Check the packing plan before changing it." }) : null,
+    info.changed ? el("p", { class: "box box-warn", text: "The box differs from the intended list. Check Build decks before changing it." }) : null,
     remainingIntentPart(info.remaining),
     el("a", { class: "btn", href: `#/assembly?deck=${encodeURIComponent(data.summary.id)}&version=${info.intended_version || info.version}`,
-      text: "Review the packing plan" }));
+      text: "Review build" }));
 }

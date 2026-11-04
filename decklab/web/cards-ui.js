@@ -176,6 +176,11 @@ function cardRow(card, opts = {}) {
 
 // ------------------------------------------------------------- token tile
 
+/** A token's picture at the normal size: the same /img/ printing as its small one. */
+function tokNormal(url) {
+  return typeof url === "string" && url.startsWith("/img/") ? url.replace(/\/small$/, "/normal") : null;
+}
+
 /** A token or reminder card as a tile: token is {front, back?, img?, back_img?, qty?} (img and back_img
  * Deck Lab's /img/ addresses; anything else isn't loaded), opts as cardTile's (meta: "TM11 5 · 2/2 Ooze").
  * The back, when it has a picture, overlaps the front's corner. The viewer flips between the faces. */
@@ -183,9 +188,9 @@ function tokenTile(token, opts = {}) {
   const local = (url) => (typeof url === "string" && url.startsWith("/img/") ? url : null);
   const front = local(token.img), back = local(token.back_img);
   const name = token.back ? `${token.front} // ${token.back}` : token.front;
-  const card = { name, type_line: opts.meta || "Token", mana_cost: "", img: front, img_small: front,
-    oracle_text: null, faces: token.back ? [{ name: token.front, type_line: "Front", img: front, img_small: front },
-      { name: token.back, type_line: "Back", img: back, img_small: back }] : null };
+  const card = { name, type_line: opts.meta || "Token", mana_cost: "", img: tokNormal(front), img_small: front,
+    oracle_text: null, faces: token.back ? [{ name: token.front, type_line: "Front", img: tokNormal(front), img_small: front },
+      { name: token.back, type_line: "Back", img: tokNormal(back), img_small: back }] : null };
   const tile = cardTile(card, { name: opts.name || name, sizes: "(max-width: 599px) 33vw, 146px", ...opts });
   tile.classList.add("token-tile");
   if (back) {

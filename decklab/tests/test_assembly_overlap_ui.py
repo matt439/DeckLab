@@ -131,7 +131,7 @@ class AssemblyOverlapSourceTests(unittest.TestCase):
         for static in (facts,pill):
             self.assertNotIn('onclick',static);self.assertNotIn('addEventListener',static)
         self.assertIn('white-space: normal; overflow-wrap: anywhere',css)
-        self.assertIn('grid-column: 1 / -1',css);self.assertIn('scope: "row"',source);self.assertIn('All quantities are card copies',source)
+        self.assertIn('scope: "row"',source);self.assertIn('All quantities are card copies',source)
         self.assertIn('.pack-overlap-number { font-family: var(--font-mono); }',css)
         self.assertNotIn('.pack-overlap-facts { font-family: var(--font-mono)',css)
         full=css.split('.pack-overlap-full {',1)[1].split('}',1)[0]

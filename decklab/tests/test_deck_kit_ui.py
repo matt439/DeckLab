@@ -36,6 +36,7 @@ class DeckKitUiTests(unittest.TestCase):
           clear(main); drawDeck(page);
           const kit = panel('overview').querySelector('.deck-kit');
           assert(kit.textContent.includes('An idea has no sleeves or deck box: choose them once you start building it'));
+          assert(kit.textContent.includes('when you mark it built in Build decks.'));
           assert.equal(kit.querySelector('a').getAttribute('href'), '#/assembly?deck=casual%2Ftest&version=owned');
           assert.equal(kit.querySelectorAll('button').length, 0, 'the hint does not choose kit early');
           assert.equal(kit.querySelectorAll('.deck-kit-tile').length, 0);

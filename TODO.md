@@ -48,6 +48,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E2-S16` | OPEN | could | L | Kept-for-later drafts built, the Quick edit's and new decks' too (migrations 0018 and 0019 applied by 2026-10-30). Left: real-device checks. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
+| `E8-S25` | OPEN | should | M | A setting for what a space's storage is like; today "storage" just means Matt's four-row box. First, list every place that assumes it and propose the setting's shape to Matt. |
 
 ## Deck Lab: collection, orders and buying
 
@@ -100,6 +101,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S59` | DECISION | could | L | Wake-on-request built in code (2026-11-01): Matt sets up the NAS gate, the service token, the Worker's secrets and the PC's wake settings, then times a real wake. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
 | `E11-S55` | OPEN | could | M | An accessibility pass: contrast, names, focus and reduced motion over every page in both densities and themes. The phone audit of the library, deck page and Game log and its fixes are done (2026-11-04); next, the other pages and the lab density, then a real screen reader. |
+| `E11-S61` | OPEN | could | S | Investigate the More dropdowns and whether they're beneficial: list the top bar's and deck page's items with their visits, and recommend what stays, moves or goes. |
 | `E11-S57` | DEFERRED | could | L | A Linux install route (a script or container); after `E11-S50` (Windows first, Matt, 2026-10-31) and `E11-S49`. |
 
 ## Areas with no open rows

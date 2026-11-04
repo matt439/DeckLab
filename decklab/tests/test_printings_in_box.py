@@ -125,6 +125,7 @@ class PrintingsInBoxTests(PreparationCase):
         plan, body = self.request(("a", "target"))
         offered = plan["decks"][0]["printing_choices"]
         self.assertEqual([o["label"] for o in offered["Llanowar Elves"]["options"]], ["FDN 227", "M19 314"])
+        self.assertTrue(all(isinstance(o["set_name"], str) for o in offered["Llanowar Elves"]["options"]))
         self.assertIsNone(offered["Llanowar Elves"]["only"])
         self.assertEqual(offered["Elvish Mystic"]["only"]["label"], "CMM 648")
         body["printings"] = {"casual/a": [

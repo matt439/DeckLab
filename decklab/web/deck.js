@@ -2,7 +2,7 @@
 in WP7 of decklab/UI-REVIEW.md.
 
 The page answers "what is this deck, and can I build it?" first: a head (the title with its colour pips, a
-status pill, one line of facts, Edit and a More menu), then the availability banner (Ready to build, on the
+status pill, one line of facts, Edit, Build deck and a More menu), then the availability banner (Ready to build, on the
 way, or what's missing and roughly what it costs, with Show missing; the Planned list / Play-now list picker
 folds into it), then five tabs: Overview, Cards, Stats, Practice and Matchups. The tab is in the address
 (?tab=), changed in place without a new history entry, and each tab's parts are drawn the first time it
@@ -255,10 +255,10 @@ function openDeckTab(name, opts = {}) { selectDeckTab(name, { focus: false, ...o
 
 // ----------------------------------------------------------------- the head
 
-/** The head: the title with its colour pips, then Edit (or Try a change, or Save as a new deck) and More on
- * the same row (More is a compact "⋯" on a phone), a status pill and one line of facts. More holds the packing
- * plan, game log, history, copy, download, print and the library picture, which shows small beside the title.
- * The sentence the editor puts beside
+/** The head: the title with its colour pips, then Edit (or Try a change, or Save as a new deck), Build deck
+ * and More on the same row (on a phone they go under the title when Build deck is there, and More is a compact
+ * "⋯"), a status pill and one line of facts. More holds the game log, history, copy, download, print and the
+ * library picture, which shows small beside the title. The sentence the editor puts beside
  * a product's or someone else's button goes under the facts, so the title keeps its row. A Beginner Box half
  * links to its pairings. */
 function deckHeader(data) {
@@ -269,6 +269,9 @@ function deckHeader(data) {
   const edit = actions && /desktop-build-note/.test(actions.getAttribute("class") || "") ? null : actions;
   const said = [];
   if (edit) for (const words of edit.querySelectorAll(".sub")) { said.push(words.textContent); words.remove(); }
+  const build = deckBuildLink(data);
+  // One primary a view (components.css): while building is the next step, Edit steps back beside it.
+  if (edit && build?.matches(".btn-primary")) edit.querySelector(".btn-primary")?.setAttribute("class", "btn");
   const more = menuButton([el("span", { class: "deck-more-words", text: "More" }),
     el("span", { class: "deck-more-dots", "aria-hidden": "true", text: "⋯" })], deckMoreItems(data),
   { aria: "More for this deck" });
@@ -279,13 +282,30 @@ function deckHeader(data) {
     el("div", { class: "deck-title-row" },
       cover,
       el("h1", {}, s.title)),
-    el("div", { class: "actions deck-head-actions" }, edit, more),
+    el("div", { class: "actions deck-head-actions" }, edit, build, more),
     el("div", { class: "deck-meta" },
       colours ? colours.pips(22, { cls: "deck-head-pips" }) : null,
       deckPill(s), deckHeadMeta(data), deckChangedDate(s.edited),
       el("code", { class: "deck-header-id", text: s.id })),
     said.length ? el("p", { class: "sub deck-head-note", text: said.join(" ") }) : null,
     s.id.startsWith(BOX_PREFIX) ? pairingLinks(s.id) : null);
+}
+
+/** Build decks' address for the list shown. */
+function deckBuildHref(data) {
+  return `#/assembly?deck=${encodeURIComponent(data.summary.id)}&version=${data.version}`;
+}
+
+/** The head's way to Build decks, for those who see home's inventory, on a home deck. For a deck not built yet
+ * it's the next step, so the primary; a built deck's says Review build (its box check, repack and take-apart are
+ * there). A product or pairing has no status of its own and stays a secondary beside Save as a new deck. */
+function deckBuildLink(data) {
+  const s = data.summary;
+  // A trial is a precon not owned: Build decks never offers it (AGENTS.md).
+  if (s.trial || !seesInventory(HOME_SPACE) || deckSpaceOf(s.id) !== HOME_SPACE) return null;
+  const built = s.status === "built";
+  return el("a", { class: `btn${built || s.read_only ? "" : " btn-primary"} deck-build`, href: deckBuildHref(data),
+    text: built ? "Review build" : "Build deck" });
 }
 
 /** The status pill: Idea, Building or Built, or what a read-only deck is. */
@@ -335,7 +355,6 @@ function deckPageColours(data) {
 function deckMoreItems(data) {
   const s = data.summary;
   const id = encodeURIComponent(s.id);
-  const home = seesInventory(HOME_SPACE) && deckSpaceOf(s.id) === HOME_SPACE;
   const retire = typeof canRetireDeck === "function" && canRetireDeck(data);
   const rename = typeof canRenameDeck === "function" && canRenameDeck(data);
   const token = routeToken, profile = state.profile?.id;
@@ -343,7 +362,6 @@ function deckMoreItems(data) {
   const cover = typeof openCoverPicker === "function" && !s.read_only
     && !/^(product|pairing)\//.test(s.id) && canEditDeck(s);
   return [
-    home ? { label: routeH1("assembly"), href: `#/assembly?deck=${id}&version=${data.version}` } : null,
     { label: routeH1("play"), href: `#/play?id=${id}` },
     !s.read_only ? { label: "History", href: `#/history?id=${id}&v=${data.version}` } : null,
     // compare.js: the other deck is chosen from the decks this viewer sees.
@@ -947,8 +965,8 @@ function deckKit(data) {
     if (!canEditDeck(s)) return null;
     return el("section", { class: "deck-section deck-kit", "aria-labelledby": "h-kit" },
       el("h2", { id: "h-kit", text: "Sleeves and deck box" }),
-      el("p", { class: "sub" }, "An idea has no sleeves or deck box: choose them once you start building it, or when you mark it built in the ",
-        el("a", { href: `#/assembly?deck=${encodeURIComponent(s.id)}&version=${data.version}`, text: "Packing plan" }), "."));
+      el("p", { class: "sub" }, "An idea has no sleeves or deck box: choose them once you start building it, or when you mark it built in ",
+        el("a", { href: deckBuildHref(data), text: routeH1("assembly") }), "."));
   }
   const box = el("section", { class: "deck-section deck-kit", "aria-labelledby": "h-kit" },
     el("h2", { id: "h-kit", text: "Sleeves and deck box" }));

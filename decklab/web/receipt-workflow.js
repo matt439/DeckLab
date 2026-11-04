@@ -512,7 +512,7 @@ function rcptWhereTheyGo(view, received, readiness) {
   return [...out, ...parts];
 }
 
-/** One deck's Planned list after the receipt: "Ready to build" (to the Packing plan), "Ready once N cards
+/** One deck's Planned list after the receipt: "Ready to build" (to Build decks), "Ready once N cards
  * arrive" or "Still N to get". Nothing when the answer has no counts for it (not refreshed, unconfirmed, or a
  * viewer without home's inventory). */
 function rcptReadyLine(deck, readiness) {
@@ -522,7 +522,7 @@ function rcptReadyLine(deck, readiness) {
     (r.coming ? ` · ${plural(r.coming, "card")} on the way` : "") });
   if (r.coming > 0) return el("p", { class: "rcpt-where-ready", text: `Ready once ${plural(r.coming, "card")} ${r.coming === 1 ? "arrives" : "arrive"}` });
   return el("p", { class: "rcpt-where-ready is-ready" }, el("a", { href: `#/assembly?deck=${encodeURIComponent(deck.id)}`,
-    text: deck.status === "built" ? "Every card is here: Packing plan" : "Ready to build" }));
+    text: deck.status === "built" ? "Every card is here: Build decks" : "Ready to build" }));
 }
 
 const TABLE_SKIPS = { changed: "the receipt changes it itself", kit: "its Sleeves or Deck box would change" };

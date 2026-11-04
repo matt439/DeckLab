@@ -39,8 +39,10 @@ class AssemblyBulkUiTests(unittest.TestCase):
           assert(first.querySelector('.pack-bulk-scope').textContent.includes('All listed sections, including any sideboard'));
           assert(bulk(first).getAttribute('aria-label').includes('Elves (Play-now list)'));
           const optional=first.querySelectorAll('[data-pack-tick]').filter(n => n.tag === 'input');
-          assert.equal(optional.length,3);
+          assert.equal(optional.length,2);
+          const token=first.querySelector('.pack-tick-optional');
           bulk(first).click(); await settle();
+          assert.equal(token.getAttribute('aria-pressed'),'false');
           assert(tiles(first).every(n => n.getAttribute('aria-pressed') === 'true'));
           same(checked(second),['false']); assert(optional.every(n => !n.checked));
           assert(first.querySelectorAll('.assembly-pending').some(n => /Wait for 1/.test(n.textContent) && n.textContent.includes('Unowned')));
