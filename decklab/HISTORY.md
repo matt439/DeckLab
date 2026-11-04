@@ -34,6 +34,25 @@ What each milestone and feature built, the decisions made along the way, and the
 - Left for later slices: the currency (AUD is still in the tables' header and rate statement) and a Settings-page control. Postage per shop is E5-S27's, in the database.
 - Tests: `decklab/tests/test_shops_setting.py`. Fixtures only.
 
+## The card viewer's decks line on every page (2026-11-04; E1-S29)
+
+- The story's last slice. The line under the card viewer's chips (which of the space's decks hold or want the card, and its free copies; GET `/api/cards/decks`, unchanged) showed only when the viewer was opened from the deck page or the Collection page. `card-viewer.js` `viewerUseSpace` now names a space everywhere: the deck page's or editor's deck's, the Collection page's, else the page's own `space` parameter, else the viewer's own space. It still asks only when the viewer may see that space's inventory, and the server's refusal shows nothing.
+- Tests: `test_card_viewer_use_ui.py` (every other page asks for the viewer's own space; a member's own space; a page naming a space the viewer can't see asks nothing).
+
+## Price history on Shopping's queued rows (2026-11-04; E5-S29)
+
+- The story's last slice: the 90-day readings the nightly snapshot keeps (2026-11-03's first slice) are now on the page. **GET `/api/shopping/price-history?name=`** (`lib/api/shop_history.py`) checks Shopping's readers first (`guard.require_sees_home_records`), then answers only for a name on the purchase queue (case-insensitively; one that isn't has `queued` false and no days), with `lib/shops/history.report`'s per-shop days and the lowest in-stock day marked. The history files are read only for this request; Shopping's overview still never loads them.
+- **The page** (`web/shopping-history.js`, after `shopping-snapshot.js`): a queued row with a shop snapshot has **Price history** beside its snapshot line; in the wide table it moves with the snapshot into the row's … details. Its sheet shows each shop's lowest in-stock price and day(s) first, then every day kept, newest first, with its price, stock (Games Portal's only in stock or not) and printing; a shop without readings says the row shows today's. Nothing is saved, and an answer after the sheet closed is dropped.
+- Tests: `test_shop_price_history.py`, `test_shopping_snapshot_ui.py`.
+
+## My wishlist in the editor's Add panel (2026-11-04; E5-S30)
+
+- The story's last slice: wished cards shown while building a deck. **GET `/api/deck/wishlist`** (`lib/api/wishlist_ideas.py`) answers with the viewer's own wishlist only: no parameter names a profile, and a request naming nobody (a script too) is 403. A saved deck is seen first (a hidden deck the missing deck's 404); a new deck's editor sends `kind` (casual or commander) and its `space`, checked as a new deck's space is.
+- **What fits:** a Commander deck's cards are those inside the draft commander's colour identity (`commander`/`commander2`, as the EDHREC ideas send them; else the saved Commander section's) and legal in Commander; one with no commander yet isn't filtered by colour (`identity` null). A casual deck takes every wished card. Basic lands and the commander itself are never offered; `left_out` counts what didn't fit.
+- **Marks:** only to a viewer who may see the deck's space's inventory, as the EDHREC ideas: in the deck, free, in other decks, or to buy with its AUD estimate, and copies on the way. No answer names a deck.
+- **The editor** (`web/editor-wishlist.js`, after `editor-edhrec.js`): a **My wishlist** tick beside EDHREC ideas for a saved or new casual or Commander deck (never a product or pairing) when a profile is chosen. It asks once per editor, revision, kind and draft commander; the typed name and the colour, type and mana value filters narrow the list on the page, the draft's cards are left out, and More pages it. A card added keeps its wished printing (the line's set and number; none means Save picks one), as one change and one Undo step.
+- Tests: `test_wishlist_ideas.py`, `test_editor_wishlist_ui.py`.
+
 ## Less text on phones (2026-11-04)
 
 - Matt asked for every page to be checked for walls of text, most of all on a phone, and noted pictures help break them up. Every page was shot at 390px wide on a full-data sandbox; before and after pictures are in the project's `verbosity/` folder.
