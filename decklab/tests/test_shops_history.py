@@ -13,7 +13,9 @@ from unittest import mock
 from decklab.lib import shops
 from decklab.lib.shops import gamesportal, history, mtgmate
 from decklab.tests.test_shops import SOL_RING, Clock, FakeShop, entry, page, session
-from decklab.tests.test_shops_missing import NightlyMissingRefreshTests, plan
+# The module, not its TestCase class: a class imported here would be collected and run twice.
+from decklab.tests import test_shops_missing
+from decklab.tests.test_shops_missing import plan
 from decklab.tests.test_shops_two_shops import TwoShopTestCase
 
 TZ = timezone(timedelta(hours=10))
@@ -105,9 +107,9 @@ class RecordTests(unittest.TestCase):
 
 
 class NightlyHistoryTests(unittest.TestCase):
-    setUp = NightlyMissingRefreshTests.setUp
-    make_snapshot = NightlyMissingRefreshTests.make_snapshot
-    refresh = NightlyMissingRefreshTests.refresh
+    setUp = test_shops_missing.NightlyMissingRefreshTests.setUp
+    make_snapshot = test_shops_missing.NightlyMissingRefreshTests.make_snapshot
+    refresh = test_shops_missing.NightlyMissingRefreshTests.refresh
 
     def test_saved_home_missing_names_are_read_but_never_kept(self):
         self.needs.names.return_value = plan(["Sol Ring", "New missing"])

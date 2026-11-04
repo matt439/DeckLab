@@ -249,6 +249,7 @@ UNDO_MIGRATION = {
     18: ("drop table public.deck_draft",),
     19: ("drop table public.new_deck_draft",),
     20: ("drop table public.dice_counter",),
+    21: ("drop table public.shop_postage",),
 }
 
 

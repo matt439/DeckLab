@@ -1849,13 +1849,16 @@ Database integration tests need the running PostgreSQL service, its configured r
 
 The integration helper builds a template database for each checkout (`decklab_tmpl_...`) and a throwaway copy for each test class. That workflow reads configured settings and authenticates to PostgreSQL; its intended data writes are confined to those test databases. Its ordinary isolation includes: the test package sets `DECKLAB_DB_NAME` to a database that doesn't exist, makes `state.store()` refuse unless a test installed a store, and (since phase 5) sets `DECKLAB_DB_LOG` to a file in a temporary folder of the run's own, which the test servers and other processes the tests start inherit, so their `db.log` lines never reach the one the nightly task and its checks are read from. Everything else runs on a `MemoryStore`, and on the files backend over a temporary tree for the inventory, decks and accessories (the Sandbox installs a `FileInventory`). Tests that read the real decks take them from the `pre-db-decks` tag (`tests/pre_db.py`'s `decks_inventory()`; a clone without the tag skips them), never the working tree. `test_inventory_contract` runs the same scenarios through both backends and compares every reader's output with kept goldens (`tests/fixtures/inventory_goldens/`), through the reader dump the cutover gates used (`tests/golden_dump.py`, normalised by `tests/golden_p4.py`). A git worktree has no `.venv` of its own; separately authorized database qualification needs an interpreter with psycopg available.
 
+CI runs them on every code change (`tests.yml`'s `database` job, 2 jobs on Linux) against a throwaway PostgreSQL 18 service container in the job's own VM, after `python -m decklab.db setup` makes the roles and database there, so the PC needs to run them only when Matt asks. A new migration needs its entry in `tests/db_support.py`'s `UNDO_MIGRATION`, or CI's rollback tests fail.
+
 They are every `decklab/tests/test_*.py` module that imports `tests/db_support.py`. When authorized, run them all from the repo root with the system python (the test package finds the `.venv`'s psycopg itself), on Windows or Linux:
 
 ```
-python -c "import pathlib, unittest; names = ['decklab.tests.' + p.stem for p in sorted(pathlib.Path('decklab/tests').glob('test_*.py')) if 'db_support' in p.read_text(encoding='utf-8')]; unittest.main(module=None, argv=['db-tests', *names])"
+python scripts/test_db.py
+python scripts/test_db.py 0 2 --require-db
 ```
 
-(On Linux, `python3.14` or whichever python the server uses.) On 2026-11-02, in WSL's Ubuntu against PostgreSQL 18, that ran 105 modules, 1,897 tests in about 5 minutes (7 skipped: commits only in the private repo, Node.js, a Windows-only case and an old-backend case). A trial restore of a dump into a scratch database uses the same `DECKLAB_DB_NAME` override: see `restore` under "Backups" above.
+The second runs one of two shards, as CI does, and fails instead of skipping every test when the database can't be used. (On Linux, `python3.14` or whichever python the server uses.) On 2026-11-02, in WSL's Ubuntu against PostgreSQL 18, that ran 105 modules, 1,897 tests in about 5 minutes (7 skipped: commits only in the private repo, Node.js, a Windows-only case and an old-backend case). A trial restore of a dump into a scratch database uses the same `DECKLAB_DB_NAME` override: see `restore` under "Backups" above.
 
 ## Tests
 
@@ -1882,7 +1885,7 @@ python scripts/test_fixtures.py decklab.tests.test_collection_import_groups
 python scripts/test_shard.py 0 4 --hang-after 600
 ```
 
-The first command discovers the fixture suite, the second selects ordinary unittest module/class/method names, and the third runs one of four module shards (indices 0 to 3). Both entry points install the same guards **before test imports**: private config and PostgreSQL credential files appear absent, configured PostgreSQL connectors fail closed, and inherited configuration overlays and the real-Forge opt-in are removed. Disposable fixture files, local synthetic HTTP servers and explicitly installed fake connectors still work. Saved-script multiprocessing workers install the guards again before importing their targets.
+The first command discovers the fixture suite, the second selects ordinary unittest module/class/method names, and the third runs one of four module shards (indices 0 to 3), balanced by `scripts/test_weights.json` (CI's per-module seconds; `python scripts/test_shard.py --merge-timings DIR` rebuilds it from a run's `timings-*` artifacts), then prints its skips by reason and its slowest modules. Both entry points install the same guards **before test imports**: private config and PostgreSQL credential files appear absent, configured PostgreSQL connectors fail closed, and inherited configuration overlays and the real-Forge opt-in are removed. Disposable fixture files, local synthetic HTTP servers and explicitly installed fake connectors still work. Saved-script multiprocessing workers install the guards again before importing their targets.
 
 Database integration and named native runtime checks remain in discovery with explicit skip reasons. Ordinary child interpreters do not inherit in-memory patches; the known server, command and process-monitor children that escape fixture isolation are skipped too. This runner prevents accidental configured-server use; it is not a sandbox for malicious code. A green fixture run does not establish PostgreSQL, native process/service, browser/device or real-Forge acceptance.
 
