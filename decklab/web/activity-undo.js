@@ -902,11 +902,18 @@ function activityUndoMixedEvidence(data, space) {
   const importing = data.action === "import_undo";
   if (importing !== Boolean(data.uploads.length) || importing === Boolean(data.components.length)
       || importing && (data.products.length || data.tokens.removed.length || data.tokens.reduced.length)) return false;
-  return data.components.every(item => item && typeof item === "object" && Object.keys(item).sort().join(",") === "checks,component,kind,order,received_on"
+  return data.components.every(item => item && typeof item === "object" && Object.keys(item).sort().join(",") === "checks,component,corrected,kind,order,received_on"
       && ["order", "component", "kind", "received_on"].every(field => typeof item[field] === "string") && item.order && item.component
-      && Array.isArray(item.checks) && item.checks.every(check => typeof check === "string"))
+      && Array.isArray(item.checks) && item.checks.every(check => typeof check === "string") && activityUndoCorrected(item.corrected))
     && data.products.every(item => item && typeof item === "object" && Object.keys(item).sort().join(",") === "intact,product,status"
       && ["ordered", "preordered"].includes(item.status) && ["yes", "no"].includes(item.intact) && typeof item.product === "string" && item.product);
+}
+
+/** A receipt part's rows corrected at the door, going back as ordered: null, or {ordered, received} counts. */
+function activityUndoCorrected(value) {
+  return value === null || Boolean(value && typeof value === "object" && !Array.isArray(value)
+    && Object.keys(value).sort().join(",") === "ordered,received"
+    && Number.isSafeInteger(value.ordered) && value.ordered > 0 && Number.isSafeInteger(value.received) && value.received > 0);
 }
 
 function activityUndoMixedReceipt(answer, preview) {
@@ -940,7 +947,8 @@ function activityUndoMixedShow(ctx) {
     el("p", { class: "sub", text: "Every row below is undone together, with no partial selection. If anything here changes before you save, nothing is saved. Saving creates one new audited change; the original change stays in Activity." }));
   add(sheet.body, [
     list("Order parts going back on order", preview.components.map(item => [el("strong", { text: "Order " + item.order + ": " + item.component + " (" + item.kind + ")" }),
-      el("span", { class: "sub", text: " received " + text(item.received_on) + (item.checks.length ? " · checks to do again: " + item.checks.join("; ") : "") })])),
+      el("span", { class: "sub", text: " received " + text(item.received_on) + (item.checks.length ? " · checks to do again: " + item.checks.join("; ") : "")
+        + (item.corrected ? " · its rows corrected on arrival go back as ordered (" + item.corrected.received + " → " + item.corrected.ordered + (item.corrected.ordered === 1 ? " row)" : " rows)") : "") })])),
     list("Products going back on order", preview.products.map(item => [el("strong", { text: item.product }),
       el("span", { class: "sub", text: " back to " + item.status + (item.intact === "yes" ? " (it was kept intact)" : "") })])),
     trading && list("Cards that left, coming back", preview.returned.added.map(row => [el("strong", { text: printing(row) + " × " + row.quantity }),
