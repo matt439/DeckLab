@@ -364,7 +364,8 @@ decklab/
                         #   stylesheets since 2026-10-12 (UI-REVIEW.md WP3): tokens.css (the design tokens, the one
                         #   dark block), base.css, components.css, then shell, library, deck, stats and each page's
                         #   own file, which only lays components out (style.css and devices.css are gone);
-                        #   WP5's shared card pieces (UI-KIT.md): cards-ui.css after components.css, and ui.js
+                        #   WP5's shared card pieces (UI-KIT.md): cards-ui.css after components.css (and, since
+                        #   2026-11-05, sim-ui.css, Forge's result pieces, between them), and ui.js
                         #   (menu, Undo toast, action bar), symbols.js (Scryfall's symbols from /sym/), cards-ui.js
                         #   (card tile and row, token tile, printing picker) and card-viewer.js (the swipe card
                         #   viewer behind openCard; card-dialog.css is gone) after core.js

@@ -237,7 +237,8 @@ No household data or migration was changed, and no Forge games were run.
 | E11-S40 | `tests/test_inventory_contract.py`, 1,173; `tests/test_api_permissions.py`, 1,126 | Concrete test groups, apart from shared fixture/base support |
 
 Other large files include `web/editor.js` (1,188), `web/deck.js` (1,179),
-`lib/api/forge_runs.py` (1,163) and `web/components.css` (1,161). Review their
+`lib/api/forge_runs.py` (1,163) and `web/components.css` (1,165; 993 after the
+2026-11-05 Forge results split). Review their
 responsibilities when the next change needs room; they are not extra split
 tasks solely to make the numbers smaller. CSS ordering includes later
 coarse-pointer/forced-colors overrides. Forge-run visibility reads mutable
@@ -327,6 +328,49 @@ cases were skipped by the fixture runner. The disposable-database qualification
 ran on 2026-10-31: all 1,892 database-integration tests in 104 modules passed on
 throwaway databases (HISTORY.md, E11-S39).
 
+### The Collection page's Add a precon sheet (2026-11-05)
+
+The precon split is built (2026-11-05). PRECON_SEARCH_MS and the nine sheet
+functions from openPreconSheet through addPrecon (the file's last 251 lines,
+from its precons marker) moved unchanged to `web/precon-add.js` (257 lines,
+with a header and strict mode); collection.js went from 1,198 to 943 lines.
+The file loads directly after `collection-filing.js` in index.html and
+test_web.PLAY_SCRIPTS, and joins test_web_pages' Collection script list; the
+workspace runner's default list has no collection.js and needed no change.
+Every name stays a global read at call time; no load-time work is added.
+
+The moved lines match `20a9300`'s lines 948-1198 exactly and the retained
+lines 1-943 are unchanged apart from the header comment, which now names
+`precon-add.js` (the precons divider and the three blank lines around it were
+dropped).
+`test_precon_add_split.py` checks the moved names, that collection.js no longer
+defines them, the load order, both lengths and the globals under Node. 185
+focused fixture tests in 15 modules pass with none skipped; node --check and
+the source-length check pass. No browser, device or full-suite run is claimed.
+
+### Forge results' styles (2026-11-05)
+
+The Forge results split is built (2026-11-05). The "Forge results" section of
+`web/components.css` (its lines 367-527: .sim-num, .wr, .range-*, .fresh,
+.flag, .swap-*, the run activity and its details) moved unchanged to
+`web/sim-ui.css` (180 lines, with a header), with the seven forced-colours
+lines for those selectors re-opened in a `@media (forced-colors: active)`
+block at its end and the forced-colours, reduced-motion ring block after it,
+so each override still follows its rule. `@keyframes spin` stays in
+components.css, which went from 1,165 to 993 lines (its header now names
+sim-ui.css). The sheet loads right after components.css, before cards-ui.css,
+in index.html and test_web.STYLES (FOUNDATION is unchanged). No remaining
+components.css rule names a moved selector, so the later position changes no
+cascade outcome.
+
+The 174 lines in the new file's body are the 173 removed lines (less one blank)
+plus the re-opened block's opening and closing lines, compared line for line.
+SimComponentTests, test_web_matchups and test_web_matchup_files now read
+sim-ui.css; UI-KIT.md's order row, PLAN.md and the sim-ui.js and matchups.css
+comments name it. 158 focused fixture tests in 8 modules and 169 in 13 further
+UI modules pass with none skipped; the source-length check passes. No browser,
+forced-colours or device check is claimed.
+
 ### Test support and discovery: E11-S40
 
 Move concrete PostgreSQL contract cases first, retaining adapt, scenario/golden
@@ -371,6 +415,63 @@ reported test counts differ. E11-S44's guards ran before imports throughout this
 qualification. Real PostgreSQL, named native process/server checks, real Forge,
 browser and physical-device acceptance remain unqualified. The prior denied
 actions were not retried. Ruff, source-length and whitespace checks pass.
+
+## Long-file audit: 2026-11-05
+
+On `20a9300`, 1,489 owned source files, none over 1,200 lines, and 36 over
+1,000. Each of the 36 was reviewed for its responsibilities, its growth since
+the public history began (2026-10-25), and the OPEN TODO rows that would add
+code to it. Every split-now proposal then went to an independent skeptic who
+tried to refute both the need and the boundary. The policy above holds: a file
+is split when the next change needs the room, not to make the number smaller.
+
+Two splits were upheld and are built (the two entries above):
+`web/collection.js` (1,198, having regrown about 180 lines in 9 days) and
+`web/components.css` (1,165, a few lines in almost every feature commit). Ten
+other split-now proposals were rejected, as each has 60-115 lines of headroom
+and no queued change needs it (library.js, activity-undo.js,
+matchups-overview.js, forge_runs.py, field.py, state/pg.py, inventory/pg.py,
+homenet/commands.py, test_server.py, golden_p4.py).
+
+The seams on record, for when a change needs the room. Each is a contiguous
+block; check its line numbers and registration points again at the time.
+
+| File (lines) | Seam | New file |
+|---|---|---|
+| `lib/api/forge_runs.py` (1,174) | HIDDEN_RUN, NAME_KEYS, `_Seen`, `_TodaysLists`; needs the patch ownership plan above | `lib/api/forge_seen.py` |
+| `web/matchups-overview.js` (1,142) | deckPicker, sameSide, findItem, openPlaySheet (the head-to-head play sheet) | `web/matchups-play-sheet.js` |
+| `lib/forge/experiment.py` (1,140) | MEASURES, ARM_KEYS, NAME_RE, load_spec, check_spec and its checkers | `lib/forge/experiment_spec.py` |
+| `lib/forge/field.py` (1,137) | `_FieldRun`, run_field with its lifecycle decorator, `_given` (E3-S31 would grow run_field) | `lib/forge/field_run.py` |
+| `web/editor-screen.js` (1,121) | SOURCE_TYPES, manaSources, listStats, the curve parts, drawStats | `web/editor-stats.js` |
+| `web/receipts.js` (1,110) | the row sheet, rcptOpenSheet through its field builders | `web/receipt-sheet.js` |
+| `lib/state/pg.py` (1,110) | `_audit_rows`, `_quantity_sql`, `_INVENTORY_ROWS`, `_KIT_CHANGED`, `_inventory_audit_rows` | `lib/state/pg_activity.py` |
+| `tests/test_forge_engine.py` (1,108) | ViewTests, PoolingTests, CommandLineTests, PageTests, Wave3PageTests | `tests/test_forge_engine_views.py` |
+| `web/library.js` (1,101) | libLoadForge, libForge, deckForgeLine, deckRowForge, libDetailForge | `web/library-forge.js` |
+| `lib/inventory/pg.py` (1,097) | `_deck_import`, `_write_decks`, write_decks, write_model | `lib/inventory/pg_import.py` |
+| `lib/homenet/commands.py` (1,097) | code_changed_since, check_server, check_task and the task/tunnel checks | `lib/homenet/server_checks.py` |
+| `web/activity-undo.js` (1,092) | the mixed and trade Undo block, from its three consts to activityUndoMixedShow | `web/activity-undo-mixed.js` |
+| `tests/test_forge_pool.py` (1,091) | PoolTests, SessionTests, ReplayTests, SettingsTests | `tests/test_forge_pool_workers.py` |
+| `tests/test_server.py` (1,085) | ProtocolTests, WriteTests | `tests/test_server_protocol.py` |
+| `web/deck.js` (1,082) | the card peek and links, peekCards through cardNames | `web/card-peek.js` |
+| `tests/test_tokens.py` (1,077) | HolderTests, CheckTests, CheckWithoutIndexTests | `tests/test_tokens_check.py` |
+| `lib/pool.py` (1,074) | the command line: the printers, `_money`, main | `lib/pool_cli.py` |
+| `web/core.js` (1,064) | keyboard menus and dialog focus, keyboardEditing through the menu buttons | `web/menus.js` |
+| `tests/test_forge_simjar.py` (1,057) | the fork switch and build tests (OWN, SWITCHES, FORK and their classes) | `tests/test_forge_simjar_fork.py` |
+| `tests/golden_p4.py` (1,054) | ui_additions and the later additions, with `_drop_keys` imported back | `tests/golden_additions.py` |
+| `lib/api/collection_edit.py` (1,048) | `_pictures`, `_prices`, `_storage` | `lib/api/collection_row_extras.py` |
+| `tests/test_api_accessories.py` (1,042) | DatabaseTests | `tests/test_api_accessories_db.py` |
+| `lib/inventory/files.py` (1,039) | the renderers, `_csv_text` through rendered_sha256 | `lib/inventory/files_render.py` |
+| `web/accessories.js` (1,038) | the kit picker, kitPicker through addFromPicker | `web/kit-picker.js` |
+| `lib/forge/variants.py` (1,029) | the variant identity: the version constants, aligned_dck, variant_entry, paired keys, test_id | `lib/forge/variants_identity.py` |
+| `tests/test_editor.py` (1,029) | KitOrderTests, FrozenSaveTests | `tests/test_editor_saves.py` |
+| `tests/test_library_ui.py` (1,018) | TABLES and LibraryTablesTests | `tests/test_library_tables_ui.py` |
+| `lib/cards.py` (1,009) | the card images: the locks, `_safe_part`, image_source, image_path | `lib/card_images.py` |
+| `lib/control.py` (1,005) | LOG_MAX_BYTES, LOG_BACKUPS, LogFile, open_log | `lib/control_log.py` |
+
+Left as they are, cohesive or without a safe seam: `web/editor.js` (1,041; its
+sheet helpers are loaded by about a dozen test lists), `web/tokens.js` (1,037),
+`forge-trial/overnight_legs.py` (1,076), `tests/test_pool.py` (1,014) and
+`tests/test_cards.py` (1,010).
 
 ## Comment audit: E11-S41
 

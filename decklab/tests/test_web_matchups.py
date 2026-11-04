@@ -311,8 +311,8 @@ class AdaptivePlayTests(unittest.TestCase):
         self.assertIn("run.link", _function(script, "jobRow"))
         self.assertIn("r.sides &&", _function(script, "findItem"))
         css = _text("matchups.css")
-        # The live range is a range bar whose band is a dashed outline (sim-ui.js rangeBar, components.css).
-        self.assertIn(".range-bar.is-live .range-band {", _text("components.css"))
+        # The live range is a range bar whose band is a dashed outline (sim-ui.js rangeBar, sim-ui.css).
+        self.assertIn(".range-bar.is-live .range-band {", _text("sim-ui.css"))
         self.assertIn("live: true", live)
         # The live bar is marked at the planned checks (MU-11), from the whole result's games.
         self.assertIn("bar.set(progress.done, progress.total, progress.checks)", live)

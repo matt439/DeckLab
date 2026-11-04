@@ -598,10 +598,10 @@ def _rule(css, selector):
 
 
 class SimComponentTests(unittest.TestCase):
-    # E11-S30 slice 6: Forge's result pieces (design/visual-design.md 4.9) are components.css's, in mono and ink,
+    # E11-S30 slice 6: Forge's result pieces (design/visual-design.md 4.9) are sim-ui.css's, in mono and ink,
     # with Forge's strong and weak colours only on flags and verdicts, and the run activity in place of the pill.
     def test_numbers_are_mono_and_never_coloured(self):
-        css = _css("components.css")
+        css = _css("sim-ui.css")
         for selector in (".sim-num", ".wr-value", ".wr-range", ".range-axis", ".flag-rate", ".swap-qty", ".swap-points"):
             with self.subTest(selector=selector):
                 self.assertIn("font-family: var(--font-mono)", _rule(css, selector))
@@ -618,7 +618,7 @@ class SimComponentTests(unittest.TestCase):
         self.assertIn("--fs-wr-caption: .8125rem;", _css("tokens.css"))
 
     def test_flags_and_verdicts_wear_forges_colours(self):
-        css = _css("components.css")
+        css = _css("sim-ui.css")
         self.assertIn("background: var(--strong-soft); color: var(--strong-ink)", _rule(css, ".flag-strong"))
         self.assertIn("background: var(--weak-soft); color: var(--weak-ink)", _rule(css, ".flag-weak"))
         self.assertIn("min-height: var(--flag-h)", _rule(css, ".flag"))
@@ -631,7 +631,7 @@ class SimComponentTests(unittest.TestCase):
         self.assertIn("color: var(--ink-3)", _rule(css, ".swap-lines.is-neutral > li"))
         # The verdict pill isn't .verdict, which is the deck page's stats tiles' (stats.css): every stylesheet
         # loads on every page.
-        self.assertNotRegex(css, r"(?m)^\.verdict\b")
+        self.assertNotRegex(css + _css("components.css"), r"(?m)^\.verdict\b")
         self.assertIn("swap-verdict swap-verdict-", _text("sim-ui.js"))
         # The test page's difference bars and their axis words are Forge results too: Forge's strong and weak
         # colours, not --good/--crit; --win and --loss are only the matchup matrix's cells (2.1).
@@ -646,7 +646,7 @@ class SimComponentTests(unittest.TestCase):
                 self.assertEqual([line for line in shaded if not (sheet.name == "matchups.css" and line.startswith(".mu-h-"))], [])
 
     def test_the_freshness_badge(self):
-        css = _css("components.css")
+        css = _css("sim-ui.css")
         self.assertIn("min-height: var(--fresh-h)", _rule(css, ".fresh"))
         self.assertIn("background: var(--surface-chip)", _rule(css, ".fresh"))
         self.assertIn("min-height: var(--fresh-h-row)", _rule(css, ".fresh-row"))
@@ -664,7 +664,7 @@ class SimComponentTests(unittest.TestCase):
         self.assertIn("--chip-on-tint-line: rgb(20 40 38 / .14);", tokens)
 
     def test_the_run_activity(self):
-        css = _css("components.css")
+        css = _css("sim-ui.css")
         button = _rule(css, ".run-activity")
         self.assertIn("width: var(--tap); height: var(--tap)", button)
         ring = _rule(css, ".activity-ring")
@@ -688,7 +688,7 @@ class SimComponentTests(unittest.TestCase):
         self.assertIn("stroke: var(--accent)", _rule(css, ".run-ring-arc"))
         self.assertIn("width: var(--ring-size)", _rule(css, ".run-ring"))
         # The pill is gone, its slot holds only the icon, and the popover hangs from the slot.
-        self.assertNotRegex(_css("matchups.css") + _css("components.css") + _css("shell.css"), r"\.runs-pill")
+        self.assertNotRegex(_css("matchups.css") + _css("components.css") + _css("sim-ui.css") + _css("shell.css"), r"\.runs-pill")
         self.assertIn("position: relative", _rule(_css("shell.css"), ".shell-status"))
         self.assertIn(".shell-status > .run-activity { display: none; }", _css("matchups.css"))
         self.assertNotRegex(_text("runs-pill.js"), r'class: "runs-pill|checkBar\(')

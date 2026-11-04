@@ -65,7 +65,7 @@ function savedBox(id) {
     a.after_save_popular ? el("p", { class: "sub", role: "status" },
       saved.popularNotice = el("span", { text: a.after_save_popular.text }), " ",
       el("a", { href: `${deckHref(id, "target")}&tab=matchups&part=gauntlet`, text: "Popular decks view" })) : null,
-    // Added from a precon (collection.js, addPrecon): its cards went into the collection in the same save.
+    // Added from a precon (precon-add.js, addPrecon): its cards went into the collection in the same save.
     a.precon ? el("p", { text: a.precon.cards
       ? `With it, ${plural(a.precon.cards, "card")} from the ${a.precon.name} precon went into ${a.precon.whose}.`
       : `The ${a.precon.name} precon had only plain basic lands for ${a.precon.whose}, so no cards were added.` }) : null,

@@ -1,7 +1,7 @@
 /* Deck Lab's matchup screens (matchups.js and its parts; runs-pill.js): the Matchups home's opponent table
    and cards, the play sheet, the pair page (verdict first), the deck page's Matchups part, per-card numbers and the
    top bar's run activity's slot. The win-rate figures, range bars, freshness badges and flags are
-   components.css's (sim-ui.js).
+   sim-ui.css's (sim-ui.js).
 
    Built on components.css (.btn, .box, .chart, .legend, .segmented, the tables, .progress) and
    deck.css (.deck-section). Phone first; then 600 (tablet), 1000 (desktop, iPad landscape) and 1600 (QHD). */
@@ -378,7 +378,7 @@
 
 .shell-status[hidden] { display: none; }
 /* The slot takes the top bar's free space (never the nav's: it grows from 0), and the 44 px activity icon sits at
-   its right end (components.css .run-activity). Without room even for the icon (a 600-720 px top bar, the five
+   its right end (sim-ui.css .run-activity). Without room even for the icon (a 600-720 px top bar, the five
    places beside the logo) there's no icon, never one over the nav; the phone's top bar and wider bars have room. */
 @media (min-width: 600px) {
   .shell-status:not([hidden]) { flex: 1 1 0; justify-content: flex-end; container-type: inline-size; }

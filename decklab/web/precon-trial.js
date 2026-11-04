@@ -377,7 +377,7 @@ async function ptrKeep(data, button, ctx) {
   }
 }
 
-/** After Add a precon (editor-deckpage.js savedBox, from collection.js's answer.trials): the trial decks of the
+/** After Add a precon (editor-deckpage.js savedBox, from precon-add.js's answer.trials): the trial decks of the
  * same precon still in the library, each with "Remove the trial deck <title>" (the existing retirement). */
 function ptrTrialsPart(trials) {
   if (!Array.isArray(trials) || !trials.length) return null;
