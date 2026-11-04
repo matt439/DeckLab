@@ -22,6 +22,8 @@ function versionInfo(build, pageRevision) {
   }
   const commit = (sha, dirty) => (sha ? sha.slice(0, 8) : "unknown") + (dirty ? " + local changes" : "");
   let label = `Server ${commit(build.running_commit, build.running_dirty)} · Checkout ${commit(build.latest_commit, build.latest_dirty)}`;
+  // A release install (E11-S49) names its version; its "local changes" are files changed since the release.
+  if (typeof build.version === "string" && build.version) label = `Release ${build.version} · ${label}`;
   const messages = [];
   const reload = Boolean(pageRevision && pageRevision !== "unknown" && !pageRevision.startsWith("__")
     && build.web_revision && pageRevision !== build.web_revision);
@@ -39,7 +41,9 @@ function versionInfo(build, pageRevision) {
   // What only an admin can act on (the PC's code): a member is told only to restart or reload (forEveryone).
   const forEveryone = [...messages];
   if (build.error || build.restart_required == null) forEveryone.pop();
-  if (build.running_dirty) messages.push("The server started with uncommitted application changes; its commit ID alone doesn't identify all the running code.");
+  if (build.running_dirty) messages.push(build.version
+    ? "The server started with application files changed since its release; its version alone doesn't identify all the running code."
+    : "The server started with uncommitted application changes; its commit ID alone doesn't identify all the running code.");
   return { label, messages, reload, forEveryone };
 }
 
