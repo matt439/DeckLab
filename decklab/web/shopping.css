@@ -359,3 +359,15 @@ table.shop-queue-table .shop-queue-lab-row > td { border-bottom: 0; box-shadow: 
 .shop-basket-row .shop-snapshot-when { color: var(--ink-2); font-size: var(--fs-xs); }
 .shop-basket-copy { justify-self: start; }
 .shop-basket-addons { display: grid; gap: var(--s-1); padding-top: var(--s-2); border-top: 1px solid var(--divider); }
+.shop-basket-postage, .shop-basket-reach { margin: 0; font-size: var(--fs-sm); }
+.shop-basket-postage-unknown { color: var(--ink-2); }
+.shop-plan { display: grid; gap: var(--s-2); min-width: 0; padding: var(--s-3); margin-bottom: var(--s-3);
+  border: 1px solid var(--border); border-radius: var(--r-panel); background: var(--surface-2); }
+.shop-plan h3 { margin: 0; font-size: var(--fs-meta); font-weight: var(--fw-bold); }
+.shop-plan h4 { margin: 0; font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.shop-plan p { margin: 0; }
+.shop-plan-best { font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.shop-plan-shops { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+.shop-plan-shop { display: grid; gap: var(--s-1); align-content: start; min-width: 0; }
+.shop-plan-copy { justify-self: start; }
+.shop-plan-others li { font-size: var(--fs-sm); color: var(--ink-2); overflow-wrap: anywhere; }

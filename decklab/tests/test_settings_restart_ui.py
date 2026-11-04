@@ -15,7 +15,7 @@ SETUP = SHELL + r'''
   api=async(path)=>{reads.push(path);if(path==='/api/server/restart')return structuredClone(view);
     if(path==='/api/status')return {build:{started_at:'new'}};throw Error('Other panel omitted');};
   apiWrite=async(path,body)=>{writes.push({path,body});if(answer)throw answer;return {restarting:true,started_at:'old'};};
-  showFooter=()=>{};loadSimulations=()=>{};settingsSimulations=()=>{};loadCommanderNightSettings=()=>{};loadVisits=()=>{};
+  showFooter=()=>{};loadSimulations=()=>{};settingsSimulations=()=>{};loadCommanderNightSettings=()=>{};loadPostageSettings=()=>{};loadVisits=()=>{};
   loadSettingsMaintenance=()=>{};loadSettingsMembers=()=>{};
   let reloads=0;reloadDeckLab=()=>{reloads++;};
   const openSettings=async(id='matt')=>{as(id,false);location.hash='#/settings';routeToken++;

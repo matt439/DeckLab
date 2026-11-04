@@ -32,6 +32,17 @@ def commander_night_row(row, scope, profiles, me):
             "summary": "Commander-night notes cleared" if cleared else "Commander-night notes updated"}
 
 
+def shop_postage_row(row, scope, profiles, me):
+    """Home's record readers only (E5-S27), as Shopping; never the amounts."""
+    if scope == "all":
+        allowed = me is None or (me in profiles and permissions.sees_home_records(profiles[me]))
+    else:
+        allowed = scope.get("space") == permissions.HOME
+    if not allowed:
+        return None
+    return {"table": "shop_postage", "op": row.get("op"), "summary": "Shops' postage updated"}
+
+
 def field_policy_row(row, scope, profiles, me):
     """HOME only, before generic admin handling; never relay rules or proof data."""
     if scope == "all":

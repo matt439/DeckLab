@@ -353,7 +353,15 @@ fill names the further printings it takes, "also 3 × M19 314"), a total over pr
 have none, the rows it couldn't speak for (printing not confirmed, couldn't be read, not checked),
 and add-ons in stock marked Add-on; then the ready rows no checked shop has. Copy this shop's list
 reuses `shopCopyShop` with the basket's own `shopCopyRows` list (ready rows only, the copies the
-basket counts), disabled once the queue revision moves on. No postage, no writes.
+basket counts), disabled once the queue revision moves on. Each basket says its postage
+(`shopBasketPostageWords`: free over its threshold, its flat postage and how far from free, or not
+known, linking an admin to Settings) and marks add-ons that reach free postage with a good status pill.
+`shopping-plan.js` draws Fewest shops first (`shopBasketPlan`, from `baskets.plan`): the recommended
+shops' cards + postage = total, buying each card where it's cheapest beside it, a note when postage
+wasn't weighed, each plan shop's rows with its own Copy this shop's list (`.shop-plan-copy`), and the
+other combinations folded under Other ways. `settings-postage.js` is Settings' Shops' postage panel
+(a home admin's; blank is not known; a 409 keeps the entries and offers Load the saved postage). No writes
+from Shopping.
 
 `shopping-reprints.js` follows `shopping-buying.js`. Its shared `reprintInfo` draws
 known upcoming paper-printing set/date evidence as a sibling of the card viewer

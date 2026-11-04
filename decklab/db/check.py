@@ -341,6 +341,29 @@ def _commander_night(c):
     return work
 
 
+def _shop_postage(c):
+    def work():
+        from decklab.lib.state import Invalid, shop_postage
+        if c.execute("select to_regclass('public.shop_postage') is null").fetchone()[0]:
+            return True, False, "the shops' postage unavailable until migration 0021"
+        rows = c.execute("select id, revision, content from shop_postage").fetchall()
+        if not rows:
+            return True, False, "not configured"
+        if len(rows) != 1:
+            return False, False, "expected at most one shops' postage record"
+        key, revision, content = rows[0]
+        if key is not True or type(revision) is not int or revision < 1:
+            return False, False, "invalid shops' postage record identity or revision"
+        try:
+            normalized = shop_postage.normalize(content)
+        except Invalid as e:
+            return False, False, str(e)
+        if normalized != content:
+            return False, False, "the shops' postage is not in its complete saved form"
+        return True, False, f"{len(content['shops'])} shops' postage at revision {revision}"
+    return work
+
+
 def _field_policy(c):
     """Validate stored policy only; old incarnation rules are intentional tombstones."""
     def work():
@@ -513,6 +536,7 @@ def run(dbname=None, say=backup.say):
         result.sub("revision rows", _revision_rows(c), c)
         result.sub("audit trail", _audit_trail(c), c)
         result.sub("Commander-night notes", _commander_night(c), c)
+        result.sub("Shops' postage", _shop_postage(c), c)
         result.sub("field policy", _field_policy(c), c)
         result.sub("visibility", _visibility(c), c)
         result.sub("member departures", _space_departures(c), c)

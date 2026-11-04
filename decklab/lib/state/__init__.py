@@ -54,6 +54,10 @@ tests/test_state_contract.py checks):
   actor, message, *, reason=None) -> that view; complete optimistic replacement of the home's
   dated Commander-night notes, with a required reason to clear and a retained revision after
   clearing. Unknown bracket facts are None, unknown date/venue/house rules blank; no seed data.
+- shop_postage() -> {revision, postage: {v: 1, shops: {key: {postage_aud, free_over_aud}}}}, revision 0
+  and no shops before anything is saved; shop_postage_put(postage, expected_revision, actor, message,
+  *, known=None) -> that view; the whole record replaced after checking its revision (E5-S27,
+  migration 0021; shop_postage.py has the rules). An unchanged save writes nothing.
 - field_policy(format) -> {v, format, revision, rules}; only a confirmed existing schema's
   absent row is an empty policy. field_policy_apply(format, expected_revision, expected_proof,
   rule, actor, message, reason=None) -> {changed, snapshot}; one independent audited CAS write,

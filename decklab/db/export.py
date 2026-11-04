@@ -54,6 +54,7 @@ TABLES = [
     ("public.visibility", ("owner", "thing")),
     ("public.space_departure", ("space_id",)),
     ("public.field_policy", ("format",)),
+    ("public.shop_postage", ("id",)),
     # Migration 0004's: the inventory. collection_import_content (whole files) isn't a CSV: the
     # raw imports are under magic/ instead.
     ("public.inventory_revision", ("id",)),
@@ -84,14 +85,14 @@ INVENTORY_TABLES = {name for name, _ in TABLES[TABLES.index(("public.inventory_r
 # Inventory tables a later migration adds (0020's dice_counter). Without one the magic folder is
 # still written (the snapshot reads its rows as none); only its CSV is skipped.
 LATER_INVENTORY_TABLES = {"public.dice_counter"}
-# Tables a database not yet migrated may lack (0003, 0004, 0006, 0010-0013, 0017 and 0020).
+# Tables a database not yet migrated may lack (0003, 0004, 0006, 0010-0013, 0017, 0020 and 0021).
 # Until it's migrated they're skipped, a CSV already written for one is kept and the wishlists
 # (or magic) folder is left as it is (without 0006 no deck file is exported; a missing table of
 # LATER_INVENTORY_TABLES doesn't hold magic back), so the nightly export still works between
 # updating the code and running migrate.
 UNTIL_MIGRATED = {"public.wishlist_entry", "public.profile_setting", "public.simulation_mode",
                   "public.play_record", "public.packing_tick", "public.commander_night", "public.visibility",
-                  "public.space_departure", "public.field_policy"} | INVENTORY_TABLES | DECK_TABLES
+                  "public.space_departure", "public.field_policy", "public.shop_postage"} | INVENTORY_TABLES | DECK_TABLES
 MAGIC = "magic"                     # the export repo's folder of inventory files
 
 README = """# Deck Lab data export
@@ -117,7 +118,8 @@ git's history shows what changed between them.
   `tables/public.deck_revision.csv`. Former deck IDs and their current (or retired) targets
   are retained in `tables/public.deck_alias.csv`, so old links and history keep their identity.
   The household's dated Commander-night notes and their revision (also after clearing) are
-  retained in `tables/public.commander_night.csv`.
+  retained in `tables/public.commander_night.csv`, and each shop's postage rules and their
+  revision in `tables/public.shop_postage.csv`.
   Public switches and their audit metadata are in `tables/public.visibility.csv`;
   an absent owner/thing row means Private.
   Departed member IDs and their removal operation/change identity are retained in

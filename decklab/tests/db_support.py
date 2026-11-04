@@ -31,7 +31,7 @@ MAX_AGE = 3600          # seconds before another run may drop a leftover copy
 PROBE_TIMEOUT = 1       # seconds to wait for the server's port before skipping
 # migration 0003's tables, which reset() empties
 PHASE2_TABLES = ("wishlist_entry", "profile_setting", "simulation_mode", "play_record")
-STATE_TABLES = PHASE2_TABLES + ("packing_tick", "commander_night", "visibility")
+STATE_TABLES = PHASE2_TABLES + ("packing_tick", "commander_night", "visibility", "shop_postage")
 # migration 0004's audited tables, children before parents (the order reset() deletes them in;
 # collection_import_content goes with collection_import, and reset() empties inventory_revision),
 # then migration 0006's (the decks part: its history and derived rows before the decks, a text
