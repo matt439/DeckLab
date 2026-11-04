@@ -48,7 +48,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E2-S16` | OPEN | could | L | Kept-for-later drafts built, the Quick edit's and new decks' too (migrations 0018 and 0019 applied by 2026-10-30). Left: real-device checks. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
-| `E1-S29` | OPEN | could | S | The card viewer's decks line (deck page, Collection) and global search's short form built (2026-11-03). Left: the viewer's line when opened from other pages. |
 
 ## Deck Lab: collection, orders and buying
 
@@ -60,8 +59,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E7-S32` | OPEN | could | L | Scan cards sheet and `POST /api/collection/scan` built, with each pending card's printing picker and language, and Tokens' Scan token cards (`POST /api/tokens/scan`, one-change add) (fixture-tested); next real phone photos of cards and token cards on the household's phones. |
 | `E5-S27` | OPEN | should | M | Shopping's Baskets built without postage (2026-11-02). Left: postage rules per shop as a setting (with `E11-S53`), add-ons that reach a free-postage threshold, and the fewest-shops plan. |
 | `E5-S28` | OPEN | should | M | Build decks together's read-only combined list built (2026-11-02). Left: Queue these (one reviewed queue change, `for` naming the decks) and each card's matching queue rows. |
-| `E5-S29` | OPEN | could | S | 90 days of queued cards' readings and `shops history NAME` built (2026-11-03). Left: Shopping's row showing the history. |
-| `E5-S30` | OPEN | could | S | The Wishlist page's "short of this card" built (2026-11-02). Left: a My wishlist tick in the editor's Add panel. |
 
 ## Deck Lab: Commander nights
 
@@ -96,7 +93,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S30` | DECISION | should | L | Visual redesign P1 ([visual-design.md](decklab/design/visual-design.md)): every slice is built and checked in dark; Collection's colour identity filter is built (decided 2026-10-31); Matt checks touch/Safari on the household's devices. |
 | `E11-S31` | DECISION | could | M | Global search in the top bar ([stories.md](decklab/design/stories.md#e11-s31)) is built and its `/` decided (2026-10-31): Matt checks the iPad field and phone sheet on devices. |
 | `E11-S58` | DECISION | should | L | Live server on Linux ([stories.md](decklab/design/stories.md#e11-s58)) is built and fixture-tested (2026-11-01): WSL qualified the database, backups, the services, `systemd-inhibit` under polkit and real Forge games (2026-11-02); still to qualify on the real Linux PC: suspend and wake, phones, and Tesseract on real card photos. |
-| `E11-S08` | OPEN | could | L | Token deletions and 2-50 added token rows undo together (2026-10-29); 1-50 purchase-queue value edits restore in place (2026-10-30); 1-50 added queue rows are removed and removed ones restored as new rows (2026-10-31); 1-50 edited token-card rows restore in place (2026-10-31); queue changes mixing 2-50 updated, added and removed rows undo whole (2026-10-31); 2-50 collection-row restores and removals are proved before commit (2026-10-31). Mixed token-card changes have no producer (2026-10-31). Still open: queue changes with orders, token-card changes that moved or renumbered rows, other multi-row and mixed changes, other accessory/wishlist inverses. |
+| `E11-S08` | OPEN | could | L | Token deletions and 2-50 added token rows undo together (2026-10-29); 1-50 purchase-queue value edits restore in place (2026-10-30); 1-50 added queue rows are removed and removed ones restored as new rows (2026-10-31); 1-50 edited token-card rows restore in place (2026-10-31); queue changes mixing 2-50 updated, added and removed rows undo whole (2026-10-31); 2-50 collection-row restores and removals are proved before commit (2026-10-31). Mixed token-card changes have no producer (2026-10-31). Receipts that corrected their rows undo whole (2026-11-04). Still open: queue changes with orders, token-card changes that moved or renumbered rows, other multi-row and mixed changes, other accessory/wishlist inverses. |
 | `E11-S49` | OPEN | could | M | Versioned release zips with a SHA-256 and version manifest; first slice, the release workflow and `build.py` reading the manifest without git. |
 | `E11-S50` | DEFERRED | could | L | One Windows installer (winget Python and PostgreSQL, release zip, generated postgres password, config questions, services, one firewall prompt, phone address); after `E11-S49`. |
 | `E11-S51` | DEFERRED | could | M | Update command for release installs (backup, replace, migrate, restart); after `E11-S49`. |
