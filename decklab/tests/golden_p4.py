@@ -89,6 +89,10 @@ older code (the committed tests/fixtures/inventory_goldens):
 - "assembly-colors": packing participants carry the Planned/library "colors" already in their
   deck summaries. Only that new key is dropped from assembly answers; test_assembly_colors
   checks its values and privacy.
+- "assembly-token-pictures": Build decks' token tiles add picture fields to the plan's token cards
+  and the card or stand-in each need shows, and its shared-tokens note was shortened. Only those
+  keys are dropped from assembly answers; test_assembly_tokens checks the pictures and that packing
+  keys don't change.
 - "storage-location-defaults": E8-S22 adds the packing plan's "storage_locations", where the
   cards it pulls from storage or puts back are kept. No golden collection records a location, so
   only an answer with none ({"ready": true, "cards": {}}) is dropped; a recorded location still
@@ -595,6 +599,25 @@ def assembly_colors(dump):
                     deck.pop("colors", None)
 
 
+def assembly_token_pictures(dump):
+    """Drop only the token tiles' picture fields and the reworded shared-tokens note from plans."""
+    pictures = ("img", "back_img", "example_art")
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        plans = mine.get("assembly") if isinstance(mine, dict) else None
+        for plan in plans.values() if isinstance(plans, dict) else []:
+            if not isinstance(plan, dict):
+                continue
+            plan.pop("token_plan_note", None)
+            found = list(plan.get("tokens") or [])
+            for deck in plan.get("decks") or []:
+                for need in (deck.get("tokens") or {}).get("needs", []):
+                    need.pop("example", None)
+                    found += (need.get("cards") or []) + (need.get("stand_ins") or [])
+            for item in found:
+                for key in pictures:
+                    item.pop(key, None)
+
+
 def storage_location_defaults(dump):
     """Drop only E8-S22's empty "storage_locations" on packing plans (none recorded)."""
     for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
@@ -943,7 +966,8 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("assembly-progress", assembly_progress), ("usual-opponents", usual_opponents),
                ("stand-in-defaults", standin_defaults), ("rename-defaults", rename_defaults),
                ("assembly-section-defaults", assembly_section_defaults), ("swap-defaults", swap_defaults),
-               ("assembly-colors", assembly_colors), ("considering-defaults", considering_defaults),
+               ("assembly-colors", assembly_colors), ("assembly-token-pictures", assembly_token_pictures),
+               ("considering-defaults", considering_defaults),
                ("box-label-defaults", box_label_defaults), ("category-defaults", category_defaults),
                ("storage-location-defaults", storage_location_defaults), ("played-defaults", played_defaults),
                ("departed-defaults", departed_defaults), ("counter-defaults", counter_defaults),

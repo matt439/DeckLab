@@ -41,7 +41,7 @@ SETUP = """
   };
   const chosen = () => main.querySelector('.pack-sort').querySelectorAll('button')
     .find(b => b.getAttribute('aria-pressed') === 'true').textContent;
-  const names = root => root.querySelectorAll('.card-tile-name').map(n => n.textContent);
+  const names = root => root.querySelectorAll('.card-tile-name').filter(n => !n.closest('.pack-token-tiles')).map(n => n.textContent);
   const steps = () => main.querySelectorAll('.pack-step').map(s => s.querySelector('h3').textContent);
   const progress = () => main.querySelector('.pack-progress-long').textContent;
   const tick = id => main.querySelectorAll('.pack-tick').find(n => n.getAttribute('data-pack-tick') === id);
@@ -135,7 +135,7 @@ class AssemblySortUiTests(unittest.TestCase):
           assert.equal(tick('pull|Alpha').getAttribute('aria-pressed'), 'true');
           assert.equal(progress(), 'Pulled 22 of 25 cards');
           assert(!steps().some(s => s.includes('Basic lands')));
-          assert(steps().findIndex(s => s.endsWith('Tokens')) > steps().findIndex(s => s.includes('Put back')));
+          assert(steps().findIndex(s => s.endsWith('Tokens (optional)')) > steps().findIndex(s => s.includes('Put back')));
           const pull = main.querySelectorAll('.pack-step').find(s => s.querySelector('h3').textContent.includes('Pull from storage'));
           same(names(pull), ['Zebra','Alpha','Forest']);
           const basicsGroup = pull.querySelectorAll('.pack-storage-group').find(g => names(g).includes('Forest'));

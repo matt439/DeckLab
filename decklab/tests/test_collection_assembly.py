@@ -408,8 +408,12 @@ class AssemblyTokenTests(PreparationCase):
         result = self.preview(("a", "target"), ("c", "owned"))
         inv, (inc, _) = tokens.read(), tokens.incoming()
         first, second = result["decks"]
+        pictures = ("img", "back_img", "example_art")       # the tiles', assembly_tokens.with_pictures
+        plain = lambda found: [{key: value for key, value in item.items() if key not in pictures} for item in found]
         undecorated = {**first["tokens"], "needs": [
-            {key: value for key, value in need.items() if key != "packing_key"} for need in first["tokens"]["needs"]]}
+            {**{key: value for key, value in need.items() if key not in ("packing_key", "example")},
+             "cards": plain(need["cards"]), "stand_ins": plain(need["stand_ins"])}
+            for need in first["tokens"]["needs"]]}
         expected = tokens.deck_tokens(decks.load_deck("casual/a", "target"), inv, inc)
         expected.pop("counters", None)          # the plan leaves the counters and dice out (E7-S24)
         self.assertEqual(undecorated, expected)
