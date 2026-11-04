@@ -4,6 +4,8 @@ counted by the Command Zone template's role targets. Writes nothing; imported wh
 feature_routes.dispatch.
 
     GET /api/commanders/candidates?space=<id>&limit=<n>     candidates_view()
+    GET /api/commanders/candidate?name=<card>&space=<id>    candidate_view(): one candidate's free cards
+                                                            by name (E9-S28's second slice)
 
 What counts is lib/decks/commander_pool.py's. The answer is the space's inventory's
 (guard.require_sees_inventory: the Collection page's 403, "That collection isn't public.", for a space the
@@ -17,6 +19,7 @@ from . import guard
 from .card_lookup import _card_json, _shown_printing
 from .carddata import _require_cards
 from .collection import _integer, space_param
+from .common import ApiError, MAX_NAME, _CONTROL_RE
 from .precon_coverage import _pool
 from .role_cards import _tag_counts
 
@@ -54,3 +57,33 @@ def candidates_view(space=None, limit=None):
     tagged = _tag_counts()
     return {"space": space, "candidates": shown, "total": len(ranked), "source": source,
             "tags_available": any(tagged.get(role) for role in cards.ROLES)}
+
+
+def candidate_view(name=None, space=None):
+    """GET /api/commanders/candidate?name=&space=: one candidate's free cards by name
+    (commander_pool.cards_for), each with "card" (its JSON, for its picture): {"space", "name", "colours",
+    "categories", "others", "source"}. The same reading rule as candidates_view (403 first); then 400 for a
+    missing or malformed name and 404 for a card that isn't a candidate in the space (no copy free, not
+    legal in Commander, or not one that may be a commander), naming no deck holding it."""
+    space = space_param(space)
+    guard.require_sees_inventory(space)
+    if not isinstance(name, str) or not name.strip() or len(name) > MAX_NAME or _CONTROL_RE.search(name):
+        raise ApiError(400, f"name is required: the candidate's card name, 1-{MAX_NAME} characters.")
+    _require_cards()
+    exact = cards.resolve(name.strip()) or name.strip()
+    free = pool.free_copies(_pool(space))
+    may_lead, _, categories, source = _rules()
+    found = commander_pool.cards_for(exact, free, cards.card, may_lead, categories)
+    if found is None:
+        raise ApiError(404, f"{exact} isn't a commander we could build from this collection: it needs a copy "
+                            "free, to be legal in Commander and to be able to lead a deck.")
+
+    def pictured(rows):
+        return [{**row, "card": _card_json(c, _shown_printing(c))} for row in rows for c in [cards.card(row["name"])]]
+
+    for part in found["categories"]:
+        part["cards"] = pictured(part["cards"])
+    found["others"]["cards"] = pictured(found["others"]["cards"])
+    card = cards.card(exact)
+    return {"space": space, "name": exact, "colours": [x for x in "WUBRG" if x in (card.get("color_identity") or ())],
+            **found, "source": source}

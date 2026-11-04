@@ -24,10 +24,16 @@ its "except" roles), from the cards' "roles" in the card index:
 Best first: coverage, then the free non-land cards that fit, then the name. Nothing here reads the
 inventory or the card data: the caller passes the free copies, a card lookup and the categories, so the
 rules are tested on their own.
+
+cards_for (E9-S28's second slice) names one candidate's free cards: each category's (the lands' being the
+free non-basic lands) and the other non-land cards that fit no counted category, each list most-printed first (as the
+Stats tab's free cards by role rank them, role_pool.free_by_role) and at most MAX_LISTED long, with the
+rest counted.
 """
 from .role_pool import fits
 
 LIMIT = 50              # candidates answered by default
+MAX_LISTED = 40         # cards cards_for names in one list (the rest are counted)
 
 
 def _is_land(card):
@@ -40,10 +46,61 @@ def _counts(category):
 
 
 def _category_count(category, entries):
+    return sum(1 for e in entries if _in_category(category, e))
+
+
+def _entries(free, card_of):
+    """The free cards that are legal in Commander, each {"name", "card", "identity", "roles", "land", "free"}."""
+    entries = []
+    for name, spare in free.items():
+        if spare <= 0:
+            continue
+        card = card_of(name)
+        if card is None or card.get("commander_legality") != "legal":
+            continue
+        entries.append({"name": name, "card": card, "identity": frozenset(card.get("color_identity") or ()),
+                        "roles": set(card.get("roles") or ()), "land": _is_land(card), "free": spare})
+    return entries
+
+
+def _in_category(category, entry):
     if category.get("lands"):
-        return sum(1 for e in entries if e["land"])
+        return entry["land"]
     roles, never = set(category["roles"]), set(category.get("except") or ())
-    return sum(1 for e in entries if e["roles"] & roles and not e["roles"] & never)
+    return bool(entry["roles"] & roles) and not entry["roles"] & never
+
+
+def _listed(rows, limit):
+    """(the rows' [{"name", "free"}] most-printed first then by name, at most limit, and how many more)."""
+    rows = sorted(rows, key=lambda e: (-len(e["card"].get("printings") or ()), e["name"].casefold()))
+    return [{"name": e["name"], "free": e["free"]} for e in rows[:limit]], max(len(rows) - limit, 0)
+
+
+def cards_for(name, free, card_of, may_lead, categories, limit=MAX_LISTED):
+    """One candidate's free cards by name, or None when name isn't a candidate (no copy free, not legal in
+    Commander, or it may not be a commander alone): {"categories": [{"category", "label", "target",
+    "count", "short", "in_coverage", "cards": [{"name", "free"}], "more"}] for each category with a
+    measure (the lands' are the free non-basic lands; the plan has none), "others" ({"cards", "more",
+    "count"}: the free non-land cards that fit no counted category)}. The arguments are candidates'."""
+    entries = _entries(free, card_of)
+    lead = next((e for e in entries if e["name"] == name), None)
+    if lead is None or not may_lead(lead["card"]):
+        return None
+    fit = [e for e in entries if e is not lead and fits(e["card"], lead["identity"])]
+    parts, counted = [], set()
+    for c in categories:
+        if not _counts(c):
+            continue
+        rows = [e for e in fit if _in_category(c, e)]
+        if c.get("roles"):
+            counted.update(e["name"] for e in rows)
+        listed, more = _listed(rows, limit)
+        parts.append({"category": c["category"], "label": c["label"], "target": c["target"],
+                      "count": len(rows), "short": bool(c.get("roles")) and len(rows) < c["target"],
+                      "in_coverage": bool(c.get("roles")), "cards": listed, "more": more})
+    others = [e for e in fit if not e["land"] and e["name"] not in counted]
+    listed, more = _listed(others, limit)
+    return {"categories": parts, "others": {"cards": listed, "more": more, "count": len(others)}}
 
 
 def candidates(free, card_of, may_lead, categories, partners=lambda card: []):
@@ -56,15 +113,7 @@ def candidates(free, card_of, may_lead, categories, partners=lambda card: []):
     free is {name: copies free} (pool.free_copies), card_of(name) the card or None (skipped),
     may_lead(card) whether it may be a commander alone, categories role_targets.CATEGORIES and
     partners(card) its partner abilities in words."""
-    entries = []
-    for name, spare in free.items():
-        if spare <= 0:
-            continue
-        card = card_of(name)
-        if card is None or card.get("commander_legality") != "legal":
-            continue
-        entries.append({"name": name, "card": card, "identity": frozenset(card.get("color_identity") or ()),
-                        "roles": set(card.get("roles") or ()), "land": _is_land(card)})
+    entries = _entries(free, card_of)
     counted = [c for c in categories if c.get("roles")]
     of = sum(c["target"] for c in counted)
     out = []

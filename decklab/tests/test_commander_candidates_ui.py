@@ -19,6 +19,13 @@ FIXTURE = SETUP + """
     source: {id: 'command-zone-658', title: 'Commander Deckbuilding Template', url: 'https://example.com/658', episode_date: '2025-02-18', checked: '2026-10-31'},
     candidates: [lead('Ghalta, Primal Hunger', ['G'], 30, ['Card advantage', 'Targeted disruption', 'Mass disruption']),
       lead('Kraum, Ludevic\\'s Opus', ['U', 'R'], 20, ['Ramp'], {partner: ['partner']})]};
+  const pic = (name) => ({name, mana_cost: '{G}', type_line: 'Creature', cmc: 1, color_identity: ['G'], img_small: null});
+  const row = (name, free = 1) => ({name, free, card: pic(name)});
+  const CARDS = {space: 'home', name: "Kraum, Ludevic's Opus", colours: ['U', 'R'], source: RANKED.source,
+    categories: [{category: 'lands', label: 'Lands', target: 38, count: 1, short: false, in_coverage: false, cards: [row('Shivan Reef')], more: 0},
+      {category: 'ramp', label: 'Ramp', target: 10, count: 12, short: false, in_coverage: true, cards: [row('Sol Ring', 2)], more: 11},
+      {category: 'mass disruption', label: 'Mass disruption', target: 6, count: 0, short: true, in_coverage: true, cards: [], more: 0}],
+    others: {cards: [row('Grizzly Bears')], more: 0, count: 1}};
   const make = (data = {}) => { as('matt', MAY.admin); location.hash = '#/collection';
     return drawCollectionRows({space: 'home', sha256: 's1', rows: [], editable: true, ...data}, 'home'); };
 """
@@ -36,7 +43,7 @@ class CommanderCandidatesUiTests(unittest.TestCase):
         self.run_js("""
           const cv = make();
           const asked = [];
-          api = async (path) => { asked.push(path); return RANKED; };
+          api = async (path) => { asked.push(path); return path.startsWith('/api/commanders/candidate?') ? CARDS : RANKED; };
           const ctx = openCommanderCandidates(cv); await flush();
           same(asked, ['/api/commanders/candidates?']);
           const list = ctx.area.textContent;
@@ -52,9 +59,23 @@ class CommanderCandidatesUiTests(unittest.TestCase):
           assert(words.includes('Targeted disruption') && words.includes('Not counted') && words.includes('Basics fill the rest'), words);
           assert(words.includes('a second commander would widen its colours'), words);
           assert(ctx.area.querySelectorAll('.ccand-short').length === 3);
+          // Its free cards by name, asked once it's opened.
+          same(asked, ['/api/commanders/candidates?', '/api/commanders/candidate?name=Kraum%2C+Ludevic%27s+Opus']);
+          assert(words.includes('Free cards by role') && words.includes('Sol Ring') && words.includes('2 free'), words);
+          assert(words.includes('12 of 10') && words.includes('11 more cards not listed.'), words);
+          assert(words.includes('0 of 6, 6 short') && words.includes('None free in its colours.'), words);
+          assert(words.includes('Shivan Reef') && words.includes('basics fill the rest'), words);
+          assert(words.includes('Other free cards') && words.includes('Grizzly Bears'), words);
+          // New deck from it: the new-deck editor with it as the commander.
+          const link = ctx.area.querySelector('.ccand-actions').querySelector('a');
+          assert.equal(link.textContent, 'New deck from it');
+          assert.equal(link.getAttribute('href'), "#/new?kind=commander&commander=Kraum%2C+Ludevic%27s+Opus");
+          // See EDHREC ideas: deck-edhrec.js's sheet for this commander and space, no deck.
+          ctx.area.querySelector('.ccand-actions').querySelector('button').click(); await flush();
+          assert.equal(asked[2], "/api/deck/edhrec?commander=Kraum%2C%20Ludevic's%20Opus&space=home");
           // Back draws the ranking again without asking.
           ctx.sheet.foot.querySelector('[data-action="back"]').click(); await flush();
-          assert.equal(asked.length, 1);
+          assert.equal(asked.length, 3);
           assert(ctx.area.textContent.includes('Ghalta'));
         """)
 
@@ -66,6 +87,11 @@ class CommanderCandidatesUiTests(unittest.TestCase):
           const ctx = openCommanderCandidates(cv); await flush();
           same(asked, ['/api/commanders/candidates?space=user2']);
           assert(ctx.message.textContent.includes("That collection isn't public."), ctx.message.textContent);
+          // A viewer who may not add decks in the space gets no New deck from it.
+          state.may = {...state.may, create: [{space: 'home', player: null}]};
+          assert.equal(candidateNewDeckHref(ctx, {name: 'Ghalta, Primal Hunger'}), null);
+          state.may = {...state.may, create: [{space: 'user2', player: null}]};
+          assert.equal(candidateNewDeckHref(ctx, {name: 'Ghalta, Primal Hunger'}), '#/new?kind=commander&commander=Ghalta%2C+Primal+Hunger&space=user2');
           api = async () => ({...RANKED, candidates: [], total: 0, tags_available: false});
           await rankCandidates(ctx);
           assert(ctx.area.textContent.includes('Role tags are unavailable'), ctx.area.textContent);

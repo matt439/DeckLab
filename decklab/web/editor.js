@@ -38,6 +38,7 @@ Routes:
     #/edit?id=<deck id>&v=target|owned   one list of a deck (the target list or the owned-only
                                          version) and the header fields, which go with either
     #/new[?kind=casual|commander]         a new deck from scratch
+    #/new?kind=commander&commander=<name> one with that commander (Commanders we could build, E9-S28)
     #/new?from=<library id>               "Save as a new deck" from a product deck, a Beginner Box half
                                           or a pairing (those stay read-only)
 
@@ -626,6 +627,8 @@ function showNewDeck(params, token) {
   const kind = params.get("kind") === "commander" ? "commander" : "casual";
   clear($("#main"));
   startEditor({ mode: "new", kind, space: params.get("space") });
+  // Commanders we could build's New deck from it (E9-S28): editor-import.js puts the commander in.
+  if (kind === "commander" && params.get("commander")) startFromCommander(params.get("commander"));
   afterRender();
 }
 

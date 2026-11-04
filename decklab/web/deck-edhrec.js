@@ -11,7 +11,12 @@
  * The sheet's Page choice narrows the ideas to one of EDHREC's pages for the commander: Budget or
  * Expensive, a Commander Brackets page, or one of the themes EDHREC lists for it (the answer's "pages").
  * Each choice asks the server again (page=); a page EDHREC hasn't got says so and the choice stays, so
- * another page (or the commander's whole page) can still be picked. */
+ * another page (or the commander's whole page) can still be picked.
+ *
+ * Commanders we could build (E9-S28, commander-candidates.js) opens the same sheet for a commander with no
+ * deck yet (openEdhrecSheet(null, {commander, space})): it asks for that commander in that space, as the
+ * new-deck editor does, so the marks count the space's pool; there's no "Not in the deck" choice and no
+ * Consider button (no deck to add to). */
 "use strict";
 
 const EDHREC_FILTERS = [["new", "Not in the deck"], ["free", "Free"], ["to_buy", "To buy"], ["all", "All"]];
@@ -46,8 +51,9 @@ function edhrecPasses(c, filter) {
   return !c.in_deck && c.status === filter;
 }
 
-function openEdhrecSheet(data) {
-  const ctx = { data, id: data.summary.id, filter: "new", answer: null, changed: false, seq: 0, page: "", pages: null };
+function openEdhrecSheet(data, lead = null) {
+  const ctx = { data, id: data ? data.summary.id : null, lead, filter: lead ? "all" : "new", answer: null, changed: false,
+    seq: 0, page: "", pages: null };
   const sheet = openSheet("EDHREC ideas", { wide: true, onClose: () => {
     const here = parseHash();
     if (ctx.changed && here.path === "deck" && addressDeckId(here.params.get("id") || "") === ctx.id) {
@@ -70,8 +76,9 @@ async function loadEdhrec(ctx) {
   clear(ctx.area);
   clear(ctx.message).append(loadingBox("Asking EDHREC…"));
   try {
-    const answer = await api(`/api/deck/edhrec?id=${encodeURIComponent(ctx.id)}`
-      + (ctx.page ? `&page=${encodeURIComponent(ctx.page)}` : ""));
+    const address = ctx.lead ? `commander=${encodeURIComponent(ctx.lead.commander)}&space=${encodeURIComponent(ctx.lead.space)}`
+      : `id=${encodeURIComponent(ctx.id)}`;
+    const answer = await api(`/api/deck/edhrec?${address}` + (ctx.page ? `&page=${encodeURIComponent(ctx.page)}` : ""));
     if (seq !== ctx.seq || ctx.sheet.closed) return;
     ctx.answer = answer;
     ctx.sha = answer.sha256;
@@ -123,8 +130,8 @@ function edhrecSourceLine(a) {
 function drawEdhrec(ctx) {
   const a = ctx.answer;
   const marks = Boolean(a.marks);
-  const filters = EDHREC_FILTERS.filter(([key]) => marks || key === "new" || key === "all");
-  if (!filters.some(([key]) => key === ctx.filter)) ctx.filter = "new";
+  const filters = EDHREC_FILTERS.filter(([key]) => (marks || key === "new" || key === "all") && !(ctx.lead && key === "new"));
+  if (!filters.some(([key]) => key === ctx.filter)) ctx.filter = filters[0][0];
   // A card EDHREC lists in two categories (its Top Cards and its type) is counted once.
   const all = [...new Map(a.groups.flatMap((g) => g.cards).map((c) => [c.name, c])).values()];
   const bar = el("div", { class: "segmented edhrec-filters", role: "group", "aria-label": "Show" },
