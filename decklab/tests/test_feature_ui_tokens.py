@@ -638,17 +638,23 @@ class TokensUiTests(unittest.TestCase):
 
     def test_packing_ticks_count_the_opponents_tokens_apart(self):
         self.run_js(self.TOKENS + """
-          // E7-S23 slice 2: an opponent-only token's lines come after the deck's own and say whose they are;
+          // E7-S23 slice 2: an opponent-only token's tile comes after the deck's own and says whose it is;
           // its tick keeps its id, and "either" stays with the deck's own.
           const theirs = need('Spirit', 'ready', 'Have it: 1 card', {side: 'opponent', cards: [card('Spirit', '', 1, 'front', 'exact')]});
           const maybe = need('Insect', 'ready', 'Have it: 1 card', {side: 'either', cards: [card('Insect', '', 1, 'front', 'exact')]});
           const gone = need('Clue', 'none', 'None owned', {side: 'opponent'});
-          const lines = assemblyTokenTasks({needs: [theirs, gone, maybe, needs[4]]});
-          const text = lines.map(li => li.textContent);
-          same(text, ['Grab Insect ×1 for Insect', 'Grab Zombie / Zombie Knight ×8 (Zombie side only, can be sleeved) for Zombie',
-                      'For your opponent: Grab Spirit ×1 for Spirit',
-                      'For your opponent: No Clue token: use a stand-in (a spare token card or a die)']);
-          assert.equal(lines[2].querySelector('input').getAttribute('data-pack-tick'), 'token|k-Spirit');
+          const hint = 'Anything will do: a spare token, a die or a scrap of paper.';
+          const items = assemblyTokenItems({needs: [maybe, needs[4], theirs, gone]});
+          same(items.map(item => item.caption), ['Grab Insect ×1 for Insect', 'Grab Zombie / Zombie Knight ×8 (Zombie side only, can be sleeved) for Zombie',
+                                                 'For your opponent: Grab Spirit ×1 for Spirit',
+                                                 `For your opponent: No Clue token. ${hint}`]);
+          const parts = assemblyTokenTasks({needs: [theirs, gone, maybe, needs[4]]});
+          assert.equal(parts[0].textContent, hint);
+          same(parts[1].querySelectorAll('.card-tile-name').map(n => n.textContent), ['Insect', 'Zombie']);
+          const group = parts.find(part => part && part.querySelector('h4'));
+          assert.equal(group.querySelector('h4').textContent, 'For your opponent');
+          same(group.querySelectorAll('.card-tile-name').map(n => n.textContent), ['Spirit', 'Clue']);
+          assert.equal(group.querySelector('.pack-tick-optional').getAttribute('data-pack-tick'), 'token|k-Spirit');
         """)
 
     def test_deck_page_lists_the_counters_and_dice_the_cards_use(self):
@@ -819,7 +825,7 @@ class TokensUiTests(unittest.TestCase):
                                'Grab Zombie / Zombie Knight ×8, Zombie Knight side (both sides used)']) {
             assert(text.includes(words), words);
           }
-          const ticks = assemblyTokenTasks({needs: both}).map(li => li.textContent);
+          const ticks = assemblyTokenItems({needs: both}).map(item => item.caption);
           assert(ticks.some(t => t.includes('Grab Zombie / Zombie Knight ×8 (Zombie side; both sides used) for Zombie')), ticks);
           assert(ticks.some(t => t.includes('(Zombie Knight side; both sides used) for Zombie Knight')), ticks);
         """)
@@ -865,19 +871,28 @@ class TokensUiTests(unittest.TestCase):
             decks:[deck('casual/a','Otters',deckTokensResult), deck('casual/b','Gandalf',null),
                    deck('casual/c','Other',{unavailable:'Token data is being rebuilt; refresh in a minute.'})]},routeToken);
           const text = main.textContent;
+          for (const words of ['Tokens (optional)', 'Anything will do: a spare token, a die or a scrap of paper.',
+                               'Check by hand (2 cards)', 'Gandalf, Westward Voyager, Elrond',
+                               'Token data is being rebuilt', 'Shared tokens', 'Both decks can use these cards.',
+                               'Zombie / Zombie Knight ×8: Otters, Gandalf',
+                               'All your token cards (1)', "Some token rows can't be read (1)", 'magic/tokens.csv line 4: bad']) {
+            assert(text.includes(words), words);
+          }
+          // The long words are the viewer's, never the tile's.
+          for (const words of ['Grab ', 'tell your opponent', 'use a stand-in', 'can be sleeved']) {
+            assert(!text.includes(words), words);
+          }
+          const captions = assemblyTokenItems(deckTokensResult).map(item => item.caption);
           for (const words of ['Grab Zombie / Zombie Knight ×8 (Zombie side only, can be sleeved) for Zombie',
                                'Grab Elf Warrior / Cat ×1 (Cat side only, can be sleeved) for Cat (details not recorded)',
                                "Stand-in for Insect: Insect / Goblin ×1 (your card says no deathtouch; Hornet Queen's Insect has deathtouch; Insect side only, can be sleeved; tell your opponent)",
-                               'No Raccoon token: use a stand-in (a spare token card or a die)',
-                               'No Fish token yet: 2 on the way', 'Check by hand: Gandalf, Westward Voyager, Elrond',
-                               'Token data is being rebuilt', 'Shared tokens', 'Both decks can use these cards.',
-                               'Zombie for Otters (Zombie side); Zombie Knight for Gandalf (Zombie Knight side)',
-                               'All your token cards (1)', 'magic/tokens.csv line 4: bad']) {
-            assert(text.includes(words), words);
+                               'No Raccoon token. Anything will do: a spare token, a die or a scrap of paper.',
+                               'No Fish token yet: 2 on the way']) {
+            assert(captions.includes(words), words);
           }
           // What's missing or on the way is never a tick.
-          const ticks = main.querySelectorAll('label').map(l => l.textContent);
-          assert(!ticks.some(t => t.includes('Raccoon') || t.includes('Fish')));
+          const ticks = main.querySelectorAll('.pack-tick-optional').map(t => t.getAttribute('aria-label'));
+          same(ticks, ['Insect: done', 'Cat: done', 'Zombie: done', 'Ooze: done']);
           assert(main.querySelectorAll('a').some(a => a.getAttribute('href') === '#/tokens'));
           // No shared cards: no "Shared tokens" panel.
           clear(main);

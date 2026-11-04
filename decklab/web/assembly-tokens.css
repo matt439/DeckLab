@@ -1,0 +1,11 @@
+/* Build decks' tokens (assembly-tokens.js): picture tiles at every width, with an optional tick at the picture's
+   bottom-left as the cards' have. A tile with no card uses .is-missing's dimmed picture. */
+.card-tile-state:has(> .pack-tick-optional) {
+  top: 0; right: 0; left: 0; aspect-ratio: 488 / 680;
+  display: flex; align-items: flex-end; padding: var(--s-1); pointer-events: none;
+}
+.card-tile-state > .pack-tick-optional { pointer-events: auto; }
+.pack-token-group { display: grid; gap: var(--s-2); }
+.pack-token-group > h4 { margin: 0; }
+.assembly-token-list[open] > .pack-token-tiles { margin-top: var(--s-3); }
+.pack-token-problems > summary { cursor: pointer; }

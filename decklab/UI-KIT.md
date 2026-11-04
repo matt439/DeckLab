@@ -82,8 +82,17 @@ return expand their exact step first. One owned click toggle handles keyboard
 activation, and queued native toggle events read current desired state. Resize
 reveals the same focused current control through the existing guarded helper.
 
+`assembly-tokens.js` follows the steps helper; its CSS follows `assembly-steps.css`.
+Tokens are always optional: one unnumbered step of token tiles, each a picture (both
+faces, example art dimmed for a token with no card), name and at most one short line.
+Longer words are the caption in the `pack-tokens` viewer group. Reminders and the
+opponent's sit under their own small headings. Ticks keep their saved ids and contexts
+but are class `pack-tick-optional`: `tick.optional`, never `tick.tile`. They look like
+card ticks and join Clear, yet never count in the bar, "All packed.", bulk ticks or
+finishing, and their own save or its failure doesn't hold the finish back.
+
 `assembly-finish.js` follows the switcher helper. A retained bar under the stable
-plan column counts global card copies and separate optional steps. The visual meter
+plan column counts global card copies and separate kit steps. The visual meter
 has a spoken equivalent; no card tasks means no meter/max/value or 0/0. The primary
 uses aria-disabled with one retained described reason and stays keyboard reachable.
 Blocked activation only focuses current guidance or reveals the original unchecked

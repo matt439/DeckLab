@@ -99,8 +99,9 @@ class FeatureUiTests(unittest.TestCase):
           drawAssembly({choices:[],decks:[deck],rows:[],ready:false,counts_confirmed:true,unresolved:[],warnings:[],
             note:'',token_note:'',totals:{waiting:0,missing:0},token_plan:[],token_problems:[],
             tokens:[{quantity:1,front:'The Monarch',back:'',notes:'single-sided verified'}]},routeToken);
-          assert(main.textContent.includes('single-sided (verified)'));
-          assert(!main.textContent.includes('reverse not recorded'));
+          const caption = viewerGroup(main.querySelector('.assembly-token-list').querySelector('.card-tile-open')).items[0].caption;
+          assert(caption.includes('single-sided (verified)'));
+          assert(!caption.includes('reverse not recorded'));
         """)
 
     def test_assembly_notes_decks_in_the_same_sleeves(self):

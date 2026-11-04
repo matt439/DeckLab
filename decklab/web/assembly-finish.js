@@ -29,6 +29,19 @@ function packBuildBar(view) {
   return bar;
 }
 
+/** Ticks still being saved that finishing waits for: a token's never does, as tokens are optional. */
+function packUnsavedTicks(view) {
+  const optional = new Set((view.ticks || []).filter(t => t.optional).map(t => t.id));
+  return [...(view.progress?.pending.keys() || [])].filter(id => !optional.has(id)).length;
+}
+
+/** Shared progress that couldn't be read, or card or kit ticks that couldn't be saved. A failed save of
+ * token ticks alone leaves its Retry beside the ticks, without holding the finish back. */
+function packProgressFailed(view) {
+  const p = view.progress;
+  return Boolean(p?.error && (!p.pending.size || packUnsavedTicks(view)));
+}
+
 /** Same ordered completion messages as the checklist, with a current focus destination when blocked. */
 function packFinishAdvice(view, cards) {
   const completion = view.data.completion, count = completion.decks.length;
@@ -39,9 +52,9 @@ function packFinishAdvice(view, cards) {
   if (!count) return advice(completion.reason || "These lists are already marked built.");
   if (!completion.can_mark_built) return advice(completion.reason || "This plan can't be marked built yet.");
   if (view.finishError) return advice("Refresh the plan before trying again.", view.finish.error.querySelector("button"));
-  if (view.progress?.error) return advice("Save shared progress before marking these decks built.", view.progressNote.querySelector("button"));
+  if (packProgressFailed(view)) return advice("Save shared progress before marking these decks built.", view.progressNote.querySelector("button"));
   if (!view.progress?.loaded) return advice("Loading shared progress.");
-  if (view.progress.pending.size) return advice("Saving shared progress.");
+  if (packUnsavedTicks(view)) return advice("Saving shared progress.");
   if (cards.every(t => t.done)) return advice("Cards checked. Mark the assembled lists as built when you're ready.");
   return advice("Check off the remaining cards, then mark the assembled lists as built here.", cards.find(t => !t.done)?.node);
 }
@@ -68,7 +81,8 @@ function packFinishClick(view, button) {
   focus.scrollIntoView({ block: "nearest" });
 }
 
-/** Update retained nodes, so polling never replaces a focused reason, primary, or meter. */
+/** Update retained nodes, so polling never replaces a focused reason, primary, or meter.
+ * ticks: those "All packed." needs, so never a token's. */
 function packUpdateBar(view, ticks, cards, other) {
   const sum = list => list.reduce((total, tick) => total + tick.count, 0);
   const pulled = sum(cards.filter(t => t.done)), total = sum(cards), done = other.filter(t => t.done).length;
@@ -85,7 +99,8 @@ function packUpdateBar(view, ticks, cards, other) {
   progress.other.textContent = other.length ? `${done} of ${plural(other.length, "other step")}` : "";
   progress.spoken.textContent = [cards.length ? `Pulled ${pulled} of ${plural(total, "card")}` : null,
     other.length ? `${done} of ${plural(other.length, "other step")}` : null].filter(Boolean).join(" · ");
-  progress.state.textContent = ticks.length && ticks.every(t => t.done) ? "All packed." : !ticks.length ? "Nothing to tick in this plan." : "";
+  progress.state.textContent = ticks.length && ticks.every(t => t.done) ? "All packed."
+    : !view.ticks?.length ? "Nothing to tick in this plan." : "";
   packStepsProgress(view);
   if (!view.finish) return;
   view.finish.message.textContent = packFinishAdvice(view, cards).text;

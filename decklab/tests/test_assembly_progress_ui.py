@@ -118,15 +118,16 @@ class AssemblyProgressUiTests(unittest.TestCase):
           const other={...elf,front:'Goblin',front_collector_number:'2',front_details:'1/1; red'};
           const data=(rows,row) => ({...plan([item('casual/a',{tokens:{needs:[{
             name:'Elf',state:'ready',cards:[{front:'Elf',back:'',quantity:1,side:'front',row}]}]}})]),tokens:rows});
-          const tokenTick=root => root.querySelectorAll('[data-pack-tick]').find(n => n.tag === 'input');
+          const tokenTick=root => root.querySelector('.pack-tick-optional');
+          const ticked=root => tokenTick(root).getAttribute('aria-pressed') === 'true';
           let root=open(data([elf],0)); await settle();
-          tokenTick(root).checked=true; tokenTick(root).fire('change'); await settle();
+          tokenTick(root).click(); await settle();
           assert.equal(server.size,1);
           for (const changed of [{...elf,set:'tother'}, {...elf,front_details:'1/1; green; deathtouch'}]) {
-            clear(main); root=open(data([changed],0)); await settle(); assert.equal(tokenTick(root).checked,false);
+            clear(main); root=open(data([changed],0)); await settle(); assert.equal(ticked(root),false);
           }
           clear(main); root=open(data([other,{...elf,notes:'Edited notes',key:'different-position'}],1)); await settle();
-          assert.equal(tokenTick(root).checked,true,'row positions and notes do not change the physical token');
+          assert.equal(ticked(root),true,'row positions and notes do not change the physical token');
         """)
 
     def test_server_token_identity_bounds_large_alternative_labels_and_tracks_physical_changes(self):
@@ -140,15 +141,17 @@ class AssemblyProgressUiTests(unittest.TestCase):
               packing_key:packingKey,cards:rows.map((r,row) => ({front:r.front,back:r.back,
                 quantity:1,side:'front',row}))}]}})]),tokens:rows};
           };
-          const tokenTick=root => root.querySelectorAll('[data-pack-tick]').find(n => n.tag === 'input');
+          const tokenTick=root => root.querySelector('.pack-tick-optional');
+          const ticked=root => tokenTick(root).getAttribute('aria-pressed') === 'true';
           let root=open(make('a'.repeat(64))); await settle();
-          assert(tokenTick(root).parentNode.textContent.length>1000,'the display label can be long');
+          const caption=viewerGroup(root.querySelector('.pack-token-tiles').querySelector('.card-tile-open')).items[0].caption;
+          assert(caption.length>1000,'the viewer caption can be long');
           assert(packingProgressView.ticks.find(t => !t.tile).id.length<250,'server key keeps request identity bounded');
-          tokenTick(root).checked=true; tokenTick(root).fire('change'); await settle();
+          tokenTick(root).click(); await settle();
           clear(main); root=open(make('a'.repeat(64),true)); await settle();
-          assert.equal(tokenTick(root).checked,true,'same physical alternatives survive display reordering');
+          assert.equal(ticked(root),true,'same physical alternatives survive display reordering');
           clear(main); root=open(make('b'.repeat(64))); await settle();
-          assert.equal(tokenTick(root).checked,false,'changed physical identity needs a fresh check');
+          assert.equal(ticked(root),false,'changed physical identity needs a fresh check');
         """)
 
     def test_simultaneous_devices_patch_only_their_own_changed_task(self):
