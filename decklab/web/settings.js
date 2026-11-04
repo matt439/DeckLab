@@ -1,7 +1,8 @@
 /* Deck Lab's page: Settings (#/settings, decklab/UI-REVIEW.md 2.2), an admin's page. Who may start Forge
 simulations and how many Forge workers the PC uses (GET/PUT /api/simulations, lib/api/simulations.py), Visits
 (GET /api/visits, lib/api/visits.py: who has used Deck Lab, when, and the pages they opened), database-maintenance
-history (GET /api/settings/maintenance, lib/api/maintenance.py; reading runs no jobs), and About Deck Lab:
+history (GET /api/settings/maintenance, lib/api/maintenance.py; reading runs no jobs), the shops' postage
+(settings-postage.js, E5-S27), and About Deck Lab:
 the running server's version, Check for updates, the card data and Restart Deck Lab (settings-restart.js). These used to sit in every page's footer;
 the footer is now one quiet line (version.js).
 
@@ -47,6 +48,7 @@ function showSettings(params, token) {
           el("p", { class: "sub", id: "sim-since" })),
         el("div", { id: "sim-loading" }, loadingBox("Loading the simulations setting…", { small: true }))),
       commanderNightSettings(),
+      typeof settingsPostagePanel === "function" ? settingsPostagePanel() : null,
       settingsMembersPanel(),
       settingsMaintenancePanel(token),
       el("section", { class: "panel settings-part", id: "settings-visits", "aria-labelledby": "settings-visits-title" },
@@ -64,14 +66,16 @@ function showSettings(params, token) {
         settingsRestartPart()))]);
   byId("sim-settings").hidden = true;
   afterRender();
-  if (params && params.get("part") === "about") {
-    const about = byId("settings-about");
-    if (about && about.scrollIntoView) about.scrollIntoView();
+  const part = params && params.get("part");
+  if (part === "about" || part === "postage") {
+    const target = byId(`settings-${part}`);
+    if (target && target.scrollIntoView) target.scrollIntoView();
   }
   if (state.simulations) renderSimulations(state.simulations);
   if (state.status) renderVersionStatus(state.status);
   settingsSimulations(token);
   loadCommanderNightSettings(token);
+  if (typeof loadPostageSettings === "function") loadPostageSettings(token);
   loadSettingsMembers(token);
   loadSettingsMaintenance(token);
   loadVisits(token);

@@ -5,15 +5,18 @@ for each snapshot shop config.json checks (lib/shops.enabled_adapters(), in that
 
   - "rows": the ready queue rows the snapshot found in stock there, each with the listing it
     found (price in AUD as the shop gave it, None when it showed none) and its fetch time;
-  - "add_ons": the long-term and waiting rows in stock there, marked as add-ons (no postage
-    rules yet, so they are only "in stock here", never "over the free-postage threshold");
+  - "add_ons": the long-term and waiting rows in stock there, marked as add-ons, those that reach
+    the shop's free-postage threshold at the smallest total marked "lifts" ("reach");
+  - "postage": the basket's postage from the shop's rules (shop_plan.postage, E5-S27's second
+    slice: a flat postage and a free-postage threshold, Settings; unknown when not set);
   - "total_aud" over the priced rows only, with "unpriced" counting the rest;
   - "unconfirmed": exact-printing rows whose printing the snapshot couldn't confirm there,
     "unknown": rows whose page couldn't be read, "not_checked": rows the run didn't reach,
     none of them claiming stock.
 
 A shop without a readable snapshot is listed with read False and no rows. "unavailable" are the
-ready rows no read shop has in stock, with each shop's reason. Nothing here changes the queue,
+ready rows no read shop has in stock, with each shop's reason, and "plan" the fewest-shops plan
+(shop_plan.plan: every combination of read shops, weighed by cards and postage). Nothing here changes the queue,
 records an order or stores a price paid; Shopping's guard (home's records) already ran.
 
 An exact row counts only a listing of its printing (set, collector number and finish, nonfoil
@@ -28,7 +31,7 @@ from decimal import Decimal, InvalidOperation
 
 from decklab.lib import shops
 
-from . import shop_prices
+from . import shop_plan, shop_prices
 
 READY = "ready"
 ADD_ON_STATES = ("long_term", "waiting_for_stock", "waiting_for_reprint")
@@ -143,8 +146,9 @@ def _totals(lines):
             "cards": sum(item.get("copies") or 0 for item in lines)}
 
 
-def basket(adapter, data, rows):
-    """One shop's basket over the queue rows (ready and add-on states only)."""
+def basket(adapter, data, rows, rules=None):
+    """One shop's basket over the queue rows (ready and add-on states only), with its postage
+    (shop_plan.postage) and the add-ons that reach its free-postage threshold, each marked "lifts"."""
     summary = shops.summary(data) if data else None
     shown = {"key": adapter.key, "shop": adapter.name, "site": adapter.site, "read": bool(data),
              "counts_stock": adapter.counts_stock,
@@ -153,7 +157,7 @@ def basket(adapter, data, rows):
              "rows": [], "add_ons": [], "unconfirmed": [], "unknown": [], "not_checked": []}
     if not data:
         shown.update(_totals([]))
-        shown["add_ons_totals"] = _totals([])
+        shown.update(add_ons_totals=_totals([]), postage=None, reach=None)
         return shown
     for row in rows:
         state = row.get("state")
@@ -168,17 +172,26 @@ def basket(adapter, data, rows):
             shown[item["status"]].append(item)
     shown.update(_totals(shown["rows"]))
     shown["add_ons_totals"] = _totals(shown["add_ons"])
+    total = shop_plan.money(shown["total_aud"])
+    shown["postage"] = shop_plan.postage((rules or {}).get(adapter.key), total, shown["unpriced"])
+    reached = shop_plan.reach(shown["add_ons"], shown["postage"]["short_by_aud"]) if shown["rows"] else None
+    shown["reach"] = reached
+    lifting = set(reached["rows"]) if reached and reached["reaches"] else set()
+    for item in shown["add_ons"]:
+        item["lifts"] = item.get("queue_row") in lifting
     return shown
 
 
-def build(rows, captured, revision=None):
-    """{"queue_revision", "shops": [basket, ...], "unavailable": [...]}, or None with no snapshot at all."""
+def build(rows, captured, revision=None, rules=None, adapters=None):
+    """{"queue_revision", "shops": [basket, ...], "unavailable": [...], "postage_read", "plan"}, or
+    None with no snapshot at all. rules: shop_postage.rules() ({key: {postage_aud, free_over_aud}},
+    None when it couldn't be read: every postage unknown)."""
     found = shop_prices.by_shop(captured)
     if not found:
         return None
+    adapters = list(shops.enabled_adapters() if adapters is None else adapters)   # config.json's shops (E11-S53)
     rows = [row for row in rows or () if isinstance(row, dict)]
-    adapters = shops.enabled_adapters()         # only the shops config.json checks (E11-S53)
-    baskets = [basket(adapter, found.get(adapter.key), rows) for adapter in adapters]
+    baskets = [basket(adapter, found.get(adapter.key), rows, rules) for adapter in adapters]
     unavailable = []
     for row in rows:
         if row.get("state") != READY:
@@ -191,16 +204,19 @@ def build(rows, captured, revision=None):
         shown["shops"] = [{"shop": adapter.name, "status": item["status"], "fetched_at": item.get("fetched_at")}
                           for adapter, item in zip(adapters, at)]
         unavailable.append(shown)
-    return {"queue_revision": revision, "shops": baskets, "unavailable": unavailable}
+    return {"queue_revision": revision, "shops": baskets, "unavailable": unavailable,
+            "postage_read": rules is not None, "plan": shop_plan.plan(baskets, rules)}
 
 
 def enrich(answer, *, data):
     """answer["baskets"] from the captured snapshots, only while some shop has one."""
     try:
-        built = build(answer.get("to_buy", []), data, answer.get("queue_revision"))
+        from . import shop_postage
+        rules = shop_postage.rules() if shop_prices.by_shop(data) else None
+        built = build(answer.get("to_buy", []), data, answer.get("queue_revision"), rules)
     except Exception as error:  # optional evidence: Shopping still answers without it
         from . import common
-        common._log(f"Shop baskets could not be worked out: {type(error).__name__}")
+        common._log(f"Shop baskets could not be worked out: {type(error).__name__}: {error}")
         return answer
     if built is not None:
         answer["baskets"] = built

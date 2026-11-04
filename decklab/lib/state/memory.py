@@ -83,6 +83,7 @@ class MemoryStore:
         self._play = {}             # (kind, id) -> play_record row
         self._packing = set()       # checked physical-task hashes, shared by the home
         self._commander_night = None  # singleton row, kept with a revision when notes are cleared
+        self._shop_postage = None   # singleton row of the shops' postage (E5-S27), or None
         self._field_policies = {}   # format -> audited {format, revision, content: {v, rules}} row
         self._field_source = field_source
         self._deck_drafts = {}      # (profile, deck, version) -> deck_draft row (not audited, never batched)
@@ -136,14 +137,14 @@ class MemoryStore:
             if self._batch is not None:
                 raise ValueError("a batch is already open in this thread (batches don't nest)")
             saved = _copy((self._wishlists, self._settings, self._mode, self._seeded_mode, self._play,
-                           self._packing, self._commander_night, self._field_policies, self._visibility,
+                           self._packing, self._commander_night, self._shop_postage, self._field_policies, self._visibility,
                            self._visibility_last, self._visibility_when))
             self._batch = rows = []
             try:
                 yield self
             except BaseException:
                 (self._wishlists, self._settings, self._mode, self._seeded_mode, self._play,
-                 self._packing, self._commander_night, self._field_policies, self._visibility,
+                 self._packing, self._commander_night, self._shop_postage, self._field_policies, self._visibility,
                  self._visibility_last, self._visibility_when) = saved
                 raise
             finally:
@@ -396,6 +397,32 @@ class MemoryStore:
             self._log(actor, message, reason, [("commander_night", "UPDATE" if before else "INSERT",
                                                ("id",), before, after)])
             return self.commander_night()
+
+    # ------------------------------------------------------------------ the shops' postage (E5-S27)
+
+    def shop_postage(self):
+        with self._lock:
+            self._check()
+            row = self._shop_postage
+            return ({"revision": row["revision"], "postage": _copy(row["content"])} if row
+                    else {"revision": 0, "postage": {"v": 1, "shops": {}}})
+
+    def shop_postage_put(self, postage, expected_revision, actor, message, *, known=None):
+        from . import shop_postage as rules_postage
+        postage = rules_postage.normalize(postage, known)
+        expected_revision = rules_postage.expectation(expected_revision)
+        rules.check_write(actor, message)
+        with self._lock:
+            self._check()
+            before = self._shop_postage
+            if (before["revision"] if before else 0) != expected_revision:
+                raise Conflict(rules_postage.CHANGED)
+            if before and before["content"] == postage or not before and not postage["shops"]:
+                return self.shop_postage()
+            after = {"id": True, "revision": expected_revision + 1, "content": _copy(postage)}
+            self._shop_postage = after
+            self._log(actor, message, None, [("shop_postage", "UPDATE" if before else "INSERT", ("id",), before, after)])
+            return self.shop_postage()
 
     # ------------------------------------------------------------------ HOME field policy
 

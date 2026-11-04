@@ -868,6 +868,50 @@ class PgStore:
                 return unchanged.result
         return self._call(work)
 
+    # ------------------------------------------------------------------ the shops' postage (E5-S27)
+
+    @staticmethod
+    def _shop_postage(cur):
+        # Read between installing code and applying migration 0021: a known missing optional
+        # table is Unavailable, never an empty record, and never trips the shared breaker.
+        cur.execute("select to_regclass('public.shop_postage') is not null")
+        if not cur.fetchone()[0]:
+            raise Unavailable(MIGRATE_MESSAGE)
+        cur.execute("select revision, content from shop_postage where id = true")
+        row = cur.fetchone()
+        return {"revision": row[0], "postage": row[1]} if row else {"revision": 0, "postage": {"v": 1, "shops": {}}}
+
+    def shop_postage(self):
+        """{revision, postage: {v, shops: {key: {postage_aud, free_over_aud}}}}, revision 0 when
+        never saved. Not cached: writes check the revision again under the record's lock."""
+        return self._call(lambda c: self._shop_postage(c.cursor()))
+
+    def shop_postage_put(self, postage, expected_revision, actor, message, *, known=None):
+        """Replace the whole record after checking its revision. An unchanged save writes nothing."""
+        from . import shop_postage as rules_postage
+        postage = rules_postage.normalize(postage, known)
+        expected_revision = rules_postage.expectation(expected_revision)
+        rules.check_write(actor, message)
+
+        def work(c):
+            from psycopg.types.json import Jsonb
+            try:
+                with self._change(c, actor, message) as (cur, _):
+                    self._lock(cur, "shop-postage:home")
+                    saved = self._shop_postage(cur)
+                    if saved["revision"] != expected_revision:
+                        raise Conflict(rules_postage.CHANGED)
+                    if saved["postage"] == postage:
+                        raise _Unchanged(saved)
+                    revision = saved["revision"] + 1
+                    cur.execute("insert into shop_postage (id, revision, content) values (true, %s, %s) "
+                                "on conflict (id) do update set revision = excluded.revision, content = excluded.content",
+                                (revision, Jsonb(postage)))
+                    return {"revision": revision, "postage": copy.deepcopy(postage)}
+            except _Unchanged as unchanged:
+                return unchanged.result
+        return self._call(work)
+
     # ------------------------------------------------------------------ the simulations mode
 
     def simulation_mode(self):

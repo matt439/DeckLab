@@ -496,6 +496,13 @@ class Handler(BaseHTTPRequestHandler):
                 if self.command == "PUT":
                     return self._send_json(200, api.change_simulations(self._write_body(api.MAX_BODY)))
                 return self._send_json(200, api.simulations_view())
+            if route == ["shop-postage"]:
+                from decklab.lib.api import shop_postage
+                self._allow(*GET, "PUT")
+                self._no_query(query)
+                if self.command == "PUT":
+                    return self._send_json(200, shop_postage.change(self._write_body(shop_postage.MAX_BODY)))
+                return self._send_json(200, shop_postage.view())
             if route == ["commander-night"]:
                 self._allow(*GET, "PUT")
                 self._no_query(query)

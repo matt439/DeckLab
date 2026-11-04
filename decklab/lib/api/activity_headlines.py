@@ -26,7 +26,7 @@ _KIND_OF = {
     **{table: "shopping" for table in ("product", "product_status", "purchase_order", "order_component",
                                         "watchlist_item", *ITEM_TABLES)},
     rules.DECK_TABLE: "decks", "deck_alias": "decks", "packing_tick": "decks", rules.ACCESSORY_TABLE: "sleeves", "wishlist_entry": "wishlist",
-    "play_record": "games", **{table: "settings" for table in ("profile_setting", "simulation_mode", "visibility", "commander_night", "field_policy", "space",
+    "play_record": "games", **{table: "settings" for table in ("profile_setting", "simulation_mode", "visibility", "commander_night", "field_policy", "shop_postage", "space",
                                                                 "profile", "profile_email")},
 }
 _MODE_WORDS = {"admins": "admins only", "everyone": "everyone", "paused": "paused"}
@@ -245,6 +245,8 @@ def describe(rows, actor_name, orders=None, groups=(), profiles=None, *, own=Non
     for row in take("commander_night"):
         phrases.append(("cleared Commander-night notes" if row["summary"].endswith("cleared")
                         else "updated Commander-night notes", None))
+    if take("shop_postage"):
+        phrases.append(("updated the shops' postage", None))
     kit = take(rules.ACCESSORY_TABLE)
     if len(kit) == 1:
         phrases.append((_lower(kit[0]["summary"]), None))

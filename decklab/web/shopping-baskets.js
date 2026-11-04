@@ -1,9 +1,11 @@
-/* Shopping's Baskets (E5-S27, first slice): a proposed basket a shop from the saved daily shop checks
+/* Shopping's Baskets (E5-S27): a proposed basket a shop from the saved daily shop checks
  * (GET /api/shopping's "baskets", lib/api/shop_baskets.py). Each shop lists the ready queue rows its
- * snapshot found in stock, with the price it showed and its fetch time, and a total over the priced rows;
- * long-term and waiting rows in stock there are add-ons. No postage rules yet. A shop that couldn't be
- * read, or a row it didn't check, claims no stock. Copy this shop's list (E5-S24's copy) copies exactly
- * the basket's rows. Read only: nothing here changes the queue, records an order or stores a price. */
+ * snapshot found in stock, with the price it showed and its fetch time, a total over the priced rows and
+ * its postage from the rules a home admin sets in Settings (settings-postage.js; unknown when not set);
+ * long-term and waiting rows in stock there are add-ons, those that reach the free-postage threshold
+ * marked. The fewest-shops plan comes first (shopping-plan.js). A shop that couldn't be read, or a row
+ * it didn't check, claims no stock. Copy this shop's list (E5-S24's copy) copies exactly the basket's
+ * rows. Read only: nothing here changes the queue, records an order or stores a price. */
 "use strict";
 
 const SHOP_BASKET_WORDS = {
@@ -56,6 +58,7 @@ function shopBasketLine(row, basket) {
   });
   return el("li", {class: "shop-basket-row", "data-basket-row": row.name, "data-basket-status": row.status},
     row.add_on ? status("outline", "Add-on") : null,
+    row.lifts ? status("good", "Reaches free postage") : null,
     el("span", {class: "shop-basket-name", text: `${row.copies} × ${row.name}`}),
     el("span", {class: "shop-basket-facts"},
       more.length && Number.isInteger(listing.copies) ? `${listing.copies} × ` : null,
@@ -84,6 +87,36 @@ function shopBasketGaps(basket) {
   return lines.length ? el("ul", {class: "shop-basket-gaps"}, lines) : null;
 }
 
+/** A basket's postage in words: free, its flat postage and how far from free, or not known. */
+function shopBasketPostageWords(postage) {
+  if (!postage) return null;
+  const flat = shopBasketAud(postage.postage_aud), over = shopBasketAud(postage.free_over_aud);
+  const short = shopBasketAud(postage.short_by_aud), least = postage.at_least ? " (some rows have no price)" : "";
+  if (postage.free) return over && postage.postage_aud !== "0.00" ? `Free postage: over ${over}${least}.` : "Posts free.";
+  const charged = flat ? `Postage ${flat}` : "Postage not known";
+  return short ? `${charged}; free over ${over}, ${short} more${least}.` : `${charged}.`;
+}
+
+function shopBasketPostage(postage) {
+  const words = shopBasketPostageWords(postage);
+  if (!words) return null;
+  const unset = !postage.postage_aud && !postage.free_over_aud;
+  return el("p", {class: `shop-basket-postage${postage.known ? "" : " shop-basket-postage-unknown"}`,
+    "data-basket-postage": postage.charged_aud || ""}, words,
+    unset && isAdminProfile() ? [" ", el("a", {href: "#/settings?part=postage", text: "Set postage in Settings"})] : null);
+}
+
+/** What the marked add-ons do for the basket's postage, or that even all of them fall short. */
+function shopBasketReach(basket) {
+  const reach = basket.reach, postage = basket.postage;
+  if (!reach || !postage) return null;
+  const total = shopBasketAud(reach.total_aud), flat = shopBasketAud(postage.postage_aud);
+  if (!reach.reaches) return el("p", {class: "sub", "data-basket-reach": "short",
+    text: `Even every add-on here (${total}) doesn't reach free postage.`});
+  return el("p", {class: "shop-basket-reach", "data-basket-reach": reach.total_aud,
+    text: `Adding the add-ons marked Reaches free postage (${total}) gets this order free postage${flat ? `, saving ${flat}` : ""}. They're on the queue already, so only bring them forward if you want them now.`});
+}
+
 function shopBasket(view, basket) {
   const head = el("div", {class: "shop-basket-head"}, el("h3", {text: basket.shop}), shopSnapshotWhen(basket.fetched_at));
   if (!basket.read) return el("article", {class: "shop-basket", "data-basket": basket.key, "data-basket-read": "false"}, head,
@@ -96,12 +129,13 @@ function shopBasket(view, basket) {
       note: "in this basket's ready rows (add-ons not included)", selector: ".shop-basket-copy"})}) : null;
   if (copy && !shopBasketsCurrent(view)) copy.disabled = true;
   return el("article", {class: "shop-basket", "data-basket": basket.key, "data-basket-read": "true"}, head,
+    rows.length ? shopBasketPostage(basket.postage) : null,
     rows.length ? [shopBasketTotal(basket, "Total"), el("ul", {class: "shop-basket-rows"}, rows.map(row => shopBasketLine(row, basket)))]
       : el("p", {class: "sub", text: "No ready rows in stock here."}),
     shopBasketGaps(basket), copy,
     addOns.length ? el("div", {class: "shop-basket-addons"}, el("h4", {text: "Add-ons in stock here"}),
       el("p", {class: "sub", text: "Long-term and waiting rows this shop has, to add to the same order if you choose."}),
-      shopBasketTotal(basket.add_ons_totals || {}, "Add-ons"),
+      shopBasketTotal(basket.add_ons_totals || {}, "Add-ons"), rows.length ? shopBasketReach(basket) : null,
       el("ul", {class: "shop-basket-rows"}, addOns.map(row => shopBasketLine(row, basket)))) : null);
 }
 
@@ -122,7 +156,7 @@ function shopBaskets(view) {
   const stale = shopBasketsCurrent(view) ? null
     : el("p", {class: "note note-warn", role: "status", text: "The queue changed since these baskets were worked out. Refresh Shopping to update them."});
   return shopSection("shop-baskets", "Baskets", 0,
-    "Proposed from each shop's saved daily check: the ready cards in stock there. Postage isn't counted yet. Check the shop before ordering.",
-    stale, el("div", {class: "shop-baskets"}, baskets.shops.filter(Boolean).map(basket => shopBasket(view, basket))),
+    "Proposed from each shop's saved daily check: the ready cards in stock there, and each shop's postage as set in Settings. Check the shop before ordering.",
+    stale, typeof shopBasketPlan === "function" ? shopBasketPlan(view) : null, el("div", {class: "shop-baskets"}, baskets.shops.filter(Boolean).map(basket => shopBasket(view, basket))),
     shopBasketsUnavailable(baskets.unavailable || []));
 }
