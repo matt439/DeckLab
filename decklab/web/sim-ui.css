@@ -1,0 +1,180 @@
+/* Deck Lab's Forge results (sim-ui.js and runs-pill.js; design/visual-design.md 4.9): the win-rate figure, the
+   range bar, the freshness badge, the strong and weak flags, a test of a change and the run activity with its
+   details. Moved from components.css unchanged (2026-11-05); loaded right after it and before cards-ui.css, with
+   its forced-colours overrides at the end, after the rules they override. Page files lay these out but never
+   restyle them. */
+
+/* ------------------------------------------------------------ Forge results */
+
+/* Forge's result pieces (sim-ui.js; design/visual-design.md 4.9): the same at both densities, only their sizes
+   change. Every Forge number is mono and in ink, never coloured good or bad: only the flags and the verdict pills
+   wear Forge's strong and weak colours, and always with words. None is accent but a run's own controls. */
+.sim-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* The win-rate figure: inline in a row ("61% 59–63"), on a tile (with "Forge field"), or a hero beside its range
+   and games. */
+.wr { display: inline-flex; align-items: baseline; gap: var(--s-1); color: var(--ink); white-space: nowrap; }
+.wr-value { font-family: var(--font-mono); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.wr-inline .wr-value, .wr-tile .wr-value { font-size: var(--fs-fig-sm); }
+.wr-range { font-family: var(--font-mono); font-size: var(--fs-fig-range); font-weight: var(--fw-medium); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.wr-caption { font-size: var(--fs-wr-caption); color: var(--ink-2); }
+.wr-hero { display: flex; align-items: center; gap: var(--s-3); white-space: normal; }
+.wr-hero .wr-value { flex: none; white-space: nowrap; font-size: var(--fs-fig); line-height: 1; letter-spacing: var(--ls-fig); }
+.wr-unit { font-size: var(--fs-fig-unit); }
+.wr-lines { display: grid; gap: 2px; font-size: var(--fs-meta); color: var(--ink-3); }
+
+/* The range bar, on the fixed 20-80% scale: a round track, a dashed 50% tick and the win rate's point 3 px past
+   it each way, the 95% band between them. A live run's band is a dashed outline (it narrows as games play). */
+.range-bar { --range-thick: var(--range-h); display: block; min-width: 0; padding: 3px 0; }
+.range-bar-compact { --range-thick: var(--range-h-compact); }
+.range-track { position: relative; display: block; height: var(--range-thick); border-radius: var(--r-pill); background: var(--range-track); }
+.range-even { position: absolute; left: 50%; top: -3px; bottom: -3px; border-left: 1px dashed var(--ink-4); }
+.range-band { position: absolute; top: 0; bottom: 0; min-width: 2px; border-radius: var(--r-pill); background: var(--range-band); }
+.range-point { position: absolute; top: -3px; bottom: -3px; width: 3px; margin-left: -1.5px; border-radius: 1px; background: var(--ink); }
+.range-bar.is-live .range-band { box-sizing: border-box; top: -2px; bottom: -2px; background: none; border: 1.5px dashed var(--ink-3); }
+.range-bar.is-muted .range-point { background: var(--ink-4); }
+.range-axis { display: flex; justify-content: space-between; margin-top: var(--s-1); font-family: var(--font-mono); font-size: var(--fs-axis); color: var(--ink-3); }
+.range-key-band, .range-key-point, .range-key-even { display: inline-block; flex: none; }
+.range-key-band { width: 16px; height: 8px; border-radius: var(--r-pill); background: var(--range-band); }
+.range-key-point { width: 3px; height: 14px; border-radius: 1px; background: var(--ink); }
+.range-key-even { height: 14px; border-left: 1px dashed var(--ink-4); }
+
+/* The freshness badge: a clock and words, round. Fresh is neutral (plain words in a lab row), aging amber, stale
+   amber with a refresh icon, and "for the saved list" (the editor) amber too. */
+.fresh {
+  display: inline-flex; align-items: center; gap: var(--s-1); flex: none;
+  min-height: var(--fresh-h); padding: 0 var(--s-2);
+  border-radius: var(--r-pill);
+  background: var(--surface-chip); color: var(--ink-2);
+  font-size: var(--fs-fresh); font-weight: var(--fw-semibold); line-height: 1; white-space: nowrap;
+}
+.fresh-row { min-height: var(--fresh-h-row); font-size: var(--fs-fresh-row); }
+.fresh.on-tint { background: var(--chip-on-tint); box-shadow: inset 0 0 0 1px var(--chip-on-tint-line); }
+.fresh.is-aging, .fresh.is-stale, .fresh.is-unsaved { background: var(--warn-soft); color: var(--warn-ink-sm); box-shadow: inset 0 0 0 1px var(--warn-line); }
+/* In a lab row (from 1,000 px, where --fresh-h-row is 17 px) a fresh badge is plain words; casual rows keep the pill. */
+@media (min-width: 1000px) {
+  .fresh-row.is-fresh { min-height: 0; padding: 0; background: none; box-shadow: none; color: inherit; font-size: inherit; font-weight: inherit; }
+}
+.fresh-icon {
+  width: var(--icon-xs); height: var(--icon-xs); flex: none; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='6' cy='6' r='4.8'/%3E%3Cpath d='M6 3.4V6l1.8 1.2'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='6' cy='6' r='4.8'/%3E%3Cpath d='M6 3.4V6l1.8 1.2'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.fresh.is-aging .fresh-icon, .fresh.is-stale .fresh-icon, .fresh.is-unsaved .fresh-icon { background: var(--warn-icon); }
+.fresh.is-stale .fresh-icon {
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16.2 10.4a6.2 6.2 0 1 1-1.9-4.9'/%3E%3Cpath d='M15 2.4v3.4h-3.4'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16.2 10.4a6.2 6.2 0 1 1-1.9-4.9'/%3E%3Cpath d='M15 2.4v3.4h-3.4'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* Strong and weak flags: a round pill, a chevron (up or down), the opponent's name (it truncates, the flag stays)
+   and the mono win rate. */
+.flag {
+  display: inline-flex; align-items: center; gap: var(--s-1); min-width: 0; max-width: 100%;
+  min-height: var(--flag-h); padding: 0 var(--s-3) 0 var(--s-2);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-flag); font-weight: var(--fw-semibold); line-height: 1; white-space: nowrap;
+}
+.flag-strong { background: var(--strong-soft); color: var(--strong-ink); }
+.flag-weak { background: var(--weak-soft); color: var(--weak-ink); }
+.flag-chevron {
+  width: 10px; height: 10px; flex: none; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 6.6 5 3.4l3 3.2' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 6.6 5 3.4l3 3.2' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.flag-weak .flag-chevron { transform: rotate(180deg); }
+.flag-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.flag-rate { flex: none; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* A test of a change: the swap (its quantities in mono), the difference in points, its verdict pill and its range.
+   The +1 and −1 of a curve or count change are neutral (.is-neutral): green and red mean better and worse. */
+.swap-result { display: grid; gap: var(--s-1); min-width: 0; }
+.swap-lines { display: flex; flex-wrap: wrap; gap: 2px var(--s-3); margin: 0; padding: 0; list-style: none; font-weight: var(--fw-semibold); }
+.swap-qty { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.swap-remove { color: var(--weak-ink); }
+.swap-add { color: var(--strong-ink); }
+.swap-lines.is-neutral > li { color: var(--ink-3); }
+.swap-figure { margin: 0; color: var(--ink); }
+.swap-points { font-family: var(--font-mono); font-size: var(--fs-swap); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.swap-unit { font-size: var(--fs-meta); color: var(--ink-2); }
+.swap-facts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); margin: 0; font-size: var(--fs-meta); color: var(--ink-2); }
+.swap-verdict {
+  display: inline-flex; align-items: center; padding: 2px var(--s-2);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-meta); font-weight: var(--fw-semibold); line-height: var(--lh-tight); white-space: nowrap;
+  background: var(--surface-chip); color: var(--ink-2);
+}
+.swap-verdict-better { background: var(--strong-soft); color: var(--strong-ink); }
+.swap-verdict-worse { background: var(--weak-soft); color: var(--weak-ink); }
+.swap-verdict-likely-better, .swap-verdict-likely-worse { background: none; color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink-4); }
+
+/* The run activity (runs-pill.js): while Forge plays, one slowly turning ring in a 44 px button in the top bar (a
+   still ring with a dot under reduced motion). Its details, a popover under it from 1,000 px or a sheet below,
+   hold each run on --accent-soft with its progress ring and Stop. */
+.run-activity {
+  display: inline-grid; place-items: center; flex: none;
+  width: var(--tap); height: var(--tap); padding: 0;
+  border: 0; border-radius: 50%;
+  background: none; cursor: pointer;
+}
+.run-activity[aria-expanded="true"] { box-shadow: 0 0 0 1px var(--accent); }
+@media (hover: hover) and (pointer: fine) {
+  .run-activity:hover { background: var(--hover); }
+}
+.run-activity:active { background: var(--accent-soft); }
+.activity-ring {
+  display: grid; place-items: center; box-sizing: border-box;
+  width: var(--activity-size); height: var(--activity-size);
+  border: 2.5px solid var(--ring-track); border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 2.4s linear infinite;
+}
+.run-activity.is-waiting .activity-ring { animation-duration: 6s; }
+@media (prefers-reduced-motion: reduce) {
+  .activity-ring { animation: none; border-color: var(--accent); }
+  .activity-ring::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+}
+.run-popover {
+  position: absolute; z-index: 30; top: calc(100% + var(--s-1)); right: 0;
+  width: min(380px, calc(100vw - 2 * var(--s-4)));
+  padding: var(--s-3);
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: var(--r-row);
+  box-shadow: var(--shadow-2);
+}
+.run-details-body { display: grid; gap: var(--s-3); }
+.run-entry {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--s-2) var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-row);
+  background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--run-line);
+  color: var(--accent-strong);
+}
+.run-entry-words { min-width: 0; }
+.run-entry-words > p { margin: 0; }
+.run-summary { overflow-wrap: anywhere; }
+.run-count { font-size: var(--fs-meta); }
+.run-entry-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--s-2); }
+.run-ring { display: inline-block; flex: none; width: var(--ring-size); height: var(--ring-size); }
+.run-ring svg { display: block; width: 100%; height: 100%; transform: rotate(-90deg); }
+.run-ring-track, .run-ring-arc { fill: none; stroke-width: 3; }
+.run-ring-track { stroke: var(--ring-track); }
+.run-ring-arc { stroke: var(--accent); stroke-linecap: round; }
+.run-stop-glyph { width: 10px; height: 10px; flex: none; border-radius: 1px; background: currentColor; }
+.run-waiting-head { margin: 0 0 var(--s-1); font-size: var(--fs-group); font-weight: var(--fw-heavy); letter-spacing: var(--ls-caps); text-transform: uppercase; color: var(--ink-2); }
+.run-waiting-list { display: grid; gap: var(--s-1); margin: 0; padding: 0; list-style: none; }
+.run-waiting-list > li { display: flex; align-items: center; gap: var(--s-2); min-height: var(--btn-h); }
+.run-waiting-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--fw-semibold); }
+.run-waiting-ahead { flex: none; font-size: var(--fs-meta); color: var(--ink-3); }
+.run-details-foot { margin: 0; }
+@media (forced-colors: active) {
+  .range-track, .flag, .fresh, .swap-verdict { border: 1px solid CanvasText; }
+  .range-point, .range-band, .fresh-icon, .flag-chevron, .activity-ring::after, .run-stop-glyph { forced-color-adjust: none; background: CanvasText; }
+  /* As specific as the theme's own colours for these, which would otherwise be drawn as they are. */
+  .fresh:is(.is-aging, .is-stale, .is-unsaved) .fresh-icon, .range-bar.is-muted .range-point { background: CanvasText; }
+  /* The ring's arc is its top border: kept apart from its track, so it still shows it turning. */
+  .activity-ring { forced-color-adjust: none; border-color: GrayText; border-top-color: Highlight; }
+  .run-ring-arc { stroke: CanvasText; }
+}
+/* Still under reduced motion: one even ring round its dot. */
+@media (forced-colors: active) and (prefers-reduced-motion: reduce) {
+  .activity-ring { border-color: Highlight; }
+}

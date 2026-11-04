@@ -6,7 +6,7 @@ How Deck Lab's pages are built from shared pieces: the design tokens, the CSS co
 
 | Kind | Files, in load order | What's in them |
 |---|---|---|
-| CSS | `tokens.css` → `base.css` → `components.css` → `cards-ui.css` → `shell.css` → page files | Tokens; page reset, type and fields; shared components; card pieces and the viewer; the app shell; page layout |
+| CSS | `tokens.css` → `base.css` → `components.css` → `sim-ui.css` → `cards-ui.css` → `shell.css` → page files | Tokens; page reset, type and fields; shared components; Forge's result pieces and the run activity; card pieces and the viewer; the app shell; page layout |
 | JS | the editor's and matchup scripts (`editor.js` first, then `sim-ui.js`, `matchups.js` … `runs-pill.js`) → `core.js` → `ui.js` → `symbols.js` → `cards-ui.js` → `card-viewer.js` → the other page scripts → `shell.js` → `settings.js` → `app.js` (index.html has the exact order) | Forge's result pieces (`sim-ui.js`) and the run activity (`runs-pill.js`); `el()`, `api()`, `toast()`, the routes table and page-head helpers; menu, Undo toast, action bar, a deck's colour pieces; card symbols; card tile and row, printing picker; card viewer; pages; the top bar, tab bar and avatar menu; the Settings page; start-up and routing |
 
 The scripts share one global scope, so a name may be defined only once across all of them (`test_web.test_no_name_is_defined_twice`). Nothing in the shared files runs at load. The sheet helpers (`openSheet`, `sheetActions`, `ask`, `busy`, `unbusy`) are in `editor.js`.
@@ -474,7 +474,7 @@ answered in bulk.
 
 **Density levels** (P1, `design/visual-design.md` 3): the density tokens above have one name and three values. **Casual** (`:root`, under 1000px: phones and the iPad in portrait), the **touch lab** (`@media (min-width: 1000px)`: the iPad in landscape, lab type and radii at touch sizes, body 14px, buttons 15px, fields 16px) and the **lab** (`(min-width: 1000px) and (pointer: fine)`: 13px body, 28–32px controls). Sizes shrink only under `(pointer: fine)`, so a touch screen keeps 44px at every width; a narrow window with a mouse gets today's 36–38px. Slice 4's components read them; the older tokens (`--fs-xs`…`--fs-2xl`, `--r-md/lg`, `--ctl-h`, `--field-h`) keep one value for the page files that still use them. `--font-num` (Figtree casual, JetBrains Mono from 1000px), `--fs-qty` and `--fw-qty` set counts and a stepper's number per level (2.3).
 
-## CSS components (`components.css`)
+## CSS components (`components.css`; Forge's pieces and the run activity in `sim-ui.css`)
 
 | Class | Use |
 |---|---|

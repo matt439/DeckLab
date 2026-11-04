@@ -1,5 +1,5 @@
 /* Deck Lab's page: the shared pieces Forge's results are drawn with (design/visual-design.md 4.9; E11-S30 slice 6),
-styled once in components.css: a win rate as a figure (winRateFigure), its 95% range on the fixed 20-80% scale
+styled once in sim-ui.css: a win rate as a figure (winRateFigure), its 95% range on the fixed 20-80% scale
 (rangeBar), how old a result or any other dated check is (freshnessBadge), "strong against" and "weak against"
 (forgeFlag) and a test of a change (swapResult). Every Forge number is set in mono, and none is coloured good or
 bad: the flags and the verdict pills say that, in words, in Forge's strong and weak colours. Each piece with a

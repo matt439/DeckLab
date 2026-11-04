@@ -103,9 +103,9 @@ class MatchupFileTests(unittest.TestCase):
         matchups = re.sub(r"/\*.*?\*/", "", _text("matchups.css"), flags=re.S)
         shaded = [line for line in matchups.splitlines() if re.search(r"var\(--(win|loss)\)", line)]
         self.assertEqual(shaded, [])
-        components = _text("components.css")
-        self.assertIn(".range-point {", components)
-        self.assertIn(".wr-value { font-family: var(--font-mono);", components)
+        sim = _text("sim-ui.css")
+        self.assertIn(".range-point {", sim)
+        self.assertIn(".wr-value { font-family: var(--font-mono);", sim)
 
     def test_opponents_use_semantic_views_for_each_density_and_pointer(self):
         # P1 slice 10: a mouse gets a real table; casual and touch lab use a list of whole-row links.

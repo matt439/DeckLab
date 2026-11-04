@@ -2,6 +2,24 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Forge results' styles in their own file (2026-11-05)
+
+The "Forge results" styles (.sim-num, .wr, .range-*, .fresh, .flag, .swap-*, the run activity and its details)
+moved unchanged from web/components.css into a new web/sim-ui.css, with their forced-colours overrides in a
+block at its end; it loads right after components.css, before cards-ui.css, on the page and in test_web's
+stylesheet list. @keyframes spin stays in components.css, which went from 1,165 to 993 lines. The Forge
+pieces' style tests read the new file; 327 focused tests pass. Details in
+[SOURCE_AUDIT.md](SOURCE_AUDIT.md#forge-results-styles-2026-11-05).
+
+## Add a precon in its own file (2026-11-05)
+
+The Collection page's Add a precon sheet (PRECON_SEARCH_MS, openPreconSheet, backToPrecons, fromWizards,
+searchPrecons, previewPrecon, preconLine, drawPreconPreview, preconAddHere, addPrecon) moved unchanged from
+web/collection.js into a new web/precon-add.js, which loads right after collection-filing.js on the page and in
+test_web's script list. collection.js went from 1,198 to 943 lines. A new test_precon_add_split checks the
+moved names, the load order, both lengths and the globals under Node; 185 focused tests pass. Details in
+[SOURCE_AUDIT.md](SOURCE_AUDIT.md#the-collection-pages-add-a-precon-sheet-2026-11-05).
+
 ## Sleeves and a deck box while a deck is being built (2026-11-03; E8-S24)
 
 - Matt's decisions of 2026-11-03: a deck whose status is building may hold sleeves and a deck box, as a built one does; an idea still can't. Taking a built deck apart (back to building) still clears its kit, since its cards go back into storage unsleeved, and making any deck an idea clears it too. Building decks still reserve no cards.

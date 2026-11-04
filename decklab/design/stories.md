@@ -2585,7 +2585,7 @@ As a deck builder who bought a precon at the shop, I want its cards added and it
 - Given Claude on the PC, when it runs `collection add-precon CODE`, then the same cards and deck are made as on the page, and `--dry-run` saves nothing.
 
 Evidence:
-- `decklab/web/collection.js`: openPreconSheet, drawPreconPreview
+- `decklab/web/precon-add.js` (from `collection.js` on 2026-11-05): openPreconSheet, drawPreconPreview
 - `decklab/lib/api/precons.py`: precon_preview, add_precon, _precon_refused
 - `decklab/db/inv_collection.py`: collection add-precon
 - `decklab/tests/test_precons.py`: test_adds_the_cards_and_the_deck_in_one_change, test_refusals_change_nothing
@@ -2599,7 +2599,7 @@ As a deck builder, I want a precon's token cards offered for adding when I add t
 - Given I skip them, then the deck page's Tokens part still shows them as not owned.
 
 Evidence:
-- `decklab/web/precon-token-choices.js`, `collection.js`: explicit per-entry physical quantities/front choices, default unchecked, exact receipts, fresh-preview conflicts and owned controls
+- `decklab/web/precon-token-choices.js`, `precon-add.js`: explicit per-entry physical quantities/front choices, default unchecked, exact receipts, fresh-preview conflicts and owned controls
 - `decklab/lib/precon_tokens.py`, `decklab/lib/api/precons.py`, `decklab/lib/inventory/ops_decks.py`: explicit source counts, unconfirmed separate rows, one atomic precon change
 - `decklab/db/inv_collection.py`: add-precon --add-tokens; `decklab/tests/test_precon_tokens.py`, `test_precon_tokens_cli.py`, `test_precon_tokens_ui.py`
 - `decklab/tests/test_precon_token_choices.py`, `test_precon_token_choices_api.py`, `test_precon_token_choices_cli.py`, `test_precon_token_choices_pg.py`, `test_precon_token_choices_ui.py`: unknown counts, paired-face choices, zero skips, bound CSV, atomic persistence and UI ownership
