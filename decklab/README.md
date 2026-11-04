@@ -145,7 +145,7 @@ Since the UI redesign of 2026-10-13 ([HISTORY.md](HISTORY.md), "UI redesign"; th
 
 ### Cards and the card viewer
 
-Every card picture or card name opens the **card viewer** over the list it's in, so a phone can swipe through the cards: a decklist, a delivery, the Collection, the Wishlist, a test hand, a revision's changes. On a phone the card fills the screen and a swipe moves to the next one (past a fifth of the width, or a flick), with "3 / 15" between Previous and Next; **Text** shows the rules text with Scryfall's mana symbols, **Flip** a double-faced card's back. From 1,000 px the card sits in the middle with Previous and Next beside it and its rules text in a dark panel on the right; the arrow keys, Home and End move between cards, and Escape closes. Pictures come from `/img/` in four sizes, and mana and other symbols from `/sym/` (see "Pictures and symbols" below).
+Every card picture or card name opens the **card viewer** over the list it's in, so a phone can swipe through the cards: a decklist, a delivery, the Collection, the Wishlist, a test hand, a revision's changes. On a phone the card fills the screen and a swipe moves to the next one (past a fifth of the width, or a flick), with "3 / 15" between Previous and Next; **Text** shows the rules text with Scryfall's mana symbols, **Flip** a double-faced card's back. From 1,000 px the card sits in the middle with Previous and Next beside it and its rules text in a dark panel on the right; the arrow keys, Home and End move between cards, and Escape closes. Wherever it's opened, a line under the list's own chips names the decks of the page's space (the deck page's or editor's deck's, the Collection page's, else your own) that hold or want the card, with copies, and its free copies there, to anyone who may see that space's collection (GET `/api/cards/decks`). Pictures come from `/img/` in four sizes, and mana and other symbols from `/sym/` (see "Pictures and symbols" below).
 
 ### Decks (the library)
 
@@ -398,6 +398,12 @@ card viewer, then add it. Tap a saved card to open its sheet: its picture (tap i
 big, swiping between cards), its notes, the printing you'd like and its source (a deck shows as its title,
 linked), with **Save**. **Remove** at the bottom of the sheet takes the card off your wishlist at once,
 with an **Undo** that puts it back at its old place with its notes, printing and source.
+
+**While building a deck:** the editor's Add panel (a casual or Commander deck, saved or new) has a
+**My wishlist** tick. Ticked, it lists your own wishlist's cards that fit the deck (a Commander deck's:
+inside its commander's colour identity and legal in Commander), in your list's order, each marked free,
+in other decks or to buy when you may see the deck's collection. A card you add keeps the printing you
+wished for. Only your own list is ever read (GET `/api/deck/wishlist`).
 
 **A wishlist is private:** only its owner sees it, on the Wishlist page or the Activity page. Not
 another home profile, not a person with their own space, and not an admin (as with each person's
@@ -653,6 +659,7 @@ The files are caches, and Shopping and deck Prices only read them, so a page loa
 - `python -m decklab.lib.shops show`: the queue's rows beside each shop's snapshot, with no network.
 - `python -m decklab.lib.shops lookup NAME [--shop gamesportal]`: one name's MTGMate listings (or Games Portal's), printed and not saved.
 - `python -m decklab.lib.shops history NAME [--shop KEY] [--json]`: a queued name's price and stock each day at each shop, its lowest in-stock price marked, from each shop's history file beside its snapshot (`mtgmate.history.json`; each day's reading is kept 90 days, and only while the name is on the queue; no network).
+- **On Shopping:** a queued row with a snapshot has **Price history** beside its snapshot line (in the wide table, under the row's … details). It opens a sheet with each shop's lowest in-stock price first, then every day kept, newest first, with its price, stock and printing (GET `/api/shopping/price-history?name=`, Shopping's readers only, asked only when opened; a name not on the queue has none).
 
 The view uses the same pool of owned and incoming cards as deck planning, read in one inventory snapshot. The added buying views follow the same home-inventory visibility rule; they do not place an order or change the queue.
 
