@@ -1265,7 +1265,7 @@ Now: Built 2026-10-15, with the reservation rule above. Physical-device testing 
 Evidence:
 - `decklab/web/assembly.js`: packDeck, renderAssemblyPlan ('Copies reserved elsewhere')
 - `decklab/lib/api/assembly.py`: MAX_DECKS, _preview, _deck_sections, plan_counts, require_sees_home_records
-- `decklab/web/deck.js`: More > Build decks with the deck and list
+- `decklab/web/deck.js`: deckBuildLink, the head's Build deck or Review build button with the deck and list
 - `decklab/tests/test_collection_assembly.py`: AssemblyTests
 
 **E4-S02** · User1 · should · M · built
