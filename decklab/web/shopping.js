@@ -354,6 +354,8 @@ function shopQueueRow(card, group, showFor = true, view = null, showLongTerm = f
   const move = view && mayDo("orders") && view.data.queue_revision && card.queue_row
     ? shopQueueMove(card, view) : null;
   const reprints = reprintInfo(card), snapshot = shopSnapshotLine(card);
+  const history = snapshot ? shopHistoryButton(card, view) : null;   // E5-S29, shopping-history.js
+  if (history) snapshot.append(history);
   return view || deck || move || price || reprints || snapshot ? el("div", { class: `shop-queue-row${shopSnapshotBack(card) ? " shop-queue-back" : ""}`,
     "data-shop-queue": view ? String(card.queue_row || "") : null, "data-shop-name": view ? shopQueueShop(card) : null,
     "data-shop-match": view && shopMatches(view, card) ? "true" : null }, row,

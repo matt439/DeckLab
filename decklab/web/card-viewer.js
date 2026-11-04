@@ -8,8 +8,9 @@ card is in the middle with Previous and Next beside it, and the arrow keys (Home
 Escape closes. A double-faced card has Flip, which shows its back's picture. The card's rules text is a
 panel: beside the picture from 1,000 px, behind the Text button on smaller screens. Under the words are the
 card's Scryfall rulings, dated and folded away (GET /api/cards/rulings).
-Opened from the deck page or the Collection page, a line under the list's own chips names the decks of that
-space which hold or want the card, built decks first, and its free copies there (E1-S29, GET /api/cards/decks),
+Wherever it's opened, a line under the list's own chips names the decks of the page's space (the deck page's or
+editor's deck's, the Collection page's, else the viewer's own) which hold or want the card, built decks first,
+and its free copies there (E1-S29, GET /api/cards/decks),
 only for a viewer who may see that space's inventory (viewerUseSpace); a basic land's line says its copies in
 decks aren't tracked, as the Card list's In decks column does.
 On portrait touch screens Text overlays the picture instead of shrinking it; each new opening starts closed. The cards either side
@@ -379,15 +380,17 @@ function viewerRulingsParts(data) {
 
 // ------------------------------------------------------------- deck use
 
-/** The space whose decks the use line names: the deck page's deck's, or the Collection page's (colSpace), and
- * only while the viewer may see that space's inventory (core.js seesInventory, the server's R6d); null on
- * every other page, which asks nothing. */
+/** The space whose decks the use line names: the deck page's or editor's deck's, the Collection page's
+ * (colSpace), else the page's own space parameter or the viewer's own space (E1-S29: the line shows from every
+ * page), and only while the viewer may see that space's inventory (core.js seesInventory, the server's R6d);
+ * null otherwise, which asks nothing. */
 function viewerUseSpace() {
   if (typeof parseHash !== "function") return null;         // app.js
   const { path, params } = parseHash();
-  const space = path === "deck" && params.get("id") ? deckSpaceOf(params.get("id"))
-    : path !== "collection" ? null
-      : typeof colSpace === "function" ? colSpace(params) : params.get("space") || ownSpace();
+  const id = params.get("id");
+  const space = (path === "deck" || path === "edit") && id ? deckSpaceOf(id)
+    : path === "collection" ? (typeof colSpace === "function" ? colSpace(params) : params.get("space") || ownSpace())
+      : params.get("space") || ownSpace();
   return space && seesInventory(space) ? space : null;
 }
 
