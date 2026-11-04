@@ -260,6 +260,36 @@ class CommanderReadinessUiTests(unittest.TestCase):
           assert(statsPanel.querySelector('.commander-data').textContent.includes('2026-01-01'));
         """)
 
+    def test_tutors_are_named_in_the_sentence_and_what_opponents_will_face(self):
+        self.run_js("""
+          const tutors = {checked:true, count:2, tags_date:'2026-10-13',
+            cards:[{name:'Elf',qty:1}, {name:'Bolt',qty:1}], land_searches:[{name:'Rampant Growth',qty:1}]};
+          const node = showReadiness(readinessPage({tutors}));
+          assert.equal(summaryText(node), 'Aims for Bracket 2: no Game Changers, extra turns, mass land denial or ' +
+            'two-card combos found. Tutors: Elf, Bolt.');
+          const effects = node.querySelector('details');
+          assert(effects.textContent.includes('Tutors: Elf, Bolt.'), effects.textContent);
+          assert(effects.textContent.includes("searches for lands only aren't counted, and tutors don't change the bracket"));
+          assert(!effects.textContent.includes('Rampant Growth'));
+          assert(!effects.open, 'tutors alone inform; they do not open the disclosure');
+          let opened;
+          openCardViewer = (items, start) => { opened = items.map(i => i.card.name); };
+          node.querySelector('[role=button]').click();
+          same(opened, ['Elf', 'Bolt']);
+        """)
+
+    def test_no_tutors_unread_tags_and_older_answers(self):
+        self.run_js("""
+          const none = showReadiness(readinessPage({tutors:{checked:true, count:0, cards:[], land_searches:[]}}));
+          assert(!summaryText(none).includes('Tutors'));
+          assert(none.textContent.includes('Tutors: none found in the checked cards.'));
+          const unread = showReadiness(readinessPage({tutors:{checked:false, reason:'no file'}}));
+          assert.equal(summaryText(unread), 'Aims for Bracket 2: no Game Changers, extra turns, mass land denial or two-card combos found.');
+          assert(unread.textContent.includes('Tutors: not counted (tutor tag data unavailable).'));
+          const older = showReadiness(readinessPage());
+          assert(!older.textContent.includes('Tutors'), 'an answer without tutors says nothing about them');
+        """)
+
     def test_current_list_not_inventory_controls_the_summary_and_casual_has_none(self):
         self.run_js("""
           const planned = readinessPage({minimum:3,game_changers:[{name:'Bolt',qty:1}]});

@@ -17,6 +17,13 @@ What each milestone and feature built, the decisions made along the way, and the
 - **Fix** (`fixture_runtime._lexical_rmtree`): after patching, the guards make `shutil.rmtree` take its path-based walk whatever the import order, so the guards check full paths and refuse only the real private files. No test was changed or skipped; `test_fixture_runner` now also removes temporary folders holding `config.json` and `.pgpass` with `shutil.rmtree` and `TemporaryDirectory`, and checks the private config still can't be removed.
 - Result: all four shards pass on the cloud container's Python 3.13 with no `.venv`, PostgreSQL or card data (database integration and the named native checks skip with their stated reasons, as on CI), and on 3.14. The tracebacks about "no state store was installed" in the output are logged by passing tests, not errors.
 
+## Tutors named on the Overview and the printout (2026-11-04; E9-S29)
+
+- The first slice counted tutors only on the Stats tab. Now `commander-readiness.js` reads the same `bracket["tutors"]` (no server change): the Overview's At the Commander table ends its bracket sentence with "Tutors: A, B." (card links into the readiness viewer), What opponents will face has a Tutors line (the names, "none found in the checked cards." or "not counted (tutor tag data unavailable).") and its note adds that land searches aren't counted and tutors don't change the bracket, and the printed play sheet's At the table carries the sentence and line as text with the same note.
+- Tutors only inform: the lead's words, the bracket and whether What opponents will face opens are unchanged, and an answer without `tutors` (an older server) shows no tutor line at all.
+- Tests: `test_commander_readiness_ui.py` (2 new) and `test_commander_print_ui.py` (1 new).
+- Not done yet: the official bracket text on tutors (it would need reading from Wizards' own page) and a Checks warning where that text sets a number.
+
 ## Undo a receipt that corrected its rows (2026-11-04; E11-S08 slice)
 
 - Activity's whole-change Undo of a receipt (`receipt_undo`, PR #23) refused a receipt whose arriving rows were corrected at the door (`receive --rows`, the Receive delivery page's corrections), though corrected token receipts are common. It now puts those rows back as they were ordered.
