@@ -73,7 +73,10 @@ function activityUndoWishlistEvidence(data, profile) {
   // An addition that moved other entries along also puts those back (1-50, wishlist_undo_moved).
   const moved = removing && Object.hasOwn(data, "moved");
   if (moved && !(Number.isInteger(data.moved) && data.moved >= 1 && data.moved <= 50)) return false;
-  const keys = ["action", "available", "current", "expect", "id", "kind", "label", "profile", "restored", ...(updating ? ["fields"] : []), ...(moved ? ["moved"] : [])];
+  // A removal put back after 1-200 later changes to the list, which stay as they are (wishlist_undo_later).
+  const later = adding && Object.hasOwn(data, "later");
+  if (later && !(Number.isInteger(data.later) && data.later >= 1 && data.later <= 200)) return false;
+  const keys = ["action", "available", "current", "expect", "id", "kind", "label", "profile", "restored", ...(updating ? ["fields"] : []), ...(moved ? ["moved"] : []), ...(later ? ["later"] : [])];
   if (!adding && !removing && !updating || data.profile !== profile || typeof profile !== "string" || !profile
       || Object.keys(data).sort().join(",") !== keys.sort().join(",")) return false;
   const rows = adding ? [data.restored] : removing ? [data.current] : [data.current, data.restored];
@@ -558,6 +561,8 @@ function activityUndoShow(ctx) {
       el("p", { class: "sub", text: "Review its saved printing, notes and source below. Saving creates one new audited change; the original change stays in Activity." }),
       ...(Number.isInteger(preview.moved) ? [el("p", { class: "sub", text: preview.moved + (preview.moved === 1 ? " other entry moved" : " other entries moved")
         + " along to make room for it, and " + (preview.moved === 1 ? "goes" : "go") + " back to " + (preview.moved === 1 ? "its" : "their") + " earlier place. Your list keeps its order." })] : []),
+      ...(Number.isInteger(preview.later) ? [el("p", { class: "sub", text: preview.later + (preview.later === 1 ? " later change" : " later changes")
+        + " to your wishlist " + (preview.later === 1 ? "stays" : "stay") + " as " + (preview.later === 1 ? "it is" : "they are") + ". The entry goes back to its old place." })] : []),
       el("section", { class: "panel" }, el("h3", { text: restoring ? "Historical wishlist entry to restore" : "Current wishlist entry to remove" }),
         el("dl", {}, ACTIVITY_UNDO_FIELDS.wishlist.flatMap(field => [el("dt", { text: field === "number" ? "collector number" : field }),
           el("dd", { class: ["notes", "source"].includes(field) ? "activity-undo-note" : null, text: text(row[field]) })]))));
