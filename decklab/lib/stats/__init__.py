@@ -260,6 +260,12 @@ Result (every key is always there; None where it doesn't apply)
                           "count", "land_searches": [card] (searches for
                           lands only, not counted), "tags_date"} or
                           {"checked": False, "reason", "tags_date"},
+                          "tutor_rules": what Wizards' bracket text says
+                          about tutors (stats.tutors.tutor_rules, from the
+                          quoted wording constants.BRACKET_TUTORS keeps):
+                          {"known": True, "says", "brackets": [{number,
+                          says, limit}], source, dates} or {"known": False,
+                          "reason"}; no limit is set, so nothing warns,
                           "combos": {"checked": True, "list_date", "version",
                           "matches": [{"names": [the two cards' names], "results":
                           [str], "class" (combos.CLASSES), "standalone": False when

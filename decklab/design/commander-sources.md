@@ -127,3 +127,14 @@
    - Recommended: no. Use the sitemap and Scryfall only.
 3. **Should a new announcement warn until the card data and rules are newer, even when it changed nothing?**
    - Recommended: yes. Claude or Matt then marks the bracket rules as reviewed by updating `constants.BRACKETS`' source date.
+
+## E9-S29: what the official bracket text says about tutors
+
+Read by Claude on 2026-11-05 from Wizards' announcements (never by Deck Lab, which doesn't fetch Wizards' pages):
+
+- **[Commander Brackets Beta Update, October 21, 2025](https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-october-21-2025)**, under "Removing Tutor Restrictions": "When we were building the original bracket system, we put in guiderails around tutors at the first three brackets—citing "few" tutors." and "So, after much discussion, the avenue we'd like to take is to remove the tutor restrictions from Commander Brackets entirely and rely on Game Changers to catch the most efficient tutors."
+- Its bracket descriptions name tutors only in Bracket 4's "Players expect" list: "Game Changers that are likely to be fast mana, snowballing resource engines, free disruption, and tutors". Brackets 1, 2, 3 and 5 say nothing about tutors.
+- **[Commander Brackets Beta Update, February 9, 2026](https://magic.wizards.com/en/news/announcements/commander-brackets-beta-update-february-9-2026)**, the latest, doesn't mention tutors.
+- **So:** no bracket sets a number of tutors, and the Checks warn about no tutor count.
+
+Deck Lab keeps this wording in `constants.BRACKET_TUTORS` (the quote, each bracket's own words and limit, `read_on` and `reviewed_through`, the latest announcement read). `stats.tutors.tutor_rules` gives it as `bracket["tutor_rules"]` while Wizards' latest Commander announcement (E9-S24) is no newer than `reviewed_through`; otherwise, or when that date is unknown, it says the official text on tutors isn't known. The Stats tab's Minimum bracket, the Overview's What opponents will face and the printed At the table quote it at the deck's target bracket. After a new announcement, read it and update `BRACKET_TUTORS` with `BRACKET_RULES_DATE`; a bracket's `limit` is only ever a number the text itself sets.

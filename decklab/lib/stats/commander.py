@@ -15,7 +15,7 @@ from .constants import (
     DECK_COPIES_RE, EXTRA_TURN_TAG, MASS_LAND_DENIAL_TAG, NUMBER_WORDS, OFF_BATTLEFIELD_CREATURE_RE,
     PARTNER_TEXT_RE, PARTNER_WITH_RE, REMINDER_RE, UPGRADED_MAX_GAME_CHANGERS)
 from .cardtext import card_list, colour_label, colour_words, front_text, subtypes, type_words
-from .tutors import tutor_check
+from .tutors import tutor_check, tutor_rules
 
 # Read only by _commander_checks below. Tests patch it here, on
 # decklab.lib.stats.commander: the package doesn't re-export it, so a patch
@@ -476,6 +476,7 @@ def _commander_checks(by_section, sections, unresolved, warnings):
             "mass_land_denial": None if mld is None else card_list(mld),
             "extra_turns": None if extra_turns is None else card_list(extra_turns),
             "tutors": tutors,
+            "tutor_rules": tutor_rules(data),
             "combos": two_card,
             "not_automatic": list(BRACKET_NOT_AUTOMATIC),
             "brackets": [dict(b) for b in BRACKETS],

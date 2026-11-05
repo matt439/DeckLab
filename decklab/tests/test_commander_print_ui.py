@@ -120,6 +120,18 @@ class CommanderPrintUiTests(unittest.TestCase):
           assert(!tablePart(printSheet(readinessPage())).includes('Tutors'));
         """)
 
+    def test_the_official_tutor_text_prints_or_says_it_is_not_known(self):
+        self.run_js("""
+          const rules = {known:true, date:'2025-10-21', read_on:'2026-11-05', says:'Remove the tutor restrictions.',
+            brackets:[{number:2, says:null, limit:null}]};
+          const part = tablePart(printSheet(readinessPage({tutor_rules:rules})));
+          assert(part.includes("Wizards' bracket text sets no limit on tutors at Bracket 2. Its update of 2025-10-21 " +
+            "says: “Remove the tutor restrictions.” (Wording read 2026-11-05.)"), part);
+          const unknown = tablePart(printSheet(readinessPage({tutor_rules:{known:false, reason:'a newer announcement'}})));
+          assert(unknown.includes("What Wizards' bracket text says about tutors isn't known: a newer announcement."), unknown);
+          assert(!tablePart(printSheet(readinessPage())).includes("Wizards' bracket text"));
+        """)
+
     def test_a_casual_deck_prints_no_commander_part(self):
         self.run_js("""
           const data = readinessPage();
