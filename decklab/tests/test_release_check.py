@@ -1,6 +1,7 @@
 """Whether a newer release is out (E11-S49, lib/release_check.py): only a release install asks, at most
 once a day, from a background thread, and nothing is downloaded. The network is replaced throughout:
 urlopen fails the test if anything reaches it unexpectedly, and the saved answer is in a temporary folder."""
+import http.client
 import io
 import json
 import tempfile
@@ -130,6 +131,27 @@ class ReleaseCheckTests(unittest.TestCase):
                 self.assertEqual((found["failed"], found["latest"], found["checked_on"], found["newer"]),
                                  (True, "v1.3.0", "2026-11-05", True))
                 self.start.assert_not_called()      # the failed attempt counts: asked again tomorrow
+
+    def test_a_broken_answer_counts_as_a_failed_check(self):
+        class _CutOff(_Answer):
+            def read(self, *args):
+                raise http.client.IncompleteRead(b'{"tag_na', 200)
+
+        self.urlopen.side_effect = None
+        self.urlopen.return_value = _github()
+        release_check.check("matt439/DeckLab")
+        self.now = NOW + timedelta(days=2)
+        for urlopen in ({"side_effect": None, "return_value": _CutOff(b"")},
+                        {"side_effect": http.client.BadStatusLine("HTTP/9")},
+                        {"side_effect": http.client.LineTooLong("header line")}):
+            with self.subTest(urlopen=urlopen):
+                self.urlopen.configure_mock(**urlopen)
+                saved = release_check.check("matt439/DeckLab")
+                self.assertEqual((saved["ok"], saved["checked_at"]), (False, self.now.isoformat(timespec="seconds")))
+                found = release_check.view()
+                self.assertEqual((found["failed"], found["latest"], found["checked_on"], found["checking"]),
+                                 (True, "v1.3.0", "2026-11-05", False))
+                self.start.assert_not_called()      # saved as an attempt: not asked again until tomorrow
 
     def test_no_release_yet_or_an_odd_answer(self):
         self.urlopen.side_effect = urllib.error.HTTPError("u", 404, "Not Found", {}, None)

@@ -13,6 +13,7 @@ Nothing waits on the network: view() answers from the saved answer and, when it'
 missing), starts one background thread to ask again; the page shows the new answer next time.
 A failed check keeps the last good answer and its date, and says it couldn't check.
 """
+import http.client
 import json
 import os
 import re
@@ -100,7 +101,8 @@ def _due(saved, repo):
 
 def fetch(repo):
     """GitHub's latest published release of repo: {"latest": tag or None, "url": its page or None}.
-    No published release yet (404) is an answer, None. Anything else raises OSError or ValueError."""
+    No published release yet (404) is an answer, None. Anything else raises OSError, ValueError or
+    http.client.HTTPException (a broken answer, such as one cut off part way)."""
     request = urllib.request.Request(f"https://api.github.com/repos/{repo}/releases/latest", headers={
         "User-Agent": USER_AGENT, "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"})
     try:
@@ -134,7 +136,7 @@ def check(repo):
     now = _now().isoformat(timespec="seconds")
     try:
         found = fetch(repo)
-    except (OSError, ValueError, UnicodeError):
+    except (OSError, ValueError, UnicodeError, http.client.HTTPException):
         result = {**saved, "repo": repo, "checked_at": now, "ok": False}
     else:
         result = {"repo": repo, "checked_at": now, "ok": True, "good_at": now, **found}
