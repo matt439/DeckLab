@@ -510,6 +510,8 @@ def _coord_title(job, detail):
     kind = _coord_kind(job)
     if kind == "gauntlet":
         return f"Gauntlet run of {title}"
+    if getattr(job.fn, "kind", None) == "group":       # a field run of chosen decks (api/field_group.py)
+        return f"Group run of {title}"
     return f"Field run of {title}" if kind == "field" else f"Test of a change to {title}"
 
 
@@ -517,7 +519,7 @@ def _coord_link(job, detail):
     """Where a coordinator job's page is: the deck page's field section, or the test's page."""
     if _coord_kind(job) == "variant":
         return "#/variant?test=" + job.key.split(":", 1)[1]
-    if _coord_kind(job) == "gauntlet":
+    if _coord_kind(job) == "gauntlet" or getattr(job.fn, "kind", None) == "group":
         via = getattr(job.fn, "via", None)
         return via.get("link") if isinstance(via, dict) else None
     deck = detail.get("deck") if isinstance(detail.get("deck"), dict) else {}

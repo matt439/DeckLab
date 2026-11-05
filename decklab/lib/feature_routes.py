@@ -8,7 +8,8 @@ pod records (play_pods.MAX_BODY), import previews (collection_edit.MAX_IMPORT_BO
 (collection_scan.MAX_SCAN_BODY, for cards and token cards), scanned token lists (tokens_scan.MAX_ADD_BODY), editor drafts kept for later (deck_drafts.MAX_BODY), field choices
 (field_choices.MAX_BODY), a restart (server_restart.MAX_BODY)
 and accessory saves with a local picture (accessories.MAX_SAVE_BODY). The gauntlet's view, run and
-stop (api/gauntlet_page.py) answer 202 while its run waits or plays, as the field's do.
+stop (api/gauntlet_page.py) and the group run's (api/field_group.py, E3-S31) answer 202 while their runs
+wait or play, as the field's do.
 """
 
 GAUNTLET_WAITING = ("queued", "running")       # a gauntlet answer's statuses sent with 202
@@ -130,11 +131,28 @@ def _gauntlet_stop(body):
     return stop_gauntlet(body)
 
 
-GAUNTLET_ROUTES = {("gauntlet",), ("gauntlet", "run"), ("gauntlet", "stop")}
+def _group_view(**params):
+    """The deck page's group run of chosen decks (api/field_group.py, E3-S31), loaded only when asked for."""
+    from decklab.lib.api.field_group import group_view
+    return group_view(**params)
+
+
+def _group_run(body):
+    from decklab.lib.api.field_group import run_group
+    return run_group(body)
+
+
+def _group_stop(body):
+    from decklab.lib.api.field_group import stop_group
+    return stop_group(body)
+
+
+GAUNTLET_ROUTES = {("gauntlet",), ("gauntlet", "run"), ("gauntlet", "stop"),
+                   ("field", "group"), ("field", "group", "run"), ("field", "group", "stop")}
 
 
 def _status(key, answer):
-    """200, or 202 for a gauntlet answer whose run waits or plays."""
+    """200, or 202 for a gauntlet or group answer whose run waits or plays."""
     waiting = key in GAUNTLET_ROUTES and isinstance(answer, dict) and answer.get("status") in GAUNTLET_WAITING
     return 202 if waiting else 200
 
@@ -184,6 +202,7 @@ def dispatch(handler, route, query):
         ("arrivals",): (arrivals.arrivals_view, ()),
         ("rankings",): (rankings.rankings_view, ("format",)),
         ("field", "membership"): (_field_membership_view, ("id", "version")),
+        ("field", "group"): (_group_view, ("id", "version", "opponents", "profile")),
         ("library", "forge"): (library_forge.library_forge_view, ()),
         ("library", "gauntlet"): (_library_gauntlet, ()),
         ("product",): (products.product_state, ("stem",)),
@@ -274,6 +293,8 @@ def dispatch(handler, route, query):
         ("server", "restart"): (server_restart.restart, server_restart.MAX_BODY),     # a named home admin's
         ("gauntlet", "run"): _gauntlet_run,        # run.start (require_start), after the deck's 404
         ("gauntlet", "stop"): (_gauntlet_stop, MAX_BODY),     # run.stop: its starter, its deck's space or an admin
+        ("field", "group", "run"): _group_run,       # run.start (require_start), after every deck's 404
+        ("field", "group", "stop"): (_group_stop, MAX_BODY),  # run.stop, as the field's
         ("visit",): (visits.beacon, MAX_BODY),      # not a data write: no guard rule, the requester's own visit
     }
     key = tuple(route)

@@ -33,6 +33,9 @@ def _field_args(sub):
                                                       "--budget)")
     play.add_argument("--opponents", help="only these field lists: deck ids, comma-separated, each with an "
                                           "optional @target or @owned")
+    play.add_argument("--group", help="play a chosen group of house decks instead of the field (E3-S31): deck ids, "
+                                      "comma-separated, each with an optional @target or @owned; the games count "
+                                      "in the ratings as a field run's")
     play.add_argument("--show", action="store_true", help="print the field view and play nothing")
     play.add_argument("--dry-run", action="store_true", help="print the plan and its time, and play nothing")
     play.add_argument("--json", action="store_true")
@@ -120,6 +123,10 @@ def _cmd_field(args):
         raise shared._CliError("field plays a deck of the library: give its deck id.")
     a = shared._cli_entry(args.deck, args.owned)
     budget = f"fixed:{args.fixed}" if args.fixed else args.budget
+    if args.group is not None:
+        if args.opponents:
+            raise shared._CliError("--opponents limits the field and --group replaces it: give one of them.")
+        return _cmd_group(args, a, budget)
     names = [n.strip() for n in args.opponents.split(",") if n.strip()] if args.opponents else None
     try:
         if args.show:
@@ -183,6 +190,100 @@ def _cmd_field(args):
         for key, why in (note.get("dropped") or {}).items():
             print(f"  ! {why} ({key[:12]})")
         _print_field(found)
+    return 1 if note.get("dropped") else 0
+
+
+def _group_entries(group, text):
+    """The --group decks' entries: each "<deck id>[@target|@owned]", else the list the field plays."""
+    out = []
+    for name in (n.strip() for n in text.split(",")):
+        if not name:
+            continue
+        deck_id, _, version = name.partition("@")
+        if version.strip() not in ("", "target", "owned"):
+            raise shared._CliError(f"{name}: a version is @target or @owned.")
+        try:
+            out.append(group.house_entry(deck_id.strip(), version.strip() or None))
+        except ValueError as e:
+            raise shared._CliError(str(e)) from None
+    return out
+
+
+def _print_group(found):
+    """field --group --show's lines (group.view's answer)."""
+    deck, overall = found["deck"], found["overall"]
+    print(f"{deck['title']} ({deck['version']}) against a group of {found['of']} {found['format']} decks: "
+          f"{found['played']} with games, {found['games']:,} games")
+    if overall and overall.get("rate") is not None:
+        rate = {"value": overall["rate"], "low": overall["low"], "high": overall["high"]}
+        print(f"  against the group: {_field_rate(rate)}" + (f" ({overall['note']})" if overall.get("note") else ""))
+    for o in found["opponents"]:
+        extra = [f"{o['games']:,} games"]
+        for word, shown in ((o.get("verdict"), o.get("verdict")), ("not meaningful", o.get("not_meaningful")),
+                            (o.get("problem"), o.get("problem"))):
+            if shown:
+                extra.append(word)
+        print(f"  {o['title']} ({o['version']}): {_field_rate(o['rate'])}; " + "; ".join(extra))
+    print(f"  ! {found['note']}")
+
+
+def _cmd_group(args, a, budget):
+    """field --group: --show prints the group view, --dry-run the plan and its time; otherwise it plays
+    the group run (group.run) into the ordinary results folder and prints the view after it. Exit code
+    1 when a deck couldn't be played."""
+    from . import estimate, group
+    chosen = _group_entries(group, args.group)
+    try:
+        if args.show:
+            found = group.view(a, chosen, results_dir=args.results_dir)
+            if args.json:
+                print(shared.json.dumps(found, ensure_ascii=False))
+            else:
+                _print_group(found)
+            return 0
+        planned = group.plan(a, chosen, budget, results_dir=args.results_dir)
+    except ValueError as e:
+        raise shared._CliError(str(e)) from None
+    minutes = _field_minutes(estimate, [(a, p["opponent"], p["games"]) for p in planned["pairs"] if p["games"] > 0],
+                             args.results_dir)
+    if args.dry_run:
+        found = {"budget": planned["budget"], "per_opponent": planned["per_opponent"],
+                 "new_games": planned["new_games"], "minutes": list(minutes) if minutes else None,
+                 "pairs": [{"id": p["opponent"]["id"], "version": p["opponent"]["version"],
+                            "title": p["opponent"]["title"], "have": p["have"], "games": p["games"]}
+                           for p in planned["pairs"]]}
+        if args.json:
+            print(shared.json.dumps(found, ensure_ascii=False))
+            return 0
+        for p in found["pairs"]:
+            print(f"{p['title']} ({p['version']}): has {p['have']:,} games; about {p['games']:,} in all")
+        print(f"{len(found['pairs'])} decks, about {found['new_games']:,} new games"
+              + (f", about {minutes[0]:.0f}-{minutes[1]:.0f} minutes" if minutes else "") + ".")
+        return 0
+    shown = [0.0]
+
+    def report(done, total, detail):
+        now = shared.time.monotonic()
+        if now - shown[0] >= FIELD_REPORT_S or (total and done == total):
+            shown[0] = now
+            print(f"  {done:,} of {total:,} games ({detail['phase']})", file=shared.sys.stderr)
+
+    print(f"Playing {a['title']} ({a['version']}) against a group of {len(chosen)} decks, budget {budget}...",
+          file=shared.sys.stderr)
+    log = {"log_dir": args.logs_dir, "log_every": args.log_every} if getattr(args, "logs_dir", None) else {}
+    try:
+        note = group.run(a, chosen, budget, by=args.by, progress=report, results_dir=args.results_dir,
+                         local=args.local, seed_base=args.seed_base, inflight=args.inflight, **log)
+    except ValueError as e:
+        raise shared._CliError(str(e)) from None
+    found = group.view(a, chosen, results_dir=args.results_dir)
+    if args.json:
+        print(shared.json.dumps({"note": note, "view": found}, ensure_ascii=False))
+    else:
+        print(f"Played {note['played']:,} games in {note['wall_s']:.0f} s.")
+        for key, why in (note.get("dropped") or {}).items():
+            print(f"  ! {why} ({key[:12]})")
+        _print_group(found)
     return 1 if note.get("dropped") else 0
 
 

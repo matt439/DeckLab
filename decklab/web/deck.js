@@ -68,13 +68,13 @@ function showDeck(params, token) {
   });
 }
 
-/** The tab and filter an address asks for: ?tab= (a ?part=field or ?part=gauntlet link opens Testing, where
+/** The tab and filter an address asks for: ?tab= (a ?part=field, ?part=group or ?part=gauntlet link opens Testing, where
  * those parts are) and ?filter=. */
 function deckViewOf(params) {
   let tab = params.get("tab");
   if (tab === "testing") tab = "matchups";
   if (!DECK_TABS.some(([name]) => name === tab)) {
-    tab = ["field", "gauntlet"].includes(params.get("part")) ? "matchups" : "overview";
+    tab = ["field", "group", "gauntlet"].includes(params.get("part")) ? "matchups" : "overview";
   }
   const filter = params.get("filter");
   return { tab, filter: CARD_FILTERS.some(([name]) => name === filter) ? filter : "all" };
@@ -222,11 +222,11 @@ function deckTabParts(name, data, screen) {
   if (name === "cards") return cardsParts(data, screen);
   if (name === "stats") return [statsSection(data)];
   if (name === "practice") return [manualHandsSection(data), practiceSection(data)];
-  // deck-tools.js, field.js, gauntlet.js, variant.js; a Commander deck's popular decks first (E3-S33)
+  // deck-tools.js, field.js, field-group.js, gauntlet.js, variant.js; a Commander deck's popular decks first (E3-S33)
   if (data.summary.kind === "commander") {
-    return [gauntletSection(data), deckMatchupsPart(data), fieldSection(data), variantTestsSection(data)];
+    return [gauntletSection(data), deckMatchupsPart(data), fieldSection(data), groupSection(data), variantTestsSection(data)];
   }
-  return [deckMatchupsPart(data), fieldSection(data), gauntletSection(data), variantTestsSection(data)];
+  return [deckMatchupsPart(data), fieldSection(data), groupSection(data), gauntletSection(data), variantTestsSection(data)];
 }
 
 /** Write the tab (and the Cards filter) into the address in place: Back still leaves the deck in one step. */

@@ -168,7 +168,7 @@ Defaults:
 
 **Fit with other work**
 - **`variant --field`:** E3-S30 adds `against="gauntlet:<sample>"` to `variants._opponent_entries` (`variants.py:330`), with `FIELD_PAIRED_LOOKS` (`seqstats.py:71`) and the gauntlet results folder. It's not in the first slices.
-- **E3-S19:** `opponent_entries` is exactly the chosen-group run E3-S19 lacks (`stories.md:924`). Its chosen house or public decks would run with the default results folder (they belong in the Bradley-Terry ratings) and reuse the group view.
+- **E3-S19:** `opponent_entries` is exactly the chosen-group run E3-S19 lacks (`stories.md:924`). Its chosen house or public decks would run with the default results folder (they belong in the Bradley-Terry ratings) and reuse the group view. Built 2026-11-05 as E3-S31: `lib/forge/group.py` (its overall row is `gauntlet._group`), `lib/api/field_group.py` and `forge field --group`.
 
 ## 7. Time estimates and defaults
 
