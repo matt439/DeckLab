@@ -25,6 +25,9 @@ An index of open work, one row per item; each row points to the doc that owns th
 - **`E7-S32`: real photos for Scan cards.** Take 10 to 20 photos of cards (a few foils, a few sleeved, one old card) with Collection's **Scan cards…** on each phone, plus a few token cards with Tokens' **Scan token cards…**, or copy them to the PC for `python -m decklab.lib.scan` (`--tokens` for token cards); the sheets and their APIs are fixture-tested only.
 - **`FG#4`: the gauntlet on the live server.** With Matt's OK, build the catalogues on the Linux spare PC, measure its Commander throughput and play a first standard run per Commander deck (PLAN.md, Still to do, item 12).
 - **`E11-S59`: wake-on-request, set up for real.** Built in code (2026-11-01): put the wake gate and its tunnel on the NAS, make the Access service token, deploy the Worker with its secrets, set the server PC's BIOS and adapter to wake, then time a real wake (decklab/README.md, "Sleeping and waking on request").
+- **`E8-S25`: the storage setting's questions.** Answer part 4 of [storage-setting.md](decklab/design/storage-setting.md) (containers, where it's kept, home's default) before slice 2 is built.
+- **`E11-S61`: the More menus.** Decide on [more-menus-review.md](decklab/design/more-menus-review.md)'s recommended moves; then they're made.
+- **`E11-S49`: the first release.** Tag a version on main to publish the first release zip; Settings' newer-release line is built.
 - **`E11-S28`: User2's user-testing session.** Confirm his device, then use the prepared [checklist](decklab/design/user-testing-user2.md).
 
 **Activation:** migrations `0012` and `0013` were applied and the server restarted on committed code on 2026-10-19, so the privacy code and guarded member removal are live. No visibility choice or real member removal has been made.
@@ -48,7 +51,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E2-S16` | OPEN | could | L | Kept-for-later drafts built, the Quick edit's and new decks' too (migrations 0018 and 0019 applied by 2026-10-30). Left: real-device checks. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
-| `E8-S25` | OPEN | should | M | A setting for what a space's storage is like; today "storage" just means Matt's four-row box. First, list every place that assumes it and propose the setting's shape to Matt. |
+| `E8-S25` | DECISION | should | M | A setting for what a space's storage is like. The inventory and proposal are written ([storage-setting.md](decklab/design/storage-setting.md), 2026-11-05): Matt answers its part 4, then slice 2 (the record and its reader). |
 
 ## Deck Lab: collection, orders and buying
 
@@ -66,7 +69,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E9-S11` | DEFERRED | could | L+pc | Four-player pod runs from the page (with `E9-S21` win shares and `E9-S22` why-not by Start); after `FG#2`. First `lib/forge/pods.py` from the prototype, fixtures only. |
-| `E9-S28` | OPEN | could | M | Commanders we could build: free legendary creatures ranked by the free pool's role coverage in their colours, EDHREC on demand. First slice built 2026-11-04 (the ranked list without EDHREC); second slice built 2026-11-04 (a candidate's free cards by role by name, New deck from it, See EDHREC ideas); next, a pair of partners or a Background counted together, and a held commander's row naming its deck. |
 | `E9-S29` | OPEN | should | S | Tutors on the Stats tab (2026-11-02), the Overview's sentence, What opponents will face and the printout (2026-11-04) built. Left: the official text on tutors (needs its source); a Checks warning where it sets a number. |
 
 ## Deck Lab: testing and Forge
@@ -93,7 +95,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S31` | DECISION | could | M | Global search in the top bar ([stories.md](decklab/design/stories.md#e11-s31)) is built and its `/` decided (2026-10-31): Matt checks the iPad field and phone sheet on devices. |
 | `E11-S58` | DECISION | should | L | Live server on Linux ([stories.md](decklab/design/stories.md#e11-s58)) is built and fixture-tested (2026-11-01): WSL qualified the database, backups, the services, `systemd-inhibit` under polkit and real Forge games (2026-11-02); still to qualify on the real Linux PC: suspend and wake, phones, and Tesseract on real card photos. |
 | `E11-S08` | OPEN | could | L | Token deletions and 2-50 added token rows undo together (2026-10-29); 1-50 purchase-queue value edits restore in place (2026-10-30); 1-50 added queue rows are removed and removed ones restored as new rows (2026-10-31); 1-50 edited token-card rows restore in place (2026-10-31); queue changes mixing 2-50 updated, added and removed rows undo whole (2026-10-31); 2-50 collection-row restores and removals are proved before commit (2026-10-31). Mixed token-card changes have no producer (2026-10-31). Receipts that corrected their rows undo whole (2026-11-04). Still open: queue changes with orders, token-card changes that moved or renumbered rows, other multi-row and mixed changes, other accessory/wishlist inverses. |
-| `E11-S49` | OPEN | could | M | Versioned release zips with a SHA-256 and version manifest. The release workflow (draft releases), `scripts/make_release.py` and `build.py` reading the manifest without git are built (2026-11-04); left: Settings saying a newer release exists, and Matt publishing the first release. |
+| `E11-S49` | DECISION | could | M | Release zips, installs without git and Settings' newer-release line (2026-11-05) are built; left: Matt publishes the first release. The update command is `E11-S51`. |
 | `E11-S50` | DEFERRED | could | L | One Windows installer (winget Python and PostgreSQL, release zip, generated postgres password, config questions, services, one firewall prompt, phone address); after `E11-S49`. |
 | `E11-S51` | DEFERRED | could | M | Update command for release installs (backup, replace, migrate, restart); after `E11-S49`. |
 | `E11-S52` | DEFERRED | could | L | First-run setup page on the PC (home profiles, optional Enable simulations); after `E11-S50`. |
@@ -101,7 +103,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S59` | DECISION | could | L | Wake-on-request built in code (2026-11-01): Matt sets up the NAS gate, the service token, the Worker's secrets and the PC's wake settings, then times a real wake. |
 | `E11-S02` | DECISION | should | S | The "Deck Lab is off" Worker is deployed (`decklab/cloudflare/`): Matt checks a signed-in save, a photo upload, and the page with Deck Lab stopped. |
 | `E11-S55` | OPEN | could | M | An accessibility pass: contrast, names, focus and reduced motion over every page in both densities and themes. The phone audit of the library, deck page and Game log and its fixes are done (2026-11-04); next, the other pages and the lab density, then a real screen reader. |
-| `E11-S61` | OPEN | could | S | Investigate the More dropdowns and whether they're beneficial: list the top bar's and deck page's items with their visits, and recommend what stays, moves or goes. |
+| `E11-S61` | DECISION | could | S | Review done ([more-menus-review.md](decklab/design/more-menus-review.md), 2026-11-05): Matt decides the recommended moves (Build decks as a lab pill from 1000 px, a Game log link on the Overview, Build decks out of Collection's More). |
 | `E11-S57` | DEFERRED | could | L | A Linux install route (a script or container); after `E11-S50` (Windows first, Matt, 2026-10-31) and `E11-S49`. |
 
 ## Areas with no open rows
