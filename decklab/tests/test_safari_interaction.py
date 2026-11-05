@@ -726,7 +726,36 @@ class NativeProfileAndHomeScreenTests(unittest.TestCase):
         tap.assert_called_once_with(driver, rect)
         reconnect.assert_called_once_with(driver, fixture.base_url, standalone=True)
         self.assertEqual(result["observed_label"], "Matt Tap to continue")
+        self.assertEqual(result["taps"], 1)
         driver.click.assert_not_called()
+
+    def test_profile_button_is_scrolled_into_view_and_a_missed_tap_gets_one_more(self):
+        # 2026-11-05, iPhone 15 Pro landscape: the button ran off the window's bottom edge
+        # and the one tap did not sign in.
+        entered = iter([False] * 30 + [True] * 30)
+        scripts = []
+
+        def execute(script, args=None):
+            scripts.append(script)
+            if "has-shell" in script:
+                return next(entered)
+            return "Matt Tap to continue" if "join(' ')" in script else None
+        driver = mock.Mock()
+        driver.execute.side_effect = execute
+        driver.command.return_value = {"x": 0, "y": 0, "width": 852, "height": 393}
+        rect = {"x": 166, "y": 150, "width": 520, "height": 94}
+        fixture = SimpleNamespace(base_url="http://127.0.0.1:9234", profile_name="Matt")
+        clock = iter(range(0, 10000, 1))
+        with mock.patch.object(interaction, "native_element", return_value="matt-button"), \
+                mock.patch.object(interaction, "native_rect", return_value=rect), \
+                mock.patch.object(interaction, "tap_native_rect", return_value={}) as tap, \
+                mock.patch.object(interaction, "web"), mock.patch.object(interaction, "native"), \
+                mock.patch.object(interaction.time, "sleep"), \
+                mock.patch.object(interaction.time, "monotonic", side_effect=lambda: next(clock) * 0.25):
+            result = interaction.choose_native_profile(driver, fixture)
+        self.assertTrue(any("scrollIntoView" in script for script in scripts))
+        self.assertEqual(tap.call_count, 2)
+        self.assertEqual(result["taps"], 2)
 
     def test_reload_button_uses_observed_enabled_native_control(self):
         driver = mock.Mock()

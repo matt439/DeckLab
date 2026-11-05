@@ -614,17 +614,34 @@ def choose_native_profile(driver, fixture):
         .filter(Boolean).join(' ').replace(/\\s+/g,' ').trim();
     """, [name])
     require(label, f"Standalone chooser has no button for fixture profile {name!r}")
-    button = native_element(driver, label, webview_only=True)
-    rect = native_rect(driver, button)
-    window = driver.command("GET", "/window/rect")
-    x, y = rect["x"] + rect["width"] / 2, rect["y"] + rect["height"] / 2
-    require(rect["width"] > 0 and rect["height"] > 0
-            and window["x"] < x < window["x"] + window["width"]
-            and window["y"] < y < window["y"] + window["height"],
-            f"Standalone native profile button has no visible tap point: label={label}, rect={rect}, window={window}")
-    gesture = tap_native_rect(driver, rect)
-    web(driver, fixture.base_url, standalone=True)
-    return {"observed_label": label, "native": rect, "native_tap": gesture}
+    # On a phone in landscape the chooser's button can run off the bottom edge
+    # (2026-11-05: y 300-394 in a 393-point window), where a tap may not land:
+    # bring it fully into view first, as a person would scroll to it.
+    driver.execute("""
+      const b=[...document.querySelectorAll('.who-button')].find(e=>e.querySelector('.who-name')?.textContent.trim()===arguments[0]);
+      if(b) b.scrollIntoView({block:'center',inline:'nearest'});
+    """, [name])
+    time.sleep(0.3)
+    taps = []
+    for _ in range(2):
+        button = native_element(driver, label, webview_only=True)
+        rect = native_rect(driver, button)
+        window = driver.command("GET", "/window/rect")
+        x, y = rect["x"] + rect["width"] / 2, rect["y"] + rect["height"] / 2
+        require(rect["width"] > 0 and rect["height"] > 0
+                and window["x"] < x < window["x"] + window["width"]
+                and window["y"] < y < window["y"] + window["height"],
+                f"Standalone native profile button has no visible tap point: label={label}, rect={rect}, window={window}")
+        taps.append({"native": rect, "native_tap": tap_native_rect(driver, rect)})
+        web(driver, fixture.base_url, standalone=True)
+        try:
+            wait(lambda: driver.execute("return document.body.classList.contains('has-shell');"), timeout=5,
+                 message="Profile tap did not enter the shell")
+            break
+        except AssertionError:
+            native(driver)  # one more real tap, recorded below; a second miss is left to the caller's check
+    return {"observed_label": label, "native": taps[-1]["native"], "native_tap": taps[-1]["native_tap"],
+            "taps": len(taps), "attempts": taps}
 
 
 def tap_native_button(driver, fixture, selector, standalone=False):
