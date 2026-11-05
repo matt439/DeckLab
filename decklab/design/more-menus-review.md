@@ -15,11 +15,11 @@ E11-S61's review. Matt couldn't find Build decks on the iPad, though he had used
 
 | Width | Who it is | Navigation | The deck page's More |
 |---|---|---|---|
-| 1000 px and up (the lab) | the desktop, an iPad 11-inch on its side (1194 px), a phone on its side | top bar: Decks · Testing · Collection · Shopping · **More ▾**, then search and the avatar | "More ▾" beside Edit and Build deck |
-| 600 to 999 px | an iPad 11-inch upright (834 px) | casual: a header and a bottom tab bar, Decks · Testing · Collection · Shopping · **More** (a sheet) | "More ▾" beside Edit and Build deck |
+| 1000 px and up (the lab) | the desktop, an iPad 11-inch on its side (1194 px) | top bar: Decks · Testing · Collection · Shopping · **More ▾**, then search and the avatar | "More ▾" beside Edit and Build deck |
+| 600 to 999 px, 501 px tall or more | an iPad 11-inch upright (834 px) | casual: a header and a bottom tab bar, Decks · Testing · Collection · Shopping · **More** (a sheet) | "More ▾" beside Edit and Build deck |
 | under 600 px | a phone | the same tab bar and sheet | a square "⋯" beside Edit |
 
-A phone on its side (500 px tall or less) gets the lab's top bar. The lab and casual densities are chosen by width alone, and the menus hold the same items in both. A member's tab bar has no Shopping (three tabs and More), and a member never sees Build decks or Sleeves & boxes.
+A phone on its side is the exception: any landscape screen 500 px tall or less gets the lab's top bar from 600 px wide (`shell.css`, the casual query), and most phones on their side are 667 to 932 px wide. So the lab's top bar shows from 1000 px, or from 600 px on a phone on its side. Its bar scrolls away with the page and keeps the search as an icon, as it has no room beside the pills for the field. The menus hold the same items in both densities. A member's tab bar has no Shopping (three tabs and More), and a member never sees Build decks or Sleeves & boxes.
 
 ## The top bar's More (and the phone's More sheet)
 
@@ -29,14 +29,14 @@ In the lab the top bar's More ▾ holds six pages. Under 1000 px the More sheet 
 |---|---|---|---|
 | Tokens | `#/tokens`, the token and reminder cards | the deck page's Tokens part ("Edit your tokens"), Build decks' More, Receive delivery's links | **Keep.** Upkeep, reached from where tokens come up. |
 | Sleeves & boxes (home only) | `#/accessories` | the deck page's kit **Choose…**, Build decks' More and its Choose sleeves | **Keep.** Mostly reached through a deck's kit. |
-| Build decks (home only) | `#/assembly`, the packing plan | the deck page's **Build deck** / **Review build**, the Overview's In its box **Review build**, the Collection page's More | **Move into plain sight in the lab:** a fifth top-bar pill after Shopping. It's the step before every game night and the item Matt lost. Under 1000 px leave it in the More sheet: a fifth tab would crowd a 375 px bar, and the deck page's button covers the usual way in. |
+| Build decks (home only) | `#/assembly`, the packing plan | the deck page's **Build deck** / **Review build**, the Overview's In its box **Review build**, the Collection page's More | **Move into plain sight in the lab from 1000 px:** a fifth top-bar pill after Shopping. It's the step before every game night and the item Matt lost. Below 1000 px leave it in More (the sheet, or a phone on its side's More ▾): a fifth tab would crowd a 375 px bar, a fifth pill a phone on its side's, and the deck page's button covers the usual way in. |
 | Game log | `#/play`, played games, pods and sideboard plans | none from the deck page except its More; the Overview's Played at home panel says when it was last played but doesn't link | **Keep, and add a plain-sight way in:** an "Open the Game log" (or "Record a game") link in the deck Overview's Played at home panel, as Compare already has. Recording a game after playing is a common step on a phone. |
 | Wishlist | `#/wishlist` | Shopping's More and its empty state | **Keep.** Personal and occasional. |
 | Activity | `#/activity`, the audit trail | none | **Keep.** A reference page, opened rarely. |
 | Who sees what (sheet only) | `#/visibility` | the avatar menu | **Keep.** The sheet is where a phone user looks; the duplicate costs nothing. |
 | Settings (sheet only, admins) | `#/settings` | the avatar menu | **Keep**, for the same reason. |
 
-Making Build decks a lab pill is one change to its route (`nav: "main"`, after Shopping): the tab bar takes only the first four main pages (`TAB_COUNT`), so under 1000 px it would stay in the More sheet by itself. It would then sit in the top bar for everyone who may see it (Matt and User1), and a member's top bar is unchanged.
+Making Build decks a main route (`nav: "main"`, after Shopping) isn't enough on its own. The tab bar takes only the first four main pages (`TAB_COUNT`), so the casual sheet would still hold it, but the lab's top bar draws every main page (`drawShell`'s `main.map`), and a phone on its side gets that bar from 600 px. A bare `nav: "main"` would add a fifth pill there too: on a phone 667 px wide the bar would need the logo, Decks · Testing · Collection · Shopping · Build decks · More ▾, the search icon and the avatar, and `.nav-items` doesn't wrap, so it risks overflowing. The change needs a rule as well: the Build decks pill shown only from 1000 px (a CSS rule on its nav item), with Build decks kept in the top bar's More ▾ below that, so a phone on its side still reaches it. Checking it means the bar at 667 px and 932 px landscape and at 1000 px. It would sit in the top bar for everyone who may see it (Matt and User1), and a member's top bar is unchanged.
 
 ## The deck page's More
 
@@ -45,7 +45,7 @@ Making Build decks a lab pill is one change to its route (`nav: "main"`, after S
 | Item | Shown when | Opens or does | Already in plain sight? | Recommendation |
 |---|---|---|---|---|
 | Game log | always | `#/play?id=`, the Game log narrowed to this deck | no (see above) | **Move into plain sight** (the Overview's Played at home link above); it can stay in More too. |
-| History | not a product or pairing | `#/history?id=`, every saved revision | only from the Overview's Played at home, when the list changed since the last game | **Keep.** Occasional. |
+| History | not a product or pairing | `#/history?id=`, every saved revision | only from the Overview's Played at home, and only when the list changed since the last game by more than the panel lists (`since.more`); a list changed by a few cards gets no History link | **Keep.** Occasional. |
 | Compare with… | always | a chooser, then `#/compare` | the library's More, Compare two decks… | **Keep.** |
 | Copy decklist | always | the list shown, to the clipboard | none | **Keep.** An export, used now and then. |
 | Download decklist | always | the list shown, as a text file | none | **Keep.** |
@@ -77,7 +77,7 @@ The row-level "⋯" menus (an editor line's, a Considering card's) and Shopping'
 
 ## Recommendation in short
 
-1. Make Build decks a pill in the lab's top bar (1000 px and up), leaving it in the phone and iPad-upright More sheet.
+1. Make Build decks a pill in the lab's top bar from 1000 px only, leaving it in the phone's and upright iPad's More sheet and in a phone on its side's More ▾ (a bare `nav: "main"` would also put it in a phone on its side's bar; see above).
 2. Add a Game log link to the deck Overview's Played at home panel.
 3. Then remove Build decks from the Collection page's More.
 4. Keep everything else where it is. Once the server's page counts are in (the query above), check that Tokens, Sleeves & boxes, Wishlist and Activity are opened rarely enough to stay in More; if one is opened as often as Shopping, look again.
