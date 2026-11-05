@@ -146,7 +146,7 @@ function tutorRulesText(br, target) {
   return `${text} (Wording read ${r.read_on}.)`;
 }
 
-const TUTOR_NOTE ="Tutors are cards that search the library for a card; searches for lands only aren't counted, " +
+const TUTOR_NOTE = "Tutors are cards that search the library for a card; searches for lands only aren't counted, " +
   "and tutors don't change the bracket here.";
 
 /** The lead sentence with the cards found and the floor-raising combos named, each name drawn by name(). */
