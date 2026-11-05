@@ -19,7 +19,7 @@ from unittest import mock
 
 from decklab.lib import access, api, jobs
 from decklab.lib import feature_routes
-from decklab.lib.api import field_group, guard
+from decklab.lib.api import field_group, field_page, guard
 from decklab.tests.test_api import _write
 from decklab.tests.test_api_permissions import PermissionTestCase
 
@@ -256,3 +256,37 @@ class GroupRunTests(GroupApiTestCase):
         self.forge.ready = False
         self.assertEqual(self.call("matt", field_group.run_group, body("matt", id=GRUUL, opponents=[MONO])), 503)
         self.assertEqual(self.g.runs, [])
+
+    def test_a_group_not_yet_reporting_names_no_hidden_deck(self):
+        # User2 plays home's Public deck against his own private one; until its first report the job
+        # has no pairs, so only its chosen decks keep it from Matt.
+        hold, real_run = threading.Event(), self.g.run
+        self.addCleanup(hold.set)
+
+        def held(*args, **kwargs):
+            hold.wait(WAIT)
+            return real_run(*args, **kwargs)
+        self.g.run = held
+        self.set_mode("everyone")
+        with mock.patch.object(guard, "public_deck_spaces", return_value=frozenset({"home"})):
+            self.call("user2", field_group.run_group, body("user2", id=GRUUL, opponents=[R_ELVES]))
+            own = self.call("user2", field_group.group_view, GRUUL, "target")
+            self.assertEqual(own["chosen"], [{"id": R_ELVES, "version": "target"}])
+            shown = self.call("matt", field_group.group_view, GRUUL, "target")
+            self.assertEqual((shown["status"], shown["chosen"], shown["opponents"]), ("none", [], []))
+            self.assertNotIn("r-elves", json.dumps(shown))
+            self.assertNotIn("User2 Elves", json.dumps(shown))
+            stopped = self.call("matt", field_group.stop_group, body("matt", id=GRUUL))
+            self.assertEqual(stopped["chosen"], [])
+            self.assertNotIn("r-elves", json.dumps(stopped))
+            self.assertNotIn("User2 Elves", json.dumps(stopped))
+        hold.set()
+
+    def test_a_field_run_waits_for_a_group_of_the_list(self):
+        self.playing()
+        self.call("matt", field_group.run_group, body("matt", id=GRUUL, opponents=[MONO]))
+        self.assertTrue(self.g.started.wait(WAIT))
+        self.forge.field.opponents = lambda entry, **options: [{"id": MONO}]
+        e = self.error("matt", field_page.run_field, body("matt", id=GRUUL))
+        self.assertEqual((e.status, e.message), (409, field_page.GROUP_PLAYING))
+        self.assertEqual(len(api.forge_runs.COORD_JOBS.active()), 1)

@@ -30,7 +30,6 @@ starter, its deck's space, or an admin). Nothing here writes the database.
 """
 import hashlib
 import importlib
-import threading
 import traceback
 from urllib.parse import quote
 
@@ -50,7 +49,6 @@ ALREADY_PLAYING = "A field or group run of this list is already playing: stop it
 CHANGED = "The saved list changed before its group run could start. Reload the saved deck before testing it again."
 TRIAL = "{title} is a trial of a precon, so it isn't an opponent."
 VERSIONS = ("target", "owned")
-_SUBMIT_LOCK = threading.Lock()
 
 
 def _group(forge):
@@ -148,6 +146,15 @@ def _active(forge, entry):
 
 def _group_jobs(forge, entry):
     return [j for j in _active(forge, entry) if getattr(j.fn, "kind", None) == "group"]
+
+
+def _shown_chosen(jobs_, seen):
+    """The chosen decks of the first of jobs_ the viewer sees whole (seen.coordinator: its deck and
+    every chosen deck, even before the run's first report), else []: never a hidden deck's id."""
+    for job in jobs_:
+        if seen.coordinator(job) and all(seen.deck(o.get("id")) for o in job.fn.chosen):
+            return list(job.fn.chosen)
+    return []
 
 
 class _GroupJob(field_page._FieldJob):
@@ -253,8 +260,7 @@ def group_view(deck_id, version="target", opponents=None, profile=None):
         except ValueError as e:
             raise ApiError(400, _public(e)) from None
     else:
-        playing = [j for j in _group_jobs(forge, entry) if seen.coordinator(j)]
-        chosen = list(playing[0].fn.chosen) if playing else []
+        chosen = _shown_chosen(_group_jobs(forge, entry), seen)
     return _answer(forge, g, entry, chosen, seen, own_settings_id(profile) if profile is not None else None)
 
 
@@ -300,7 +306,7 @@ def run_group(body):
     run = _GroupJob(forge, g, entry, chosen, budget, profile["name"],
                     {"space": options["space"], "keep": options["keep"]}, by_id=profile["id"])
     key = job_key(forge, entry, chosen)
-    with _SUBMIT_LOCK:
+    with field_page.SUBMIT_LOCK:
         # One run of a list at a time: a field run or another group would play the same pairs beside it.
         if any(j.key != key for j in _active(forge, entry)):
             raise ApiError(409, ALREADY_PLAYING)
@@ -330,5 +336,5 @@ def stop_group(body):
     for job in playing:
         if forge_runs.COORD_JOBS.cancel(job.key, by=profile["name"]):
             job.wait(forge_runs.STOP_WAIT)
-    chosen = list(playing[0].fn.chosen) if playing else []
+    chosen = _shown_chosen(playing, seen)     # an admin's anonymous Stop names no hidden deck
     return _answer(forge, g, entry, chosen, seen, profile["id"])

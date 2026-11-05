@@ -21,6 +21,7 @@ ratings, notes and budgets follow the viewer's visibility. Jobs and notes are sp
 legacy note paths are read only for home. Names from other spaces are "someone". Stop requires
 a visible run started by the viewer or using their space's deck, or an admin (E10-S31).
 """
+import threading
 import traceback
 from urllib.parse import quote
 
@@ -37,6 +38,10 @@ FIELD_BUSY = ("4 field runs or tests of changes are already waiting to be played
 FIELD_FAILED = ("Something went wrong on the PC while Forge was playing the field. Try again; if it keeps "
                 "happening, the server window says why.")
 FIELD_NO_SUMMARY = "The field view can't be worked out on the PC now (the server log says why)."
+GROUP_PLAYING = "A group run of this list is already playing: stop it first."
+# Held while a field or group run of a list is checked for and submitted (api/field_group.py too):
+# one run of a list at a time, since a field run and a group would play the same pairs side by side.
+SUBMIT_LOCK = threading.Lock()
 
 
 class _FieldJob:
@@ -245,7 +250,8 @@ def run_field(body):
     when it's left out). A field run of the same list that's already waiting or playing is
     joined. Returns field_view's answer. ApiError as field_view, 400 for a budget that isn't
     one or a list the field has no opponent for (forge.field.NO_OPPONENTS), 403 without a
-    profile or while the simulations setting refuses (api/simulations.py), and 503 when Forge isn't ready, COORD_JOBS has 4 waiting, the server is
+    profile or while the simulations setting refuses (api/simulations.py), 409 while a group run of the list
+    waits or plays (api/field_group.py), and 503 when Forge isn't ready, COORD_JOBS has 4 waiting, the server is
     stopping, or home's saved field choices can't be read (field_policy_overlay.REFUSED: the
     answer's run_refused says so beforehand, and the job's run_field refuses again). An optional expected_card_sha (64 lowercase hex characters) guards the exact
     playable saved list: 409 if it changed, before checking Forge or submitting a job. Normal
@@ -282,10 +288,14 @@ def run_field(body):
     if not opponents:
         raise ApiError(400, forge.field.NO_OPPONENTS.format(fmt=forge.fmt_for(entry["kind"])))
     run = _FieldJob(forge, entry, budget, profile["name"], options, by_id=profile["id"])
-    try:
-        forge_runs.COORD_JOBS.submit(job_key(forge, entry), run, rerun=True)
-    except jobs.Busy as e:
-        raise ApiError(503, forge_runs.MATCHUP_STOPPING if e.stopping else FIELD_BUSY) from None
+    key = job_key(forge, entry)
+    with SUBMIT_LOCK:
+        if any(j.key.startswith(key + ":group:") for j in forge_runs.COORD_JOBS.active()):
+            raise ApiError(409, GROUP_PLAYING)
+        try:
+            forge_runs.COORD_JOBS.submit(key, run, rerun=True)
+        except jobs.Busy as e:
+            raise ApiError(503, forge_runs.MATCHUP_STOPPING if e.stopping else FIELD_BUSY) from None
     return _answer(forge, summary, entry, profile["id"], seen)
 
 

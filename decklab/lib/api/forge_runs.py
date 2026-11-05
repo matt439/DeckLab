@@ -107,7 +107,7 @@ class _Seen:
         return bool(sides) and all(isinstance(side, dict) and self.historical(side.get("id")) for side in sides)
 
     def coordinator(self, job):
-        """True when the viewer sees a COORD_JOBS job: its deck, and a test's one opponent."""
+        """True when the viewer sees a COORD_JOBS job: its deck, a test's one opponent and a group's decks."""
         fn = job.fn
         deck = getattr(fn, "entry", None) or getattr(fn, "base", None)
         if not isinstance(deck, dict):          # else the deck its progress reports
@@ -117,6 +117,10 @@ class _Seen:
             return False
         against = getattr(fn, "against", None)
         if isinstance(against, dict) and not self.historical(against.get("id")):
+            return False
+        chosen = getattr(fn, "chosen", None)     # a group run's decks (api/field_group.py), before any report
+        if isinstance(chosen, (list, tuple)) and not all(
+                isinstance(o, dict) and self.historical(o.get("id")) for o in chosen):
             return False
         detail = COORD_JOBS.snapshot(job)["detail"]
         pairs = detail.get("pairs") if isinstance(detail, dict) else None
