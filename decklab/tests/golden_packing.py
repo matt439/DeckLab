@@ -26,6 +26,8 @@ PRODUCT_SOURCE = re.compile(r"magic/products/([a-z0-9]+(?:-[a-z0-9]+)*)\.csv")
 PICKER_KEYS = {"tokens_sha256", "expect", "product", "editable", "written", "lines", "choices"}
 CHOICE_KEYS = {"row", "front", "back", "set", "number", "quantity", "free", "packed"}
 BOX_KEYS = {"expect", "checked_on", "editable", "why_not", "recipe_sha256"}
+# The box check's "Which printing?" offers (2026-11-05): none in a default scenario's box.
+BOX_PRINTINGS_KEYS = BOX_KEYS | {"printings"}
 SECTIONS = ("Commander", "Companion", "Deck", "Sideboard")
 DECK_ID = re.compile(r"(casual|commander)/[a-z0-9]+(?:-[a-z0-9]+)*")
 ART_KEYS = {"name", "mana_cost", "cmc", "type_line", "colors", "color_identity", "roles", "img", "img_small",
@@ -79,7 +81,8 @@ def _named(value):
 def _default_box_check(deck):
     """Named physical rows only after both default receipts match the checklist."""
     check, physical = deck.get("box_check"), deck.get("take_apart")
-    if (not isinstance(check, dict) or set(check) != BOX_KEYS or check["checked_on"] is not None
+    if (not isinstance(check, dict) or set(check) not in (BOX_KEYS, BOX_PRINTINGS_KEYS)
+            or check.get("printings", {}) != {} or check["checked_on"] is not None
             or check["editable"] is not True or check["why_not"] is not None
             or not _hash(check["expect"]) or not _hash(check["recipe_sha256"])
             or not isinstance(deck.get("id"), str) or DECK_ID.fullmatch(deck["id"]) is None

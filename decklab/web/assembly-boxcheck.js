@@ -64,7 +64,11 @@ function packBoxReceipt(answer, deck, evidence, review) {
   return answer && typeof answer.saved === "boolean" && answer.id === deck.id && Number.isSafeInteger(answer.revision)
     && answer.revision >= 0 && typeof answer.sha256 === "string" && /^[a-f0-9]{64}$/.test(answer.sha256)
     && (answer.saved ? answer.sha256 !== evidence.meta.expect : answer.sha256 === evidence.meta.expect)
-    && (answer.saved ? answer.checked_on !== evidence.meta.checked_on : answer.checked_on === evidence.meta.checked_on)
+    // Printing choices may make a same-day check a real save; without any, the old date rule stands.
+    && (answer.printings_changed === undefined ? !review.printings : typeof answer.printings_changed === "boolean"
+      && (!answer.printings_changed || Boolean(review.printings) && answer.saved))
+    && (answer.saved ? answer.checked_on !== evidence.meta.checked_on || answer.printings_changed === true
+      : answer.checked_on === evidence.meta.checked_on)
     && answer.recipe_sha256 === evidence.meta.recipe_sha256 && boxCheckDate(answer.checked_on) !== null
     && answer.expected_cards === review.expected_cards && answer.found_cards === review.found_cards
     && encode(answer.missing) !== null && encode(answer.missing) === encode(review.missing)
@@ -75,15 +79,17 @@ function packReviewBoxCheck(view, deck) {
   const evidence = packBoxCheckEvidence(deck), recipe = JSON.stringify(view.selected.map(packSelectedChoice));
   const data = view.data, root = view.root, seq = view.seq, original = JSON.stringify([deck.box_check, deck.take_apart]);
   const expected = [], extras = [], controls = [], repairButtons = [], acceptedValues = new WeakMap();
+  const printingOffers = boxCheckPrintingOffers(evidence?.meta), printingControls = [], printingShown = new Set();
   let leavingForRepair = false, editorReading = false, sourceSha = evidence?.meta.expect;
   let stage = "edit", pending = false, saved = false, repaired = false, needsRefresh = false, refreshed = false, review = null;
   view.reviewing = true; packProgress(view);
-  const ctx = openAssemblySheet(view, "Check " + deck.title + " box", { onClose: () => {
+  const ctx = openAssemblySheet(view, "Check " + deck.title + " box", { wide: true, onClose: () => {
     if (!owner()) return;
     if (leavingForRepair) { view.reviewing = false; view.boxCheckRefresh = null; packProgress(view); return; }
     if (saved || needsRefresh) afterClose();
     else if (!pending) { view.reviewing = false; packProgress(view); }
   } });
+  ctx.sheet.dialog.classList.add("box-check-sheet");
   const owner = () => assemblyActive(view) && ctx.token === routeToken && ctx.profile === state.profile?.id
     && view.hash === location.hash && view.root === root && view.data === data && view.seq === seq && data.decks.includes(deck)
     && recipe === JSON.stringify(view.selected.map(packSelectedChoice)) && ownSpace() === HOME_SPACE && seesHomeInventory(state.may)
@@ -96,6 +102,7 @@ function packReviewBoxCheck(view, deck) {
   const editing = el("div"), reviewing = el("div", { hidden: true }), editorChoices = el("div", { class: "box-editor-choices" });
   ctx.sheet.body.append(el("p", { text: "Review the recorded physical cards and installed stand-in markers in every section. Count the cards actually in the box, then review any differences." }),
     el("p", { class: "sub", text: "Pictures are representative name-only art. They do not confirm a printing, finish or physical quantity. Saving records a historical date; the counts and differences stay only in this review." }),
+    el("p", { class: "sub", hidden: !Object.keys(printingOffers).length, text: "Cards you own in more than one printing ask which printing is in the box. What you choose is saved to the deck's Printings in box with the check date." }),
     el("p", { class: "sub", text: "Every count starts unreviewed. Tick a tile to fill its full recorded quantity, or enter a whole count. Use 0 when none were found." }), editing, reviewing, error);
   function local(input, valid = () => true) {
     acceptedValues.set(input, input.value);
@@ -127,7 +134,10 @@ function packReviewBoxCheck(view, deck) {
           || [row.name, row.input, row.section].some(input => !input.isConnected || !editing.contains(input))) return null;
       seen.add(key); extraRows.push({ section, name, quantity: found });
     }
-    return { rows, extras: extraRows, ...packBoxDifferences(expected, rows, extraRows) };
+    const printings = boxCheckPrintingChanges(printingControls);
+    if (printings === null) return null;
+    return { rows, extras: extraRows, ...(Object.keys(printings).length ? { printings } : {}),
+      ...packBoxDifferences(expected, rows, extraRows) };
   }
   function syncTicks() {
     for (const row of expected) {
@@ -148,6 +158,10 @@ function packReviewBoxCheck(view, deck) {
     clear(reviewing).append(el("h3", { text: "Review differences" }),
       el("p", { text: plural(review.expected_cards, "recorded physical card") + "; " + plural(review.found_cards, "card") + " found, including extras." }),
       el("p", { class: "sub", text: "Saving the check date keeps the deck's lists, collection, kit and reservations as recorded. To record what the box really holds instead, use Correct the recorded box below." }));
+    const printingSummary = boxCheckPrintingSummary(review.printings);
+    if (printingSummary) reviewing.append(printingSummary);
+    if (printingSummary && evidence.meta.editable && (review.missing.length || review.extra.length)) reviewing.append(el("p", { class: "sub",
+      text: "Correct the recorded box doesn't save printing choices: check the box again after correcting it, or use the deck page's Printings in box…." }));
     reviewing.append(el("p", { class: "sub", text: "Review collection copies closes this local box review and discards its counts and extras. It does not save a check date or change the collection. A missing card may still be in storage or another box." }));
     repairButtons.length = 0;
     for (const [key, label] of [["missing", "Missing"], ["extra", "Extra"]]) reviewing.append(el("section", {},
@@ -251,9 +265,13 @@ function packReviewBoxCheck(view, deck) {
         acceptedValues.set(row.tick, false);
         const art = physical.name && data.box_check_cards?.[physical.name];
         const card = art && art.name === physical.name ? art : null;
+        const offer = physical.name && !printingShown.has(physical.name) ? printingOffers[physical.name] : null;
+        const choice = offer ? boxCheckPrintingControl(physical.name, offer, input => local(input)) : null;
+        if (choice) { printingShown.add(physical.name); printingControls.push(choice); }
         tiles.append(el("div", {}, cardTile(card, { name: packBoxRowWords(physical), qty: physical.quantity, check: row.tick,
           meta: physical.name ? "Representative art; printing and finish unconfirmed" : "Unspecified physical stand-in" }),
-          el("label", { class: "field" }, el("span", { text: "Found (0 means reviewed and missing)" }), row.input)));
+          el("label", { class: "field" }, el("span", { text: "Found (0 means reviewed and missing)" }), row.input),
+          choice ? choice.node : null));
         expected.push(row);
       });
     }
@@ -285,7 +303,8 @@ function packReviewBoxCheck(view, deck) {
     pending = true; error.textContent = ""; packSaving(view, true); actions();
     try {
       const answer = await apiWrite("/api/deck/box-check", { id: deck.id, expect: evidence.meta.expect,
-        recipe_sha256: evidence.meta.recipe_sha256, rows: review.rows, extras: review.extras });
+        recipe_sha256: evidence.meta.recipe_sha256, rows: review.rows, extras: review.extras,
+        ...(review.printings ? { printings: review.printings } : {}) });
       state.library = null;
       if (!packBoxReceipt(answer, deck, evidence, review)) throw new Error("The box check result could not be confirmed.");
       if (!owner()) return;
@@ -293,7 +312,9 @@ function packReviewBoxCheck(view, deck) {
       sourceSha = answer.sha256;
       if (current()) {
         const confirmation = el("p", { role: "status", tabindex: "-1", text: "Last box check recorded: " + answer.checked_on
-          + ". Contents may have changed since. Only the date was saved; keep this difference review until you are done." });
+          + ". Contents may have changed since. " + (answer.printings_changed
+            ? "The date and the printings chosen were saved; the counts weren't. "
+            : "Only the date was saved; ") + "keep this difference review until you are done." });
         reviewing.append(confirmation); actions(); if (here() && focusOwned()) confirmation.focus();
       }
     } catch (failure) {

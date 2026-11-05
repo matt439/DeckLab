@@ -200,6 +200,7 @@ called as before (from decklab.lib import api; api.<name>). Each part:
                      box line, which printing of its cards is in its box (one deck.save); view() is
                      the deck page's part. assembly_printings.py: Build decks' "Which printing?"
     box_check.py     POST /api/deck/box-check: save_box_check() records a built deck's Box checked date (one deck.save)
+                     box_check_printings.py: its "Which printing?" offers and the Printings in box parts it saves
     box_repair.py    POST /api/deck/box-repair: repair_box() previews, then saves, a built deck's physical build corrected
                      from a box check, with its check date (one deck.save). Both imported when first asked
     dice.py          GET /api/dice, POST /api/dice/save: dice_view(), save_dice(), a space's owned dice and
