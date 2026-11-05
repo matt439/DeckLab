@@ -463,6 +463,7 @@ class NativeFieldAndHomeScreenTests(unittest.TestCase):
                 mock.patch.object(interaction, "bounds", side_effect=[below, shown, shown]), \
                 mock.patch.object(interaction, "visible_button_hit_point", return_value={"point": {"x": 94, "y": 422}}), \
                 mock.patch.object(interaction, "scroll_clear_band", return_value=None), \
+                mock.patch.object(interaction, "scroll_anchor", return_value=None), \
                 mock.patch.object(interaction, "native_element", return_value="field"), \
                 mock.patch.object(interaction, "native_rect",
                                   side_effect=lambda d, element: window if element != "field"
@@ -483,7 +484,7 @@ class NativeScrollTests(unittest.TestCase):
     WINDOW = {"x": 0, "y": 0, "width": 393, "height": 852}
     BAND = {"top": 56, "bottom": 520, "height": 714, "overlays": []}
 
-    def scroll(self, top, upwards, band=BAND):
+    def scroll(self, top, upwards, band=BAND, anchor=None):
         target = {"rect": {"left": 16, "right": 196, "top": top, "bottom": top + 289, "width": 180, "height": 289},
                   "visible": {"left": 16, "right": 196, "top": max(0, top), "bottom": min(714, top + 289)},
                   "viewport": dict(self.VIEWPORT), "shown": True}
@@ -491,6 +492,7 @@ class NativeScrollTests(unittest.TestCase):
         driver.find.return_value = "webview"
         driver.command.return_value = self.WINDOW
         with mock.patch.object(interaction, "scroll_clear_band", return_value=band) as observe, \
+                mock.patch.object(interaction, "scroll_anchor", return_value=anchor), \
                 mock.patch.object(interaction, "native_rect", return_value=self.CONTENT), \
                 mock.patch.object(interaction, "raw_swipe", return_value={"start": {}}) as swipe, \
                 mock.patch.object(interaction, "web"), mock.patch.object(interaction.time, "sleep"):
@@ -520,6 +522,34 @@ class NativeScrollTests(unittest.TestCase):
             for y in (start[1], end[1]):
                 self.assertGreaterEqual(y, slack + 56 + 12)  # below the top bar even if all slack is above
                 self.assertLessEqual(y, 520 - 12)  # above the bottom bars even if no slack is above
+
+    def test_phone_landscape_uses_the_measured_offset_where_the_worst_case_leaves_no_room(self):
+        # 2026-11-05: a 292-tall landscape viewport in a 402-tall WebView, the receipt bar
+        # from 176: bounding every inset split left under 60 points, so no drag was made.
+        self.VIEWPORT = {"left": 0, "top": 0, "width": 874, "height": 292}
+        self.CONTENT = {"x": 0, "y": 0, "width": 874, "height": 402}
+        self.WINDOW = {"x": 0, "y": 0, "width": 874, "height": 402}
+        band = {"top": 0, "bottom": 176, "height": 292, "overlays": []}
+        with self.assertRaisesRegex(AssertionError, "No scrolling content between the fixed bars"):
+            self.scroll(150, True, band=band)
+        start, end, _, gesture = self.scroll(150, True, band=band, anchor={"offsetY": 20})
+        self.assertEqual(gesture["plan"]["css_offset_y"], 20)
+        for y in (start[1], end[1]):
+            self.assertGreaterEqual(y, 20 + 12)
+            self.assertLessEqual(y, 20 + 176 - 12)
+
+    def test_scroll_anchor_falls_back_when_the_avatar_cannot_be_mapped(self):
+        driver = mock.Mock()
+        driver.execute.return_value = True
+        fixture = SimpleNamespace(base_url="http://x")
+        with mock.patch.object(interaction, "anchor_transform", side_effect=AssertionError("clipped")), \
+                mock.patch.object(interaction, "web") as web:
+            self.assertIsNone(interaction.scroll_anchor(driver, fixture))
+        web.assert_called_once_with(driver, "http://x", standalone=False)
+        driver.execute.return_value = False
+        with mock.patch.object(interaction, "anchor_transform") as transform:
+            self.assertIsNone(interaction.scroll_anchor(driver, fixture))
+        transform.assert_not_called()
 
     def test_near_target_moves_only_the_remaining_distance(self):
         start, end, _, gesture = self.scroll(250, True)

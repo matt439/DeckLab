@@ -161,13 +161,20 @@ def bounds(driver, selector):
       let visible={left:Math.max(r.left,viewport.left),top:Math.max(r.top,viewport.top),
         right:Math.min(r.right,viewport.right),bottom:Math.min(r.bottom,viewport.bottom)};
       let shown=true;
+      // The root and body clip only through the viewport, already applied: the page's
+      // scroll lock (:root:has(dialog[open]) overflow hidden) would otherwise clip at
+      // -scrollY + the viewport height. A modal dialog is drawn in the top layer, so
+      // nothing above it clips it.
+      const page=new Set([document.documentElement, document.body]);
+      let modal=false;
       for(let a=e;a;a=a.parentElement) {
         const s=getComputedStyle(a); if(s.display==='none'||s.visibility==='hidden'||+s.opacity===0) shown=false;
-        if(a!==e) {
+        if(a!==e && !modal && !page.has(a)) {
           const q=a.getBoundingClientRect();
           if(/hidden|clip|auto|scroll/.test(s.overflowX)) { visible.left=Math.max(visible.left,q.left+a.clientLeft); visible.right=Math.min(visible.right,q.left+a.clientLeft+a.clientWidth); }
           if(/hidden|clip|auto|scroll/.test(s.overflowY)) { visible.top=Math.max(visible.top,q.top+a.clientTop); visible.bottom=Math.min(visible.bottom,q.top+a.clientTop+a.clientHeight); }
         }
+        try { if(a.tagName==='DIALOG' && a.matches(':modal')) modal=true; } catch(_) {}
       }
       return {rect,visible,viewport,pan,shown,clientWidth:e.clientWidth,scrollWidth:e.scrollWidth,
         scrollTop:e.scrollTop,disabled:e.disabled===true};
@@ -356,6 +363,21 @@ SCROLL_DURATION_MS = 900
 SCROLL_HOLD_MS = 250
 
 
+SCROLL_ANCHOR = "#avatar-button"
+
+
+def scroll_anchor(driver, fixture):
+    """The page's CSS-to-native mapping from the shell's avatar, or None when it can't be measured."""
+    try:
+        if not driver.execute("const b=document.querySelector(arguments[0]); return !!(b && b.getAttribute('aria-label'));",
+                              [SCROLL_ANCHOR]):
+            return None
+        return anchor_transform(driver, fixture, SCROLL_ANCHOR)
+    except (AssertionError, RuntimeError, KeyError, TypeError):
+        web(driver, fixture.base_url, standalone=False)
+        return None
+
+
 def scroll_clear_band(driver, x):
     """Observe the fixed or sticky bars at the top and bottom of the viewport in one column.
 
@@ -411,6 +433,7 @@ def native_scroll_towards(driver, fixture, measured, upwards, standalone=False):
     require(viewport["width"] > 0, f"Native target has no measurable viewport width: {measured}")
     centre = (rect["left"] + rect["right"]) / 2 - viewport["left"]
     band = scroll_clear_band(driver, max(1, min(viewport["width"] - 1, centre)))
+    anchor = None if standalone else scroll_anchor(driver, fixture)
     native(driver)
     view = driver.find("-ios predicate string", "type == 'XCUIElementTypeWebView' AND visible == 1")
     content, window = native_rect(driver, view), driver.command("GET", "/window/rect")
@@ -425,11 +448,16 @@ def native_scroll_towards(driver, fixture, measured, upwards, standalone=False):
     height = viewport.get("height") or (band or {}).get("height") or (bottom - top) / scale
     clear = band or {"top": 0, "bottom": height}
     # CSS y=0 sits somewhere in the WebView's obscured insets (iOS 27's WebView is
-    # full-screen; the page starts under the status bar), so bound the band for
-    # any split of that slack rather than assuming CSS 0 is the WebView's top.
-    slack = max(0, content["height"] - height * scale)
-    clear_top = max(top, content["y"] + slack + clear["top"] * scale) + 12
-    clear_bottom = min(bottom, content["y"] + clear["bottom"] * scale) - 12
+    # full-screen; the page starts under the status bar). Map it through the shell's
+    # avatar when it can be measured; otherwise bound the band for any split of that
+    # slack, which can leave too little room on a phone in landscape.
+    if anchor is not None:
+        css_top = css_bottom = anchor["offsetY"]
+    else:
+        slack = max(0, content["height"] - height * scale)
+        css_top, css_bottom = content["y"] + slack, content["y"]
+    clear_top = max(top, css_top + clear["top"] * scale) + 12
+    clear_bottom = min(bottom, css_bottom + clear["bottom"] * scale) - 12
     require(clear_bottom - clear_top >= 60,
             f"No scrolling content between the fixed bars for a native drag: band={band}, content={content}, window={window}")
     aim = max(height * SCROLL_AIM_FRACTION, clear["top"] + 8)
@@ -442,6 +470,7 @@ def native_scroll_towards(driver, fixture, measured, upwards, standalone=False):
         y1, y2 = y2, y1
     gesture = dict(raw_swipe(driver, (x, y1), (x, y2), duration=SCROLL_DURATION_MS, hold_ms=SCROLL_HOLD_MS) or {})
     gesture["plan"] = {"upwards": upwards, "clear_band": band, "aim_css_top": aim, "needed_css": needed,
+                       "css_offset_y": None if anchor is None else anchor["offsetY"],
                        "distance_points": distance, "duration_ms": SCROLL_DURATION_MS, "hold_ms": SCROLL_HOLD_MS}
     web(driver, fixture.base_url, standalone=standalone)
     time.sleep(0.2)
