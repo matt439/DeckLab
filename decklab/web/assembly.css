@@ -175,3 +175,18 @@
   width: 72px; height: 72px; border-radius: 50%; pointer-events: none;
   background: var(--accent) var(--icon-tick-on-accent) center / 44px no-repeat;
 }
+
+/* Check box: a wide sheet on a desktop, so a 100-card box shows several tiles a row; a phone keeps its bottom sheet.
+   Each tile of a card owned in two or more printings asks which printing is in the box (box-check-printings.js). */
+@media (min-width: 900px) {
+  dialog.sheet.box-check-sheet { width: min(1200px, calc(100vw - 2 * var(--s-5))); }
+  dialog.sheet.box-check-sheet, dialog.sheet.box-check-sheet .sheet-inner { max-height: 92vh; max-height: 92dvh; }
+}
+.box-check-sheet .card-tiles { grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); }
+@media (max-width: 599px) { .box-check-sheet .card-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.box-check-printing { margin-top: var(--s-2); padding: var(--s-2); border: 1px solid var(--border); border-radius: var(--r-panel); }
+.box-check-printing-title { margin: 0 0 var(--s-1); }
+.box-check-printing select { width: 100%; }
+.box-check-printing-count { margin-top: var(--s-1); }
+.box-check-printing-count span { overflow-wrap: anywhere; }
+.box-check-printing .sub { margin: var(--s-1) 0 0; }

@@ -9,7 +9,7 @@ import json
 import re
 
 from decklab.lib import cards, decks, inventory, spaces
-from decklab.lib.decks import assembled, boxcheck
+from decklab.lib.decks import assembled, boxcheck, printings
 
 from . import assembly_takeapart, guard
 from .carddata import _require_cards
@@ -104,27 +104,35 @@ def physical(deck):
 
 
 def save_box_check(body):
-    """POST /api/deck/box-check {profile,id,expect,recipe_sha256,rows,extras}.
+    """POST /api/deck/box-check {profile,id,expect,recipe_sha256,rows,extras,printings?}.
 
     rows enumerate every server-derived physical section row exactly once, with the
     observed quantity. extras name additional cards explicitly. Both original text and
     canonical recipe receipts must match before row indices are interpreted. One normal
-    deck.save writes only Box checked; quantities never enter text or the audit message.
+    deck.save writes only Box checked (and, when printings is given, those cards' parts of the
+    Printings in box line: box_check_printings.py); quantities never enter text or the audit message.
     """
     data = _parse_body(body)
     profile = _writer(data)
-    _keys(data, ("profile", "id", "expect", "recipe_sha256", "rows", "extras"))
+    _keys(data, ("profile", "id", "expect", "recipe_sha256", "rows", "extras"), ("printings",))
     stored, deck, _version, _sections, recipe, result = checked(data, profile)
+    from . import box_check_printings
+    picks = box_check_printings.chosen(data.get("printings"))
     try:
         checked_on = _box_check_today()
         boxcheck.record_date(deck, checked_on)
+        owned = printings.capacity(inventory.current().collection(spaces.HOME).rows) if picks else {}
+        printings_changed = box_check_printings.apply(deck, picks, owned)
         text = decks.render_deck_file(deck)
     except (ValueError, decks.DeckFileError) as error:
         raise ApiError(400, _public(error)) from None
     # A same-day check still verifies its original SHA under the normal write lock.
     # An unchanged deck.save creates neither a row change nor another audit/revision.
+    # Printing choices go in the same save, checked as any Printings in box save is.
     op = inventory.Op("deck.save", {"deck_id": stored.id, "text": text, "base_sha256": stored.sha256})
-    after, summary = apply_op(op, profile, f"Record a box check for {deck.title}", _deck_refused(stored.id, deck.title, profile))
+    what = (f"Record a box check and printings in box for {deck.title}" if printings_changed
+            else f"Record a box check for {deck.title}")
+    after, summary = apply_op(op, profile, what, _deck_refused(stored.id, deck.title, profile))
     held = after.deck(stored.id)
     return {"saved": bool(summary.changed), "id": stored.id, "revision": held.revision, "sha256": held.sha256,
-            "checked_on": checked_on, "recipe_sha256": recipe, **result}
+            "checked_on": checked_on, "recipe_sha256": recipe, "printings_changed": printings_changed, **result}

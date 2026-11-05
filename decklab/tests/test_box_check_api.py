@@ -83,7 +83,8 @@ class BoxCheckApiTests(BoxCheckCase):
             offer = self.offer()
         info = offer["box_check"]
         self.assertEqual(info, {"expect": self.record().sha256, "checked_on": None, "editable": True, "why_not": None,
-                                "recipe_sha256": box_check.recipe_sha256("owned", offer["take_apart"]["sections"])})
+                                "recipe_sha256": box_check.recipe_sha256("owned", offer["take_apart"]["sections"]),
+                                "printings": {}})
         self.assertEqual(offer["take_apart"]["version"], "owned")
         self.assertEqual(offer["take_apart"]["card_count"], 14)
         self.assertEqual(files.render(inventory.current(), decks=True), before)

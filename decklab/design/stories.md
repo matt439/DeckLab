@@ -2813,7 +2813,13 @@ Evidence:
 - `decklab/web/box-repair.js`, `assembly-boxcheck.js`: Correct the recorded box in the difference review, Preview corrected box, Save corrected box
 - `decklab/tests/test_box_repair_api.py`, `test_box_repair_ui.py`: preview without writes, printings kept, markers dropped, reservations and stale tables, refusals
 
-Gap: none against the criteria. Member-space and product box checks are future scope, and real-device and household acceptance is separate. The date and name-only art certify no current contents, printing or finish.
+Now (2026-11-05, Matt's request): the box check is a wide sheet on a desktop, and each card the box holds that the collection owns in two or more printings asks which printing is in the box (a drop-down for one copy, a count per printing otherwise, starting from the deck's Printings in box record). Changed choices are listed in the difference review and saved to the Printings in box line in the same save as the check date, checked as any Printings in box save is; Correct the recorded box doesn't carry them.
+
+- `decklab/lib/api/box_check_printings.py`, `box_check.py`, `assembly.py`: the offers (owned printings, copies other boxes' records leave, this deck's record) and the optional `printings` of POST /api/deck/box-check
+- `decklab/web/box-check-printings.js`, `assembly-boxcheck.js`, `assembly.css`: the picker, its review summary and receipt, and the wide sheet
+- `decklab/tests/test_box_check_printings_api.py`, `test_box_check_printings_ui.py`: offers only for several printings, one save with the date, kept and cleared records, refusals, review, locking and receipt checks
+
+Gap: none against the criteria. Member-space and product box checks are future scope, and real-device and household acceptance is separate. The date and name-only art certify no current contents, printing or finish; a printing chosen in the check is the person's record, as on the deck page.
 
 **E7-S22** · Matt · could · M · built
 

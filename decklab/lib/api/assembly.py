@@ -364,6 +364,8 @@ def _preview(selected, profile=False):
     answer = annotate(answer, p, inventory.current())
     from . import assembly_printings
     answer = assembly_printings.annotate(answer, p)
+    from . import box_check_printings
+    answer = box_check_printings.annotate(answer, p, inventory.current())
     answer["selections"] = selections
     from .assembly_intent import project
     for item in answer["decks"]:
