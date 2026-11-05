@@ -20,7 +20,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 - **`E11-S31`: global search's device check.** Built 2026-10-31, `/` decided (the Editor keeps its own; global search everywhere else); check the iPad field and phone sheet with `E11-S30`'s device check.
 - **`E2-S22`: physical-device follow-up.** Confirm hardware and touch usability on the household's actual iPhones and M2 11-inch iPad after the fixes. Keep prior results in the story; the [Safari Simulator suite](decklab/safari/EVIDENCE.md) covers repeat functional regressions.
 - **`E11-S02`: signed-in off-page check.** On a phone through decklab.example.com, save a deck edit, upload an accessory photo, and check the off page while Deck Lab is stopped.
-- **`E11-S30`: the redesign's last gate.** Collection's colour filter is decided and built (colour identity, 2026-10-31); Matt checks touch and Safari on the household's iPhones and iPad (MacBook connected, from 2026-10-31).
+- **`E11-S30`: the redesign's last gate.** Collection's colour filter is decided and built (colour identity, 2026-10-31); Matt checks touch and Safari on the household's iPhones and iPad (MacBook connected, from 2026-10-31); the Safari Simulator suite passes 60/60 on the redesign (2026-11-05, [evidence](decklab/safari/EVIDENCE.md)).
 - **`E11-S58`: the Linux server PC's own checks.** WSL already qualified the database, backups, the services, `systemd-inhibit` under polkit and real Forge games (2026-11-02). After the move (SELF-HOSTING.md, "From a Windows server to a Linux one"), run `python -m decklab.smoke` there, try it from the phones, scan a few real card photos with Tesseract, and let the PC sleep and wake through the gate and the wake timer.
 - **`E7-S32`: real photos for Scan cards.** Take 10 to 20 photos of cards (a few foils, a few sleeved, one old card) with Collection's **Scan cards…** on each phone, plus a few token cards with Tokens' **Scan token cards…**, or copy them to the PC for `python -m decklab.lib.scan` (`--tokens` for token cards); the sheets and their APIs are fixture-tested only.
 - **`FG#4`: the gauntlet on the live server.** With Matt's OK, build the catalogues on the Linux spare PC, measure its Commander throughput and play a first standard run per Commander deck (PLAN.md, Still to do, item 12).
@@ -51,7 +51,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E2-S16` | OPEN | could | L | Kept-for-later drafts built, the Quick edit's and new decks' too (migrations 0018 and 0019 applied by 2026-10-30). Left: real-device checks. |
-| `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes ([evidence](decklab/safari/EVIDENCE.md)). |
+| `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes, on the P1 redesign since 2026-11-05 ([evidence](decklab/safari/EVIDENCE.md)). |
 | `E8-S25` | DECISION | should | M | A setting for what a space's storage is like. The inventory and proposal are written ([storage-setting.md](decklab/design/storage-setting.md), 2026-11-05): Matt answers its part 4, then slice 2 (the record and its reader). |
 
 ## Deck Lab: collection, orders and buying
