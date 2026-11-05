@@ -503,6 +503,13 @@ class Handler(BaseHTTPRequestHandler):
                 if self.command == "PUT":
                     return self._send_json(200, shop_postage.change(self._write_body(shop_postage.MAX_BODY)))
                 return self._send_json(200, shop_postage.view())
+            if route == ["pricing-setting"]:
+                from decklab.lib.api import pricing_setting
+                self._allow(*GET, "PUT")
+                self._no_query(query)
+                if self.command == "PUT":
+                    return self._send_json(200, pricing_setting.change(self._write_body(pricing_setting.MAX_BODY)))
+                return self._send_json(200, pricing_setting.view())
             if route == ["commander-night"]:
                 self._allow(*GET, "PUT")
                 self._no_query(query)

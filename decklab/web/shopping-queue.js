@@ -157,6 +157,7 @@ function shopQueuePresentation(groups, view, {showFor = true, group = "to-buy", 
   const holder = el("div", {class: "shop-queue-presentation", tabindex: "-1", role: "group", "aria-label": "Purchase queue"});
   const cards = el("div", {class: headings ? "shop-queue-groups" : "shop-rows"});
   const shopCards = el("div", {class: "shop-queue-groups shop-queue-by-shop"});
+  // "Ref AUD": the row's listed_aud is the shop's own listing, in AUD whatever the configured currency (E11-S53).
   const headers = [["name", "Card"], ["printing", "Printing"], ...(showFor ? [["for", "For"]] : []),
     ["qty", "Qty"], ["price", "Ref AUD"], ["shop", "Shop"], ["stock", "Stock"], ["checked", "Checked"], ["actions", "Actions"]];
   const table = el("table", {class: `data shop-queue-table${showFor ? "" : " shop-queue-no-for"}`},

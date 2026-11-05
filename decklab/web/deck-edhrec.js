@@ -1,7 +1,7 @@
 /* A Commander deck's "EDHREC ideas" (E9-S07, lib/api/edhrec.py): the commander's commonly played cards
  * from EDHREC, grouped by EDHREC's categories with the share of its decks playing each, and the date the
  * PC fetched them. A viewer who sees the deck's space's collection gets each card marked in the deck, free,
- * in use (every copy in another deck, which is never named) or to buy with its AUD estimate; anyone else
+ * in use (every copy in another deck, which is never named) or to buy with its estimate (E11-S53: in the answer's currency); anyone else
  * the list alone (the server sends no marks). Whoever may change the deck adds a card to its Considering
  * list from here (POST /api/deck/considering, deck-considering.js), one save each.
  *
@@ -139,7 +139,7 @@ function drawEdhrec(ctx) {
       text: `${words} (${num(all.filter((c) => edhrecPasses(c, key)).length)})`,
       onclick: () => { if (ctx.filter !== key) { ctx.filter = key; drawEdhrec(ctx); } } })));
   const rate = marks && a.price_error ? `No prices: ${a.price_error}`
-    : marks && a.rate != null ? `Estimates in AUD: Scryfall's cheapest non-foil printing at 1 USD = ${num(a.rate, 4)} AUD (ECB rate of ${a.rate_date}), prices pulled ${a.price_date}.` : null;
+    : marks && a.rate != null ? estimateRateWords(a) : null;
   const groups = a.groups.map((g) => {
     const shown = g.cards.filter((c) => edhrecPasses(c, ctx.filter));
     if (!shown.length) return null;

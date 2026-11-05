@@ -108,6 +108,8 @@ Two optional settings matter most on Linux:
 
 **Price-check shops:** each night Deck Lab looks the purchase queue's cards up at two Australian shops, MTGMate and Games Portal, and shows their prices in AUD. If you can't buy from them, turn the check off with `"shops": []`, or keep one with `"shops": ["mtgmate"]` (the keys are `mtgmate` and `gamesportal`). Without the setting both are checked.
 
+**Currency:** prices are estimates in AUD unless you set `"currency"` to an ISO code the ECB publishes a USD rate for (`"EUR"`, `"GBP"`, `"CAD"`, ...). Once Deck Lab is running, an admin can choose both the currency and the price-check shops on Settings' **Prices** part instead, without editing this file or restarting; a choice made there wins, and this file's values apply to any field left to "Use config.json's". The Prices part needs the database's migration 0022 (`python -m decklab.db migrate`).
+
 On Linux and macOS, `chmod 600 decklab/config.json`: it holds the household's emails.
 
 ## 5. Set up the database

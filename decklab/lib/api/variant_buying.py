@@ -11,7 +11,7 @@ from decimal import Decimal, InvalidOperation
 import math
 import re
 
-from decklab.lib import cards, decks, inventory, pool, purchases
+from decklab.lib import cards, currency, decks, inventory, pool, purchases
 from decklab.lib.forge import lists
 
 from . import carddata, common, guard, shopping_missing
@@ -231,7 +231,8 @@ def _queue(rows, omitted):
 def _estimates(rows):
     """Only existing cached evidence: the usual price_aud helper may refresh FX."""
     try:
-        rate = carddata._cached_rate()
+        code = currency.code()
+        rate = carddata._cached_rate(code)
         price_date = cards.price_date()
         if not isinstance(rate, dict) or type(rate.get("rate")) not in (int, float) \
                 or not math.isfinite(rate["rate"]) or rate["rate"] <= 0 or not _date(rate.get("date")) or not _date(price_date):
@@ -252,7 +253,8 @@ def _estimates(rows):
                     or not all(isinstance(value, str) and 0 < len(value) <= MAX_TEXT for value in (set_code, number)):
                 continue
             row["estimate"] = {"aud": round(aud, 2), "set": set_code, "collector_number": number, "finish": finish,
-                               "price_date": price_date, "rate": rate["rate"], "rate_date": rate["date"]}
+                               "price_date": price_date, "rate": rate["rate"], "rate_date": rate["date"],
+                               **currency.tag(code)}     # E11-S53: the estimate's currency, when it isn't AUD
         except Exception:
             continue
 

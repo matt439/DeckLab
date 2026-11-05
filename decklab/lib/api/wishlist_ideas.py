@@ -20,7 +20,7 @@ estimate. No answer names a deck holding a card. Nothing is written.
 """
 from collections import Counter
 
-from decklab.lib import cards, decks, pool, spaces, state
+from decklab.lib import cards, currency, decks, pool, spaces, state
 
 from . import common, drafts, guard
 from .card_lookup import _card_json, _shown_printing
@@ -114,6 +114,7 @@ def wishlist_ideas_view(deck_id=None, commander=None, commander2=None, space=Non
         try:
             result["rate"], result["rate_date"] = cards.usd_to_aud()
             result["price_date"] = cards.price_date()
+            result.update(currency.tag(currency.code()))      # E11-S53: only when it isn't AUD
         except RuntimeError as e:
             result["price_error"] = str(e)
             prices = False

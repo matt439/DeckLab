@@ -426,6 +426,7 @@ def queue_row(row, repo, inv=None):
                 if not price.is_finite() or price < 0:
                     raise InvalidOperation()
             except InvalidOperation:
+                # listed_aud is a shop's own AUD listing, whatever the configured currency (E11-S53)
                 raise ValueError(f"{where}: invalid AUD reference price") from None
             if not row["checked"] or not row["listed_at"]:
                 raise ValueError(f"{where}: reference price needs retailer and checked date")

@@ -186,8 +186,8 @@ function drawColPriceNote(cv) {
   const p = cv.prices || {};
   cv.priceNote.hidden = !(cv.rows || []).length;
   let words = p.rate
-    ? `~A$ each is an estimate for that row's own printing and finish, using Scryfall's US prices. `
-      + `1 USD = ${p.rate} AUD (ECB rate of ${p.rate_date || "date not recorded"}). A dash means Scryfall has no price for it.`
+    ? `${colSortWords("price")} is an estimate for that row's own printing and finish, using Scryfall's US prices. `
+      + `1 USD = ${p.rate} ${ansCurrency(p)} (ECB rate of ${p.rate_date || "date not recorded"}). A dash means Scryfall has no price for it.`
     : p.price_error ? `No prices: ${p.price_error}` : "No prices: the card data isn't ready yet.";
   const storage = cv.storage;
   if (storage && storage.error) words += ` In storage only isn't offered: ${storage.error}`;
@@ -217,7 +217,7 @@ function colRowTable(cv, rows) {
   const sortable = (key, cls = "") => {
     const on = cv.sort.key === key;
     return el("th", { scope: "col", class: `col-th-${key} ${cls}`.trim(), "aria-sort": on ? (cv.sort.dir > 0 ? "ascending" : "descending") : null },
-      el("button", { type: "button", class: "th-sort", "data-col-sort": key, text: COL_SORTS[key], onclick: (event) => {
+      el("button", { type: "button", class: "th-sort", "data-col-sort": key, text: colSortWords(key), onclick: (event) => {
         if (!colRowControlCurrent(cv, event.currentTarget)) return;
         cv.sort = { key, dir: on ? -cv.sort.dir : COL_SORT_FIRST[key] || 1 };
         local.set("collection.rowsSort", `${key}:${cv.sort.dir}`);
@@ -425,7 +425,7 @@ function colDrawPreview(cv, row) {
     el("dl", { class: "col-preview-facts" },
       field("Printing", el("span", { text: colPrinting(row) })),
       field("Owned", el("span", { text: plural(Number(row.quantity), "copy", "copies") })),
-      field("Estimated price per copy", price == null ? colUnknown("No price") : `~A$${price.toFixed(2)} each`),
+      field("Estimated price per copy", price == null ? colUnknown("No price") : `~${aud(price)} each`),
       field("Condition", colDetail(row.condition, "condition")), field("Language", colDetail(row.language, "language")),
       field("Colour identity", colours ? colours.pips(20) : colUnknown("Colour identity not recorded")),
       field("Type", card?.type_line || colUnknown("Type not recorded"))),
@@ -458,7 +458,7 @@ function colCasualRow(cv, row) {
     el("span", { class: card?.img_small ? "col-casual-picture" : "col-casual-picture thumb-missing", "aria-hidden": "true" }, card?.img_small
       ? el("img", { src: card.img_small, alt: "", loading: "lazy", decoding: "async", width: 56, height: 78 }) : null),
     el("span", { class: "col-casual-name", text: row.name }),
-    el("span", { class: "col-casual-price" }, price == null ? colUnknown("No price") : `~A$${price.toFixed(2)} each`),
+    el("span", { class: "col-casual-price" }, price == null ? colUnknown("No price") : `~${aud(price)} each`),
     el("span", { class: "col-casual-meta", text: [plural(Number(row.quantity), "copy", "copies"), colPrinting(row), ...details].join(" \u00b7 ") }),
     el("span", { class: "col-casual-storage", text: colStorageWords(cv, row) }));
   if (card) viewerItem(node, card, "collection-casual-rows", caption);
@@ -495,8 +495,8 @@ function colRowFilters(cv) {
     if (!colActive(cv)) return;
     const [key, dir] = sort.value.split(":"); cv.sort = { key, dir: Number(dir) };
     local.set("collection.rowsSort", sort.value); redraw();
-  } }, Object.entries(COL_SORTS).flatMap(([key, words]) => [1, -1].map((dir) =>
-    el("option", { value: `${key}:${dir}`, text: `${words}: ${dir === 1 ? "ascending" : "descending"}` }))));
+  } }, Object.keys(COL_SORTS).flatMap((key) => [1, -1].map((dir) =>
+    el("option", { value: `${key}:${dir}`, text: `${colSortWords(key)}: ${dir === 1 ? "ascending" : "descending"}` }))));
   sort.value = `${cv.sort.key}:${cv.sort.dir}`;
   add(sheet.body, [
     checkbox("Condition or language not recorded", cv.unrecordedOnly, (on) => { cv.unrecordedOnly = on; cv.unrecorded.checked = on; }),

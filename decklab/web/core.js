@@ -129,6 +129,24 @@ function priceSymbol() {
 
 function aud(x) { return x == null ? "no price" : `${priceSymbol()}${x.toFixed(2)}`; }
 
+/** The currency an API answer's estimates are in (E11-S53): its `currency`, which the server sends only when it
+ * isn't AUD, so a missing one is AUD (never priceCurrency(): a stale status mustn't relabel an AUD answer). */
+function ansCurrency(a) { return a && typeof a.currency === "string" && a.currency ? a.currency : "AUD"; }
+
+/** An amount in a given currency: "A$1.20" for AUD, the configured sign for it ("€1.20"), else "SEK 1.20". */
+function moneyIn(x, code) {
+  if (x == null) return "no price";
+  const sign = code === "AUD" ? "A$" : code === priceCurrency() ? priceSymbol() : `${code} `;
+  return `${sign}${x.toFixed(2)}`;
+}
+
+/** "Estimates in AUD: Scryfall's cheapest non-foil printing at 1 USD = 1.4237 AUD (ECB rate of …), prices pulled …."
+ * in the answer's currency (ansCurrency). */
+function estimateRateWords(a) {
+  const code = ansCurrency(a);
+  return `Estimates in ${code}: Scryfall's cheapest non-foil printing at 1 USD = ${num(a.rate, 4)} ${code} (ECB rate of ${a.rate_date}), prices pulled ${a.price_date}.`;
+}
+
 /** A shop's own listing, postage or queue reference price: always the shop's AUD, never converted, so "A$"
  * whatever the configured currency (E11-S53: MTGMate and Games Portal list in AUD). */
 function listedAud(x) { return x == null ? "no price" : `A$${x.toFixed(2)}`; }

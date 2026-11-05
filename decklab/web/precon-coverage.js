@@ -137,10 +137,10 @@ async function openCoveragePrecon(ctx, deck) {
   }
 }
 
-/** The rate and dates the estimates were made with (AGENTS.md: prices in AUD, with the date pulled). */
+/** The rate and dates the estimates were made with (AGENTS.md: prices in AUD, or the configured currency, with the date pulled). */
 function coverageRate(p) {
   if (p.price_error) return `No prices: ${p.price_error}`;
-  return `Estimates in AUD: Scryfall's cheapest non-foil printing at 1 USD = ${num(p.rate, 4)} AUD (ECB rate of ${p.rate_date}), prices pulled ${p.price_date}.`;
+  return estimateRateWords(p);
 }
 
 function drawCoveragePrecon(ctx) {

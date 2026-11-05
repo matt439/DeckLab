@@ -56,7 +56,7 @@ import urllib.error
 from datetime import datetime
 from pathlib import Path
 
-from decklab.lib import card_index, cards
+from decklab.lib import card_index, cards, currency
 from decklab.lib.config import DATA
 
 COMBOS_DIR = DATA / "combos"
@@ -522,13 +522,15 @@ def _print_near(deck_id, near, target):
             bracket = f"; raises the minimum bracket to {m['minimum_with']}"
             if target and m["minimum_with"] > target:
                 bracket += f", above the target {target}"
-        aud = f" ~A${m['aud']:.2f}" if m.get("aud") is not None else ""
+        aud = (f" ~{currency.money(m['aud'], (near.get('prices') or {}).get('currency') or currency.DEFAULT)}"
+               if m.get("aud") is not None else "")
         state = f"[{_STATES[m['availability']]}] " if "availability" in m else ""
         print(f"  {state}add {m['missing']}{aud} (with {', '.join(held)}): {what}{bracket}")
         print(f"      {m['url']}")
     rates = near.get("prices")
     if rates:
-        print(f"AUD estimates: 1 USD = {rates['rate']} AUD ({rates['rate_date']}), card prices of "
+        code = rates.get("currency") or currency.DEFAULT
+        print(f"{code} estimates: 1 USD = {rates['rate']} {code} ({rates['rate_date']}), card prices of "
               f"{rates['price_date']}.")
 
 

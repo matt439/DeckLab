@@ -22,6 +22,7 @@ what) and only through its table's allow-list of fields, never the raw row:
     commander_night   home viewers only, no outsider admin override     the summary only, no note content
     field_policy      home viewers only, no outsider admin override     fixed format summary, no policy content
     shop_postage      home's record readers only (E5-S27)               the summary only, no amounts
+    pricing_setting   home's record readers only (E11-S53)              the summary only, no currency or shops
     space, profile    admins                                           the summary only
     profile_email     admins                                           "An email address changed" only
     collection_card,  the space's people only (home: Matt and User1;  INVENTORY_FIELDS' (never notes,
@@ -346,6 +347,8 @@ def _row(row, scope, profiles, space_of, me=None, spaces=None, *, own=None, orde
         return activity_home.field_policy_row(row, scope, profiles, me)
     if table == "shop_postage":
         return activity_home.shop_postage_row(row, scope, profiles, me)
+    if table == "pricing_setting":
+        return activity_home.pricing_setting_row(row, scope, profiles, me)
     if table == "packing_tick":
         return ({"table": table, "op": op, "summary": "Packing progress updated"}
                 if _home_viewer(scope, profiles, me) else None)

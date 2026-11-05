@@ -154,14 +154,14 @@ function renderVersionStatus(s) {
   if (footer) footer.textContent = footerLine(s);
 }
 
-/** Settings' read-only line about the prices (E11-S53): the currency and the price-check shops, both set in
- * config.json on the PC, never on this page. "" before a status answer says. */
+/** Settings' About line about the prices (E11-S53): the currency and the price-check shops, chosen in the Prices
+ * part (settings-pricing.js) or else config.json on the PC. "" before a status answer says. */
 function pricingWords(p) {
   if (!p || typeof p.currency !== "string") return "";
   const shops = Array.isArray(p.shops) ? p.shops.map((shop) => shop && shop.name).filter(Boolean) : [];
   return `Prices are estimates in ${p.currency}${p.currency_default ? " (the default)" : ""}, from Scryfall's US prices ` +
     `at the ECB's rate. Price-check shops: ${shops.length ? shops.join(", ") : "none (the nightly shop check is off)"}. ` +
-    `Both are set in config.json on the PC ("currency" and "shops"), not here.`;
+    `Change them under Prices above; config.json on the PC ("currency" and "shops") applies where nothing is chosen there.`;
 }
 
 /** The footer's one quiet line: "Prices 2026-10-12 · 1 USD = 1.4237 AUD", or what the card data is doing. */

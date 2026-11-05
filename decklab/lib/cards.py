@@ -998,7 +998,7 @@ def _show(name):
             print("Price: " + price_aud(exact).label())
         except RuntimeError as e:
             usd, set_code, number, finish = cheapest
-            print(f"Price: US${usd:.2f} {finish} ({set_code.upper()} {number}); no AUD rate: {e}")
+            print(f"Price: US${usd:.2f} {finish} ({set_code.upper()} {number}); no {currency.code()} rate: {e}")
     return 0
 
 

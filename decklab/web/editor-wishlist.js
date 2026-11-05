@@ -123,7 +123,7 @@ function drawEditorWishlistNote(ac, answer = null, inDeck = 0) {
       : `Only cards in the commander's colour identity and legal in Commander are listed.`
     : null;
   const rate = marks && answer.price_error ? `No prices: ${answer.price_error}`
-    : marks && answer.rate != null ? `Estimates in AUD: Scryfall's cheapest non-foil printing at 1 USD = ${num(answer.rate, 4)} AUD (ECB rate of ${answer.rate_date}), prices pulled ${answer.price_date}.` : null;
+    : marks && answer.rate != null ? estimateRateWords(answer) : null;
   add(clear(note), [
     el("p", { class: "sub", text: "From your own wishlist, in its order." + (fit ? ` ${fit}` : "") }),
     answer.left_out ? el("p", { class: "sub", text: `${plural(answer.left_out, "wished card")} ${answer.left_out === 1 ? "doesn't" : "don't"} fit this deck.` }) : null,

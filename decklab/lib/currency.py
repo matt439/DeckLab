@@ -1,4 +1,5 @@
-"""The currency Deck Lab's price estimates are in (E11-S53): config.json's "currency", an ISO 4217
+"""The currency Deck Lab's price estimates are in (E11-S53): Settings' Prices panel's choice (a home
+admin's, saved in the database: lib/pricing_setting.py), else config.json's "currency", an ISO 4217
 code. Unset means AUD, so a household that never sets it sees nothing change.
 
 Scryfall gives USD; lib/cards.usd_to_aud() converts with the ECB reference rate (Frankfurter) for
@@ -38,19 +39,40 @@ def _say_once(text):
         print(text, file=sys.stderr, flush=True)
 
 
+def valid(value):
+    """value as one of ECB_CODES ("eur " -> "EUR"), or None when it isn't one."""
+    wanted = value.strip().upper() if isinstance(value, str) else None
+    return wanted if wanted and _CODE_RE.fullmatch(wanted) and wanted in ECB_CODES else None
+
+
+def tag(currency):
+    """{} for AUD, else {"currency": code}: what an API answer with a rate adds, so an AUD answer
+    stays byte for byte as before (pool.compare's convention). A page reads a missing one as AUD."""
+    return {} if currency == DEFAULT else {"currency": currency}
+
+
+def tag_of(answer):
+    """tag() for an answer that already names its currency (pool.compare's: "currency" only when it
+    isn't AUD), so an answer built from it carries the same."""
+    return tag(answer.get("currency") or DEFAULT)
+
+
 def code(settings=None):
-    """The configured currency's upper-case code: config.json's "currency", or DEFAULT when it isn't
-    set. A value that isn't one of ECB_CODES counts as unset, said once. settings: config.load()'s."""
+    """The configured currency's upper-case code: Settings' saved choice, else config.json's
+    "currency", or DEFAULT when neither is set. A value that isn't one of ECB_CODES counts as unset,
+    said once. settings: config.load()'s (when not given, with Settings' saved choice laid over it:
+    pricing_setting.settings())."""
     if settings is None:
+        from decklab.lib import pricing_setting
         try:
-            settings = config.load()
+            settings = pricing_setting.settings()
         except Exception:  # an unreadable config.json: /api/status still answers, in the default
             return DEFAULT
     value = settings.get(SETTING)
     if value is None or (isinstance(value, str) and not value.strip()):
         return DEFAULT
-    wanted = value.strip().upper() if isinstance(value, str) else None
-    if wanted and _CODE_RE.fullmatch(wanted) and wanted in ECB_CODES:
+    wanted = valid(value)
+    if wanted:
         return wanted
     _say_once(f'config.json\'s "{SETTING}" ({value!r}) isn\'t a currency the ECB publishes a USD rate for '
               f"({', '.join(ECB_CODES)}), so prices stay in {DEFAULT}.")

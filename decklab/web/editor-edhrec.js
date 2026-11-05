@@ -138,7 +138,7 @@ function drawEditorEdhrecNote(ac, answer = null, inDeck = 0) {
   if (ac.mode !== "edhrec" || !answer) { clear(note); note.hidden = true; return; }
   const marks = Boolean(answer.marks);
   const rate = marks && answer.price_error ? `No prices: ${answer.price_error}`
-    : marks && answer.rate != null ? `Estimates in AUD: Scryfall's cheapest non-foil printing at 1 USD = ${num(answer.rate, 4)} AUD (ECB rate of ${answer.rate_date}), prices pulled ${answer.price_date}.` : null;
+    : marks && answer.rate != null ? estimateRateWords(answer) : null;
   add(clear(note), [
     edhrecSourceLine(answer),
     answer.source && answer.source.stale ? el("p", { class: "box box-warn", text: answer.source.stale }) : null,

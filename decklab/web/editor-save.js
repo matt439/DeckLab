@@ -409,10 +409,17 @@ function ownedPreview(o, version = "target") {
         // deck-prices.js's, when the page loaded it (a page or test may load this file without it)
         const listed = !o.price_error && typeof listedPriceWords === "function" ? listedPriceWords(r) : null;
         return el("li", { text: `${r.missing} ${r.name}` +
-          (r.aud_each != null ? ` (about A$${r.aud_each.toFixed(2)} each)` : "") + (listed ? `; ${listed}` : "") });
+          (r.aud_each != null ? ` (about ${moneyIn(r.aud_each, ansCurrency(o))} each)` : "") + (listed ? `; ${listed}` : "") });
       }))) : null,
-    o.price_error ? el("p", { class: "price-note", text: `No AUD estimates: ${o.price_error}` })
-      : el("p", { class: "price-note", text: `A$ are estimates: Scryfall's US prices of ${o.price_date} × 1 USD = ${o.rate} AUD (ECB rate of ${o.rate_date}).` }));
+    o.price_error ? el("p", { class: "price-note", text: `No ${editorPriceCode(o)} estimates: ${o.price_error}` })
+      : el("p", { class: "price-note", text: `${editorPriceSign(o)} are estimates: Scryfall's US prices of ${o.price_date} × 1 USD = ${o.rate} ${ansCurrency(o)} (ECB rate of ${o.rate_date}).` }));
+}
+
+/** The table note's currency (E11-S53): the answer's, or with no prices the configured one; AUD reads as before. */
+function editorPriceCode(o) { return typeof o.currency === "string" ? o.currency : priceCurrency(); }
+function editorPriceSign(o) {
+  const code = ansCurrency(o);
+  return code === "AUD" ? "A$" : code === priceCurrency() ? priceSymbol().trim() : code;
 }
 
 

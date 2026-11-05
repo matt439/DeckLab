@@ -58,6 +58,12 @@ tests/test_state_contract.py checks):
   and no shops before anything is saved; shop_postage_put(postage, expected_revision, actor, message,
   *, known=None) -> that view; the whole record replaced after checking its revision (E5-S27,
   migration 0021; shop_postage.py has the rules). An unchanged save writes nothing.
+- pricing_setting() -> {revision, pricing: {v: 1, currency: code or None, shops: [key] or None}},
+  revision 0 with both None before anything is saved (cached as settings() is: every price
+  estimate reads it); pricing_setting_cached() -> that view as last read or written, or None,
+  never connecting; pricing_setting_put(pricing, expected_revision, actor, message) -> that view,
+  the whole record replaced after checking its revision (E11-S53, migration 0022, Unavailable
+  with pricing.MIGRATE before it; pricing.py has the rules). An unchanged save writes nothing.
 - field_policy(format) -> {v, format, revision, rules}; only a confirmed existing schema's
   absent row is an empty policy. field_policy_apply(format, expected_revision, expected_proof,
   rule, actor, message, reason=None) -> {changed, snapshot}; one independent audited CAS write,

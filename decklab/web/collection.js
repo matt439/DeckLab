@@ -56,6 +56,8 @@ const COL_TYPE_MS = 250;                    // wait this long after typing befor
 const COL_STRIP_FILTER = 12;                // more printings than this: the strip gets a "Find a set" box
 const COL_SORTS = { name: "Card", set: "Printing", quantity: "Copies", price: "~A$ each", condition: "Condition",
   language: "Language" };
+/** A sort's heading; the price's names the configured currency ("~A$ each", "~€ each", E11-S53) when drawn. */
+function colSortWords(key) { return key === "price" ? `~${priceSymbol().trim()} each` : COL_SORTS[key]; }
 const COL_SORT_FIRST = { price: -1 };       // the first tap on a heading: most valuable first
 
 
@@ -259,7 +261,7 @@ function colInStorage(cv, row) {
   return held == null || Number(row.quantity || 0) > held;
 }
 
-/** A row's estimated A$ (its own printing and finish), or null when there's none. */
+/** A row's estimate in the configured currency (its own printing and finish), or null when there's none. */
 function colPrice(cv, row) {
   const p = cv.prices && cv.prices.rows[colKey(row)];
   return p && typeof p.aud === "number" ? p.aud : null;

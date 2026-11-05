@@ -32,7 +32,7 @@ is 404, and either way the rest of the sheet still works.
 """
 import re
 
-from decklab.lib import cards, decks, edhrec, spaces
+from decklab.lib import cards, currency, decks, edhrec, spaces
 
 from . import drafts, guard
 from .card_lookup import _card_json, _shown_printing

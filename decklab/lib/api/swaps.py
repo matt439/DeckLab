@@ -11,7 +11,7 @@ The answers count the deck's space's inventory, so only a viewer who may see it 
 (a deck the viewer may not see is the missing deck's 404). They name no other deck: a
 candidate's copies are counted free, never by who holds the rest.
 """
-from decklab.lib import cards, decks, pool, spaces
+from decklab.lib import cards, currency, decks, pool, spaces
 from decklab.lib.decks import dual_lands, swaps
 
 from . import drafts, guard
@@ -181,7 +181,7 @@ def _suggest(deck_id, deck, version, source, destination, wanted=None):
     return {"deck_id": deck_id, "version": version, "kind": kind,
             "colours": [c for c in swaps.COLOURS if c in colours], "cards": out,
             "rate": result["rate"], "rate_date": result["rate_date"], "price_date": result["price_date"],
-            "warnings": _unique(_scrub(warnings))}
+            **currency.tag_of(result), "warnings": _unique(_scrub(warnings))}
 
 
 def _space_pool(space, warnings):
@@ -266,7 +266,7 @@ def suggest_replacements(deck_id=None, version=None, card=None):
                      "mv": slot.get("cmc") or 0},
             "candidates": listed, "more": max(len(found) - swaps.MAX_REPLACEMENTS, 0),
             "rate": stamp["rate"], "rate_date": stamp["rate_date"], "price_date": stamp["price_date"],
-            "warnings": _unique(_scrub(warnings))}
+            **currency.tag_of(stamp), "warnings": _unique(_scrub(warnings))}
 
 
 def suggest_dual_lands(deck_id=None, version=None):
@@ -318,7 +318,7 @@ def suggest_dual_lands(deck_id=None, version=None):
             "colours": [c for c in swaps.COLOURS if c in colours], "checked": checked, "short": short,
             "basics": sum(basics.values()), "lands": listed, "more": max(len(found) - swaps.MAX_REPLACEMENTS, 0),
             "rate": stamp["rate"], "rate_date": stamp["rate_date"], "price_date": stamp["price_date"],
-            "warnings": _unique(_scrub(warnings))}
+            **currency.tag_of(stamp), "warnings": _unique(_scrub(warnings))}
 
 
 def _candidate(missing_card, name, spare, here, take, counts, colours):

@@ -14,7 +14,8 @@ const SHOP_BASKET_WORDS = {
   unread: "no saved check",
 };
 
-/** A basket's price as A$, or null when it isn't a price. */
+/** A basket's price as A$, or null when it isn't a price. Always A$: the shops list in AUD, never the configured
+ * currency's estimate (E11-S53). */
 function shopBasketAud(value) {
   if (typeof value !== "string" || !/^\d{1,9}(?:\.\d{1,2})?$/.test(value)) return null;
   return listedAud(Number(value));

@@ -6,7 +6,7 @@ POST /api/decklist/parse ("Paste a list", parse_list), POST
 import re
 import traceback
 
-from decklab.lib import accessories, cards, decks, permissions, pool, spaces
+from decklab.lib import accessories, cards, currency, decks, permissions, pool, spaces
 from decklab.lib.inventory import paths as inventory_paths
 
 from . import common, deck_aliases, drafts, guard
@@ -772,10 +772,12 @@ def find_cards(q=None, scope=None, colors=None, type=None, mv=None, deck_id=None
         if scope == "owned":
             entry["free"] = free[name]
         out.append(entry)
+    tag = {}
     try:
         rate, rate_date = cards.usd_to_aud()
         price_date = cards.price_date()
+        tag = currency.tag(currency.code())       # E11-S53: only when it isn't AUD
     except RuntimeError:
         rate = rate_date = price_date = None
     return {"cards": out, "total": len(names), "page": page, "pages": max(1, -(-len(names) // n)),
-            "did_you_mean": did_you_mean, "price_date": price_date, "rate": rate, "rate_date": rate_date}
+            "did_you_mean": did_you_mean, "price_date": price_date, "rate": rate, "rate_date": rate_date, **tag}

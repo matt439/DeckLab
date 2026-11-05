@@ -62,7 +62,7 @@ import urllib.request
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 
-from decklab.lib import cards, config, decks, pool, spaces
+from decklab.lib import cards, config, currency, decks, pool, spaces
 
 CACHE = None                        # the cache folder; None: config.DATA / "edhrec" (tests point it elsewhere)
 PAGE_URL = "https://json.edhrec.com/pages/commanders/{slug}.json"
@@ -445,6 +445,7 @@ def ideas(deck_id, p=None, prices=True, refresh=False, commanders=None, page=Non
         try:
             result["rate"], result["rate_date"] = cards.usd_to_aud()
             result["price_date"] = cards.price_date()
+            result.update(currency.tag(currency.code()))      # E11-S53: only when it isn't AUD
         except RuntimeError as e:
             result["price_error"] = str(e)
             prices = False
@@ -508,7 +509,8 @@ def _print(result, show_all):
     if result["price_error"]:
         print(f"No prices: {result['price_error']}")
     elif result["rate"] is not None:
-        print(f"Prices: ~AUD, cheapest non-foil printing, 1 USD = {result['rate']} AUD "
+        code = result.get("currency") or currency.DEFAULT
+        print(f"Prices: ~{code}, cheapest non-foil printing, 1 USD = {result['rate']} {code} "
               f"(ECB rate of {result['rate_date']}), pulled {result['price_date']}")
     seen = {}                       # a card EDHREC lists in two categories is counted once
     for group in result["groups"]:
@@ -524,7 +526,8 @@ def _print(result, show_all):
             if status == "free" and c["free"] > 1:
                 words = f"free ({c['free']})"
             if status == "to_buy" and result["rate"] is not None:
-                words += f", ~A${c['aud_each']:.2f}" if c.get("aud_each") is not None else ", no price"
+                words += (f", ~{currency.money(c['aud_each'], result.get('currency') or currency.DEFAULT)}"
+                          if c.get("aud_each") is not None else ", no price")
             if c.get("on_the_way"):
                 words += f", {c['on_the_way']} on the way"
             if c["considering"]:
@@ -551,7 +554,7 @@ def main(argv=None):
                              "cedh, or one of the commander's themes (its slug)")
     parser.add_argument("--refresh", action="store_true",
                         help=f"fetch again when the copy is over {int(MIN_REFRESH.total_seconds() // 3600)} hour old")
-    parser.add_argument("--no-prices", action="store_true", help="skip the AUD estimates")
+    parser.add_argument("--no-prices", action="store_true", help=f"skip the {currency.code()} estimates")
     parser.add_argument("--all", action="store_true", help="also list the cards already in the deck")
     args = parser.parse_args(argv)
     with entry.command():

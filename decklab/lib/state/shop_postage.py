@@ -1,4 +1,5 @@
-"""Each shop's postage rules (E5-S27): a flat postage and a free-postage threshold, in AUD.
+"""Each shop's postage rules (E5-S27): a flat postage and a free-postage threshold, in AUD (whatever the
+configured currency, E11-S53: the shops charge postage in Australian dollars).
 
 One household record, saved whole with a revision, as the Commander-night notes are:
 

@@ -113,7 +113,7 @@ from collections import Counter
 from datetime import date
 from pathlib import Path
 
-from decklab.lib import cards, config, decks, inventory, pool, spaces
+from decklab.lib import cards, config, currency, decks, inventory, pool, spaces
 from decklab.lib.inventory import files as inventory_files
 from decklab.lib.inventory import ops_collection as ops
 from decklab.lib.inventory import rules
@@ -263,7 +263,8 @@ def _prices(rows):
         answer["price_error"] = _public(e)
         return answer
     try:
-        answer.update(rate=rate, rate_date=rate_date, price_date=cards.price_date() or None)
+        answer.update(rate=rate, rate_date=rate_date, price_date=cards.price_date() or None,
+                      **currency.tag(currency.code()))      # E11-S53: only when it isn't AUD
         for row in rows:
             usd = cards.printing_usd(row.get("set"), row.get("collector_number"), row.get("finish") or "nonfoil")
             if usd is not None:

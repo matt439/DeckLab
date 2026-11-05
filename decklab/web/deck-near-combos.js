@@ -90,7 +90,7 @@ function nearCombosPanel(data) {
   }
   const p = near.prices;
   panel.append(el("p", { class: "sub", text: p
-    ? `Prices are estimates for the cheapest non-foil printing (Scryfall ${p.price_date}; 1 USD = ${p.rate} AUD, ECB ${p.rate_date}).`
+    ? `Prices are estimates for the cheapest non-foil printing (Scryfall ${p.price_date}; 1 USD = ${p.rate} ${ansCurrency(p)}, ECB ${p.rate_date}).`
     : "No prices: the exchange rate couldn't be read." }));
   return panel;
 }

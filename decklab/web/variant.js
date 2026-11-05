@@ -224,8 +224,13 @@ function vtAnnounce(page, data) {
 function vtBuyingAllowed() {
   return !!state.profile?.id && ownSpace() === HOME_SPACE && seesHomeInventory(state.may);
 }
+/** A recorded queue reference: the shop's own AUD listing, never converted (E11-S53), so always A$. */
 function vtBuyingMoney(value) {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? `A$${value.toFixed(2)}` : null;
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? listedAud(value) : null;
+}
+/** The Scryfall estimate, in the estimate's own currency (its `currency`, AUD when absent). */
+function vtBuyingEstimate(value, estimate) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? moneyIn(value, ansCurrency(estimate)) : null;
 }
 function vtBuyingPrinting(row) {
   const printing = row.printing === "exact" || row.set
@@ -247,12 +252,12 @@ function vtBuyingPrice(row) {
   if (refs.length) return el("ul", { class: "vt-buying-prices", "aria-label": `${row.name}: recorded references` },
     refs.map(ref => el("li", { text: `${vtBuyingMoney(ref.aud)} each at ${ref.shop || "recorded shop"}; `
       + `checked ${ref.checked || "date unavailable"}; ${vtBuyingPrinting(ref)}.` })));
-  const estimate = row.estimate, amount = estimate && vtBuyingMoney(estimate.aud);
+  const estimate = row.estimate, amount = estimate && vtBuyingEstimate(estimate.aud, estimate);
   const dated = estimate && typeof estimate.rate === "number" && Number.isFinite(estimate.rate) && estimate.rate > 0
     && /^\d{4}-\d{2}-\d{2}$/.test(estimate.price_date || "") && /^\d{4}-\d{2}-\d{2}$/.test(estimate.rate_date || "");
   return el("p", { class: "vt-buying-price", text: amount === null || !dated ? "No dated price available."
     : `Cached Scryfall estimate: ${amount} each; ${vtBuyingPrinting(estimate)}. `
-      + `Prices ${estimate.price_date}; 1 USD = ${estimate.rate} AUD (${estimate.rate_date}).` });
+      + `Prices ${estimate.price_date}; 1 USD = ${estimate.rate} ${ansCurrency(estimate)} (${estimate.rate_date}).` });
 }
 function vtBuyingRequests(row, checked) {
   if (!checked) return el("p", { class: "vt-buying-queue", text: "Existing queue requests could not be checked." });

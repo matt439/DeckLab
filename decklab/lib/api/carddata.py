@@ -12,7 +12,7 @@ import threading
 import traceback
 from pathlib import Path
 
-from decklab.lib import cards, config, currency, shops
+from decklab.lib import cards, config, currency, pricing_setting, shops
 
 from . import common
 from .common import ApiError, _public
@@ -43,7 +43,7 @@ def update_cards(force=False, log=None):
         try:
             cards.usd_to_aud()
         except RuntimeError as e:        # offline with no cached rate: prices wait
-            log(f"No USD->AUD rate yet: {e}")
+            log(f"No USD->{currency.code()} rate yet: {e}")
         UPDATE["error"] = None
     except Exception as e:              # a background thread: keep it for status()
         UPDATE["error"] = _public(e)
@@ -117,7 +117,7 @@ def status():
     can't be read (the footer still answers, in the default currency)."""
     info, error = _index_info()
     try:
-        settings = config.load()
+        settings = pricing_setting.settings()     # config.json with Settings' saved choice over it
     except Exception:
         settings = None
     code = currency.code(settings) if settings is not None else currency.DEFAULT
@@ -137,7 +137,8 @@ def status():
 
 def pricing(code=None, settings=None):
     """What Settings says about the prices (E11-S53): the currency estimates are in and the
-    price-check shops the nightly snapshot reads, both config.json settings, read-only here."""
+    price-check shops the nightly snapshot reads: Settings' Prices panel's choice, else config.json's.
+    settings: pricing_setting.settings()'s (read when not given)."""
     code = code or currency.code()
     return {"currency": code, "symbol": currency.symbol(code), "currency_default": code == currency.DEFAULT,
             "shops": [{"key": adapter.key, "name": adapter.name} for adapter in shops.enabled_adapters(settings)]}

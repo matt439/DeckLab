@@ -43,6 +43,17 @@ def shop_postage_row(row, scope, profiles, me):
     return {"table": "shop_postage", "op": row.get("op"), "summary": "Shops' postage updated"}
 
 
+def pricing_setting_row(row, scope, profiles, me):
+    """Home's record readers only (E11-S53), as Settings' Prices panel; never the currency or shops."""
+    if scope == "all":
+        allowed = me is None or (me in profiles and permissions.sees_home_records(profiles[me]))
+    else:
+        allowed = scope.get("space") == permissions.HOME
+    if not allowed:
+        return None
+    return {"table": "pricing_setting", "op": row.get("op"), "summary": "Price settings updated"}
+
+
 def field_policy_row(row, scope, profiles, me):
     """HOME only, before generic admin handling; never relay rules or proof data."""
     if scope == "all":

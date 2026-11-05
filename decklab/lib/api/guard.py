@@ -127,6 +127,7 @@ upkeep in another space; the command line writes every space.
     PUT  /api/simulations                         simulations.edit (an admin, by role)
     PUT  /api/commander-night                     commander_night.edit (a home admin)
     PUT  /api/shop-postage                        postage.edit (a home admin; GET: home's record readers)
+    PUT  /api/pricing-setting                     pricing.edit (a home admin; GET: home's record readers)
     POST /api/field/policy/preview, /api/field/policy
                                                   field.edit (a home admin; the preview writes nothing)
     POST /api/assembly/preview                    run (it writes nothing)

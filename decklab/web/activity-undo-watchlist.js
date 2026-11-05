@@ -3,6 +3,8 @@
 "use strict";
 
 // The queue's quantity is text, so these rows have their own check rather than activityUndoRow's.
+// listed_aud is a shop's own listing in AUD (MTGMate and Games Portal), never converted, so its label stays AUD
+// whatever the configured currency (E11-S53).
 ACTIVITY_UNDO_FIELDS.watchlist = ["name", "set", "collector_number", "finish", "quantity", "for", "printing",
   "listed_aud", "listed_at", "in_stock", "checked", "notes", "state", "source"];
 ACTIVITY_UNDO_EDITABLE.watchlist = [...ACTIVITY_UNDO_FIELDS.watchlist];

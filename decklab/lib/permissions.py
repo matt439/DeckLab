@@ -138,7 +138,8 @@ Actions and their targets:
     "wishlist.edit"    a profile id
     "settings.edit"    a profile id
     "accessories.edit"  no target: whether the profile has accessories of its own to change
-    "receipts.apply", "products.edit", "orders.edit", "postage.edit"   no target: a home admin
+    "receipts.apply", "products.edit", "orders.edit", "postage.edit", "pricing.edit"
+                       no target: a home admin
     "run"              no target
     "run.stop"         {"visible", "by_id", "spaces"}; original starter id and deck spaces;
                        without a target only an admin or script passes
@@ -172,7 +173,7 @@ EITHER = "either"               # the house's decks; they count as Matt's
 DECK_ACTIONS = ("deck.edit", "tables.update")
 SPACE_ACTIONS = ("collection.edit", "tokens.edit")
 OWN_ACTIONS = ("wishlist.edit", "settings.edit")
-ADMIN_ACTIONS = ("receipts.apply", "products.edit", "orders.edit", "postage.edit")
+ADMIN_ACTIONS = ("receipts.apply", "products.edit", "orders.edit", "postage.edit", "pricing.edit")
 ACTIONS = (DECK_ACTIONS + SPACE_ACTIONS + OWN_ACTIONS + ADMIN_ACTIONS
            + ("accessories.edit", "deck.create", "play.record", "run", "run.start", "run.stop",
               "simulations.edit", "commander_night.edit", "members.edit", "field.edit", "server.restart"))
@@ -188,7 +189,7 @@ FIELD_EDIT_ADMINS = "Only an admin can change who's in the field."
 SHARED = "shared"               # lib/accessories.py's SHARED: the owner of what every home profile uses
 
 _ADMIN_WORDS = {"receipts.apply": "receipts", "products.edit": "products", "orders.edit": "orders",
-                "postage.edit": "shops' postage"}
+                "postage.edit": "shops' postage", "pricing.edit": "price settings"}
 
 
 def _get(target, key, default=None):
