@@ -13,6 +13,7 @@ class ExpectedFieldListTests(ApiTestCase):
         self.forge = self.box.forge
         self.forge.field = FakeFieldPart(self.forge)
         self.runner = mock.Mock()
+        self.runner.active.return_value = []          # no group run of the list (api/field_group.py)
         self.answer = {"status": "queued"}
         self.status = mock.Mock(return_value={"ready": True})
         self.opponents = mock.Mock(wraps=self.forge.field.opponents)
