@@ -310,7 +310,10 @@ class WishlistUndoPgTests(db_support.DbTestCase):
             self.assertEqual(calls.call_count, 1)
             self.assertEqual(any(row == entry for row in self.store.wishlist("matt")), op == "DELETE")
             self.assertEqual(len(self.persisted()["audit.change_set"]), len(before["audit.change_set"]) + 1)
-            with self.assertRaises(undo.UndoConflict):
+            # A removal already put back took its old position again: that's the lasting reason
+            # (E11-S08's later-changes slice), not a reload-and-retry conflict.
+            expected = undo.UndoUnsupported if op == "DELETE" else undo.UndoConflict
+            with self.assertRaises(expected):
                 self.store.wishlist_undo_review(source, "matt")
 
     def test_own_list_changes_and_target_aba_refuse_but_other_profile_changes_do_not(self):
