@@ -290,6 +290,32 @@ class CommanderReadinessUiTests(unittest.TestCase):
           assert(!older.textContent.includes('Tutors'), 'an answer without tutors says nothing about them');
         """)
 
+    def test_the_official_tutor_text_at_the_target_bracket(self):
+        self.run_js("""
+          const says = "So, after much discussion, the avenue we'd like to take is to remove the tutor restrictions.";
+          const rules = {known:true, date:'2025-10-21', read_on:'2026-11-05', reviewed_through:'2026-02-09', says,
+            brackets:[1,2,3,5].map((number) => ({number, says:null, limit:null}))
+              .concat([{number:4, says:'Game Changers that are likely to be fast mana and tutors', limit:null}])};
+          const node = showReadiness(readinessPage({tutor_rules:rules, tutors:{checked:true, count:0, cards:[], land_searches:[]}}));
+          const line = node.querySelector('.tutor-rules').textContent;
+          assert.equal(line, `Wizards' bracket text sets no limit on tutors at Bracket 2. Its update of 2025-10-21 ` +
+            `says: “${says}” (Wording read 2026-11-05.)`);
+          assert(!summaryText(node).includes('limit'), 'the lead sentence is unchanged');
+          assert(!node.querySelector('details').open);
+          const four = readinessPage({tutor_rules:rules}); four.summary.target_bracket = 4;
+          assert(showReadiness(four).querySelector('.tutor-rules').textContent.includes(
+            'at Bracket 4. Its update of 2025-10-21 says: “' + says + '” Bracket 4 players expect ' +
+            '“Game Changers that are likely to be fast mana and tutors”.'));
+          const none = readinessPage({tutor_rules:rules}); delete none.summary.target_bracket;
+          assert(showReadiness(none).querySelector('.tutor-rules').textContent.startsWith(
+            "Wizards' bracket text sets no limit on tutors. Its update"));
+          const unknown = showReadiness(readinessPage({tutor_rules:{known:false, reason:'the date is unknown'}}));
+          assert.equal(unknown.querySelector('.tutor-rules').textContent,
+            "What Wizards' bracket text says about tutors isn't known: the date is unknown.");
+          assert(!unknown.textContent.includes('sets no limit'));
+          assert.equal(showReadiness(readinessPage()).querySelector('.tutor-rules'), null);
+        """)
+
     def test_current_list_not_inventory_controls_the_summary_and_casual_has_none(self):
         self.run_js("""
           const planned = readinessPage({minimum:3,game_changers:[{name:'Bolt',qty:1}]});

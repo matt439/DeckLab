@@ -262,7 +262,8 @@ NUMBER_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, 
                 "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12}
 # banned-list: "Lutri, the Spellchaser - only banned as a companion" (Scryfall says legal).
 BANNED_AS_COMPANION = {"Lutri, the Spellchaser"}
-# wizards-commander, brackets-2025-02, brackets-2025-10 (tutor limits removed),
+# wizards-commander, brackets-2025-02, brackets-2025-10 (tutor limits removed;
+# BRACKET_TUTORS below),
 # brackets-2026-02 (latest change; still "beta" on 2026-09-29).
 BRACKETS = (
     {"number": 1, "name": "Exhibition", "min_turns": 9, "game_changers": 0,
@@ -290,6 +291,30 @@ BRACKETS = (
 # changed nothing.
 BRACKET_RULES_DATE = "2026-02-09"
 UPGRADED_MAX_GAME_CHANGERS = 3
+# What Wizards' official bracket text says about tutors (E9-S29), quoted word for
+# word from the announcement that set it and read by Claude on read_on (Deck Lab
+# itself never fetches Wizards' pages). brackets-2025-10 removed the tutor limits
+# (the original "few" tutors in Brackets 1-3) and sets no number for any bracket,
+# so no check warns about a tutor count; only Bracket 4's "Players expect" list
+# names tutors. brackets-2026-02, the latest announcement read (reviewed_through),
+# doesn't mention tutors. The Commander checks say the text isn't known while
+# Wizards' latest Commander announcement is newer than reviewed_through or its
+# date is unknown. After a new announcement, read it and update this with
+# BRACKET_RULES_DATE.
+BRACKET_TUTORS = {
+    "source": "brackets-2025-10",
+    "read_on": "2026-11-05",
+    "reviewed_through": "2026-02-09",
+    "says": ("So, after much discussion, the avenue we'd like to take is to remove the tutor "
+             "restrictions from Commander Brackets entirely and rely on Game Changers to catch "
+             "the most efficient tutors."),
+    # Per bracket: (its own words naming tutors, or None when it names none;
+    # the number of tutors it allows, or None when it sets no number).
+    "brackets": {1: (None, None), 2: (None, None), 3: (None, None),
+                 4: ("Game Changers that are likely to be fast mana, snowballing resource engines, "
+                     "free disruption, and tutors", None),
+                 5: (None, None)},
+}
 BRACKET_LABELS = {1: "Bracket 1 or 2 (theme and intent decide)", 2: "Bracket 2 or higher",
                   3: "Bracket 3 or higher", 4: "Bracket 4 or higher (4 or 5 by intent)"}
 MASS_LAND_DENIAL_TAG = "mass-land-denial"   # its description is Wizards' definition, word for word

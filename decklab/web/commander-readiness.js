@@ -130,6 +130,22 @@ function tutorLine(tutors, name) {
   return line;
 }
 
+/** What Wizards' official bracket text says about tutors at the target bracket (E9-S29, bracket.tutor_rules):
+ * the wording Deck Lab keeps, quoted with its date, or that it isn't known. Null for an older server's answer.
+ * It informs only, like the count: the text sets no number today, so nothing warns. */
+function tutorRulesText(br, target) {
+  const r = br && br.tutor_rules;
+  if (!r || typeof r !== "object") return null;
+  if (r.known !== true) return `What Wizards' bracket text says about tutors isn't known: ${r.reason || "it can't be read"}.`;
+  const entry = (Array.isArray(r.brackets) ? r.brackets : []).find((b) => b && b.number === target) || null;
+  const where = entry ? ` at Bracket ${target}` : "";
+  let text = entry && Number.isInteger(entry.limit) ? `Wizards' bracket text allows at most ${entry.limit} tutors${where}.`
+    : `Wizards' bracket text sets no limit on tutors${where}.`;
+  text += ` Its update of ${r.date} says: “${r.says}”`;
+  if (entry && entry.says) text += ` Bracket ${target} players expect “${entry.says}”.`;
+  return `${text} (Wording read ${r.read_on}.)`;
+}
+
 const TUTOR_NOTE = "Tutors are cards that search the library for a card; searches for lands only aren't counted, " +
   "and tutors don't change the bracket here.";
 
@@ -194,6 +210,8 @@ function commanderReadiness(data) {
       list && list.length ? cardNames(list) : null));
   }
   if (facts.tutors) effects.append(tutorLine(facts.tutors, (name) => cardLink({ name }, "commander-readiness", { inline: true })));
+  const rules = tutorRulesText(br, target);
+  if (rules) effects.append(el("p", { class: "sub tutor-rules", text: rules }));
   effects.append(comboFindings(br, "commander-readiness"));
   effects.append(el("p", { class: "sub", text: "Mass land denial means removing or locking down many lands. " +
     (facts.tutors ? `${TUTOR_NOTE} ` : "") + "Community tags can miss cards or flag effects you don't intend to use." }));
@@ -230,6 +248,8 @@ function commanderPrintPart(data) {
     list == null ? "not checked (effect data unavailable)."
       : list.length ? `${[...new Set(list.map((entry) => entry.name))].join(", ")}.` : "none found in the checked cards."));
   if (facts.tutors) parts.push(tutorLine(facts.tutors, (name) => name), el("p", { text: TUTOR_NOTE }));
+  const rules = tutorRulesText(facts.br, facts.target);
+  if (rules) parts.push(el("p", { class: "tutor-rules", text: rules }));
   // Each combo as text: on paper there's no viewer or link to follow.
   parts.push(comboFindings(facts.br, null, true, (m) => el("li", { text: `${(m.names || []).join(" + ")}${comboWords(m)}` })));
   parts.push(el("p", { text: COMMANDER_CHECK_LIMITS }), commanderDataNote(facts.br));

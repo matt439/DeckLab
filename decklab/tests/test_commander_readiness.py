@@ -197,6 +197,42 @@ class OfficialListTests(FixtureStats):
         self.assertEqual((data["official_unknown"], data["official_checked"], data["official_announcement"],
                           data["cards_older_than_announcement"], data["stale"]), (True, None, None, False, True))
 
+    def test_the_official_tutor_text_is_the_kept_quote(self):
+        # E9-S29: the fixture's announcement (2026-02-09) is the one the kept wording was checked through.
+        rules = self.bracket()["tutor_rules"]
+        self.assertTrue(rules["known"])
+        self.assertEqual((rules["source"], rules["date"], rules["read_on"], rules["reviewed_through"]),
+                         ("brackets-2025-10", "2025-10-21", "2026-11-05", "2026-02-09"))
+        self.assertTrue(rules["url"].endswith("/commander-brackets-beta-update-october-21-2025"))
+        self.assertIn("remove the tutor restrictions from Commander Brackets entirely", rules["says"])
+        self.assertEqual([b["number"] for b in rules["brackets"]], [1, 2, 3, 4, 5])
+        self.assertEqual([b["limit"] for b in rules["brackets"]], [None] * 5)     # no number, so no warning
+        self.assertFalse(rules["limit_set"])
+        self.assertEqual([b["number"] for b in rules["brackets"] if b["says"]], [4])
+        self.assertIn("free disruption, and tutors", rules["brackets"][3]["says"])
+        json.dumps(rules, allow_nan=False)
+
+    def test_tutors_never_warn_or_block(self):
+        text = "Commander\n1 The Seriema\n\nDeck\n99 Plains\n"
+        result = stats.deck_stats(decks.parse_decklist(text), "commander")
+        self.assertEqual(result["commander"]["bracket"]["tutors"]["count"], 1)
+        self.assertTrue(result["commander"]["ok"])
+        self.assertFalse(any("utor" in w for w in result["warnings"] + result["commander"]["problems"]))
+
+    def test_the_tutor_text_is_not_known_after_a_newer_announcement_or_without_one(self):
+        later = {"date": "2026-11-30", "url": "https://magic.wizards.com/en/news/announcements/x"}
+        with self.official(announcement=later, last_success_at="2026-10-15T00:00:00+00:00"):
+            rules = self.bracket()["tutor_rules"]
+        self.assertEqual(rules, {"known": False, "read_on": "2026-11-05", "reviewed_through": "2026-02-09",
+                                 "reason": "Wizards announced a Commander change on 2026-11-30, after the "
+                                           "wording Deck Lab keeps was checked (2026-02-09)"})
+        for changes in ({"last_success_at": None}, {"announcement": None}):
+            with self.subTest(changes=changes), self.official(**changes):
+                rules = self.bracket()["tutor_rules"]
+            self.assertFalse(rules["known"])
+            self.assertIn("unknown", rules["reason"])
+            self.assertNotIn("says", rules)
+
     def test_reading_never_fetches(self):
         with mock.patch.object(official_lists, "update", side_effect=AssertionError("no check in stats")):
             self.assertFalse(self.bracket()["data"]["stale"])
