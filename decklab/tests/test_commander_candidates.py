@@ -62,12 +62,13 @@ class CandidatesApiTests(CandidatesTestCase):
         self.assertEqual(ghalta["card"]["name"], "Ghalta, Primal Hunger")
         self.assertEqual(answer["source"]["id"], role_targets.SOURCE_ID)
 
-    def test_a_commander_a_built_deck_holds_isnt_a_candidate(self):
+    def test_a_commander_a_built_deck_holds_isnt_a_free_candidate(self):
         self.write("holder", base.deck_text(roles.GHALTA, title="Secret Holder", fmt="Commander", status="built"),
                    kind="commander")
-        names = [c["name"] for c in api.candidates_view()["candidates"]]
-        self.assertEqual(names, ["Abaddon the Despoiler"])
-        self.assertNotIn("Secret Holder", json.dumps(api.candidates_view()))
+        answer = api.candidates_view()
+        self.assertEqual([c["name"] for c in answer["candidates"]], ["Abaddon the Despoiler"])
+        # E9-S28's third slice: it's a held row instead, apart (test_commander_candidates_pairs).
+        self.assertEqual([c["name"] for c in answer["held"]], ["Ghalta, Primal Hunger"])
 
     def test_limit_and_bad_requests(self):
         answer = api.candidates_view(limit="1")
@@ -184,7 +185,8 @@ class CandidateCardsApiTests(CandidatesTestCase):
         self.assertApiError(404, api.candidate_view, "Sol Ring")              # may not lead
         self.write("holder", base.deck_text(roles.GHALTA, title="Secret Holder", fmt="Commander", status="built"),
                    kind="commander")
-        error = self.assertApiError(404, api.candidate_view, "Ghalta, Primal Hunger")
+        self.assertApiError(404, api.candidate_view, "Pick Your Poison")    # owned, but may not lead
+        error = self.assertApiError(404, api.candidate_view, "Nobody At All")
         self.assertNotIn("Secret Holder", error.message)
 
     def test_the_route(self):

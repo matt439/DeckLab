@@ -628,7 +628,7 @@ function showNewDeck(params, token) {
   clear($("#main"));
   startEditor({ mode: "new", kind, space: params.get("space") });
   // Commanders we could build's New deck from it (E9-S28): editor-import.js puts the commander in.
-  if (kind === "commander" && params.get("commander")) startFromCommander(params.get("commander"));
+  if (kind === "commander" && params.get("commander")) startFromCommander(params.get("commander"), params.get("partner"));
   afterRender();
 }
 
