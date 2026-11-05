@@ -15,6 +15,8 @@ range covers those sampled opponents only.
     results_dir()           the gauntlet's results folder (forge/gauntlet.results_dir)
     opponents(base_entry, against, exclude_ids=())
                             the sample's playable decks as Forge entries, without a mirror of the base
+    opponents_of(base_entry, chosen, exclude_ids=())
+                            the same over a sample dict (an unsaved standard draw, the page's estimate)
     tag(summary)            each opponent record's {"identity", "style", "tier"} from the catalogue
     groups(rows)            the paired difference by group over [(record, paired_diff())]
     note(m)                 the caveat: these m sampled opponents only
@@ -54,10 +56,19 @@ def opponents(base_entry, against, exclude_ids=()):
     """The sample's decks as Forge entries in its order, without one whose list is the base's own
     (a mirror) or exclude_ids (a trial deck's own precon). ForgeError (a plain sentence) for an
     unknown sample, one of the other format, a catalogue without its decks, or no opponent left."""
+    try:
+        chosen = _g().sample(sample_of(against))
+    except ValueError as e:
+        raise ForgeError(str(e)) from None
+    return opponents_of(base_entry, chosen, exclude_ids)
+
+
+def opponents_of(base_entry, chosen, exclude_ids=()):
+    """opponents() over a sample dict itself (one drawn and not saved, as the page's estimate of the
+    standard sample is): the same entries, the same ForgeError sentences."""
     from decklab.lib.gauntlet import without
     g = _g()
     try:
-        chosen = g.sample(sample_of(against))
         g._check(base_entry, chosen)
     except ValueError as e:
         raise ForgeError(str(e)) from None

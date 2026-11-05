@@ -4,7 +4,9 @@ and the deck page's "Tests of changes" list. Every class here starts with "vt-".
 
 A test plays a changed version of a list on its saved list's own games (the same shuffles), so only
 games where the change mattered differ, and says whether the change is better, worse or makes little
-difference: against one deck, or against the field (every other deck of the format). The server works
+difference: against one deck, against the field (every other deck of the format), or against popular
+decks (the format's standard gauntlet sample, E3-S30: the page then adds the difference by colour, number
+of colours, style and tier, saying it covers those sampled opponents only). The server works
 everything out (GET /api/variant, /api/variants, /api/variant/estimate); the page shows it.
 
 - The test page: while the test plays, its progress, the next check, a bar per opponent, the time left,
@@ -17,7 +19,7 @@ everything out (GET /api/variant, /api/variants, /api/variant/estimate); the pag
   deck or its commander differs from the saved list and the size is the same; disabled, with the reason,
   for a size change or a sideboard-only change. Below 700 px it's a second row of the bottom bar, full
   width; from 700 px it sits before Save. It opens a sheet: the change as chips, what to test against
-  (the field by default), how long (Until it's clear, or a quick look; Quick first for a Commander deck
+  (the field by default; Popular decks once the PC has a gauntlet catalogue), how long (Until it's clear, or a quick look; Quick first for a Commander deck
   or when the worst case passes 30 minutes), each with its time, and Start. #/edit?…&test=change (the deck
   page's Test this swap, E3-S25) opens the sheet as the editor opens (vtOpenTestFromRoute).
 - The deck page (deck.js calls variantTestsSection): the tests of the list, newest first; running ones
@@ -32,6 +34,7 @@ const VT_MINUS = "−";
 const VT_LIVE = ["queued", "running"];
 const VT_SIDEBOARD = "Sideboard changes aren't tested (games are best of one)";
 const VT_SIZE = "Keep the same number of cards to test a change";
+const VT_POPULAR = "gauntlet";      // the server's "popular decks": the format's standard sample (E3-S30)
 
 
 // ------------------------------------------------------------------ shared words and parts
@@ -71,6 +74,7 @@ function vtSpan(data) {
   const add2 = (x) => { if (x && x.delta != null) ends.push(Math.abs(x.low || 0), Math.abs(x.high || 0), Math.abs(x.delta)); };
   add2(data.field);
   for (const o of data.opponents || []) add2(o.paired);
+  for (const rows of Object.values(data.groups || {})) for (const g of rows || []) add2(g);
   if (data.job && data.job.range) add2(data.job.range);
   const widest = Math.max(0.05, ...ends);
   return Math.ceil(widest * 20 - 1e-9) / 20;
@@ -111,8 +115,15 @@ function vtDiffBar(delta, low, high, { dashed = false, label = "Difference in wi
   return bar;
 }
 
+/** Whether a test (its saved "against") is against a popular-decks sample (E3-S30): "gauntlet:<sample id>". */
+function vtPopular(test) {
+  const a = test && test.against;
+  return typeof a === "string" && a.startsWith("gauntlet:");
+}
+
 function vtAgainst(test) {
   const a = test && test.against;
+  if (vtPopular(test)) return "popular decks";
   if (typeof a === "string") return "the field";
   return (a && (a.title || a.id)) || "another deck";
 }
@@ -167,6 +178,7 @@ function vtDraw(page, data) {
     el("div", { class: "vt-grid" },
       vtLive(data) ? vtLivePanel(page, data) : vtVerdictPanel(page, data),
       vtRows(data, vtSpan(data))),
+    vtLive(data) ? null : vtGroups(data, vtSpan(data)),
     vtBuyingSection(page, data),
   ]);
   afterRender();
@@ -520,7 +532,7 @@ function vtVerdictPanel(page, data) {
     numbers && numbers.delta != null ? [vtDiffBar(numbers.delta, numbers.low, numbers.high, { span: vtSpan(data) }),
       vtAxis(vtSpan(data))] : null,
     data.margin ? el("p", { class: "sub", text: `"Makes little difference" means within ${Math.round(data.margin * 100)} points of win rate` +
-      (typeof t.against === "string" ? " against the field." : " against one deck.") }) : null,
+      (vtPopular(t) ? " against popular decks." : typeof t.against === "string" ? " against the field." : " against one deck.") }) : null,
     vtHowItWorks(data),
     el("div", { class: "actions vt-actions" },
       canMore ? el("button", { type: "button", class: "btn btn-primary", text: "Play more", "data-run": true,
@@ -542,14 +554,16 @@ async function vtMore(page) {
 function vtRows(data, span = vtSpan(data)) {
   const rows = data.opponents || [];
   if (!rows.length) return null;
+  // A popular deck's games are in the gauntlet's own results, which the matchup page doesn't show: no link.
+  const popular = vtPopular(data.test);
   return el("section", { class: "vt-rows" },
-    el("h2", { text: rows.length === 1 ? "The games" : "Against each deck" }),
+    el("h2", { text: rows.length === 1 ? "The games" : popular ? "Against each popular deck" : "Against each deck" }),
     el("p", { class: "sub", text: "How much the change moves the win rate against each deck, in points: the band is " +
       "where it probably lies, and every bar uses the same scale." }),
     el("ul", { class: "vt-list" }, rows.map((o) => {
       const p = o.paired || {};
       const name = o.title || o.id || "Opponent";
-      const head = o.base_key ? el("a", { href: `#/matchup?key=${o.base_key}`, text: name }) : el("span", { text: name });
+      const head = o.base_key && !popular ? el("a", { href: `#/matchup?key=${o.base_key}`, text: name }) : el("span", { text: name });
       if (o.dropped) {
         return el("li", { class: "vt-row vt-row-dropped" }, el("div", { class: "vt-row-name" }, head),
           el("p", { class: "sub", text: o.dropped }));
@@ -562,6 +576,42 @@ function vtRows(data, span = vtSpan(data)) {
           p.delta != null ? `${vtPoints(p.delta)} points (${vtPoints(p.low)} to ${vtPoints(p.high)})` : "No difference yet",
           p.same != null ? `played out the same in ${pctShort(p.same)} of games` : null].filter(Boolean).join(" · ") }));
     })), vtAxis(span));
+}
+
+const VT_GROUPS = [["colour", "By colour"], ["identity_size", "By number of colours"], ["style", "By style"],
+  ["tier", "By tier"]];
+
+/** A popular-decks test's difference by group (E3-S30: colour, number of colours, style, tier), each group a
+ * row with its opponents, its difference bar on the page's scale and its range, under the caveat that every
+ * range covers the sampled opponents only (data.note); null for any other test. */
+function vtGroups(data, span = vtSpan(data)) {
+  const groups = data.groups;
+  if (!groups || !vtPopular(data.test)) return null;
+  const row = (g) => {
+    const name = g.label || g.key;
+    const words = [g.delta != null ? `${vtPoints(g.delta)} points (${vtPoints(g.low)} to ${vtPoints(g.high)})`
+      : "No difference yet", g.note || null].filter(Boolean).join(" · ");
+    return el("tr", {},
+      el("th", { scope: "row", text: name }),
+      el("td", { class: "vt-group-n", text: thousands(g.opponents || 0) }),
+      el("td", { class: "vt-group-diff" },
+        vtDiffBar(g.delta, g.low, g.high, { label: `${name}: difference in win rate`, span }),
+        el("span", { class: "sub", text: words })));
+  };
+  const parts = VT_GROUPS.filter(([key]) => (groups[key] || []).length).map(([key, title]) => {
+    const id = `vt-groups-${key}`;
+    const head = el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "Group" }),
+      el("th", { scope: "col", text: "Decks" }), el("th", { scope: "col", text: "Difference" })));
+    // The scale sits under the bars' own column, so its 0 and ends line up with them.
+    const foot = el("tfoot", {}, el("tr", {}, el("td", {}), el("td", {}), el("td", {}, vtAxis(span))));
+    return el("div", { class: "vt-group" }, el("h3", { id, text: title }),
+      el("table", { class: "vt-group-table", "aria-labelledby": id }, head, el("tbody", {}, groups[key].map(row)), foot));
+  });
+  if (!parts.length) return null;
+  return el("section", { class: "vt-rows vt-groups", "aria-labelledby": "vt-groups-h" },
+    el("h2", { id: "vt-groups-h", text: "By group" }),
+    el("p", { class: "sub", text: data.note || "Each difference covers these sampled opponents only." }),
+    parts);
 }
 
 /** "Save this change": the editor opens with the tested list as its draft (asking first when it already
@@ -669,8 +719,8 @@ function vtTestItem(t) {
     const words = `Testing: ${vtChangeWords(t.changes).join(", ")}` + (t.total ? ` (${pctShort((t.done || 0) / t.total)})` : "");
     return el("li", { class: "vt-test-item" }, el("a", { href, text: words }), saved);
   }
-  const against = t.against === "field" ? "the field" : t.against;
-  const how = { stopped: "stopped early", error: "couldn't finish" }[t.verdict] || (t.delta == null ? "not settled" : null);
+  const against = t.against === "field" ? "the field" : t.against === "gauntlet" ? "popular decks" : t.against;
+  const how ={ stopped: "stopped early", error: "couldn't finish" }[t.verdict] || (t.delta == null ? "not settled" : null);
   const facts = [`against ${against}`, t.games_per_opponent ? `${thousands(t.games_per_opponent)} games a deck` : null, how];
   return el("li", { class: "vt-test-item" },
     el("a", { href, class: "vt-test-link" }, swapResult({ changes: t.changes, delta: t.delta, low: t.low, high: t.high,
@@ -783,16 +833,39 @@ async function vtOpenTestSheet() {
   others.map((d) => el("option", { value: d.id, text: d.title })));
   const radio = (name, value, text, checked, onchange) => el("label", { class: "vt-choice" },
     el("input", { type: "radio", name, value, checked: checked || null, onchange }), el("span", {}, text));
-  function drawAgainst(fieldSize, fieldOk) {
-    clear(againstHost).append(
-      radio("vt-against", "field", fieldOk ? `The field (${plural(fieldSize, "deck")})` : "The field (not available yet)",
-        pick.against === "field", () => { pick.against = "field"; select.disabled = true; refresh(); }),
-      radio("vt-against", "deck", "One deck:", pick.against !== "field", () => { pick.against = select.value; select.disabled = false; refresh(); }),
-      select);
-    select.disabled = pick.against === "field";
+  // The field's size and whether it can be tested against, from its estimate; popular decks' (E3-S30: the
+  // format's standard sample, offered only once its estimate says it's available) from their own.
+  const field = { size: 0, ok: true }, popular = { size: 0, ok: false };
+  const named = (value) => value !== "field" && value !== VT_POPULAR;
+  function drawAgainst() {
+    const choose = (value) => () => { pick.against = value; select.disabled = !named(value); refresh(); };
+    add(clear(againstHost), [
+      radio("vt-against", "field", field.ok ? `The field (${plural(field.size, "deck")})` : "The field (not available yet)",
+        pick.against === "field", choose("field")),
+      popular.ok ? radio("vt-against", VT_POPULAR, `Popular decks (${plural(popular.size, "deck")}, a sample)`,
+        pick.against === VT_POPULAR, choose(VT_POPULAR)) : null,
+      others.length ? radio("vt-against", "deck", "One deck:", named(pick.against),
+        () => { pick.against = select.value; select.disabled = false; refresh(); }) : null,
+      others.length ? select : null]);
+    select.disabled = !named(pick.against);
     const fieldInput = againstHost.querySelector('input[value="field"]');
-    if (fieldInput && !fieldOk) fieldInput.disabled = true;
+    if (fieldInput && !field.ok) fieldInput.disabled = true;
   }
+  const estimateFor = (against) => api(`/api/variant/estimate?id=${encodeURIComponent(ed.id)}&version=${ed.version}` +
+    `&against=${encodeURIComponent(against)}`);
+  // Asked once as the sheet opens: whether popular decks can be offered at all (a catalogue built on the PC).
+  estimateFor(VT_POPULAR).then((est) => {
+    if (sheet.closed || !est || !est.available || !est.opponents) return;
+    popular.ok = true;
+    popular.size = est.opponents;
+    if (pick.against === "field" && !field.ok) {       // nothing else to offer first
+      pick.against = VT_POPULAR;
+      drawAgainst();
+      refresh();
+      return;
+    }
+    drawAgainst();
+  }).catch(() => {});
   function drawHow(est) {
     const times = est || {};
     const maxAhead = (times.max && times.max.ahead) || 1600;
@@ -807,33 +880,45 @@ async function vtOpenTestSheet() {
     clear(howHost).append(runChoiceControl(options, pick.mode, (mode) => { pick.mode = mode; }, { label: "How long to play" }).node);
   }
   async function refresh() {
-    const against = pick.against === "field" ? "field" : pick.against;
-    const q = `/api/variant/estimate?id=${encodeURIComponent(ed.id)}&version=${ed.version}&against=${encodeURIComponent(against)}`;
+    const against = pick.against;
     try {
-      const est = await api(q);
+      const est = await estimateFor(against);
       if (sheet.closed) return;
+      if (against === "field") {        // the field's size and state, kept even when another choice came since
+        field.size = est.opponents;
+        field.ok = est.available;
+      }
+      if (against !== pick.against) {   // a later choice's answer wins
+        if (against === "field") drawAgainst();
+        return;
+      }
       pick.estimate = est;
+      problem.hidden = true;
       if (against === "field") {
-        drawAgainst(est.opponents, est.available);
+        drawAgainst();
         if (!est.available) {
-          if (others.length) { pick.against = others[0].id; drawAgainst(0, false); refresh(); return; }
+          if (popular.ok) { pick.against = VT_POPULAR; drawAgainst(); refresh(); return; }
+          if (others.length) { pick.against = others[0].id; drawAgainst(); refresh(); return; }
           problem.hidden = false;
           problem.textContent = est.problem || "There's no deck to test against.";
         }
+      } else if (against === VT_POPULAR && !est.available) {
+        problem.hidden = false;
+        problem.textContent = est.problem || "There are no popular decks to test against.";
       }
       drawHow(est);
     } catch (e) {
-      if (sheet.closed) return;
+      if (sheet.closed || against !== pick.against) return;
       drawHow(null);
     }
   }
-  drawAgainst(0, true);
+  drawAgainst();
   drawHow(null);
   refresh();
   sheetActions(sheet, [{ text: "Start", kind: "primary", onclick: () => start(), disabled: !runsAllowed() },
     { text: "Cancel", onclick: () => sheet.close() }]);
   async function start() {
-    const against = pick.against === "field" ? "field" : { id: pick.against, version: "target" };
+    const against = named(pick.against) ? { id: pick.against, version: "target" } : pick.against;
     try {
       const answer = await apiWrite("/api/variant/run", { id: ed.id, version: ed.version, list: sendList(ed.lists),
         against, mode: pick.mode || "ahead" });

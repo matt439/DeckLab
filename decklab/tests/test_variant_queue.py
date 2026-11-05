@@ -39,7 +39,8 @@ class VariantQueueTests(support.VariantApiCase):
         self.saved = self.summary()
         self.saved.update(looks=[{}], outcome="better", opponents=[], against={"id": support.RED_ID, "version": "target"})
         self.load = self.patch(support.real_forge.variants, "load_summary",
-                               side_effect=lambda test_id: deepcopy(self.saved) if test_id == self.saved["test"] else None)
+                               side_effect=lambda test_id, results_dir=None: deepcopy(self.saved)
+                               if test_id == self.saved["test"] and results_dir is None else None)
         self.job = self.patch(support.api.forge_runs.COORD_JOBS, "get", return_value=None)
         self.forbidden = [self.patch(owner, name, side_effect=AssertionError("No external or execution path"))
                           for owner, name in ((cards, "usd_to_aud"), (cards, "price_aud"), (cards, "_get_json"),

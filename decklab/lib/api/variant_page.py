@@ -5,7 +5,8 @@ api.forge_runs.COORD_JOBS (key "variant:<test id>") through forge.variants.run_t
     variant_view(test)  GET /api/variant?test=<id>: the test view (section 15); the server
                         answers 202 while its "status" is "queued" or "running"
     variant_estimate(deck_id, version, against, against_version=None)
-                        GET /api/variant/estimate?id=&version=&against=<deck id or "field">[&av=]:
+                        GET /api/variant/estimate?id=&version=&against=<deck id, "field", "gauntlet"
+                        or "gauntlet:<sample id>">[&av=]:
                         {"quick": [low, high], "ahead": [low, high]} minutes (None while there's no
                         estimator), with "max" (the games a deck each plays to at most), "opponents",
                         "available" and "problem" (the field when it can't be tested against) and
@@ -16,6 +17,13 @@ api.forge_runs.COORD_JOBS (key "variant:<test id>") through forge.variants.run_t
                         "mode"?}: the test view
     stop_variant(body)  POST /api/variant/stop {"profile", "test"}
     more_variant(body)  POST /api/variant/more {"profile", "test"}: "Play more"
+
+Against popular decks (E3-S30): "against" may be "gauntlet" (the format's standard sample, the
+sheet's "Popular decks") or "gauntlet:<sample id>" (a saved sample). Such a test is the command
+line's (forge variant --gauntlet: the same test id), plays in the gauntlet's own results folder and
+leaves a trial deck's own precon out; every answer here finds it there too. Its opponents are public
+sparring decks, never a house deck, so they're always shown; its view adds "sample", "groups" and
+"note" (forge.variants.view).
 
 A test needs a visible base and explicit deck opponent; field opponent rows follow visibility.
 Hidden-field verdicts and job errors are discarded while visible per-opponent numbers remain.
@@ -47,6 +55,8 @@ COORD_STOPPING = "Deck Lab is stopping on the PC, so no test can start."
 SIZE_WORDS = "Keep the same number of cards to test a change"
 FIELD_HIDDEN = "The field has decks you can't see, so this list can't be tested against it."
 QUICK_DEFAULT_MINUTES = 30      # past this worst case, the sheet offers "Quick look" first (section 11.6)
+GAUNTLET = "gauntlet"           # the sheet's "Popular decks": the format's standard sample (E3-S30)
+AGAINST_WORDS = 'against must be "field", "gauntlet", "gauntlet:<sample id>" or {"id", "version"} of a deck'
 
 
 def _forge():
@@ -66,6 +76,77 @@ def _test_id(value):
 
 def _job_key(test):
     return f"variant:{test}"
+
+
+# ------------------------------------------------------------------ against popular decks (E3-S30)
+
+def _vg(forge):
+    """forge.variants_gauntlet: a gauntlet sample's tests."""
+    return forge.variants.gauntlet_tests
+
+
+def is_gauntlet_choice(value):
+    """Whether an against (a query's or a body's) asks for popular decks: "gauntlet" or
+    "gauntlet:<sample id>"."""
+    return value == GAUNTLET or (isinstance(value, str) and value.startswith(GAUNTLET + ":")
+                                 and len(value) > len(GAUNTLET) + 1)
+
+
+def _exclude_ids(base):
+    """A trial deck's own precon, which its tests leave out (E3-S39)."""
+    from decklab.lib.gauntlet import trial_excluded
+    try:
+        return trial_excluded(decks.find_summary(base["id"]))
+    except (inventory.StateError, OSError, ValueError, RuntimeError):
+        return ()
+
+
+def _gauntlet_sample(forge, base, value, save):
+    """(the sample dict, None) for "gauntlet" (the format's standard sample, saved only when save, as
+    forge variant --gauntlet standard saves it) or "gauntlet:<sample id>", or (None, a plain sentence)
+    when there's no catalogue, no such sample or it's of the other format."""
+    vg = _vg(forge)
+    g = vg._g()
+    fmt = g.format_of(base)
+    try:
+        chosen = g.standard(fmt, save=save) if value == GAUNTLET else g.sample(vg.sample_of(value))
+    except (ValueError, forge.ForgeError) as e:
+        return None, _public(e)
+    if chosen.get("format") != fmt:
+        return None, f"That popular-decks sample is for {chosen.get('format')} decks, not {fmt}."
+    return chosen, None
+
+
+def _gauntlet_opponents(forge, base, chosen):
+    """The sample's opponents for this list (no mirror, no trial's own precon), or (None, why)."""
+    try:
+        return _vg(forge).opponents_of(base, chosen, _exclude_ids(base)), None
+    except forge.ForgeError as e:
+        return None, _public(e)
+
+
+def _visible(seen):
+    """seen.deck, with the gauntlet's public sparring decks always visible."""
+    from decklab.lib.gauntlet import is_gauntlet_id
+    return lambda deck_id: is_gauntlet_id(deck_id) or seen.deck(deck_id)
+
+
+def _results_of(forge, test, run=None):
+    """The results folder a test lives in: the gauntlet's for a gauntlet sample's test (its job's
+    against, else where its summary is saved), else None (the default folder)."""
+    vg = _vg(forge)
+    if run is not None and vg.is_gauntlet(getattr(run, "against", None)):
+        return vg.results_dir()
+    if run is not None and hasattr(run, "against"):
+        return None
+    if forge.variants.load_summary(test) is not None:
+        return None
+    folder = vg.results_dir()
+    return folder if forge.variants.load_summary(test, folder) is not None else None
+
+
+def _load_summary(forge, test):
+    return forge.variants.load_summary(test, _results_of(forge, test))
 
 
 class _VariantRun:
@@ -100,7 +181,7 @@ def _pending(run):
     fmt = run.forge.lists.fmt_for(run.base["kind"])
     space = (getattr(run, "field_options", None) or {}).get("space")
     field_name = f"field:{space}:{fmt}" if space is not None else f"field:{fmt}"
-    against = (field_name if run.against == "field" else
+    against = (field_name if run.against == "field" else run.against if isinstance(run.against, str) else
                {"id": run.against["id"], "version": run.against["version"], "card_sha": run.against["card_sha"],
                 "title": run.against.get("title")})
     return {"test": run.test, "version": 1,
@@ -129,8 +210,8 @@ def _job_json(run, snap, found):
 def _current_reference(record):
     """A response-only current link/title; captured test records stay byte-for-byte saved."""
     out = dict(record)
-    if str(record.get("id")).startswith("pairing/"):
-        return out                  # its saved half order determines its displayed name
+    if str(record.get("id")).startswith(("pairing/", "gauntlet:")):
+        return out                  # a saved half order names a pairing; a gauntlet deck is no house deck
     try:
         summary = decks.find_summary(record.get("id")) if record.get("id") else None
     except (inventory.StateError, OSError, ValueError, RuntimeError):
@@ -167,8 +248,10 @@ def _view(forge, test, seen=None):
     job = forge_runs.COORD_JOBS.get(_job_key(test))
     if job is not None and not seen.coordinator(job):
         job = None
-    found = forge.variants.view(test, visible=seen.deck)
-    snap = forge_runs.COORD_JOBS.snapshot(job) if job is not None else None
+    visible = _visible(seen)
+    found = forge.variants.view(test, _results_of(forge, test, job.fn if job is not None else None),
+                                visible=visible)
+    snap =forge_runs.COORD_JOBS.snapshot(job) if job is not None else None
     if found is None and job is None:
         raise ApiError(404, TEST_NONE)
     if found is None:
@@ -190,7 +273,7 @@ def _view(forge, test, seen=None):
     if out["job"] is not None:
         out["job"]["may_stop"] = seen.can_stop(job, seen.coordinator(job))
         pairs = out["job"]["pairs"]
-        shown = {key: pair for key, pair in pairs.items() if seen.deck((pair.get("opponent") or {}).get("id"))}
+        shown = {key: pair for key, pair in pairs.items() if visible((pair.get("opponent") or {}).get("id"))}
         if len(shown) != len(pairs):
             out["job"].update(pairs=shown, done=sum(p.get("done") or 0 for p in shown.values()),
                               total=sum(p.get("total") or 0 for p in shown.values()))
@@ -258,11 +341,20 @@ def variant_estimate(deck_id, version="target", against=None, against_version=No
     top-ups included), each None when there's no estimate (forge.estimate's), plus "max", "opponents",
     "available", "problem" and "default"."""
     forge = _forge()
-    base, against_ = _base_and_against(forge, deck_id, version, against, against_version)
+    results_dir, popular = None, is_gauntlet_choice(against)
+    base, against_ = _base_and_against(forge, deck_id, version, "field" if popular else against, against_version)
+    if popular:
+        chosen, problem = _gauntlet_sample(forge, base, against, save=False)
+        opponents = None
+        if chosen is not None:
+            opponents, problem = _gauntlet_opponents(forge, base, chosen)
+            results_dir = _vg(forge).results_dir()
+    else:
+        opponents, problem = _opponents(forge, base, against_)
     field_test = against_ == "field"
-    opponents, problem = _opponents(forge, base, against_)
     looks = forge.variants._ahead_looks(field_test)
-    out = {"against": "field" if field_test else against_["id"], "available": opponents is not None,
+    out = {"against": (against if popular else "field") if field_test else against_["id"],
+           "available": opponents is not None,
            "problem": problem, "opponents": len(opponents or []), "quick": None, "ahead": None,
            "max": {"quick": forge.variants.QUICK_GAMES, "ahead": looks[-1]},
            "default": "quick" if base["kind"] == "commander" else "ahead"}
@@ -273,7 +365,7 @@ def variant_estimate(deck_id, version="target", against=None, against_version=No
         pairs = []
         for o in opponents:
             try:
-                have = len(forge.views._games(forge.load(forge.matchup_key(base, o)) or {}))
+                have = len(forge.views._games(forge.load(forge.matchup_key(base, o), results_dir) or {}))
             except forge.ForgeError:
                 have = 0
             pairs.append((base, o, max(0, target - have) + target))
@@ -307,10 +399,13 @@ def _tests_json(forge, deck_id, version, seen):
                 run.version == version and seen.coordinator(job)):
             running[run.test] = (run, forge_runs.COORD_JOBS.snapshot(job))
     out = []
-    for summary in forge.variants.tests_for(deck_id, version):
+    found = (forge.variants.tests_for(deck_id, version) +      # and E3-S30's, in the gauntlet's folder
+             forge.variants.tests_for(deck_id, version, _vg(forge).results_dir()))
+    found.sort(key=lambda s: s.get("created") or "", reverse=True)
+    for summary in found:
         live = running.pop(summary["test"], None)
         if _sees_test(summary, seen):
-            out.append(_test_item(forge, forge.variants.visible_summary(summary, seen.deck), today, live))
+            out.append(_test_item(forge, forge.variants.visible_summary(summary, _visible(seen)), today, live))
     for run, snap in running.values():
         if _sees_test(_pending(run), seen):
             out.insert(0, _test_item(forge, _pending(run), today, (run, snap)))
@@ -324,7 +419,8 @@ def _test_item(forge, summary, today, live):
         against = _current_reference(against)
     snap = live[1] if live else None
     return {"test": summary["test"], "changes": (summary.get("variant") or {}).get("changes"),
-            "against": "field" if isinstance(against, str) else (against or {}).get("title")
+            "against": (GAUNTLET if _vg(forge).is_gauntlet(against) else "field") if isinstance(against, str)
+            else (against or {}).get("title")
             or (against or {}).get("id"),
             "verdict": summary.get("outcome"), "words": forge.variants.verdict_words(summary) if not live else None,
             "games_per_opponent": looks[-1]["games_per_opponent"] if looks else 0,
@@ -406,12 +502,13 @@ def run_variant(body):
     if mode not in ("ahead", "quick"):
         raise ApiError(400, 'mode must be "ahead" or "quick"')
     against = data["against"]
-    if against != "field":
+    popular = is_gauntlet_choice(against)
+    if against != "field" and not popular:
         if not isinstance(against, dict) or not isinstance(against.get("id"), str):
-            raise ApiError(400, 'against must be "field" or {"id", "version"} of a deck')
+            raise ApiError(400, AGAINST_WORDS)
         if set(against) - {"id", "version"}:
-            raise ApiError(400, 'against must be "field" or {"id", "version"} of a deck')
-    base, against_ = (_base_and_against(forge, data["id"], version, "field") if against == "field" else
+            raise ApiError(400, AGAINST_WORDS)
+    base, against_ = (_base_and_against(forge, data["id"], version, "field") if against == "field" or popular else
                       _base_and_against(forge, data["id"], version, against["id"], against.get("version")))
     _require_owner(base, profile)
     cards, sections = _draft_cards(forge, data["id"], version, data["list"])
@@ -426,13 +523,23 @@ def run_variant(body):
         variant = forge.variants.variant_entry(base, cards)
     except ValueError as e:
         raise ApiError(400, str(e)) from None
-    if against_ == "field":
+    if popular:
+        _ready(forge)               # before the standard sample is saved
+        chosen, problem = _gauntlet_sample(forge, base, against, save=True)
+        if chosen is None:
+            raise ApiError(400, problem)
+        _, problem = _gauntlet_opponents(forge, base, chosen)
+        if problem:
+            raise ApiError(400, problem)
+        against_ = _vg(forge).against_for(chosen["id"])
+    elif against_ == "field":
         _, problem = _opponents(forge, base, "field", forge_runs._Seen(profile))
         if problem:
             raise ApiError(400, problem)
     _ready(forge)
     seen = forge_runs._Seen(profile)
-    options = _field_options(forge, base, seen) if against_ == "field" else None
+    options = ({"exclude_ids": _exclude_ids(base)} if popular else
+               _field_options(forge, base, seen) if against_ == "field" else None)
     test = forge.variants.test_id(base, variant, against_, mode, field_space=(options or {}).get("space"))
     _submit(_VariantRun(forge, test, base, cards, against_, mode, profile["name"], field_options=options,
                         by_id=profile["id"]), rerun=True)
@@ -452,7 +559,7 @@ def stop_variant(body):
     test = _test_id(data["test"])
     seen = forge_runs._Seen(profile)
     job = forge_runs.COORD_JOBS.get(_job_key(test))
-    summary = _pending(job.fn) if job is not None else forge.variants.load_summary(test)
+    summary = _pending(job.fn) if job is not None else _load_summary(forge, test)
     visible = summary is not None and _sees_test(summary, seen)
     if job is not None:
         seen.require_stop(job, visible, TEST_NONE)
@@ -483,7 +590,7 @@ def more_variant(body):
             raise ApiError(404, TEST_NONE)
         _require_owner(job.fn.base, profile)
         return _view(forge, test, seen)     # already playing: join it
-    summary = forge.variants.load_summary(test)
+    summary = _load_summary(forge, test)
     if summary is None or not _sees_test(summary, seen):
         raise ApiError(404, TEST_NONE)
     base_ = summary["base"]
@@ -508,7 +615,10 @@ def more_variant(body):
     if not cards:
         raise ApiError(409, "This test's changed list wasn't saved with it, so it can't play more: start a new test.")
     _ready(forge)
-    options = _field_options(forge, base, seen) if against_ == "field" else None
+    if _vg(forge).is_gauntlet(against):
+        against_, options = against, {"exclude_ids": _exclude_ids(base)}      # E3-S30: the same sample
+    else:
+        options = _field_options(forge, base, seen) if against_ == "field" else None
     _submit(_VariantRun(forge, test, base, cards, against_, summary.get("mode"), profile["name"], extend=test,
                         opponents=summary.get("limited"), field_options=options, by_id=profile["id"]), rerun=True)
     return _view(forge, test, seen)

@@ -117,3 +117,15 @@
 .vt-queue-add { margin-block-start: var(--s-2); }
 .vt-queue-review { overflow-wrap: anywhere; }
 .vt-queue-review h3 { margin-block: var(--s-4) var(--s-2); }
+
+/* A popular-decks test's difference by group (E3-S30): one small table a grouping, the group's name, its
+   decks and its bar on the page's shared scale, the range and any note under the bar. */
+.vt-group h3 { font-size: var(--fs-md); margin: var(--s-3) 0 var(--s-1); }
+.vt-group-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.vt-group-table th, .vt-group-table td { padding: var(--s-2) var(--s-2); border-top: 1px solid var(--border); text-align: left; vertical-align: top; }
+.vt-group-table thead th { border-top: 0; font-size: var(--fs-sm); color: var(--ink-2); font-weight: var(--fw-semibold); }
+.vt-group-table th:first-child { width: 32%; overflow-wrap: anywhere; }
+.vt-group-table th:nth-child(2), .vt-group-n { width: 4.5em; font-variant-numeric: tabular-nums; }
+.vt-group-diff .vt-diff { margin-top: var(--s-1); }
+.vt-group-diff .sub { display: block; font-size: var(--fs-sm); color: var(--ink-2); }
+.vt-group-table tfoot td { border-top: 0; padding-top: 0; }
