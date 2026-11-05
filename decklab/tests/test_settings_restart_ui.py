@@ -83,6 +83,35 @@ class SettingsRestartUiTests(unittest.TestCase):
           assert(!byId('build-warning').querySelectorAll('a').some(node=>node.textContent==='Restart Deck Lab…'));
         ''')
 
+    def test_a_git_checkout_shows_no_release_line(self):
+        self.run_js(r'''
+          view={...view,release:null};await openSettings();assert(byId('server-release').hidden);
+          same(reads,['/api/server/restart']);
+        ''')
+
+    def test_a_newer_release_is_named_with_a_link_and_nothing_downloaded(self):
+        self.run_js(r'''
+          const base={enabled:true,current:'1.2.0',latest:'v1.3.0',url:'https://github.com/matt439/DeckLab/releases/tag/v1.3.0',
+            newer:true,checked_on:'2026-11-05',failed:false,checking:false};
+          view={...view,release:base};await openSettings();
+          const line=byId('server-release');assert(!line.hidden);
+          assert(line.textContent.includes('Release 1.3.0 is out; this is 1.2.0.'),line.textContent);
+          assert(line.textContent.includes('Nothing is downloaded'));
+          const link=line.querySelectorAll('a')[0];assert.equal(link.getAttribute('href'),base.url);
+          assert.equal(link.getAttribute('rel'),'noopener noreferrer');
+          drawServerRelease({...base,url:'javascript:alert(1)'});assert.equal(line.querySelectorAll('a').length,0);
+          drawServerRelease({...base,newer:false,latest:'v1.2.0'});
+          assert.equal(line.textContent,'This is the newest release (checked 2026-11-05).');
+          drawServerRelease({...base,newer:false,latest:'v1.2.0',failed:true});
+          assert(line.textContent.includes("Couldn't check")&&line.textContent.includes('2026-11-05'),line.textContent);
+          drawServerRelease({...base,newer:null,latest:null,checked_on:null,failed:true});
+          assert.equal(line.textContent,"Couldn't check for a newer release.");
+          drawServerRelease({...base,newer:null,latest:null,checked_on:null,checking:true});
+          assert(line.textContent.startsWith('Checking for a newer release'));
+          drawServerRelease({...base,enabled:false});assert(line.textContent.includes('off'));
+          drawServerRelease(null);assert(line.hidden);
+        ''')
+
 
 if __name__ == "__main__":
     unittest.main()
