@@ -55,12 +55,13 @@ def material(cheapest, listed):
     return listed - cheapest >= MATERIAL_AUD and listed >= cheapest * MATERIAL_RATIO
 
 
-def annotate(rows, totals, sections, canonical, rate):
+def annotate(rows, totals, sections, canonical, rate, code=None):
     """Add listed_printing, listed_finish, listed_aud_each, listed_aud_missing and listed_material to
     each missing row whose list names a printing other than the priced one, and, when any row is
     material, totals.as_listed (the material rows, dearest first: name, printing, finish, missing,
     aud_each, aud_missing) and totals.aud_missing_as_listed (the missing copies with each annotated
-    row at its listed price, unpriced listings at the cheapest). rate: (AUD per USD, its date)."""
+    row at its listed price, unpriced listings at the cheapest). rate: (AUD per USD, its date); code:
+    the currency it is in (pool.compare's one read of the setting)."""
     listed = listed_printings(sections, canonical)
     differences = []
     for row in rows:
@@ -74,7 +75,7 @@ def annotate(rows, totals, sections, canonical, rate):
         label = _label(set_code, number, finish)
         if label == row.get("priced_printing"):
             continue
-        price = cards.price_aud_printing(set_code, number, finish, rate=rate)
+        price = cards.price_aud_printing(set_code, number, finish, rate=rate, code=code)
         each = price.aud if price else None
         cost = round(each * row["missing"], 2) if each is not None else None
         row.update(listed_printing=label, listed_finish=finish, listed_aud_each=each,

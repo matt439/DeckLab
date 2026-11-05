@@ -706,8 +706,8 @@ def compare(sections, pool, exclude=(), prices=True, listed=False):
     result = {"rate": None, "rate_date": None, "price_date": None, "price_error": None}
     if prices:
         try:
-            code = currency.code()
-            rate, rate_date = cards.usd_to_aud()
+            code = currency.code()      # read once: the rate, every row and the label share it
+            rate, rate_date = cards.usd_to_aud(code)
             price_date = cards.price_date()
             # AGENTS.md: a price is shown with the date it was pulled, and the
             # stamp above a deck file's table must read back.
@@ -730,7 +730,8 @@ def compare(sections, pool, exclude=(), prices=True, listed=False):
         used = [(d.title, d.cards[name]) for d in others if d.cards.get(name)]
         available = max(owned - sum(qty for _, qty in used), 0)
         missing = max(needed - available, 0)
-        price = cards.price_aud(name) if prices and name not in unresolved else None
+        price = (cards.price_aud(name, rate=(result["rate"], result["rate_date"]), code=code)
+                 if prices and name not in unresolved else None)
         rows.append({
             "name": name,
             "need": needed,
@@ -767,7 +768,7 @@ def compare(sections, pool, exclude=(), prices=True, listed=False):
     }
     if listed and prices and buying:    # the Planned list's printings beside the cheapest (E5-S31)
         listed_prices.annotate(rows, totals, sections, lambda n: _canonical(n, "decklist", {}),
-                               (result["rate"], result["rate_date"]))
+                               (result["rate"], result["rate_date"]), code)
     result.update(
         rows=rows,
         totals=totals,

@@ -75,6 +75,19 @@ class PricingSettingUiTests(unittest.TestCase):
           assert(byId('pricing-source').textContent.includes('estimates in EUR (set here)'));
         ''')
 
+    def test_a_status_read_already_in_flight_is_followed_by_a_fresh_one(self):
+        self.run_js(r'''
+          await openSettings();
+          let release; versionRequest = new Promise(resolve => { release = resolve; });
+          const before = footers;
+          byId('pricing-currency').value = 'EUR';
+          await save();
+          assert(byId('settings-prices').textContent.includes('Price settings saved.'));
+          assert.equal(footers, before);          // the old read began before the save: not reused as the answer
+          versionRequest = null; release(); await flush();
+          assert.equal(footers, before + 1);      // a new /api/status read starts after it
+        ''')
+
     def test_config_json_sends_null_and_no_shop_turns_the_check_off(self):
         self.run_js(r'''
           view = answer({currency: {saved: 'EUR', config: 'GBP', effective: 'EUR', symbol: '€', source: 'saved'}});

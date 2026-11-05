@@ -149,7 +149,7 @@ class FixtureServer:
                             ("INDEX_FILE", cache / "scryfall/index.json.gz"),
                             ("FX_FILE", cache / "fx.json"), ("IMAGES_DIR", cache / "images"),
                             ("_index", None), ("_download", _forbidden), ("_open_url", _forbidden),
-                            ("update", _forbidden), ("usd_to_aud", lambda: (1.0, "2000-01-01"))):
+                            ("update", _forbidden), ("usd_to_aud", lambda code=None: (1.0, "2000-01-01"))):
             self._patch(cards, name, value)
         index = cards.build_index(cache / "scryfall/cards.jsonl", cache / "scryfall/tags.jsonl",
                                   log=lambda *a: None)

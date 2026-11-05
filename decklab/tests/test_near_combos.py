@@ -29,7 +29,7 @@ STATS = {"commander": {"bracket": {"near_combos": {"checked": True, "total": 2,
                                                    "matches": [match("Black Lotus"), match("Wrath of God")]}}}}
 
 
-def price(name):
+def price(name, rate=None, code=None):
     return cards.Price(name, 2.5, 1.25, 2.0, "2026-10-27", "2026-10-26", "fdn", "1")
 
 

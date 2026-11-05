@@ -108,6 +108,28 @@ class CommandLineTests(unittest.TestCase):
         self.assertIn("EUR estimates: 1 USD = 0.9 EUR", eur)
 
 
+class NotEditsTests(unittest.TestCase):
+    """pg_decks.NOT_EDITS_RE (the library's "last edited"): a reprice changes only Deck Lab's own lines in any
+    currency, so it isn't an edit. Python's re reads the pattern as PostgreSQL's regexp_replace does here."""
+
+    def body(self, stamp):
+        import re
+        from decklab.lib.inventory import pg_decks
+        text = (f"# Gruul Ramp\n\n- **Status:** built\n\n## Owned vs needed\n\nPrices converted at {stamp.text()}.\n\n"
+                f"| Card | Need |\n|---|---|\n| Alpha | {stamp.rate} |\n\n## Notes\n\nHand notes.\n")
+        return re.sub(pg_decks.NOT_EDITS_RE, "", text)
+
+    def test_a_reprice_in_any_currency_is_not_an_edit(self):
+        from decklab.lib.decks import PriceStamp
+        aud = self.body(PriceStamp(1.42, "2026-10-30", "2026-10-31"))
+        self.assertEqual(aud, self.body(PriceStamp(1.45, "2026-11-01", "2026-11-02")))
+        eur = self.body(PriceStamp(0.9, "2026-10-30", "2026-10-31", "EUR"))
+        self.assertEqual(eur, self.body(PriceStamp(0.91, "2026-11-01", "2026-11-02", "EUR")))
+        self.assertEqual(eur, aud)
+        self.assertNotIn("1 USD", eur)
+        self.assertIn("Hand notes.", eur)
+
+
 class ApiTagTests(unittest.TestCase):
     def setUp(self):
         pricing_setting.forget()
@@ -176,8 +198,13 @@ class PageTests(unittest.TestCase):
           assert.equal(colSortWords('price'), '~A$ each');
           assert.equal(colSortWords('name'), 'Card');
           state.status = {pricing: {currency: 'EUR', symbol: '€', currency_default: false, shops: []}};
-          assert.equal(colSortWords('price'), '~€ each');
-          assert.equal(`~${aud(1.5)} each`, '~€1.50 each');
+          assert.equal(colSortWords('price', {currency: 'EUR'}), '~€ each');
+          // A kept AUD answer stays A$ after the status turns to EUR (a Settings change in another tab).
+          assert.equal(colSortWords('price', {rate: 1.42}), '~A$ each');
+          assert.equal(colSortWords('price', {currency: 'SEK'}), '~SEK each');
+          assert.equal(ansMoney(1.5, {rate: 1.42}), 'A$1.50');
+          assert.equal(ansMoney(1.5, {currency: 'EUR'}), '€1.50');
+          assert.equal(ansSign(null), 'A$');
           const cv = {priceNote: el('p'), rows: [{}], prices: {rate: 0.9, rate_date: '2026-10-30', currency: 'EUR'}};
           drawColPriceNote(cv);
           assert(cv.priceNote.textContent.startsWith('~€ each is an estimate'), cv.priceNote.textContent);
@@ -187,6 +214,28 @@ class PageTests(unittest.TestCase):
           drawColPriceNote(cv);
           assert(cv.priceNote.textContent.startsWith('~A$ each is an estimate'), cv.priceNote.textContent);
           assert(cv.priceNote.textContent.includes('1 USD = 1.42 AUD'), cv.priceNote.textContent);
+        """)
+
+    def test_deck_and_editor_amounts_follow_their_answer_not_the_status(self):
+        self.run_js(r"""
+          state.status = {pricing: {currency: 'EUR', symbol: '€', currency_default: false, shops: []}};
+          const audAnswer = {rate: 1.42};
+          // The status says EUR, but these answers have no currency: they're AUD, and say so.
+          assert.equal(edhrecMarkWords({status: 'to_buy', aud_each: 1.2}, true, audAnswer)[0], 'To buy · ~A$1.20');
+          assert.equal(edhrecMarkWords({status: 'to_buy', aud_each: 1.2}, true, {currency: 'EUR'})[0], 'To buy · ~€1.20');
+          const listed = {missing: 1, listed_printing: 'FIC 207', listed_aud_each: 5, aud_each: 1};
+          assert.equal(listedPriceWords(listed, audAnswer), 'As listed (FIC 207): A$5.00 each');
+          assert.equal(asListedWords({missing: 2, name: 'Alpha', printing: 'FIC 207', aud_missing: 9}, {currency: 'EUR'}),
+            '2 Alpha (FIC 207) about €9.00');
+          const side = editorEdhrecSide({edhrec: {row: {status: 'to_buy', aud_each: 2}, marks: true, answer: audAnswer}});
+          assert(side.some(node => node && node.textContent === 'To buy · ~A$2.00'));
+          assert.equal(searchResultSide({name: 'Alpha', aud: 3, aud_currency: 'AUD', have: 0})[0].textContent, 'A$3.00');
+          assert.equal(searchResultSide({name: 'Alpha', aud: 3, aud_currency: 'EUR', have: 0})[0].textContent, '€3.00');
+          const near = {checked: true, total: 1, prices: {rate: 1.42, rate_date: '2026-10-30', price_date: '2026-10-31'},
+            matches: [{names: ['Alpha', 'Beta'], missing: 'Beta', results: ['Win'], aud: 1.2, url: 'https://combos.example/1'}]};
+          const data = {summary: {read_only: true}, version: 'target', stats: {commander: {bracket: {near_combos: near}}}};
+          assert(nearCombosPanel(data).textContent.includes('About A$1.20.'));
+          state.status = null;
         """)
 
     def test_variant_references_stay_aud_and_the_estimate_follows(self):

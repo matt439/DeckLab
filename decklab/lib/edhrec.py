@@ -443,9 +443,10 @@ def ideas(deck_id, p=None, prices=True, refresh=False, commanders=None, page=Non
               "groups": [], "left_out": [], "rate": None, "rate_date": None, "price_date": None, "price_error": None}
     if p is not None and prices:
         try:
-            result["rate"], result["rate_date"] = cards.usd_to_aud()
+            code = currency.code()      # one read: the rate, each price and the label agree (E11-S53)
+            result["rate"], result["rate_date"] = cards.usd_to_aud(code)
             result["price_date"] = cards.price_date()
-            result.update(currency.tag(currency.code()))      # E11-S53: only when it isn't AUD
+            result.update(currency.tag(code))      # E11-S53: only when it isn't AUD
         except RuntimeError as e:
             result["price_error"] = str(e)
             prices = False
@@ -479,7 +480,8 @@ def ideas(deck_id, p=None, prices=True, refresh=False, commanders=None, page=Non
                 row["on_the_way"] = sum(qty for _, qty in p.on_the_way.get(exact, []))
                 row["status"] = ("in_deck" if row["in_deck"] else "free" if spare else
                                  "in_use" if p.owned.get(exact, 0) else "to_buy")
-                price = cards.price_aud(exact) if prices and row["status"] == "to_buy" else None
+                price = (cards.price_aud(exact, rate=(result["rate"], result["rate_date"]), code=code)
+                         if prices and row["status"] == "to_buy" else None)
                 row["aud_each"] = price.aud if price else None
                 row["priced_printing"] = pool._printing_label(price)
             rows.append(row)

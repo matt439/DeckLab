@@ -227,8 +227,9 @@ def _rewrite_table(deck, p):
     if other:
         wording = decks.PRICE_STAMP
         try:                            # the wording with today's figures, as an example
-            rate, rate_date = cards.usd_to_aud()
-            wording = decks.PriceStamp(rate, rate_date, cards.price_date() or rate_date, currency.code()).text()
+            code = currency.code()      # one read: the rate and its label agree (E11-S53)
+            rate, rate_date = cards.usd_to_aud(code)
+            wording = decks.PriceStamp(rate, rate_date, cards.price_date() or rate_date, code).text()
         except (TypeError, *_INDEX_ERRORS):
             pass
         kept = "Prices that still apply were kept and the rest left blank."

@@ -34,12 +34,12 @@ function deckEdhrecSection(data) {
 
 /** "In the deck", "Free in the pool", "2 free", "Owned, all in other decks", "To buy · ~A$1.20", with
  * copies on the way and Considering said; for a viewer with no marks only what the deck's list shows. */
-function edhrecMarkWords(c, marks) {
+function edhrecMarkWords(c, marks, answer = null) {
   const words = [];
   if (c.in_deck) words.push("In the deck");
   else if (marks && c.status === "free") words.push(c.free > 1 ? `${num(c.free)} free` : "Free in the pool");
   else if (marks && c.status === "in_use") words.push("Owned, all in other decks");
-  else if (marks && c.status === "to_buy") words.push(c.aud_each != null ? `To buy · ~${aud(c.aud_each)}` : "To buy · no price");
+  else if (marks && c.status === "to_buy") words.push(c.aud_each != null ? `To buy · ~${ansMoney(c.aud_each, answer)}` : "To buy · no price");
   if (marks && c.on_the_way) words.push(`${num(c.on_the_way)} on the way`);
   if (c.considering) words.push("Considering");
   return words;
@@ -159,7 +159,7 @@ function drawEdhrec(ctx) {
 
 function edhrecRow(ctx, c, marks) {
   const share = c.inclusion != null ? `${c.inclusion}% of decks` : null;
-  const row = cardRow(c.card || null, { name: c.name, meta: [share, ...edhrecMarkWords(c, marks)].filter(Boolean).join(" · "),
+  const row = cardRow(c.card || null, { name: c.name, meta: [share, ...edhrecMarkWords(c, marks, ctx.answer)].filter(Boolean).join(" · "),
     viewerGroup: "deck-edhrec", caption: c.name });
   if (!ctx.answer.may_add || c.in_deck) return row;
   const button = el("button", { type: "button", class: "btn btn-quiet", text: c.considering ? "Considering" : "Consider",

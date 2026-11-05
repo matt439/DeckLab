@@ -57,7 +57,8 @@ const COL_STRIP_FILTER = 12;                // more printings than this: the str
 const COL_SORTS = { name: "Card", set: "Printing", quantity: "Copies", price: "~A$ each", condition: "Condition",
   language: "Language" };
 /** A sort's heading; the price's names the configured currency ("~A$ each", "~€ each", E11-S53) when drawn. */
-function colSortWords(key) { return key === "price" ? `~${priceSymbol().trim()} each` : COL_SORTS[key]; }
+/** A column's words; the price column's in the saved prices answer's currency (ansSign: A$ until one says otherwise). */
+function colSortWords(key, prices = null) { return key === "price" ? `~${ansSign(prices)} each` : COL_SORTS[key]; }
 const COL_SORT_FIRST = { price: -1 };       // the first tap on a heading: most valuable first
 
 

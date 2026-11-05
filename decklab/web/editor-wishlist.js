@@ -89,15 +89,15 @@ function editorWishlistAnswer(ac) {
 }
 
 /** One wished card as a search result: its card's data, its wished printing as the default, and the row. */
-function editorWishlistItem(row, marks) {
+function editorWishlistItem(row, marks, answer = null) {
   const printing = row.set && row.number ? { set: row.set, number: row.number, finish: "nonfoil" } : null;
-  return { ...(row.card || { type_line: "" }), name: row.name, default: printing, wish: { row, marks } };
+  return { ...(row.card || { type_line: "" }), name: row.name, default: printing, wish: { row, marks, answer } };
 }
 
 /** A result's side: its wished printing, then (with marks) whether a copy is free, all in other decks or to
  * buy, and copies on the way. */
 function editorWishlistSide(c) {
-  const { row, marks } = c.wish;
+  const { row, marks, answer } = c.wish;
   const out = [row.set ? el("span", { class: "ac-price", text: `${row.set.toUpperCase()} ${row.number}`,
     title: "The printing on your wishlist, which the line keeps" }) : null];
   if (marks) {
@@ -106,7 +106,7 @@ function editorWishlistSide(c) {
       title: "Owned, but every copy is in another deck" }));
     else if (row.status === "in_deck") out.push(el("span", { class: "chip chip-plain", text: "In the saved deck" }));
     else if (row.status === "to_buy") out.push(el("span", { class: "chip chip-warn",
-      text: row.aud_each != null ? `To buy · ~${aud(row.aud_each)}` : "To buy · no price" }));
+      text: row.aud_each != null ? `To buy · ~${ansMoney(row.aud_each, answer)}` : "To buy · no price" }));
     if (row.on_the_way) out.push(el("span", { class: "chip chip-info", text: `${num(row.on_the_way)} on the way` }));
   }
   return out;
@@ -184,7 +184,7 @@ async function editorWishlistLookUp(ac, q, more = false) {
   // More shows the next wished cards not shown yet (an add between pages changes what fits).
   const shown = new Set(more ? ac.items.map((c) => c.name) : []);
   const rest = fits.filter((row) => !shown.has(row.name));
-  const next = rest.slice(0, WISHLIST_PAGE).map((row) => editorWishlistItem(row, marks));
+  const next = rest.slice(0, WISHLIST_PAGE).map((row) => editorWishlistItem(row, marks, answer));
   if (!more) ac.page = 1;
   ac.items = more ? [...ac.items, ...next] : next;
   ac.guessFrom = -1;

@@ -257,14 +257,15 @@ def _prices(rows):
     answer = {"rows": {}, "rate": None, "rate_date": None, "price_date": None, "price_error": None}
     if not _ready():
         return answer
+    code = currency.code()      # one read: the rate and its label agree (E11-S53)
     try:
-        rate, rate_date = cards.usd_to_aud()
+        rate, rate_date = cards.usd_to_aud(code)
     except RuntimeError as e:          # offline with no cached rate
         answer["price_error"] = _public(e)
         return answer
     try:
         answer.update(rate=rate, rate_date=rate_date, price_date=cards.price_date() or None,
-                      **currency.tag(currency.code()))      # E11-S53: only when it isn't AUD
+                      **currency.tag(code))      # E11-S53: only when it isn't AUD
         for row in rows:
             usd = cards.printing_usd(row.get("set"), row.get("collector_number"), row.get("finish") or "nonfoil")
             if usd is not None:

@@ -364,7 +364,7 @@ def dump(root=None, backend=None, decks=False):
 
     root = Path(root or config.REPO).resolve()
     with pointed(root), inventory.use(backend or FileInventory(root)), inventory.pinned(), \
-            mock.patch.object(cards, "usd_to_aud", lambda: FIXED_RATE):
+            mock.patch.object(cards, "usd_to_aud", lambda code=None: FIXED_RATE):
         c = lambda work: _capture(root, work)      # noqa: E731
         out = {}
         space_ids = spaces.space_ids()

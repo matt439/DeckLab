@@ -25,6 +25,12 @@ function nearBracketWords(m, target) {
 }
 
 /** One combo: "Add <card>: with <piece>, <what it does>." then its marks and actions. */
+/** The near combos' prices stamp (its `currency` names the amounts'), or null. */
+function nearPrices(data) {
+  const near = (((data.stats || {}).commander || {}).bracket || {}).near_combos;
+  return (near && near.prices) || null;
+}
+
 function nearComboItem(m, data, editable) {
   const results = m.results || [];
   const what = results.slice(0, 2).join(", ") + (results.length > 2 ? ", …" : "");
@@ -41,7 +47,7 @@ function nearComboItem(m, data, editable) {
   item.append(line);
   const marks = el("p", { class: "near-combo-marks" });
   if (m.availability && NEAR_STATUS[m.availability]) marks.append(status(...NEAR_STATUS[m.availability]), " ");
-  marks.append(m.aud != null ? `About ${aud(m.aud)}.` : "No price.");
+  marks.append(m.aud != null ? `About ${ansMoney(m.aud, nearPrices(data))}.` : "No price.");
   const bracket = nearBracketWords(m, data.summary.target_bracket);
   if (bracket) marks.append(" ", status("warn", `Bracket ${m.minimum_with}`), ` ${bracket}`);
   item.append(marks);

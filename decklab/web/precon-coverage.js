@@ -155,15 +155,15 @@ function drawCoveragePrecon(ctx) {
     el("p", { class: "sub precon-meta", text: [d.set_name || d.code.toUpperCase(), d.type, d.released ? `released ${d.released}` : null].filter(Boolean).join(" · ") }),
     el("p", { class: "precon-summary" }, coverageShare(p)),
     missing.length ? el("p", {}, el("b", { text: `${plural(totals.missing || 0, "card")} to find` }),
-      totals.aud_missing != null ? `, about ${aud(totals.aud_missing)} to buy` : "",
+      totals.aud_missing != null ? `, about ${ansMoney(totals.aud_missing, p)} to buy` : "",
       totals.unpriced && totals.unpriced.length ? ` (${plural(totals.unpriced.length, "card")} with no price)` : "", ".")
       : el("p", { class: "box box-good", text: `Every card of it has a copy free in ${ctx.whose}.` }),
     missing.length ? el("p", { class: "sub pcov-rate", text: coverageRate(p) }) : null,
     p.problems && p.problems.length ? el("p", { class: "box box-warn", text: `${plural(p.problems.length, "card")} of MTGJSON's list can't be read and isn't counted.` }) : null,
     missing.length ? el("section", { class: "precon-section" }, el("h3", { text: "Missing cards" }),
       el("div", { class: "card-tiles precon-tiles" }, missing.map((c) => cardTile(c.card || null, { qty: c.missing, name: c.name,
-        meta: [c.free ? `${num(c.free)} of ${num(c.need)} free` : `${num(c.need)} needed`, c.aud_each != null ? `~${aud(c.aud_each)} each` : "no price"],
-        viewerGroup: "precon-coverage", caption: `${c.missing} ${c.name}${c.aud_missing != null ? ` · ~${aud(c.aud_missing)}` : ""}` })))) : null,
+        meta: [c.free ? `${num(c.free)} of ${num(c.need)} free` : `${num(c.need)} needed`, c.aud_each != null ? `~${ansMoney(c.aud_each, p)} each` : "no price"],
+        viewerGroup: "precon-coverage", caption: `${c.missing} ${c.name}${c.aud_missing != null ? ` · ~${ansMoney(c.aud_missing, p)}` : ""}` })))) : null,
     p.may_start ? el("label", { class: "field precon-title", for: titleInput.id }, el("span", { text: "New deck's title" }), titleInput) : null,
     p.may_start ? ctx.titleNote : null,
     p.may_start ? el("p", { class: "sub", text: "Start a deck from it makes an idea deck with this list, to build from what you have. Nothing is added to the collection." })

@@ -737,10 +737,12 @@ def fx_file(code=None):
     return FX_FILE if code == "AUD" else FX_FILE.with_name(f"fx-{code.lower()}.json")
 
 
-def usd_to_aud():
-    """(rate, rate_date): the configured currency (lib/currency: AUD unless config.json's
-    "currency" says otherwise; the name is older than the setting) per USD, the ECB reference
-    rate from Frankfurter. USD itself is a rate of 1, dated today, and never fetched.
+def usd_to_aud(code=None):
+    """(rate, rate_date): code's currency (default: the configured one, lib/currency: AUD unless
+    Settings or config.json say otherwise; the name is older than the setting) per USD, the ECB
+    reference rate from Frankfurter. USD itself is a rate of 1, dated today, and never fetched.
+    A caller that also labels the figures passes the code it read, so one setting change can't
+    give the rate one currency and the label another.
 
     Fetched at most once a day and cached in decklab/data/fx.json (fx_file). When the
     fetch fails the cached rate is used, and it's tried again the next day.
@@ -748,7 +750,7 @@ def usd_to_aud():
     FX_RETRY_GAP seconds (the server may start before the network is up)."""
     global _fx, _fx_tried_on, _fx_tried_at, _fx_code
     today = date.today().isoformat()
-    code = currency.code()
+    code = code or currency.code()
     if code == "USD":
         return 1.0, today
     path = fx_file(code)
@@ -804,16 +806,19 @@ class Price:
                 f"ECB {self.rate_date})")
 
 
-def price_aud(name):
-    """AUD estimate for the card's cheapest paper printing (see cheapest_usd),
-    or None when no printing has a USD price."""
+def price_aud(name, rate=None, code=None):
+    """The estimate (in the configured currency) for the card's cheapest paper printing (see
+    cheapest_usd), or None when no printing has a USD price. rate: (currency per USD, its date) and
+    code: its currency, when the caller already read them (both, so a whole table is one snapshot of
+    the setting); otherwise the currency is read once here and its rate fetched for that code."""
     cheapest = cheapest_usd(name)
     if cheapest is None:
         return None
     usd, set_code, number, finish = cheapest
-    rate, rate_date = usd_to_aud()
+    code = code or currency.code()
+    rate, rate_date = rate if rate is not None else usd_to_aud(code)
     return Price(resolve(name), round(usd * rate, 2), usd, rate, rate_date,
-                 price_date(), set_code, number, finish, currency.code())
+                 price_date(), set_code, number, finish, code)
 
 
 def printing_usd(set_code, collector_number, finish="nonfoil"):
@@ -827,17 +832,19 @@ def printing_usd(set_code, collector_number, finish="nonfoil"):
     return p.get(key) if p else None
 
 
-def price_aud_printing(set_code, collector_number, finish="nonfoil", rate=None):
-    """AUD estimate (a Price) for this exact printing and finish (see printing_usd), or None without
-    a USD price. rate: (AUD per USD, its date), when the caller already has it (usd_to_aud
-    otherwise, which raises RuntimeError with no rate)."""
+def price_aud_printing(set_code, collector_number, finish="nonfoil", rate=None, code=None):
+    """The estimate (a Price) for this exact printing and finish (see printing_usd), or None without
+    a USD price. rate: (currency per USD, its date), when the caller already has it (usd_to_aud
+    otherwise, which raises RuntimeError with no rate); code: the currency that rate is in (read
+    once here when not given, and the rate fetched for it)."""
     usd = printing_usd(set_code, collector_number, finish)
     if usd is None:
         return None
-    rate, rate_date = rate if rate is not None else usd_to_aud()
+    code = code or currency.code()
+    rate, rate_date = rate if rate is not None else usd_to_aud(code)
     printed = printing_card(set_code, collector_number)
     return Price(printed["name"] if printed else "", round(usd * rate, 2), usd, rate, rate_date,
-                 price_date(), set_code.lower(), str(collector_number), finish or "nonfoil", currency.code())
+                 price_date(), set_code.lower(), str(collector_number), finish or "nonfoil", code)
 
 
 # --- Images -----------------------------------------------------------------

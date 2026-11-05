@@ -8,7 +8,7 @@ and a new deck's Start from workflows live in editor-import.js. It uses editor.j
 editor-screen.js's changed(), editor-details.js's setField() and drawDetails(), and editor-lines.js's
 section titles, steppers, moving and removing a line.
 
-The search (GET /api/deck/find) shows a dozen cards with a line of rules text, the estimate (aud(), E11-S53) and how
+The search (GET /api/deck/find) shows a dozen cards with a line of rules text, the estimate (in the answer's currency, E11-S53) and how
 many are owned: the name typed first, then the deck's space's cards, then whole-word matches. A click or
 Enter on a result adds one copy and the result says "Added ✓ (now 3)"; Shift adds four, and a count typed
 first ("4 bolt") adds that many. The results stay, with the text selected, so the next name can be typed
@@ -321,6 +321,8 @@ async function lookUp(ac, q, more = false) {
     const answer = await api(findUrl(ac, q));
     if (!editorSearchCurrent(ac) || seq !== ac.seq || typed() !== q || scope !== editorSearchScope(ac)) return;
     const found = answer.cards || [];
+    const code = ansCurrency(answer);       // each result's estimate is in its answer's currency (E11-S53)
+    for (const c of found) c.aud_currency = code;
     // Few or no names have the text in them: the server's close spellings ("did_you_mean") come after
     // them, as cards to pick. Without any, what "Paste a list" makes of the text, which also covers a
     // server that doesn't send them.
@@ -481,7 +483,7 @@ function searchResultSide(c, words = null) {
   if (words) return [el("span", { class: "ac-added", text: words })];
   if (c.edhrec) return editorEdhrecSide(c);
   if (c.wish) return editorWishlistSide(c);
-  return [c.aud != null ? el("span", { class: "ac-price", text: aud(c.aud) }) : null, ownedBadge(c)];
+  return [c.aud != null ? el("span", { class: "ac-price", text: moneyIn(c.aud, c.aud_currency || "AUD") }) : null, ownedBadge(c)];
 }
 
 function drawOptions(ac) {
@@ -825,7 +827,7 @@ if (window.visualViewport) {
 
 /** The card data of a search answer, as a decklist line has it. */
 function cardData(c) {
-  const { default: _, have: __, aud: ___, free: ____, edhrec: _____, wish: ______, ...card } = c;
+  const { default: _, have: __, aud: ___, free: ____, edhrec: _____, wish: ______, aud_currency: _______, ...card } = c;
   return card;
 }
 

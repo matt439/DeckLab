@@ -116,6 +116,14 @@ function pricingInput(ctx) {
     shops: ctx.useConfig.checked ? null : ctx.shops.filter(item => item.box.checked).map(item => item.key)};
 }
 
+/** A /api/status read that starts after the save: one already in flight began before it and would answer with
+ * the old pricing, so wait for it to finish, then ask again. Amounts follow their own answers (ansMoney) anyway. */
+async function freshPricingStatus() {
+  if (typeof showFooter !== "function") return;
+  try { if (typeof versionRequest !== "undefined" && versionRequest) await versionRequest; } catch (_) { /* showFooter says */ }
+  return showFooter();
+}
+
 async function savePricing(ctx) {
   if (!ctx.here() || ctx.busy || ctx.stale) return;
   const chosen = pricingInput(ctx);
@@ -127,7 +135,7 @@ async function savePricing(ctx) {
     if (!ctx.here()) return;
     const next = drawPricingSettings(ctx.host, data, ctx.token, ctx.profile);
     if (next) next.status.textContent = "Price settings saved.";
-    if (typeof showFooter === "function") showFooter();      // state.status's pricing: aud() and About follow at once
+    freshPricingStatus();      // state.status's pricing: About and the sign of a page with no prices follow at once
   } catch (error) {
     if (!ctx.here()) return;
     ctx.stale = error.status === 409;

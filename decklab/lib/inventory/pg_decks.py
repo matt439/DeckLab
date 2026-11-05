@@ -155,7 +155,7 @@ def last(c, deck_id):
 # the owned-vs-needed table's (and any table's) rows, its price stamp, the substitute list's availability note,
 # and the Cover card, Sleeves and Deck box header lines (a picture or a kit chosen isn't an edit of the deck).
 NOT_EDITS_RE = (r"(^|\n)(\|[^\n]*|- \*\*(Cover card|Sleeves|Deck box):\*\*[^\n]*"
-                r"|[^\n]*1 USD = [0-9.]+ AUD \(ECB rate of[^\n]*"
+                r"|[^\n]*1 USD = [0-9.]+ [A-Z]{3} \(ECB rate of[^\n]*"     # any currency's (E11-S53)
                 r"|<!-- decklab:substitute-availability -->[^\n]*)(?=\n|$)")
 
 

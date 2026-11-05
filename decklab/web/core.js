@@ -140,6 +140,16 @@ function moneyIn(x, code) {
   return `${sign}${x.toFixed(2)}`;
 }
 
+/** An API answer's amount in that answer's own currency (ansCurrency), never the status's: a page that keeps an
+ * answer across a Settings change, or reads a new answer before its status poll, still labels it rightly. */
+function ansMoney(x, a) { return moneyIn(x, ansCurrency(a)); }
+
+/** The sign of an answer's currency, for headings: "A$", the configured sign when it's that one ("€"), else "SEK". */
+function ansSign(a) {
+  const code = ansCurrency(a);
+  return code === "AUD" ? "A$" : code === priceCurrency() ? priceSymbol().trim() : code;
+}
+
 /** "Estimates in AUD: Scryfall's cheapest non-foil printing at 1 USD = 1.4237 AUD (ECB rate of …), prices pulled …."
  * in the answer's currency (ansCurrency). */
 function estimateRateWords(a) {

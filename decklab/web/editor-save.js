@@ -226,7 +226,7 @@ function drawCheck() {
 function checkSummary(o, blocks, warnings) {
   const t = o && o.totals;
   const bits = [];
-  if (t && t.missing) bits.push(`${t.missing} missing` + (o.price_error || t.aud_missing == null ? "" : ` · ~${aud(t.aud_missing)}`));
+  if (t && t.missing) bits.push(`${t.missing} missing` + (o.price_error || t.aud_missing == null ? "" : ` · ~${ansMoney(t.aud_missing, o)}`));
   if (blocks) bits.push(plural(blocks, "problem"));
   if (warnings) bits.push(plural(warnings, "warning"));
   if (!bits.length) {
@@ -401,13 +401,13 @@ function ownedPreview(o, version = "target") {
     el("h3", { text: "Owned vs needed" }),
     el("p", {}, t.missing
       ? [status("warn", `${t.missing} missing`), ` ${plural(t.missing, "copy", "copies")} still to get` +
-        (o.price_error || t.aud_missing == null ? "." : `, about ${aud(t.aud_missing)} at the cheapest printings (estimate).`)]
+        (o.price_error || t.aud_missing == null ? "." : `, about ${ansMoney(t.aud_missing, o)} at the cheapest printings (estimate).`)]
       : [status("good", "Covered"), " Every card is available now or on the way after allowing for other built decks."],
     coming ? ` ${plural(coming, "card")} counted as on the way.` : ""),
     missing.length ? el("details", { class: "more" }, el("summary", { text: `What's missing (${missing.length})` }),
       el("ul", { class: "sources-list" }, missing.map((r) => {
         // deck-prices.js's, when the page loaded it (a page or test may load this file without it)
-        const listed = !o.price_error && typeof listedPriceWords === "function" ? listedPriceWords(r) : null;
+        const listed = !o.price_error && typeof listedPriceWords === "function" ? listedPriceWords(r, o) : null;
         return el("li", { text: `${r.missing} ${r.name}` +
           (r.aud_each != null ? ` (about ${moneyIn(r.aud_each, ansCurrency(o))} each)` : "") + (listed ? `; ${listed}` : "") });
       }))) : null,
@@ -417,10 +417,7 @@ function ownedPreview(o, version = "target") {
 
 /** The table note's currency (E11-S53): the answer's, or with no prices the configured one; AUD reads as before. */
 function editorPriceCode(o) { return typeof o.currency === "string" ? o.currency : priceCurrency(); }
-function editorPriceSign(o) {
-  const code = ansCurrency(o);
-  return code === "AUD" ? "A$" : code === priceCurrency() ? priceSymbol().trim() : code;
-}
+function editorPriceSign(o) { return ansSign(o); }
 
 
 // ------------------------------------------------------------------- saving

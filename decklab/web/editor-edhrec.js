@@ -108,14 +108,14 @@ function editorEdhrecInDraft(ed) {
 }
 
 /** One idea as a search result: its card's data, no default printing (Save gives it one), and the idea. */
-function editorEdhrecItem(row, marks) {
-  return { ...(row.card || { type_line: "" }), name: row.name, default: null, edhrec: { row, marks } };
+function editorEdhrecItem(row, marks, answer = null) {
+  return { ...(row.card || { type_line: "" }), name: row.name, default: null, edhrec: { row, marks, answer } };
 }
 
 /** A result's side: its share of EDHREC's decks, then (with marks) whether a copy is free, all in other
  * decks or to buy, and copies on the way. */
 function editorEdhrecSide(c) {
-  const { row, marks } = c.edhrec;
+  const { row, marks, answer } = c.edhrec;
   const out = [row.inclusion != null ? el("span", { class: "ac-price", text: `${row.inclusion}% of decks`,
     title: "The share of EDHREC's decks with this commander that play it" }) : null];
   if (marks) {
@@ -124,7 +124,7 @@ function editorEdhrecSide(c) {
       title: "Owned, but every copy is in another deck" }));
     else if (row.status === "in_deck") out.push(el("span", { class: "chip chip-plain", text: "In the saved deck" }));
     else if (row.status === "to_buy") out.push(el("span", { class: "chip chip-warn",
-      text: row.aud_each != null ? `To buy · ~${aud(row.aud_each)}` : "To buy · no price" }));
+      text: row.aud_each != null ? `To buy · ~${ansMoney(row.aud_each, answer)}` : "To buy · no price" }));
     if (row.on_the_way) out.push(el("span", { class: "chip chip-info", text: `${num(row.on_the_way)} on the way` }));
   }
   if (row.considering) out.push(el("span", { class: "chip chip-outline", text: "Considering" }));
@@ -210,7 +210,7 @@ async function editorEdhrecLookUp(ac, q, more = false) {
   // changes what fits, and an offset would then skip an idea or show one twice.
   const shown = new Set(more ? ac.items.map((c) => c.name) : []);
   const rest = fits.filter((row) => !shown.has(row.name));
-  const next = rest.slice(0, EDHREC_PAGE).map((row) => editorEdhrecItem(row, marks));
+  const next = rest.slice(0, EDHREC_PAGE).map((row) => editorEdhrecItem(row, marks, answer));
   if (!more) ac.page = 1;
   ac.items = more ? [...ac.items, ...next] : next;
   ac.guessFrom = -1;
