@@ -111,15 +111,39 @@ class KernelTests(unittest.TestCase):
         rows = self.store.later_rows("matt", self.source[0]["id"])
         rows[0] = copy.deepcopy(rows[0])
         rows[0]["key"]["position"] = 1
-        self.assertEqual(self.refused(later.Unsupported, later_rows=rows), later.AGAIN)
+        self.assertEqual(self.refused(later.Unsupported, later_rows=rows, latest_target=rows[0]["id"]), later.AGAIN)
+        # Evidence that disagrees with itself (a later row at the position latest_target doesn't
+        # name, or a latest_target no later row at the position explains) is a conflict.
+        self.refused(undo.UndoConflict, later_rows=rows)
         self.refused(undo.UndoConflict, latest_target=self.store.latest("matt"))
+        for value in (None, self.source[0]["id"] - 1):
+            with self.subTest(latest_target=value):
+                self.refused(undo.UndoConflict, latest_target=value)
 
-    def test_put_back_and_removed_again_at_its_old_index_conflicts_on_the_position(self):
+    def test_another_card_at_its_old_position_since_is_refused_for_good(self):
+        # Through the adapter's real evidence: latest_target is the later row at the position, so
+        # the answer is the fixed reason every time, never a reload-and-retry conflict.
         self.store.wishlist_add("matt", entry("Swamp"), MATT, "Later put at index 1", at=1)
         self.assertIn(("Swamp", 1), layout(self.store))
+        for _ in range(2):
+            with self.assertRaises(later.Unsupported) as caught:
+                self.store.wishlist_undo_review(self.change_id, "matt")
+            self.assertEqual(str(caught.exception), later.AGAIN)
         self.store.wishlist_remove("matt", "Swamp", MATT, "Later removal")
-        with self.assertRaises(undo.UndoConflict):
+        with self.assertRaises(later.Unsupported) as caught:
             self.store.wishlist_undo_review(self.change_id, "matt")
+        self.assertEqual(str(caught.exception), later.AGAIN)
+
+    def test_removed_last_entry_then_any_card_added_is_refused_for_good(self):
+        store = support.AuditWishlistMemory()
+        store.seed_wishlist("matt", [entry(name) for name in ("Opt", "Forest", "Island", "Plains")])
+        store.wishlist_remove("matt", "Plains", MATT, "Removed the last entry")
+        change = store.changes()[-1]["id"]
+        store.wishlist_add("matt", entry("Swamp"), MATT, "Appended into the freed position")
+        self.assertEqual(layout(store)[-1], ("Swamp", 3))
+        with self.assertRaises(later.Unsupported) as caught:
+            store.wishlist_undo_review(change, "matt")
+        self.assertEqual(str(caught.exception), later.AGAIN)
 
     def test_a_slot_the_ordinary_rules_no_longer_give_is_refused(self):
         self.store.wishlist_remove("matt", "Island", MATT, "Neighbour removed too")
@@ -203,9 +227,11 @@ class ApiTests(test_api.ApiTestCase):
         self.assertEqual(result["sha256"], undo.list_sha(self.store.raw_entries("matt")))
         self.assertEqual(result["revision"], str(self.store.latest("matt")))
         self.assertEqual(self.store.raw_source(self.change_id), source)
-        # Put back once: the source can't be put back again.
+        # Put back once: the source can't be put back again, for a fixed reason (its position is taken).
         after = self.unchanged()
-        self.refused(409, self.apply, preview["expect"])
+        self.assertEqual(self.refused(400, self.apply, preview["expect"]).message, f"{api.UNSUPPORTED} {later.AGAIN}")
+        self.assertEqual(api.wishlist_undo_view(id=self.change_id),
+                         {"available": False, "id": self.change_id, "reason": f"{api.UNSUPPORTED} {later.AGAIN}"})
         self.assertEqual(self.unchanged(), after)
 
     def test_owner_only_everyone_else_sees_a_missing_change(self):
@@ -245,6 +271,21 @@ class ApiTests(test_api.ApiTestCase):
         self.assertTrue(result["reason"].startswith(api.UNSUPPORTED))
         self.assertIn("old place", result["reason"])
         self.assertNotIn("café", json.dumps(result))
+
+    def test_removed_last_entry_then_any_card_added_answers_the_fixed_reason(self):
+        store = support.AuditWishlistMemory()
+        self.addCleanup(state.use(store))
+        store.seed_wishlist("matt", [entry(name) for name in ("Opt", "Forest", "Island", "Plains")])
+        store.wishlist_remove("matt", "Plains", MATT, "Removed the last entry")
+        change = store.changes()[-1]["id"]
+        store.wishlist_add("matt", entry("Swamp", NOTE), MATT, "Appended into the freed position")
+        before = copy.deepcopy((store._wishlists, store.changes()))
+        for _ in range(2):  # a reload gives the same lasting answer, not a 409 loop
+            result = api.wishlist_undo_view(id=change)
+            self.assertEqual(result, {"available": False, "id": change, "reason": f"{api.UNSUPPORTED} {later.AGAIN}"})
+            self.assertNotIn("café", json.dumps(result))
+        self.assertEqual(self.refused(400, self.apply, "a" * 64, change).message, f"{api.UNSUPPORTED} {later.AGAIN}")
+        self.assertEqual(copy.deepcopy((store._wishlists, store.changes())), before)
 
     def test_projection_accepts_later_only_on_a_restore_within_its_bound(self):
         plan = self.store.wishlist_undo_review(self.change_id, "matt")

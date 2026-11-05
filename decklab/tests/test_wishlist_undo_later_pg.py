@@ -72,9 +72,27 @@ class WishlistUndoLaterPgTests(db_support.DbTestCase):
         self.assertGreater(rows[0][0], before_latest)
         with self.connect("ro") as connection:
             self.assertEqual(result["sha256"], undo.list_sha(adapter.entries(connection.cursor(), "matt")))
-        # Its old position has been written since, so the same source can't be put back twice.
-        with self.assertRaises(undo.UndoConflict):
+        # Its old position has been written since, so the same source can't be put back twice:
+        # a lasting fixed reason, not a reload-and-retry conflict.
+        with self.assertRaises(later.Unsupported) as caught:
             self.store.wishlist_undo_review(source, "matt")
+        self.assertEqual(str(caught.exception), later.AGAIN)
+
+    def test_removed_last_entry_then_any_card_added_is_refused_for_good(self):
+        for name in ("Opt", "Forest", "Island", "Plains"):
+            self.store.wishlist_add("matt", entry(name), MATT, "Fixture entry")
+        self.store.wishlist_remove("matt", "Plains", MATT, "Removed the last entry")
+        source = self.last_change()
+        self.store.wishlist_add("matt", entry("Swamp", NOTE), MATT, "Appended into the freed position")
+        self.assertEqual(self.layout()[-1], ("Swamp", 3))
+        before, last = self.layout(), self.last_change()
+        for _ in range(2):
+            with self.assertRaises(later.Unsupported) as caught:
+                self.store.wishlist_undo_review(source, "matt")
+            self.assertEqual(str(caught.exception), later.AGAIN)
+        with self.assertRaises(later.Unsupported):
+            self.store.wishlist_undo_apply(source, "matt", "a" * 64, WEB, "Undo wishlist change")
+        self.assertEqual((self.layout(), self.last_change()), (before, last))
 
     def test_card_removed_again_since_is_refused_and_writes_nothing(self):
         source = self.remove_forest()

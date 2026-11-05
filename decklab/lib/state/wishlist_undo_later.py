@@ -50,7 +50,7 @@ def review(change_id, pid, source_rows, later_rows, raw_entries, latest_target, 
     restored = undo._entry(old, pid)
     if row.get("key") != {"profile_id": pid, "position": old["position"]}:
         raise undo.UndoUnsupported("Only the printing preference, notes and source on the same wishlist entry can be undone here.")
-    if latest_target != row["id"] or not undo._id(latest_owner) or latest_owner <= row["id"]:
+    if not undo._id(latest_target) or latest_target < row["id"] or not undo._id(latest_owner) or latest_owner <= row["id"]:
         raise undo.UndoConflict()
     if not isinstance(later_rows, list) or not later_rows or not all(_later(item, pid) for item in later_rows):
         raise Unsupported("The later wishlist changes cannot be checked.")
@@ -59,11 +59,17 @@ def review(change_id, pid, source_rows, later_rows, raw_entries, latest_target, 
     ids = [item["id"] for item in later_rows]
     if ids != sorted(set(ids)) or ids[0] <= row["id"] or ids[-1] != latest_owner:
         raise Unsupported("The later wishlist changes cannot be checked.")
+    # The later rows are read before the position fence: a later row at the old position is the
+    # very row latest_target points at, a lasting reason (AGAIN), not a change since the review.
+    at_position = [item["id"] for item in later_rows
+                   if any(item[side]["position"] == old["position"] for side in SIDES if item.get(side) is not None)]
+    if latest_target != (at_position[-1] if at_position else row["id"]):
+        raise undo.UndoConflict()  # the evidence disagrees with itself
+    if at_position:
+        raise Unsupported(AGAIN)
     name = restored["name"].casefold()
     for item in later_rows:
-        sides = [item[side] for side in SIDES if item.get(side) is not None]
-        if any(side["position"] == old["position"] for side in sides) \
-                or any(side["name"].casefold() == name for side in sides[1:]):
+        if any(item[side]["name"].casefold() == name for side in ("before", "after") if item.get(side) is not None):
             raise Unsupported(AGAIN)
     undo._layout(raw_entries, pid)
     current = [undo._entry(item, pid) for item in raw_entries]
