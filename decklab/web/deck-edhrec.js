@@ -76,7 +76,7 @@ async function loadEdhrec(ctx) {
   clear(ctx.area);
   clear(ctx.message).append(loadingBox("Asking EDHREC…"));
   try {
-    const address = ctx.lead ? `commander=${encodeURIComponent(ctx.lead.commander)}&space=${encodeURIComponent(ctx.lead.space)}`
+    const address = ctx.lead ? `commander=${encodeURIComponent(ctx.lead.commander)}${ctx.lead.commander2 ? `&commander2=${encodeURIComponent(ctx.lead.commander2)}` : ""}&space=${encodeURIComponent(ctx.lead.space)}`
       : `id=${encodeURIComponent(ctx.id)}`;
     const answer = await api(`/api/deck/edhrec?${address}` + (ctx.page ? `&page=${encodeURIComponent(ctx.page)}` : ""));
     if (seq !== ctx.seq || ctx.sheet.closed) return;

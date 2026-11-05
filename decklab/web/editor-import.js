@@ -167,32 +167,54 @@ function afterBulkChange(sections) {
  * section as one change (one Undo step, kept in the draft), titled with its name when the title is empty.
  * A draft of a new deck already holding cards is kept as it is, and says why the commander wasn't added.
  * The address loses commander= either way, so a reload brings back the draft and never adds it twice. */
-async function startFromCommander(name) {
+async function startFromCommander(name, partner = null) {
   const ed = editor;
+  const names = partner && partner !== name ? [name, partner] : [name];
   const params = new URLSearchParams({ kind: "commander" });
   if (ed.space && ed.space !== HOME_SPACE) params.set("space", ed.space);
   if (location.hash.startsWith("#/new?")) history.replaceState(history.state, "", `#/new?${params}`);
   const lines = Object.values(ed.lists).reduce((n, list) => n + list.length, 0);
   if (lines) {
-    const already = (ed.lists.Commander || []).some((l) => l.name === name);
-    if (!already) toast(`Your unsaved new deck is still here, so ${name} wasn't added. Save or discard it, then start from the commander again.`);
+    const already = names.every((n) => (ed.lists.Commander || []).some((l) => l.name === n));
+    if (!already) toast(`Your unsaved new deck is still here, so ${names.join(" and ")} ${names.length > 1 ? "weren't" : "wasn't"} added. Save or discard it, then start from the commander again.`);
     return false;
   }
-  let found;
-  try {
-    found = await api(`/api/cards/search?q=${encodeURIComponent(name)}&limit=20&detail=1`);
-  } catch (e) {
-    if (!(e instanceof ApiError)) throw e;
-    if (editor === ed) toast(`${name} couldn't be looked up: ${e.message}`);
-    return false;
+  const found = [];
+  for (const n of names) {
+    let answer;
+    try {
+      answer = await api(`/api/cards/search?q=${encodeURIComponent(n)}&limit=20&detail=1`);
+    } catch (e) {
+      if (!(e instanceof ApiError)) throw e;
+      if (editor === ed) toast(`${n} couldn't be looked up: ${e.message}`);
+      return false;
+    }
+    if (editor !== ed || ed.mode !== "new") return false;
+    const card = ((answer && answer.cards) || []).find((c) => c.name === n);
+    if (!card) { toast(`${n} isn't a card Deck Lab knows. Add the commander with the search.`); return false; }
+    found.push(card);
   }
-  const card = ((found && found.cards) || []).find((c) => c.name === name);
-  if (editor !== ed || ed.mode !== "new") return false;
-  if (!card) { toast(`${name} isn't a card Deck Lab knows. Add the commander with the search.`); return false; }
   if (ed.fields.kind !== "commander") setField("kind", "commander", false);
-  if (!norm("title", ed.fields.title)) ed.fields.title = name.split(" // ")[0];
-  ed.addSection = "Commander";
-  addCard(card, "Commander");
+  if (!norm("title", ed.fields.title)) {
+    const both = names.map((n) => n.split(" // ")[0].split(",")[0]).join(" and ");
+    ed.fields.title = names.length > 1 && both.length <= 100 ? both : name.split(" // ")[0];
+  }
+  if (found.length === 1) {
+    ed.addSection = "Commander";
+    addCard(found[0], "Commander");
+  } else {
+    // A pair (E9-S28's third slice): both commanders go in as one change, one Undo step.
+    const lines = ed.lists.Commander || (ed.lists.Commander = []);
+    for (const c of found) {
+      const d = c.default;
+      placeLine(lines, newLine({ qty: 1, name: c.name, set: d && d.set, number: d && d.number,
+        finish: d ? d.finish : "nonfoil", card: cardData(c) }));
+    }
+    ed.addSection = "Deck";
+    syncSections();
+    changed();
+    toast(`${names.join(" and ")} are the commanders. New cards go to ${sectionTitle("Deck")} now.`);
+  }
   drawDetails();
   return true;
 }

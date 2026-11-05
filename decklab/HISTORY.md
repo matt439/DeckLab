@@ -2,6 +2,47 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Commanders we could build: pairs and held commanders (2026-11-05; E9-S28 third slice)
+
+- **Pairs counted together:** `lib/decks/commander_pool.py`'s `pairs` offers two free cards that may be your two commanders together as one row, counted over the union of their colour identities and ranked with the single candidates by the same coverage figure. The rules are the Commander checks' own (`lib/stats/commander.py`'s `_pairing`, wrapped in `lib/api/commander_candidates.py`'s `_Rules.pair_rule` so each half must be able to lead, or be the Background a "Choose a Background" commander takes): partner, partner with, partner—[text] such as Friends forever, Choose a Background and Doctor's companion. A Background is never a row alone.
+- **Bounded:** at most `MAX_PAIRABLE` (200) cards are tried as halves (most-printed first) and the best `MAX_PAIRS` (100) pairs kept. The answer's `pairs` (`found`, `left_out`, `untried`) and the sheet's line say what was left out. Free cards are grouped by colour identity (at most 32 groups), so each pair's counts are a sum over groups, not a pass over the pool.
+- **Opening a pair:** `GET /api/commanders/candidate?name=&partner=&space=` (the same reading rule, 403 first) gives `names`, `pairing` and the free cards by role over both colours. Two cards that can't be commanders together answer 404. The sheet shows both cards with their free copies. **New deck from it** goes to `#/new?kind=commander&commander=&partner=`, and `editor-import.js`'s `startFromCommander(name, partner)` puts both in the Commander section as one change (one Undo step), titled after both. A draft already holding cards is still kept. **See EDHREC ideas…** sends `commander2` (`deck-edhrec.js`), which `/api/deck/edhrec` already took.
+- **Held commanders:** `commander_pool.held` makes a row for each card that may lead, is owned or on the way, and has no copy free, because built decks or intact products hold every copy. It's counted against the free pool only. These rows come back in their own `held` and `held_total` fields (at most 50) and are listed after the free ones under "Held by a deck", never mixed into the ranking. Each row's `held_by` names its decks as the Collection page names holders (`collection._holders` with `guard.deck_reader`): a deck the viewer may not see is "one of the home decks", and a product is named only to home's record readers. Opening a held row works too, with its `held_by`.
+- Tests: `test_commander_candidates_pairs.py` (new, 13 tests: real-rule pairs from invented cards' text, the union counts, the caps' figures, a pair needing both free, held rows and their naming, a hidden deck's words, a member's own holder and the 403s), `test_commander_candidates.py` (held rather than left out), `test_commander_candidates_ui.py` (pair rows, the caps' words, held rows after the free ones, the pair's New deck and EDHREC requests) and `test_commander_start_ui.py` (a pair goes in as one change). Fixtures only: no migration, server restart or database writes.
+
+## Settings says when a newer release is out (2026-11-05; E11-S49)
+
+- **Who asks:** only a release install (`build.is_release`: a `decklab/release.json` and no `.git`). A git checkout makes no request at all, so everything there behaves as before.
+- **The check** (`lib/release_check.py`): GitHub's `GET /repos/matt439/DeckLab/releases/latest` (published releases only: drafts and pre-releases aren't "latest"). It uses urllib with a 5-second timeout, a generic User-Agent and `Accept: application/vnd.github+json`, and reads the tag and the release page's address. It never downloads an asset. The answer goes in the gitignored `decklab/data/release-check.json`, so it asks at most once a day (a clock set back counts as due). It asks in one background thread, so no request waits on the network, and the page shows the new answer the next time Settings is opened. A failure keeps the last good answer and its date. That includes a broken answer, such as one cut off part way, which still counts as that day's attempt. No release yet (404) is an answer. Versions compare as semantic versions (a leading v and build metadata are ignored, and a pre-release comes before its release).
+- **Settings:** `GET /api/server/restart` (a named home admin's, as before) now also returns `release`. The About part's line says "Release 1.3.0 is out; this is 1.2.0. Nothing is downloaded: see release 1.3.0" (a link to its GitHub page), or "This is the newest release (checked DATE).", or that it couldn't check (with the last good check's date), or that it's checking. Members, other spaces' admins and git checkouts see no line.
+- **Setting:** `config.json`'s `"release_check": false` turns it off. `"release_check": "owner/repo"` asks another repository (a fork's releases). SELF-HOSTING.md's release paragraph says so.
+- Left for later (E11-S51): an update command for release installs.
+- Tests: `decklab/tests/test_release_check.py` (version order, a checkout asking nothing, turned off, at most once a day, a failure keeping the last good answer, a broken answer counting as a failed check, 404 and odd answers, another repository, one thread at a time; the network mocked throughout), `test_settings_restart_ui.py` (the line's wordings, its link and a checkout's hidden line) and `test_server_restart.py`.
+
+## A space's storage as a setting: inventory and proposal (2026-11-05; E8-S25 first slice)
+
+[decklab/design/storage-setting.md](design/storage-setting.md) lists, file by file, every place that assumes the household's 4-row storage box (about 2,400 cards) or its colour-and-type order:
+- the Card list's box count (`collection_locations.py`'s `CAPACITY`, `BOX_ROW`, `in_box` and `storage_box`, and `config.json`'s `storage_box_capacity`)
+- the pending-delivery scenario
+- the location suggestions, Row 1 to Row 4, which every space gets, a member's too
+- Build decks' Storage order (`packStorageGroup`)
+- Where these go and Receive delivery's "storage box" words
+- the docs, and the tests that pin each one
+
+It also lists the generic "storage" words that only mean loose cards, which need no setting.
+
+It proposes a per-space storage record. The record holds containers (name, kind box/binder/shelf/other, capacity, sections, an ordering rule from a fixed list) and a default container, and locations match a container by section.
+
+It would be kept in a new audited table, `space_storage` (migration 0022, saved whole with a revision as shop postage is). The proposal lists the places a new per-space table must join: the export's table lists, check, admission, departure, the space export, `STATE_TABLES` and `UNDO_MIGRATION`, and an Activity row rule of its own. Without that rule a member's save would show only to admins.
+
+It would be changed only by the space's own people, on the Collection page's More, Storage setup…, or with `storage show|set` on the PC. Home keeps today's box as a built-in default whenever it has no saved record, and saving an empty list opts out. Other spaces see plain wording.
+
+The proposal includes a seven-slice build order and nine questions for Matt. No code changed.
+
+## The More menus reviewed (2026-11-05; E11-S61)
+
+[decklab/design/more-menus-review.md](design/more-menus-review.md) lists every item in the top bar's More (and the phone's More sheet), the deck page's More and the pages' own More menus, at each width: the lab's top bar (from 1000 px, or from 600 px on a phone on its side), an iPad 11-inch upright and a phone. For each item it says what it opens and its other ways in, and recommends keep, move into plain sight or remove. In short: make Build decks a lab top-bar pill from 1000 px only (a phone on its side shares the lab's bar, so the pill needs a width rule too), add a Game log link to the deck Overview's Played at home panel, then take Build decks out of the Collection page's More, and keep the rest. Page visits weren't available off the server PC (and they record pages, not menu clicks), so the review rests on the code and gives the read-only query for the counts. Nothing on the page changed; the moves wait for Matt's decision.
+
 ## Forge results' styles in their own file (2026-11-05)
 
 The "Forge results" styles (.sim-num, .wr, .range-*, .fresh, .flag, .swap-*, the run activity and its details)

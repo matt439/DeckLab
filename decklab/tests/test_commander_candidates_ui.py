@@ -57,7 +57,7 @@ class CommanderCandidatesUiTests(unittest.TestCase):
           assert.equal(ctx.sheet.heading.textContent, "Kraum, Ludevic's Opus");
           const words = ctx.area.textContent;
           assert(words.includes('Targeted disruption') && words.includes('Not counted') && words.includes('Basics fill the rest'), words);
-          assert(words.includes('a second commander would widen its colours'), words);
+          assert(words.includes('its pairs with free cards are rows of their own'), words);
           assert(ctx.area.querySelectorAll('.ccand-short').length === 3);
           // Its free cards by name, asked once it's opened.
           same(asked, ['/api/commanders/candidates?', '/api/commanders/candidate?name=Kraum%2C+Ludevic%27s+Opus']);
@@ -96,4 +96,58 @@ class CommanderCandidatesUiTests(unittest.TestCase):
           await rankCandidates(ctx);
           assert(ctx.area.textContent.includes('Role tags are unavailable'), ctx.area.textContent);
           assert(ctx.area.textContent.includes('No card that may be a commander'), ctx.area.textContent);
+        """)
+
+
+PAIRS = """
+  const PAIR = lead("Kraum, Ludevic's Opus and Tymna the Weaver", ['W', 'U', 'B', 'R'], 34, ['Mass disruption'],
+    {kind: 'pair', names: ["Kraum, Ludevic's Opus", 'Tymna the Weaver'], pairing: 'partner',
+     faces: [{name: "Kraum, Ludevic's Opus", free: 1, card: null}, {name: 'Tymna the Weaver', free: 2, card: null}]});
+  const HELD = lead('Ghalta, Primal Hunger', ['G'], 30, [], {kind: 'held', free: 0,
+    held_by: [{id: 'commander/stompy', title: 'Ghalta Stompy', quantity: 1}, {id: null, title: 'one of the home decks', quantity: 1}]});
+  const WITH = {...RANKED, total: 3, candidates: [PAIR, ...RANKED.candidates], pairs: {found: 120, left_out: 20, untried: 4},
+    held: [HELD], held_total: 1};
+"""
+
+
+@unittest.skipUnless(NODE, "Node.js isn't installed")
+class CommanderPairsUiTests(unittest.TestCase):
+    """E9-S28's third slice: pair rows, the caps' words, and the held rows apart, naming their decks."""
+
+    def run_js(self, code):
+        CommanderCandidatesUiTests.run_js(self, PAIRS + code)
+
+    def test_a_pair_opens_with_both(self):
+        self.run_js("""
+          const cv = make();
+          const asked = [];
+          api = async (path) => { asked.push(path); return path.startsWith('/api/commanders/candidate?') ? CARDS : WITH; };
+          const ctx = openCommanderCandidates(cv); await flush();
+          const list = ctx.area.textContent;
+          assert(list.includes("Kraum, Ludevic's Opus and Tymna the Weaver") && list.includes('together by partner'), list);
+          assert(list.includes("20 more pairs of the 120 found aren't listed.") && list.includes("4 cards that may pair weren't tried"), list);
+          ctx.area.querySelector('.ccand-pair').querySelector('.pcov-pick').click(); await flush();
+          same(asked.slice(1), ["/api/commanders/candidate?name=Kraum%2C+Ludevic%27s+Opus&partner=Tymna+the+Weaver"]);
+          assert.equal(ctx.area.querySelector('.ccand-tile').children.length, 2);
+          const words = ctx.area.textContent;
+          assert(words.includes('Two commanders together (partner)') && words.includes('2 free'), words);
+          const link = ctx.area.querySelector('.ccand-actions').querySelector('a');
+          assert.equal(link.getAttribute('href'), "#/new?kind=commander&commander=Kraum%2C+Ludevic%27s+Opus&partner=Tymna+the+Weaver");
+          ctx.area.querySelector('.ccand-actions').querySelector('button').click(); await flush();
+          assert.equal(asked[2], "/api/deck/edhrec?commander=Kraum%2C%20Ludevic's%20Opus&commander2=Tymna%20the%20Weaver&space=home");
+        """)
+
+    def test_held_rows_come_after_naming_their_decks(self):
+        self.run_js("""
+          const cv = make();
+          api = async (path) => path.startsWith('/api/commanders/candidate?') ? CARDS : WITH;
+          const ctx = openCommanderCandidates(cv); await flush();
+          const list = ctx.area.textContent;
+          assert(list.indexOf('Held by a deck') > list.indexOf('Kraum, Ludevic'), list);
+          const held = ctx.area.querySelector('.ccand-held-list');
+          assert(held.textContent.includes('in Ghalta Stompy and one of the home decks'), held.textContent);
+          assert.equal(ctx.area.querySelectorAll('.ccand-held').length, 1);
+          held.querySelector('.pcov-pick').click(); await flush();
+          const words = ctx.area.textContent;
+          assert(words.includes('Every copy is in Ghalta Stompy and one of the home decks') && words.includes('None free'), words);
         """)

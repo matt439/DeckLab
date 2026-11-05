@@ -52,6 +52,26 @@ class CommanderStartTests(unittest.TestCase):
           assert(toasts.some((t) => t.includes("Nobody At All isn't a card Deck Lab knows")), toasts.join('|'));
         ''')
 
+    def test_a_pair_goes_in_together_as_one_change(self):
+        # E9-S28's third slice: #/new?kind=commander&commander=<one>&partner=<other>.
+        self.run_js(r'''
+          const tymnaCard = {name: 'Tymna the Weaver', mana_cost: '{1}{W}{B}', type_line: 'Legendary Creature — Human Cleric',
+            cmc: 3, color_identity: ['W', 'B'], img_small: null, default: {set: 'c16', number: '48', finish: 'nonfoil'}};
+          api = async (path) => { if (!path.startsWith('/api/cards/search')) return {}; searched.push(path);
+            return {cards: [path.includes('Tymna') ? tymnaCard : ghaltaCard]}; };
+          startEditor({mode: 'new', kind: 'commander', restoreDraft: false});
+          const ed = editor, before = ed.history.length;
+          assert.equal(await startFromCommander('Ghalta, Primal Hunger', 'Tymna the Weaver'), true);
+          assert.equal(searched.length, 2);
+          same(ed.lists.Commander.map((l) => l.name).sort(), ['Ghalta, Primal Hunger', 'Tymna the Weaver']);
+          assert.equal(ed.fields.title, 'Ghalta and Tymna the Weaver');
+          assert.equal(ed.addSection, 'Deck');
+          assert.equal(ed.history.length, before + 1);
+          // A draft already holding both is left as it is.
+          assert.equal(await startFromCommander('Ghalta, Primal Hunger', 'Tymna the Weaver'), false);
+          assert.equal(ed.lists.Commander.length, 2);
+        ''')
+
 
 if __name__ == '__main__':
     unittest.main()
