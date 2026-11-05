@@ -147,7 +147,11 @@ Why not the other places:
 - **`profile_setting`** is a profile's, private to that profile with no sharing. Home's storage is Matt's and User1's together, and a profile's settings are read only by that profile (E10-S38).
 - **`config.json`** (where `storage_box_capacity` lives now) is on the PC only: a member can't change it, it isn't backed up with the database, and it isn't per space.
 
-A new per-space table also has to join the per-space lists: the inventory export and its `LATER_INVENTORY_TABLES` (`decklab/db/export.py:64,87`), `db check`'s references (`check.py:444`), member admission (`profile_admission.py:110`), a member's departure (`space_apply.py:26-32`), the space export (`space_export.py:120`), and `UNDO_MIGRATION` in `decklab/tests/db_support.py`. While the migration isn't applied, every space reads as "no setting" (home keeps its built-in default), and a save is refused with the words E8-S22 uses for locations ("Deck Lab's database needs updating on the PC").
+A new per-space table also has to join the per-space lists:
+- the export's table list and its set of tables that may not be migrated yet (`decklab/db/export.py:57,95`, where `shop_postage` is; not `LATER_INVENTORY_TABLES`, which holds inventory tables such as `dice_counter`);
+- `db check`'s references (`check.py:444`), member admission (`profile_admission.py:110`), a member's departure (`space_apply.py:26-32`) and the space export (`space_export.py:120`);
+- the Activity page: a row rule of its own in `decklab/lib/api/activity.py` (and its line in the module's docstring table), and its group in `activity_headlines.py`'s table map. Without one, a table falls through to the "anything else: admins" rule (`activity.py:382-390`, `UNKNOWN_CHANGED`), so a member's own save would show to Matt as "changed", with a web change's message, and never to the member (see 2.4);
+- `STATE_TABLES` and `UNDO_MIGRATION` in `decklab/tests/db_support.py`. While the migration isn't applied, every space reads as "no setting" (home keeps its built-in default), and a save is refused with the words E8-S22 uses for locations ("Deck Lab's database needs updating on the PC").
 
 ### 2.3 Ordering rules
 
@@ -165,13 +169,16 @@ A rule may say which section each group goes in (`colour-type` with four rows: c
 
 - **Changes:** the space's own people, the same as its collection (home: Matt and User1; a member: only that member). No admin override (E10-S29). A new rule `storage.edit` in `decklab/lib/permissions.py`, equal to the collection's edit rule, checked on the server's write as every write is.
 - **Reads:** whoever may see that space's inventory (`permissions.sees_inventory`). When a space makes its collection Public, its storage setting follows it, read-only (Q7).
+- **Activity:** a save's row shows only to the space's own people (`scope_spaces`, as `collection_card`'s rows; no admin override), with a fixed summary, "Storage setup updated", never container names or sections; its message and reason follow the module's usual rules within that space. A test checks that an admin doesn't see a member space's storage row or its message.
 - **Command line:** `python -m decklab.db storage show [--space S] [--json]` and `storage set FILE [--space S] --expect N -m "..."` (a JSON file in the scratchpad, as `watchlist apply` takes a CSV), with `--actor` and `--dry-run` as the other writes. Every save is one audited change set. Member upkeep through Claude follows the existing relay rule: report only that it's done.
 
 ### 2.5 Defaults
 
 - **Home with no saved record:** a built-in default that is today's behaviour: one container `Storage box`, kind box, sections `Row 1` to `Row 4`, capacity `storage_box_capacity` from `config.json` or 2,400, order `colour-type`, and it's the default. Nothing on the page changes until someone saves.
-- **Any other space with no record** (a member's space, or a fresh self-hosted install's home: Q8): no containers. No count line, no Row suggestions (only locations already used), and the words "storage" and "loose cards" only, never "the storage box". Where these go keeps "To storage".
-- **A saved record always wins**, home's included. Saving an empty list of containers is allowed and means "no particular storage".
+- **Any other space with no record** (a member's space): no containers. No count line, no Row suggestions (only locations already used), and the words "storage" and "loose cards" only, never "the storage box". Where these go keeps "To storage".
+- **A saved record always wins**, home's included. Saving an empty list of containers is allowed and means "no particular storage": it's how a self-hosted install's home opts out of the built-in box (Q8).
+
+This is the one default rule: home's built-in box applies whenever home has no saved record, whatever `config.json` holds and whether or not any location is recorded. Slices 2 and 3 build it that way; Q8 asks only whether a fresh install should be told how to opt out.
 
 ### 2.6 Where it's edited
 
@@ -198,7 +205,7 @@ The sheet:
 Each slice keeps every space's page as it is now unless the space saves a setting.
 
 1. **This inventory and proposal** (2026-11-05). Matt answers part 4.
-2. **The record and its reader.** Migration `0022_space_storage.sql`, the state-store read and write with a revision and the audit trail, the per-space table lists of 2.2, `permissions.storage.edit`, `GET`/`PUT /api/storage?space=`, the `storage show|set` commands, home's built-in default, and the fixture tests (the in-memory store) plus `UNDO_MIGRATION`. No page change. Applying the migration live is Matt's, separately.
+2. **The record and its reader.** Migration `0022_space_storage.sql`, the state-store read and write with a revision and the audit trail, the per-space table lists of 2.2 (export, check, admission, departure, space export, Activity's row rule and headline group with its privacy test, `STATE_TABLES`), `permissions.storage.edit`, `GET`/`PUT /api/storage?space=`, the `storage show|set` commands, home's built-in default (2.5's rule), and the fixture tests (the in-memory store) plus `UNDO_MIGRATION`. No page change. Applying the migration live is Matt's, separately.
 3. **The count and the suggestions.** `collection_locations.py` reads the setting (containers, matching, default) instead of `BOX_ROW`, `CAPACITY` and `in_box`; the rows answers gain per-container counts beside `storage_box`; the Card list draws one line per container; the location suggestions come from the setting; the pending scenario routes by container. Home's default keeps every current test's numbers; a member's space loses the Row 1-4 suggestions (a fix, 1.3).
 4. **Storage setup… on the Collection page.** The sheet, its preview, its conflict and permission refusals, and its UI tests.
 5. **Build decks' order follows the rule.** `packStorageGroup` becomes the `colour-type` rule among the others; the toggle's label follows the setting.
@@ -214,5 +221,5 @@ Each slice keeps every space's page as it is now unless the space saves a settin
 5. **Unsleeved.** Pages say loose cards are "unsleeved". Should a container say whether its cards are sleeved (a binder, a sleeved shelf), so Put back and Where these go stop saying "unsleeved" there?
 6. **`storage_box_capacity` in `config.json`.** Keep it as the seed for home's built-in default until the first save, then ignore it (proposed), or retire it now?
 7. **Public.** When a space makes its collection Public, should its storage setting be readable too (proposed), or always private?
-8. **A self-hosted install's home.** Should a new install's home start with today's box (as the household's does), or with no containers and plain words, as a member's space does? Proposed: no containers, with the household's home given its built-in default only while `config.json` has `storage_box_capacity` or home has recorded `Row N` locations, so the household sees no change.
+8. **A self-hosted install's home.** Under 2.5 a new install's home starts with today's box, as the household's does, and opts out by saving an empty list of containers. Is that right, or should a new install start with no containers? Choosing no containers would need a signal telling the household's home apart, and neither candidate is reliable: `storage_box_capacity` is optional (2,400 when it's missing, and `config.example.json` doesn't have it), and a blank location already counts as in the box, so the household may have no `Row N` locations at all. The household would then lose its "Storage box: about N of 2,400" line, and `StorageBoxTests` would break. Proposed: keep 2.5's rule, and say in the README how to opt out.
 9. **Containers as accessories?** A storage box is a physical thing like a deck box. Should a container be able to point to an accessory row (a `deck_box` with a capacity), or stay a separate list (proposed: separate, since accessories are home's only and a member's space has none)?
