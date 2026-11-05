@@ -839,14 +839,14 @@ async function vtOpenTestSheet() {
   const named = (value) => value !== "field" && value !== VT_POPULAR;
   function drawAgainst() {
     const choose = (value) => () => { pick.against = value; select.disabled = !named(value); refresh(); };
-    clear(againstHost).append(
+    add(clear(againstHost), [
       radio("vt-against", "field", field.ok ? `The field (${plural(field.size, "deck")})` : "The field (not available yet)",
         pick.against === "field", choose("field")),
       popular.ok ? radio("vt-against", VT_POPULAR, `Popular decks (${plural(popular.size, "deck")}, a sample)`,
         pick.against === VT_POPULAR, choose(VT_POPULAR)) : null,
       others.length ? radio("vt-against", "deck", "One deck:", named(pick.against),
         () => { pick.against = select.value; select.disabled = false; refresh(); }) : null,
-      others.length ? select : null);
+      others.length ? select : null]);
     select.disabled = !named(pick.against);
     const fieldInput = againstHost.querySelector('input[value="field"]');
     if (fieldInput && !field.ok) fieldInput.disabled = true;
