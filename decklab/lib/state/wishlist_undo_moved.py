@@ -20,6 +20,11 @@ MAX_MOVED = 50
 KEY = ("profile_id", "position")
 
 
+class Unsupported(undo.UndoUnsupported):
+    """A shape this module can't undo. Its message is a fixed sentence (a count at most, never a
+    note), so the API passes it on after the general one."""
+
+
 def _own(row, pid):
     """Whether one raw audit row belongs wholly to pid's wishlist (privacy, before any value)."""
     if not isinstance(row, dict) or row.get("table") != "wishlist_entry" or row.get("op") not in ("UPDATE", "INSERT"):
@@ -40,10 +45,10 @@ def source_record(source_rows, pid, total=None):
     if total is not None and (type(total) is not int or total < len(source_rows)):
         raise undo.UndoMissing()
     if len(source_rows) > MAX_MOVED + 1 or (total or 0) > MAX_MOVED + 1:
-        raise undo.UndoUnsupported(f"Undo can put back at most {MAX_MOVED} moved wishlist entries in one change.")
+        raise Unsupported(f"Undo can put back at most {MAX_MOVED} moved wishlist entries in one change.")
     inserts = [row for row in source_rows if row["op"] == "INSERT"]
     if len(inserts) != 1 or source_rows[-1] is not inserts[0]:
-        raise undo.UndoUnsupported("Only one added wishlist entry and the entries it moved can be undone here.")
+        raise Unsupported("Only one added wishlist entry and the entries it moved can be undone here.")
     return inserts[0], source_rows[:-1]
 
 
@@ -59,18 +64,18 @@ def review(change_id, pid, source_rows, raw_entries, latest_owner, total=None):
     inserted, moved = source_record(source_rows, pid, total)
     ids = [row.get("id") for row in source_rows]
     if not all(undo._id(value) for value in ids) or ids != sorted(set(ids)):
-        raise undo.UndoUnsupported("The original wishlist audit identity cannot be checked.")
+        raise Unsupported("The original wishlist audit identity cannot be checked.")
     new = inserted["after"]
     current = undo._entry(new, pid)
     if not _key(inserted, new):
-        raise undo.UndoUnsupported("The recorded wishlist row cannot be restored exactly.")
+        raise Unsupported("The recorded wishlist row cannot be restored exactly.")
     moves = sorted(moved, key=lambda row: row["before"].get("position") if isinstance(row["before"].get("position"), int) else -1)
     for index, row in enumerate(moves):
         old, after = row["before"], row["after"]
         undo._entry(old, pid), undo._entry(after, pid)
         if not _key(row, after) or any(old[field] != after[field] for field in undo.RAW_FIELDS - {"position"}) \
                 or old["position"] != new["position"] + index or after["position"] != old["position"] + 1:
-            raise undo.UndoUnsupported("Only entries moved one place along to make room for the addition can be put back here.")
+            raise Unsupported("Only entries moved one place along to make room for the addition can be put back here.")
     if latest_owner != ids[-1] or not undo._id(latest_owner):
         raise undo.UndoConflict()
     undo._layout(raw_entries, pid)

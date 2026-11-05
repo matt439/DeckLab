@@ -212,9 +212,12 @@ class ApiTests(test_api.ApiTestCase):
         with self.store.batch(actor, "Two additions"):
             self.store.wishlist_add("matt", entry("Plains", NOTE), actor, "x")
             self.store.wishlist_add("matt", entry("Swamp", NOTE), actor, "x")
-        result = api.wishlist_undo_view(id=self.store.changes()[-1]["id"])
-        self.assertEqual(result, {"available": False, "id": self.store.changes()[-1]["id"], "reason": api.UNSUPPORTED})
+        change = self.store.changes()[-1]["id"]
+        result = api.wishlist_undo_view(id=change)
+        reason = f"{api.UNSUPPORTED} Only one added wishlist entry and the entries it moved can be undone here."
+        self.assertEqual(result, {"available": False, "id": change, "reason": reason})
         self.assertNotIn("café", json.dumps(result))
+        self.assertEqual(self.refused(400, self.apply, "a" * 64, change).message, reason)
 
     def test_activity_offers_review_only_to_the_owner_of_a_whole_shown_change(self):
         change = {"id": self.change_id, "rows": self.store.raw_source(self.change_id), "total": 3}

@@ -61,6 +61,8 @@ def _call(method, *args):
         raise ApiError(409, CHANGED) from None
     except state.Unavailable:
         raise ApiError(503, DATABASE_DOWN, reason="database") from None
+    except moved.Unsupported as error:  # a fixed sentence saying why, counts at most
+        raise ApiError(400, f"{UNSUPPORTED} {error}") from None
     except state.Invalid:
         raise ApiError(400, UNSUPPORTED) from None
 
@@ -112,7 +114,7 @@ def wishlist_undo_view(id=None):
         return _project(_call("wishlist_undo_review", change_id, pid), change_id, pid)
     except ApiError as error:
         if error.status == 400:
-            return {"available": False, "id": change_id, "reason": UNSUPPORTED}
+            return {"available": False, "id": change_id, "reason": error.message}
         raise
 
 
