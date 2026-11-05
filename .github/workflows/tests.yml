@@ -16,7 +16,9 @@
 name: tests
 
 on:
-  pull_request:
+  pull_request:               # into main only; edited, so a pull request retargeted to main runs again
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
   schedule:

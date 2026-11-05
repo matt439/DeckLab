@@ -6,7 +6,9 @@ name: lint
 on:
   push:
     branches: [main]
-  pull_request:
+  pull_request:               # into main only; edited, so a pull request retargeted to main runs again
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
 
 jobs:
   ruff:

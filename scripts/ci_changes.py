@@ -5,6 +5,9 @@ A push that merges a pull request skips the suite when the pull request's own ru
 same files: main hadn't moved past the branch (so that run tested exactly the merged files) and the
 merge changed nothing else. Any doubt runs it.
 Missing history, empty/unknown comparisons, scheduled and manual runs use the full suite.
+A pull request into any branch but the default one never skips it (its pass would otherwise count
+once the pull request is retargeted to main), and a push skips only for a pull request into main
+whose run really ran the suite, not one that skipped it.
 """
 import json
 import os
@@ -35,6 +38,13 @@ def is_documentation(name):
         path.parent in {PurePosixPath("."), PurePosixPath("decklab")}
         or name.startswith(DOC_DIRECTORIES)
     )
+
+
+def default_branch(event):
+    name = event["repository"]["default_branch"]
+    if not isinstance(name, str) or not name:
+        raise ValueError("Missing default branch")
+    return name
 
 
 def changed_paths(event_name, event):
@@ -80,6 +90,9 @@ def tested_pull_request(event, api):
               if pull.get("merged_at") and pull.get("merge_commit_sha") == after]
     if len(merged) != 1:
         return None
+    main = default_branch(event)
+    if merged[0]["base"]["ref"] != main:
+        return None
     number, head = merged[0]["number"], merged[0]["head"]["sha"]
     if not isinstance(head, str) or not re.fullmatch(r"[0-9a-f]{40}", head):
         return None
@@ -92,15 +105,33 @@ def tested_pull_request(event, api):
         return None
     query = urllib.parse.urlencode({"head_sha": head, "event": "pull_request", "status": "success", "per_page": 100})
     runs = api(f"/actions/runs?{query}").get("workflow_runs", [])
-    if any(run.get("path") == TESTS_WORKFLOW and run.get("head_sha") == head
-           and run.get("conclusion") == "success" for run in runs):
-        return number
+    for run in runs:
+        if (run.get("path") == TESTS_WORKFLOW and run.get("head_sha") == head
+                and run.get("conclusion") == "success"
+                and any(pull.get("number") == number and pull.get("base", {}).get("ref") == main
+                        for pull in run.get("pull_requests") or [])
+                and suite_ran(run, api)):
+            return number
     return None
+
+
+def suite_ran(run, api):
+    """Whether a passing run really ran the suite: every job passed and none was skipped."""
+    jobs = api(f"/actions/runs/{int(run['id'])}/jobs?per_page=100").get("jobs", [])
+    return (any("shard" in job.get("name", "") for job in jobs)
+            and all(job.get("conclusion") == "success" for job in jobs))
 
 
 def should_run_tests(event_name, event, api=github_api):
     if event_name not in {"push", "pull_request"}:
         return True, "This event always runs the full suite."
+    if event_name == "pull_request":
+        try:
+            into_main = event["pull_request"]["base"]["ref"] == default_branch(event)
+        except (KeyError, TypeError, ValueError):
+            into_main = False
+        if not into_main:
+            return True, "Not a pull request into the default branch (or unknown); running the full suite."
     try:
         paths = changed_paths(event_name, event)
     except (KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError):
