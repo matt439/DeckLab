@@ -30,6 +30,10 @@ def latest(cur, pid, position=None):
 
 def _plan(store, cur, change_id, pid):
     raw = source(cur, change_id)
+    if len(raw) > 1:
+        # An addition that moved other entries along (wishlist_undo_moved); its own whole-source scope.
+        from . import pg_wishlist_undo_moved
+        return pg_wishlist_undo_moved.plan(cur, change_id, pid)
     # Private scope is decided before even deriving a position from another row.
     row = undo.source_record(raw, pid)
     target = row["after"] if row["after"] is not None else row["before"]
@@ -72,6 +76,11 @@ def apply(store, change_id, pid, expect, actor, message):
                     raise undo.UndoUnsupported("Review this wishlist Undo before saving it.")
                 if expect != plan["expect"]:
                     raise undo.UndoConflict()
+                if "raw_moves" in plan:
+                    from . import pg_wishlist_undo_moved
+                    pg_wishlist_undo_moved.inverse(cur, pid, plan)
+                    saved = pg_wishlist_undo_moved.receipt(cur, plan, change_set, pid)
+                    return {"review": plan, **saved}
                 current, positions = store._entries(cur, pid)
                 if plan["action"] == "wishlist_add":
                     changed, _ = store._wishlist_add_at(cur, pid, current, positions, plan["restored"], at=plan["insert_at"])
