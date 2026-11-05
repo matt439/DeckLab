@@ -102,6 +102,24 @@ class SafariFixtureTests(unittest.TestCase):
                 self.assertIn(new.encode(), self.request(fixture, "/"))
         self.assertEqual(initial[0], initial[1])
 
+    def test_linked_temp_folder_still_serves_the_profile_page(self):
+        # macOS's temp folder is under /var, a link to /private/var. The profile
+        # config refuses linked paths, so the fixture must use the resolved folder.
+        import tempfile
+        with tempfile.TemporaryDirectory() as outer:
+            real = Path(outer, "real")
+            real.mkdir()
+            linked = Path(outer, "linked")
+            try:
+                linked.symlink_to(real, target_is_directory=True)
+            except (OSError, NotImplementedError) as error:
+                self.skipTest(f"this account can't create a directory symlink: {error}")
+            with mock.patch.object(tempfile, "tempdir", str(linked)):
+                with FixtureServer() as fixture:
+                    self.assertFalse(any(p.is_symlink() for p in (fixture.root, *fixture.root.parents)))
+                    page = self.request(fixture, f"/?profile={fixture.profile_id}")
+                    self.assertIn(fixture.web_revision.encode(), page)
+
     def test_precon_opt_in_uses_only_seeded_cache_and_keeps_download_and_forge_guards(self):
         from decklab.lib import precons
         with FixtureServer() as fixture:
