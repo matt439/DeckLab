@@ -60,6 +60,7 @@ from decklab.lib import decks
 
 from . import common, deck_identity, engine, field, lifecycle, lists, runner, saved, seqstats, views
 from . import pool as pools
+from . import variants_gauntlet as gauntlet_tests
 from .common import STOPS, ForgeError, forge_name
 
 NO_DECK_ORDER = ("Tests of changes need Deck Lab's deck-order patch, which doesn't fit this Forge version yet.")
@@ -207,7 +208,10 @@ def paired_key(base_key, base_side, card_sha, dck_sha):
 
 
 def _against_value(against, fmt, space=None):
-    """A summary's "against": "field:<format>", or {"id", "version", "card_sha"} of one list."""
+    """A summary's "against": "field:<format>", "gauntlet:<sample id>" (E3-S30), or {"id", "version",
+    "card_sha"} of one list."""
+    if gauntlet_tests.is_gauntlet(against):
+        return against
     if against == "field":
         return f"field:{space}:{fmt}" if space is not None else f"field:{fmt}"
     return {"id": against["id"], "version": against["version"], "card_sha": against["card_sha"]}
@@ -330,7 +334,10 @@ def _ahead_looks(field_test):
 def _opponent_entries(base_entry, against, opponents, field_options=None):
     """The opponents' entries: [against], or the field minus the base's deck id (field.opponents),
     limited to opponents' names when given; a ForgeError while home's saved field choices
-    can't be read (a field test fails closed, as a field run does)."""
+    can't be read (a field test fails closed, as a field run does). A gauntlet sample's against
+    ("gauntlet:<sample id>", E3-S30) is the sample's decks (field_options' "exclude_ids" left out)."""
+    if gauntlet_tests.is_gauntlet(against):
+        return gauntlet_tests.opponents(base_entry, against, (field_options or {}).get("exclude_ids") or ())
     if against != "field":
         return [against]
     try:
@@ -692,13 +699,24 @@ def _keys_today(summary, base_entry, opponents):
     return True
 
 
+def run_test(base_entry, variant_cards, against, mode="ahead", *, results_dir=None, **options):
+    """Play a variant test (_claimed_test). A gauntlet sample's test (against "gauntlet:<sample id>",
+    E3-S30) plays in the gauntlet's results folder unless results_dir is given, so its games never
+    join the field or the ratings."""
+    if results_dir is None and gauntlet_tests.is_gauntlet(against):
+        results_dir = gauntlet_tests.results_dir()
+    return _claimed_test(base_entry, variant_cards, against, mode, results_dir=results_dir, **options)
+
+
 @lifecycle.writing("base_entry", "against", "opponents")
-def run_test(base_entry, variant_cards, against, mode="ahead", *, by, progress=None, results_dir=None, pool=None,
-             local=False, log_dir=None, log_every=1, opponents=None, extend=None, field_options=None):
+def _claimed_test(base_entry, variant_cards, against, mode="ahead", *, by, progress=None, results_dir=None,
+                  pool=None, local=False, log_dir=None, log_every=1, opponents=None, extend=None,
+                  field_options=None):
     """Play a variant test (section 11.4) and return its summary (section 14.3).
 
     base_entry is the list as it is today (lists.entry), variant_cards the changed list's
-    {"Commander": [[qty, name]], "Main": [...]}, against an entry or "field" (opponents: the
+    {"Commander": [[qty, name]], "Main": [...]}, against an entry, "field" or "gauntlet:<sample id>"
+    (a saved gauntlet sample, played as the field is; opponents: the
     field's "<deck id>[@version]" names to limit it to), mode "ahead", "quick" or an int (games a
     deck). extend=<test id> is "Play more": that test (its summary must be this one's) goes on as
     "ahead" to the next look. A test that's already been played (the same id) goes on from where
@@ -713,11 +731,11 @@ def run_test(base_entry, variant_cards, against, mode="ahead", *, by, progress=N
     if not _deck_order(engine.today()):
         raise ForgeError(NO_DECK_ORDER)
     variant = variant_entry(base_entry, variant_cards)
-    field_test = against == "field"
+    field_test = against == "field" or gauntlet_tests.is_gauntlet(against)
     fmt = lists.fmt_for(base_entry["kind"])
     if not field_test and against.get("kind") != base_entry["kind"]:
         raise ForgeError(common.MIXED_KINDS)
-    limited = sorted(opponents) if field_test and opponents else None
+    limited = sorted(opponents) if against == "field" and opponents else None
     mode = _mode_value(mode)
     if extend is not None:
         tid = extend
@@ -759,6 +777,8 @@ def _run_test(tid, summary, base_entry, variant, against, field_test, fmt, mode,
             raise ForgeError(NOT_A_TEST)
         summary = _new_summary(tid, base_entry, variant, against, mode, opponent_entries, margin, by, limited,
                                (field_options or {}).get("space"))
+        if gauntlet_tests.is_gauntlet(against):
+            gauntlet_tests.tag(summary)
     else:
         opponent_entries = [o for o in opponent_entries if _opponent_record(summary, o) is not None]
         if not opponent_entries:
@@ -903,7 +923,8 @@ def verdict_words(summary, titles=None):
         return None
     last = looks[-1]
     decision = outcome if outcome in seqstats.PAIRED_VERDICTS else last.get("decision")
-    against = "the field" if isinstance(summary.get("against"), str) else \
+    against = gauntlet_tests.TITLE if gauntlet_tests.is_gauntlet(summary.get("against")) else \
+        "the field" if isinstance(summary.get("against"), str) else \
         ((titles or {}).get("against") or (summary.get("against") or {}).get("title") or "that deck")
     margin = round(100 * (summary.get("margin") or 0))
     games = last.get("games_per_opponent") or 0
@@ -956,7 +977,7 @@ def view(test, results_dir=None, *, visible=None):
     if summary is None:
         return None
     summary = visible_summary(summary, visible)
-    rows, diffs = [], []
+    rows, diffs, by_group = [], [], []
     for record in summary["opponents"]:
         paired = diff = None
         base = saved.load(record["base_key"], results_dir) if record.get("base_key") else None
@@ -969,6 +990,8 @@ def view(test, results_dir=None, *, visible=None):
                 diff = None
         if diff is not None and record.get("dropped") is None:
             diffs.append(diff)
+        if record.get("dropped") is None:
+            by_group.append((record, diff))
         rows.append({**{k: record.get(k) for k in ("id", "version", "title", "card_sha", "base_key", "paired_key",
                                                     "dropped")},
                      "games": len(_games(paired)), "paired": _paired_json(diff)})
@@ -981,8 +1004,14 @@ def view(test, results_dir=None, *, visible=None):
         if found:
             field_numbers = {"delta": found.get("delta"), "low": found.get("low"), "high": found.get("high")}
     outcome = summary.get("outcome")
-    return {"test": summary, "opponents": rows, "field": field_numbers, "margin": summary.get("margin"),
-            "verdict": outcome if outcome in OUTCOMES else None, "words": verdict_words(summary)}
+    out = {"test": summary, "opponents": rows, "field": field_numbers, "margin": summary.get("margin"),
+           "verdict": outcome if outcome in OUTCOMES else None, "words": verdict_words(summary)}
+    if gauntlet_tests.is_gauntlet(summary.get("against")):
+        # E3-S30: the difference by group, and the caveat that it covers these opponents only.
+        out["sample"] = gauntlet_tests.sample_of(summary["against"])
+        out["groups"] = gauntlet_tests.groups(by_group)
+        out["note"] = gauntlet_tests.note(len(by_group))
+    return out
 
 
 def tests_for(deck_id, version, results_dir=None):

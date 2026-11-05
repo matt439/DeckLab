@@ -168,6 +168,7 @@ Defaults:
 
 **Fit with other work**
 - **`variant --field`:** E3-S30 adds `against="gauntlet:<sample>"` to `variants._opponent_entries` (`variants.py:330`), with `FIELD_PAIRED_LOOKS` (`seqstats.py:71`) and the gauntlet results folder. It's not in the first slices.
+  - Built 2026-11-05 for the command line (`forge variant --gauntlet <sample id>|standard`, or `--against gauntlet:<sample id>`): `forge/variants_gauntlet.py` resolves the sample's decks (no mirror, no trial's own precon), `variants.run_test` plays and saves the whole test in the gauntlet's results folder, and `variants.view` adds `groups` (each group's `seqstats.paired_field` over its opponents, in the gauntlet view's groups) and the "these sampled opponents only" `note`. The editor's Test this change sheet doesn't offer it yet: its API (`variant_page.py`) reads tests from the default results folder only.
 - **E3-S19:** `opponent_entries` is exactly the chosen-group run E3-S19 lacks (`stories.md:924`). Its chosen house or public decks would run with the default results folder (they belong in the Bradley-Terry ratings) and reuse the group view.
 
 ## 7. Time estimates and defaults

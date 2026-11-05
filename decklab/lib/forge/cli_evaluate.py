@@ -199,6 +199,9 @@ def _variant_args(sub):
     variant.add_argument("--against", metavar="DECK", help="the deck to test against")
     variant.add_argument("--owned-b", action="store_true", help="the --against deck's owned-only list")
     variant.add_argument("--field", action="store_true", help="test against the field of the deck's format")
+    variant.add_argument("--gauntlet", metavar="SAMPLE",
+                         help="test against a saved gauntlet sample (its id, sample:<12 hex>, or standard), on the "
+                              "base list's own gauntlet games (E3-S30)")
     variant.add_argument("--opponents", help="limit the field to these decks: deck ids (id@version), with commas")
     variant.add_argument("--until", choices=("ahead",), help="play until the difference is clear (the default)")
     variant.add_argument("--games", type=shared._positive, help="play this many games a deck, with one look at the end")
@@ -255,12 +258,41 @@ def _variant_cards(base, args):
     return cards_
 
 
+def _gauntlet_against(base, sample, ref):
+    """(against "gauntlet:<sample id>", field_options) of a --gauntlet SAMPLE (an id or "standard"),
+    without a trial deck's own precon (E3-S30)."""
+    from . import gauntlet, variants_gauntlet
+    fmt = gauntlet.format_of(base)
+    try:
+        chosen = gauntlet.standard(fmt, save=True) if sample == "standard" else gauntlet.sample(sample)
+    except ValueError as e:
+        raise shared._CliError(str(e)) from None
+    if chosen.get("format") != fmt:
+        raise shared._CliError(f"{chosen.get('id')} is a {chosen.get('format')} sample, not {fmt}.")
+    return variants_gauntlet.against_for(chosen["id"]), {"exclude_ids": _trial_ids(ref, base)}
+
+
+def _trial_ids(ref, base):
+    """The gauntlet ids a trial deck's tests leave out (its own precon); () for a .dck file."""
+    from decklab.lib.gauntlet import trial_excluded
+    if ref.lower().endswith(".dck"):
+        return ()
+    try:
+        return trial_excluded(shared.decks.find_summary(base["id"]))
+    except Exception:           # a .dck file, or a deck that can't be read: nothing to leave out
+        return ()
+
+
 def _cmd_variant(args):
-    from . import deck_identity, variants
-    if args.field and args.against:
-        raise shared._CliError("Test against one deck (--against) or the field (--field), not both.")
-    if args.more is None and not args.field and not args.against:
-        raise shared._CliError("Say what to test against: --against DECK or --field.")
+    from . import deck_identity, variants, variants_gauntlet
+    sample = getattr(args, "gauntlet", None)
+    if args.against and args.against.startswith(variants_gauntlet.PREFIX) and not sample:
+        sample, args.against = args.against[len(variants_gauntlet.PREFIX):], None
+    if sum(bool(x) for x in (args.field, args.against, sample)) > 1:
+        raise shared._CliError("Test against one deck (--against), the field (--field) or a gauntlet sample "
+                               "(--gauntlet), not more than one.")
+    if args.more is None and not args.field and not args.against and not sample:
+        raise shared._CliError("Say what to test against: --against DECK, --field or --gauntlet SAMPLE.")
     if args.opponents and not args.field:
         raise shared._CliError("--opponents limits the field: use it with --field.")
     if sum(bool(x) for x in (args.until, args.games, args.quick)) > 1:
@@ -269,9 +301,12 @@ def _cmd_variant(args):
     if args.results_dir is not None and not shared.Path(args.results_dir).is_dir():
         raise shared._CliError(f"There's no folder called {args.results_dir}.")
     base = shared._cli_entry(args.deck, args.owned)
-    extend = None
+    extend, results_dir, field_options = None, args.results_dir, None
     if args.more:
-        summary = variants.load_summary(args.more, args.results_dir)
+        summary = variants.load_summary(args.more, results_dir)
+        if summary is None and results_dir is None:       # a gauntlet sample's test (E3-S30)
+            results_dir = variants_gauntlet.results_dir()
+            summary = variants.load_summary(args.more, results_dir)
         if summary is None:
             raise shared._CliError(f"There's no test {args.more} in the results folder.")
         if not deck_identity.same(summary["base"]["id"], base["id"]) or \
@@ -279,12 +314,21 @@ def _cmd_variant(args):
             raise shared._CliError(f"Test {args.more[:12]} isn't of {args.deck}'s {base['version']} list.")
         cards_ = summary["variant"].get("cards")
         against = summary["against"]
-        against = "field" if isinstance(against, str) else shared._cli_entry(against["id"], against["version"] == "owned")
+        if variants_gauntlet.is_gauntlet(against):
+            field_options = {"exclude_ids": _trial_ids(args.deck, base)}
+            results_dir = results_dir or variants_gauntlet.results_dir()
+        else:
+            against = "field" if isinstance(against, str) else \
+                shared._cli_entry(against["id"], against["version"] == "owned")
         extend, mode = args.more, summary.get("mode")
         opponents = summary.get("limited")
     else:
         cards_ = _variant_cards(base, args)
-        against = "field" if args.field else shared._cli_entry(args.against, args.owned_b)
+        if sample:
+            against, field_options = _gauntlet_against(base, sample, args.deck)
+            results_dir = results_dir or variants_gauntlet.results_dir()
+        else:
+            against = "field" if args.field else shared._cli_entry(args.against, args.owned_b)
         opponents = [o.strip() for o in args.opponents.split(",") if o.strip()] if args.opponents else None
     try:
         variant = variants.variant_entry(base, cards_)
@@ -292,8 +336,9 @@ def _cmd_variant(args):
         raise shared._CliError(str(e)) from None
     words = ", ".join([f"-{q} {n}" for q, n in variant["changes"]["remove"]]
                       + [f"+{q} {n}" for q, n in variant["changes"]["add"]])
-    print(f"Testing {words} in {base['title']} ({base['version']}) against "
-          f"{'the field' if against == 'field' else against['title']}", file=shared.sys.stderr)
+    named = (f"gauntlet sample {variants_gauntlet.sample_of(against)}" if variants_gauntlet.is_gauntlet(against)
+             else "the field" if against == "field" else against["title"])
+    print(f"Testing {words} in {base['title']} ({base['version']}) against {named}", file=shared.sys.stderr)
     shown = [0.0, None]
 
     def report(done, total, detail):
@@ -308,11 +353,11 @@ def _cmd_variant(args):
         log = {"log_dir": args.logs_dir, "log_every": getattr(args, "log_every", None) or 1}
     try:
         summary = variants.run_test(base, cards_, against, mode, by=args.by, progress=report,
-                                    results_dir=args.results_dir, local=args.local, opponents=opponents,
-                                    extend=extend, **log)
+                                    results_dir=results_dir, local=args.local, opponents=opponents,
+                                    extend=extend, field_options=field_options, **log)
     except ValueError as e:
         raise shared._CliError(str(e)) from None
-    found = variants.view(summary["test"], args.results_dir) or {"test": summary}
+    found = variants.view(summary["test"], results_dir) or {"test": summary}
     if args.json:
         print(shared.json.dumps(found, ensure_ascii=False))
         return 0
@@ -342,11 +387,33 @@ def _print_variant(found):
         state = "stopped" if look.get("stopped") else "interim" if look.get("interim") else "look"
         print(f"  {state} at {look['games_per_opponent']:,} games a deck: {look.get('decision')}"
               + (f" (z {look['z']:.2f}, bound {look['bound']})" if look.get("z") is not None else ""))
+    _print_groups(found)
     mismatch = summary.get("starter_mismatch") or {}
     if mismatch.get("of") and mismatch.get("games", 0) > 0.01 * mismatch["of"]:
         print("  ! The two versions didn't get the same games; the comparison is weaker than it should be "
               f"({mismatch['games']} of {mismatch['of']} games had another starter).")
     print(f"  test {summary['test']}")
+
+
+GROUP_TITLES = (("colour", "By colour"), ("identity_size", "By number of colours"), ("style", "By style"),
+                ("tier", "By tier"))
+
+
+def _print_groups(found):
+    """A gauntlet sample's test's difference by group (E3-S30), and its caveat."""
+    if not found.get("groups"):
+        return
+    for name, title in GROUP_TITLES:
+        rows = found["groups"].get(name) or []
+        if rows:
+            print(f"  {title}:")
+        for g in rows:
+            numbers = (f"{100 * g['delta']:+.1f} points ({100 * g['low']:+.1f} to {100 * g['high']:+.1f})"
+                       if g.get("delta") is not None else "no difference yet")
+            note = f"; {g['note']}" if g.get("note") else ""
+            print(f"    {g['label']} ({g['opponents']}): {numbers}{note}")
+    if found.get("note"):
+        print(f"  {found['note']}")
 
 
 def _experiment_args(sub):
