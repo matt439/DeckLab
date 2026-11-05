@@ -22,10 +22,18 @@ from .interaction import (anchor_transform, bounds, choose_native_profile, css, 
                           text, touch, visit, wait, wait_native_add_dismissed, web)
 
 
+# The active Pictures layout's sheet trigger: tapping the tile itself ticks its
+# native check (since 2026-10-26), so inspection opens from the tile's Inspect
+# button. It has aria-haspopup="dialog", which WebKit on iOS 27 exposes as
+# XCUIElementTypeOther rather than a Button.
+RECEIPT_INSPECT = ".rcpt-grid .rcpt-picture-inspect"
+POPUP_BUTTON_TYPES = ("XCUIElementTypeButton", "XCUIElementTypeOther")
+
+
 def receipt_open(driver, fixture):
     visit(driver, fixture, f"/receipt?order={quote(fixture.order_id)}")
-    wait(lambda: css(driver, ".rcpt-grid .card-tile-open"), message="Receipt fixture has no card tiles")
-    opened = tap_native_visible_part(driver, fixture, ".rcpt-grid .card-tile-open")
+    wait(lambda: css(driver, RECEIPT_INSPECT), message="Receipt fixture has no card tiles with Inspect")
+    opened = tap_native_visible_part(driver, fixture, RECEIPT_INSPECT, element_type=POPUP_BUTTON_TYPES)
     wait(lambda: text(driver, ".rcpt-sheet-count"), message="Receipt inspection did not open")
     wait(lambda: driver.execute("const i=document.querySelector('.rcpt-sheet-pic img'); return i && i.complete && i.naturalWidth>0;"),
          message="Receipt card image did not load")
@@ -198,7 +206,7 @@ def viewer_swipes(driver, fixture):
 def keyboard_save_history(driver, fixture):
     try:
         return _keyboard_save_history(driver, fixture)
-    except AssertionError as error:
+    except Exception as error:
         try:
             web(driver, fixture.base_url, standalone=False)
             trace = read_input_trace(driver)
@@ -207,7 +215,65 @@ def keyboard_save_history(driver, fixture):
             web(driver, fixture.base_url, standalone=False)
         except Exception as diagnostic_error:
             trace = {"diagnostic_error": str(diagnostic_error)}
-        raise AssertionError(f"{error}; observed_input={json.dumps(trace)}") from error
+        # A failed edit leaves an unsaved draft whose "Leave without saving?"
+        # guard would stop the next case's visit: discard it before re-raising.
+        try:
+            cleanup = discard_unsaved_editor(driver, fixture)
+        except Exception as cleanup_error:
+            cleanup = {"cleanup_error": str(cleanup_error)}
+        if not isinstance(error, AssertionError):
+            raise  # keep a DriverError's type, so the runner can tell a lost session
+        raise AssertionError(f"{error}; observed_input={json.dumps(trace)}; "
+                             f"draft_cleanup={json.dumps(cleanup, default=str)}") from error
+
+
+# The editor's own discard controls: the bar's Discard (editor-screen.js), its
+# "Discard your changes?" answer and the leave guard's "Discard them and leave"
+# (editor.js confirmLeave) both carry data-action="discard" (sheetActions).
+EDITOR_STATE = """
+  const shown=(e)=>!!e && !e.hidden && !e.disabled && e.getClientRects().length>0;
+  const sheet=[...document.querySelectorAll('dialog.sheet[open]')]
+    .find(d=>shown(d.querySelector('button[data-action="discard"]')));
+  const bar=document.querySelector('.bar-discard'), save=document.querySelector('.bar-save');
+  return {question:sheet ? (sheet.querySelector('h2')?.textContent.trim()||'') : null,
+          bar:shown(bar), dirty:!!save && !!save.querySelector('.dot:not([hidden])'),
+          href:location.href};
+"""
+EDITOR_DISCARD = """
+  const shown=(e)=>!!e && !e.hidden && !e.disabled && e.getClientRects().length>0;
+  const answer=[...document.querySelectorAll('dialog.sheet[open] button[data-action="discard"]')].find(shown);
+  const target=answer || document.querySelector('.bar-discard');
+  if(!shown(target)) return null;
+  target.click(); return answer ? 'answer' : 'bar';
+"""
+
+
+def discard_unsaved_editor(driver, fixture):
+    """Cleanup after a failed editor case only; never evidence of a passing case.
+
+    Hides the software keyboard natively, then presses the editor's own Discard
+    controls (Discard, then its confirmation; or the leave guard's "Discard them
+    and leave") until no unsaved change or discard question is left. The
+    element clicks are cleanup, not a substitute for a native measurement.
+    """
+    native(driver)
+    try:
+        if mobile(driver, "isKeyboardShown"):
+            mobile(driver, "hideKeyboard")
+    except Exception:
+        pass
+    web(driver, fixture.base_url, standalone=False)
+    steps = []
+    for _ in range(5):
+        state = driver.execute(EDITOR_STATE)
+        if state.get("question") is None and not state.get("bar"):
+            require(not state.get("dirty"), f"Editor still has unsaved changes and no Discard control: {state}")
+            return {"discarded": bool(steps), "steps": steps, "final": state}
+        pressed = driver.execute(EDITOR_DISCARD)
+        steps.append({"state": state, "pressed": pressed})
+        time.sleep(0.5)
+        web(driver, fixture.base_url, standalone=False)
+    raise AssertionError(f"Unsaved editor draft was not discarded: steps={steps}")
 
 
 def _keyboard_save_history(driver, fixture):

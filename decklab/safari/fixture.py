@@ -125,7 +125,10 @@ class FixtureServer:
                 "error": None}
 
     def _start(self):
-        self.root = Path(self._stack.enter_context(tempfile.TemporaryDirectory(prefix="decklab-safari-")))
+        # Resolved: macOS's temp folder is under /var, a link to /private/var, and the
+        # profile config refuses any linked folder above config.json.
+        self.root = Path(self._stack.enter_context(
+            tempfile.TemporaryDirectory(prefix="decklab-safari-"))).resolve()
         data.seed(self.root)
         cache = self.root / "decklab/data"
         # Install fail-closed defaults before importing any request handlers or DB code.

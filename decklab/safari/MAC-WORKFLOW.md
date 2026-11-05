@@ -1,6 +1,6 @@
 # Running Deck Lab's Safari tests from Windows through the Mac
 
-This is the practical workflow used for E11-S29, verified on **2026-10-15**.
+This is the practical workflow used for E11-S29, verified on **2026-10-15** and again on **2026-11-05**.
 The Windows PC holds the main checkout. SSH runs commands on the MacBook, where
 Xcode runs native Safari on disposable iPhone and iPad Simulators. Results can
 then be copied back to Windows. The household database is not needed.
@@ -19,18 +19,19 @@ and [EVIDENCE.md](EVIDENCE.md) for the accepted six-configuration run.
 
    ```powershell
    ssh -o BatchMode=yes -o ConnectTimeout=10 <mac-user>@<mac-address> 'echo connected'
-   ssh <mac-user>@<mac-address> "/Users/<mac-user>/DeckLabSafari/run-safari --check --runtime 27.0 --ipad-model 'iPad Air 11-inch (M2)'"
+   ssh <mac-user>@<mac-address> "/Users/<mac-user>/DeckLabSafari/run-safari-decklab --check --runtime 27.0 --ipad-model 'iPad Air 11-inch (M2)'"
    ```
 
 4. Start the full run from **Windows PowerShell**:
 
    ```powershell
-   ssh -t -o ServerAliveInterval=30 -o ServerAliveCountMax=6 <mac-user>@<mac-address> "caffeinate -i /Users/<mac-user>/DeckLabSafari/run-safari --runtime 27.0 --ipad-model 'iPad Air 11-inch (M2)'"
+   ssh -t -o ServerAliveInterval=30 -o ServerAliveCountMax=6 <mac-user>@<mac-address> "caffeinate -i /Users/<mac-user>/DeckLabSafari/run-safari-decklab --runtime 27.0 --ipad-model 'iPad Air 11-inch (M2)'"
    $LASTEXITCODE
    ```
 
    Keep the terminal open. `caffeinate -i` prevents idle sleep while this command
-   runs; keep the lid open. The accepted full run took about **32 minutes**.
+   runs; keep the lid open. The accepted full run of 2026-11-05 took about **47 minutes**
+   (October's took 32; the slower, resting native scrolls account for most of the difference).
    The SSH keepalive settings help detect a lost connection; they do not resume
    an interrupted run. `-t` gives the remote command a terminal for Ctrl+C.
 5. Read the report and copy the complete results directory back using the steps
@@ -39,7 +40,7 @@ and [EVIDENCE.md](EVIDENCE.md) for the accepted six-configuration run.
 The same run can be started directly in **Terminal on the Mac**:
 
 ```sh
-caffeinate -i ~/DeckLabSafari/run-safari --runtime 27.0 --ipad-model 'iPad Air 11-inch (M2)'
+caffeinate -i ~/DeckLabSafari/run-safari-decklab --runtime 27.0 --ipad-model 'iPad Air 11-inch (M2)'
 echo $?
 ```
 
@@ -53,22 +54,31 @@ the commands throughout this guide.
 | --- | --- |
 | Windows checkout | `C:\Projects\DeckLab` |
 | Mac SSH account and address | `<mac-user>@<mac-address>` |
-| Mac checkout | `/Users/<mac-user>/DeckLabSafari/source-1b39515` |
-| Mac launcher | `/Users/<mac-user>/DeckLabSafari/run-safari` |
+| Mac checkout | `/Users/<mac-user>/DeckLabSafari/decklab` |
+| Mac launcher | `/Users/<mac-user>/DeckLabSafari/run-safari-decklab` |
 | Private tools | `/Users/<mac-user>/DeckLabSafari/toolchain/` |
-| Mac results | `source-1b39515/decklab/data/safari/<run-id>/` |
+| Mac results | `decklab/decklab/data/safari/<run-id>/` |
 | Copied Windows results | `decklab\data\safari\macbook\<run-id>\` |
 
-`source-1b39515` is the checkout's original directory name. It stays the same
-when newer commits are transferred; it does not pin the checkout to that commit.
-The launcher always runs that directory's current revision.
+`decklab` is a clone of this public repository, made on 2026-11-05 from a Git
+bundle. The Mac's older `source-1b39515` checkout (and its `run-safari` launcher)
+holds the private repository's history from before the public split, so it can't
+fast-forward to this repository: leave it as it is. `run-safari-decklab` is
+`run-safari` pointed at `decklab`, with the same private toolchain. The launcher
+always runs that directory's current revision.
 
-The prepared toolchain is Python 3.14.8, Node 24.14.0 / npm 11.9.0, Appium 3.4.2
-and XCUITest 10.43.0; the lockfile moved to Appium 3.8.0 and XCUITest 10.43.1 on
-2026-10-26 and to XCUITest 12.22.7 on 2026-10-30 (security fixes), so rerun `setup.sh`
-as below before the next run.
-The accepted run used Xcode 27.0 and iOS 27.0. These are
-recorded versions, not instructions to upgrade whenever a newer release appears.
+The toolchain is Python 3.14.8 and Node 24.14.0 / npm 11.9.0, with the lockfile's
+Appium 3.8.0 and XCUITest 12.22.7 (rerun `setup.sh` as below whenever the lockfile
+changes). The accepted run of 2026-11-05 used Xcode 27.2 with the iOS 27.0 runtime;
+October's used Xcode 27.0. These are recorded versions, not instructions to upgrade
+whenever a newer release appears.
+
+The Mac updates Xcode from the App Store on its own unless that's turned off
+(System Settings, General, Software Update, Automatic updates): on 2026-11-05 it
+moved from 27.0 to 27.2 in the middle of a run, which killed the remaining
+Simulator sessions. A new Xcode then needs its first-launch setup, which asks for
+the Mac's password, so it can't be done over SSH: run `sudo xcodebuild
+-runFirstLaunch` in Terminal on the Mac (or open Xcode once), then `--check` again.
 
 ## Connect to the Mac for the first time
 
@@ -160,7 +170,7 @@ $pcRevision = git rev-parse HEAD
 if ($LASTEXITCODE -ne 0) { throw 'Cannot read the Windows revision.' }
 $macRevision = @'
 set -e
-cd /Users/<mac-user>/DeckLabSafari/source-1b39515
+cd /Users/<mac-user>/DeckLabSafari/decklab
 test -z "$(git status --porcelain)"
 git rev-parse HEAD
 '@ | ssh -o BatchMode=yes <mac-user>@<mac-address> "tr -d '\r' | /bin/zsh -l -s"
@@ -206,7 +216,7 @@ source update is active:
 ```sh
 (
   set -e
-  cd /Users/<mac-user>/DeckLabSafari/source-1b39515
+  cd /Users/<mac-user>/DeckLabSafari/decklab
   test -z "$(git status --porcelain)"
   git bundle verify /Users/<mac-user>/DeckLabSafari/incoming.bundle
   git fetch /Users/<mac-user>/DeckLabSafari/incoming.bundle HEAD:refs/remotes/windows-transfer/latest
@@ -228,13 +238,13 @@ Terminal or the SSH shell** before running preflight:
 (
   set -e
   export PATH="$HOME/DeckLabSafari/toolchain/cpython-3.14.8/python/bin:$HOME/DeckLabSafari/toolchain/node-v24.14.0-darwin-arm64/bin:$PATH"
-  cd ~/DeckLabSafari/source-1b39515
+  cd ~/DeckLabSafari/decklab
   bash decklab/safari/setup.sh
 )
 ```
 
 Ordinary SSH shells may select macOS's older Python or a different Node. The
-`run-safari` launcher sets these tool paths automatically for normal runs. See
+`run-safari-decklab` launcher sets these tool paths automatically for normal runs. See
 [first setup](README.md#first-setup-on-the-mac) if rebuilding the machine or
 creating a new checkout; the private tool directories are not in Git bundles.
 
@@ -244,7 +254,7 @@ The runner prints its results directory. In **Mac Terminal or an SSH shell**,
 list recent directories and open the chosen report:
 
 ```sh
-cd ~/DeckLabSafari/source-1b39515
+cd ~/DeckLabSafari/decklab
 ls -dt decklab/data/safari/*/
 cat decklab/data/safari/REPLACE_WITH_RUN_ID/report.md
 ```
@@ -269,7 +279,7 @@ Set-Location C:\Projects\DeckLab
 $runId = '20261015T051426Z-59b4e5' # Replace with the new run's actual ID.
 $resultsRoot = Join-Path (Get-Location) 'decklab\data\safari\macbook'
 New-Item -ItemType Directory -Force -Path $resultsRoot | Out-Null
-scp -r "<mac-user>@<mac-address>:/Users/<mac-user>/DeckLabSafari/source-1b39515/decklab/data/safari/$runId" $resultsRoot
+scp -r "<mac-user>@<mac-address>:/Users/<mac-user>/DeckLabSafari/decklab/decklab/data/safari/$runId" $resultsRoot
 if ($LASTEXITCODE -ne 0) { throw 'Results copy failed.' }
 Get-Content (Join-Path $resultsRoot "$runId\report.md")
 Get-FileHash -Algorithm SHA256 (Join-Path $resultsRoot "$runId\report.json")
@@ -281,7 +291,7 @@ and native source. Results are gitignored. Record reviewed acceptance in a small
 committed summary with the tested commit and raw report hash, as in
 [the completed evidence](EVIDENCE.md); retain the complete raw directory too.
 
-`cleanup-verification.json` in the accepted run was an additional independent
+`cleanup-verification.json` in October's accepted run was an additional independent
 check, not an automatically generated file in every run. Normal reports include
 the runner's own cleanup notes and test device UUIDs.
 
@@ -299,7 +309,7 @@ interruption. Avoid force-killing the process or deleting all Simulator devices.
 | Connection refused on port 22 | Enable Remote Login and allow `<mac-user>`. |
 | Connection times out | Check current IP, home-network connection and whether the Mac is awake. |
 | `Permission denied (publickey)` | Confirm the username, public key in that account's `authorized_keys`, permissions and any key passphrase. |
-| Wrong Python/Node or missing Appium | Use `~/DeckLabSafari/run-safari`; rerun local setup if the lockfile changed. |
+| Wrong Python/Node or missing Appium | Use `~/DeckLabSafari/run-safari-decklab`; rerun local setup if the lockfile changed. |
 | No compatible runtime/model | Finish the Simulator runtime download in Xcode; check `xcrun simctl list runtimes` and `xcrun simctl list devicetypes`. |
 | No Simulator window | Expected in headless mode. Native iOS still runs; inspect the report and screenshots. |
 | `--output` directory already exists | Choose a new directory or omit `--output` for a unique automatic name. |
@@ -312,7 +322,7 @@ here-string so PowerShell does not expand shell `$` expressions, and strip CRLF:
 ```powershell
 @'
 set -e
-cd /Users/<mac-user>/DeckLabSafari/source-1b39515
+cd /Users/<mac-user>/DeckLabSafari/decklab
 git status --short
 git rev-parse HEAD
 '@ | ssh -o BatchMode=yes <mac-user>@<mac-address> "tr -d '\r' | /bin/zsh -l -s"

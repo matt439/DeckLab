@@ -16,7 +16,30 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import environment
-from .driver import Driver
+from .driver import Driver, DriverError
+
+# Texts Appium returns once the Simulator's web inspector, WebDriverAgent or
+# display has gone (2026-11-05: an iPhone 15 Pro landscape Simulator rebooted
+# mid-session). They only trigger a liveness probe; text alone never ends a run.
+SESSION_LOST_TEXTS = ("Remote debugger is not connected", "ECONNREFUSED 127.0.0.1:8100",
+                      "display surface is not available")
+SESSION_LOST_REASON = "Simulator session lost (environment)"
+RETRY_SUFFIX = "-retry1"
+
+
+class SessionLost(RuntimeError):
+    """The Appium session or its Simulator died; what failed after it says nothing about the page."""
+
+
+def suggests_lost_session(error):
+    seen = set()
+    while error is not None and id(error) not in seen:
+        seen.add(id(error))
+        if isinstance(error, (DriverError, AssertionError)) and any(
+                text in str(error) for text in SESSION_LOST_TEXTS):
+            return True
+        error = error.__cause__ or error.__context__
+    return False
 
 
 def slug(value):
@@ -30,8 +53,9 @@ def write_reports(output, report):
              "Simulator coverage for E11-S29 / E2-S22. Physical-device acceptance is separate.", "",
              "| Requested model | Actual model | OS | Orientation | Result |", "|---|---|---|---|---|"]
     for row in report["matrix"]:
+        status = row["status"] + (" (retried once)" if row.get("retries") else "")
         lines.append(f"| {row['requested_model']} | {row.get('model', 'unavailable')} | "
-                     f"{row.get('os_version', '—')} | {row['orientation']} | {row['status']} |")
+                     f"{row.get('os_version', '—')} | {row['orientation']} | {status} |")
     for error in report.get("errors", []):
         lines.extend(["", f"Setup: {error}"])
     for row in report["matrix"]:
@@ -46,13 +70,23 @@ def write_reports(output, report):
         for error in diagnostics.get("diagnostic_errors", []):
             lines.append("Diagnostic unavailable: " + error.replace("\n", " "))
         for assertion in row.get("assertions", []):
-            lines.append(f"- {assertion['status']}: {assertion['name']}")
-            if assertion.get("error"):
-                lines.append("  " + assertion["error"].replace("\n", " "))
-            if assertion.get("artifacts"):
-                for artifact in assertion["artifacts"]:
-                    lines.append(f"  - [{artifact}]({artifact})")
+            assertion_lines(lines, assertion, "")
+        for number, retry in enumerate(row.get("retries", []), 1):
+            lines.extend(["", (f"Attempt {number} lost its Simulator session and was retried once on a new "
+                               f"Simulator: {retry['reason']}").replace("\n", " ")])
+            for note in retry.get("cleanup_notes", []):
+                lines.append(f"Attempt {number} cleanup: " + note.replace("\n", " "))
+            for assertion in retry.get("assertions", []):
+                assertion_lines(lines, assertion, f"attempt {number} ")
     (output / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def assertion_lines(lines, assertion, prefix):
+    lines.append(f"- {prefix}{assertion['status']}: {assertion['name']}")
+    if assertion.get("error"):
+        lines.append("  " + assertion["error"].replace("\n", " "))
+    for artifact in assertion.get("artifacts") or []:
+        lines.append(f"  - [{artifact}]({artifact})")
 
 
 class Recorder:
@@ -75,13 +109,30 @@ class Recorder:
         except Exception as error:
             result.update(status="failed", error=f"{type(error).__name__}: {error}",
                           traceback=traceback.format_exc())
+            lost = suggests_lost_session(error) and not self.session_alive()
             self.capture(result, f"{len(self.row['assertions']):02}-{slug(name)}")
+            if lost:
+                # The flows after this one would only fail against a dead driver.
+                result["session_lost"] = True
+                raise SessionLost(result["error"]) from error
         finally:
             result["seconds"] = round(time.monotonic() - started, 2)
             print(f"  {result['status']}: {name}", flush=True)
             if result.get("error"):
                 print("    " + result["error"].splitlines()[0][:500], flush=True)
         return result["status"] == "passed"
+
+    def session_alive(self, attempts=2, pause=2):
+        """A native WebDriverAgent round trip, which a dead session or Simulator fails every time."""
+        for attempt in range(attempts):
+            if attempt:
+                time.sleep(pause)
+            try:
+                self.driver.command("GET", "/orientation")
+                return True
+            except Exception:
+                continue
+        return False
 
     def capture(self, result, name):
         errors = result.setdefault("diagnostic_errors", [])
@@ -230,7 +281,7 @@ def capabilities(row, udid):
             "appium:connectHardwareKeyboard": False, "appium:forceSimulatorSoftwareKeyboardPresence": True,
             "appium:isHeadless": True,
             "appium:nativeWebTap": True, "appium:nativeWebTapStrict": True,
-            "appium:webviewConnectTimeout": 60000,
+            "appium:webviewConnectTimeout": 60000, "appium:wdaLaunchTimeout": 120000,
             "appium:includeSafariInWebviews": True, "appium:additionalWebviewBundleIds": ["*"],
             "appium:showXcodeLog": True}
 
@@ -248,12 +299,13 @@ def verify_orientation(driver, fixture, expected):
     return {"native_orientation": actual, "viewport": viewport}
 
 
-def run_configuration(url, row, output):
+def run_configuration(url, row, output, suffix=""):
     from .fixture import FixtureServer
     from .flows import run_flows
 
-    directory = output / slug(row["model"] + "-" + row["orientation"])
+    directory = output / (slug(row["model"] + "-" + row["orientation"]) + suffix)
     directory.mkdir()
+    lost = False
     with simulator(row) as udid, FixtureServer() as fixture, \
             (directory / "commands.jsonl").open("w", encoding="utf-8") as log:
         driver = None
@@ -269,6 +321,11 @@ def run_configuration(url, row, output):
             run_flows(driver, fixture, recorder)
             row["status"] = "passed" if row["assertions"] and all(
                 item["status"] == "passed" for item in row["assertions"]) else "failed"
+        except SessionLost:
+            # Propagates only after the driver, fixture and Simulator are torn
+            # down, so main() can retry on a new Simulator.
+            lost = True
+            raise
         except (Exception, KeyboardInterrupt) as error:
             row.update(status="interrupted" if isinstance(error, KeyboardInterrupt) else "failed",
                        reason=f"{type(error).__name__}: {error}",
@@ -292,7 +349,54 @@ def run_configuration(url, row, output):
                 try:
                     driver.close()
                 except Exception as error:
-                    cleanup_failed(row, f"Appium session cleanup: {error}")
+                    if lost:  # expected: the session is already gone
+                        row.setdefault("cleanup_notes", []).append(f"Appium session cleanup: {error}")
+                    else:
+                        cleanup_failed(row, f"Appium session cleanup: {error}")
+
+
+def all_check_names():
+    from .flows import run_flows
+
+    names = ["device.native_and_viewport_orientation"]
+    run_flows(None, None, lambda name, action: names.append(name))
+    return names
+
+
+# One attempt's results, moved into row["retries"] before the retry.
+ATTEMPT_KEYS = ("assertions", "cleanup_notes", "session_diagnostics", "reason", "traceback",
+                "capabilities", "fixture_url", "test_udid", "test_name")
+
+
+def run_with_retry(url, row, output):
+    """Run one configuration; a lost Simulator session costs one retry on a new Simulator."""
+    try:
+        run_configuration(url, row, output)
+        return
+    except SessionLost as error:
+        first = {"reason": str(error), "directory": slug(row["model"] + "-" + row["orientation"])}
+        for key in ATTEMPT_KEYS:
+            if key in row:
+                first[key] = row.pop(key)
+        row["retries"] = [first]
+    row["status"] = "running"
+    print("  Simulator session lost; retrying once on a new Simulator", flush=True)
+    try:
+        run_configuration(url, row, output, RETRY_SUFFIX)
+    except SessionLost as error:
+        assertions = row.setdefault("assertions", [])
+        done = {item["name"] for item in assertions}
+        assertions.extend({"name": name, "status": "not_run", "artifacts": [],
+                           "error": "Not run: the Simulator session was lost."}
+                          for name in all_check_names() if name not in done)
+        row.update(status="failed", reason=f"{SESSION_LOST_REASON}, on the retry too: {error}")
+        return
+    # The retry never hides a failure the page caused before the session was lost.
+    earlier = [item["name"] for item in first.get("assertions", [])
+               if item["status"] != "passed" and not item.get("session_lost")]
+    if earlier:
+        note = "Attempt 1 failed before its session was lost: " + ", ".join(earlier) + "."
+        row.update(status="failed", reason=(row["reason"] + " " + note) if row.get("reason") else note)
 
 
 def main(argv=None):
@@ -338,7 +442,7 @@ def main(argv=None):
                     print(f"{row['model']} / {row['os_version']} / {row['orientation']}", flush=True)
                     row["status"] = "running"
                     try:
-                        run_configuration(url, row, output)
+                        run_with_retry(url, row, output)
                     except KeyboardInterrupt:
                         row.update(status="interrupted", reason="Run interrupted during this configuration.")
                         raise

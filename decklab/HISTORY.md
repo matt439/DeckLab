@@ -2,6 +2,17 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Safari Simulator suite passing again after the redesign (2026-11-05; E11-S29, E11-S30)
+
+- **The result:** the first Simulator run since 2026-10-15 (the whole P1 redesign landed in between) passes **60/60** on iPhone 15 Pro, iPhone 17 Pro and iPad Air 11-inch (M2), portrait and landscape, on Xcode 27.2 / iOS 27.0, from clean source `368580a` ([EVIDENCE.md](safari/EVIDENCE.md), `safari/evidence/2026-11-05-simulator.json`). Getting there took five runs (0, 23, 38, 58, 60).
+- **One product fault, fixed:** on an iPad in landscape, Safari panning the view as a low count took focus left the editor's Save bar under the keyboard; `editor-cards.js`'s `noteViewHeight` now measures the lift from where the bar actually ends (the old `innerHeight` estimate stays the fallback), so Save stays reachable (`tests/test_editor_keyboard_pan_ui.py`, 5).
+- **The fixture on macOS:** it now resolves its temp root, since the profile config (2026-10-27) refuses linked folders and macOS's temp folder is under the `/var` link; every `?profile=` page had answered 500 there.
+- **The harness, caught up with the redesign:** Receive delivery opens a card with Inspect (a tile tap ticks it); native scrolls are slow drags that rest before lifting, sized to what's left, kept between the fixed bars and mapped through the shell's avatar; a field is revealed only when nothing covers it; a failed editor case discards its draft so it can't fail the Share case after it; `bounds()` no longer counts the page's scroll lock (`:root:has(dialog[open])`) or anything above a modal dialog as a clip; the Home Screen chooser's button is scrolled into view, with one more recorded tap allowed.
+- **A lost Simulator session** (one rebooted mid-run) reruns that configuration once on a fresh device, shown in the report; a second loss is reported as an environment failure, never as page failures.
+- **The Mac:** a new checkout of this public repository, `~/DeckLabSafari/decklab`, with launcher `run-safari-decklab` (the old one holds the private repository's pre-split history). Xcode updating itself mid-run is documented in MAC-WORKFLOW.md, with its password-only first-launch step.
+- **Decided:** Receive delivery's phone layout stays as it is (no card tile before the first scroll; Matt, 2026-11-05).
+- Still open: E2-S22's and E11-S30's checks on the household's real iPhones and iPad.
+
 ## Test this change against popular decks (2026-11-05; E3-S30)
 
 - **The sheet:** the editor's Test this change offers **Popular decks (N decks, a sample)** beside the field and one deck: the format's standard gauntlet sample, asked once as the sheet opens (`GET /api/variant/estimate?against=gauntlet`) and offered only when it's available (a catalogue built on the PC). Its times count the base list's games already in the gauntlet's results folder. When the field can't be tested against, it's chosen first.

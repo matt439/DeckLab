@@ -9,10 +9,11 @@ additional test packages.
 For the prepared Windows PC and MacBook, use the [connection and run workflow](MAC-WORKFLOW.md):
 SSH setup, transferring committed changes, running the suite and copying results.
 
-**Validated on the Mac on 2026-10-15:** all 60 checks passed across the six
-configurations on Xcode 27.0 / iOS 27.0. The [acceptance evidence](EVIDENCE.md)
-records the clean source revision, exact models, runtime, results and verified
-cleanup. E11-S29 is built. E2-S22 retains the remaining physical hardware and
+**Validated on the Mac on 2026-11-05:** all 60 checks passed across the six
+configurations on Xcode 27.2 / iOS 27.0, against the P1 redesign (first validated
+on 2026-10-15, on Xcode 27.0). The [acceptance evidence](EVIDENCE.md) records the
+clean source revision, exact models, runtime, results and verified cleanup.
+E11-S29 is built. E2-S22 retains the remaining physical hardware and
 touch-usability checks separately.
 
 ## First setup on the Mac
@@ -94,14 +95,16 @@ and look under `node_modules`), together with an override of `glob@13` to 14 for
 Do not update packages globally to repair a local run. Repeat `setup.sh` after a
 pull changes the lockfile. Changing Xcode or a runtime also needs a new report.
 
-Matt's Mac was prepared on 2026-10-15 under `~/DeckLabSafari`, with the checkout
-in `source-1b39515` and a `run-safari` wrapper that selects its private Python
-3.14.8 and Node 24.14.0 installations without changing system Python or shell
-profiles. On that Mac, the equivalent commands are:
+Matt's Mac was prepared on 2026-10-15 under `~/DeckLabSafari`, with private Python
+3.14.8 and Node 24.14.0 installations that leave system Python and shell profiles
+unchanged. Since 2026-11-05 this repository's checkout is `~/DeckLabSafari/decklab`
+and its wrapper `run-safari-decklab` (the older `source-1b39515` and `run-safari`
+hold the private repository's pre-split history). On that Mac, the equivalent
+commands are:
 
 ```sh
-~/DeckLabSafari/run-safari --check
-~/DeckLabSafari/run-safari
+~/DeckLabSafari/run-safari-decklab --check
+~/DeckLabSafari/run-safari-decklab
 ```
 
 The wrapper runs the checkout's current revision. Its preflight report records
@@ -153,6 +156,11 @@ Exit codes: **0** means all six configurations passed (or all six are ready for
 `--check`); **1** means a test assertion or Simulator session failed; **2** means
 prerequisites, an unavailable configuration or server startup prevented complete
 coverage; **130** means interrupted. An otherwise passing partial matrix exits 2.
+A configuration whose Simulator session dies (a dead-session error confirmed by a
+failed WebDriverAgent probe) is retried once on a new Simulator, in a `-retry1`
+folder; the report keeps the first attempt and its reason, and a failure the
+page caused before the loss still fails the row. A second loss fails the row as
+"Simulator session lost (environment)" with its remaining checks `not_run`.
 
 Ctrl+C, or SIGINT sent to the CLI process, writes the interrupted report and
 cleans up its own resources. This also works when a noninteractive shell passed
