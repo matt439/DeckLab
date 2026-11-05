@@ -9,7 +9,7 @@ What each milestone and feature built, the decisions made along the way, and the
 - **The test page:** says "Against popular decks", heads its rows **Against each popular deck** (no matchup links: those games are the gauntlet's own) and adds **By group** (`vtGroups`): one small table each for colour, number of colours, style and tier (a grouping with no rows left out), each group's decks, its bar on the page's one scale and its range, with `forge.variants.view`'s note that each covers those sampled opponents only. The deck page's Tests of changes list says "against popular decks".
 - `forge/variants_gauntlet.opponents_of` counts an unsaved sample (the estimate never saves one).
 - This finishes E3-S30. Known limits: no browser or device check; the sheet offers only the standard sample.
-- Tests: `decklab/tests/test_variant_gauntlet_api.py` (11: estimate, run, the list, a running test, Play more and Stop, a trial, refusals, a mirror-only sample), `test_web_variant.py` (the groups, the rows, the words, the sheet).
+- Tests: `decklab/tests/test_variant_gauntlet_api.py` (13: estimate, run, the list, a running test, Play more and Stop, a trial, refusals, a mirror-only sample, a signed-in viewer and another space, the queue review), `test_web_variant.py` (the groups, the rows, the words, the sheet).
 
 ## Play a deck against chosen decks (2026-11-05; E3-S31)
 
