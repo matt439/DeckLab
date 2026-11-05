@@ -19,6 +19,7 @@ A formal, user-centred design model of Deck Lab, first written on 2026-10-13: wh
 | [gap-analysis.md](gap-analysis.md) | What's built, partial and missing for each persona, and a roadmap from it |
 | [privacy-by-default.md](privacy-by-default.md) | The design for Matt's decision of 2026-10-13 that every space's data is private unless made public (read-only, to everyone signed in; the 2026-10-18 member template renamed it): the rule and switches, every surface before and after, Forge, his decisions, and the phased stories E10-S28 to E10-S36 (see also [member-template.md](member-template.md), E10-S37 to E10-S43) |
 | [member-template.md](member-template.md) | Matt's accepted member decisions of 2026-10-18 and, in §4, what shipped and in what order; all of it is built and live since 2026-10-19 except per-deck public (E10-S41, deferred). User5's invite was sent on 2026-10-18 |
+| [more-menus-review.md](more-menus-review.md) | E11-S61's review of 2026-11-05: every More menu's items at each width, what each opens, its other ways in, and a keep, move or remove recommendation for Matt to decide |
 | [user-testing-user2.md](user-testing-user2.md) | The prepared session checklist for E11-S28: the opening script, preparation and cleanup, goal-based tasks with success conditions, observation rules, the notes table, closing questions and the privacy rules for the notes |
 
 ## The method
