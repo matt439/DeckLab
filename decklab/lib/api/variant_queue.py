@@ -62,7 +62,7 @@ def _saved(test_id, profile):
     """Existing visibility semantics, without engine discovery or playing anything."""
     forge = variant_page._forge()
     seen = forge_runs._Seen(profile)
-    saved = forge.variants.load_summary(test_id)
+    saved = variant_page._load_summary(forge, test_id)     # a popular-decks test's too (E3-S30)
     if saved is None or not variant_page._sees_test(saved, seen):
         raise ApiError(404, variant_page.TEST_NONE)
     job = forge_runs.COORD_JOBS.get(variant_page._job_key(test_id))

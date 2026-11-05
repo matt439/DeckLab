@@ -201,7 +201,7 @@ inventory writes answer 503 with "reason": "database":
                                          save that preview as one audited change (409 when it changed,
                                          503 naming the migrate command before migration 0017)
     GET  /api/variant?test=<id>          a test of a change (wave 3); 202 while it waits or plays
-    GET  /api/variant/estimate?id=&version=&against=<deck id>|field[&av=]   its rough time
+    GET  /api/variant/estimate?id=&version=&against=<deck id>|field|gauntlet[:<sample>][&av=]   its rough time
     GET  /api/variants?id=&version=      the tests of a deck's list
     POST /api/variant/run, /api/variant/stop, /api/variant/more
                                          body {"profile", ...}: start a test, Stop it, play more

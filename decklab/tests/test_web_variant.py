@@ -158,6 +158,67 @@ class VariantScriptTests(unittest.TestCase):
         self.assertIn("couldn't be played: no.", rows)
         self.assertIn("−10 · worse0better · +10", rows)          # one shared scale with its axis (MU-10)
 
+    POPULAR = {"status": "done", "verdict": "better", "margin": 0.02,
+               "words": "Better against the sampled popular decks: +3.0 points of win rate (+1.0 to +5.0)",
+               "field": {"delta": 0.03, "low": 0.01, "high": 0.05}, "error": None, "sample": "sample:000000000003",
+               "note": "Each difference covers these 2 sampled opponents only, not every deck of that colour, style or tier.",
+               "test": {"test": "a" * 64, "base": {"id": "casual/gruul-ramp", "version": "target", "title": "Gruul Ramp"},
+                        "against": "gauntlet:sample:000000000003", "outcome": "better",
+                        "looks": [{"games_per_opponent": 200, "decision": "better", "stopped": False}],
+                        "variant": {"changes": {"remove": [[1, "Shock"]], "add": [[1, "Opt"]]}}},
+               "opponents": [{"id": "gauntlet:forge/duels/red-burn", "title": "Red Burn", "base_key": "b" * 64,
+                              "paired": {"delta": 0.04, "low": 0.0, "high": 0.08, "n": 200}, "games": 200},
+                             {"id": "gauntlet:forge/duels/izzet", "title": "Izzet Shocks", "base_key": "c" * 64,
+                              "paired": {"delta": 0.02, "low": -0.02, "high": 0.06, "n": 200}, "games": 200}],
+               "groups": {"colour": [{"key": "U", "label": "Blue", "opponents": 1, "delta": 0.02, "low": -0.02,
+                                      "high": 0.06, "note": "A deck of several colours counts in each"},
+                                     {"key": "R", "label": "Red", "opponents": 2, "delta": 0.03, "low": 0.01,
+                                      "high": 0.05, "note": ""}],
+                          "identity_size": [{"key": "mono", "label": "One colour", "opponents": 1, "delta": None,
+                                             "low": None, "high": None, "note": "Only one deck"}],
+                          "style": [], "tier": [{"key": "hard", "label": "Hard", "opponents": 1, "delta": -0.12,
+                                                 "low": -0.2, "high": -0.04, "note": ""}]}}
+
+    def test_a_popular_decks_test_by_group(self):
+        data = json.dumps(self.POPULAR)
+        field = json.dumps(dict(self.POPULAR, test=dict(self.POPULAR["test"], against="field:Constructed")))
+        groups, none, rows, verdict, against, item, links, span = _run_page([
+            f"vtGroups({data})", f"String(vtGroups({field}))", f"vtRows({data})", f"vtVerdictPanel({{}}, {data})",
+            f"vtAgainst({data}.test)",
+            # (sim-ui.js's swap result and badge, stood in for: only the facts line is checked)
+            "(globalThis.swapResult = (o) => el('span', {text: o.gamesText}), globalThis.freshnessBadge = () => null, "
+            "vtTestItem({test: 'a'.repeat(64), against: 'gauntlet', changes: {remove: [[1, 'Shock']], add: [[1, 'Opt']]},"
+            " delta: 0.03, low: 0.01, high: 0.05, verdict: 'better', games_per_opponent: 200}))",
+            # A popular deck's games are in the gauntlet's own results: no matchup link to them.
+            "(globalThis.vtCount = (n, tag) => (n.tag === tag ? 1 : 0) + (n.children || []).reduce((a, c) => a + vtCount(c, tag), 0), "
+            f"String(vtCount(vtRows({data}), 'a')))",
+            f"String(vtSpan({data}))"], self.NAMES)
+        for words in ("By group", "By colour", "By number of colours", "By tier", "Blue", "Red", "One colour", "Hard",
+                      "these 2 sampled opponents only", "+2.0 points (−2.0 to +6.0)", "No difference yet",
+                      "A deck of several colours counts in each", "Only one deck"):
+            self.assertIn(words, groups)
+        self.assertNotIn("By style", groups)           # a grouping with no rows isn't drawn
+        self.assertEqual(none, "null")                 # only a popular-decks test has groups
+        self.assertIn("Against each popular deck", rows)
+        self.assertEqual(links, "0")
+        self.assertIn("within 2 points of win rate against popular decks.", verdict)
+        self.assertEqual(against, "popular decks")
+        self.assertIn("against popular decks", item)
+        self.assertEqual(span, "0.2")                  # the groups share the page's one scale
+
+    def test_the_sheet_offers_popular_decks(self):
+        sheet = _function(SCRIPT, "vtOpenTestSheet")
+        # Asked once as it opens; offered only when the server says the sample is available, with its size.
+        self.assertIn("estimateFor(VT_POPULAR).then(", sheet)
+        self.assertIn("if (sheet.closed || !est || !est.available || !est.opponents) return;", sheet)
+        self.assertIn('popular.ok ? radio("vt-against", VT_POPULAR, `Popular decks (${plural(popular.size, "deck")}, a sample)`',
+                      sheet)
+        # Start sends "gauntlet" itself (the server resolves the standard sample); a deck stays {id, version}.
+        self.assertIn('const against = named(pick.against) ? { id: pick.against, version: "target" } : pick.against;', sheet)
+        # A late estimate answer for an earlier choice never redraws the sheet.
+        self.assertIn("if (sheet.closed || against !== pick.against) return;", sheet)
+        self.assertIn('const VT_POPULAR = "gauntlet";', SCRIPT)
+
     def test_one_scale_coloured_by_verdict(self):
         # Every difference bar on the page shares one span (the widest end, rounded up to 5 points) and its axis;
         # a bar's colour is its verdict: its whole range above 0 helps, below 0 hurts, across 0 is even.
