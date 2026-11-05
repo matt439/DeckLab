@@ -8,10 +8,12 @@ card with another kind of tutor tag too is still a tutor. The zone tags under
 finds, so they don't make a land search a tutor.
 
 The count informs only: it never changes the minimum bracket, and nothing is
-blocked by it."""
+blocked by it. tutor_rules says what Wizards' official bracket text says
+about tutors, from the wording constants.BRACKET_TUTORS keeps."""
 from decklab.lib import cards
 
 from .cardtext import card_list
+from .constants import BRACKET_TUTORS, SOURCES
 
 TUTOR_TAG = "tutor"
 LAND_TUTOR_TAG = "tutor-land"
@@ -46,3 +48,32 @@ def tutor_check(entries, path=None, tags_date=None):
     searches = [e for e in entries if e.card["oracle_id"] in land]
     return {"checked": True, "cards": card_list(found), "count": len({e.name for e in found}),
             "land_searches": card_list(searches), "tags_date": tags_date}
+
+
+def tutor_rules(data, kept=None):
+    """bracket["tutor_rules"]: what Wizards' official bracket text says about
+    tutors, from the wording Deck Lab keeps (constants.BRACKET_TUTORS, quoted
+    from the announcement; never fetched), checked against Wizards' latest
+    Commander announcement in data (_data_dates: official_announcement,
+    official_unknown). {"known": True, "source", "title", "url", "date",
+    "read_on", "reviewed_through", "says", "brackets": [{number, says, limit}],
+    "limit_set"} or {"known": False, "reason", "read_on", "reviewed_through"}
+    when an announcement newer than the kept wording, or none known, may have
+    changed it. A limit is a number of tutors the text allows; none is set
+    today, so nothing warns about a count."""
+    kept = BRACKET_TUTORS if kept is None else kept
+    dates = {"read_on": kept["read_on"], "reviewed_through": kept["reviewed_through"]}
+    announcement = data.get("official_announcement")
+    if data.get("official_unknown") or not announcement:
+        return {"known": False, **dates, "reason": "the date of Wizards' latest Commander announcement is "
+                "unknown, so the kept wording may be out of date"}
+    if announcement["date"] > kept["reviewed_through"]:
+        return {"known": False, **dates, "reason": f"Wizards announced a Commander change on "
+                f"{announcement['date']}, after the wording Deck Lab keeps was checked "
+                f"({kept['reviewed_through']})"}
+    source = SOURCES[kept["source"]]
+    brackets = [{"number": n, "says": says, "limit": limit}
+                for n, (says, limit) in sorted(kept["brackets"].items())]
+    return {"known": True, **dates, "source": kept["source"], "title": source["title"],
+            "url": source["url"], "date": source["date"], "says": kept["says"], "brackets": brackets,
+            "limit_set": any(b["limit"] is not None for b in brackets)}

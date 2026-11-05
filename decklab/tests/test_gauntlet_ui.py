@@ -186,11 +186,11 @@ class GauntletUiTests(unittest.TestCase):
           answers=[base()];
           const ids=()=>panel('matchups').children.map(n=>n.getAttribute('id'));
           open('#/deck?id=casual%2Ftest&v=target&tab=matchups');await settle();
-          same(ids(),['sec-matchups','sec-field','sec-gauntlet','sec-tests']);
+          same(ids(),['sec-matchups','sec-field','sec-group','sec-gauntlet','sec-tests']);
           clear(main);location.hash='#/deck?id=commander%2Ftest&v=target&tab=matchups';
           const page=makePage();page.summary={...page.summary,id:'commander/test',kind:'commander'};
           drawDeck(page,deckViewOf(parseHash().params));await settle();
-          same(ids(),['sec-gauntlet','sec-matchups','sec-field','sec-tests']);
+          same(ids(),['sec-gauntlet','sec-matchups','sec-field','sec-group','sec-tests']);
         """)
 
     def test_the_headline_and_verdicts_come_before_the_play_box(self):

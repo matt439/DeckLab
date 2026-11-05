@@ -70,7 +70,10 @@ function activityUndoPhysicalBatchEvidence(data) {
 
 function activityUndoWishlistEvidence(data, profile) {
   const adding = data.action === "wishlist_add", removing = data.action === "wishlist_remove", updating = data.action === "wishlist_update";
-  const keys = ["action", "available", "current", "expect", "id", "kind", "label", "profile", "restored", ...(updating ? ["fields"] : [])];
+  // An addition that moved other entries along also puts those back (1-50, wishlist_undo_moved).
+  const moved = removing && Object.hasOwn(data, "moved");
+  if (moved && !(Number.isInteger(data.moved) && data.moved >= 1 && data.moved <= 50)) return false;
+  const keys = ["action", "available", "current", "expect", "id", "kind", "label", "profile", "restored", ...(updating ? ["fields"] : []), ...(moved ? ["moved"] : [])];
   if (!adding && !removing && !updating || data.profile !== profile || typeof profile !== "string" || !profile
       || Object.keys(data).sort().join(",") !== keys.sort().join(",")) return false;
   const rows = adding ? [data.restored] : removing ? [data.current] : [data.current, data.restored];
@@ -553,6 +556,8 @@ function activityUndoShow(ctx) {
     const restoring = preview.action === "wishlist_add", row = restoring ? preview.restored : preview.current;
     sheet.body.append(el("p", { class: "box box-warn", text: restoring ? "Save Undo restores this entry to your wishlist." : "Save Undo removes this entry from your wishlist." }),
       el("p", { class: "sub", text: "Review its saved printing, notes and source below. Saving creates one new audited change; the original change stays in Activity." }),
+      ...(Number.isInteger(preview.moved) ? [el("p", { class: "sub", text: preview.moved + (preview.moved === 1 ? " other entry moved" : " other entries moved")
+        + " along to make room for it, and " + (preview.moved === 1 ? "goes" : "go") + " back to " + (preview.moved === 1 ? "its" : "their") + " earlier place. Your list keeps its order." })] : []),
       el("section", { class: "panel" }, el("h3", { text: restoring ? "Historical wishlist entry to restore" : "Current wishlist entry to remove" }),
         el("dl", {}, ACTIVITY_UNDO_FIELDS.wishlist.flatMap(field => [el("dt", { text: field === "number" ? "collector number" : field }),
           el("dd", { class: ["notes", "source"].includes(field) ? "activity-undo-note" : null, text: text(row[field]) })]))));

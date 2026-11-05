@@ -2,17 +2,35 @@
 import re
 
 from decklab.lib import permissions, state
-from decklab.lib.state import rules, wishlist_undo as undo
+from decklab.lib.state import rules, wishlist_undo as undo, wishlist_undo_moved as moved
 
 from . import activity, guard
 from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
 from .settings import _web_actor, _writer
 
 NO_CHANGE = "No undoable wishlist change at that ID."
-UNSUPPORTED = "Undo supports one wishlist entry's preferences or the latest add or removal on your wishlist."
+UNSUPPORTED = ("Undo supports one wishlist entry's preferences or the latest add or removal on your wishlist "
+               "(an addition with up to 50 entries it moved along).")
 CHANGED = "The wishlist changed. Reload Activity and review this Undo again."
 UNCONFIRMED = "The wishlist Undo result could not be confirmed. Reload Activity before trying again."
 REVISION = re.compile(r"[1-9][0-9]{0,18}")
+
+
+def hint(change, shown, profile):
+    """{"review": True, "kind": "wishlist"} for what looks like one addition to the viewer's own
+    wishlist that moved 1-50 other entries along, shown whole; None otherwise. Never authority:
+    the review reads the complete change again."""
+    rows = change.get("rows") or ()
+    total = change.get("total", len(rows))
+    if not profile or not isinstance(profile.get("id"), str) or type(total) is not int             or not 2 <= total <= moved.MAX_MOVED + 1 or len(rows) != total or change.get("more") or change.get("groups")             or shown.get("id") != change.get("id"):
+        return None
+    try:
+        moved.source_record(list(rows), profile["id"])
+    except state.Invalid:
+        return None
+    if permissions.sees_wishlist(profile, profile["id"]) and guard.allowed(profile, "wishlist.edit", profile["id"]):
+        return {"review": True, "kind": "wishlist"}
+    return None
 
 
 def _viewer():
@@ -43,6 +61,8 @@ def _call(method, *args):
         raise ApiError(409, CHANGED) from None
     except state.Unavailable:
         raise ApiError(503, DATABASE_DOWN, reason="database") from None
+    except moved.Unsupported as error:  # a fixed sentence saying why, counts at most
+        raise ApiError(400, f"{UNSUPPORTED} {error}") from None
     except state.Invalid:
         raise ApiError(400, UNSUPPORTED) from None
 
@@ -78,6 +98,11 @@ def _project(plan, change_id, pid):
         extra = {"fields": fields}
     elif "fields" in plan:
         raise ApiError(503, UNCONFIRMED)
+    if "moved" in plan:
+        # An addition that moved other entries along: they go back to their places too (wishlist_undo_moved).
+        if action != "wishlist_remove" or type(plan["moved"]) is not int or not 1 <= plan["moved"] <= moved.MAX_MOVED                 or not isinstance(plan.get("raw_moves"), list) or len(plan["raw_moves"]) != plan["moved"]:
+            raise ApiError(503, UNCONFIRMED)
+        extra["moved"] = plan["moved"]
     return {"available": True, "id": change_id, "expect": plan["expect"], "kind": "wishlist", "action": action,
             "profile": pid, "label": plan["label"], "current": current, "restored": restored, **extra}
 
@@ -89,7 +114,7 @@ def wishlist_undo_view(id=None):
         return _project(_call("wishlist_undo_review", change_id, pid), change_id, pid)
     except ApiError as error:
         if error.status == 400:
-            return {"available": False, "id": change_id, "reason": UNSUPPORTED}
+            return {"available": False, "id": change_id, "reason": error.message}
         raise
 
 

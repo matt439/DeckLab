@@ -29,7 +29,8 @@ estimand. Equal-weight per-card pooling over field opponents isn't built (sectio
                             every field list's field average and when it was tested (the
                             library's Forge line)
     last_note(entry, results_dir=None)
-                            the last field run's note of this list, or None
+                            the last field run's note of this list, or None (never a group
+                            run's, group.py)
 
 The optional space/public/visible arguments select a member's field: its own
 space plus spaces accepted by public(space_id), then visible(deck_id) filters
@@ -523,6 +524,8 @@ def last_note(entry, results_dir=None, *, space="home", visible=None, keep=None)
     except (OSError, ValueError):
         return None
     runs = found.get("runs") if isinstance(found, dict) else None
+    # A group run's note (group.py, E3-S31: its "group" part) isn't a run of the whole field.
+    runs = [r for r in runs if not (isinstance(r, dict) and "group" in r)] if isinstance(runs, list) else None
     note = runs[-1] if isinstance(runs, list) and runs and isinstance(runs[-1], dict) else None
     if note is None or (visible is not None and not visible((note.get("deck") or {}).get("id", ""))):
         return None

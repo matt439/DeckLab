@@ -5,13 +5,14 @@ that everything needing card data raises until the index can be loaded
 UPDATE lives here only: the server reads api.carddata.UPDATE, and tests
 patch it here.
 """
+import datetime
 import json
 import math
 import threading
 import traceback
 from pathlib import Path
 
-from decklab.lib import cards
+from decklab.lib import cards, config, currency, shops
 
 from . import common
 from .common import ApiError, _public
@@ -88,11 +89,17 @@ def _require_cards():
                         f"on the PC says more.")
 
 
-def _cached_rate():
-    """{"rate", "date"} of the USD->AUD rate cached on disk, or None. Never
-    fetches: status() must answer at once."""
+def _cached_rate(code=None):
+    """{"rate", "date"} of the USD rate in the configured currency (lib/currency) cached on disk,
+    or None. Never fetches: status() must answer at once. USD needs no rate: 1, dated today as
+    cards.usd_to_aud() dates it, so readers that need a dated rate (the variant buying summary) work."""
+    code = code or currency.code()
+    if code == "USD":
+        return {"rate": 1.0, "date": datetime.date.today().isoformat()}
     try:
-        data = json.loads(Path(cards.FX_FILE).read_text(encoding="utf-8"))
+        data = json.loads(Path(cards.fx_file(code)).read_text(encoding="utf-8"))
+        if data.get("to", "AUD") != code:
+            return None
         rate, date = data["rate"], data["date"]
     except (OSError, ValueError, KeyError, TypeError):
         return None
@@ -105,8 +112,15 @@ def status():
     """GET /api/status: whether the card data is ready, and the cached rate.
 
     cards.error says why the index can't be loaded (None when it can), and
-    update_error why the last background update failed."""
+    update_error why the last background update failed. fx is the cached USD rate in the configured
+    currency, and pricing what Settings says about the prices (E11-S53), None while config.json
+    can't be read (the footer still answers, in the default currency)."""
     info, error = _index_info()
+    try:
+        settings = config.load()
+    except Exception:
+        settings = None
+    code = currency.code(settings) if settings is not None else currency.DEFAULT
     return {
         "cards": {
             "ready": info is not None,
@@ -116,5 +130,14 @@ def status():
         },
         "updating": UPDATE["running"],
         "update_error": UPDATE["error"],
-        "fx": _cached_rate(),
+        "fx": _cached_rate(code),
+        "pricing": pricing(code, settings) if settings is not None else None,
     }
+
+
+def pricing(code=None, settings=None):
+    """What Settings says about the prices (E11-S53): the currency estimates are in and the
+    price-check shops the nightly snapshot reads, both config.json settings, read-only here."""
+    code = code or currency.code()
+    return {"currency": code, "symbol": currency.symbol(code), "currency_default": code == currency.DEFAULT,
+            "shops": [{"key": adapter.key, "name": adapter.name} for adapter in shops.enabled_adapters(settings)]}

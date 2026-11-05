@@ -33,6 +33,9 @@ def _field_args(sub):
                                                       "--budget)")
     play.add_argument("--opponents", help="only these field lists: deck ids, comma-separated, each with an "
                                           "optional @target or @owned")
+    play.add_argument("--group", help="play a chosen group of house decks instead of the field (E3-S31): deck ids, "
+                                      "comma-separated, each with an optional @target or @owned; the games count "
+                                      "in the ratings as a field run's")
     play.add_argument("--show", action="store_true", help="print the field view and play nothing")
     play.add_argument("--dry-run", action="store_true", help="print the plan and its time, and play nothing")
     play.add_argument("--json", action="store_true")
@@ -120,6 +123,10 @@ def _cmd_field(args):
         raise shared._CliError("field plays a deck of the library: give its deck id.")
     a = shared._cli_entry(args.deck, args.owned)
     budget = f"fixed:{args.fixed}" if args.fixed else args.budget
+    if args.group is not None:
+        if args.opponents:
+            raise shared._CliError("--opponents limits the field and --group replaces it: give one of them.")
+        return _cmd_group(args, a, budget)
     names = [n.strip() for n in args.opponents.split(",") if n.strip()] if args.opponents else None
     try:
         if args.show:
@@ -186,6 +193,100 @@ def _cmd_field(args):
     return 1 if note.get("dropped") else 0
 
 
+def _group_entries(group, text):
+    """The --group decks' entries: each "<deck id>[@target|@owned]", else the list the field plays."""
+    out = []
+    for name in (n.strip() for n in text.split(",")):
+        if not name:
+            continue
+        deck_id, _, version = name.partition("@")
+        if version.strip() not in ("", "target", "owned"):
+            raise shared._CliError(f"{name}: a version is @target or @owned.")
+        try:
+            out.append(group.house_entry(deck_id.strip(), version.strip() or None))
+        except ValueError as e:
+            raise shared._CliError(str(e)) from None
+    return out
+
+
+def _print_group(found):
+    """field --group --show's lines (group.view's answer)."""
+    deck, overall = found["deck"], found["overall"]
+    print(f"{deck['title']} ({deck['version']}) against a group of {found['of']} {found['format']} decks: "
+          f"{found['played']} with games, {found['games']:,} games")
+    if overall and overall.get("rate") is not None:
+        rate = {"value": overall["rate"], "low": overall["low"], "high": overall["high"]}
+        print(f"  against the group: {_field_rate(rate)}" + (f" ({overall['note']})" if overall.get("note") else ""))
+    for o in found["opponents"]:
+        extra = [f"{o['games']:,} games"]
+        for word, shown in ((o.get("verdict"), o.get("verdict")), ("not meaningful", o.get("not_meaningful")),
+                            (o.get("problem"), o.get("problem"))):
+            if shown:
+                extra.append(word)
+        print(f"  {o['title']} ({o['version']}): {_field_rate(o['rate'])}; " + "; ".join(extra))
+    print(f"  ! {found['note']}")
+
+
+def _cmd_group(args, a, budget):
+    """field --group: --show prints the group view, --dry-run the plan and its time; otherwise it plays
+    the group run (group.run) into the ordinary results folder and prints the view after it. Exit code
+    1 when a deck couldn't be played."""
+    from . import estimate, group
+    chosen = _group_entries(group, args.group)
+    try:
+        if args.show:
+            found = group.view(a, chosen, results_dir=args.results_dir)
+            if args.json:
+                print(shared.json.dumps(found, ensure_ascii=False))
+            else:
+                _print_group(found)
+            return 0
+        planned = group.plan(a, chosen, budget, results_dir=args.results_dir)
+    except ValueError as e:
+        raise shared._CliError(str(e)) from None
+    minutes = _field_minutes(estimate, [(a, p["opponent"], p["games"]) for p in planned["pairs"] if p["games"] > 0],
+                             args.results_dir)
+    if args.dry_run:
+        found = {"budget": planned["budget"], "per_opponent": planned["per_opponent"],
+                 "new_games": planned["new_games"], "minutes": list(minutes) if minutes else None,
+                 "pairs": [{"id": p["opponent"]["id"], "version": p["opponent"]["version"],
+                            "title": p["opponent"]["title"], "have": p["have"], "games": p["games"]}
+                           for p in planned["pairs"]]}
+        if args.json:
+            print(shared.json.dumps(found, ensure_ascii=False))
+            return 0
+        for p in found["pairs"]:
+            print(f"{p['title']} ({p['version']}): has {p['have']:,} games; about {p['games']:,} in all")
+        print(f"{len(found['pairs'])} decks, about {found['new_games']:,} new games"
+              + (f", about {minutes[0]:.0f}-{minutes[1]:.0f} minutes" if minutes else "") + ".")
+        return 0
+    shown = [0.0]
+
+    def report(done, total, detail):
+        now = shared.time.monotonic()
+        if now - shown[0] >= FIELD_REPORT_S or (total and done == total):
+            shown[0] = now
+            print(f"  {done:,} of {total:,} games ({detail['phase']})", file=shared.sys.stderr)
+
+    print(f"Playing {a['title']} ({a['version']}) against a group of {len(chosen)} decks, budget {budget}...",
+          file=shared.sys.stderr)
+    log = {"log_dir": args.logs_dir, "log_every": args.log_every} if getattr(args, "logs_dir", None) else {}
+    try:
+        note = group.run(a, chosen, budget, by=args.by, progress=report, results_dir=args.results_dir,
+                         local=args.local, seed_base=args.seed_base, inflight=args.inflight, **log)
+    except ValueError as e:
+        raise shared._CliError(str(e)) from None
+    found = group.view(a, chosen, results_dir=args.results_dir)
+    if args.json:
+        print(shared.json.dumps({"note": note, "view": found}, ensure_ascii=False))
+    else:
+        print(f"Played {note['played']:,} games in {note['wall_s']:.0f} s.")
+        for key, why in (note.get("dropped") or {}).items():
+            print(f"  ! {why} ({key[:12]})")
+        _print_group(found)
+    return 1 if note.get("dropped") else 0
+
+
 def _variant_args(sub):
     variant = sub.add_parser("variant", help="test a change to a deck on its own games (wave 3)")
     variant.add_argument("deck", help="the deck id whose list is changed")
@@ -199,6 +300,9 @@ def _variant_args(sub):
     variant.add_argument("--against", metavar="DECK", help="the deck to test against")
     variant.add_argument("--owned-b", action="store_true", help="the --against deck's owned-only list")
     variant.add_argument("--field", action="store_true", help="test against the field of the deck's format")
+    variant.add_argument("--gauntlet", metavar="SAMPLE",
+                         help="test against a saved gauntlet sample (its id, sample:<12 hex>, or standard), on the "
+                              "base list's own gauntlet games (E3-S30)")
     variant.add_argument("--opponents", help="limit the field to these decks: deck ids (id@version), with commas")
     variant.add_argument("--until", choices=("ahead",), help="play until the difference is clear (the default)")
     variant.add_argument("--games", type=shared._positive, help="play this many games a deck, with one look at the end")
@@ -255,12 +359,41 @@ def _variant_cards(base, args):
     return cards_
 
 
+def _gauntlet_against(base, sample, ref):
+    """(against "gauntlet:<sample id>", field_options) of a --gauntlet SAMPLE (an id or "standard"),
+    without a trial deck's own precon (E3-S30)."""
+    from . import gauntlet, variants_gauntlet
+    fmt = gauntlet.format_of(base)
+    try:
+        chosen = gauntlet.standard(fmt, save=True) if sample == "standard" else gauntlet.sample(sample)
+    except ValueError as e:
+        raise shared._CliError(str(e)) from None
+    if chosen.get("format") != fmt:
+        raise shared._CliError(f"{chosen.get('id')} is a {chosen.get('format')} sample, not {fmt}.")
+    return variants_gauntlet.against_for(chosen["id"]), {"exclude_ids": _trial_ids(ref, base)}
+
+
+def _trial_ids(ref, base):
+    """The gauntlet ids a trial deck's tests leave out (its own precon); () for a .dck file."""
+    from decklab.lib.gauntlet import trial_excluded
+    if ref.lower().endswith(".dck"):
+        return ()
+    try:
+        return trial_excluded(shared.decks.find_summary(base["id"]))
+    except Exception:           # a .dck file, or a deck that can't be read: nothing to leave out
+        return ()
+
+
 def _cmd_variant(args):
-    from . import deck_identity, variants
-    if args.field and args.against:
-        raise shared._CliError("Test against one deck (--against) or the field (--field), not both.")
-    if args.more is None and not args.field and not args.against:
-        raise shared._CliError("Say what to test against: --against DECK or --field.")
+    from . import deck_identity, variants, variants_gauntlet
+    sample = getattr(args, "gauntlet", None)
+    if args.against and args.against.startswith(variants_gauntlet.PREFIX) and not sample:
+        sample, args.against = args.against[len(variants_gauntlet.PREFIX):], None
+    if sum(bool(x) for x in (args.field, args.against, sample)) > 1:
+        raise shared._CliError("Test against one deck (--against), the field (--field) or a gauntlet sample "
+                               "(--gauntlet), not more than one.")
+    if args.more is None and not args.field and not args.against and not sample:
+        raise shared._CliError("Say what to test against: --against DECK, --field or --gauntlet SAMPLE.")
     if args.opponents and not args.field:
         raise shared._CliError("--opponents limits the field: use it with --field.")
     if sum(bool(x) for x in (args.until, args.games, args.quick)) > 1:
@@ -269,9 +402,12 @@ def _cmd_variant(args):
     if args.results_dir is not None and not shared.Path(args.results_dir).is_dir():
         raise shared._CliError(f"There's no folder called {args.results_dir}.")
     base = shared._cli_entry(args.deck, args.owned)
-    extend = None
+    extend, results_dir, field_options = None, args.results_dir, None
     if args.more:
-        summary = variants.load_summary(args.more, args.results_dir)
+        summary = variants.load_summary(args.more, results_dir)
+        if summary is None and results_dir is None:       # a gauntlet sample's test (E3-S30)
+            results_dir = variants_gauntlet.results_dir()
+            summary = variants.load_summary(args.more, results_dir)
         if summary is None:
             raise shared._CliError(f"There's no test {args.more} in the results folder.")
         if not deck_identity.same(summary["base"]["id"], base["id"]) or \
@@ -279,12 +415,21 @@ def _cmd_variant(args):
             raise shared._CliError(f"Test {args.more[:12]} isn't of {args.deck}'s {base['version']} list.")
         cards_ = summary["variant"].get("cards")
         against = summary["against"]
-        against = "field" if isinstance(against, str) else shared._cli_entry(against["id"], against["version"] == "owned")
+        if variants_gauntlet.is_gauntlet(against):
+            field_options = {"exclude_ids": _trial_ids(args.deck, base)}
+            results_dir = results_dir or variants_gauntlet.results_dir()
+        else:
+            against = "field" if isinstance(against, str) else \
+                shared._cli_entry(against["id"], against["version"] == "owned")
         extend, mode = args.more, summary.get("mode")
         opponents = summary.get("limited")
     else:
         cards_ = _variant_cards(base, args)
-        against = "field" if args.field else shared._cli_entry(args.against, args.owned_b)
+        if sample:
+            against, field_options = _gauntlet_against(base, sample, args.deck)
+            results_dir = results_dir or variants_gauntlet.results_dir()
+        else:
+            against = "field" if args.field else shared._cli_entry(args.against, args.owned_b)
         opponents = [o.strip() for o in args.opponents.split(",") if o.strip()] if args.opponents else None
     try:
         variant = variants.variant_entry(base, cards_)
@@ -292,8 +437,9 @@ def _cmd_variant(args):
         raise shared._CliError(str(e)) from None
     words = ", ".join([f"-{q} {n}" for q, n in variant["changes"]["remove"]]
                       + [f"+{q} {n}" for q, n in variant["changes"]["add"]])
-    print(f"Testing {words} in {base['title']} ({base['version']}) against "
-          f"{'the field' if against == 'field' else against['title']}", file=shared.sys.stderr)
+    named = (f"gauntlet sample {variants_gauntlet.sample_of(against)}" if variants_gauntlet.is_gauntlet(against)
+             else "the field" if against == "field" else against["title"])
+    print(f"Testing {words} in {base['title']} ({base['version']}) against {named}", file=shared.sys.stderr)
     shown = [0.0, None]
 
     def report(done, total, detail):
@@ -308,11 +454,11 @@ def _cmd_variant(args):
         log = {"log_dir": args.logs_dir, "log_every": getattr(args, "log_every", None) or 1}
     try:
         summary = variants.run_test(base, cards_, against, mode, by=args.by, progress=report,
-                                    results_dir=args.results_dir, local=args.local, opponents=opponents,
-                                    extend=extend, **log)
+                                    results_dir=results_dir, local=args.local, opponents=opponents,
+                                    extend=extend, field_options=field_options, **log)
     except ValueError as e:
         raise shared._CliError(str(e)) from None
-    found = variants.view(summary["test"], args.results_dir) or {"test": summary}
+    found = variants.view(summary["test"], results_dir) or {"test": summary}
     if args.json:
         print(shared.json.dumps(found, ensure_ascii=False))
         return 0
@@ -342,11 +488,33 @@ def _print_variant(found):
         state = "stopped" if look.get("stopped") else "interim" if look.get("interim") else "look"
         print(f"  {state} at {look['games_per_opponent']:,} games a deck: {look.get('decision')}"
               + (f" (z {look['z']:.2f}, bound {look['bound']})" if look.get("z") is not None else ""))
+    _print_groups(found)
     mismatch = summary.get("starter_mismatch") or {}
     if mismatch.get("of") and mismatch.get("games", 0) > 0.01 * mismatch["of"]:
         print("  ! The two versions didn't get the same games; the comparison is weaker than it should be "
               f"({mismatch['games']} of {mismatch['of']} games had another starter).")
     print(f"  test {summary['test']}")
+
+
+GROUP_TITLES = (("colour", "By colour"), ("identity_size", "By number of colours"), ("style", "By style"),
+                ("tier", "By tier"))
+
+
+def _print_groups(found):
+    """A gauntlet sample's test's difference by group (E3-S30), and its caveat."""
+    if not found.get("groups"):
+        return
+    for name, title in GROUP_TITLES:
+        rows = found["groups"].get(name) or []
+        if rows:
+            print(f"  {title}:")
+        for g in rows:
+            numbers = (f"{100 * g['delta']:+.1f} points ({100 * g['low']:+.1f} to {100 * g['high']:+.1f})"
+                       if g.get("delta") is not None else "no difference yet")
+            note = f"; {g['note']}" if g.get("note") else ""
+            print(f"    {g['label']} ({g['opponents']}): {numbers}{note}")
+    if found.get("note"):
+        print(f"  {found['note']}")
 
 
 def _experiment_args(sub):

@@ -325,7 +325,7 @@ def step_backups(r, ctx):
 
 def step_cards(r, ctx):
     _needs(ctx, "cards")
-    from decklab.lib import cards
+    from decklab.lib import cards, currency
     count = cards.info().get("cards") or 0
     r.note(PASS if count > 20000 else FAIL, f"The card index has {count:,} cards")
     for asked, exact in (("Llanowar Elves", "Llanowar Elves"), ("sol ring", "Sol Ring"), ("fire", "Fire // Ice")):
@@ -339,7 +339,7 @@ def step_cards(r, ctx):
         r.note(WARN, "Sol Ring has no price: prices won't show until the card data is updated")
     date = cards.price_date()
     r.note(PASS if date else WARN, f"Prices as of {date or 'unknown'}")
-    if not cards.FX_FILE.exists():
+    if currency.code() != "USD" and not cards.fx_file().exists():
         r.note(WARN, "No exchange rate saved yet: the server fetches one on first use (needs the network)")
     if not cards.bulk_path("oracle_tags").exists():
         r.note(WARN, "Scryfall's oracle tags are missing: python -m decklab.lib.cards update")

@@ -119,6 +119,9 @@ upkeep in another space; the command line writes every space.
     POST /api/gauntlet/run                        the deck seen first (its 404), then run.start as
                                                   /api/field/run (api/gauntlet_page.py)
     POST /api/gauntlet/stop                       the deck seen first, then run.stop as /api/field/stop
+    POST /api/field/group/run                     the deck and every chosen deck seen first (their 404),
+                                                  then run.start as /api/field/run (api/field_group.py)
+    POST /api/field/group/stop                    the deck seen first, then run.stop as /api/field/stop
     POST /api/play/sideboard-test                 the plan preview's reading rule (its own space, both
                                                   lists visible), then run.start as /api/variant/run
     PUT  /api/simulations                         simulations.edit (an admin, by role)

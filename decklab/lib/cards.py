@@ -77,6 +77,7 @@ from pathlib import Path
 from decklab.lib import card_index
 # Owned by card_index and re-exported (cards.fold, cards.ROLES, cards.build_index...).
 from decklab.lib.card_index import FACE_FIELDS, INDEX_VERSION, ROLE_TAGS, ROLES, build_index, fold
+from decklab.lib import currency
 from decklab.lib.config import DATA, USER_AGENT
 
 SCRYFALL_DIR = DATA / "scryfall"
@@ -87,6 +88,7 @@ IMAGES_DIR = DATA / "images"
 
 BULK_LIST_URL = "https://api.scryfall.com/bulk-data"
 FX_URL = "https://api.frankfurter.dev/v1/latest?from=USD&to=AUD"
+FX_URL_TEMPLATE = "https://api.frankfurter.dev/v1/latest?from=USD&to={code}"   # another currency (lib/currency)
 BULK_TYPES = ("default_cards", "oracle_tags")
 MAX_BULK_AGE = timedelta(days=7)
 IMAGE_SIZES = ("small", "normal", "small-back", "normal-back",
@@ -724,20 +726,39 @@ def cheapest_usd(name):
 _fx = None              # the rate in use: {"rate", "date", "fetched_on"}
 _fx_tried_on = None     # the day of the last network attempt
 _fx_tried_at = None     # time.monotonic() of the last network attempt
+_fx_code = currency.DEFAULT     # the currency _fx and the attempts above are for
 _fx_lock = threading.Lock()
 
 
-def usd_to_aud():
-    """(rate, rate_date): AUD per USD, the ECB reference rate from Frankfurter.
+def fx_file(code=None):
+    """Where the rate for code (default: the configured currency) is cached: fx.json for AUD, as
+    always, else fx-<code>.json beside it, so changing the setting never reads another's rate."""
+    code = code or currency.code()
+    return FX_FILE if code == "AUD" else FX_FILE.with_name(f"fx-{code.lower()}.json")
 
-    Fetched at most once a day and cached in decklab/data/fx.json. When the
+
+def usd_to_aud():
+    """(rate, rate_date): the configured currency (lib/currency: AUD unless config.json's
+    "currency" says otherwise; the name is older than the setting) per USD, the ECB reference
+    rate from Frankfurter. USD itself is a rate of 1, dated today, and never fetched.
+
+    Fetched at most once a day and cached in decklab/data/fx.json (fx_file). When the
     fetch fails the cached rate is used, and it's tried again the next day.
     With nothing cached it raises RuntimeError, and tries again after
     FX_RETRY_GAP seconds (the server may start before the network is up)."""
-    global _fx, _fx_tried_on, _fx_tried_at
+    global _fx, _fx_tried_on, _fx_tried_at, _fx_code
     today = date.today().isoformat()
+    code = currency.code()
+    if code == "USD":
+        return 1.0, today
+    path = fx_file(code)
+    url = FX_URL if code == "AUD" else FX_URL_TEMPLATE.format(code=code)
     with _fx_lock:
-        cached = _fx or _read_json(FX_FILE, None)
+        if _fx_code != code:            # the setting changed: start again for the new currency
+            _fx, _fx_tried_on, _fx_tried_at, _fx_code = None, None, None, code
+        cached = _fx or _read_json(path, None)
+        if cached is not None and cached.get("to", "AUD") != code:
+            cached = None
         if cached is None:
             due = _fx_tried_at is None or time.monotonic() - _fx_tried_at >= FX_RETRY_GAP
         else:
@@ -745,37 +766,41 @@ def usd_to_aud():
         if due:
             _fx_tried_on, _fx_tried_at = today, time.monotonic()
             try:
-                data = _get_json(FX_URL, timeout=15)
-                cached = {"rate": float(data["rates"]["AUD"]), "date": data["date"],
-                          "fetched_on": today, "source": FX_URL}
-                _write_json(FX_FILE, cached)
+                data = _get_json(url, timeout=15)
+                cached = {"rate": float(data["rates"][code]), "date": data["date"],
+                          "fetched_on": today, "source": url}
+                if code != "AUD":
+                    cached["to"] = code
+                _write_json(path, cached)
             except NETWORK_ERRORS + (KeyError, TypeError) as e:
                 if cached is None:
-                    raise RuntimeError(f"No USD->AUD rate: {e}, and nothing cached in {FX_FILE}") from e
+                    raise RuntimeError(f"No USD->{code} rate: {e}, and nothing cached in {path}") from e
         if cached is None:
-            raise RuntimeError(f"No USD->AUD rate: the last try failed and nothing is cached in "
-                               f"{FX_FILE}; trying again within {FX_RETRY_GAP // 60} minutes")
+            raise RuntimeError(f"No USD->{code} rate: the last try failed and nothing is cached in "
+                               f"{path}; trying again within {FX_RETRY_GAP // 60} minutes")
         _fx = cached
     return cached["rate"], cached["date"]
 
 
 @dataclass
 class Price:
-    """An AUD estimate for one card, with what's needed to label it as one."""
+    """An estimate for one card in the configured currency (AUD unless set; the field names are
+    older than the setting), with what's needed to label it as one."""
     name: str
     aud: float              # usd x rate, rounded to cents
     usd: float              # Scryfall's USD price for the printing and finish below
-    rate: float             # AUD per USD
+    rate: float             # currency per USD
     rate_date: str          # ECB reference date of the rate
     price_date: str         # date Scryfall's prices were pulled
     set: str                # the printing that was priced
     collector_number: str
     finish: str = "nonfoil"     # foil or etched only when no non-foil price exists
+    currency: str = "AUD"       # lib/currency's code the estimate is in
 
     def label(self):
         finish = "" if self.finish == "nonfoil" else f" {self.finish}"
-        return (f"~A${self.aud:.2f} est. (US${self.usd:.2f}{finish}, {self.set.upper()} "
-                f"{self.collector_number}, Scryfall {self.price_date}; 1 USD = {self.rate} AUD, "
+        return (f"~{currency.symbol(self.currency)}{self.aud:.2f} est. (US${self.usd:.2f}{finish}, {self.set.upper()} "
+                f"{self.collector_number}, Scryfall {self.price_date}; 1 USD = {self.rate} {self.currency}, "
                 f"ECB {self.rate_date})")
 
 
@@ -788,7 +813,7 @@ def price_aud(name):
     usd, set_code, number, finish = cheapest
     rate, rate_date = usd_to_aud()
     return Price(resolve(name), round(usd * rate, 2), usd, rate, rate_date,
-                 price_date(), set_code, number, finish)
+                 price_date(), set_code, number, finish, currency.code())
 
 
 def printing_usd(set_code, collector_number, finish="nonfoil"):
@@ -812,7 +837,7 @@ def price_aud_printing(set_code, collector_number, finish="nonfoil", rate=None):
     rate, rate_date = rate if rate is not None else usd_to_aud()
     printed = printing_card(set_code, collector_number)
     return Price(printed["name"] if printed else "", round(usd * rate, 2), usd, rate, rate_date,
-                 price_date(), set_code.lower(), str(collector_number), finish or "nonfoil")
+                 price_date(), set_code.lower(), str(collector_number), finish or "nonfoil", currency.code())
 
 
 # --- Images -----------------------------------------------------------------

@@ -11,12 +11,13 @@ from decklab.tests.test_workspace_ui import NODE, RUNNER, WEB
 
 
 FIXTURE = """
-  const panelWith = (tutors) => commanderPanel({sources: {}, commander: {ok: true,
+  const panelWith = (tutors, tutor_rules, target) => commanderPanel({sources: {}, commander: {ok: true,
     size: {ok: true, cards: 100, expected: 100}, commanders: ['Commander'],
     eligibility: {ok: true}, singleton: {ok: true, duplicates: [], allowed: []},
     identity: {ok: true, outside: []}, legality: {ok: true, banned: [], banned_as_companion: [], not_legal: []},
     bracket: {label: 'Bracket 1 or 2 (theme and intent decide)',
-      reasons: ['No Game Changers, mass land denial or extra turns.'], tutors}}}, {});
+      reasons: ['No Game Changers, mass land denial or extra turns.'], tutors, tutor_rules}}},
+    target ? {target_bracket: target} : {});
   const minimum = (panel) => panel.querySelector('.formula');
 """
 
@@ -58,4 +59,22 @@ class StatsTutorUiTests(unittest.TestCase):
             const text = minimum(panelWith(tutors)).textContent;
             assert(!text.includes('Tutors found'), text);
           }
+        """)
+
+    def test_the_official_tutor_text_at_the_target_bracket(self):
+        self.run_js("""
+          const rules = {known: true, date: '2025-10-21', read_on: '2026-11-05', says: 'Remove the tutor restrictions.',
+            brackets: [{number: 3, says: null, limit: null}]};
+          const counted = minimum(panelWith({checked: true, count: 0, cards: [], land_searches: []}, rules, 3));
+          const line = counted.querySelector('.tutor-rules').textContent;
+          assert.equal(line, "Wizards' bracket text sets no limit on tutors at Bracket 3. Its update of 2025-10-21 " +
+            "says: “Remove the tutor restrictions.” (Wording read 2026-11-05.)");
+          assert(counted.textContent.includes('Tutors found: 0'));
+          // Tags unread: no count, but the official text still shows.
+          const unread = minimum(panelWith({checked: false}, rules, 3));
+          assert(!unread.textContent.includes('Tutors found'));
+          assert(unread.querySelector('.tutor-rules'));
+          const unknown = minimum(panelWith(undefined, {known: false, reason: 'no check worked'}, 3)).textContent;
+          assert(unknown.includes("What Wizards' bracket text says about tutors isn't known: no check worked."), unknown);
+          assert.equal(minimum(panelWith(undefined)).querySelector('.tutor-rules'), null);
         """)

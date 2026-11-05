@@ -43,7 +43,7 @@ function shopSnapshotCounts(shop) { return SHOP_SNAPSHOT_SHOPS[shop || "MTGMate"
 /** The words for one row's snapshot: the shop's price and stock, or why there's none. */
 function shopSnapshotWords(snap) {
   const shop = snap.shop || "MTGMate";
-  const price = snap.price_aud != null && Number.isFinite(Number(snap.price_aud)) ? aud(Number(snap.price_aud)) : null;
+  const price = snap.price_aud != null && Number.isFinite(Number(snap.price_aud)) ? listedAud(Number(snap.price_aud)) : null;
   const printing = snap.set ? `${String(snap.set).toUpperCase()} ${snap.collector_number || ""}`.trim()
     + (snap.finish && snap.finish !== "nonfoil" ? ` ${snap.finish}` : "") : null;
   if (snap.status === "in_stock")
@@ -206,14 +206,14 @@ function shopMissingSnapshotOne(snap, short) {
   const shop = snap.shop || "MTGMate", counts = shopSnapshotCounts(shop);
   const stocked = snap.status === "in_stock", listed = stocked || (snap.status === "out_of_stock" && snap.set != null);
   // short: Shopping's missing-card rows, where the line repeats down the page; the link and date keep the detail.
-  const words = short ? (stocked ? `${shop} ${aud(snap.price)} each, ${counts ? `${snap.stock} in stock` : "in stock"}`
-    : snap.status === "out_of_stock" ? (snap.price == null ? `${shop}: out of stock` : `${shop} ${aud(snap.price)} each, out of stock`)
+  const words = short ? (stocked ? `${shop} ${listedAud(snap.price)} each, ${counts ? `${snap.stock} in stock` : "in stock"}`
+    : snap.status === "out_of_stock" ? (snap.price == null ? `${shop}: out of stock` : `${shop} ${listedAud(snap.price)} each, out of stock`)
     : snap.status === "not_listed" ? `${shop}: no nonfoil listed`
     : snap.status === "unknown" ? `${shop}: price unknown`
     : `${shop}: not checked`)
-    : stocked ? `${shop}: ${aud(snap.price)} each; ${counts ? plural(snap.stock, "copy", "copies") : "this printing"}${counts ? " of this printing" : ""} in stock when fetched.`
+    : stocked ? `${shop}: ${listedAud(snap.price)} each; ${counts ? plural(snap.stock, "copy", "copies") : "this printing"}${counts ? " of this printing" : ""} in stock when fetched.`
     : snap.status === "out_of_stock" ? (snap.price == null ? `${shop}: nonfoil out of stock in the saved check, with no price shown.`
-      : `${shop}: nonfoil out of stock in the saved check (listed at ${aud(snap.price)} each).`)
+      : `${shop}: nonfoil out of stock in the saved check (listed at ${listedAud(snap.price)} each).`)
     : snap.status === "not_listed" ? `${shop}: no nonfoil printing listed in the saved check.`
     : snap.status === "unknown" ? `${shop}: nonfoil price unknown in the saved snapshot.`
     : `${shop}: no saved nonfoil check for this card.`;

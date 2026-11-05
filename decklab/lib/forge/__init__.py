@@ -635,6 +635,9 @@ Where things are (decklab/lib/forge/, each part importing only those above it)
     adaptive.py     adaptive runs: run_adaptive(), last_summary(), lead_from_summary()
     field.py        the field view: field_lists(), plan(), run_field(), view()
     variants.py     tests of a change: aligned_dck(), run_test(), view(), tests_for()
+    variants_gauntlet.py
+                    a test of a change against a saved gauntlet sample (E3-S30): its
+                    opponents, results folder and difference by group
     experiment.py   the experiment harness: load_spec(), plan(), run(), measures(), report()
     cli.py          the command line (__main__.py runs it)
     java/           DeckLabSim's source and, since wave 2, the v2 game loop (GameLoop,
