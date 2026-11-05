@@ -125,7 +125,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 
-from decklab.lib import cards, decks, inventory, listed_prices, spaces
+from decklab.lib import cards, currency, decks, inventory, listed_prices, spaces
 from decklab.lib.config import REPO  # noqa: F401  (nothing here reads it; tests not yet ported patch it)
 from decklab.lib.decks.identity import CardIdentityError, deck_colors
 from decklab.lib.inventory import entry, rules, unreadable
@@ -706,16 +706,19 @@ def compare(sections, pool, exclude=(), prices=True, listed=False):
     result = {"rate": None, "rate_date": None, "price_date": None, "price_error": None}
     if prices:
         try:
+            code = currency.code()
             rate, rate_date = cards.usd_to_aud()
             price_date = cards.price_date()
             # AGENTS.md: a price is shown with the date it was pulled, and the
             # stamp above a deck file's table must read back.
             if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(rate_date)):
-                raise RuntimeError(f"the USD->AUD rate has no usable date ({rate_date!r})")
+                raise RuntimeError(f"the USD->{code} rate has no usable date ({rate_date!r})")
             if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(price_date)):
                 raise RuntimeError(f"the card index doesn't say when Scryfall's prices were pulled "
                                    f"({price_date!r}). Run: python -m decklab.lib.cards update --force")
             result.update(rate=rate, rate_date=rate_date, price_date=price_date)
+            if code != currency.DEFAULT:
+                result["currency"] = code       # E11-S53: the "aud" figures are in this currency
         except RuntimeError as e:          # offline with no cached rate, or no price date
             result["price_error"] = str(e)
             prices = False
@@ -799,8 +802,9 @@ def owned_vs_needed(deck_id, version="target", pool=None, prices=True):
             row at its listed price (material or not, and a row unpriced at
             the cheapest but priced as listed included), the rest at the
             cheapest (lib/listed_prices.py)
-      rate, rate_date, price_date: the USD->AUD rate, its ECB date and the date
-            Scryfall's prices were pulled; price_error says why they're None
+      rate, rate_date, price_date: the USD rate in the configured currency (lib/currency), its ECB
+            date and the date Scryfall's prices were pulled; price_error says why they're None.
+            currency: that currency's code, only when it isn't AUD (the "aud" fields are in it)
       conflicts: cards this deck needs that other built or intact decks hold:
             name, need, owned, available, missing, short (copies missing only
             because of those decks) and decks [(deck title, copies)]
@@ -875,6 +879,7 @@ def table_rows(result):
         raise ValueError("a deck file's owned-vs-needed table describes its target list, "
                          f"not the {result['version']} list")
     priced = result["rate"] is not None
+    code = result.get("currency") or currency.DEFAULT
     rows = []
     for r in result["rows"]:
         if not r["missing"]:
@@ -882,7 +887,7 @@ def table_rows(result):
         elif not priced:
             each, missing = None, None
         elif r["aud_each"] is not None:
-            each, missing = decks.format_aud(r["aud_each"]), decks.format_aud(r["aud_missing"])
+            each, missing = decks.format_aud(r["aud_each"], code), decks.format_aud(r["aud_missing"], code)
             if r["priced_finish"] != "nonfoil":
                 each += f" ({r['priced_finish']})"
         else:
@@ -894,11 +899,11 @@ def table_rows(result):
     if not totals["missing"]:
         aud = ""
     elif priced:
-        aud = decks.format_aud(aud)
+        aud = decks.format_aud(aud, code)
     # Without prices it isn't known which cards have none: leave the old label.
     labels = (f"not counted, no price: {', '.join(totals['unpriced'])}",) if totals["unpriced"] else ()
     total = decks.TotalRow(totals["missing"], aud, labels=labels if priced else None)
-    stamp = decks.PriceStamp(result["rate"], result["rate_date"], result["price_date"]) if priced else None
+    stamp = decks.PriceStamp(result["rate"], result["rate_date"], result["price_date"], code) if priced else None
     return decks.sort_table_rows(rows), total, stamp
 
 
@@ -1018,11 +1023,13 @@ def _print_result(r):
               f"{_money(row['aud_missing']) if row['missing'] else '':>10}{finish}")
     t = r["totals"]
     print(f"{t['cards']} cards, {t['need']} copies needed, {t['missing']} missing"
-          + (f", about A${t['aud_missing']:.2f} to buy" if t["aud_missing"] is not None else ""))
+          + (f", about {currency.money(t['aud_missing'], r.get('currency') or 'AUD')} to buy"
+             if t["aud_missing"] is not None else ""))
     if t["unpriced"]:
         print("No price for: " + ", ".join(t["unpriced"]))
     if r["rate"] is not None:
-        print(f"AUD estimates: Scryfall prices of {r['price_date']}, 1 USD = {r['rate']} AUD "
+        code = r.get("currency") or currency.DEFAULT
+        print(f"{code} estimates: Scryfall prices of {r['price_date']}, 1 USD = {r['rate']} {code} "
               f"(ECB {r['rate_date']}).")
     elif r["price_error"]:
         print(f"No prices: {r['price_error']}")

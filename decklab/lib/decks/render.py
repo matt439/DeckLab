@@ -6,9 +6,9 @@ stops a table being repriced, and new_deck_text() is a new file's text.
 import re
 from dataclasses import astuple
 
-from .deckfile import (DATE_RE, FIELD_RE, KINDS, MARKER, OWNED_FIELDS, PRICE_NOTE, PRICE_STAMP,
-                       PRICE_STAMP_RE, TABLE_HEADER, TABLE_RULE, _QUOTE_CUT_RE, PriceStamp, _lines, considering_insert,
-                       _one_line, _parse_row, _rate_in, _without_stamp)
+from .deckfile import (DATE_RE, FIELD_RE, KINDS, MARKER, OWNED_FIELDS, PRICE_STAMP_RE, TABLE_RULE, _QUOTE_CUT_RE,
+                       _lines, considering_insert, _one_line, _parse_row, _rate_in, _without_stamp, price_note,
+                       price_stamp_words, stamp_from, table_header)
 from . import considering
 from .decklist import DeckFileError, DecklistError, categories, format_decklist, parse_decklist
 from .edit import _merge_notes
@@ -169,7 +169,7 @@ def _read_stamp(deck):
     if "prices" not in deck.spans:
         return None
     m = PRICE_STAMP_RE.fullmatch(deck.text[slice(*deck.spans["prices"])])
-    return PriceStamp(float(m.group(1)), m.group(2), m.group(3)) if m else None
+    return stamp_from(m) if m else None
 
 
 def _price_text(deck):
@@ -259,8 +259,9 @@ def render_deck_file(deck):
 
     if "prices_other" in spans and deck.prices is not None and deck.prices != _read_stamp(deck):
         other = other_rate(deck)
-        fix = (f"reword it as {PRICE_STAMP!r}" if other["where"] == "alone"
-               else f"take it out, leaving only the stamp {PRICE_STAMP!r}")
+        wording = price_stamp_words(deck.prices.currency)
+        fix = (f"reword it as {wording!r}" if other["where"] == "alone"
+               else f"take it out, leaving only the stamp {wording!r}")
         raise DeckFileError(
             f"the text above the owned-vs-needed table gives an exchange rate in other words "
             f"({other['found']!r}, in the paragraph that starts {other['paragraph']!r}), so new prices "
@@ -269,8 +270,14 @@ def render_deck_file(deck):
         edits.append((*spans["prices"], _price_text(deck)))
     elif "prices_insert" in spans and deck.prices is not None:
         pos = spans["prices_insert"][0]
-        note = PRICE_NOTE.format(stamp=deck.prices.text())
+        note = price_note(deck.prices.currency).format(stamp=deck.prices.text())
         edits.append((pos, pos, _lead(deck.text[:pos], nl) + note + nl + nl))
+
+    # New prices in another currency than the header names (E11-S53: the setting changed): the
+    # header follows them. Unrepriced, the old stamp, cells and header all stay.
+    if (deck.table_header_span and deck.prices is not None and deck.table_currency
+            and deck.prices.currency != deck.table_currency):
+        edits.append((*deck.table_header_span, table_header(deck.prices.currency)))
 
     if "table" in spans:
         start, end = spans["table"]
@@ -297,7 +304,7 @@ def render_deck_file(deck):
 
 
 def new_deck_text(title, kind, fields, sections, rows=(), total=None, price_note="",
-                  newline="\n", notes=""):
+                  newline="\n", notes="", currency="AUD"):
     """The text of a new deck file, in the same layout as the existing ones.
 
     fields is a list of (key, value) header fields, e.g.
@@ -305,7 +312,8 @@ def new_deck_text(title, kind, fields, sections, rows=(), total=None, price_note
     rows/total fill the owned-vs-needed table (or fill it later with
     set_table), and price_note is the paragraph above the table that states the
     exchange rate and date. The Substitutes section starts empty, and so does
-    Notes unless notes (one paragraph) is given.
+    Notes unless notes (one paragraph) is given. currency names the table's
+    price columns (lib/currency's code; repricing in another rewrites them).
     """
     if kind not in KINDS:
         raise ValueError(f"kind must be one of {KINDS}, not {kind!r}")
@@ -320,7 +328,7 @@ def new_deck_text(title, kind, fields, sections, rows=(), total=None, price_note
     parts = ["```", "", "## Owned vs needed", ""]
     if price_note:
         parts += [price_note, ""]
-    parts += [TABLE_HEADER, TABLE_RULE] + [format_table_row(r) for r in rows]
+    parts += [table_header(currency), TABLE_RULE] + [format_table_row(r) for r in rows]
     if total is not None:
         parts.append(format_total_row(total))
     parts += ["", "## Substitutes", "", "## Notes"]

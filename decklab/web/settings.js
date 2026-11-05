@@ -62,6 +62,7 @@ function showSettings(params, token) {
           el("span", { class: "spinner spinner-small", "aria-hidden": "true" }), " Checking the version…")),
         el("p", { class: "sub", id: "build-checked" }),
         el("p", { class: "sub", id: "settings-cards", role: "status" }),
+        el("p", { class: "sub", id: "settings-pricing" }),
         el("div", { class: "actions" }, check),
         settingsRestartPart()))]);
   byId("sim-settings").hidden = true;

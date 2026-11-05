@@ -175,6 +175,15 @@ The three places "Less text on phones" left alone because tests pinned their wor
 - Still unsupported: receipts that split a part or confirmed extra copies.
 - Tests: `test_inventory_undo_receipt_rows.py` (11 fixture cases: tokens with a ledger, cards, an uncorrected part, later correction or record edit, rows outside received parts, a missing position, a record change beyond the ledger, the Activity hint), `test_inventory_undo_receipt_rows_pg.py` (2 cases through the real audit trail, run against a disposable PostgreSQL 16 in a cloud session) and `test_activity_mixed_undo_ui.py` (the new line and malformed `corrected` values).
 
+## Currency as a setting (2026-11-05; E11-S53 second slice)
+
+- **The setting:** `config.json`'s optional `"currency"`, an ISO code the ECB publishes a USD rate for (`lib/currency.ECB_CODES`), or `"USD"` (a rate of 1, never fetched, dated the day it's used). Unset, blank or unknown means AUD (an unknown one said once on stderr), so an existing household sees nothing change.
+- **The rate:** `cards.usd_to_aud()` (the name is older than the setting) asks Frankfurter for the configured code and caches it in `decklab/data/fx-<code>.json` (AUD keeps `fx.json`); a cache written for another currency is never used, and a change of setting starts the day's attempts again. `Price` carries its currency and labels it.
+- **Deck tables:** a table repriced in another currency names it in its header (`| ~EUR each | ~EUR missing |`), its rate statement (`1 USD = 0.9 EUR (ECB rate of ...), pulled ...`) and a new table's note; the parser reads any one-currency header, and an AUD table reads and renders byte for byte as before. A refresh without `--reprice` keeps the old header, stamp and prices; repricing still refuses a rate worded any other way.
+- **The page:** `/api/status` gains `pricing` (currency, symbol, whether it's the default, the enabled shops) and its `fx` is the configured currency's. The deck page's Prices note and its sortable `~EUR missing` column, the footer, and Scryfall estimates through `aud()` follow it; shops' own AUD listings (snapshot lines, the queue's reference prices, Baskets and postage, price history) use `listedAud()` and stay A$. Settings' About part says the currency and shops, read-only.
+- Left: other pages' and commands' A$/AUD labels (stories.md, E11-S53's Gap) and a Settings control.
+- Tests: `decklab/tests/test_currency_setting.py`. Fixtures only.
+
 ## Price-check shops as a setting (2026-11-04; E11-S53 first slice)
 
 - Matt's decision of 2026-10-31: currency and the price-check shops become settings, for self-hosters outside Australia. This first slice is the shops.

@@ -143,13 +143,25 @@ function renderVersionStatus(s) {
   const cards = $("#settings-cards");
   const cardWords = s.cards?.ready
     ? `Card data from Scryfall, index built ${(s.cards.built_at || "").slice(0, 10)}` +
-      (s.cards.price_date ? `, prices of ${s.cards.price_date}` : "") + (s.fx ? `. 1 USD = ${s.fx.rate} AUD (ECB rate of ${s.fx.date})` : "") + "."
+      (s.cards.price_date ? `, prices of ${s.cards.price_date}` : "") + (s.fx ? `. 1 USD = ${s.fx.rate} ${priceCurrency()}${s.fx.date ? ` (ECB rate of ${s.fx.date})` : ""}` : "") + "."
     : s.updating ? "Card data is being downloaded from Scryfall…" : "No card data yet. Deck Lab downloads it from Scryfall when it starts.";
   // A status region: rewritten only when the words change, so it announces the download starting and finishing,
   // not every check.
   if (cards && cards.textContent !== cardWords) cards.textContent = cardWords;
+  const pricing = $("#settings-pricing"), pricingText = pricingWords(s.pricing);
+  if (pricing && pricing.textContent !== pricingText) pricing.textContent = pricingText;
   const footer = $("#footer-data");
   if (footer) footer.textContent = footerLine(s);
+}
+
+/** Settings' read-only line about the prices (E11-S53): the currency and the price-check shops, both set in
+ * config.json on the PC, never on this page. "" before a status answer says. */
+function pricingWords(p) {
+  if (!p || typeof p.currency !== "string") return "";
+  const shops = Array.isArray(p.shops) ? p.shops.map((shop) => shop && shop.name).filter(Boolean) : [];
+  return `Prices are estimates in ${p.currency}${p.currency_default ? " (the default)" : ""}, from Scryfall's US prices ` +
+    `at the ECB's rate. Price-check shops: ${shops.length ? shops.join(", ") : "none (the nightly shop check is off)"}. ` +
+    `Both are set in config.json on the PC ("currency" and "shops"), not here.`;
 }
 
 /** The footer's one quiet line: "Prices 2026-10-12 · 1 USD = 1.4237 AUD", or what the card data is doing. */
@@ -157,7 +169,7 @@ function footerLine(s) {
   const parts = [];
   if (s.cards?.ready) { if (s.cards.price_date) parts.push(`Prices ${s.cards.price_date}`); }
   else parts.push(s.updating ? "Card data is downloading from Scryfall" : "No card data yet");
-  if (s.fx) parts.push(`1 USD = ${s.fx.rate} AUD`);
+  if (s.fx) parts.push(`1 USD = ${s.fx.rate} ${priceCurrency()}`);
   return parts.join(" · ");
 }
 

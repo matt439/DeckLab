@@ -17,7 +17,7 @@ const SHOP_BASKET_WORDS = {
 /** A basket's price as A$, or null when it isn't a price. */
 function shopBasketAud(value) {
   if (typeof value !== "string" || !/^\d{1,9}(?:\.\d{1,2})?$/.test(value)) return null;
-  return aud(Number(value));
+  return listedAud(Number(value));
 }
 
 /** True when these baskets were worked out for the queue the page now shows. */

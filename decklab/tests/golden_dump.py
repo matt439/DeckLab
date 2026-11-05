@@ -289,9 +289,10 @@ def pointed(root):
 # (E7-S28), the printings a holder's list names for the copies its cards already count;
 # standin_names, printing_version and planned_colors index recipe/list facts captured by deck projections;
 # recorded and recorded_stale are the Printings in box line's (lib/decks/printings.py), which no golden deck has
-# (tests/test_printings_in_box.py covers them).
+# (tests/test_printings_in_box.py covers them). currency is a price stamp's and estimate's (E11-S53), always
+# AUD in the goldens (tests/test_currency_setting.py covers the others).
 _NOT_RECORDED = frozenset({"warning_decks", "printings", "standin_names", "printing_version", "planned_colors",
-                           "recorded", "recorded_stale"})
+                           "recorded", "recorded_stale", "currency"})
 
 _UNDER_ROOT = re.compile(r"<ROOT>[^'\"\s]*")
 
