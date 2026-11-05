@@ -248,7 +248,8 @@ class WishlistUndoPgTests(db_support.DbTestCase):
             self.assertEqual(adapter.entries(cur, "matt"), [row for row in plan["raw_after"] if row["name"] != "Opt"])
             self.assertEqual(adapter.latest(cur, "matt", plan["raw_restore"]["position"]), plan["row_change_id"])
         before = self.persisted()
-        with self.assertRaises(undo.UndoConflict):
+        # A removal the list moved on from is wishlist_undo_later's; it refuses a card touched since.
+        with self.assertRaises(undo.UndoUnsupported):
             self.apply(source, plan=plan)
         self.assertEqual(self.persisted(), before)
         source, _ = self.presence_source("INSERT")

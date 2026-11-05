@@ -2,7 +2,7 @@
 import copy
 
 from decklab.lib import state
-from decklab.lib.state import wishlist_undo as undo
+from decklab.lib.state import wishlist_undo as undo, wishlist_undo_later as later
 from decklab.lib.state.memory import MemoryStore
 
 
@@ -35,6 +35,17 @@ class AuditWishlistMemory(MemoryStore):
                     ids.append(self._audit_ids[(change["id"], index)])
         return max(ids, default=None)
 
+    def later_rows(self, pid, after_id, limit=later.MAX_LATER + 1):
+        """pid's wishlist audit rows after after_id, in order, as pg_wishlist_undo_later.later reads them."""
+        rows = []
+        for change in self._changes:
+            for index, row in enumerate(change["rows"]):
+                audit_id = self._audit_ids[(change["id"], index)]
+                if audit_id > after_id and row["table"] == "wishlist_entry" and any(
+                        isinstance(side, dict) and side.get("profile_id") == pid for side in (row["key"], row["before"], row["after"])):
+                    rows.append({**copy.deepcopy(row), "id": audit_id, "change": change["id"]})
+        return sorted(rows, key=lambda row: row["id"])[:limit]
+
     def raw_entries(self, pid):
         return copy.deepcopy(self._wishlists.get(pid, []))
 
@@ -44,6 +55,13 @@ class AuditWishlistMemory(MemoryStore):
         if pid in self.inactive:
             raise undo.UndoMissing()
         raw = self.raw_source(change_id)
+        if len(raw) == 1:
+            row = undo.source_record(raw, pid)
+            owner = self.latest(pid)
+            if row["op"] == "DELETE" and undo._id(row.get("id")) and undo._id(owner) and owner > row["id"]:
+                # As pg_wishlist_undo._plan: a removal the list has moved on from (wishlist_undo_later).
+                return later.review(change_id, pid, raw, self.later_rows(pid, row["id"]), self.raw_entries(pid),
+                                    self.latest(pid, row["before"].get("position")), owner)
         target = (raw[0].get("after") or raw[0].get("before")) if len(raw) == 1 else None
         position = target.get("position") if isinstance(target, dict) else None
         return undo.review(change_id, pid, raw, self.raw_entries(pid), self.latest(pid, position), self.latest(pid))
