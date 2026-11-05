@@ -36,8 +36,8 @@ function incomingBannerSources(owned) {
 // ------------------------------------------------------------- availability
 
 /** "2 Y'shtola (FIC 207 foil) about A$1,120.00": one listed printing that costs materially more (E5-S31). */
-function asListedWords(d) {
-  return `${d.missing > 1 ? `${d.missing} ` : ""}${d.name} (${d.printing}) about ${aud(d.aud_missing)}`;
+function asListedWords(d, owned) {
+  return `${d.missing > 1 ? `${d.missing} ` : ""}${d.name} (${d.printing}) about ${ansMoney(d.aud_missing, owned)}`;
 }
 
 /** The banner's second line, only when the list's own printings would cost materially more than the
@@ -46,10 +46,10 @@ function asListedLine(owned) {
   const listed = owned && owned.totals && Array.isArray(owned.totals.as_listed) ? owned.totals.as_listed
     .filter((d) => d && typeof d.name === "string" && typeof d.printing === "string" && Number.isFinite(d.aud_missing)) : [];
   if (!listed.length) return null;
-  const shown = listed.slice(0, 3).map(asListedWords).join("; ");
+  const shown = listed.slice(0, 3).map((d) => asListedWords(d, owned)).join("; ");
   const rest = listed.length > 3 ? ` and ${listed.length - 3} more` : "";
   const total = Number.isFinite(owned.totals.aud_missing_as_listed) && listed.length > 1
-    ? `. About ${aud(owned.totals.aud_missing_as_listed)} in all as listed` : "";
+    ? `. About ${ansMoney(owned.totals.aud_missing_as_listed, owned)} in all as listed` : "";
   return el("p", { class: "sub deck-avail-listed", text: `As listed: ${shown}${rest}${total}.` });
 }
 
@@ -99,7 +99,7 @@ function availabilityBanner(data, screen) {
     more.push("The warnings below say why.");
   } else if (a.missing > 0) {
     kind = "warn";
-    head = `${a.missing} missing` + (a.aud != null ? `, about ${aud(a.aud)} at the cheapest printings${a.priced ? "" : ", and more"}` : "");
+    head = `${a.missing} missing` + (a.aud != null ? `, about ${ansMoney(a.aud, data.owned)} at the cheapest printings${a.priced ? "" : ", and more"}` : "");
     if (a.held) more.push(`${a.held} held by other decks`);
     if (a.coming) more.push(`${plural(a.coming, "card")} on the way`);
     action = el("button", { type: "button", class: "btn deck-avail-action", text: "Show missing",

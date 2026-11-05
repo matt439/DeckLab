@@ -646,6 +646,18 @@ class MathAndPriceTests(PoolTestCase):
         self.assertEqual((result["rate"], result["rate_date"], result["price_date"], result["price_error"]),
                          (2.0, "2026-09-28", "2026-09-28", None))
 
+    def test_one_read_of_the_currency_prices_the_whole_table(self):
+        # E11-S53: Settings may change the currency mid-run; the rate, every row and the label
+        # come from one read, so a table never mixes one currency's figures with another's stamp.
+        self.deck("a", "A", "idea", "Deck\n3 Llanowar Elves\n")
+        reads = iter(["AUD"])
+        rates = {"AUD": (2.0, "2026-09-28"), "EUR": (0.5, "2026-09-28")}
+        with mock.patch.object(pool.currency, "code", side_effect=lambda *a: next(reads, "EUR")), \
+                mock.patch.object(cards, "usd_to_aud", side_effect=lambda code=None: rates[code or "EUR"]):
+            result, rows = self.check("casual/a", prices=True)
+        self.assertNotIn("currency", result)
+        self.assertEqual((result["rate"], rows["Llanowar Elves"]["aud_each"]), (2.0, 0.4))
+
     def test_no_exchange_rate_means_no_prices(self):
         self.deck("a", "A", "idea", "Deck\n1 Sol Ring\n")
         with mock.patch.object(cards, "usd_to_aud", side_effect=RuntimeError("offline, nothing cached")):

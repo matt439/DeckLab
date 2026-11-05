@@ -84,6 +84,8 @@ class MemoryStore:
         self._packing = set()       # checked physical-task hashes, shared by the home
         self._commander_night = None  # singleton row, kept with a revision when notes are cleared
         self._shop_postage = None   # singleton row of the shops' postage (E5-S27), or None
+        self._pricing = None        # singleton row of the price settings (E11-S53), or None
+        self.pricing_ready = True   # False: as before migration 0022
         self._field_policies = {}   # format -> audited {format, revision, content: {v, rules}} row
         self._field_source = field_source
         self._deck_drafts = {}      # (profile, deck, version) -> deck_draft row (not audited, never batched)
@@ -137,14 +139,14 @@ class MemoryStore:
             if self._batch is not None:
                 raise ValueError("a batch is already open in this thread (batches don't nest)")
             saved = _copy((self._wishlists, self._settings, self._mode, self._seeded_mode, self._play,
-                           self._packing, self._commander_night, self._shop_postage, self._field_policies, self._visibility,
+                           self._packing, self._commander_night, self._shop_postage, self._pricing, self._field_policies, self._visibility,
                            self._visibility_last, self._visibility_when))
             self._batch = rows = []
             try:
                 yield self
             except BaseException:
                 (self._wishlists, self._settings, self._mode, self._seeded_mode, self._play,
-                 self._packing, self._commander_night, self._shop_postage, self._field_policies, self._visibility,
+                 self._packing, self._commander_night, self._shop_postage, self._pricing, self._field_policies, self._visibility,
                  self._visibility_last, self._visibility_when) = saved
                 raise
             finally:
@@ -423,6 +425,43 @@ class MemoryStore:
             self._shop_postage = after
             self._log(actor, message, None, [("shop_postage", "UPDATE" if before else "INSERT", ("id",), before, after)])
             return self.shop_postage()
+
+    # ------------------------------------------------------------------ the price settings (E11-S53)
+
+    def pricing_setting(self):
+        from . import pricing as rules_pricing
+        with self._lock:
+            self._check()
+            if not self.pricing_ready:
+                raise Unavailable(rules_pricing.MIGRATE)
+            row = self._pricing
+            view = ({"revision": row["revision"], "pricing": _copy(row["content"])} if row
+                    else {"revision": 0, "pricing": dict(rules_pricing.EMPTY)})
+            self._pricing_last = _copy(view)
+            return view
+
+    def pricing_setting_cached(self):
+        """The view as last read or written, or None: never raises (PgStore's twin)."""
+        return _copy(getattr(self, "_pricing_last", None))
+
+    def pricing_setting_put(self, pricing, expected_revision, actor, message):
+        from . import pricing as rules_pricing
+        pricing = rules_pricing.normalize(pricing)
+        expected_revision = rules_pricing.expectation(expected_revision)
+        rules.check_write(actor, message)
+        with self._lock:
+            self._check()
+            if not self.pricing_ready:
+                raise Unavailable(rules_pricing.MIGRATE)
+            before = self._pricing
+            if (before["revision"] if before else 0) != expected_revision:
+                raise Conflict(rules_pricing.CHANGED)
+            if (before["content"] if before else rules_pricing.EMPTY) == pricing:
+                return self.pricing_setting()
+            after = {"id": True, "revision": expected_revision + 1, "content": _copy(pricing)}
+            self._pricing = after
+            self._log(actor, message, None, [("pricing_setting", "UPDATE" if before else "INSERT", ("id",), before, after)])
+            return self.pricing_setting()
 
     # ------------------------------------------------------------------ HOME field policy
 

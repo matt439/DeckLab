@@ -2,7 +2,7 @@
 simulations and how many Forge workers the PC uses (GET/PUT /api/simulations, lib/api/simulations.py), Visits
 (GET /api/visits, lib/api/visits.py: who has used Deck Lab, when, and the pages they opened), database-maintenance
 history (GET /api/settings/maintenance, lib/api/maintenance.py; reading runs no jobs), the shops' postage
-(settings-postage.js, E5-S27), and About Deck Lab:
+(settings-postage.js, E5-S27), the currency and price-check shops (settings-pricing.js, E11-S53), and About Deck Lab:
 the running server's version, Check for updates, the card data and Restart Deck Lab (settings-restart.js). These used to sit in every page's footer;
 the footer is now one quiet line (version.js).
 
@@ -49,6 +49,7 @@ function showSettings(params, token) {
         el("div", { id: "sim-loading" }, loadingBox("Loading the simulations setting…", { small: true }))),
       commanderNightSettings(),
       typeof settingsPostagePanel === "function" ? settingsPostagePanel() : null,
+      typeof settingsPricingPanel === "function" ? settingsPricingPanel() : null,
       settingsMembersPanel(),
       settingsMaintenancePanel(token),
       el("section", { class: "panel settings-part", id: "settings-visits", "aria-labelledby": "settings-visits-title" },
@@ -68,7 +69,7 @@ function showSettings(params, token) {
   byId("sim-settings").hidden = true;
   afterRender();
   const part = params && params.get("part");
-  if (part === "about" || part === "postage") {
+  if (part === "about" || part === "postage" || part === "prices") {
     const target = byId(`settings-${part}`);
     if (target && target.scrollIntoView) target.scrollIntoView();
   }
@@ -77,6 +78,7 @@ function showSettings(params, token) {
   settingsSimulations(token);
   loadCommanderNightSettings(token);
   if (typeof loadPostageSettings === "function") loadPostageSettings(token);
+  if (typeof loadPricingSettings === "function") loadPricingSettings(token);
   loadSettingsMembers(token);
   loadSettingsMaintenance(token);
   loadVisits(token);

@@ -7,7 +7,7 @@ from unittest import mock
 from decklab.lib import access, cards, feature_routes, inventory, state
 from decklab.lib.api import activity_undo, guard, wishlist_undo
 from decklab.lib.api.common import ApiError, DATABASE_DOWN
-from decklab.lib.state import wishlist_undo as kernel
+from decklab.lib.state import wishlist_undo as kernel, wishlist_undo_later as later
 from decklab.tests import household_config, test_api, wishlist_undo_support as support
 
 DEFAULT = object()
@@ -302,6 +302,18 @@ class WishlistUndoApiTests(test_api.ApiTestCase):
                         self.assertEqual(self.view()["expect"], preview["expect"])
                         self.assertTrue(self.apply(expect=preview["expect"])["saved"])
                         self.assertEqual(self.store.raw_entries("user2"), other)
+                    elif op == "DELETE":
+                        # A removal put back after later list changes (wishlist_undo_later): the stale
+                        # review conflicts (or, once the card itself was touched since, says why it can't).
+                        self.refused(409 if mode == "own-write" else 400, self.apply, expect=preview["expect"])
+                        self.assertEqual(self.unchanged(), before)
+                        fresh = self.view()
+                        if mode == "own-write":
+                            self.assertEqual((fresh["action"], fresh["later"]), ("wishlist_add", 1))
+                        else:
+                            self.assertEqual(fresh, {"available": False, "id": self.change_id,
+                                                     "reason": f"{wishlist_undo.UNSUPPORTED} {later.AGAIN}"})
+                            self.assertEqual(self.unchanged(), before)
                     else:
                         self.assertEqual(self.refused(409, self.view).message, wishlist_undo.CHANGED)
                         self.assertEqual(self.refused(409, self.apply, expect=preview["expect"]).message, wishlist_undo.CHANGED)

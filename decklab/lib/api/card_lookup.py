@@ -13,7 +13,7 @@ import urllib.parse
 from collections import Counter
 from datetime import date
 
-from decklab.lib import cards, decks, pool, spaces
+from decklab.lib import cards, currency, decks, pool, spaces
 
 from . import common
 from .carddata import _require_cards
@@ -302,8 +302,10 @@ def printings(name):
               "rate": None, "rate_date": None, "price_date": None, "price_error": None}
     rate = None
     try:
-        rate, rate_date = cards.usd_to_aud()
-        answer.update(rate=rate, rate_date=rate_date, price_date=cards.price_date() or None)
+        code = currency.code()      # one read: the rate and its label agree (E11-S53)
+        rate, rate_date = cards.usd_to_aud(code)
+        answer.update(rate=rate, rate_date=rate_date, price_date=cards.price_date() or None,
+                      **currency.tag(code))      # E11-S53: only when it isn't AUD
     except RuntimeError as e:          # offline with no cached rate
         answer["price_error"] = _public(e)
     found = []

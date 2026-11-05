@@ -508,6 +508,17 @@ class TestPrices(FixtureIndex):
             self.assertIsNone(cards.price_aud("Black Lotus"))
             rate.assert_not_called()
 
+    def test_a_price_reads_the_currency_once(self):
+        # E11-S53: the rate and the Price's label come from one read of the setting.
+        reads = iter(["AUD"])
+        rates = {"AUD": (2.0, "2026-09-28"), "EUR": (0.5, "2026-09-28")}
+        with mock.patch.object(cards.currency, "code", side_effect=lambda *a: next(reads, "EUR")), \
+                mock.patch.object(cards, "usd_to_aud", side_effect=lambda code=None: rates[code or "EUR"]):
+            price = cards.price_aud("Llanowar Elves")
+        self.assertEqual((price.currency, price.rate, price.aud), ("AUD", 2.0, 0.4))
+        given = cards.price_aud_printing("m19", "314", rate=(0.5, "2026-09-28"), code="EUR")
+        self.assertEqual((given.currency, given.rate), ("EUR", 0.5))
+
     def test_price_aud(self):
         with mock.patch.object(cards, "usd_to_aud", return_value=(1.4237, "2026-09-28")):
             price = cards.price_aud("llanowar elves")

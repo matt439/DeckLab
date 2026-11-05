@@ -108,8 +108,12 @@ def enabled_adapters(settings=None):
     """The shops the snapshot checks, in SNAPSHOT_ADAPTERS order (E11-S53): config.json's "shops",
     a list of shop keys ("mtgmate", "gamesportal"), or every shop when it isn't set. [] turns the
     shop check off (a household that can't buy from these shops). An unknown key is left out, and
-    a value that isn't a list counts as unset, each said once on stderr. settings: config.load()'s."""
-    value = (config.load() if settings is None else settings).get(SETTING)
+    a value that isn't a list counts as unset, each said once on stderr. settings: config.load()'s
+    (when not given, with Settings' saved choice laid over it: lib/pricing_setting.py)."""
+    if settings is None:
+        from decklab.lib import pricing_setting
+        settings = pricing_setting.settings()
+    value = settings.get(SETTING)
     if value is None:
         return SNAPSHOT_ADAPTERS
     if not isinstance(value, list) or not all(isinstance(key, str) for key in value):
@@ -124,8 +128,20 @@ def enabled_adapters(settings=None):
     return tuple(adapter for adapter in SNAPSHOT_ADAPTERS if adapter.key in wanted)
 
 
+def normalize_keys(value):
+    """value, a list of shop keys, as a tuple of known keys without repeats in SNAPSHOT_ADAPTERS
+    order (" MTGMate" -> "mtgmate"), or None when it isn't a list of keys Deck Lab knows."""
+    if not isinstance(value, list) or not all(isinstance(key, str) for key in value):
+        return None
+    wanted = {key.strip().lower() for key in value}
+    if wanted - set(ADAPTERS):
+        return None
+    return tuple(adapter.key for adapter in SNAPSHOT_ADAPTERS if adapter.key in wanted)
+
+
 def shops_off_words():
-    return f'No price-check shop is set (config.json\'s "{SETTING}" is empty), so no shop is checked.'
+    return (f'No price-check shop is set (Settings\' Prices, or else config.json\'s "{SETTING}", is empty), '
+            "so no shop is checked.")
 
 
 def _now():
@@ -508,6 +524,7 @@ def _describe(shown):
         return "no snapshot"
     if shown["status"] in ("in_stock", "out_of_stock"):
         where = f"{shown['set'].upper()} {shown['collector_number']} {shown['finish']}"
+        # A$ whatever the configured currency (E11-S53): the shops list in AUD, never converted.
         price = f"A${shown['price_aud']}" if shown["price_aud"] else "price not shown"
         counted = f"{shown['stock']} in stock" if _counts_stock(shown.get("shop")) else "in stock"
         stock = counted if shown["status"] == "in_stock" else "out of stock"
@@ -731,6 +748,7 @@ def _show(_args):
     for adapter, data in snapshots:
         print(f"{adapter.name} snapshot of {data.get('fetched_at')}")
     for number, row in enumerate(rows, 1):
+        # A$ whatever the configured currency (E11-S53): the shops list in AUD, never converted.
         reference = f"ref A${row['listed_aud']} at {row['listed_at']}" if row.get("listed_aud") else "no reference"
         seen = "; ".join(f"{adapter.name}: {_describe(match(row, data))}" for adapter, data in snapshots)
         print(f"#{number} {row['name']} [{row.get('state')}] {reference}; {seen}")
@@ -747,6 +765,7 @@ def _lookup(args):
     if not listings:
         print(f"{adapter.name} lists nothing named {args.name}.")
     for item in listings:
+        # A$ whatever the configured currency (E11-S53): the shops list in AUD, never converted.
         price = f"A${item['price']}" if item["price"] else "no price"
         stock = f"{item['stock']} in stock" if adapter.counts_stock else ("in stock" if item["stock"] else "out of stock")
         print(f"{item['set'].upper()} {item['number']} {item['finish']} {item['condition']}: {price}, {stock}")

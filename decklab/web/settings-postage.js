@@ -10,7 +10,9 @@ function settingsPostagePanel() {
   if (!postageAdmin()) return null;
   return el("section", {class: "panel settings-part", id: "settings-postage", "aria-labelledby": "settings-postage-title"},
     el("h2", {id: "settings-postage-title", text: "Shops' postage"}),
-    el("p", {class: "sub", text: "What each shop charges to post an order, and the order total that posts free, in A$. Shopping's Baskets use them to plan the fewest shops. Leave a field blank when you don't know it."}),
+    // A$ whatever the configured currency (E11-S53): the shops charge postage in Australian dollars.
+    el("p", {class: "sub", text: "What each shop charges to post an order, and the order total that posts free, in A$. Shopping's Baskets use them to plan the fewest shops. Leave a field blank when you don't know it."
+      + (priceCurrency() !== "AUD" ? " The shops charge in Australian dollars, so these stay in A$." : "")}),
     el("div", {id: "postage-settings"}, loadingBox("Loading the shops' postage…", {small: true})));
 }
 

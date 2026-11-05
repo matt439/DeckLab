@@ -18,7 +18,7 @@ function ownedSection(data) {
   }
   const t = o.totals;
   const code = ownedCurrency(o);
-  const sign = code === "AUD" ? "A$" : priceCurrency() === code ? priceSymbol().trim() : code;
+  const sign = code === "AUD" ? "A$" : priceCurrency() === code ? priceSymbol().trim() : code;     // ansSign's, or the configured one's with no prices
   const priceNote = el("p", { class: "price-note" }, o.price_error
     ? `No ${sign} estimates: ${o.price_error}`
     : `${sign} prices are estimates: the cheapest non-foil printing's US price on Scryfall (prices of ${o.price_date}) ` +
@@ -32,7 +32,7 @@ function ownedSection(data) {
   }
   const coming = deckAvailability(o).coming;
   if (t.missing || coming) {
-    const cost = t.missing && !o.price_error ? `, about ${aud(t.aud_missing)} at the cheapest printings` : "";
+    const cost = t.missing && !o.price_error ? `, about ${ansMoney(t.aud_missing, o)} at the cheapest printings` : "";
     const summary = t.missing ? `${t.missing} missing${cost}` : `${coming} on the way`;
     const details = el("details", { class: "more deck-price-table" },
       el("summary", { text: `Price table: ${summary}` }),
@@ -53,10 +53,10 @@ function ownedSection(data) {
 
 /** "As listed (FIC 207 foil): A$560.00 each" for a missing row whose list names a printing priced
  * differently from the cheapest (lib/listed_prices.py); null otherwise. */
-function listedPriceWords(r) {
+function listedPriceWords(r, o = null) {
   if (!(r && r.missing > 0 && typeof r.listed_printing === "string" && Number.isFinite(r.listed_aud_each))) return null;
   if (r.listed_aud_each === r.aud_each) return null;
-  return `As listed (${r.listed_printing}): ${aud(r.listed_aud_each)} each`;
+  return `As listed (${r.listed_printing}): ${ansMoney(r.listed_aud_each, o)} each`;
 }
 
 /** A row's labels as the deck's table would have them (api: pool.row_labels). */
@@ -114,7 +114,7 @@ function ownedTable(o, ownership = {}) {
   const head = el("thead", {}, el("tr", {}, sortable("name", "Card"),
     el("th", {scope: "col", class: "num", text: "Need"}), el("th", {scope: "col", class: "num", text: "Can use"}),
     sortable("missing", "Missing", "num"), sortable("cost", `~${ownedCurrency(o)} missing`, "num")));
-  const bodies = new Map(rows.map(row => [row, ownedRow(row, usable(row), o.price_error)]));
+  const bodies = new Map(rows.map(row => [row, ownedRow(row, usable(row), o.price_error, o)]));
   const foot = el("tfoot", {}, el("tr", {},
       el("th", { scope: "row", text: `All ${plural(o.totals.cards, "card")}` }),
       el("td", { class: "num", text: num(o.totals.need) }),
@@ -123,7 +123,7 @@ function ownedTable(o, ownership = {}) {
       el("td", { class: "num", text: "" })),
       o.price_error ? null : el("tr", {}, el("td", { colspan: 5, class: "total-cost" },
         o.totals.missing ? `The ${plural(o.totals.missing, "missing copy", "missing copies")} would cost about ` +
-          `${aud(o.totals.aud_missing)} (estimate).` : "Nothing is missing.")));
+          `${ansMoney(o.totals.aud_missing, o)} (estimate).` : "Nothing is missing.")));
   function draw() {
     const ordered = sort ? [...rows].sort((a, b) => {
       if (sort.key === "name") return sort.dir * a.name.localeCompare(b.name);
@@ -143,7 +143,7 @@ function ownedTable(o, ownership = {}) {
   return wrap;
 }
 
-function ownedRow(r, usable, priceError = false) {
+function ownedRow(r, usable, priceError = false, o = null) {
   // Only the copies this deck counts on that haven't arrived, and the decks holding a
   // card only when they leave this deck short: the same labels as the deck's table.
   // "Cards other decks are holding" below lists every deck holding copies.
@@ -154,7 +154,7 @@ function ownedRow(r, usable, priceError = false) {
   for (const [deck, n] of own.in_use) labels.push(status("warn", `${n} in use in ${deck}`));
   const priced = !priceError && Number.isFinite(r.aud_each) && r.aud_each >= 0;
   if (r.priced_finish && r.priced_finish !== "nonfoil" && priced) labels.push(status("plain", `${r.priced_finish} price`));
-  const listed = !priceError && listedPriceWords(r);
+  const listed = !priceError && listedPriceWords(r, o);
   if (listed) labels.push(status(r.listed_material ? "warn" : "plain", listed));
   const reprints = r.missing > 0 ? reprintInfo(r) : null;
   const savedShop = Number.isSafeInteger(r.missing) && r.missing > 0 && Object.hasOwn(r, "shop_snapshot") && typeof shopMissingSnapshotLine === "function"
@@ -163,7 +163,7 @@ function ownedRow(r, usable, priceError = false) {
   return el("tbody", { class: r.missing > 0 ? "is-missing" : null },
     el("tr", {},
       el("th", { scope: "row", class: "name-cell" }, cardLink({ name: r.name }, "owned-table"),
-        el("span", {class: "price-each", text: priced ? `${aud(r.aud_each)} each (estimate)` : "No estimate"})),
+        el("span", {class: "price-each", text: priced ? `${ansMoney(r.aud_each, o)} each (estimate)` : "No estimate"})),
       el("td", { class: "num", text: num(r.need) }),
       el("td", { class: "num", text: num(usable) }),
       el("td", { class: "num missing-n", text: num(r.missing) }),

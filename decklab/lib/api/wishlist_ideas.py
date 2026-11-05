@@ -20,7 +20,7 @@ estimate. No answer names a deck holding a card. Nothing is written.
 """
 from collections import Counter
 
-from decklab.lib import cards, decks, pool, spaces, state
+from decklab.lib import cards, currency, decks, pool, spaces, state
 
 from . import common, drafts, guard
 from .card_lookup import _card_json, _shown_printing
@@ -112,8 +112,10 @@ def wishlist_ideas_view(deck_id=None, commander=None, commander2=None, space=Non
     prices = p is not None
     if prices:
         try:
-            result["rate"], result["rate_date"] = cards.usd_to_aud()
+            code = currency.code()      # one read: the rate, each price and the label agree (E11-S53)
+            result["rate"], result["rate_date"] = cards.usd_to_aud(code)
             result["price_date"] = cards.price_date()
+            result.update(currency.tag(code))      # E11-S53: only when it isn't AUD
         except RuntimeError as e:
             result["price_error"] = str(e)
             prices = False
@@ -142,7 +144,8 @@ def wishlist_ideas_view(deck_id=None, commander=None, commander2=None, space=Non
             row["on_the_way"] = sum(qty for _, qty in p.on_the_way.get(exact, []))
             row["status"] = ("in_deck" if row["in_deck"] else "free" if spare else
                              "in_use" if p.owned.get(exact, 0) else "to_buy")
-            price = cards.price_aud(exact) if prices and row["status"] == "to_buy" else None
+            price = (cards.price_aud(exact, rate=(result["rate"], result["rate_date"]), code=code)
+                     if prices and row["status"] == "to_buy" else None)
             row["aud_each"] = price.aud if price else None
             row["priced_printing"] = pool._printing_label(price)
         result["cards"].append(row)

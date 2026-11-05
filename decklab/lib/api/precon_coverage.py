@@ -24,7 +24,7 @@ list_source) also make a trial deck (api/precon_trial.py, E3-S39).
 """
 import csv
 
-from decklab.lib import cards, decks, pool, precon_coverage, precons, spaces
+from decklab.lib import cards, currency, decks, pool, precon_coverage, precons, spaces
 
 from . import guard, saving
 from . import precons as add
@@ -151,6 +151,7 @@ def coverage_deck(file=None, space=None):
             "share": round(covered / total, 4) if total else None, "missing": missing,
             "totals": {k: result["totals"][k] for k in ("missing", "aud_missing", "unpriced")},
             "rate": result["rate"], "rate_date": result["rate_date"], "price_date": result["price_date"],
+            **currency.tag_of(result),
             "price_error": result["price_error"], "problems": read["problems"], "may_start": _may_start(space),
             "testable": why is None, "why_not_testable": why}
 

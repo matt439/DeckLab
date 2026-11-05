@@ -17,7 +17,7 @@ deck page knows, to each match:
 Nothing is fetched per card: prices are the card index's, and the exchange rate is cards'
 once-a-day cached one; without a rate the prices are left out and the list still shows.
 """
-from decklab.lib import cards, pool
+from decklab.lib import cards, currency, pool
 
 from .card_lookup import _resolve
 
@@ -52,7 +52,8 @@ def annotate(stats, deck_id, p, sees, considering):
         price = prices[name]
         match["aud"] = price.aud if price else None
         if price and rates is None:
-            rates = {"rate": price.rate, "rate_date": price.rate_date, "price_date": price.price_date}
+            rates = {"rate": price.rate, "rate_date": price.rate_date, "price_date": price.price_date,
+                     **currency.tag(price.currency)}      # E11-S53: only when it isn't AUD
         match["considering"] = name in listed
         if free is not None:
             match["availability"] = _availability(name, free, p)

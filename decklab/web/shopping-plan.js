@@ -11,7 +11,8 @@ function shopPlanNames(shops) {
   return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
-/** "A$3.70 cards + A$8.00 postage = A$11.70", with unknown postage and rows without a price named. */
+/** "A$3.70 cards + A$8.00 postage = A$11.70", with unknown postage and rows without a price named. The shops'
+ * prices and postage are AUD, whatever the configured currency (E11-S53). */
 function shopPlanSum(plan) {
   const cards = shopBasketAud(plan.cards_aud) || "A$0.00", postage = shopBasketAud(plan.postage_aud) || "A$0.00";
   const total = shopBasketAud(plan.total_aud) || cards;

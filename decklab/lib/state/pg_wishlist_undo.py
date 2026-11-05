@@ -36,9 +36,14 @@ def _plan(store, cur, change_id, pid):
         return pg_wishlist_undo_moved.plan(cur, change_id, pid)
     # Private scope is decided before even deriving a position from another row.
     row = undo.source_record(raw, pid)
+    latest_owner = latest(cur, pid)
+    if row["op"] == "DELETE" and undo._id(row.get("id")) and undo._id(latest_owner) and latest_owner > row["id"]:
+        # A removal the list has moved on from since (wishlist_undo_later); the same ordinary save.
+        from . import pg_wishlist_undo_later
+        return pg_wishlist_undo_later.plan(cur, change_id, pid, raw)
     target = row["after"] if row["after"] is not None else row["before"]
     position = target.get("position")
-    return undo.review(change_id, pid, raw, entries(cur, pid), latest(cur, pid, position), latest(cur, pid))
+    return undo.review(change_id, pid, raw, entries(cur, pid), latest(cur, pid, position), latest_owner)
 
 
 def _allowed(store, pid, actor=None):

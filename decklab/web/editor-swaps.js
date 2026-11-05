@@ -155,7 +155,7 @@ async function openSwapSheet(uid) {
 
 function drawSwapSheet(sheet, uid, entry, answer) {
   const price = entry.aud_each != null
-    ? `Buying it: about ${aud(entry.aud_each)} each${answer.price_date ? ` (prices of ${answer.price_date})` : ""}.` : null;
+    ? `Buying it: about ${ansMoney(entry.aud_each, answer)} each${answer.price_date ? ` (prices of ${answer.price_date})` : ""}.` : null;
   const rows = entry.candidates.map((c) => {
     const n = Math.max(1, c.max_qty);
     const chips = !c.basic && !c.here ? [status("info", "On the way")] : [];

@@ -912,6 +912,23 @@ class PgStore:
                 return unchanged.result
         return self._call(work)
 
+    # ------------------------------------------------------------------ the price settings (E11-S53)
+
+    def pricing_setting(self):
+        """{revision, pricing: {v, currency, shops}} (pg_pricing.get; cached)."""
+        from . import pg_pricing
+        return pg_pricing.get(self)
+
+    def pricing_setting_cached(self):
+        """The last value read or written, or None; never connects (pg_pricing.cached)."""
+        from . import pg_pricing
+        return pg_pricing.cached(self)
+
+    def pricing_setting_put(self, pricing, expected_revision, actor, message):
+        """Replace the whole record after checking its revision (pg_pricing.put)."""
+        from . import pg_pricing
+        return pg_pricing.put(self, pricing, expected_revision, actor, message)
+
     # ------------------------------------------------------------------ the simulations mode
 
     def simulation_mode(self):

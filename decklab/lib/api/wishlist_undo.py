@@ -2,7 +2,7 @@
 import re
 
 from decklab.lib import permissions, state
-from decklab.lib.state import rules, wishlist_undo as undo, wishlist_undo_moved as moved
+from decklab.lib.state import rules, wishlist_undo as undo, wishlist_undo_later as later, wishlist_undo_moved as moved
 
 from . import activity, guard
 from .common import ApiError, DATABASE_DOWN, _keys, _parse_body
@@ -10,7 +10,8 @@ from .settings import _web_actor, _writer
 
 NO_CHANGE = "No undoable wishlist change at that ID."
 UNSUPPORTED = ("Undo supports one wishlist entry's preferences or the latest add or removal on your wishlist "
-               "(an addition with up to 50 entries it moved along).")
+               "(an addition with up to 50 entries it moved along), or a removal put back at its old place after "
+               "up to 200 later changes to your wishlist.")
 CHANGED = "The wishlist changed. Reload Activity and review this Undo again."
 UNCONFIRMED = "The wishlist Undo result could not be confirmed. Reload Activity before trying again."
 REVISION = re.compile(r"[1-9][0-9]{0,18}")
@@ -103,6 +104,11 @@ def _project(plan, change_id, pid):
         if action != "wishlist_remove" or type(plan["moved"]) is not int or not 1 <= plan["moved"] <= moved.MAX_MOVED                 or not isinstance(plan.get("raw_moves"), list) or len(plan["raw_moves"]) != plan["moved"]:
             raise ApiError(503, UNCONFIRMED)
         extra["moved"] = plan["moved"]
+    if "later" in plan:
+        # A removal put back after later changes to the list, which stay as they are (wishlist_undo_later).
+        if action != "wishlist_add" or type(plan["later"]) is not int or not 1 <= plan["later"] <= later.MAX_LATER:
+            raise ApiError(503, UNCONFIRMED)
+        extra["later"] = plan["later"]
     return {"available": True, "id": change_id, "expect": plan["expect"], "kind": "wishlist", "action": action,
             "profile": pid, "label": plan["label"], "current": current, "restored": restored, **extra}
 

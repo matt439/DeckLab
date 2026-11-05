@@ -6,7 +6,7 @@ Usage (from the repo root):
     python -m decklab.lib.pool casual/gruul-ramp      owned vs needed for one deck
     python -m decklab.lib.pool user2/casual/elves   ... a deck in User2's space, against his pool
         [--owned]        use the deck file's owned-only list instead of the target list
-        [--no-prices]    skip the AUD estimates
+        [--no-prices]    skip the price estimates (AUD, or the configured currency)
 
 From code:
 
@@ -706,8 +706,8 @@ def compare(sections, pool, exclude=(), prices=True, listed=False):
     result = {"rate": None, "rate_date": None, "price_date": None, "price_error": None}
     if prices:
         try:
-            code = currency.code()
-            rate, rate_date = cards.usd_to_aud()
+            code = currency.code()      # read once: the rate, every row and the label share it
+            rate, rate_date = cards.usd_to_aud(code)
             price_date = cards.price_date()
             # AGENTS.md: a price is shown with the date it was pulled, and the
             # stamp above a deck file's table must read back.
@@ -730,7 +730,8 @@ def compare(sections, pool, exclude=(), prices=True, listed=False):
         used = [(d.title, d.cards[name]) for d in others if d.cards.get(name)]
         available = max(owned - sum(qty for _, qty in used), 0)
         missing = max(needed - available, 0)
-        price = cards.price_aud(name) if prices and name not in unresolved else None
+        price = (cards.price_aud(name, rate=(result["rate"], result["rate_date"]), code=code)
+                 if prices and name not in unresolved else None)
         rows.append({
             "name": name,
             "need": needed,
@@ -767,7 +768,7 @@ def compare(sections, pool, exclude=(), prices=True, listed=False):
     }
     if listed and prices and buying:    # the Planned list's printings beside the cheapest (E5-S31)
         listed_prices.annotate(rows, totals, sections, lambda n: _canonical(n, "decklist", {}),
-                               (result["rate"], result["rate_date"]))
+                               (result["rate"], result["rate_date"]), code)
     result.update(
         rows=rows,
         totals=totals,
@@ -1013,7 +1014,8 @@ def _money(value):
 def _print_result(r):
     print(f"{r['deck_id']} ({r['version']} list)")
     width = max([len(row["name"]) for row in r["rows"]] + [4])
-    print(f"{'Card':<{width}}  Need  Owned  Coming  Used  Missing  A$ each  A$ missing")
+    sign = currency.symbol(r.get("currency") or currency.DEFAULT).strip()    # "A$", "€" or "SEK" (E11-S53)
+    print(f"{'Card':<{width}}  Need  Owned  Coming  Used  Missing  {sign} each  {sign} missing")
     for row in r["rows"]:
         used = sum(qty for _, qty in row["in_use_elsewhere"])
         # A card with no non-foil price is priced in foil or etched; say so.
@@ -1050,7 +1052,7 @@ def main(argv=None):
     parser.add_argument("deck", nargs="?", help="deck id, e.g. casual/gruul-ramp, pairing/cats+elves "
                                                 "or user2/casual/elves")
     parser.add_argument("--owned", action="store_true", help="use the owned-only list")
-    parser.add_argument("--no-prices", action="store_true", help="skip the AUD estimates")
+    parser.add_argument("--no-prices", action="store_true", help=f"skip the {currency.code()} estimates")
     parser.add_argument("--space", default=spaces.HOME,
                         help="whose pool to show with no deck: home (default) or a person's space")
     args = parser.parse_args(argv)

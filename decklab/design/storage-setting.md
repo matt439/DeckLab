@@ -141,7 +141,7 @@ Today's `BOX_ROW` (`row\s*\d`) also counts `Row 9` and `row3` as in the box. Und
 
 ### 2.2 Where it's kept
 
-**A database table, `public.space_storage`, in a new migration `0022_space_storage.sql`:** `space_id` (primary key, referencing `space`), `revision`, `content jsonb` with a check on its shape, and the audit triggers, as `0021_shop_postage.sql` does. A save sends `expect` (the revision it read), and an older revision is refused as a conflict.
+**A database table, `public.space_storage`, in a new migration `0023_space_storage.sql`:** `space_id` (primary key, referencing `space`), `revision`, `content jsonb` with a check on its shape, and the audit triggers, as `0021_shop_postage.sql` does. A save sends `expect` (the revision it read), and an older revision is refused as a conflict.
 
 Why not the other places:
 - **`profile_setting`** is a profile's, private to that profile with no sharing. Home's storage is Matt's and User1's together, and a profile's settings are read only by that profile (E10-S38).
@@ -205,7 +205,7 @@ The sheet:
 Each slice keeps every space's page as it is now unless the space saves a setting.
 
 1. **This inventory and proposal** (2026-11-05). Matt answers part 4.
-2. **The record and its reader.** Migration `0022_space_storage.sql`, the state-store read and write with a revision and the audit trail, the per-space table lists of 2.2 (export, check, admission, departure, space export, Activity's row rule and headline group with its privacy test, `STATE_TABLES`), `permissions.storage.edit`, `GET`/`PUT /api/storage?space=`, the `storage show|set` commands, home's built-in default (2.5's rule), and the fixture tests (the in-memory store) plus `UNDO_MIGRATION`. No page change. Applying the migration live is Matt's, separately.
+2. **The record and its reader.** Migration `0023_space_storage.sql`, the state-store read and write with a revision and the audit trail, the per-space table lists of 2.2 (export, check, admission, departure, space export, Activity's row rule and headline group with its privacy test, `STATE_TABLES`), `permissions.storage.edit`, `GET`/`PUT /api/storage?space=`, the `storage show|set` commands, home's built-in default (2.5's rule), and the fixture tests (the in-memory store) plus `UNDO_MIGRATION`. No page change. Applying the migration live is Matt's, separately.
 3. **The count and the suggestions.** `collection_locations.py` reads the setting (containers, matching, default) instead of `BOX_ROW`, `CAPACITY` and `in_box`; the rows answers gain per-container counts beside `storage_box`; the Card list draws one line per container; the location suggestions come from the setting; the pending scenario routes by container. Home's default keeps every current test's numbers; a member's space loses the Row 1-4 suggestions (a fix, 1.3).
 4. **Storage setup… on the Collection page.** The sheet, its preview, its conflict and permission refusals, and its UI tests.
 5. **Build decks' order follows the rule.** `packStorageGroup` becomes the `colour-type` rule among the others; the toggle's label follows the setting.

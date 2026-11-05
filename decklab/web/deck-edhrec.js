@@ -1,7 +1,7 @@
 /* A Commander deck's "EDHREC ideas" (E9-S07, lib/api/edhrec.py): the commander's commonly played cards
  * from EDHREC, grouped by EDHREC's categories with the share of its decks playing each, and the date the
  * PC fetched them. A viewer who sees the deck's space's collection gets each card marked in the deck, free,
- * in use (every copy in another deck, which is never named) or to buy with its AUD estimate; anyone else
+ * in use (every copy in another deck, which is never named) or to buy with its estimate (E11-S53: in the answer's currency); anyone else
  * the list alone (the server sends no marks). Whoever may change the deck adds a card to its Considering
  * list from here (POST /api/deck/considering, deck-considering.js), one save each.
  *
@@ -34,12 +34,12 @@ function deckEdhrecSection(data) {
 
 /** "In the deck", "Free in the pool", "2 free", "Owned, all in other decks", "To buy · ~A$1.20", with
  * copies on the way and Considering said; for a viewer with no marks only what the deck's list shows. */
-function edhrecMarkWords(c, marks) {
+function edhrecMarkWords(c, marks, answer = null) {
   const words = [];
   if (c.in_deck) words.push("In the deck");
   else if (marks && c.status === "free") words.push(c.free > 1 ? `${num(c.free)} free` : "Free in the pool");
   else if (marks && c.status === "in_use") words.push("Owned, all in other decks");
-  else if (marks && c.status === "to_buy") words.push(c.aud_each != null ? `To buy · ~${aud(c.aud_each)}` : "To buy · no price");
+  else if (marks && c.status === "to_buy") words.push(c.aud_each != null ? `To buy · ~${ansMoney(c.aud_each, answer)}` : "To buy · no price");
   if (marks && c.on_the_way) words.push(`${num(c.on_the_way)} on the way`);
   if (c.considering) words.push("Considering");
   return words;
@@ -139,7 +139,7 @@ function drawEdhrec(ctx) {
       text: `${words} (${num(all.filter((c) => edhrecPasses(c, key)).length)})`,
       onclick: () => { if (ctx.filter !== key) { ctx.filter = key; drawEdhrec(ctx); } } })));
   const rate = marks && a.price_error ? `No prices: ${a.price_error}`
-    : marks && a.rate != null ? `Estimates in AUD: Scryfall's cheapest non-foil printing at 1 USD = ${num(a.rate, 4)} AUD (ECB rate of ${a.rate_date}), prices pulled ${a.price_date}.` : null;
+    : marks && a.rate != null ? estimateRateWords(a) : null;
   const groups = a.groups.map((g) => {
     const shown = g.cards.filter((c) => edhrecPasses(c, ctx.filter));
     if (!shown.length) return null;
@@ -159,7 +159,7 @@ function drawEdhrec(ctx) {
 
 function edhrecRow(ctx, c, marks) {
   const share = c.inclusion != null ? `${c.inclusion}% of decks` : null;
-  const row = cardRow(c.card || null, { name: c.name, meta: [share, ...edhrecMarkWords(c, marks)].filter(Boolean).join(" · "),
+  const row = cardRow(c.card || null, { name: c.name, meta: [share, ...edhrecMarkWords(c, marks, ctx.answer)].filter(Boolean).join(" · "),
     viewerGroup: "deck-edhrec", caption: c.name });
   if (!ctx.answer.may_add || c.in_deck) return row;
   const button = el("button", { type: "button", class: "btn btn-quiet", text: c.considering ? "Considering" : "Consider",

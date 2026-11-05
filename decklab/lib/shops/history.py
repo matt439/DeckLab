@@ -132,6 +132,7 @@ def lines(answer):
             if not day["listed"]:
                 said.append(f"  {day['on']}  not listed")
                 continue
+            # A$ whatever the configured currency (E11-S53): the shops list in AUD, never converted.
             price = f"A${day['price']}" if day["price"] else "price not shown"
             if not day["in_stock"]:
                 stock = "out of stock"

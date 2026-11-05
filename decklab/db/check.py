@@ -364,6 +364,29 @@ def _shop_postage(c):
     return work
 
 
+def _pricing_setting(c):
+    def work():
+        from decklab.lib.state import Invalid, pricing
+        if c.execute("select to_regclass('public.pricing_setting') is null").fetchone()[0]:
+            return True, False, "the price settings unavailable until migration 0022"
+        rows = c.execute("select id, revision, content from pricing_setting").fetchall()
+        if not rows:
+            return True, False, "not set (config.json's apply)"
+        if len(rows) != 1:
+            return False, False, "expected at most one price settings record"
+        key, revision, content = rows[0]
+        if key is not True or type(revision) is not int or revision < 1:
+            return False, False, "invalid price settings record identity or revision"
+        try:
+            normalized = pricing.normalize(content)
+        except Invalid as e:
+            return False, False, str(e)
+        if normalized != content:
+            return False, False, "the price settings are not in their complete saved form"
+        return True, False, f"currency {content['currency'] or 'from config.json'} at revision {revision}"
+    return work
+
+
 def _field_policy(c):
     """Validate stored policy only; old incarnation rules are intentional tombstones."""
     def work():
@@ -537,6 +560,7 @@ def run(dbname=None, say=backup.say):
         result.sub("audit trail", _audit_trail(c), c)
         result.sub("Commander-night notes", _commander_night(c), c)
         result.sub("Shops' postage", _shop_postage(c), c)
+        result.sub("Price settings", _pricing_setting(c), c)
         result.sub("field policy", _field_policy(c), c)
         result.sub("visibility", _visibility(c), c)
         result.sub("member departures", _space_departures(c), c)

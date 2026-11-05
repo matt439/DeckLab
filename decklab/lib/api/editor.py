@@ -6,7 +6,7 @@ POST /api/decklist/parse ("Paste a list", parse_list), POST
 import re
 import traceback
 
-from decklab.lib import accessories, cards, decks, permissions, pool, spaces
+from decklab.lib import accessories, cards, currency, decks, permissions, pool, spaces
 from decklab.lib.inventory import paths as inventory_paths
 
 from . import common, deck_aliases, drafts, guard
@@ -761,21 +761,24 @@ def find_cards(q=None, scope=None, colors=None, type=None, mv=None, deck_id=None
     else:
         names = []
     shown = names[(page - 1) * n:page * n]
+    tag = {}
+    code = currency.code()      # one read: the rate, every result's price and the label agree (E11-S53)
+    try:
+        rate, rate_date = cards.usd_to_aud(code)
+        price_date = cards.price_date()
+        tag = currency.tag(code)       # E11-S53: only when it isn't AUD
+    except RuntimeError:
+        rate = rate_date = price_date = None
     out = []
     for name in shown:
         card = cards.card(name)
         chosen = None if decks.is_basic_land(name) else _default_printing(name, counts)
         printing = cards.printing(chosen["set"], chosen["number"]) if chosen else None
-        price = cards.price_aud(name)
+        price = cards.price_aud(name, rate=(rate, rate_date), code=code) if rate is not None else None
         entry = dict(_card_json(card, printing or _shown_printing(card)), default=chosen, have=have_of(card),
                      aud=price.aud if price else None)
         if scope == "owned":
             entry["free"] = free[name]
         out.append(entry)
-    try:
-        rate, rate_date = cards.usd_to_aud()
-        price_date = cards.price_date()
-    except RuntimeError:
-        rate = rate_date = price_date = None
     return {"cards": out, "total": len(names), "page": page, "pages": max(1, -(-len(names) // n)),
-            "did_you_mean": did_you_mean, "price_date": price_date, "rate": rate, "rate_date": rate_date}
+            "did_you_mean": did_you_mean, "price_date": price_date, "rate": rate, "rate_date": rate_date, **tag}
