@@ -54,6 +54,9 @@ def review_hint(change, shown, profile):
     if (queue := activity_watchlist_undo.hint(change, shown, profile)) is not None:
         return queue
     if profile:
+        from . import wishlist_undo as wishlist_moved
+        if (moved := wishlist_moved.hint(change, shown, profile)) is not None:
+            return moved
         from . import activity_token_edit_undo
         if (edits := activity_token_edit_undo.hint(change, shown, profile, _space(profile))) is not None:
             return edits
