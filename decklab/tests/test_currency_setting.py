@@ -241,6 +241,14 @@ class StatusTests(unittest.TestCase):
             with setting("USD"):
                 self.assertEqual(carddata._cached_rate(), {"rate": 1.0, "date": date.today().isoformat()})
 
+    def test_an_unreadable_config_still_answers_status(self):
+        # /api/status answers without config.json (the footer still shows), in the default currency.
+        with mock.patch.object(config, "load", side_effect=ValueError("broken")):
+            self.assertEqual(currency.code(), "AUD")
+            answer = carddata.status()
+        self.assertIsNone(answer["pricing"])
+        self.assertIn("fx", answer)
+
 
 try:
     from decklab.tests.test_deck_page_ui import PAGE

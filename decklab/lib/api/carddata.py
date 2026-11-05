@@ -12,7 +12,7 @@ import threading
 import traceback
 from pathlib import Path
 
-from decklab.lib import cards, currency, shops
+from decklab.lib import cards, config, currency, shops
 
 from . import common
 from .common import ApiError, _public
@@ -113,9 +113,14 @@ def status():
 
     cards.error says why the index can't be loaded (None when it can), and
     update_error why the last background update failed. fx is the cached USD rate in the configured
-    currency, and pricing what Settings says about the prices (E11-S53)."""
+    currency, and pricing what Settings says about the prices (E11-S53), None while config.json
+    can't be read (the footer still answers, in the default currency)."""
     info, error = _index_info()
-    code = currency.code()
+    try:
+        settings = config.load()
+    except Exception:
+        settings = None
+    code = currency.code(settings) if settings is not None else currency.DEFAULT
     return {
         "cards": {
             "ready": info is not None,
@@ -126,13 +131,13 @@ def status():
         "updating": UPDATE["running"],
         "update_error": UPDATE["error"],
         "fx": _cached_rate(code),
-        "pricing": pricing(code),
+        "pricing": pricing(code, settings) if settings is not None else None,
     }
 
 
-def pricing(code=None):
+def pricing(code=None, settings=None):
     """What Settings says about the prices (E11-S53): the currency estimates are in and the
     price-check shops the nightly snapshot reads, both config.json settings, read-only here."""
     code = code or currency.code()
     return {"currency": code, "symbol": currency.symbol(code), "currency_default": code == currency.DEFAULT,
-            "shops": [{"key": adapter.key, "name": adapter.name} for adapter in shops.enabled_adapters()]}
+            "shops": [{"key": adapter.key, "name": adapter.name} for adapter in shops.enabled_adapters(settings)]}

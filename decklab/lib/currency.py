@@ -41,7 +41,12 @@ def _say_once(text):
 def code(settings=None):
     """The configured currency's upper-case code: config.json's "currency", or DEFAULT when it isn't
     set. A value that isn't one of ECB_CODES counts as unset, said once. settings: config.load()'s."""
-    value = (config.load() if settings is None else settings).get(SETTING)
+    if settings is None:
+        try:
+            settings = config.load()
+        except Exception:  # an unreadable config.json: /api/status still answers, in the default
+            return DEFAULT
+    value = settings.get(SETTING)
     if value is None or (isinstance(value, str) and not value.strip()):
         return DEFAULT
     wanted = value.strip().upper() if isinstance(value, str) else None
