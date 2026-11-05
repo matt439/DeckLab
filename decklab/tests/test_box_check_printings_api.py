@@ -4,6 +4,10 @@ from decklab.lib.api.box_check import save_box_check  # noqa: F401  (the route t
 from decklab.lib.decks import printings
 from decklab.tests import test_box_check_api as base
 
+# The fixture card index and state store, as test_box_check_api's module installs them.
+setUpModule = base.setUpModule
+tearDownModule = base.tearDownModule
+
 ELF, MYSTIC = base.ELF, base.MYSTIC
 FIELD = "Printings in box"
 
