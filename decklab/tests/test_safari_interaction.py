@@ -60,6 +60,17 @@ class NativeGestureTests(unittest.TestCase):
                          ["pointerMove", "pointerDown", "pause", "pointerMove", "pointerUp"])
         driver.command.assert_called_with("DELETE", "/actions")
 
+    def test_held_drag_rests_before_lifting_and_raw_swipe_passes_the_hold_through(self):
+        driver = mock.Mock()
+        driver.command.return_value = {"x": 0, "y": 0, "width": 393, "height": 852}
+        interaction.raw_swipe(driver, (100, 500), (100, 200), duration=900, hold_ms=250)
+        finger = next(call.args[2] for call in driver.command.call_args_list
+                      if call.args[:2] == ("POST", "/actions"))["actions"][0]["actions"]
+        self.assertEqual([item["type"] for item in finger],
+                         ["pointerMove", "pointerDown", "pause", "pointerMove", "pause", "pointerUp"])
+        self.assertEqual(finger[3]["duration"], 900)
+        self.assertEqual(finger[4], {"type": "pause", "duration": 250})
+
     def test_failed_touch_releases_finger_so_later_cases_can_recover(self):
         driver = mock.Mock()
         driver.command.side_effect = [{"x": 0, "y": 0, "width": 393, "height": 852},
@@ -221,7 +232,7 @@ class AnchorTransformTests(unittest.TestCase):
 class NativeFieldAndHomeScreenTests(unittest.TestCase):
     def test_partly_visible_receipt_tile_gets_one_raw_native_tap_with_exact_label(self):
         driver = mock.Mock()
-        driver.execute.return_value = "Llanowar Elves: check and edit"
+        driver.execute.return_value = "Inspect Llanowar Elves"
         native = {"x": 16, "y": 260, "width": 180, "height": 250}
         window = {"x": 0, "y": 0, "width": 393, "height": 852}
         driver.command.side_effect = [True, native, window, {"x": 0, "y": 60, "width": 393, "height": 695}]
@@ -234,8 +245,10 @@ class NativeFieldAndHomeScreenTests(unittest.TestCase):
                 mock.patch.object(interaction, "native_element", return_value="tile") as find, \
                 mock.patch.object(interaction, "touch", return_value={"start": {"x": 106, "y": 306}}) as touch, \
                 mock.patch.object(interaction, "web"):
-            opened = interaction.tap_native_visible_part(driver, fixture, ".card-tile-open")
-        find.assert_called_once_with(driver, "Llanowar Elves: check and edit", require_visible=False, webview_only=True)
+            opened = interaction.tap_native_visible_part(driver, fixture, flows.RECEIPT_INSPECT,
+                                                         element_type=flows.POPUP_BUTTON_TYPES)
+        find.assert_called_once_with(driver, "Inspect Llanowar Elves", element_type=flows.POPUP_BUTTON_TYPES,
+                                     require_visible=False, webview_only=True)
         touch.assert_called_once()
         self.assertEqual(touch.call_args.args[2], (106, 246.5))
         self.assertEqual(opened["coordinate_transform"]["offsetY"], 60)
@@ -243,7 +256,7 @@ class NativeFieldAndHomeScreenTests(unittest.TestCase):
 
     def test_offscreen_receipt_tile_is_revealed_before_single_native_tap(self):
         driver = mock.Mock()
-        driver.execute.return_value = "Llanowar Elves: check and edit"
+        driver.execute.return_value = "Inspect Llanowar Elves"
         driver.command.side_effect = [True, {"x": 16, "y": 260, "width": 180, "height": 250},
                                       {"x": 0, "y": 0, "width": 393, "height": 852},
                                       {"x": 0, "y": 60, "width": 393, "height": 695}]
@@ -259,7 +272,7 @@ class NativeFieldAndHomeScreenTests(unittest.TestCase):
                 mock.patch.object(interaction, "native_element", return_value="tile"), \
                 mock.patch.object(interaction, "native_scroll_towards", return_value={}) as scroll, \
                 mock.patch.object(interaction, "touch") as touch, mock.patch.object(interaction, "web"):
-            interaction.tap_native_visible_part(driver, fixture, ".card-tile-open")
+            interaction.tap_native_visible_part(driver, fixture, flows.RECEIPT_INSPECT)
         scroll.assert_called_once_with(driver, fixture, below, upwards=True, standalone=False)
         touch.assert_called_once()
 
@@ -275,7 +288,7 @@ class NativeFieldAndHomeScreenTests(unittest.TestCase):
 
         def execute(script, args=None):
             if "elementFromPoint" not in script:
-                return "Llanowar Elves: check and edit"
+                return "Inspect Llanowar Elves"
             # Execute the production observation script against a descendant
             # image and a fixed footer covering the tile's geometric center.
             completed = subprocess.run([shutil.which("node"), "-e", """
@@ -302,7 +315,7 @@ class NativeFieldAndHomeScreenTests(unittest.TestCase):
                 mock.patch.object(interaction, "native_element", return_value="tile"), \
                 mock.patch.object(interaction, "web"), mock.patch.object(interaction, "native_scroll_towards") as scroll:
             opened = interaction.tap_native_visible_part(driver,
-                SimpleNamespace(base_url="http://127.0.0.1:9234"), ".card-tile-open")
+                SimpleNamespace(base_url="http://127.0.0.1:9234"), flows.RECEIPT_INSPECT)
         hit = opened["hit_test"]
         self.assertEqual(len(hit["samples"]), 9)
         self.assertFalse(hit["samples"][0]["on_target"])
@@ -316,7 +329,7 @@ class NativeFieldAndHomeScreenTests(unittest.TestCase):
 
     def test_fully_occluded_tile_scrolls_before_one_observed_native_tap(self):
         driver = mock.Mock()
-        driver.execute.return_value = "Llanowar Elves: check and edit"
+        driver.execute.return_value = "Inspect Llanowar Elves"
         window = {"x": 0, "y": 0, "width": 393, "height": 852}
         driver.command.side_effect = [True, {"x": 16, "y": 260, "width": 180, "height": 250}, window,
                                       {"x": 0, "y": 60, "width": 393, "height": 695}]
@@ -330,61 +343,344 @@ class NativeFieldAndHomeScreenTests(unittest.TestCase):
                 mock.patch.object(interaction, "native_element", return_value="tile"), \
                 mock.patch.object(interaction, "native_scroll_towards", return_value={}) as scroll, \
                 mock.patch.object(interaction, "touch") as touch, mock.patch.object(interaction, "web"):
-            opened = interaction.tap_native_visible_part(driver, fixture, ".card-tile-open")
+            opened = interaction.tap_native_visible_part(driver, fixture, flows.RECEIPT_INSPECT)
         scroll.assert_called_once_with(driver, fixture, measured, upwards=True, standalone=False)
         self.assertEqual(opened["native_preparation"][0]["hit_test"], blocked)
         touch.assert_called_once()
 
-    def test_quantity_focus_uses_native_field_bounds_after_native_scroll(self):
-        driver = mock.Mock()
+    FIELD_VIEWPORT = {"left": 0, "top": 0, "width": 393, "height": 714}
+
+    def field(self, top, viewport=None):
+        rect = {"left": 61, "right": 105, "top": top, "bottom": top + 44, "width": 44, "height": 44}
+        viewport = viewport or self.FIELD_VIEWPORT
+        visible = {"left": rect["left"], "right": rect["right"], "top": max(top, viewport["top"]),
+                   "bottom": min(top + 44, viewport["top"] + viewport["height"])}
+        return {"rect": rect, "visible": visible, "shown": True, "viewport": dict(viewport)}
+
+    def native_field(self, driver, field_rect, view_rect, window):
         driver.execute.return_value = "Copies of Forest"
-        driver.find.return_value = "native-forest-field"
-        field_rect = {"x": 60, "y": 400, "width": 44, "height": 44}
+        driver.find.return_value = "webview"
+        driver.command.side_effect = lambda method, path, body=None: window if path == "/window/rect" else None
+        rects = {"field": field_rect, "webview": view_rect}
+        return mock.patch.object(interaction, "native_rect", side_effect=lambda d, element: rects[element])
+
+    def test_field_under_fixed_tab_bar_is_not_revealed_and_scrolls_content_up(self):
+        # iPhone 17 Pro, 2026-11-05: Forest (top 666.5) lay inside the 714px
+        # viewport but under the tab bar; one raw tap hit the Testing tab.
+        driver = mock.Mock()
         window = {"x": 0, "y": 0, "width": 393, "height": 852}
-        view_rect = {"x": 0, "y": 60, "width": 393, "height": 695}
-        driver.command.side_effect = [view_rect, window, field_rect, window]
-        dom = {"rect": {"left": 60, "right": 104, "top": 340, "bottom": 384, "width": 44, "height": 44},
-               "visible": {"left": 60, "right": 104, "top": 340, "bottom": 384}, "shown": True,
-               "viewport": {"left": 0, "width": 393}}
+        view_rect = {"x": 0, "y": 60, "width": 393, "height": 714}
+        covered, shown = self.field(666.5), self.field(300)
+        blocked = {"point": None, "samples": [{"on_target": False, "hit": {"tag": "A", "class": "tab"}}]}
+        clear = {"point": {"x": 83, "y": 322}, "samples": []}
         fixture = SimpleNamespace(base_url="http://127.0.0.1:9234")
-        clipped = copy.deepcopy(dom)
-        clipped["rect"].update(top=800, bottom=844)
-        clipped["visible"].update(top=800, bottom=695)
-        with mock.patch.object(interaction, "mobile") as mobile, \
-                mock.patch.object(interaction, "web"), mock.patch.object(interaction, "bounds", side_effect=[clipped, dom, dom]), \
-                mock.patch.object(interaction, "raw_swipe", return_value={"start": {"x": 255, "y": 602}}) as swipe, \
-                mock.patch.object(interaction, "tap_native_rect", return_value={"start": {"x": 82, "y": 422}}) as tap:
+        with self.native_field(driver, {"x": 61, "y": 360, "width": 44, "height": 44}, view_rect, window), \
+                mock.patch.object(interaction, "bounds", side_effect=[covered, shown, shown]), \
+                mock.patch.object(interaction, "visible_button_hit_point", side_effect=[blocked, clear, clear]), \
+                mock.patch.object(interaction, "native_element", return_value="field") as find, \
+                mock.patch.object(interaction, "native_scroll_towards", return_value={"start": {}}) as scroll, \
+                mock.patch.object(interaction, "mobile") as mobile, mock.patch.object(interaction, "web"), \
+                mock.patch.object(interaction, "tap_native_rect") as rect_tap, \
+                mock.patch.object(interaction, "touch", return_value={"start": {"x": 83, "y": 382}}) as touch:
             result = interaction.focus_native_field(driver, fixture, ".qty-input")
+        scroll.assert_called_once_with(driver, fixture, covered, True)
+        self.assertEqual(result["native_scrolls"][0]["hit_test"], blocked)
+        find.assert_called_once_with(driver, "Copies of Forest", element_type="XCUIElementTypeTextField",
+                                     require_visible=False, webview_only=True)
+        touch.assert_called_once()
+        transform, point = touch.call_args.args[1:3]
+        self.assertEqual(point, (83, 322))  # the hit-tested point, not the native rectangle's centre
+        self.assertEqual((transform["offsetX"], transform["offsetY"]), (0, 60))
+        rect_tap.assert_not_called()
         mobile.assert_not_called()  # Xcode 27's private scroll-to-element selector is not used.
-        swipe.assert_called_once()
-        tap.assert_called_once_with(driver, field_rect)
-        self.assertEqual(result["label"], "Copies of Forest")
-        self.assertIn("XCUIElementTypeTextField", driver.find.call_args.args[1])
         driver.click.assert_not_called()
+
+    def test_field_covered_by_top_bar_scrolls_content_down(self):
+        driver = mock.Mock()
+        window = {"x": 0, "y": 0, "width": 393, "height": 852}
+        under_header, shown = self.field(20), self.field(300)
+        fixture = SimpleNamespace(base_url="http://127.0.0.1:9234")
+        with self.native_field(driver, {"x": 61, "y": 360, "width": 44, "height": 44},
+                               {"x": 0, "y": 60, "width": 393, "height": 714}, window), \
+                mock.patch.object(interaction, "bounds", side_effect=[under_header, shown, shown]), \
+                mock.patch.object(interaction, "visible_button_hit_point",
+                                  side_effect=[{"point": None, "samples": []}, {"point": {"x": 83, "y": 322}},
+                                               {"point": {"x": 83, "y": 322}}]), \
+                mock.patch.object(interaction, "native_element", return_value="field"), \
+                mock.patch.object(interaction, "native_scroll_towards", return_value={}) as scroll, \
+                mock.patch.object(interaction, "web"), mock.patch.object(interaction, "touch"):
+            interaction.focus_native_field(driver, fixture, ".qty-input")
+        self.assertIs(scroll.call_args.args[3], False)
+
+    def test_field_covered_at_tap_time_fails_instead_of_tapping_through_overlay(self):
+        driver = mock.Mock()
+        window = {"x": 0, "y": 0, "width": 393, "height": 852}
+        shown = self.field(300)
+        covered = {"point": None, "samples": [{"on_target": False, "hit": {"tag": "DIV", "class": "edit-bar"}}]}
+        with self.native_field(driver, {"x": 61, "y": 360, "width": 44, "height": 44},
+                               {"x": 0, "y": 60, "width": 393, "height": 714}, window), \
+                mock.patch.object(interaction, "bounds", side_effect=[shown, shown]), \
+                mock.patch.object(interaction, "visible_button_hit_point",
+                                  side_effect=[{"point": {"x": 83, "y": 322}}, covered]), \
+                mock.patch.object(interaction, "native_element", return_value="field"), \
+                mock.patch.object(interaction, "web"), mock.patch.object(interaction, "touch") as touch, \
+                mock.patch.object(interaction, "tap_native_rect") as rect_tap, \
+                self.assertRaisesRegex(AssertionError, "covered at its tap point.*edit-bar"):
+            interaction.focus_native_field(driver, SimpleNamespace(base_url="http://127.0.0.1:9234"), ".qty-input")
+        touch.assert_not_called()
+        rect_tap.assert_not_called()
+
+    def test_field_moving_during_native_lookup_is_measured_again_before_the_tap(self):
+        driver = mock.Mock()
+        window = {"x": 0, "y": 0, "width": 393, "height": 852}
+        before, after = self.field(300), self.field(340)
+        hit = {"point": {"x": 83, "y": 362}}
+        with self.native_field(driver, {"x": 61, "y": 400, "width": 44, "height": 44},
+                               {"x": 0, "y": 60, "width": 393, "height": 714}, window), \
+                mock.patch.object(interaction, "bounds", side_effect=[before, after, after]), \
+                mock.patch.object(interaction, "visible_button_hit_point", return_value=hit), \
+                mock.patch.object(interaction, "native_element", return_value="field") as find, \
+                mock.patch.object(interaction, "web"), mock.patch.object(interaction, "touch") as touch:
+            result = interaction.focus_native_field(driver, SimpleNamespace(base_url="http://127.0.0.1:9234"), ".qty-input")
+        self.assertEqual(find.call_count, 2)
+        self.assertEqual(result["dom"], after)
+        self.assertEqual(touch.call_args.args[2], (83, 362))
 
     def test_wide_editor_scroll_stays_in_target_column_away_from_add_panel(self):
         driver = mock.Mock()
         driver.execute.return_value = "Copies of Forest"
         driver.find.return_value = "native-forest-field"
         window = {"x": 0, "y": 0, "width": 1194, "height": 834}
-        field = {"x": 72, "y": 400, "width": 44, "height": 44}
-        driver.command.side_effect = [window, window, field, window]
+        viewport = {"left": 0, "top": 0, "width": 1194, "height": 834}
         shown = {"rect": {"left": 72, "right": 116, "top": 400, "bottom": 444, "width": 44, "height": 44},
                  "visible": {"left": 72, "right": 116, "top": 400, "bottom": 444}, "shown": True,
-                 "viewport": {"left": 0, "width": 1194}}
+                 "viewport": viewport}
         below = copy.deepcopy(shown)
         below["rect"].update(top=1000, bottom=1044)
         below["visible"].update(top=1000, bottom=834)
+        driver.command.side_effect = lambda method, path, body=None: window
         with mock.patch.object(interaction, "web"), \
                 mock.patch.object(interaction, "bounds", side_effect=[below, shown, shown]), \
+                mock.patch.object(interaction, "visible_button_hit_point", return_value={"point": {"x": 94, "y": 422}}), \
+                mock.patch.object(interaction, "scroll_clear_band", return_value=None), \
+                mock.patch.object(interaction, "native_element", return_value="field"), \
+                mock.patch.object(interaction, "native_rect",
+                                  side_effect=lambda d, element: window if element != "field"
+                                  else {"x": 72, "y": 400, "width": 44, "height": 44}), \
                 mock.patch.object(interaction, "raw_swipe", return_value={}) as swipe, \
-                mock.patch.object(interaction, "tap_native_rect"):
+                mock.patch.object(interaction, "touch"), mock.patch.object(interaction.time, "sleep"):
             interaction.focus_native_field(driver, SimpleNamespace(base_url="http://127.0.0.1:9234"), ".qty-input")
         start, end = swipe.call_args.args[1:]
         self.assertEqual(start[0], 94)
         self.assertEqual(end[0], 94)
         self.assertLess(start[0], 720)  # the separate Add panel starts in the right column
 
+
+class NativeScrollTests(unittest.TestCase):
+    """A scroll is one slow drag between the fixed bars, sized to what is left to close."""
+    VIEWPORT = {"left": 0, "top": 0, "width": 393, "height": 714}
+    CONTENT = {"x": 0, "y": 60, "width": 393, "height": 714}
+    WINDOW = {"x": 0, "y": 0, "width": 393, "height": 852}
+    BAND = {"top": 56, "bottom": 520, "height": 714, "overlays": []}
+
+    def scroll(self, top, upwards, band=BAND):
+        target = {"rect": {"left": 16, "right": 196, "top": top, "bottom": top + 289, "width": 180, "height": 289},
+                  "visible": {"left": 16, "right": 196, "top": max(0, top), "bottom": min(714, top + 289)},
+                  "viewport": dict(self.VIEWPORT), "shown": True}
+        driver = mock.Mock()
+        driver.find.return_value = "webview"
+        driver.command.return_value = self.WINDOW
+        with mock.patch.object(interaction, "scroll_clear_band", return_value=band) as observe, \
+                mock.patch.object(interaction, "native_rect", return_value=self.CONTENT), \
+                mock.patch.object(interaction, "raw_swipe", return_value={"start": {}}) as swipe, \
+                mock.patch.object(interaction, "web"), mock.patch.object(interaction.time, "sleep"):
+            gesture = interaction.native_scroll_towards(driver, SimpleNamespace(base_url="http://x"), target, upwards)
+        observe.assert_called_once_with(driver, 106)
+        (_, start, end), options = swipe.call_args.args, swipe.call_args.kwargs
+        return start, end, options, gesture
+
+    def test_drag_is_slow_and_rests_before_lifting_so_ios_adds_no_momentum(self):
+        start, end, options, gesture = self.scroll(683, True)
+        self.assertEqual(options, {"duration": 900, "hold_ms": 250})
+        self.assertEqual(gesture["plan"]["hold_ms"], 250)
+
+    def test_far_target_moves_at_most_45_percent_and_stays_above_the_fixed_bars(self):
+        start, end, _, _ = self.scroll(683, True)
+        self.assertGreater(start[1], end[1])  # finger moves up: the content moves up
+        self.assertAlmostEqual(start[1] - end[1], 714 * 0.45, places=3)
+        self.assertLessEqual(start[1], 60 + 520 - 12)  # starts on content, not on the bottom bars
+        self.assertGreaterEqual(end[1], 60 + 56 + 12)  # ends below the top bar
+
+    def test_full_screen_webview_keeps_the_drag_between_the_bars_for_any_inset_split(self):
+        # iOS 27: the WebView fills the screen and CSS y=0 sits under the status bar.
+        self.CONTENT = {"x": 0, "y": 0, "width": 393, "height": 852}
+        slack = 852 - 714
+        for top in (683, -200):
+            start, end, _, _ = self.scroll(top, top > 0)
+            for y in (start[1], end[1]):
+                self.assertGreaterEqual(y, slack + 56 + 12)  # below the top bar even if all slack is above
+                self.assertLessEqual(y, 520 - 12)  # above the bottom bars even if no slack is above
+
+    def test_near_target_moves_only_the_remaining_distance(self):
+        start, end, _, gesture = self.scroll(250, True)
+        expected = 250 - 714 * 0.22 + 12
+        self.assertAlmostEqual(start[1] - end[1], expected, places=3)
+        self.assertAlmostEqual(gesture["plan"]["needed_css"], 250 - 714 * 0.22, places=3)
+
+    def test_target_above_the_viewport_drags_down_to_the_aim(self):
+        start, end, _, _ = self.scroll(-115, False)
+        self.assertLess(start[1], end[1])
+        self.assertAlmostEqual(end[1] - start[1], 714 * 0.22 + 115 + 12, places=3)
+
+    def test_no_content_between_the_bars_fails_clearly(self):
+        with self.assertRaisesRegex(AssertionError, "between the fixed bars"):
+            self.scroll(683, True, band={"top": 300, "bottom": 330, "height": 714})
+
+    def test_covered_target_direction_follows_its_half_of_the_viewport(self):
+        def target(top):
+            return {"rect": {"top": top, "bottom": top + 44}, "visible": {"top": top, "bottom": top + 44},
+                    "viewport": dict(self.VIEWPORT)}
+        self.assertTrue(interaction.scroll_upwards(target(666)))   # under the bottom bars
+        self.assertFalse(interaction.scroll_upwards(target(20)))   # under the top bar
+        below = target(683)
+        below["visible"]["bottom"] = 714
+        self.assertTrue(interaction.scroll_upwards(below))
+        above = target(-40)
+        above["visible"]["top"] = 0
+        self.assertFalse(interaction.scroll_upwards(above))
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js is needed for the observed fixed-bar check")
+    def test_clear_band_is_measured_from_fixed_bars_actually_drawn_in_the_column(self):
+        driver = mock.Mock()
+
+        def execute(script, args=None):
+            completed = subprocess.run([shutil.which("node"), "-e", """
+              const fs=require('fs'), input=JSON.parse(fs.readFileSync(0,'utf8'));
+              const box=(top,bottom,position,cls,parent=null)=>({nodeType:1,tagName:'DIV',parentElement:parent,
+                position,getAttribute:()=>cls,getBoundingClientRect:()=>({top,bottom})});
+              const topbar=box(0,56,'sticky','topbar'), edit=box(590,650,'fixed','edit-bar'),
+                tabs=box(650,714,'fixed','tabbar'), save=box(600,644,'static','bar-save',edit),
+                main=box(-400,1400,'static','main'), card=box(200,489,'static','card',main);
+              global.visualViewport={height:714}; global.getComputedStyle=e=>({position:e.position});
+              global.document={elementFromPoint:(x,y)=>y<56?topbar:y>=650?tabs:y>=590?save:card};
+              process.stdout.write(JSON.stringify(Function(input.script).apply(null,input.args)));
+            """], input=json.dumps({"script": script, "args": args}), text=True, capture_output=True, check=True)
+            return json.loads(completed.stdout)
+
+        driver.execute.side_effect = execute
+        band = interaction.scroll_clear_band(driver, 106)
+        self.assertEqual((band["top"], band["bottom"], band["height"]), (56, 590, 714))
+        self.assertEqual({overlay["class"] for overlay in band["overlays"]}, {"topbar", "edit-bar", "tabbar"})
+
+
+class NativeElementTypeTests(unittest.TestCase):
+    def selector(self, **options):
+        driver = mock.Mock()
+        driver.find.return_value = "found"
+        interaction.native_element(driver, "Inspect Llanowar Elves", **options)
+        return driver.find.call_args.args
+
+    def test_default_lookup_stays_narrow_to_native_buttons(self):
+        using, selector = self.selector(webview_only=True)
+        self.assertEqual(using, "-ios class chain")
+        self.assertTrue(selector.startswith("**/XCUIElementTypeWebView/**/XCUIElementTypeButton["))
+
+    def test_popup_button_opt_in_also_matches_webkit_other_elements_inside_the_webview(self):
+        using, selector = self.selector(webview_only=True, require_visible=False,
+                                        element_type=("XCUIElementTypeButton", "XCUIElementTypeOther"))
+        self.assertEqual(using, "-ios class chain")
+        self.assertTrue(selector.startswith("**/XCUIElementTypeWebView/**/*[`"))
+        self.assertIn('type IN {"XCUIElementTypeButton", "XCUIElementTypeOther"}', selector)
+        self.assertIn('name == "Inspect Llanowar Elves"', selector)
+        self.assertNotIn("visible == 1", selector)
+        using, selector = self.selector(element_type=("XCUIElementTypeButton", "XCUIElementTypeOther"))
+        self.assertEqual(using, "-ios predicate string")
+        self.assertTrue(selector.startswith('type IN {"XCUIElementTypeButton", "XCUIElementTypeOther"} AND visible == 1'))
+
+    def test_untyped_lookup_and_bad_type_names(self):
+        self.assertTrue(self.selector(webview_only=True, element_type=None)[1].startswith(
+            "**/XCUIElementTypeWebView/**/*[`visible == 1 AND (name"))
+        with self.assertRaisesRegex(AssertionError, "Unrecognized native element type"):
+            self.selector(element_type=("Button",))
+
+
+class EditorIsolationTests(unittest.TestCase):
+    """A failed keyboard case must not leave a dirty editor for Share and standalone."""
+
+    class Editor:
+        def __init__(self):
+            self.dirty, self.question, self.pressed = True, None, []
+
+        def execute(self, script, args=None):
+            if script == flows.EDITOR_STATE:
+                return {"question": self.question, "bar": self.dirty and self.question is None,
+                        "dirty": self.dirty, "href": "http://x/#/edit"}
+            if script == flows.EDITOR_DISCARD:
+                if self.question is not None:
+                    self.pressed.append("answer")
+                    self.question, self.dirty = None, False
+                    return "answer"
+                self.pressed.append("bar")
+                self.question = "Discard your changes?"
+                return "bar"
+            raise AssertionError(script)
+
+    def test_bar_discard_and_its_confirmation_clear_the_draft_after_hiding_the_keyboard(self):
+        editor = self.Editor()
+        driver = SimpleNamespace(execute=editor.execute)
+        native_calls = []
+        with mock.patch.object(flows, "web"), mock.patch.object(flows, "native"), \
+                mock.patch.object(flows, "mobile", side_effect=lambda d, name, **a: native_calls.append(name) or True), \
+                mock.patch.object(flows.time, "sleep"):
+            result = flows.discard_unsaved_editor(driver, SimpleNamespace(base_url="http://x"))
+        self.assertEqual(native_calls, ["isKeyboardShown", "hideKeyboard"])
+        self.assertEqual(editor.pressed, ["bar", "answer"])
+        self.assertTrue(result["discarded"])
+        self.assertFalse(result["final"]["dirty"])
+
+    def test_open_leave_guard_is_answered_with_discard_them_and_leave(self):
+        editor = self.Editor()
+        editor.question = "Leave without saving?"
+        driver = SimpleNamespace(execute=editor.execute)
+        with mock.patch.object(flows, "web"), mock.patch.object(flows, "native"), \
+                mock.patch.object(flows, "mobile", return_value=False), mock.patch.object(flows.time, "sleep"):
+            result = flows.discard_unsaved_editor(driver, SimpleNamespace(base_url="http://x"))
+        self.assertEqual(editor.pressed, ["answer"])
+        self.assertEqual(len(result["steps"]), 1)
+
+    def test_failed_keyboard_case_discards_then_reraises_the_original_failure(self):
+        fixture = SimpleNamespace(base_url="http://x")
+        with mock.patch.object(flows, "_keyboard_save_history", side_effect=AssertionError("Save is covered")), \
+                mock.patch.object(flows, "web"), mock.patch.object(flows, "native"), \
+                mock.patch.object(flows, "mobile", return_value=True), \
+                mock.patch.object(flows, "read_input_trace", return_value={"events": []}), \
+                mock.patch.object(flows, "discard_unsaved_editor", return_value={"discarded": True}) as discard, \
+                self.assertRaisesRegex(AssertionError, "Save is covered.*draft_cleanup.*discarded"):
+            flows.keyboard_save_history(mock.Mock(), fixture)
+        discard.assert_called_once()
+
+    def test_driver_error_also_discards_the_draft_and_keeps_its_type(self):
+        from decklab.safari.driver import DriverError
+        with mock.patch.object(flows, "_keyboard_save_history", side_effect=DriverError("stale element")), \
+                mock.patch.object(flows, "web"), mock.patch.object(flows, "native"), \
+                mock.patch.object(flows, "mobile", return_value=True), \
+                mock.patch.object(flows, "read_input_trace", return_value={}), \
+                mock.patch.object(flows, "discard_unsaved_editor", return_value={"discarded": True}) as discard, \
+                self.assertRaisesRegex(DriverError, "^stale element$"):
+            flows.keyboard_save_history(mock.Mock(), SimpleNamespace(base_url="http://x"))
+        discard.assert_called_once()
+
+    def test_failed_cleanup_is_reported_without_hiding_the_original_failure(self):
+        with mock.patch.object(flows, "_keyboard_save_history", side_effect=AssertionError("Save is covered")), \
+                mock.patch.object(flows, "web"), mock.patch.object(flows, "native"), \
+                mock.patch.object(flows, "mobile", return_value=True), \
+                mock.patch.object(flows, "read_input_trace", return_value={}), \
+                mock.patch.object(flows, "discard_unsaved_editor", side_effect=RuntimeError("no discard")), \
+                self.assertRaisesRegex(AssertionError, "Save is covered.*cleanup_error.*no discard"):
+            flows.keyboard_save_history(mock.Mock(), SimpleNamespace(base_url="http://x"))
+
+
+class NativeProfileAndHomeScreenTests(unittest.TestCase):
     def test_standalone_profile_uses_observed_full_native_label_and_center(self):
         driver = mock.Mock()
         driver.execute.return_value = "Matt Tap to continue"
@@ -737,7 +1033,9 @@ class ReceiptViewportTests(unittest.TestCase):
                 mock.patch.object(flows, "anchor_transform", side_effect=AssertionError("AX image invisible")) as anchor:
             flows.receipt_open(driver, fixture)
         anchor.assert_not_called()
-        tap.assert_called_once_with(driver, fixture, ".rcpt-grid .card-tile-open")
+        # Tapping .card-tile-open now ticks the tile's native check; Inspect opens the sheet.
+        tap.assert_called_once_with(driver, fixture, ".rcpt-grid .rcpt-picture-inspect",
+                                    element_type=("XCUIElementTypeButton", "XCUIElementTypeOther"))
 
     def test_partly_cropped_receipt_close_fails_initial_viewport(self):
         valid = {"rect": {"left": 20, "right": 200, "top": 0, "bottom": 44, "width": 180, "height": 44},

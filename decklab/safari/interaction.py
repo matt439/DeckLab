@@ -190,19 +190,34 @@ def no_page_errors(driver):
 
 def native_element(driver, label, element_type="XCUIElementTypeButton", timeout=15, prefix=False,
                    require_visible=True, webview_only=False):
+    """Find one native element by its exact accessible name.
+
+    element_type is one XCUIElementType name, None for any type, or a tuple of
+    accepted types: WebKit on iOS 27 exposes an aria-haspopup button as
+    XCUIElementTypeOther, so a caller that knows its control is such a button
+    opts into (Button, Other) rather than every flow dropping the type filter.
+    """
     native(driver)
     quoted = json.dumps(label)
     match = f"name {'BEGINSWITH' if prefix else '=='} {quoted} OR label {'BEGINSWITH' if prefix else '=='} {quoted}"
-    kind = f"type == {json.dumps(element_type)} AND " if element_type else ""
+    types = (element_type,) if isinstance(element_type, str) else tuple(element_type or ())
+    require(all(isinstance(name, str) and name.startswith("XCUIElementType") for name in types),
+            f"Unrecognized native element type filter: {element_type!r}")
+    if len(types) == 1:
+        kind = f"type == {json.dumps(types[0])} AND "
+    elif types:
+        kind = f"type IN {{{', '.join(json.dumps(name) for name in types)}}} AND "
+    else:
+        kind = ""
     visibility = "visible == 1 AND " if require_visible else ""
     predicate = f"{kind}{visibility}({match})"
     using, selector = "-ios predicate string", predicate
     if webview_only:
         # Native class chains scope descendants without matching Safari chrome
         # with the same label (for example a tab's Close button).
-        predicate = f"{visibility}({match})".replace("`", "``")
+        scoped = (f"{visibility}({match})" if len(types) == 1 else predicate).replace("`", "``")
         using = "-ios class chain"
-        selector = f"**/XCUIElementTypeWebView/**/{element_type or '*'}[`{predicate}`]"
+        selector = f"**/XCUIElementTypeWebView/**/{types[0] if len(types) == 1 else '*'}[`{scoped}`]"
     return wait(lambda: driver.find(using, selector), timeout, f"Native {label!r} control unavailable")
 
 
@@ -281,8 +296,12 @@ def anchor_transform(driver, fixture, selector):
     return transform
 
 
-def touch(driver, transform, start, end=None, duration=350):
-    """Send a real finger in native point coordinates; no synthetic DOM events."""
+def touch(driver, transform, start, end=None, duration=350, hold_ms=0):
+    """Send a real finger in native point coordinates; no synthetic DOM events.
+
+    hold_ms rests the finger at the end of a drag before lifting it, so iOS sees
+    a drag that stopped rather than a flick, and adds no momentum.
+    """
     def point(css_point):
         x = transform["offsetX"] + css_point[0] * transform["pixelRatioX"]
         y = transform["offsetY"] + css_point[1] * transform["pixelRatioY"]
@@ -303,6 +322,8 @@ def touch(driver, transform, start, end=None, duration=350):
                {"type": "pointerDown", "button": 0}, {"type": "pause", "duration": 60}]
     if end is not None:
         actions.append({"type": "pointerMove", "duration": duration, "origin": "viewport", **end_native})
+        if hold_ms:
+            actions.append({"type": "pause", "duration": hold_ms})
     actions.append({"type": "pointerUp", "button": 0})
     try:
         driver.command("POST", "/actions", {"actions": [{"type": "pointer", "id": "finger",
@@ -312,8 +333,9 @@ def touch(driver, transform, start, end=None, duration=350):
     return {"start": start_native, "end": end_native}
 
 
-def raw_swipe(driver, start, end, duration=350):
-    return touch(driver, {"offsetX": 0, "offsetY": 0, "pixelRatioX": 1, "pixelRatioY": 1}, start, end, duration=duration)
+def raw_swipe(driver, start, end, duration=350, hold_ms=0):
+    return touch(driver, {"offsetX": 0, "offsetY": 0, "pixelRatioX": 1, "pixelRatioY": 1}, start, end,
+                 duration=duration, hold_ms=hold_ms)
 
 
 def tap_native_rect(driver, rect):
@@ -322,23 +344,105 @@ def tap_native_rect(driver, rect):
                  (rect["x"] + rect["width"] / 2, rect["y"] + rect["height"] / 2))
 
 
+# A scroll is a slow drag that rests before lifting (no momentum), sized to
+# bring the target's top to about SCROLL_AIM_FRACTION of the viewport and never
+# more than SCROLL_MAX_FRACTION of the WebView in one gesture. iOS ignores the
+# first few points of a drag (touch slop), so each drag is that much longer.
+SCROLL_AIM_FRACTION = 0.22
+SCROLL_MAX_FRACTION = 0.45
+SCROLL_MIN_POINTS = 48
+SCROLL_SLOP_POINTS = 12
+SCROLL_DURATION_MS = 900
+SCROLL_HOLD_MS = 250
+
+
+def scroll_clear_band(driver, x):
+    """Observe the fixed or sticky bars at the top and bottom of the viewport in one column.
+
+    A drag must start and end on scrolling content: a finger put down on a fixed
+    bottom bar (an action bar, the editor's bar, the tab bar) does not scroll
+    the page. The bars are found by what is actually drawn there, not by class.
+    """
+    value = driver.execute("""
+      const x=arguments[0], v=visualViewport, H=v ? v.height : innerHeight;
+      const pinned=(node)=>{ for(let a=node;a && a.nodeType===1;a=a.parentElement) {
+        const p=getComputedStyle(a).position; if(p==='fixed'||p==='sticky') return a; } return null; };
+      let top=0, bottom=H; const overlays=[];
+      const look=(ys, edge)=>{ for(const y of ys) {
+        const f=pinned(document.elementFromPoint(x,y)); if(!f) continue;
+        const r=f.getBoundingClientRect();
+        if(edge==='top' ? r.bottom>H*0.5 : r.top<H*0.5) continue;
+        if(edge==='top') top=Math.max(top,r.bottom); else bottom=Math.min(bottom,r.top);
+        overlays.push({edge,y,tag:f.tagName,class:f.getAttribute('class'),top:r.top,bottom:r.bottom});
+      } };
+      look([1,H*0.05,H*0.1,H*0.15],'top');
+      look([H-1,H*0.95,H*0.9,H*0.85,H*0.8,H*0.75],'bottom');
+      return {top,bottom,height:H,overlays};
+    """, [x])
+    if not isinstance(value, dict) or not all(isinstance(value.get(key), (int, float)) for key in ("top", "bottom")):
+        return None
+    return value
+
+
+def scroll_upwards(measured):
+    """Which way to move the content to reveal a target that is not hittable.
+
+    bounds() ignores overlays, so a target inside the viewport may still be
+    covered: a target in the lower half is then under the bottom bars (move the
+    content up) and one in the upper half under the top bar (move it down).
+    """
+    rect, visible, viewport = measured["rect"], measured["visible"], measured.get("viewport") or {}
+    if rect["top"] < visible["top"] - 1:
+        return False
+    if rect["bottom"] > visible["bottom"] + 1:
+        return True
+    height = viewport.get("height") or visible["bottom"]
+    return (rect["top"] + rect["bottom"]) / 2 > height / 2
+
+
 def native_scroll_towards(driver, fixture, measured, upwards, standalone=False):
-    """Scroll the observed target's column through the native WebView."""
+    """Scroll the observed target's column through the native WebView with one slow drag.
+
+    upwards moves the content up (the finger drags up) to reveal what is below.
+    The drag is sized to the distance still to close, kept between the fixed
+    bars, and rests before lifting so the page stops where it was put.
+    """
+    viewport, rect = measured["viewport"], measured["rect"]
+    require(viewport["width"] > 0, f"Native target has no measurable viewport width: {measured}")
+    centre = (rect["left"] + rect["right"]) / 2 - viewport["left"]
+    band = scroll_clear_band(driver, max(1, min(viewport["width"] - 1, centre)))
     native(driver)
     view = driver.find("-ios predicate string", "type == 'XCUIElementTypeWebView' AND visible == 1")
     content, window = native_rect(driver, view), driver.command("GET", "/window/rect")
     left, right = max(content["x"], window["x"]), min(content["x"] + content["width"], window["x"] + window["width"])
     top, bottom = max(content["y"], window["y"]), min(content["y"] + content["height"], window["y"] + window["height"])
     require(right - left > 40 and bottom - top > 80, f"No native WebView scroll path: content={content}, window={window}")
-    viewport, rect = measured["viewport"], measured["rect"]
-    require(viewport["width"] > 0, f"Native target has no measurable viewport width: {measured}")
-    fraction = ((rect["left"] + rect["right"]) / 2 - viewport["left"]) / viewport["width"]
+    scale = content["width"] / viewport["width"]
+    require(math.isfinite(scale) and 0.5 <= scale <= 2,
+            f"Implausible native/CSS scale for a scroll: content={content}, viewport={viewport}")
     # Follow the target's column; a fixed fraction can scroll an iPad side panel.
-    x = max(left + 12, min(right - 12, content["x"] + content["width"] * fraction))
-    y1, y2 = top + (bottom - top) * 0.78, top + (bottom - top) * 0.28
+    x = max(left + 12, min(right - 12, content["x"] + content["width"] * centre / viewport["width"]))
+    height = viewport.get("height") or (band or {}).get("height") or (bottom - top) / scale
+    clear = band or {"top": 0, "bottom": height}
+    # CSS y=0 sits somewhere in the WebView's obscured insets (iOS 27's WebView is
+    # full-screen; the page starts under the status bar), so bound the band for
+    # any split of that slack rather than assuming CSS 0 is the WebView's top.
+    slack = max(0, content["height"] - height * scale)
+    clear_top = max(top, content["y"] + slack + clear["top"] * scale) + 12
+    clear_bottom = min(bottom, content["y"] + clear["bottom"] * scale) - 12
+    require(clear_bottom - clear_top >= 60,
+            f"No scrolling content between the fixed bars for a native drag: band={band}, content={content}, window={window}")
+    aim = max(height * SCROLL_AIM_FRACTION, clear["top"] + 8)
+    needed = (rect["top"] - aim) if upwards else (aim - rect["top"])
+    distance = max(SCROLL_MIN_POINTS, needed * scale) + SCROLL_SLOP_POINTS
+    distance = min(distance, (bottom - top) * SCROLL_MAX_FRACTION, clear_bottom - clear_top)
+    middle = (clear_top + clear_bottom) / 2
+    y1, y2 = middle + distance / 2, middle - distance / 2
     if not upwards:
         y1, y2 = y2, y1
-    gesture = raw_swipe(driver, (x, y1), (x, y2))
+    gesture = dict(raw_swipe(driver, (x, y1), (x, y2), duration=SCROLL_DURATION_MS, hold_ms=SCROLL_HOLD_MS) or {})
+    gesture["plan"] = {"upwards": upwards, "clear_band": band, "aim_css_top": aim, "needed_css": needed,
+                       "distance_points": distance, "duration_ms": SCROLL_DURATION_MS, "hold_ms": SCROLL_HOLD_MS}
     web(driver, fixture.base_url, standalone=standalone)
     time.sleep(0.2)
     return gesture
@@ -361,8 +465,12 @@ def visible_button_hit_point(driver, selector, visible):
     """, [selector, visible])
 
 
-def tap_native_visible_part(driver, fixture, selector, standalone=False):
-    """Reveal a real native button and tap its visible area exactly once."""
+def tap_native_visible_part(driver, fixture, selector, standalone=False, element_type="XCUIElementTypeButton"):
+    """Reveal a real native button and tap its visible area exactly once.
+
+    element_type narrows the native lookup (see native_element); a caller whose
+    control is an aria-haspopup button passes (Button, Other).
+    """
     preparation = []
     for attempt in range(9):
         measured = bounds(driver, selector)
@@ -378,7 +486,7 @@ def tap_native_visible_part(driver, fixture, selector, standalone=False):
             if hit_test["point"] is not None:
                 break
         require(attempt < 8, f"Native target did not become tappable after eight scrolls: {selector}; {measured}")
-        gesture = native_scroll_towards(driver, fixture, measured, upwards=rect["top"] >= visible["top"],
+        gesture = native_scroll_towards(driver, fixture, measured, upwards=scroll_upwards(measured),
                                         standalone=standalone)
         preparation.append({"before": measured, "hit_test": hit_test, "native_gesture": gesture})
     label = driver.execute("""
@@ -386,7 +494,7 @@ def tap_native_visible_part(driver, fixture, selector, standalone=False):
       return (b.getAttribute('aria-label')||b.textContent).replace(/\\s+/g,' ').trim();
     """, [selector])
     require(label, f"Native target has no observed accessible label: {selector}")
-    button = native_element(driver, label, require_visible=False, webview_only=True)
+    button = native_element(driver, label, element_type=element_type, require_visible=False, webview_only=True)
     require(driver.command("GET", f"/element/{button}/enabled") is True, f"Native target {label!r} is disabled")
     rect = native_rect(driver, button)
     window = driver.command("GET", "/window/rect")
@@ -400,40 +508,72 @@ def tap_native_visible_part(driver, fixture, selector, standalone=False):
             "native_tap": gesture, "native_preparation": preparation}
 
 
+def _same_place(before, after):
+    return all(abs(after["rect"][key] - before["rect"][key]) <= 2 for key in ("left", "top", "width", "height"))
+
+
 def focus_native_field(driver, fixture, selector):
-    """Reveal an actual native text field, then focus it with one raw finger."""
+    """Reveal an actual native text field, then focus it with one raw finger.
+
+    Revealed means hittable: inside the visible viewport, and what is drawn at
+    the field is the field, not a fixed bar over it. The tap goes to the
+    hit-tested point, mapped through the native field, with the bounds and hit
+    test taken right before it; a covered field fails instead of tapping through.
+    """
     label = driver.execute("return document.querySelector(arguments[0]).getAttribute('aria-label');", [selector])
     require(label, f"Native field {selector} needs an exact accessible label")
     swipes = []
     for attempt in range(9):
         measured = bounds(driver, selector)
         require(measured is not None and measured["shown"], f"Native field {label!r} is absent or hidden: {measured}")
+        rect, visible = measured["rect"], measured["visible"]
+        require(visible["left"] <= rect["left"] + 1 and visible["right"] >= rect["right"] - 1,
+                f"Native text field is horizontally clipped: {measured}")
+        hit_test = None
         try:
             fully_visible(measured, f"Native text field {label!r} before focus")
-            break
         except AssertionError:
-            rect, visible = measured["rect"], measured["visible"]
-            require(visible["left"] <= rect["left"] + 1 and visible["right"] >= rect["right"] - 1,
-                    f"Native text field is horizontally clipped: {measured}")
-            require(attempt < 8, f"Native text field not revealed after eight native scroll gestures: {measured}; swipes={swipes}")
-            upwards = rect["bottom"] > visible["bottom"] + 1
-            gesture = native_scroll_towards(driver, fixture, measured, upwards)
-            swipes.append({"before": measured, "native_gesture": gesture})
-    field = native_element(driver, label, element_type="XCUIElementTypeTextField",
-                           require_visible=False, webview_only=True)
-    rect = native_rect(driver, field)
-    window = driver.command("GET", "/window/rect")
-    require(rect["width"] > 0 and rect["height"] > 0 and rect["x"] >= window["x"]
-            and rect["y"] >= window["y"] and rect["x"] + rect["width"] <= window["x"] + window["width"]
-            and rect["y"] + rect["height"] <= window["y"] + window["height"],
-            f"Native text field is outside the screen after revealing it: label={label}, field={rect}, window={window}")
-    web(driver, fixture.base_url, standalone=False)
-    measured = bounds(driver, selector)
-    fully_visible(measured, f"Native text field {label!r} before focus")
+            pass
+        else:
+            hit_test = visible_button_hit_point(driver, selector, visible)
+            if hit_test["point"] is not None:
+                break
+        require(attempt < 8, f"Native text field not revealed and hittable after eight native scroll gestures: "
+                             f"{measured}; hit_test={hit_test}; swipes={swipes}")
+        gesture = native_scroll_towards(driver, fixture, measured, scroll_upwards(measured))
+        swipes.append({"before": measured, "hit_test": hit_test, "native_gesture": gesture})
+    previous = measured
+    for settle in range(3):
+        field = native_element(driver, label, element_type="XCUIElementTypeTextField",
+                               require_visible=False, webview_only=True)
+        rect = native_rect(driver, field)
+        window = driver.command("GET", "/window/rect")
+        view = driver.find("-ios predicate string", "type == 'XCUIElementTypeWebView' AND visible == 1")
+        view_rect = native_rect(driver, view)
+        require(rect["width"] > 0 and rect["height"] > 0 and rect["x"] >= window["x"]
+                and rect["y"] >= window["y"] and rect["x"] + rect["width"] <= window["x"] + window["width"]
+                and rect["y"] + rect["height"] <= window["y"] + window["height"],
+                f"Native text field is outside the screen after revealing it: label={label}, field={rect}, window={window}")
+        web(driver, fixture.base_url, standalone=False)
+        measured = bounds(driver, selector)
+        fully_visible(measured, f"Native text field {label!r} before focus")
+        hit_test = visible_button_hit_point(driver, selector, measured["visible"])
+        require(hit_test["point"] is not None,
+                f"Native text field {label!r} is covered at its tap point; not tapping through the overlay: "
+                f"dom={measured}; samples={hit_test.get('samples')}")
+        if _same_place(previous, measured):
+            break
+        # Safari's toolbar can collapse during the native round trip; map the
+        # tap only from a native rectangle read while the field stood still.
+        require(settle < 2, f"Native text field {label!r} kept moving while measuring: before={previous}, after={measured}")
+        previous = measured
+    transform = measured_transform(measured, rect, window, label, view_rect)
+    point = hit_test["point"]
     # Do not use web-context element.click: nativeWebTap can retain a stale
     # viewport translation after Safari auto-scrolls an off-screen input.
-    gesture = tap_native_rect(driver, rect)
-    return {"label": label, "native": rect, "dom": measured, "native_tap": gesture, "native_scrolls": swipes}
+    gesture = touch(driver, transform, (point["x"], point["y"]))
+    return {"label": label, "native": rect, "dom": measured, "hit_test": hit_test,
+            "coordinate_transform": transform, "native_tap": gesture, "native_scrolls": swipes}
 
 
 def choose_native_profile(driver, fixture):
