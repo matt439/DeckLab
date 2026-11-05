@@ -115,7 +115,23 @@ function num(x, digits = 2) {
   return x.toFixed(digits).replace(/0+$/, "").replace(/\.$/, "");
 }
 
-function aud(x) { return x == null ? "no price" : `A$${x.toFixed(2)}`; }
+/** The configured currency (config.json's "currency", E11-S53; /api/status's pricing): "AUD" until it's read. */
+function priceCurrency() {
+  const pricing = typeof state !== "undefined" && state && state.status && state.status.pricing;
+  return pricing && typeof pricing.currency === "string" ? pricing.currency : "AUD";
+}
+
+/** Its sign in amounts: "A$" for AUD, "€" for EUR, else the code and a space. */
+function priceSymbol() {
+  const pricing = typeof state !== "undefined" && state && state.status && state.status.pricing;
+  return pricing && typeof pricing.symbol === "string" && pricing.symbol ? pricing.symbol : "A$";
+}
+
+function aud(x) { return x == null ? "no price" : `${priceSymbol()}${x.toFixed(2)}`; }
+
+/** A shop's own listing, postage or queue reference price: always the shop's AUD, never converted, so "A$"
+ * whatever the configured currency (E11-S53: MTGMate and Games Portal list in AUD). */
+function listedAud(x) { return x == null ? "no price" : `A$${x.toFixed(2)}`; }
 
 function plural(n, one, many) { return `${num(n)} ${n === 1 ? one : (many || one + "s")}`; }
 

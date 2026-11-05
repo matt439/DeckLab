@@ -128,9 +128,9 @@ from .deckfile import (
     BUILT_VERSIONS, COUNT_RE, DATE_RE, FIELD_RE, FORMATS, HEADING_RE, HOLDER_STATUSES, KINDS, MARKER, MARKER_RE,
     OWNED_FIELDS, PLAYERS, PRICE_NOTE, PRICE_STAMP, PRICE_STAMP_RE, RATE_CONTEXT_RE, RATE_FORMS,
     RATE_NEAR, STATUSES, TABLE_COLUMNS, TABLE_HEADER, TABLE_RULE, TOTAL_RE, DeckFile, HeaderField,
-    PriceStamp, TableRow, TotalRow, _count, _find_block, _headings, _leading_word, _Line, _lines,
-    _one_line, _paragraphs, _parse_row, _rate_in, _section_end, _unbold, _without_stamp, frees_kit, parse_deck,
-    read_deck_file)
+    PRICE_STAMP_TEMPLATE, PriceStamp, TableRow, TotalRow, _count, _find_block, _headings, _leading_word, _Line,
+    _lines, _one_line, _paragraphs, _parse_row, _rate_in, _section_end, _unbold, _without_stamp, frees_kit,
+    parse_deck, price_note, price_stamp_words, read_deck_file, stamp_from, table_columns, table_header)
 from .decklist import (
     _BASIC_KEYS, BASIC_LANDS, CATEGORY_MAX, LINE_RE, MAIN_SECTIONS, SECTIONS, SET_IN_NAME_RE, DeckFileError,
     DeckLine, DecklistError, _section_name, card_count, categories, clean_category, clean_sections,

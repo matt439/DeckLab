@@ -12,7 +12,7 @@ import contextlib
 from datetime import datetime, timezone
 from pathlib import Path
 
-from decklab.lib import cards, config, decks, inventory, pool, spaces
+from decklab.lib import cards, config, currency, decks, inventory, pool, spaces
 
 from . import common, guard
 from .carddata import _INDEX_ERRORS
@@ -228,7 +228,7 @@ def _rewrite_table(deck, p):
         wording = decks.PRICE_STAMP
         try:                            # the wording with today's figures, as an example
             rate, rate_date = cards.usd_to_aud()
-            wording = decks.PriceStamp(rate, rate_date, cards.price_date() or rate_date).text()
+            wording = decks.PriceStamp(rate, rate_date, cards.price_date() or rate_date, currency.code()).text()
         except (TypeError, *_INDEX_ERRORS):
             pass
         kept = "Prices that still apply were kept and the rest left blank."

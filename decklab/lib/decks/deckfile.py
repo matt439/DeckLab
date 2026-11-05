@@ -36,15 +36,59 @@ FORMATS = {"casual": "Casual 60-card, 1v1", "commander": "Commander (100 cards)"
 TABLE_COLUMNS = ["Card", "Need", "Owned", "Missing", "~AUD each", "~AUD missing", "Notes"]
 TABLE_HEADER = "| " + " | ".join(TABLE_COLUMNS) + " |"
 TABLE_RULE = "|" + "---|" * len(TABLE_COLUMNS)
+# The price columns name the table's currency (E11-S53: lib/currency's, AUD unless set): "~EUR each".
+_PRICE_COLUMN_RE = re.compile(r"~([A-Z]{3}) (each|missing)")
+
+
+def table_columns(currency="AUD"):
+    """TABLE_COLUMNS with the price columns in currency ("~EUR each", "~EUR missing")."""
+    return [f"~{currency} each" if c == "~AUD each" else f"~{currency} missing" if c == "~AUD missing" else c
+            for c in TABLE_COLUMNS]
+
+
+def table_header(currency="AUD"):
+    """The table's header line; TABLE_HEADER for AUD."""
+    return "| " + " | ".join(table_columns(currency)) + " |"
+
+
+def _table_currency(cells):
+    """The currency code a header row's cells name, or None when they aren't the table's header."""
+    if len(cells) != len(TABLE_COLUMNS) or cells[:4] != TABLE_COLUMNS[:4] or cells[6] != TABLE_COLUMNS[6]:
+        return None
+    each, missing = _PRICE_COLUMN_RE.fullmatch(cells[4]), _PRICE_COLUMN_RE.fullmatch(cells[5])
+    if not (each and missing and each.group(2) == "each" and missing.group(2) == "missing"
+            and each.group(1) == missing.group(1)):
+        return None
+    return each.group(1)
+
 MARKER = "*Decklist changed in Deck Lab on {date}; prose sections may be out of date.*"
 
 # The rate and dates the table's prices were worked out with, inside the
 # paragraph above the table. A file without one gets PRICE_NOTE there.
+# The stamp names its currency (E11-S53): AUD's is PRICE_STAMP, another's price_stamp_words(code).
+PRICE_STAMP_TEMPLATE = "1 USD = {rate} {currency} (ECB rate of {rate_date}), pulled {price_date}"
 PRICE_STAMP = "1 USD = {rate} AUD (ECB rate of {rate_date}), pulled {price_date}"
-PRICE_STAMP_RE = re.compile(r"1 USD = (\d+(?:\.\d+)?) AUD \(ECB rate of (\d{4}-\d{2}-\d{2})\), "
+PRICE_STAMP_RE = re.compile(r"1 USD = (\d+(?:\.\d+)?) ([A-Z]{3}) \(ECB rate of (\d{4}-\d{2}-\d{2})\), "
                             r"pulled (\d{4}-\d{2}-\d{2})")
 PRICE_NOTE = ("Prices are **estimates in AUD**: Scryfall's cheapest paper non-foil printing (USD), "
               "converted at {stamp}.")
+
+
+def price_stamp_words(currency="AUD"):
+    """The stamp's wording in currency, with its {rate}, {rate_date} and {price_date} left to fill."""
+    return PRICE_STAMP.replace(" AUD ", f" {currency} ")
+
+
+def price_note(currency="AUD"):
+    """PRICE_NOTE in currency, with its {stamp} left to fill."""
+    return PRICE_NOTE.replace("in AUD", f"in {currency}")
+
+
+def stamp_from(match):
+    """The PriceStamp a PRICE_STAMP_RE match reads."""
+    return PriceStamp(float(match.group(1)), match.group(3), match.group(4), match.group(2))
+
+
 # An exchange rate stated some other way above the table (see _rate_in): a
 # conversion factor, in one of RATE_FORMS, that isn't PRICE_STAMP itself.
 # Ordinary amounts ("A$45", "45.50 AUD", "cards under 1 USD") and prose that
@@ -155,10 +199,11 @@ class TotalRow:
 
 @dataclass
 class PriceStamp:
-    """The rate and dates the table's AUD prices were worked out with."""
-    rate: float             # AUD per USD
+    """The rate and dates the table's prices were worked out with, and their currency."""
+    rate: float             # currency per USD
     rate_date: str          # ECB reference date of the rate (YYYY-MM-DD)
     price_date: str         # date Scryfall's USD prices were pulled (YYYY-MM-DD)
+    currency: str = "AUD"   # lib/currency's code (E11-S53)
 
     def text(self):
         """The stamp as written in the file. Raises ValueError for values
@@ -166,8 +211,10 @@ class PriceStamp:
         number, a date that isn't YYYY-MM-DD), so a save never writes a stamp
         the next read wouldn't find."""
         ok = (isinstance(self.rate, (int, float)) and math.isfinite(self.rate) and self.rate > 0
-              and all(isinstance(d, str) and DATE_RE.fullmatch(d) for d in (self.rate_date, self.price_date)))
-        text = PRICE_STAMP.format(rate=self.rate, rate_date=self.rate_date, price_date=self.price_date)
+              and all(isinstance(d, str) and DATE_RE.fullmatch(d) for d in (self.rate_date, self.price_date))
+              and isinstance(self.currency, str))
+        text = PRICE_STAMP_TEMPLATE.format(rate=self.rate, currency=self.currency, rate_date=self.rate_date,
+                                           price_date=self.price_date)
         if not ok or not PRICE_STAMP_RE.fullmatch(text):
             raise ValueError(f"can't write this price stamp: {self!r}")
         return text
@@ -193,6 +240,8 @@ class DeckFile:
     spans: dict = field(default_factory=dict, repr=False)
     space: str = "home"             # lib/spaces.py: "home", or the person whose deck folder holds it
     considering: list | None = None  # [DeckLine] of the "## Considering" block (considering.py), if any
+    table_currency: str | None = None   # the currency the table's header names ("AUD"), if it has one
+    table_header_span: tuple | None = field(default=None, repr=False)     # where that header line is
 
     @property
     def deck_id(self):
@@ -499,13 +548,14 @@ def parse_deck(data, slug, kind, path=None, space=None):
             spans["considering_block"] = (pos, pos)
 
     # Owned-vs-needed table: rows after the header and |---| lines.
-    rows, total, prices = None, None, None
+    rows, total, prices, table_currency, header_span = None, None, None, None, None
     found = heading(lambda h: h.startswith("owned vs"), 2)
     if found:
         end = _section_end(lines, headings, found[0], 6)
         for j in range(found[0] + 1, end - 1):
             cells = [c.strip() for c in lines[j].text.strip().strip("|").split("|")]
-            if lines[j].text.startswith("|") and cells == TABLE_COLUMNS:
+            table_currency = _table_currency(cells) if lines[j].text.startswith("|") else None
+            if table_currency:
                 if not re.match(r"^\|(\s*:?-+:?\s*\|)+\s*$", lines[j + 1].text):
                     raise DeckFileError("owned-vs-needed table: no |---| line under the header")
                 # The price stamp in the text between the heading and the table.
@@ -517,7 +567,7 @@ def parse_deck(data, slug, kind, path=None, space=None):
                     for line in para:
                         m = PRICE_STAMP_RE.search(line.text)
                         if m and prices is None:
-                            prices = PriceStamp(float(m.group(1)), m.group(2), m.group(3))
+                            prices = stamp_from(m)
                             spans["prices"] = (line.start + m.start(), line.start + m.end())
                     span = (para[0].start, para[-1].start + len(para[-1].text))
                     if other is None and _rate_in(_without_stamp(text, span, spans.get("prices"))):
@@ -526,6 +576,7 @@ def parse_deck(data, slug, kind, path=None, space=None):
                     spans["prices_other"] = other
                 elif prices is None:
                     spans["prices_insert"] = (lines[j].start, lines[j].start)
+                header_span = (lines[j].start, lines[j].start + len(lines[j].text))
                 k = first_row = j + 2
                 rows = []
                 while k < len(lines) and lines[k].text.startswith("|"):
@@ -548,7 +599,8 @@ def parse_deck(data, slug, kind, path=None, space=None):
         header=header, target=target, owned=owned, rows=rows, total=total,
         changed_on=changed_on, sha256=hashlib.sha256(data).hexdigest(),
         text=text, newline=newline, prices=prices, spans=spans, space=space or _space_of(path),
-        considering=considering)
+        considering=considering, table_currency=table_currency if rows is not None else None,
+        table_header_span=header_span if rows is not None else None)
 
 
 def considering_insert(text):

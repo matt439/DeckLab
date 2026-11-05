@@ -17,10 +17,12 @@ function ownedSection(data) {
     return section;
   }
   const t = o.totals;
+  const code = ownedCurrency(o);
+  const sign = code === "AUD" ? "A$" : priceCurrency() === code ? priceSymbol().trim() : code;
   const priceNote = el("p", { class: "price-note" }, o.price_error
-    ? `No A$ estimates: ${o.price_error}`
-    : `A$ prices are estimates: the cheapest non-foil printing's US price on Scryfall (prices of ${o.price_date}) ` +
-      `× 1 USD = ${o.rate} AUD (ECB rate of ${o.rate_date}). ` +
+    ? `No ${sign} estimates: ${o.price_error}`
+    : `${sign} prices are estimates: the cheapest non-foil printing's US price on Scryfall (prices of ${o.price_date}) ` +
+      `× 1 USD = ${o.rate} ${code} (ECB rate of ${o.rate_date}). ` +
       (o.rows.some((r) => r.listed_printing) ? '"As listed" is the printing and finish your list names. ' : "") +
       "Check a shop such as MTGMate before buying.",
   t.unpriced && t.unpriced.length ? ` No price for: ${t.unpriced.join(", ")}.` : "");
@@ -69,6 +71,11 @@ function ownedMissingPrice(row, priceError = false) {
   return !priceError && Number.isFinite(cost) && cost >= 0 ? cost : null;
 }
 
+/** The currency an owned answer's prices are in (E11-S53): the API names it only when it isn't AUD. */
+function ownedCurrency(o) {
+  return typeof o.currency === "string" ? o.currency : o.price_error ? priceCurrency() : "AUD";
+}
+
 function ownedTable(o, ownership = {}) {
   // Only the cards worth a look: missing, on the way or held by another deck. The rest are simply owned.
   const rows = [...o.rows].filter((r) => r.missing > 0 || rowLabels(r).on_the_way.length || rowLabels(r).in_use.length)
@@ -101,12 +108,12 @@ function ownedTable(o, ownership = {}) {
     const heading = el("th", {scope: "col", class: cls}, button);
     headings.set(key, heading); return heading;
   };
-  const caption = el("caption", {class: "sr-only", text: "Cards missing, on the way or held by another deck: copies needed, usable and missing, estimated AUD missing cost, and a unit estimate below each card name. Sort by Card, Missing or estimated missing cost."});
+  const caption = el("caption", {class: "sr-only", text: `Cards missing, on the way or held by another deck: copies needed, usable and missing, estimated ${ownedCurrency(o)} missing cost, and a unit estimate below each card name. Sort by Card, Missing or estimated missing cost.`});
   const columns = el("colgroup", {}, el("col"), el("col", {class: "c-need"}), el("col", {class: "c-have"}),
     el("col", {class: "c-miss"}), el("col", {class: "c-price"}));
   const head = el("thead", {}, el("tr", {}, sortable("name", "Card"),
     el("th", {scope: "col", class: "num", text: "Need"}), el("th", {scope: "col", class: "num", text: "Can use"}),
-    sortable("missing", "Missing", "num"), sortable("cost", "~AUD missing", "num")));
+    sortable("missing", "Missing", "num"), sortable("cost", `~${ownedCurrency(o)} missing`, "num")));
   const bodies = new Map(rows.map(row => [row, ownedRow(row, usable(row), o.price_error)]));
   const foot = el("tfoot", {}, el("tr", {},
       el("th", { scope: "row", text: `All ${plural(o.totals.cards, "card")}` }),

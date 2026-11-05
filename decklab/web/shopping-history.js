@@ -15,7 +15,7 @@ function shopHistoryDay(value) {
 
 function shopHistoryPrice(day) {
   const value = Number(day.price);
-  return day.price != null && day.price !== "" && Number.isFinite(value) ? aud(value) : "price not shown";
+  return day.price != null && day.price !== "" && Number.isFinite(value) ? listedAud(value) : "price not shown";
 }
 
 /** One day's stock in the shop's own terms (Games Portal says only in stock or not). */

@@ -332,7 +332,7 @@ function shopPrice(card) {
   if (card.listed_aud === "" || card.listed_aud == null) return null;
   const amount = Number(card.listed_aud);
   if (!Number.isFinite(amount)) return null;
-  return `${aud(amount)}${card.listed_at ? ` at ${card.listed_at}` : ""}`;
+  return `${listedAud(amount)}${card.listed_at ? ` at ${card.listed_at}` : ""}`;
 }
 
 /** A queued card as a row: its picture, copies, what it's for and which printing, a chip for a state that

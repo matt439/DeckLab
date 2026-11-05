@@ -402,6 +402,10 @@ def table_changes(deck, rows):
     return out
 
 
-def format_aud(amount):
-    """'~$0.40' for a price estimate in AUD (the table's cell format)."""
-    return f"~${amount:,.2f}"
+def format_aud(amount, currency="AUD"):
+    """'~$0.40' for a price estimate in AUD (the table's cell format); another currency's cell
+    from lib/currency ("~€0.40")."""
+    if currency == "AUD":
+        return f"~${amount:,.2f}"
+    from decklab.lib import currency as currencies
+    return currencies.cell(amount, currency)
