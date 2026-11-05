@@ -162,6 +162,27 @@ class RunTests(GauntletVariantCase):
         self.assertNotIn("groups", variants.view(house["test"], self.folder))
 
 
+class GroupTests(unittest.TestCase):
+
+    def test_an_untagged_opponent_is_unknown_never_colourless(self):
+        rows = [({"id": "a", "group": {"identity": "", "style": "aggro", "tier": "easy"}}, None),
+                ({"id": "b"}, None),
+                ({"id": "c", "group": {"identity": None, "style": None, "tier": None}}, None)]
+        found = variants_gauntlet.groups(rows)
+        self.assertEqual([(g["key"], g["opponents"]) for g in found["colour"]], [("C", 1), ("unknown", 2)])
+        self.assertEqual([(g["key"], g["opponents"]) for g in found["identity_size"]],
+                         [("colourless", 1), ("unknown", 2)])
+        self.assertEqual([(g["key"], g["opponents"]) for g in found["style"]], [("aggro", 1), ("unknown", 2)])
+
+    def test_tag_leaves_a_deck_the_catalogue_lacks_untagged(self):
+        summary = {"base": {"kind": "casual"}, "opponents": [{"id": "gone"}, {"id": "here"}]}
+        cat = {"decks": [{"id": "here", "identity": "", "style": {"primary": "ramp"}, "tier": "easy"}]}
+        with mock.patch.object(gauntlet, "catalogue", return_value=cat):
+            variants_gauntlet.tag(summary)
+        self.assertNotIn("group", summary["opponents"][0])
+        self.assertEqual(summary["opponents"][1]["group"], {"identity": "", "style": "ramp", "tier": "easy"})
+
+
 @unittest.skipUnless(seqstats_built(), "needs seqstats' paired functions (package S)")
 class GauntletCommandLineTests(GauntletVariantCase):
 

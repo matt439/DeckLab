@@ -78,9 +78,12 @@ def tag(summary):
         return summary
     by_id = {d.get("id"): d for d in cat.get("decks") or []}
     for record in summary.get("opponents") or []:
-        deck = by_id.get(record.get("id")) or {}
-        record["group"] = {"identity": deck.get("identity") or "", "style": (deck.get("style") or {}).get("primary"),
-                           "tier": deck.get("tier")}
+        deck = by_id.get(record.get("id"))
+        if deck is None:
+            continue                # not in the catalogue: its groups say unknown, never colourless
+        identity = deck.get("identity")
+        record["group"] = {"identity": identity if isinstance(identity, str) else None,
+                           "style": (deck.get("style") or {}).get("primary"), "tier": deck.get("tier")}
     return summary
 
 
@@ -108,19 +111,29 @@ def groups(rows):
     def read(record):
         return record.get("group") or {}
 
+    def identity(m):
+        """The opponent's colour identity ("" colourless), or None when no tag recorded it."""
+        found = read(m[0]).get("identity")
+        return found if isinstance(found, str) else None
+
+    known = [m for m in rows if identity(m) is not None]
+    unknown = [m for m in rows if identity(m) is None]
     colour = []
     for letter, label in g.COLOURS:
-        inside = [m for m in rows if letter in (read(m[0]).get("identity") or "")]
+        inside = [m for m in known if letter in identity(m)]
         if inside:
             colour.append(_row(letter, label, inside, g.OVERLAP))
-    colourless = [m for m in rows if not read(m[0]).get("identity")]
+    colourless = [m for m in known if not identity(m)]
     if colourless:
         colour.append(_row("C", "Colourless", colourless))
     size = []
     for count, (key, label) in enumerate(g.SIZES):
-        inside = [m for m in rows if len(read(m[0]).get("identity") or "") == count]
+        inside = [m for m in known if len(identity(m)) == count]
         if inside:
             size.append(_row(key, label, inside))
+    if unknown:
+        colour.append(_row("unknown", "Unknown", unknown))
+        size.append(_row("unknown", "Unknown", unknown))
     out = {"colour": colour, "identity_size": size}
     for name, order in (("style", g.STYLES), ("tier", g.TIERS)):
         found = {}
