@@ -153,6 +153,11 @@ Exit codes: **0** means all six configurations passed (or all six are ready for
 `--check`); **1** means a test assertion or Simulator session failed; **2** means
 prerequisites, an unavailable configuration or server startup prevented complete
 coverage; **130** means interrupted. An otherwise passing partial matrix exits 2.
+A configuration whose Simulator session dies (a dead-session error confirmed by a
+failed WebDriverAgent probe) is retried once on a new Simulator, in a `-retry1`
+folder; the report keeps the first attempt and its reason, and a failure the
+page caused before the loss still fails the row. A second loss fails the row as
+"Simulator session lost (environment)" with its remaining checks `not_run`.
 
 Ctrl+C, or SIGINT sent to the CLI process, writes the interrupted report and
 cleans up its own resources. This also works when a noninteractive shell passed

@@ -405,6 +405,209 @@ class ReportTests(unittest.TestCase):
                 pass
         self.assertEqual(calls[-1], ("xcrun", "simctl", "delete", owned))
 
+    def lost_driver(self, alive):
+        driver = mock.Mock()
+        driver.screenshot.return_value = b"screenshot"
+        driver.contexts.return_value = ["NATIVE_APP"]
+
+        def command(method, path, body=None):
+            if path == "/orientation" and not alive:
+                raise DriverError("GET /orientation: connect ECONNREFUSED 127.0.0.1:8100")
+            return "<native/>"
+
+        driver.command.side_effect = command
+        return driver
+
+    def test_dead_session_text_and_failed_probe_raise_session_lost(self):
+        driver = self.lost_driver(alive=False)
+        with tempfile.TemporaryDirectory() as directory, mock.patch.object(runner.time, "sleep") as sleep:
+            output = Path(directory)
+            row = {}
+            record = runner.Recorder(driver, output, output, row)
+            with self.assertRaises(runner.SessionLost):
+                record("receipt", lambda: (_ for _ in ()).throw(
+                    DriverError("POST /execute/sync: Remote debugger is not connected")))
+            result = row["assertions"][0]
+            self.assertEqual(result["status"], "failed")
+            self.assertTrue(result["session_lost"])
+            self.assertTrue(result["artifacts"], "the dead device's screen is still captured")
+        probes = [call for call in driver.command.call_args_list if call.args == ("GET", "/orientation")]
+        self.assertEqual(len(probes), 2)
+        sleep.assert_called_once()
+
+    def test_dead_session_text_is_not_enough_while_the_probe_answers(self):
+        driver = self.lost_driver(alive=True)
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            row = {}
+            record = runner.Recorder(driver, output, output, row)
+            self.assertFalse(record("receipt", lambda: (_ for _ in ()).throw(
+                DriverError("Remote debugger is not connected"))))
+            self.assertTrue(record("next", lambda: {}))
+            self.assertNotIn("session_lost", row["assertions"][0])
+
+    def test_page_failure_never_probes_or_ends_the_session(self):
+        driver = self.lost_driver(alive=False)
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            row = {}
+            record = runner.Recorder(driver, output, output, row)
+            self.assertFalse(record("save", lambda: (_ for _ in ()).throw(AssertionError("Save covered"))))
+        self.assertNotIn(mock.call("GET", "/orientation"), driver.command.call_args_list)
+
+    def test_wrapped_wait_timeout_counts_as_session_text(self):
+        try:
+            try:
+                raise DriverError("Could not proxy command. connect ECONNREFUSED 127.0.0.1:8100")
+            except DriverError as inner:
+                raise AssertionError("No inspectable Safari context") from inner
+        except AssertionError as error:
+            self.assertTrue(runner.suggests_lost_session(error))
+        self.assertTrue(runner.suggests_lost_session(
+            AssertionError("timed out: The device's display surface is not available yet")))
+        self.assertFalse(runner.suggests_lost_session(AssertionError("Save covered")))
+        self.assertFalse(runner.suggests_lost_session(ValueError("ECONNREFUSED 127.0.0.1:8100")))
+
+    @contextlib.contextmanager
+    def configuration(self, row, flows, drivers=None):
+        """Run run_configuration with fakes; flows(record) plays the recorded checks."""
+        fixture = SimpleNamespace(base_url="http://127.0.0.1:8629", logs=[])
+        made = []
+
+        def make_driver(*args):
+            driver = self.lost_driver(alive=bool(drivers and drivers[len(made)]))
+            driver.capabilities = {}
+            made.append(driver)
+            return driver
+
+        def simulator(row):
+            row["simulators"] = row.get("simulators", 0) + 1
+            return contextlib.nullcontext(f"udid-{row['simulators']}")
+
+        names = runner.all_check_names()  # before run_flows is faked below
+        patches = (mock.patch.object(runner, "all_check_names", return_value=names),
+                   mock.patch.object(runner, "simulator", side_effect=simulator),
+                   mock.patch("decklab.safari.fixture.FixtureServer",
+                              side_effect=lambda: contextlib.nullcontext(fixture)),
+                   mock.patch.object(runner, "Driver", side_effect=make_driver),
+                   mock.patch.object(runner, "verify_orientation", return_value={}),
+                   mock.patch("decklab.safari.flows.run_flows",
+                              side_effect=lambda driver, fixture, record: flows(record)),
+                   mock.patch.object(runner.time, "sleep"))
+        with contextlib.ExitStack() as stack:
+            for patch in patches:
+                stack.enter_context(patch)
+            yield made
+
+    def test_lost_session_retries_once_in_new_folder_and_passes_visibly(self):
+        attempts = []
+
+        def flows(record):
+            attempts.append(1)
+            if len(attempts) == 1:
+                record("receipt.initial_viewport", lambda: (_ for _ in ()).throw(
+                    DriverError("Could not proxy command. connect ECONNREFUSED 127.0.0.1:8100")))
+                record("never reached", lambda: self.fail("ran against a dead session"))
+            else:
+                record("receipt.initial_viewport", lambda: {})
+
+        row = {"requested_model": "iPhone 15 Pro", "model": "iPhone 15 Pro", "os_version": "27.0",
+               "orientation": "LANDSCAPE", "status": "running"}
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            with self.configuration(row, flows, drivers=[False, True]) as made:
+                runner.run_with_retry("http://127.0.0.1:4723", row, output)
+            self.assertTrue((output / "iPhone-15-Pro-LANDSCAPE").is_dir())
+            self.assertTrue((output / "iPhone-15-Pro-LANDSCAPE-retry1").is_dir())
+            runner.write_reports(output, {"source": {"revision": "abc"}, "matrix": [row]})
+            markdown = (output / "report.md").read_text(encoding="utf-8")
+            saved = json.loads((output / "report.json").read_text(encoding="utf-8"))
+        self.assertEqual(row["status"], "passed")
+        self.assertEqual(row["simulators"], 2)
+        self.assertEqual(len(made), 2)
+        self.assertEqual([item["status"] for item in row["assertions"]], ["passed", "passed"])
+        self.assertEqual(len(row["retries"]), 1)
+        self.assertIn("ECONNREFUSED", row["retries"][0]["reason"])
+        self.assertEqual([item["name"] for item in row["retries"][0]["assertions"]],
+                         ["device.native_and_viewport_orientation", "receipt.initial_viewport"])
+        self.assertIn("passed (retried once)", markdown)
+        self.assertIn("Attempt 1 lost its Simulator session", markdown)
+        self.assertIn("ECONNREFUSED", saved["matrix"][0]["retries"][0]["reason"])
+
+    def test_session_lost_twice_fails_row_and_marks_rest_not_run(self):
+        def flows(record):
+            record("receipt.initial_viewport", lambda: (_ for _ in ()).throw(
+                DriverError("Remote debugger is not connected")))
+
+        row = {"requested_model": "iPhone 15 Pro", "model": "iPhone 15 Pro", "os_version": "27.0",
+               "orientation": "LANDSCAPE", "status": "running"}
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            with self.configuration(row, flows, drivers=[False, False, False]) as made:
+                runner.run_with_retry("http://127.0.0.1:4723", row, output)
+        self.assertEqual(len(made), 2, "at most one retry")
+        self.assertEqual(row["status"], "failed")
+        self.assertTrue(row["reason"].startswith("Simulator session lost (environment)"))
+        statuses = {item["name"]: item["status"] for item in row["assertions"]}
+        self.assertEqual(statuses["receipt.initial_viewport"], "failed")
+        self.assertEqual(statuses["version.stale_detection_reload"], "not_run")
+        self.assertEqual(list(statuses), runner.all_check_names())
+        made[0].close.assert_called_once()
+        made[1].close.assert_called_once()
+
+    def test_page_failure_before_loss_is_not_hidden_by_a_passing_retry(self):
+        attempts = []
+
+        def flows(record):
+            attempts.append(1)
+            if len(attempts) == 1:
+                record("receipt.initial_viewport", lambda: (_ for _ in ()).throw(AssertionError("hint covered")))
+                record("receipt.image_swipe_exactly_one", lambda: (_ for _ in ()).throw(
+                    DriverError("display surface is not available yet")))
+            else:
+                record("receipt.initial_viewport", lambda: {})
+
+        row = {"requested_model": "iPhone 15 Pro", "model": "iPhone 15 Pro", "os_version": "27.0",
+               "orientation": "PORTRAIT", "status": "running"}
+        with tempfile.TemporaryDirectory() as directory:
+            with self.configuration(row, flows, drivers=[False, True]):
+                runner.run_with_retry("http://127.0.0.1:4723", row, Path(directory))
+        self.assertEqual(row["status"], "failed")
+        self.assertIn("receipt.initial_viewport", row["reason"])
+        self.assertNotIn("receipt.image_swipe_exactly_one", row["reason"])
+
+    def test_page_failures_without_a_lost_session_run_once(self):
+        def flows(record):
+            record("receipt.initial_viewport", lambda: (_ for _ in ()).throw(AssertionError("hint covered")))
+
+        row = {"requested_model": "iPhone 15 Pro", "model": "iPhone 15 Pro", "os_version": "27.0",
+               "orientation": "PORTRAIT", "status": "running"}
+        with tempfile.TemporaryDirectory() as directory:
+            with self.configuration(row, flows, drivers=[False]) as made:
+                runner.run_with_retry("http://127.0.0.1:4723", row, Path(directory))
+        self.assertEqual(len(made), 1)
+        self.assertEqual(row["status"], "failed")
+        self.assertNotIn("retries", row)
+
+    def test_main_counts_a_passing_retry_as_passed(self):
+        rows = environment.matrix({}, [])
+        for row in rows:
+            row.update(status="pending", model=row["requested_model"], os_version="27.0")
+
+        def run(url, row, output):
+            row.update(status="passed", assertions=[{"name": "check", "status": "passed"}],
+                       retries=[{"reason": "DriverError: ECONNREFUSED 127.0.0.1:8100", "assertions": []}])
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "run"
+            with mock.patch.object(environment, "source", return_value={"revision": "abc", "dirty": False}), \
+                    mock.patch.object(environment, "inspect", return_value={"errors": [], "matrix": rows}), \
+                    mock.patch.object(runner, "appium", return_value=contextlib.nullcontext("http://127.0.0.1:4723")), \
+                    mock.patch.object(runner, "run_with_retry", side_effect=run):
+                self.assertEqual(runner.main(["--output", str(output)]), 0)
+            report = json.loads((output / "report.json").read_text(encoding="utf-8"))
+        self.assertTrue(all(row["retries"] for row in report["matrix"]))
+
     def test_appium_owns_process_group_and_terminates_children_on_parent_exit(self):
         process = mock.Mock(pid=9321)
         process.poll.return_value = None
