@@ -2,7 +2,8 @@
 /api/server/restart (lib/api/server_restart.py) says whether a restart may start and what it would stop; POST
 asks the PC to restart, after a confirmation here. The page then waits for a server with another started_at
 (GET /api/status's build) and reloads. A restart is refused while the checkout has uncommitted code, and it
-never applies database migrations. The "Restart needed" warning box (version.js) links here for a home admin.
+never applies database migrations. On a release install, the same answer says whether a newer release is out
+(lib/release_check.py: checked at most once a day, nothing downloaded). The "Restart needed" warning box (version.js) links here for a home admin.
 
 Loaded after settings.js and before app.js. Nothing here runs at load.
 */
@@ -20,6 +21,7 @@ function mayRestartServer(profile = state.profile) {
 function settingsRestartPart() {
   if (!mayRestartServer()) return null;
   return el("div", { class: "settings-fields", id: "server-restart" },
+    el("p", { class: "sub", id: "server-release", hidden: true }),
     el("p", { class: "sub", id: "server-restart-words", role: "status" }),
     el("div", { class: "actions", id: "server-restart-actions" }));
 }
@@ -29,9 +31,39 @@ async function loadServerRestart(token) {
   if (!host || token !== routeToken) return;
   try {
     const view = await api("/api/server/restart");
-    if (token === routeToken && host.isConnected && !host.restarting) drawServerRestart(host, view);
+    if (token === routeToken && host.isConnected && !host.restarting) {
+      drawServerRelease(view.release);
+      drawServerRestart(host, view);
+    }
   } catch (e) {
     if (token === routeToken && host.isConnected && !host.restarting) host.hidden = true;
+  }
+}
+
+/** A release install's line about newer releases (lib/release_check.py): null in a git checkout, which asks nothing.
+ * The PC checks GitHub at most once a day and downloads nothing; this only links to the release's page. */
+function drawServerRelease(release) {
+  const line = byId("server-release");
+  if (!line) return;
+  clear(line);
+  line.hidden = !release || typeof release !== "object";
+  if (line.hidden) return;
+  const day = typeof release.checked_on === "string" && /^\d{4}-\d{2}-\d{2}$/.test(release.checked_on) ? release.checked_on : null;
+  const named = v => typeof v === "string" && v ? v.replace(/^v/i, "") : null;
+  const latest = named(release.latest), current = named(release.current);
+  const url = typeof release.url === "string" && /^https:\/\/github\.com\//.test(release.url) ? release.url : null;
+  if (!release.enabled) {
+    line.textContent = "Checking for newer releases is off (config.json's release_check).";
+  } else if (release.newer === true && latest) {
+    add(line, [`Release ${latest} is out; this is ${current || "an older release"}. Nothing is downloaded: `,
+      url ? el("a", { href: url, target: "_blank", rel: "noopener noreferrer", text: `see release ${latest}` }) : "see the Releases page",
+      "."]);
+  } else if (release.failed) {
+    line.textContent = "Couldn't check for a newer release" + (day ? `; the last check, on ${day}, found none newer.` : ".");
+  } else if (release.newer === false && day) {
+    line.textContent = `This is the newest release (checked ${day}).`;
+  } else {
+    line.textContent = release.checking ? "Checking for a newer release now; reopen Settings to see what it finds." : "Not checked for a newer release yet.";
   }
 }
 
