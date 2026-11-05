@@ -2,6 +2,54 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Play a deck against chosen decks (2026-11-05; E3-S31)
+
+- **A group run** is a field run over decks the viewer chooses: up to 12 of the format's decks they may see (their own space's, and another space's only when its decks are Public; never a trial or a Beginner Box half). `lib/forge/group.py` checks the group, plans, runs and views it, through `run_field`'s `opponent_entries`, into the ordinary results folder, so its games are ordinary matchups that count in Rankings, the ratings and per-card stats. Its note is kept with the field's notes but never shown as the field's last run (`field.last_note`).
+- **The view:** one figure gives the list's equal-weight average against the group with its range and how many it's ahead of, even with and behind (the gauntlet's `_group`), then each chosen deck hardest first.
+- **The page:** the Testing tab's **Against chosen decks** part, below Against the field (`web/field-group.js`): tick the decks, pick the field's budget, **Play these decks**. The Running list says **Group run of <deck>**; the simulations setting and Stop work as a field run's.
+- **API:** `GET /api/field/group?id=&version=&opponents=a,b`, `POST /api/field/group/run` and `/stop` (`lib/api/field_group.py`). A chosen deck the viewer can't see answers as a missing deck before any 403; only lists and results show, never another space's counts.
+- **Review fixes:** a group run is shown (the Running list, the view, Stop's answer) only to a viewer who sees every chosen deck, checked on the job's chosen decks so it holds while the run waits before its first report too (`forge_runs._Seen.coordinator`). A list plays one field or group run at a time in both directions, under one lock shared by `run_field` and `run_group` (409 otherwise).
+- **Command line:** `python -m decklab.lib.forge field <deck> --group a,b[@target|@owned]` (with `--show`, `--dry-run`, `--budget` or `--fixed`).
+- This finishes E3-S19 (its criterion 2, the averaged group run).
+- Tests: `test_forge_group.py`, `test_field_group_api.py` (a group not yet reporting names no hidden deck; a field run waits for a group of its list), `test_field_group_ui.py`; fake runners, no Forge.
+
+## Variant tests against a gauntlet sample (2026-11-05; E3-S30 slice)
+
+- `python -m decklab.lib.forge variant <deck> --remove ... --add ... --gauntlet <sample id>|standard` (or `--against gauntlet:<sample id>`) tests a change against a saved gauntlet sample instead of the household's decks.
+- The changed list plays the base list's own gauntlet games (the same seeds and seats). Any base top-ups, the paired results and the test summaries are saved in the gauntlet's results folder (`paired/`, `paired/tests/`), so none of it joins the field, Rankings or the ratings.
+- It is judged as a field test (the field's looks and 2-point margin). The answer gives the difference over the whole sample and by colour (overlapping), number of colours, style and tier, each group as `paired_field` over its opponents; an opponent the catalogue didn't tag is counted as Unknown, never as Colourless. A group of one says "one opponent, not a group", and the caveat says each difference covers these N sampled opponents only.
+- A sample that doesn't exist, one of the other format, a mirror of the deck's own list and a trial deck's own precon are handled as the gauntlet run handles them. `--more <test>` finds the test in the gauntlet folder; mixing `--against`, `--field` and `--gauntlet` is refused.
+- Left: the editor's Test this change sheet has no "Against: popular decks sample" choice yet (`variant_page.py` reads only the default results folder).
+- New `forge/variants_gauntlet.py`. Tests: `decklab/tests/test_variant_gauntlet.py` (9), fake runners.
+
+## The official bracket text on tutors (2026-11-05; E9-S29)
+
+- The bracket check counted tutors but couldn't say what Wizards' bracket text says about them. Claude read the official announcements on 2026-11-05. The Commander Brackets Beta Update of 2025-10-21 says "the avenue we'd like to take is to remove the tutor restrictions from Commander Brackets entirely and rely on Game Changers to catch the most efficient tutors". Of its brackets, only Bracket 4's "Players expect" list names tutors: "Game Changers that are likely to be fast mana, snowballing resource engines, free disruption, and tutors". The 2026-02-09 update doesn't mention them.
+- `constants.BRACKET_TUTORS` keeps that wording: the quote, each bracket's own words and its limit (none: no bracket sets a number), `read_on` and `reviewed_through`. Deck Lab still never fetches Wizards' pages.
+- `stats.tutors.tutor_rules` gives it as `bracket["tutor_rules"]` while Wizards' latest Commander announcement (E9-S24) is no newer than `reviewed_through`. After a newer announcement, or when that date is unknown, it says what the official text says about tutors isn't known.
+- The Stats tab's Minimum bracket, the Overview's What opponents will face and the printed At the table quote it at the deck's target bracket, adding Bracket 4's own words there. It still shows when the tag data can't be read; an older answer without it shows nothing.
+- The text sets no number, so the Checks panel gets no tutor warning. Nothing is blocked, the bracket doesn't move, and casual decks are unchanged.
+- Tests: `test_commander_readiness.py` (3 new), `test_commander_readiness_ui.py`, `test_commander_print_ui.py`, `test_stats_tutors_ui.py` (1 new each).
+
+## Undo a wishlist addition that moved other entries along (2026-11-05; E11-S08 slice)
+
+- Activity's wishlist Undo now also reverses an addition that had to move other entries along first: an add at an index, such as the Wishlist page's Undo of a removal, when the slot was taken. Its change is 1-50 position-only UPDATEs followed by one INSERT, all on one profile's wishlist.
+- The review is `wishlist_remove` with a `moved` count. Save deletes the entry and moves each moved entry back to its old position, lowest first, so the list is exactly as it was, positions included, in one new audited change (`lib/state/wishlist_undo_moved.py`, `pg_wishlist_undo_moved.py`).
+- Owner only, at the same `/api/activity/wishlist-undo`. Another profile's change, or a change set that touches anything but the owner's wishlist, answers 404 as missing before any value is read.
+- Allowed only while that change is still the latest saved change to the owner's whole wishlist and every touched entry is exactly as it left it; otherwise 409, and nothing is written.
+- Other shapes (more than one addition, moves that don't make room, changes beyond position, more than 50 moved) give the general sentence followed by a fixed reason, with counts only. No message or refusal quotes a wishlist note.
+- Before commit, the receipt proves exactly the DELETE and then the moves back, the whole surviving list and a newer owner audit version. The Activity sheet adds one line saying how many other entries go back to their earlier places.
+- Tests: `test_wishlist_undo_moved.py`, `test_activity_wishlist_moved_undo_ui.py`, `test_wishlist_undo_moved_pg.py` (PostgreSQL, CI's database job).
+
+## Currency as a setting (2026-11-05; E11-S53 second slice)
+
+- **The setting:** `config.json`'s optional `"currency"`, an ISO code the ECB publishes a USD rate for (`lib/currency.ECB_CODES`), or `"USD"` (a rate of 1, never fetched, dated the day it's used). Unset, blank or unknown means AUD (an unknown one said once on stderr), so an existing household sees nothing change.
+- **The rate:** `cards.usd_to_aud()` (the name is older than the setting) asks Frankfurter for the configured code and caches it in `decklab/data/fx-<code>.json` (AUD keeps `fx.json`); a cache written for another currency is never used, and a change of setting starts the day's attempts again. `Price` carries its currency and labels it.
+- **Deck tables:** a table repriced in another currency names it in its header (`| ~EUR each | ~EUR missing |`), its rate statement (`1 USD = 0.9 EUR (ECB rate of ...), pulled ...`) and a new table's note; the parser reads any one-currency header, and an AUD table reads and renders byte for byte as before. A refresh without `--reprice` keeps the old header, stamp and prices; repricing still refuses a rate worded any other way.
+- **The page:** `/api/status` gains `pricing` (currency, symbol, whether it's the default, the enabled shops) and its `fx` is the configured currency's. The deck page's Prices note and its sortable `~EUR missing` column, the footer, and Scryfall estimates through `aud()` follow it; shops' own AUD listings (snapshot lines, the queue's reference prices, Baskets and postage, price history) use `listedAud()` and stay A$. Settings' About part says the currency and shops, read-only.
+- Left: other pages' and commands' A$/AUD labels (stories.md, E11-S53's Gap) and a Settings control.
+- Tests: `decklab/tests/test_currency_setting.py`. Fixtures only.
+
 ## Commanders we could build: pairs and held commanders (2026-11-05; E9-S28 third slice)
 
 - **Pairs counted together:** `lib/decks/commander_pool.py`'s `pairs` offers two free cards that may be your two commanders together as one row, counted over the union of their colour identities and ranked with the single candidates by the same coverage figure. The rules are the Commander checks' own (`lib/stats/commander.py`'s `_pairing`, wrapped in `lib/api/commander_candidates.py`'s `_Rules.pair_rule` so each half must be able to lead, or be the Background a "Choose a Background" commander takes): partner, partner with, partner—[text] such as Friends forever, Choose a Background and Doctor's companion. A Background is never a row alone.
@@ -174,15 +222,6 @@ The three places "Less text on phones" left alone because tests pinned their wor
 - **Preview:** each part carries `corrected`, `null` or `{"ordered", "received"}` row counts; Activity's review says "its rows corrected on arrival go back as ordered (2 → 1 row)". The API and page validate the new field strictly.
 - Still unsupported: receipts that split a part or confirmed extra copies.
 - Tests: `test_inventory_undo_receipt_rows.py` (11 fixture cases: tokens with a ledger, cards, an uncorrected part, later correction or record edit, rows outside received parts, a missing position, a record change beyond the ledger, the Activity hint), `test_inventory_undo_receipt_rows_pg.py` (2 cases through the real audit trail, run against a disposable PostgreSQL 16 in a cloud session) and `test_activity_mixed_undo_ui.py` (the new line and malformed `corrected` values).
-
-## Currency as a setting (2026-11-05; E11-S53 second slice)
-
-- **The setting:** `config.json`'s optional `"currency"`, an ISO code the ECB publishes a USD rate for (`lib/currency.ECB_CODES`), or `"USD"` (a rate of 1, never fetched, dated the day it's used). Unset, blank or unknown means AUD (an unknown one said once on stderr), so an existing household sees nothing change.
-- **The rate:** `cards.usd_to_aud()` (the name is older than the setting) asks Frankfurter for the configured code and caches it in `decklab/data/fx-<code>.json` (AUD keeps `fx.json`); a cache written for another currency is never used, and a change of setting starts the day's attempts again. `Price` carries its currency and labels it.
-- **Deck tables:** a table repriced in another currency names it in its header (`| ~EUR each | ~EUR missing |`), its rate statement (`1 USD = 0.9 EUR (ECB rate of ...), pulled ...`) and a new table's note; the parser reads any one-currency header, and an AUD table reads and renders byte for byte as before. A refresh without `--reprice` keeps the old header, stamp and prices; repricing still refuses a rate worded any other way.
-- **The page:** `/api/status` gains `pricing` (currency, symbol, whether it's the default, the enabled shops) and its `fx` is the configured currency's. The deck page's Prices note and its sortable `~EUR missing` column, the footer, and Scryfall estimates through `aud()` follow it; shops' own AUD listings (snapshot lines, the queue's reference prices, Baskets and postage, price history) use `listedAud()` and stay A$. Settings' About part says the currency and shops, read-only.
-- Left: other pages' and commands' A$/AUD labels (stories.md, E11-S53's Gap) and a Settings control.
-- Tests: `decklab/tests/test_currency_setting.py`. Fixtures only.
 
 ## Price-check shops as a setting (2026-11-04; E11-S53 first slice)
 
