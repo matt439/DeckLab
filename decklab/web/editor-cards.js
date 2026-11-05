@@ -765,7 +765,10 @@ function noteKeyboard() {
 /** --vvh sizes the side panel to the screen above the keyboard (iOS keeps 100dvh the whole screen's).
  * The editor's sticky bar also needs the part of the layout viewport below the visual viewport: Safari
  * can pan back after typing, leaving Save behind its input accessory row. Track that pan as well as
- * height changes. The scaled height distinguishes a keyboard from pinch zoom alone. */
+ * height changes. The scaled height distinguishes a keyboard from pinch zoom alone.
+ * window.innerHeight isn't always the sticky scrollport's height (an iPad in landscape panned by 219.5
+ * reported one 128px short, so Save went under the keyboard): the lift is measured from the bar itself
+ * (liftFromBar), with innerHeight's estimate only when there's no bar on screen to measure. */
 function noteViewHeight() {
   const root = document.documentElement;
   if (!root || !root.style || !root.style.setProperty) return;
@@ -773,8 +776,30 @@ function noteViewHeight() {
   root.style.setProperty("--vvh", `${Math.round(h)}px`);
   const vv = window.visualViewport;
   const keyboard = window.matchMedia("(pointer: coarse)").matches && h < fullHeight - 120;
-  const bottom = vv && keyboard ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
-  root.style.setProperty("--editor-keyboard-bottom", `${bottom}px`);
+  if (!vv || !keyboard) { root.style.setProperty("--editor-keyboard-bottom", "0px"); return; }
+  const estimate = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  root.style.setProperty("--editor-keyboard-bottom", `${estimate}px`);
+  const measured = liftFromBar(vv, estimate);
+  if (measured !== null && measured !== estimate) root.style.setProperty("--editor-keyboard-bottom", `${measured}px`);
+}
+
+/** The keyboard lift that ends the stuck bar at the visual viewport's bottom, from where it is now with the
+ * lift in use taken off (the sticky scrollport's bottom), so the answer never depends on the last one; null
+ * with no shown bar. iOS gives rects from the visual viewport's top, other browsers from the layout
+ * viewport's: the root's rect against vv.pageTop says which (unknown: the visual one, which only lifts higher). */
+function liftFromBar(vv, applied) {
+  const bar = editor && editor.dom && editor.dom.bar;
+  if (!bar || !bar.isConnected || !bar.getBoundingClientRect) return null;
+  const rect = bar.getBoundingClientRect();
+  if (!rect || !(rect.height > 0) || !Number.isFinite(rect.bottom)) return null;
+  const style = window.getComputedStyle ? window.getComputedStyle(bar) : null;
+  const used = style ? parseFloat(style.bottom) : NaN;
+  const unlifted = rect.bottom + (Number.isFinite(used) ? used : applied);
+  const rootTop = document.documentElement.getBoundingClientRect ? document.documentElement.getBoundingClientRect().top : NaN;
+  const layoutRects = Number.isFinite(vv.pageTop) && Number.isFinite(rootTop) && vv.offsetTop > 1
+    && Math.abs(rootTop + vv.pageTop - vv.offsetTop) <= 1;
+  const visibleBottom = vv.height + (layoutRects ? vv.offsetTop : 0);
+  return Math.max(0, unlifted - visibleBottom);
 }
 
 if (window.visualViewport) {
