@@ -1,4 +1,4 @@
-"""Activity restores 1-50 edited token-card rows of one change in place, for that space's own token editors only."""
+"""Activity restores 1-50 edited token-card rows of one change, for that space's own token editors only."""
 import copy
 import json
 from unittest import mock
@@ -46,6 +46,25 @@ class TokenEditApiTests(TokenEditFixture):
         self.seed(batch_rows(1), [{**batch_rows(1)[0], "front_details": "4/4; white; flying"}])
         answer = self.view()
         self.assertEqual((answer["row_count"], answer["label"]), (1, "Updates to 1 token-card row"))
+
+    def test_reordered_source_reviews_only_value_edits_and_keeps_positions_internal(self):
+        self.seed_reordered()
+        source = self.store.audit[fixture.CHANGE_ID]
+        self.assertGreater(len(source), 1)
+        preview = self.view()
+        self.assertEqual(set(preview), PACKET)
+        self.assertEqual((preview["row_count"], preview["label"]), (1, "Updates to 1 token-card row"))
+        self.assertEqual([item["token_row_id"] for item in preview["rows"]], [9])
+        self.assertEqual(preview["rows"][0]["fields"], [
+            {"field": "front_collector_number", "before": "0", "after": self.olds[2]["front_collector_number"]}])
+        for internal in ("position", "layout", "proof", "current_db", "restore_db"):
+            self.assertNotIn(internal, json.dumps(preview))
+        self.assertEqual(self.store.writes, [])
+        answer = self.apply(expect=preview["expect"])
+        self.assertEqual((answer["row_count"], answer["restored_rows"]),
+                         (1, [{"token_row_id": 9, "row": self.olds[2]}]))
+        self.assertEqual(self.stock(), self.historical_stock)
+
 
     def test_save_returns_every_restored_row_by_id_and_a_replay_refuses(self):
         self.seed(survivors=(self.zombie(),))
@@ -126,9 +145,15 @@ class TokenEditApiTests(TokenEditFixture):
         hidden, moved = copy.deepcopy(rows), copy.deepcopy(rows)
         hidden[2]["after"]["space_id"] = "user2"
         moved[1]["after"]["position"] += 1
+        self.assertEqual(api.review_hint({**change, "rows": moved}, shown, guard.viewer()), {"review": True})
         for other in ({**change, "total": 4}, {**change, "groups": [{"table": "token_card"}]}, {**change, "rows": hidden},
-                      {**change, "rows": moved}, {**change, "rows": rows[:2] + [{**rows[2], "table": "collection_card"}]}):
+                      {**change, "rows": rows[:2] + [{**rows[2], "table": "collection_card"}]}):
             self.assertIsNone(api.review_hint(other, shown, guard.viewer()))
+        for field in ("before", "after"):
+            for position in (-1, True, "1", None):
+                malformed = copy.deepcopy(moved)
+                malformed[1][field]["position"] = position
+                self.assertIsNone(api.review_hint({**change, "rows": malformed}, shown, guard.viewer()))
         self.assertIsNone(api.review_hint(change, {"id": 1}, guard.viewer()))
         with access.using(USER2):
             self.assertIsNone(api.review_hint(change, shown, guard.viewer()))

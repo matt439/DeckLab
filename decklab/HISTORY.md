@@ -2,6 +2,19 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Deterministic warm-worker progress checks (2026-11-06)
+
+- The warm-pool progress checks separate scripted event/clock coverage from subprocess integration. Scripted completed games prove progress before a chunk ends, throttling and heartbeats during a stall; the fake worker processes prove monotonic completed-game counts, matching wins and the final saved total. No assertion requires a busy runner to sample an arbitrary number of distinct totals.
+- The fixtures use no real Forge installation or games. All 52 warm-pool checks passed, as did ruff and the source-length guard. Application behavior is unchanged.
+
+## Undo token edits that reordered the list (2026-11-06; E11-S08 slice)
+
+- Activity can restore a token-card edit that changed the sorted list order. The complete source must contain only 1-50 own-space token-card UPDATEs, including any unchanged cards whose positions moved. All source rows must still match their audited after-images and latest touches; a reordered source must still be the space's latest token change. Its historical sorted stock and the ordinary writer's forward layout must be reproducible. An unsorted historical list, ambiguous tie order, later changes, invalid values, unchecked printings, duplicate known identities or changed packed allocations refuse the whole Undo.
+- The preview lists only cards whose values change, under the existing `token_batch_update` packet and own-space permissions. Position-only source rows remain internal evidence. The list follows the restored values; no card is added or removed.
+- `inventory/undo_token_order.py` predicts the ordinary writer's gap-preserving positions and exact inverse UPDATEs. Historical numeric positions need not come back, and the inverse may move a row the source did not update. Before commit, the same transaction proves exactly those audit images, the restored stock and order, predicted layout, unchanged packing and other inventory, or rolls back. Both source and inverse are bounded to 50 audited rows.
+- Evidence: `test_inventory_undo_token_edit.py`, `test_inventory_undo_token_order.py`, `test_activity_undo_token_edit_api.py`, `test_activity_undo_token_edit_ui.py` and the guarded `test_inventory_undo_token_edit_pg.py`. The affected fixture run passed 825 tests with 45 separate-qualification skips (870 discovered); all 14 final ordering checks and 7 source-inventory checks passed, as did ruff and the source-length guard. The guarded PostgreSQL tests passed in CI; local PostgreSQL integration and real browser/device qualification remain unrun.
+- E11-S08 remains partial: order-linked queue changes, token additions/removals that move survivors and other recovery shapes remain open.
+
 ## Prices in Settings and every currency label (2026-11-05; E11-S53 third slice)
 
 - **Labels:** every Scryfall estimate follows the configured currency: the Collection page's values and price sort, the Stats tab's One card away, the variant buying summary's estimate, the editor's table note and search prices, EDHREC and wishlist ideas, precon coverage, and on the command line `pool`, `edhrec`, `combos` and `cards`. Each price answer carries its own `currency` (`currency.tag()`, added only when it isn't AUD), and the page formats an answer's amounts by it (`ansMoney()`, `ansSign()` in `core.js`), so a page left open across a change never shows one currency's figures under another's sign. With no setting every line and answer is byte for byte as before.

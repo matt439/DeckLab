@@ -29,7 +29,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from decklab.lib import api, config, decks, forge, jobs
-from decklab.lib.forge import pool, runner, seeds, slots
+from decklab.lib.forge import pool, runner, runner_v2, seeds, slots
 from decklab.tests import test_forge
 from decklab.tests.test_forge import CARD_LOG, GISA, GREEN, RED, entry, load_json, sections, stored, wait_dead
 from decklab.tests.test_forge_slots import SlotFolder, wait_for
@@ -270,15 +270,17 @@ class RunTests(PoolCase):
         more = self.run_matchup(3, exact=True)
         self.assertEqual((more["next_game"], more["batches"][1]["first"]), (40, 37))
 
-    def test_progress_comes_after_games_and_at_least_once_a_second(self):
-        self.fake("delay=0.01")
+    def test_process_progress_counts_completed_games_and_finishes_at_the_total(self):
         calls = []
-        self.run_matchup(200, progress=lambda done, total, detail: calls.append((time.monotonic(), done)))
-        gaps = [later[0] - earlier[0] for earlier, later in zip(calls, calls[1:])]
-        self.assertTrue(all(gap >= runner.PROGRESS_GAP - 0.01 for gap in gaps[:-1]), gaps)
-        self.assertLess(max(gaps), runner.HEARTBEAT + 0.5, gaps)
-        self.assertGreater(len({done for _, done in calls}), 3)        # live: not once a chunk
-        self.assertEqual(calls[-1][1], 200)
+        result = self.run_matchup(200, progress=lambda done, total, detail: calls.append((done, total, dict(detail))))
+        self.assertEqual((calls[0][:2], calls[-1][:2]), ((0, 200), (200, 200)))
+        self.assertEqual([done for done, _, _ in calls], sorted(done for done, _, _ in calls))
+        for done, total, detail in calls:
+            self.assertEqual(total, 200)
+            self.assertTrue(0 <= done <= total)
+            self.assertEqual(sum(detail["wins"]) + detail["other"], done)
+        self.assertEqual(result["runs"][-1]["played"], 200)
+        self.assertEqual(len(result["batches"][-1]["games"]), 200)
 
     def test_a_commander_mirror(self):
         a = entry(GISA, "commander/gisa", "commander")
@@ -298,6 +300,59 @@ class RunTests(PoolCase):
                 mock.patch.object(forge.common, "_log"), self.assertRaises(forge.ForgeError) as caught:
             self.run_matchup(200)
         self.assertEqual(str(caught.exception), runner.OTHER_ENGINE)
+
+
+class ProgressTests(unittest.TestCase):
+
+    def test_game_progress_is_throttled_and_idle_heartbeats_arrive_within_one_second(self):
+        # Script delivery and elapsed time independently of process/thread scheduling. The
+        # second game reaches the throttle boundary before its chunk ends; then play stalls.
+        clock = SimpleNamespace(now=100.0)
+        gap, heartbeat = runner.PROGRESS_GAP, runner.HEARTBEAT
+        second, third = clock.now + gap, clock.now + gap + 2 * heartbeat
+        scheduled = [(clock.now, ("start", 1, 0, 3, 0.0)),
+                     (clock.now + gap / 2, ("game", 1, {"g": 0, "w": 0}, [{}, {}], [{}, {}], None)),
+                     (second, ("game", 1, {"g": 1, "w": 1}, [{}, {}], [{}, {}], None)),
+                     (third, ("game", 1, {"g": 2, "w": None}, [{}, {}], [{}, {}], None)),
+                     (third + gap / 4, ("end", 1, {"wall_s": 2 * heartbeat})),
+                     (third + gap / 4, ("done", "finished"))]
+        calls, delivered = [], []
+
+        def get(timeout):
+            deadline = clock.now + timeout
+            if not scheduled:
+                raise AssertionError("The scripted ticket ended without its done event")
+            if scheduled[0][0] > deadline:
+                clock.now = deadline
+                raise queue.Empty
+            clock.now, event = scheduled.pop(0)
+            if event[0] == "game":
+                delivered.append(event[2]["g"])
+            return event
+
+        def empty():
+            raise queue.Empty
+
+        ticket = SimpleNamespace(events=SimpleNamespace(get=get, get_nowait=empty), stop=mock.Mock())
+        placement = pool.Placement(ticket, "local", "1024m")
+        progress = lambda done, total, detail: calls.append((clock.now, done, total, len(delivered), detail))
+        with mock.patch.object(pool, "place", return_value=placement), \
+                mock.patch.object(runner_v2, "time", SimpleNamespace(monotonic=lambda: clock.now)):
+            record, fails, stopped, _ = runner._play_v2({}, "f" * 64, {"ranges": [[0, 3]]},
+                                                       progress, [], None, True)
+        self.assertIsNone(stopped)
+        self.assertEqual(fails, [])
+        ticket.stop.assert_not_called()
+        self.assertEqual([game["g"] for game in record["games"]], [0, 1, 2])
+        self.assertEqual((calls[0][1], calls[-1][1]), (0, 3))
+        for _, done, total, completed, detail in calls:
+            self.assertEqual((done, total), (completed, 3))
+            self.assertEqual(sum(detail["wins"]) + detail["other"], done)
+        self.assertIn((second, 2), [(at, done) for at, done, *_ in calls])
+        self.assertTrue(any(second < at < third and done == 2 for at, done, *_ in calls))
+        gaps = [later[0] - earlier[0] for earlier, later in zip(calls, calls[1:])]
+        self.assertTrue(all(elapsed + 1e-9 >= gap for elapsed in gaps[:-1]), gaps)
+        self.assertLessEqual(max(gaps), heartbeat + 1e-9, gaps)
 
 
 # ============================================================ re-queues, recycling and failing

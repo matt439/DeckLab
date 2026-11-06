@@ -1,7 +1,7 @@
-"""Restoring 1-50 edited token-card rows of one change in place, with fake audit rows and disposable stock only.
+"""Restoring edited token-card rows of one change, with fake audit rows and disposable stock only.
 
 DatabaseLike stands in for PgInventory.apply: it records an UPDATE audit row for every token row
-the undo changed (with its unchanged persisted position), keeps the layout, then runs the
+whose values or persisted position changed, using the real position allocator, then runs the
 transaction-local proof before "committing". No PostgreSQL, household data or real card cache
 is read or changed.
 """
@@ -11,7 +11,7 @@ import unittest
 from unittest import mock
 
 from decklab.lib import inventory
-from decklab.lib.inventory import changes, model, rules, undo, undo_token_edit as edit
+from decklab.lib.inventory import changes, model, pg, rules, undo, undo_token_edit as edit
 from decklab.lib.state import Invalid
 from decklab.lib.tokens import names
 from decklab.tests import test_activity_undo_api as fixture
@@ -50,6 +50,7 @@ class TokenEditFixture(unittest.TestCase):
         self.store.snapshot = self.store.snapshot.replace(decks={}, products=(), tokens={},
             status=model.Sheet("magic/products/status.csv", tuple(rules.STATUS_FIELDS), (), True))
         self.store.undo_token_positions = mock.Mock(side_effect=lambda space: copy.deepcopy(self.layout if space == self.space else []))
+        self.store.undo_token_latest = mock.Mock(side_effect=lambda space: self.store.latest if space == self.space else None)
         self.store.undo_audit_rows = mock.Mock(side_effect=lambda change_id: copy.deepcopy(self.store.audit.get(change_id, [])))
         self.store.undo_latest = mock.Mock(side_effect=lambda table, key: self.touched.get(key.get("id")))
         self.checked = mock.Mock(side_effect=lambda row: (dict(row), []))
@@ -77,20 +78,57 @@ class TokenEditFixture(unittest.TestCase):
         self.store.audit[fixture.CHANGE_ID] = audit
         self.store.latest = fixture.ROW_ID + len(self.rows) - 1
 
+    def seed_reordered(self, *, olds=None, edits=None, positions=None, survivors=(), space="home"):
+        """A real sorted edit and allocator-generated audit, including position-only survivors.
+
+        Dense historical positions make the default id 9 edit move before id 7 and renumber
+        all three rows. Only id 9 changes values; every source UPDATE is still proved.
+        """
+        self.space = space
+        self.olds = copy.deepcopy(batch_rows() if olds is None else olds)
+        edits = {9: {"front_collector_number": "0"}} if edits is None else edits
+        made = [model.TokenRow.make(row, id=FIRST + index) for index, row in enumerate(self.olds)]
+        before = self.store.snapshot.with_tokens(space, [*survivors, *made])
+        old_rows = before.token_set(space).rows
+        old_positions = {row.id: index + 1 for index, row in enumerate(old_rows)} if positions is None else dict(positions)
+        self.historical_layout = [{"id": row.id, "position": old_positions[row.id]} for row in old_rows]
+        ordinary = lambda row: {**row.as_dict(), "quantity": int(row.quantity)}
+        self.historical_stock = [(row.id, ordinary(row)) for row in old_rows]
+        self.store.snapshot = before.with_tokens(space, [row.replace(**edits.get(row.id, {})) for row in old_rows])
+        current_rows = self.store.snapshot.token_set(space).rows
+        new_positions = dict(zip((row.id for row in current_rows), pg._positions([row.id for row in current_rows], old_positions)))
+        self.layout = [{"id": row.id, "position": new_positions[row.id]} for row in current_rows]
+        self.rows = [ordinary(next(row for row in current_rows if row.id == FIRST + index)) for index in range(len(self.olds))]
+        old_by_id = dict(self.historical_stock)
+        audit, self.touched = [], {row.id: 50 for row in old_rows}
+        for row in current_rows:
+            old, current = old_by_id[row.id], ordinary(row)
+            if old == current and old_positions[row.id] == new_positions[row.id]:
+                continue
+            rid = fixture.ROW_ID + len(audit)
+            audit.append({"id": rid, "table": "token_card", "op": "UPDATE", "key": {"id": row.id},
+                          "before": raw(old, space, row.id, old_positions[row.id]),
+                          "after": raw(current, space, row.id, new_positions[row.id])})
+            self.touched[row.id] = rid
+        self.store.audit[fixture.CHANGE_ID] = audit
+        self.store.latest = max(row["id"] for row in audit)
+
     def database_apply(self, op, actor, message, reason=None, expected_revision=None):
         before = self.store.snapshot
         after, summary = op.run(changes.detach(before))
         after = changes.prepare(before, after, revision=before.revision + "-undo")
         positions = {item["id"]: item["position"] for item in self.layout}
+        row_ids = [row.id for row in after.token_set(self.space).rows]
+        saved_positions = dict(zip(row_ids, pg._positions(row_ids, positions)))
         olds = {row.id: row for row in before.token_set(self.space).rows}
         actual = []
         for row in after.token_set(self.space).rows:
             old = olds.get(row.id)
-            if old is not None and old.as_dict() != row.as_dict():
+            if old is not None and (old.as_dict() != row.as_dict() or positions[row.id] != saved_positions[row.id]):
                 actual.append({"id": self.store.latest + 1 + len(actual), "table": "token_card", "op": "UPDATE", "key": {"id": row.id},
                                "before": raw({**old.as_dict(), "quantity": int(old.quantity)}, self.space, row.id, positions[row.id]),
-                               "after": raw({**row.as_dict(), "quantity": int(row.quantity)}, self.space, row.id, positions[row.id])})
-        layout = copy.deepcopy(self.layout)
+                               "after": raw({**row.as_dict(), "quantity": int(row.quantity)}, self.space, row.id, saved_positions[row.id])})
+        layout = [{"id": rid, "position": saved_positions[rid]} for rid in row_ids]
         if edit.restoring(summary):
             if self.mutate is not None:
                 after, actual, layout = self.mutate(after, copy.deepcopy(actual), copy.deepcopy(layout))
@@ -145,9 +183,10 @@ class TokenEditReviewTests(TokenEditFixture):
         plan = self.review()
         self.assertEqual((plan["action"], plan["row_count"], plan["label"]), (edit.ACTION, 1, "Updates to 1 token-card row"))
         self.store.audit[fixture.CHANGE_ID][0]["before"]["position"] += 1
-        message = self.refusal()
-        self.assertIn("1 of the 1 updated token-card row can't be restored", message)
-        self.assertIn(edit.MOVED + ": 1", message)
+        with self.assertRaises(undo.UndoConflict) as caught:
+            self.review()
+        self.assertEqual(str(caught.exception), edit.UNSAFE)
+        self.assertEqual(self.store.writes, [])
 
     def test_a_single_quantity_or_notes_edit_keeps_the_older_single_row_inverse(self):
         self.seed(batch_rows(1))
@@ -186,7 +225,10 @@ class TokenEditReviewTests(TokenEditFixture):
         self.assertIn(edit.EDITED + ": 1", self.refusal())
         self.seed()
         self.store.audit[fixture.CHANGE_ID][1]["before"]["position"] = 1
-        self.assertIn(edit.MOVED + ": 1", self.refusal())
+        with self.assertRaises(undo.UndoConflict) as caught:
+            self.review()
+        self.assertEqual(str(caught.exception), edit.UNSAFE)
+        self.assertEqual(self.store.writes, [])
 
     def test_invalid_or_unchecked_recorded_values_are_counted(self):
         olds = recorded(batch_rows())

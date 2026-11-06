@@ -1,4 +1,4 @@
-/* Undo of 1-50 token-card rows' edited values (E11-S08): every row's recorded values back in place,
+/* Undo of 1-50 token-card rows' edited values (E11-S08): every row's recorded values restored,
    together, by stable id; no selection, reason or confirmation. */
 "use strict";
 
@@ -54,8 +54,8 @@ function activityUndoTokenEditBody(body, preview, text) {
     item.fields.map(field => el("p", {}, el("b", { text: ACTIVITY_UNDO_TOKEN_WORDS[field.field] + ": " }),
       el("span", { class: literal(field.field), text: text(field.before) }), " → ", el("span", { class: literal(field.field), text: text(field.after) })))));
   body.append(el("p", { class: "sub", text: one
-      ? "Review the token-card row below. Its recorded values will be restored in place in one new audited change; the original change stays in Activity."
-      : "Review all " + plural(preview.row_count, "token-card row") + " below. Their recorded values will be restored together, in place, in one new audited change; the original change stays in Activity. There is no partial selection." }),
-    el("p", { class: "sub", text: (one ? "The row is" : "Each row is") + " checked again when you save, with the packed token cards in deck boxes and products. No token card is added or removed." }),
+      ? "Review the token-card row below. Its recorded values will be restored in one new audited change; the original change stays in Activity."
+      : "Review all " + plural(preview.row_count, "token-card row") + " below. Their recorded values will be restored together in one new audited change; the original change stays in Activity. There is no partial selection." }),
+    el("p", { class: "sub", text: (one ? "The row is" : "Each row is") + " checked again when you save, with the packed token cards in deck boxes and products. The list follows the restored values. No token card is added or removed." }),
     el("div", { class: "panels" }, rows));
 }
