@@ -1,4 +1,4 @@
-"""Activity's Undo of 1-50 token-card rows' edited values, restored in place (E11-S08).
+"""Activity's Undo of 1-50 token-card rows' edited values (E11-S08).
 
 For the space's own token editors only (tokens.edit in that space, as the Tokens page's edits):
 another space's change answers as a missing one before anything is read, an admin's included.
@@ -16,13 +16,13 @@ UNCONFIRMED = "The undo result could not be confirmed. Reload Activity before tr
 
 
 def _row_shape(row, space):
-    """Whether one Activity row looks like an own-space token UPDATE keeping its id and position
+    """Whether one Activity row looks like an own-space token UPDATE keeping its id
     (never authority)."""
     before, after = (row.get("before"), row.get("after")) if isinstance(row, dict) else (None, None)
     return isinstance(before, dict) and isinstance(after, dict) and row.get("table") == "token_card" \
         and row.get("op") == "UPDATE" and type(after.get("id")) is int and row.get("key") == {"id": after["id"]} \
-        and before.get("id") == after["id"] and type(after.get("position")) is int \
-        and before.get("position") == after["position"] \
+        and before.get("id") == after["id"] and type(after.get("position")) is int and after["position"] >= 0 \
+        and type(before.get("position")) is int and before["position"] >= 0 \
         and before.get("space_id") == space and after.get("space_id") == space
 
 

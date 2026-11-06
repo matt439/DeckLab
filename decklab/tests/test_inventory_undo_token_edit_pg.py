@@ -125,6 +125,60 @@ class TokenEditUndoPgTests(db_support.DbTestCase):
         self.assertEqual(self.persisted(), before)
         self.assertIsNone(getattr(self.backend._applying, "connection", None))
 
+    def seed_reordered(self):
+        """Editing A beyond B moves B's position, though B's values do not change."""
+        self.add(self.row("Treasure", "", "2", front_details="1/1; colourless"))
+        self.add(self.row("Treasure", "", "3", front_details="2/2; colourless"))
+        self.add(self.row("Zombie", "", "4"))
+        sheet = self.fresh().token_set("home")
+        self.original_stock = [(row.id, row.as_dict()) for row in sheet.rows]
+        self.original_layout = self.sql("select id,position from token_card order by position,id")
+        base = sheet.rows[0].as_dict()
+        inventory.apply(Op("tokens.edit", {"space": "home", "sha256": files.rendered_sha256(sheet), "base": base,
+                                           "row": {**base, "front_details": "3/3; colourless"}, "separate": True}),
+                        existing.ACTOR, "Fixture token edit changes list order")
+        return self.source("token_card")
+
+    def test_reordered_edit_restores_values_and_order_with_the_writers_new_positions(self):
+        source = self.seed_reordered()
+        original = self.sql("select op,row_key,before,after from audit.row_change where change_set_id=%s order by id", (source,))
+        self.assertEqual(len(original), 2)
+        self.assertTrue(any(old["front_details"] == new["front_details"] and old["position"] != new["position"]
+                            for _, _, old, new in original))
+        plan = inventory.undo_review(source, "home")
+        rid = self.original_stock[0][0]
+        self.assertEqual((plan["row_count"], [item["token_row_id"] for item in plan["rows"]]), (1, [rid]))
+        before = self.persisted()
+        after, summary = self.apply(source, plan)
+        self.assertEqual([(row.id, row.as_dict()) for row in after.token_set("home").rows], self.original_stock)
+        self.assertEqual(summary.extra["restored_token_row_ids"], [rid])
+        actual = self.sql("select table_name,op,row_key,before,after from audit.row_change "
+                          "where change_set_id=(select max(id) from audit.change_set)")
+        self.assertEqual([(table, op, key) for table, op, key, _, _ in actual], [("token_card", "UPDATE", {"id": rid})])
+        self.assertEqual(actual[0][4]["front_details"], self.original_stock[0][1]["front_details"])
+        layout = self.sql("select id,position from token_card order by position,id")
+        self.assertEqual([row[0] for row in layout], [row[0] for row in self.original_stock])
+        self.assertNotEqual(layout, self.original_layout)  # Restore ordinary order, not obsolete internal numbers.
+        self.assertEqual(layout[-1], self.original_layout[-1])
+        saved = self.persisted()
+        for table in ("collection_card", "deck", "deck_text", "deck_line", "deck_revision", "decks_revision"):
+            self.assertEqual(saved[table], before[table], table)
+        self.assertEqual(self.sql("select op,row_key,before,after from audit.row_change where change_set_id=%s order by id", (source,)), original)
+
+    def test_wrong_actual_position_in_a_reordered_undo_rolls_back(self):
+        source = self.seed_reordered()
+        plan = inventory.undo_review(source, "home")
+        before = self.persisted()
+        real = edit.confirm
+        def tampered(before_inv, saved, summary, actual, layout):
+            changed = [dict(row) for row in actual]
+            changed[0] = {**changed[0], "after": {**changed[0]["after"], "position": 1}}
+            return real(before_inv, saved, summary, changed, layout)
+        with mock.patch.object(edit, "confirm", side_effect=tampered), self.assertRaises(undo.UndoConflict) as caught:
+            self.apply(source, plan)
+        self.assertEqual(str(caught.exception), edit.UNCONFIRMED)
+        self.assertEqual(self.persisted(), before)
+
     def test_a_packed_line_that_would_lose_cards_refuses_the_whole_change_without_write(self):
         source = self.seed()
         plan = inventory.undo_review(source, "home")

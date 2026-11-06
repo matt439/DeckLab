@@ -910,8 +910,8 @@ class PgInventory:
                             summary = undo_token_delete.confirm_in_transaction(cur, change_set, before, saved, summary)
                         from . import undo_token_edit
                         if undo_token_edit.restoring(summary):
-                            # Token-card values restored in place: prove the exact UPDATEs, every
-                            # position and the packing unchanged before commit (or roll back).
+                            # Token-card values restored: prove the exact UPDATEs, predicted
+                            # sorted layout and unchanged packing before commit (or roll back).
                             summary = undo_token_edit.confirm_in_transaction(cur, change_set, before, saved, summary)
                         from . import undo_watchlist
                         if undo_watchlist.restoring(summary):

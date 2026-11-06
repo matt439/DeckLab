@@ -25,8 +25,9 @@ class ActivityUndoTokenEditUiTests(unittest.TestCase):
         self.run_js(r'''
           const p=editPreview(),before=JSON.stringify(p),{sheet}=await open(p);const text=sheet.body.textContent;
           assert.equal(sheet.body.querySelectorAll('.activity-undo-batch-row').length,2);
-          for(const words of ['Review all 2 token-card rows','restored together, in place, in one new audited change','original change stays in Activity',
+          for(const words of ['Review all 2 token-card rows','restored together in one new audited change','original change stays in Activity',
             'no partial selection','Each row is checked again when you save','No token card is added or removed',
+            'The list follows the restored values',
             'Angel 7 / The Monarch','Angel 8 / The Monarch','TST 1/2 · nonfoil · 2 physical cards',
             'Quantity (physical cards): 2 → 5','Front details: Not recorded → 4/4; white; flying','Notes: Paired faces verified → Recorded pairing note'])assert(text.includes(words),words);
           assert.equal(sheet.body.querySelectorAll('input').length,0);assert.equal(sheet.body.querySelector('textarea'),null);
@@ -58,6 +59,20 @@ class ActivityUndoTokenEditUiTests(unittest.TestCase):
         self.run_js(r'''
           const why="1 of the 2 updated token-card rows can't be restored (would change or exceed packed token cards: 1).";
           const {sheet}=await open({available:false,id:42,reason:why});assert(!save(sheet));assert(sheet.body.textContent.includes(why));
+        ''')
+
+    def test_a_reordered_value_edit_reviews_the_card_without_position_only_rows(self):
+        self.run_js(r'''
+          const current=pairRow({front_collector_number:'0'}),restored={...current,front_collector_number:'9'};
+          const item={label:'Angel / The Monarch',token_row_id:9,current,restored,
+            fields:[{field:'front_collector_number',before:'0',after:'9'}]};
+          const p=editPreview({row_count:1,label:'Updates to 1 token-card row',rows:[item]});
+          const {sheet}=await open(p);const text=sheet.body.textContent;
+          assert.equal(sheet.body.querySelectorAll('.activity-undo-batch-row').length,1);
+          assert(text.includes('Front collector number: 0 → 9'));assert(text.includes('The list follows the restored values'));
+          assert(!text.includes('in place'));assert(!text.includes('position'));assert(save(sheet));
+          assert.equal(activityUndoTokenEditEvidence({...p,rows:[item,{...item,token_row_id:8,restored:current,fields:[]}],row_count:2,
+            label:'Updates to 2 token-card rows'}),false);
         ''')
 
     def test_save_sends_only_the_source_and_receipt_and_accepts_a_reordered_exact_receipt(self):
