@@ -1,0 +1,87 @@
+{
+  "key": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "format": "Constructed",
+  "sides": [
+    {
+      "id": "casual/safari-fixture",
+      "title": "Synthetic home woodland deck",
+      "kind": "casual",
+      "version": "target",
+      "card_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "current": true,
+      "card_count": 60,
+      "ai": {}
+    },
+    {
+      "id": "casual/synthetic-opponent",
+      "title": "Synthetic sparring deck",
+      "kind": "casual",
+      "version": "target",
+      "card_sha": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "current": true,
+      "card_count": 60,
+      "ai": {}
+    }
+  ],
+  "status": "done",
+  "job": null,
+  "result": {
+    "games": 800,
+    "wins": [
+      456,
+      344
+    ],
+    "draws": 0,
+    "timeouts": 0,
+    "errors": 0,
+    "winrate": {
+      "value": 0.57,
+      "low": 0.536,
+      "high": 0.604,
+      "balanced": true
+    },
+    "updated": "2026-11-06T23:00:00Z",
+    "lead": {
+      "verdict": "ahead",
+      "side": 0,
+      "basis": "rate"
+    },
+    "engine": {
+      "current": true,
+      "kind": "decklab"
+    },
+    "noise_points": 3.5,
+    "rounds": {},
+    "speed": {},
+    "casts": [],
+    "cards": [],
+    "on_play": {},
+    "on_draw": {},
+    "starter": {},
+    "forge_version": "synthetic-review",
+    "not_meaningful": false
+  },
+  "notice": null,
+  "error": null,
+  "choices": [
+    200,
+    400,
+    800,
+    1600,
+    3200
+  ],
+  "default_games": 800,
+  "default_mode": "assess",
+  "forge": {
+    "ok": true,
+    "installed": true,
+    "version": "synthetic-review",
+    "error": null,
+    "workers": 1
+  },
+  "real_games": null,
+  "earlier": [],
+  "estimates": null,
+  "workers": 1,
+  "batch_size": 25
+}

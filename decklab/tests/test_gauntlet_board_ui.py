@@ -79,6 +79,30 @@ class GauntletBoardUiTests(unittest.TestCase):
           assert.equal(pending.length,2);
         """)
 
+    def test_pairing_leads_only_on_matchups_and_historical_evidence_keeps_its_scope(self):
+        self.run_js("""
+          api=async()=>board('commander',[
+            tested('commander/c','Current',.61),
+            row('commander/s','Changed',{state:'stale_list',before:{rate:.41,low:.33,high:.49,updated:'2026-11-01T00:00:00Z'}}),
+            row('commander/o','Older',{state:'stale_older',older:{reason:'forge',overall:{rate:.45,low:.4,high:.5},
+              updated:'2026-10-30T00:00:00Z',earlier:false,opponents:20,of:20}})]);
+          open();await settle();
+          const pairing=button(main,'Play a matchup');
+          assert(pairing.classList.contains('btn-quiet'));assert(!pairing.classList.contains('btn-primary'));
+          assert(main.querySelector('.gb-scope').textContent.includes('Commander · 1v1 · 20 sampled opponents'));
+          assert.equal(main.querySelector('.gb-help').querySelector('summary').textContent,'About these results');
+          const rows=main.querySelectorAll('.gb-row');
+          assert(rows[0].querySelector('.gb-score').querySelector('.wr'));
+          assert(rows[1].querySelector('.gb-score-historical').textContent.includes('Before: 41%'));
+          assert(rows[2].querySelector('.gb-score-historical').textContent.includes('older Forge'));
+          assert(!rows[1].querySelector('.wr'));assert(!rows[2].querySelector('.wr'));
+          button(main,'Matchups').click();
+          assert(pairing.classList.contains('btn-primary'));assert(!pairing.classList.contains('btn-quiet'));
+          button(main,'Rankings').click();
+          assert(!pairing.classList.contains('btn-primary'));assert(pairing.classList.contains('btn-quiet'));
+          assert.equal(writes.length,0);
+        """)
+
     def test_rows_show_the_standing_details_and_play_and_never_play_all(self):
         self.run_js("""
           const rows=[tested('commander/c','Commander C',.61),

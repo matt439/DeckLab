@@ -4981,11 +4981,13 @@ Evidence:
 
 **E11-S30** · Matt · should · L · partial
 
+2026-11-07: the [visual-polish implementation and Chromium review](visual-polish-completion-2026-11-07.md) are complete, including remaining page/state families, receipt pointer/footer recovery, local reload persistence and actual 200% page zoom. This supersedes older component styling, not household acceptance: Safari/touch, software keyboards, screen readers, varied real art and production durability remain. The story stays partial.
+
 As Matt, I want Deck Lab to look like one app with two densities, casual on the phone and a "lab" on the desktop, so that User1 and the members find it friendly on their phones while I get a dense tool for building, buying and testing decks, and the Forge results that set it apart from collection apps are visible where we already look.
 
 - Given the phone or the iPad in portrait, when any page opens, then it uses the casual density of [visual-design.md](visual-design.md): mana-tinted deck tiles, words for counts and 44 px targets.
 - Given a window 1000 px or wider (the desktop or the iPad in landscape), when the library, a deck page, Matchups, Collection or Shopping opens, then it uses the lab density: a list beside the selected item's detail, mono numerals, and keyboard hints only with a fine pointer; on a touch screen every target stays 44 px.
-- Given either density, then teal is the only action and selection colour, deck colours appear only on decks, and both themes (light and dark) pass 4.5:1 text contrast.
+- Given either density, then shared accent tokens define action and selection emphasis, deck identity colours remain distinct from actions, and both themes (light and dark) pass 4.5:1 text contrast.
 - Given a tested casual deck, when the library or its Overview shows, then its field win rate and how long ago it was tested show without opening Matchups (E1-S12 separately retains the poor-AI caveat).
 - Given the fonts, then Figtree and JetBrains Mono are self-hosted; the page still loads nothing from the internet.
 - Given each rollout slice in visual-design.md section 7, when it ships, then it ships alone on the existing UI kit with its tests, a device check in both themes and UI-KIT.md updated in the same commit.
@@ -5085,6 +5087,8 @@ Inline verification placement is implemented for proven targets: the original si
 Slice 15's empty, loading and failed states built 2026-10-27: core.js `emptyBox`, `noneSelected`, `loadingBox` and `loadFailed`, every page brought to 4.10's rules, and failures that read as empty lists made into real failures with Try again. `test_empty_loading_ui.py` covers the pieces; 226 disposable-fixture Chromium renders at four sizes in both themes had no overflow. See [HISTORY.md](../HISTORY.md#empty-loading-and-failed-states-2026-10-27-e11-s30-slice-15).
 
 Exact physical printing is recorded since 2026-10-27 (a built deck's Printings in box line, from Build decks' Which printing? or the deck page; [HISTORY.md](../HISTORY.md#printings-in-box-2026-10-27-e11-s30-slice-13)). Gap: touch/Safari/household-device acceptance remains (Collection's colour filter was decided and built 2026-10-31) (full-data dark was checked 2026-10-27, and Matchups with saved results in dark 2026-10-29). Independent ready reserve coding can continue. Section 6's question 4 is settled (Matt, 2026-10-25: only Building and Idea tiles show a status pill). The lab top bar's global search is E11-S31.
+
+The 7 November rendered polish implements shared/task repairs, populated deck/library composition, shared typography, [narrow variant group evidence](visual-polish-variant-groups-2026-11-07.md), the [tablet header overflow fix](visual-polish-tablet-header-2026-11-07.md) and [receipt tools/empty Considering](visual-polish-receipt-considering-2026-11-07.md). Paired task captures cover the latest slice; earlier 40-case composition coverage includes QHD deck Overview. Receipt enlargement/pointer/footer qualification, remaining page/state families, other table typography, actual enlargement and household Safari/touch/art/screen-reader checks keep this story partial; the [visual direction](visual-polish-direction-2026-11-07.md) owns the next treatments.
 
 Slice 14 implementation finished 2026-10-26: numeric MV and retained sorting, changed-row treatment, the owned action bar, exact saved-list Forge evidence and the guarded explicit post-save field choice are built. The field response never delays the successful-save UI or replaces later edits; the remaining physical/Safari checks, slice 13 contracts and slice 15 remain with the visual-design owner. Validation and limits are recorded in HISTORY.md.
 

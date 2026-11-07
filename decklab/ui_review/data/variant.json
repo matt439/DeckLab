@@ -1,0 +1,130 @@
+{
+  "status": "done",
+  "verdict": "better",
+  "margin": 0.02,
+  "words": "Better against the sampled popular decks: +3.0 points of win rate (+1.0 to +5.0)",
+  "field": {
+    "delta": 0.03,
+    "low": 0.01,
+    "high": 0.05
+  },
+  "error": null,
+  "sample": "sample:000000000003",
+  "note": "Synthetic result data. Each difference covers these sampled opponents only.",
+  "test": {
+    "test": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "base": {
+      "id": "user2/casual/member-fixture",
+      "version": "target",
+      "kind": "casual",
+      "title": "Synthetic member woodland deck",
+      "card_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    },
+    "against": "gauntlet:sample:000000000003",
+    "outcome": "better",
+    "looks": [
+      {
+        "games_per_opponent": 200,
+        "decision": "better",
+        "stopped": false
+      }
+    ],
+    "variant": {
+      "changes": {
+        "remove": [
+          [
+            1,
+            "Elvish Mystic"
+          ]
+        ],
+        "add": [
+          [
+            1,
+            "Llanowar Elves"
+          ]
+        ]
+      }
+    },
+    "by": "User2",
+    "created": "2026-11-07T00:00:00Z",
+    "updated": "2026-11-07T00:20:00Z"
+  },
+  "opponents": [
+    {
+      "id": "gauntlet:forge/duels/red-burn",
+      "title": "Red Burn",
+      "base_key": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "paired": {
+        "delta": 0.04,
+        "low": 0.0,
+        "high": 0.08,
+        "n": 200
+      },
+      "games": 200
+    },
+    {
+      "id": "gauntlet:forge/duels/izzet",
+      "title": "Izzet Shocks",
+      "base_key": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "paired": {
+        "delta": 0.02,
+        "low": -0.02,
+        "high": 0.06,
+        "n": 200
+      },
+      "games": 200
+    },
+    {
+      "id": "gauntlet:synthetic/unreadable",
+      "title": "Synthetic omitted opponent",
+      "dropped": "Synthetic fixture: opponent list could not be read."
+    }
+  ],
+  "groups": {
+    "colour": [
+      {
+        "key": "U",
+        "label": "Blue",
+        "opponents": 1,
+        "delta": 0.02,
+        "low": -0.02,
+        "high": 0.06,
+        "note": "A deck of several colours counts in each"
+      },
+      {
+        "key": "R",
+        "label": "Red",
+        "opponents": 2,
+        "delta": 0.03,
+        "low": 0.01,
+        "high": 0.05,
+        "note": ""
+      }
+    ],
+    "identity_size": [
+      {
+        "key": "mono",
+        "label": "One colour",
+        "opponents": 1,
+        "delta": null,
+        "low": null,
+        "high": null,
+        "note": "Only one deck"
+      }
+    ],
+    "style": [],
+    "tier": [
+      {
+        "key": "hard",
+        "label": "Hard",
+        "opponents": 1,
+        "delta": -0.12,
+        "low": -0.2,
+        "high": -0.04,
+        "note": ""
+      }
+    ]
+  },
+  "buying": null,
+  "job": null
+}

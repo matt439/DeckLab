@@ -1,0 +1,273 @@
+{
+  "schema": 1,
+  "screenshots": [
+    {
+      "file": "before-testing-1440-light.png",
+      "sha256": "58306f41be2b86aadd7d9aa379ad25e9ee346eec7eb1982744ce24e8e971f23d",
+      "bytes": 331682,
+      "stage": "before",
+      "suite": "capture",
+      "case": "board-mixed-1440-light",
+      "spec": {
+        "name": "board-mixed-1440-light",
+        "route": "/#/matchups?view=popular",
+        "ready": ".gb-row",
+        "width": 1440,
+        "height": 900,
+        "coarse": false,
+        "theme": "light"
+      },
+      "copied_unchanged": true,
+      "visual_inspection": "Viewed by primary agent; bounded findings in the implementation report."
+    },
+    {
+      "file": "after-testing-1440-light.png",
+      "sha256": "6c709560ea13508b66e69b938554b2da547698fc4cbbfe1e3231f1f769d4624d",
+      "bytes": 327264,
+      "stage": "after",
+      "suite": "capture",
+      "case": "board-mixed-1440-light",
+      "spec": {
+        "name": "board-mixed-1440-light",
+        "route": "/#/matchups?view=popular",
+        "ready": ".gb-row",
+        "width": 1440,
+        "height": 900,
+        "coarse": false,
+        "theme": "light"
+      },
+      "copied_unchanged": true,
+      "visual_inspection": "Viewed by primary agent; bounded findings in the implementation report."
+    },
+    {
+      "file": "before-testing-1440-dark.png",
+      "sha256": "706dad00f3633ab5792aa6f4f55de014a01eb6b59cda4fffcff92a10834cbed2",
+      "bytes": 328764,
+      "stage": "before",
+      "suite": "capture",
+      "case": "board-mixed-1440-dark",
+      "spec": {
+        "name": "board-mixed-1440-dark",
+        "route": "/#/matchups?view=popular",
+        "ready": ".gb-row",
+        "width": 1440,
+        "height": 900,
+        "coarse": false,
+        "theme": "dark"
+      },
+      "copied_unchanged": true,
+      "visual_inspection": "Viewed by primary agent; bounded findings in the implementation report."
+    },
+    {
+      "file": "after-testing-1440-dark.png",
+      "sha256": "38b073065a3aeb647816d31fa529e786a010e99f5085916f80c143789c94fb81",
+      "bytes": 324261,
+      "stage": "after",
+      "suite": "capture",
+      "case": "board-mixed-1440-dark",
+      "spec": {
+        "name": "board-mixed-1440-dark",
+        "route": "/#/matchups?view=popular",
+        "ready": ".gb-row",
+        "width": 1440,
+        "height": 900,
+        "coarse": false,
+        "theme": "dark"
+      },
+      "copied_unchanged": true,
+      "visual_inspection": "Viewed by primary agent; bounded findings in the implementation report."
+    },
+    {
+      "file": "before-testing-393-light.png",
+      "sha256": "18efd05be6df35eb3536a0995a73784af31c4b626c3beaa9409c35bc7552fc50",
+      "bytes": 140246,
+      "stage": "before",
+      "suite": "capture",
+      "case": "board-mixed-393-light",
+      "spec": {
+        "name": "board-mixed-393-light",
+        "route": "/#/matchups?view=popular",
+        "ready": ".gb-row",
+        "width": 393,
+        "height": 700,
+        "coarse": true,
+        "theme": "light",
+        "fullPage": false
+      },
+      "copied_unchanged": true,
+      "visual_inspection": "Viewed by primary agent; bounded findings in the implementation report."
+    },
+    {
+      "file": "after-testing-393-light.png",
+      "sha256": "9bca692ec3164a3eeef3d87162d10d7d1399c1144afba8d0ec845120c7c76856",
+      "bytes": 140608,
+      "stage": "after",
+      "suite": "capture",
+      "case": "board-mixed-393-light",
+      "spec": {
+        "name": "board-mixed-393-light",
+        "route": "/#/matchups?view=popular",
+        "ready": ".gb-row",
+        "width": 393,
+        "height": 700,
+        "coarse": true,
+        "theme": "light",
+        "fullPage": false
+      },
+      "copied_unchanged": true,
+      "visual_inspection": "Viewed by primary agent; bounded findings in the implementation report."
+    },
+    {
+      "file": "before-testing-393-dark.png",
+      "sha256": "782a30b0480ee8fe167b7ff4788c6b4ccbf75ef65ab3df4774d6289c2fcf8624",
+      "bytes": 136053,
+      "stage": "before",
+      "suite": "capture",
+      "case": "board-mixed-393-dark",
+      "spec": {
+        "name": "board-mixed-393-dark",
+        "route": "/#/matchups?view=popular",
+        "ready": ".gb-row",
+        "width": 393,
+        "height": 700,
+        "coarse": true,
+        "theme": "dark",
+        "fullPage": false
+      },
+      "copied_unchanged": true,
+      "visual_inspection": "Viewed by primary agent; bounded findings in the implementation report."
+    },
+    {
+      "file": "after-testing-393-dark.png",
+      "sha256": "66c26a88726a51c4ba1795e321c9dd3f5403af547e80f9601af88c43f122fc15",
+      "bytes": 136457,
+      "stage": "after",
+      "suite": "capture",
+      "case": "board-mixed-393-dark",
+      "spec": {
+        "name": "board-mixed-393-dark",
+        "route": "/#/matchups?view=popular",
+        "ready": ".gb-row",
+        "width": 393,
+        "height": 700,
+        "coarse": true,
+        "theme": "dark",
+        "fullPage": false
+      },
+      "copied_unchanged": true,
+      "visual_inspection": "Viewed by primary agent; bounded findings in the implementation report."
+    },
+    {
+      "file": "before-commander-1440-light.png",
+      "sha256": "c9aa9e78627ec3551475d0c2d02247e52b1938e818f6d45cc691782b45f3d930",
+      "bytes": 238418,
+      "stage": "before",
+      "suite": "composition",
+      "case": "commander-1440-light",
+      "spec": {
+        "name": "commander-1440-light",
+        "route": "/#/deck?id=commander/woodland-council",
+        "ready": ".deck-tabs",
+        "width": 1440,
+        "height": 900,
+        "coarse": false,
+        "theme": "light"
+      },
+      "copied_unchanged": true,
+      "visual_inspection": "Viewed by primary agent; bounded findings in the implementation report."
+    },
+    {
+      "file": "after-commander-1440-light.png",
+      "sha256": "ccbf014f439b560fd285b84223d255afd99f21c77f6870d446d4a8061537b01c",
+      "bytes": 239029,
+      "stage": "after",
+      "suite": "composition",
+      "case": "commander-1440-light",
+      "spec": {
+        "name": "commander-1440-light",
+        "route": "/#/deck?id=commander/woodland-council",
+        "ready": ".deck-tabs",
+        "width": 1440,
+        "height": 900,
+        "coarse": false,
+        "theme": "light"
+      },
+      "copied_unchanged": true,
+      "visual_inspection": "Viewed by primary agent; bounded findings in the implementation report."
+    },
+    {
+      "file": "before-commander-1440-dark.png",
+      "sha256": "64167102f4bc38dd03396b2ebd0c6ecd84c903f33f0308e0d836e044c30fcf5b",
+      "bytes": 234665,
+      "stage": "before",
+      "suite": "composition",
+      "case": "commander-1440-dark",
+      "spec": {
+        "name": "commander-1440-dark",
+        "route": "/#/deck?id=commander/woodland-council",
+        "ready": ".deck-tabs",
+        "width": 1440,
+        "height": 900,
+        "coarse": false,
+        "theme": "dark"
+      },
+      "copied_unchanged": true,
+      "visual_inspection": "Viewed by primary agent; bounded findings in the implementation report."
+    },
+    {
+      "file": "after-commander-1440-dark.png",
+      "sha256": "e686c10c4844c87b0cb1975e99a62d2b3790cee549a8787a6f5f7c542eb504f6",
+      "bytes": 236162,
+      "stage": "after",
+      "suite": "composition",
+      "case": "commander-1440-dark",
+      "spec": {
+        "name": "commander-1440-dark",
+        "route": "/#/deck?id=commander/woodland-council",
+        "ready": ".deck-tabs",
+        "width": 1440,
+        "height": 900,
+        "coarse": false,
+        "theme": "dark"
+      },
+      "copied_unchanged": true,
+      "visual_inspection": "Viewed by primary agent; bounded findings in the implementation report."
+    },
+    {
+      "file": "before-commander-2560-dark.png",
+      "sha256": "885a785ed079c4dd02e3e7653e5d5dfb5b551e5be4e7e073d4fee473394f91ff",
+      "bytes": 456300,
+      "stage": "before",
+      "suite": "composition",
+      "case": "commander-2560-dark",
+      "spec": {
+        "name": "commander-2560-dark",
+        "route": "/#/deck?id=commander/woodland-council",
+        "ready": ".deck-tabs",
+        "width": 2560,
+        "height": 1305,
+        "theme": "dark"
+      },
+      "copied_unchanged": true,
+      "visual_inspection": "Viewed by primary agent; bounded findings in the implementation report."
+    },
+    {
+      "file": "after-commander-2560-dark.png",
+      "sha256": "0c48130addb8a2a9ee9e3e1a33a428f5fcf3a2f4c36a6fddc496b0fd2f9b7dbe",
+      "bytes": 448434,
+      "stage": "after",
+      "suite": "composition",
+      "case": "commander-2560-dark",
+      "spec": {
+        "name": "commander-2560-dark",
+        "route": "/#/deck?id=commander/woodland-council",
+        "ready": ".deck-tabs",
+        "width": 2560,
+        "height": 1305,
+        "theme": "dark"
+      },
+      "copied_unchanged": true,
+      "visual_inspection": "Viewed by primary agent; bounded findings in the implementation report."
+    }
+  ]
+}

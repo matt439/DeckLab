@@ -171,3 +171,39 @@ class ReceiptBulkTests(unittest.TestCase):
           await confirm();assert(comp.rows.every(r => r.ticked));
           v.everything.click();assert(!document.body.querySelector('dialog'));
         """)
+
+    def test_delivery_shortcut_survives_redraw_and_keeps_order_scope(self):
+        self.run_js("""
+          const single = fresh(delivery()), button = single.everything, wrapper = single.everythingBar;
+          const before = rcptRequestKey(single);
+          assert(single.comps[0].section.querySelector('.rcpt-toolbar').contains(button));
+          rcptDrawBoard(single);rcptSync(single);
+          assert.equal(single.everything, button);assert.equal(single.everythingBar, wrapper);
+          assert.equal(main.querySelectorAll('.rcpt-everything').length, 1);
+          assert(single.comps[0].section.querySelector('.rcpt-toolbar').contains(button));
+          button.click();[...document.body.querySelectorAll('button')].find(b => b.textContent === 'Cancel').click();
+          await settle();assert.equal(rcptRequestKey(single), before);
+          button.click();await confirm();assert(single.comps[0].rows.every(row => row.ticked));
+          assert(wrapper.hidden);assert.equal(document.activeElement, single.primary);
+
+          // The same shortcut must remain reachable while every part of a mixed order is switched off.
+          const several = fresh();assert(several.comps.every(comp => !comp.selected));
+          assert.equal(several.everythingBar.parentNode, several.board);
+          assert(several.comps.every(comp => !comp.section.contains(several.everything)));
+          rcptDrawBoard(several);rcptSync(several);
+          assert.equal(main.querySelectorAll('.rcpt-everything').length, 1);
+          several.everything.click();await confirm();
+          assert(several.comps.every(comp => comp.selected && comp.rows.every(row => row.ticked)));
+
+          // A whole product has no per-card toolbar, so its order-level control stays outside the part.
+          const data = delivery();data.components = [{id:'kit',kind:'product',status:'pending',checks:[],
+            product:{name:'Fixture product'},items:[{name:'Alpha',set:'tst',collector_number:'1',
+              finish:'nonfoil',quantity:'1',section:'deck'}],pictures:[null],decks:null}];
+          const product = fresh(data);
+          assert.equal(product.everythingBar.parentNode, product.board);
+          assert(!product.comps[0].section.contains(product.everything));
+          assert(product.everythingBar.hidden); // Its only part is selected; its storage choice stays explicit.
+          product.everything.click();await settle();assert(!document.body.querySelector('dialog'));
+          assert.equal(product.comps[0].intact, '');
+          assert(rcptClientBlockers(product).some(item => item.text.includes('choose whether to keep it')));
+        """)

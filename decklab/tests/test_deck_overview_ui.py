@@ -241,10 +241,12 @@ class DeckOverviewUiTests(unittest.TestCase):
           // Games that couldn't be read: no line at all, never "not played".
           assert.equal(draw(null), null);
           assert.equal(draw(undefined), null);
-          assert.equal(draw({last: null, games: 0, since: null}).querySelector('.deck-played').textContent,
-            'Not played at home yet');
+          const empty = draw({last: null, games: 0, since: null});
+          assert.equal(empty.querySelector('.deck-played').textContent, 'Not played at home yet');
+          assert.equal(empty.querySelector('h2'), null);
           let part = draw({last: '2026-10-20', games: 3, since: {version: 'target', changes: [], more: 0}});
           assert.equal(part.querySelector('.deck-played').textContent, 'Last played 2026-10-20 · 3 games');
+          assert.equal(part.querySelector('h2').textContent, 'Played at home');
           assert(part.textContent.includes("Its list hasn't changed since that game."));
           part = draw({last: '2026-10-20', games: 1, since: null});
           assert(part.textContent.includes('1 game'));

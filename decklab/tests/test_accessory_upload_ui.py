@@ -114,6 +114,7 @@ class AccessoryUploadInteractionTests(unittest.TestCase):
           const {sheet, ctx} = opened({row: existing});
           choose(ctx); readers.at(-1).finish(); await flush();
           button(ctx.picture, /^Crop/).click();
+          ctx.picture.querySelector('.acc-crop-stage').querySelector('img').fire('load');
           const area = ctx.picture.querySelector('.acc-crop-box');
           area.fire('keydown', {key: 'ArrowLeft', shiftKey: true});
           button(ctx.picture, 'Done').click();
@@ -211,6 +212,7 @@ class AccessoryUploadInteractionTests(unittest.TestCase):
           const {sheet, ctx} = opened(); choose(ctx); readers[0].finish(); await flush();
           ctx.inputs.notes.value = 'A note I typed';
           button(ctx.picture, /^Crop/).click();
+          ctx.picture.querySelector('.acc-crop-stage').querySelector('img').fire('load');
           ctx.picture.querySelector('.acc-crop-box').fire('keydown', {key: 'ArrowLeft', shiftKey: true});
           button(ctx.picture, 'Done').click();
           respond = async () => {throw new Error('Try the save again');};

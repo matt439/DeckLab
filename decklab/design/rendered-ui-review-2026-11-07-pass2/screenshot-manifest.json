@@ -1,0 +1,427 @@
+{
+  "note": "Native viewport settings are nominal; exact headless CSS metrics are separate. Full-page image height is not viewport height. Counts are artifacts,not independent screen passes.",
+  "screenshots": [
+    {
+      "file": "he-01-empty-list-review-390-light.png",
+      "width": 780,
+      "height": 1688,
+      "family": "headless editor sequence",
+      "sha256": "a4960c8c0e1d7239e6ffd2b9a25339df632ea08c1f4f6fd1add66fbdb3538b05"
+    },
+    {
+      "file": "he-02-after-keep-editing-footer-390-light.png",
+      "width": 780,
+      "height": 1688,
+      "family": "headless editor sequence",
+      "sha256": "1f92a00c92f78752083a33a610ed8fe54cf4545439ba879f7d5a3e6c3f63c75d"
+    },
+    {
+      "file": "he-03-kept-draft-resumed-390-light.png",
+      "width": 780,
+      "height": 1688,
+      "family": "headless editor sequence",
+      "sha256": "7fbabf33f421690767d5101545e6d958b583c3e5dc30aadd7a57061fa7ee6253"
+    },
+    {
+      "file": "hl-01-board-mixed-1440-light.png",
+      "width": 2880,
+      "height": 1970,
+      "family": "headless capture",
+      "sha256": "efbb56632a1890f19b10e9906fb538ee6d4fe5a5e455e802aa80b73821916638"
+    },
+    {
+      "file": "hl-02-board-mixed-320-light.png",
+      "width": 640,
+      "height": 3880,
+      "family": "headless capture",
+      "sha256": "829108b7c6c5a9a2c6c82a1ed7bd250bfaea1996047ddb4ae82e309fd04549ce"
+    },
+    {
+      "file": "hl-03-variant-failed-1440-light.png",
+      "width": 2880,
+      "height": 3198,
+      "family": "headless capture",
+      "sha256": "58bab0cfc6da73415c2dbf1b381bd5966065ddbdf075a75b69e6de824ce35558"
+    },
+    {
+      "file": "hl-04-variant-running-1440-light.png",
+      "width": 2880,
+      "height": 1920,
+      "family": "headless capture",
+      "sha256": "f91cbbdd5c5401e08b3059c8c113e7e06062353c0ad64cd40827e8b89235b6a0"
+    },
+    {
+      "file": "hl-05-variant-member-390-light.png",
+      "width": 780,
+      "height": 3822,
+      "family": "headless capture",
+      "sha256": "da97f13fbbb7bf8e1fa94fb04206dcf0232cb8d8c473c7e632f57eb683f8d439"
+    },
+    {
+      "file": "hl-06-pair-failed-1440-light.png",
+      "width": 2880,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "0907a7fc24c527c587522293ec074d1a68a134fb3ba7741769681090fd633036"
+    },
+    {
+      "file": "hl-07-pair-stale-1440-light.png",
+      "width": 2880,
+      "height": 2068,
+      "family": "headless capture",
+      "sha256": "af5de9b2c178833b41160c1c34e83de5ae3bf8ce110701f386951284a0f0e58c"
+    },
+    {
+      "file": "hl-08-receipt-429-fine-light.png",
+      "width": 858,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "baa879a59394347960239735dd50ae96b90978a730454604fdab895065479c3e"
+    },
+    {
+      "file": "hl-09-receipt-429-coarse-light.png",
+      "width": 858,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "721feec6e43332046e0f79e1ca57946c71e88d8be7e253497e25ea6ea13f1b8a"
+    },
+    {
+      "file": "hl-10-receipt-430-fine-light.png",
+      "width": 860,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "f04944dc19492e421f1dee8e6d2c3927217866855bf8ce85f3f408074625b88b"
+    },
+    {
+      "file": "hl-11-receipt-430-coarse-light.png",
+      "width": 860,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "efc42a0d3deb7c8e5f2be55b631ea65ca33a63c873a52364b6c9cd135a82fa28"
+    },
+    {
+      "file": "hl-12-receipt-999-fine-light.png",
+      "width": 1998,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "490700f902872f04ee09a5ef5ce0ba3a0beb67cd61bada24c24293abe0d6adfa"
+    },
+    {
+      "file": "hl-13-receipt-999-coarse-light.png",
+      "width": 1998,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "a9efef80d111034caf86e994eb1b211181fa545f791e9aea9dfa69bf4408af3e"
+    },
+    {
+      "file": "hl-14-receipt-1000-fine-light.png",
+      "width": 2000,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "e12386694ef306008588316d723eb4b5fd02f3b9ac1874704293941c1a9a22cf"
+    },
+    {
+      "file": "hl-15-receipt-1000-coarse-light.png",
+      "width": 2000,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "d692ba7b8ed7fa595f65d3b5bc8047e0706f2eb398bc11d9285e5745b2f4f65f"
+    },
+    {
+      "file": "hl-16-editor-root200-320-light.png",
+      "width": 640,
+      "height": 7348,
+      "family": "headless capture",
+      "sha256": "268667a436741ada495e7b35a023ef5b86abe3946718b888654ab042692afd08",
+      "provenance": "corrected dry-run-check-allowed root-font recapture; initial attempt superseded"
+    },
+    {
+      "file": "hl-17-board-mixed-1440-dark.png",
+      "width": 2880,
+      "height": 1970,
+      "family": "headless capture",
+      "sha256": "f61664c41ac655e71d68e7a895cb7aefab6faf4b692a6e5270dcf7d53c7eda4c"
+    },
+    {
+      "file": "hl-18-board-mixed-320-dark.png",
+      "width": 640,
+      "height": 3880,
+      "family": "headless capture",
+      "sha256": "cd9be77231db70cba6baa05f10b518fbb0673f464f661f4ec0a12c1f8d11c354"
+    },
+    {
+      "file": "hl-19-variant-failed-1440-dark.png",
+      "width": 2880,
+      "height": 3198,
+      "family": "headless capture",
+      "sha256": "2b54780edfdf639fd44851ac12e8734509f6f0ecd0905d54094b03cfc9fc7fc8"
+    },
+    {
+      "file": "hl-20-variant-running-1440-dark.png",
+      "width": 2880,
+      "height": 1920,
+      "family": "headless capture",
+      "sha256": "d1bab994913bcb55d565e761e81b01620fc134e7269b715a68eb87ce98ac4dbd"
+    },
+    {
+      "file": "hl-21-variant-member-390-dark.png",
+      "width": 780,
+      "height": 3822,
+      "family": "headless capture",
+      "sha256": "5facd7afed947af28d5a5254ac7f72794f5cd3f9ef5c49b9b8579c582fdc2378"
+    },
+    {
+      "file": "hl-22-pair-failed-1440-dark.png",
+      "width": 2880,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "eabf7c864e60598a22cb448dee8dd37dd067d17b0f76e633b9e963ffbec29fd1"
+    },
+    {
+      "file": "hl-23-pair-stale-1440-dark.png",
+      "width": 2880,
+      "height": 2068,
+      "family": "headless capture",
+      "sha256": "aa1d1bf45346fcf4ae99fccd1046268c67f08ce5c98cffb8c3ff0e77e92d06b6"
+    },
+    {
+      "file": "hl-24-receipt-429-fine-dark.png",
+      "width": 858,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "73a0c9c140940110537d55ea042d5be9f4ac31ffbd5a0415f497bc8126b8004f"
+    },
+    {
+      "file": "hl-25-receipt-429-coarse-dark.png",
+      "width": 858,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "e57b739bb0ff0cead8c066bd663e70c1894a26ac501fe0fc1608c40734bb31f7"
+    },
+    {
+      "file": "hl-26-receipt-430-fine-dark.png",
+      "width": 860,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "84da63d60a00b749a4a0869e8e3c6a4cabd0ee29af4cd3cde9418bb367edfa03"
+    },
+    {
+      "file": "hl-27-receipt-430-coarse-dark.png",
+      "width": 860,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "d49a0afb2f1575d0976a5e8eea9ee1335f768a50a2360c999adc49f2f89a57ab"
+    },
+    {
+      "file": "hl-28-receipt-999-fine-dark.png",
+      "width": 1998,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "b0e0a3b72684f860bb7d1ea1ce8b4bb1fff32037d614fc5f70f9245907964bdd"
+    },
+    {
+      "file": "hl-29-receipt-999-coarse-dark.png",
+      "width": 1998,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "2aa0057da43758c4060847c251233dec001a9a2ae4c0f89e695d6d96430ff360"
+    },
+    {
+      "file": "hl-30-receipt-1000-fine-dark.png",
+      "width": 2000,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "c7cfeb7ae3dececc2993fbac460e8a5454eda8a312f2eacb93249d73a0386f77"
+    },
+    {
+      "file": "hl-31-receipt-1000-coarse-dark.png",
+      "width": 2000,
+      "height": 1800,
+      "family": "headless capture",
+      "sha256": "f74576f87dad044895cf2422888c46af1027033526a2875bec3fbab6a45a7046"
+    },
+    {
+      "file": "hl-32-editor-root200-320-dark.png",
+      "width": 640,
+      "height": 7348,
+      "family": "headless capture",
+      "sha256": "2315d5ba8d8f290cdf763f574fdd9092a09e0af2e29b372557aa59fd69d9cd38",
+      "provenance": "corrected dry-run-check-allowed root-font recapture; initial attempt superseded"
+    },
+    {
+      "file": "p2-01-home-variant-actions-1440-light.png",
+      "width": 2880,
+      "height": 1800,
+      "family": "native",
+      "sha256": "09a26b5b8a3a5dcef05d87e650da150d4e7c202439b3d29002295ad90465c0cf"
+    },
+    {
+      "file": "p2-02-member-variant-missing-actions-1440-light.png",
+      "width": 2880,
+      "height": 1800,
+      "family": "native",
+      "sha256": "a188d8169c4154d71b4759f3f6c935e8176a98293849852d053d1b65c58759c6"
+    },
+    {
+      "file": "p2-03-member-editor-enabled-1440-light.png",
+      "width": 2880,
+      "height": 1800,
+      "family": "native",
+      "sha256": "245bc501ceee6c27d68ab6a80d3bb2402de4d46a9bbe62bc9b23d5ff8978eae2"
+    },
+    {
+      "file": "p2-04-public-home-variant-render-control-1440-light.png",
+      "width": 2880,
+      "height": 1800,
+      "family": "native",
+      "sha256": "86821e1e63d9905ed7c8c6626c869f024fb86644adfa4d948d486fca5847a4cb"
+    },
+    {
+      "file": "p2-05-editor-nested-viewer-390-light.png",
+      "width": 780,
+      "height": 1688,
+      "family": "native",
+      "sha256": "9456fdf9d189dcab1ea40f5f98f475bb88f06339cb6a77a47eb53b6e260662a7"
+    },
+    {
+      "file": "p2-06-editor-added-opt-dirty-390-light.png",
+      "width": 780,
+      "height": 1688,
+      "family": "native",
+      "sha256": "36a528b98c081c1781d15696ba7f0230fbf4f51c6d032dc52a0befe8f085e9dc"
+    },
+    {
+      "file": "p2-07-editor-leave-guard-390-light.png",
+      "width": 780,
+      "height": 1688,
+      "family": "native",
+      "sha256": "f51cbbccf269fd98970dcf9f1990c7945d2b73b4989bdc8669fe7cdd4dc12957"
+    },
+    {
+      "file": "p2-08-editor-restored-local-draft-390-light.png",
+      "width": 780,
+      "height": 1688,
+      "family": "native",
+      "sha256": "600a68fd3fbbc98861bc48aef912acdfea594a51500caafbb9b3b9da2e71a690"
+    },
+    {
+      "file": "p2-09-editor-conflict-review-390-light.png",
+      "width": 780,
+      "height": 1688,
+      "family": "native",
+      "sha256": "bcc5dd40d25b4ca7250c784b3eec26d118d4abbed9bbffd1714633bb12de865e"
+    },
+    {
+      "file": "p2-10-editor-rebased-54-390-light.png",
+      "width": 780,
+      "height": 1688,
+      "family": "native",
+      "sha256": "72666078707a8f3eaa2163ced183783c52620be116ebce938b196d64b603fcb0"
+    },
+    {
+      "file": "p2-11-editor-empty-save-blocker-390-light.png",
+      "width": 780,
+      "height": 1688,
+      "family": "native",
+      "sha256": "b629161d04adcb56ac3169fef860728edde483af59fe8ebc946f414d3dc654ae"
+    },
+    {
+      "file": "p2-12-popular-lead-opens-pair-sheet-390-light.png",
+      "width": 780,
+      "height": 1688,
+      "family": "native",
+      "sha256": "20f3b9cf57424d5c85aeb1c022c836ccf5a2b8611d26726cbb27ffb0a67e7fca"
+    },
+    {
+      "file": "p2-13-popular-mixed-390-dark.png",
+      "width": 780,
+      "height": 1688,
+      "family": "native",
+      "sha256": "ccff80b50530792d08a228e18e17d1370c9c97c300ad1c96923f07cca5fec534"
+    },
+    {
+      "file": "p2-14-popular-320-dark-keyboard-focus.png",
+      "width": 640,
+      "height": 1688,
+      "family": "native",
+      "sha256": "4f59a1ef0fadc63cac4dd3bac01e3760b66d0fe94bc212efa5581683e7e04ab0"
+    },
+    {
+      "file": "p2-15-popular-all-states-1440-dark.png",
+      "width": 2880,
+      "height": 1800,
+      "family": "native",
+      "sha256": "4d9522a59904e535edd755a91470fc0608efc9b93418da1149308165a53652c0"
+    },
+    {
+      "file": "p2-16-popular-failed-1440-dark.png",
+      "width": 2880,
+      "height": 1800,
+      "family": "native",
+      "sha256": "008026b804aa83a284d62c6d49d554f3ece81e9874442596d3c013bac101cb25"
+    },
+    {
+      "file": "p2-17-pair-complete-1440-dark.png",
+      "width": 2880,
+      "height": 1800,
+      "family": "native",
+      "sha256": "0784a4646bc3a12deeaec87185e4debac29d53a31ec4c9c2e4cf941c7d3ab1b5"
+    },
+    {
+      "file": "p2-18-pair-stale-list-1440-dark.png",
+      "width": 2880,
+      "height": 1800,
+      "family": "native",
+      "sha256": "80cfd7b62abb5105044ced81db4d5b8df951af9df596819ae8f59216219d1420"
+    },
+    {
+      "file": "p2-19-native-empty-draft-controls-enabled-1440-dark.png",
+      "width": 2880,
+      "height": 1800,
+      "family": "native",
+      "sha256": "c1c9d35b48282210c9f304625bb8c775ee415b198ef1bc26b7989ff805d4861d"
+    },
+    {
+      "file": "p2-20-native-keep-editing-footer-disabled-1440-dark.png",
+      "width": 2880,
+      "height": 1800,
+      "family": "native",
+      "sha256": "14ecce083f6360de4647add1f71361ac6414a1fa0c095ebc7e160aac324648de"
+    },
+    {
+      "file": "p2-21-kept-draft-entry-1440-dark.png",
+      "width": 2880,
+      "height": 1800,
+      "family": "native",
+      "sha256": "c7255fba4a126ca56e25ff6604f863d17b159acbb257e2e162bd95d88b9325ab"
+    },
+    {
+      "file": "p2-22-kept-draft-resumed-54-1440-dark.png",
+      "width": 2880,
+      "height": 1800,
+      "family": "native",
+      "sha256": "54e174533da3f8fa7100506dd2ccf930b8e44623b91b4d84fae8289d5ab280b9"
+    },
+    {
+      "file": "p2-23-receipt-displayed-999-dark.png",
+      "width": 1998,
+      "height": 1800,
+      "family": "native",
+      "sha256": "ff11909a8ba67a09107f154d0e34fdeb6db1c0be72ab306a1bd545d41dff9c5f"
+    },
+    {
+      "file": "p2-24-receipt-displayed-1000-dark.png",
+      "width": 2000,
+      "height": 1800,
+      "family": "native",
+      "sha256": "2c55457e1d677236f8c9916c5451753ba3c38fd720477382b1b358e0f9ae3148"
+    },
+    {
+      "file": "p2-25-receipt-displayed-1001-split-dark.png",
+      "width": 2002,
+      "height": 1800,
+      "family": "native",
+      "sha256": "e8b0b02344e4f79011f982f0c6c90ec8fdc33ec0ff38f8f28644e38d374239e7"
+    }
+  ]
+}

@@ -24,6 +24,9 @@ class WishlistInteractionTests(unittest.TestCase):
           const flush = async (n = 40) => { for (let i = 0; i < n; i++) await Promise.resolve(); };
           const button = (root, text) => root.querySelectorAll("button").find((b) => b.textContent.trim() === text) || null;
           const openDialog = () => document.querySelectorAll("dialog").pop();
+          openCardViewer = (items, index, opts) => {
+            inspections.push({card: items[index].card || items[index], items, index, trigger: opts.trigger});
+          };
         """
         result = subprocess.run([NODE, str(RUNNER)], input=json.dumps([str(WEB), setup + scenario]),
                                 capture_output=True, text=True, encoding="utf-8", timeout=20)
@@ -50,10 +53,12 @@ class WishlistInteractionTests(unittest.TestCase):
           const sheet = openDialog();
           assert.equal(sheet.querySelector("textarea").value, "A useful recommendation.");
           assert(sheet.textContent.includes("Suggested in User1 suggestions · 2026-10-01"));
-          sheet.querySelector(".wishlist-sheet-pic").click();
+          const zoom = sheet.querySelector(".wishlist-sheet-pic");
+          zoom.click();
           assert.equal(inspections.length, 1);
           assert.equal(inspections[0].card.name, "Alpha");
-          assert.equal(inspections[0].trigger, tile);
+          assert.equal(inspections[0].trigger, zoom);
+          assert(sheet.isConnected);
           assert.equal(main.querySelector(".desktop-handoff"), null);
         """)
 
@@ -63,9 +68,126 @@ class WishlistInteractionTests(unittest.TestCase):
             source_deck: {id: "casual/gruul-ramp", title: "Gruul Ramp"}})]}), state.profile, routeToken);
           assert(!view.cards.textContent.includes("0 owned"));
           assert(!view.cards.textContent.includes("0 on the way"));
+          assert(view.cards.textContent.includes("None in your collection yet"));
           const link = view.cards.querySelectorAll("a").find((a) => a.textContent === "Gruul Ramp");
           assert(link); assert.equal(link.getAttribute("href"), deckHref("casual/gruul-ramp"));
           assert(!view.cards.textContent.includes("gruul-ramp.md"));
+        """)
+
+    def test_unknown_zero_and_positive_availability_in_tiles_and_sheets_and_recovery(self):
+        self.run_js("""
+          const cases = [
+            [undefined, "Collection counts unavailable"], [null, "Collection counts unavailable"],
+            [{owned: null, on_the_way: null}, "Collection counts unavailable"],
+            [{owned: 3, on_the_way: null}, "Collection counts unavailable"],
+            [{owned: null, on_the_way: 1}, "Collection counts unavailable"],
+            [{owned: 0, on_the_way: 0}, "None in your collection yet"],
+            [{owned: 3, on_the_way: 1}, "3 owned · 1 on the way"],
+            [{owned: 0, on_the_way: 1}, "1 on the way"],
+          ];
+          const view = show();
+          for (const [have, words] of cases) {
+            view.data = saved([], {entries: [entry(alpha, {have})]});
+            updateWishlist(view);
+            assert(view.cards.textContent.includes(words));
+            const tile = view.cards.querySelector(".card-tile-open");
+            assert(tile.getAttribute("aria-label").includes(words));
+            tile.click();
+            const sheet = openDialog();
+            assert(sheet.textContent.includes(words));
+            if (words === "Collection counts unavailable") {
+              assert(!sheet.textContent.includes("None in your collection yet"));
+              assert(!view.cards.textContent.includes("None in your collection yet"));
+            }
+            sheet.querySelector(".sheet-close").click();
+          }
+        """)
+
+    def test_zoom_keeps_all_draft_fields_list_group_and_explicit_save(self):
+        self.run_js("""
+          const pictured = {...alpha, img_small: "/img/fdn/1/small"};
+          const view = show([beta, pictured]);
+          const writes = [];
+          apiWrite = async (path, body) => { writes.push(body); return saved([beta, pictured]); };
+          view.cards.querySelectorAll(".card-tile-open")[1].click();
+          const sheet = openDialog();
+          sheet.querySelector("textarea").value = "Local notes";
+          sheet.querySelectorAll("input").find(i => i.id.startsWith("wish-source")).value = "magic/decks/casual/elves.md";
+          pickPrinting = async () => ({set: "m19", number: "314", set_name: "Core Set 2019"});
+          button(sheet, "Choose…").click(); await flush();
+          const zoom = sheet.querySelector(".wishlist-sheet-pic");
+          zoom.click();
+          assert.equal(inspections[0].index, 1);
+          same(inspections[0].items.map(item => item.card.name), ["Beta", "Alpha"]);
+          assert.equal(inspections[0].trigger, zoom);
+          // The viewer returns to this very sheet and focus target, without recreating any inputs.
+          inspections[0].trigger.focus();
+          assert.equal(document.activeElement, zoom);
+          assert.equal(openDialog(), sheet);
+          assert(sheet.isConnected);
+          assert.equal(sheet.querySelector("textarea").value, "Local notes");
+          assert.equal(sheet.querySelectorAll("input").find(i => i.id.startsWith("wish-source")).value,
+            "magic/decks/casual/elves.md");
+          assert(sheet.textContent.includes("M19 314"));
+          assert.equal(writes.length, 0);
+          sheet.querySelector('[data-action="save"]').click(); await flush();
+          same(writes, [{profile: "user1", action: "set", name: "Alpha", notes: "Local notes",
+            source: "magic/decks/casual/elves.md", set: "m19", number: "314"}]);
+        """)
+
+    def test_zoom_and_late_printing_do_not_act_on_a_replaced_page_or_person(self):
+        self.run_js("""
+          for (const leave of [() => { routeToken++; }, () => { state.profile = state.profiles[1]; }]) {
+            state.profile = state.profiles[0]; clear(main);
+            const view = show([{...alpha, img_small: "/img/fdn/1/small"}]);
+            view.cards.querySelector(".card-tile-open").click();
+            const sheet = openDialog();
+            let resolvePick;
+            pickPrinting = () => new Promise(resolve => {resolvePick = resolve;});
+            button(sheet, "Choose…").click();
+            leave();
+            resolvePick({set: "m19", number: "314"}); await flush();
+            assert(!sheet.textContent.includes("M19 314"));
+            sheet.querySelector(".wishlist-sheet-pic").click();
+            assert.equal(inspections.length, 0);
+            sheet.querySelector(".sheet-close").click();
+          }
+        """)
+
+    def test_route_and_profile_cleanup_dispose_private_sheet_and_owned_nested_context(self):
+        self.run_js("""
+          closeEditor = () => {}; stopMatchupRefresh = () => {}; noteVisit = () => {};
+          drawShell = () => {}; loadSimulations = () => {}; loadArrivalNotices = () => {};
+          state.remote = true; state.forcedTheme = true;
+          api = async () => saved([]);
+          let closedViewers = 0;
+          closeViewer = () => { closedViewers++; viewerState = null; };
+          openCardViewer = () => (viewerState = {owned: true});
+          for (const cleanup of [() => route(), () => chooseProfile(state.profiles[1]), () => drawWho()]) {
+            for (const nested of ["viewer", "picker"]) {
+              state.profile = state.profiles[0]; clear(main);
+              const view = show([{...alpha, img_small: "/img/fdn/1/small"}]);
+              view.cards.querySelector(".card-tile-open").click();
+              const sheet = openDialog();
+              let picker, resolvePick;
+              if (nested === "viewer") sheet.querySelector(".wishlist-sheet-pic").click();
+              else {
+                pickPrinting = (name, opts) => new Promise(resolve => {
+                  resolvePick = resolve; picker = openSheet({title: "Old private printing"}); opts.onOpen(picker);
+                });
+                button(sheet, "Choose…").click();
+              }
+              await cleanup(); await flush();
+              assert(!sheet.isConnected);
+              assert.equal(wishlistSheets.size, 0);
+              if (picker) {
+                assert(picker.closed); assert(!picker.dialog.isConnected);
+                resolvePick({set: "m19", number: "314"}); await flush();
+                assert(!sheet.textContent.includes("M19 314"));
+              } else assert.equal(viewerState, null);
+            }
+          }
+          assert.equal(closedViewers, 3);
         """)
 
     def test_add_and_remove_use_captured_profile_and_render_persisted_answers(self):

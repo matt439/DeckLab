@@ -813,7 +813,7 @@ function deckCard(d, product, compact, kitShown = false, ctx = {}) {
   const body = [
     colours ? colours.stripe() : null,
     banner,
-    el("span", { class: "deck-body" + (colours ? " deck-tint" : ""), style: colours ? colours.vars(135) : null },
+    el("span", { class: "deck-body" },
       el("span", { class: "deck-title-row" }, el("span", { class: "deck-title", text: title }),
         pips ? el("span", { class: "sr-only", text: ` (${colours.label})` }) : null),
       compact ? null : deckMeta(d, ctx.person),
@@ -894,8 +894,8 @@ function deckRow(d, ctx) {
 }
 
 /** The lab's detail pane (5, Library): the selected deck's overview, with its art, colours, status, who plays
- * it, its owned bar, what's missing, tokens and kit, and the ways in: Edit deck (the pane's one primary, for a
- * deck the visitor may change) and Open deck. */
+ * it, its owned bar, what's missing, tokens and kit. Edit deck (the pane's one primary, for a deck the visitor
+ * may change) and Open deck sit with the identity before the supporting evidence. */
 function libDetail(d, ctx) {
   const colours = libColours(d);
   const ready = d.error ? { chip: null, missing: 0 } : deckReadiness(d);
@@ -908,10 +908,12 @@ function libDetail(d, ctx) {
     el("div", { class: "lib-detail-card" },
       colours ? colours.stripe() : null,
       deckCover(d, colours, true),
-      el("div", { class: "lib-detail-body" + (colours ? " deck-tint" : ""), style: colours ? colours.vars(90) : null },
+      el("div", { class: "lib-detail-body" },
        el("div", { class: "lib-detail-main" },
         el("h2", { class: "lib-detail-title", text: d.title }),
         el("div", { class: "lib-detail-chips" }, deckStatusPill(d, true), deckMeta(d, ctx.person)),
+        el("div", { class: "actions lib-detail-actions" }, edit,
+          el("a", { class: edit ? "btn btn-secondary" : "btn btn-primary", href: open, text: "Open deck" })),
         deckPlayed(d),
         owned,
         d.error ? el("p", { class: "deck-error", text: `Can't be read: ${d.error}` })
@@ -922,9 +924,7 @@ function libDetail(d, ctx) {
         d.error ? null : libDetailGauntlet(d),
         deckTokens(d.tokens),
         deckSleeve(d.kit),
-        libBoxSelectedNote(d),
-        el("div", { class: "actions lib-detail-actions" }, edit,
-          el("a", { class: edit ? "btn btn-secondary" : "btn btn-primary", href: open, text: "Open deck" }))),
+        libBoxSelectedNote(d)),
        glance.facts, glance.cards)));
 }
 
@@ -957,7 +957,7 @@ function deckForgeLine(d) {
   if (!n || !n.rate) return null;
   return el("span", { class: "deck-forge" },
     winRateFigure(n.rate, { size: "tile", what: "Forge field win rate", games: n.games }),
-    freshnessBadge(n.tested, { size: "casual", onTint: true }));
+    freshnessBadge(n.tested, { size: "casual" }));
 }
 
 /** A lab row's Forge field column (4.2): the inline win rate, its range and the freshness; "—" for a casual deck
@@ -988,7 +988,7 @@ function libDetailForge(d) {
     el("p", { class: "lib-detail-label", text: "Forge field" }),
     el("div", { class: "lib-detail-forge-figure" },
       winRateFigure(n.rate, { size: "hero", what: "Forge field win rate", games: n.games, barred: true }),
-      freshnessBadge(n.tested, { size: "panel", onTint: true })),
+      freshnessBadge(n.tested, { size: "panel" })),
     rangeBar(n.rate, { axis: true, decorative: true }),
     n.partial && n.of ? el("p", { class: "lib-detail-forge-note", text: `Against ${num(n.counted)} of the ${plural(n.of, "deck")} in the field so far.` }) : null,
     el("a", { class: "btn btn-quiet btn-inline", href: `${deckHref(d.id, n.version)}&part=field`, text: "Field view" }));

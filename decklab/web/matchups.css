@@ -94,8 +94,10 @@
 /* ------------------------------------------------------------ the Matchups home */
 
 /* The heading and the format switch together, at the matrix's start (not across the page from it). */
-.mu-home-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); }
+.mu-home-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); margin-bottom: var(--s-3); }
 .mu-home-head h2 { margin: 0; }
+.mu-home-head .mu-view { min-width: 0; max-width: 100%; }
+.mu-home:has(.gb) .mu-home-head { max-width: 64rem; }
 .mu-home > .empty { margin: var(--s-3) 0; }
 
 /* The selected list's field and latest test are separate from saved pairs, which may use other lists. */

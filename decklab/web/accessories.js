@@ -739,6 +739,7 @@ function accImageBody(ctx) {
 
 async function saveFromSheet(ctx) {
   if (ctx.busy || !accSheetHere(ctx)) return;
+  if (ctx.activeCrop && !ctx.activeCrop.commit()) return;
   const row = accFormRow(ctx);
   if (!row) return;
   const body = { action: ctx.editing ? "edit" : "add", row, image: accImageBody(ctx) };

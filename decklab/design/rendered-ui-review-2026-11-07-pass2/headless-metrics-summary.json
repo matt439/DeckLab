@@ -1,0 +1,1533 @@
+{
+  "browserVersion": "156.0.8078.80",
+  "headless": true,
+  "noNativeInput": true,
+  "sourcePin": "ea781f9e5e7960690210b4783f4cbf5144918da9",
+  "sameOriginOnly": true,
+  "simulationMutationsBlocked": true,
+  "allowedNonGet": "Read-only POST /api/deck/check only in corrected stress recaptures",
+  "cases": [
+    {
+      "id": "01-board-mixed-1440-light",
+      "png": "hl-01-board-mixed-1440-light.png",
+      "case": "complete",
+      "theme": "light",
+      "viewport": {
+        "innerWidth": 1440,
+        "innerHeight": 900,
+        "clientWidth": 1440,
+        "clientHeight": 900,
+        "scrollWidth": 1440,
+        "scrollHeight": 985,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "full-page",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false
+    },
+    {
+      "id": "02-board-mixed-320-light",
+      "png": "hl-02-board-mixed-320-light.png",
+      "case": "complete",
+      "theme": "light",
+      "viewport": {
+        "innerWidth": 320,
+        "innerHeight": 844,
+        "clientWidth": 320,
+        "clientHeight": 844,
+        "scrollWidth": 320,
+        "scrollHeight": 1940,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": true,
+        "fine": false,
+        "hover": false
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "full-page",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false
+    },
+    {
+      "id": "03-variant-failed-1440-light",
+      "png": "hl-03-variant-failed-1440-light.png",
+      "case": "failed",
+      "theme": "light",
+      "viewport": {
+        "innerWidth": 1440,
+        "innerHeight": 900,
+        "clientWidth": 1440,
+        "clientHeight": 900,
+        "scrollWidth": 1440,
+        "scrollHeight": 1599,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "full-page",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false
+    },
+    {
+      "id": "04-variant-running-1440-light",
+      "png": "hl-04-variant-running-1440-light.png",
+      "case": "running",
+      "theme": "light",
+      "viewport": {
+        "innerWidth": 1440,
+        "innerHeight": 900,
+        "clientWidth": 1440,
+        "clientHeight": 900,
+        "scrollWidth": 1440,
+        "scrollHeight": 960,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "full-page",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false
+    },
+    {
+      "id": "05-variant-member-390-light",
+      "png": "hl-05-variant-member-390-light.png",
+      "case": "complete",
+      "theme": "light",
+      "viewport": {
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "clientWidth": 390,
+        "clientHeight": 844,
+        "scrollWidth": 390,
+        "scrollHeight": 1911,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": true,
+        "fine": false,
+        "hover": false
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "full-page",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false
+    },
+    {
+      "id": "06-pair-failed-1440-light",
+      "png": "hl-06-pair-failed-1440-light.png",
+      "case": "failed",
+      "theme": "light",
+      "viewport": {
+        "innerWidth": 1440,
+        "innerHeight": 900,
+        "clientWidth": 1440,
+        "clientHeight": 900,
+        "scrollWidth": 1440,
+        "scrollHeight": 900,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "full-page",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false
+    },
+    {
+      "id": "07-pair-stale-1440-light",
+      "png": "hl-07-pair-stale-1440-light.png",
+      "case": "stale",
+      "theme": "light",
+      "viewport": {
+        "innerWidth": 1440,
+        "innerHeight": 900,
+        "clientWidth": 1440,
+        "clientHeight": 900,
+        "scrollWidth": 1440,
+        "scrollHeight": 1034,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "full-page",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false
+    },
+    {
+      "id": "08-receipt-429-fine-light",
+      "png": "hl-08-receipt-429-fine-light.png",
+      "case": "complete",
+      "theme": "light",
+      "viewport": {
+        "innerWidth": 429,
+        "innerHeight": 900,
+        "clientWidth": 429,
+        "clientHeight": 900,
+        "scrollWidth": 429,
+        "scrollHeight": 2477,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "viewport",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false,
+      "receipt": {
+        "gridWidth": 397,
+        "gridTemplateColumns": "194.5px 194.5px",
+        "imageWidths": [
+          16,
+          194.5,
+          16,
+          194.5,
+          16,
+          194.5
+        ],
+        "blankTarget": {
+          "width": 195.6875,
+          "height": 24,
+          "minHeight": "24px",
+          "display": "flex",
+          "hidden": false
+        },
+        "recordTarget": {
+          "width": 130.15625,
+          "height": 36
+        },
+        "frameTemplateColumns": "397px"
+      }
+    },
+    {
+      "id": "09-receipt-429-coarse-light",
+      "png": "hl-09-receipt-429-coarse-light.png",
+      "case": "complete",
+      "theme": "light",
+      "viewport": {
+        "innerWidth": 429,
+        "innerHeight": 900,
+        "clientWidth": 429,
+        "clientHeight": 900,
+        "scrollWidth": 429,
+        "scrollHeight": 2521,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": true,
+        "fine": false,
+        "hover": false
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "viewport",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false,
+      "receipt": {
+        "gridWidth": 397,
+        "gridTemplateColumns": "194.5px 194.5px",
+        "imageWidths": [
+          16,
+          194.5,
+          16,
+          194.5,
+          16,
+          194.5
+        ],
+        "blankTarget": {
+          "width": 195.6875,
+          "height": 24,
+          "minHeight": "24px",
+          "display": "flex",
+          "hidden": false
+        },
+        "recordTarget": {
+          "width": 130.15625,
+          "height": 44
+        },
+        "frameTemplateColumns": "397px"
+      }
+    },
+    {
+      "id": "10-receipt-430-fine-light",
+      "png": "hl-10-receipt-430-fine-light.png",
+      "case": "complete",
+      "theme": "light",
+      "viewport": {
+        "innerWidth": 430,
+        "innerHeight": 900,
+        "clientWidth": 430,
+        "clientHeight": 900,
+        "scrollWidth": 430,
+        "scrollHeight": 1957,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "viewport",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false,
+      "receipt": {
+        "gridWidth": 398,
+        "gridTemplateColumns": "127.328px 127.328px 127.344px",
+        "imageWidths": [
+          16,
+          127.328125,
+          16,
+          127.328125,
+          16,
+          127.34375
+        ],
+        "blankTarget": {
+          "width": 195.6875,
+          "height": 24,
+          "minHeight": "24px",
+          "display": "flex",
+          "hidden": false
+        },
+        "recordTarget": {
+          "width": 130.15625,
+          "height": 36
+        },
+        "frameTemplateColumns": "398px"
+      }
+    },
+    {
+      "id": "11-receipt-430-coarse-light",
+      "png": "hl-11-receipt-430-coarse-light.png",
+      "case": "complete",
+      "theme": "light",
+      "viewport": {
+        "innerWidth": 430,
+        "innerHeight": 900,
+        "clientWidth": 430,
+        "clientHeight": 900,
+        "scrollWidth": 430,
+        "scrollHeight": 2001,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": true,
+        "fine": false,
+        "hover": false
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "viewport",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false,
+      "receipt": {
+        "gridWidth": 398,
+        "gridTemplateColumns": "127.328px 127.328px 127.344px",
+        "imageWidths": [
+          16,
+          127.328125,
+          16,
+          127.328125,
+          16,
+          127.34375
+        ],
+        "blankTarget": {
+          "width": 195.6875,
+          "height": 24,
+          "minHeight": "24px",
+          "display": "flex",
+          "hidden": false
+        },
+        "recordTarget": {
+          "width": 130.15625,
+          "height": 44
+        },
+        "frameTemplateColumns": "398px"
+      }
+    },
+    {
+      "id": "12-receipt-999-fine-light",
+      "png": "hl-12-receipt-999-fine-light.png",
+      "case": "complete",
+      "theme": "light",
+      "viewport": {
+        "innerWidth": 999,
+        "innerHeight": 900,
+        "clientWidth": 999,
+        "clientHeight": 900,
+        "scrollWidth": 999,
+        "scrollHeight": 1841,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "viewport",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false,
+      "receipt": {
+        "gridWidth": 951,
+        "gridTemplateColumns": "180.594px 180.594px 180.609px 180.594px 180.594px",
+        "imageWidths": [
+          16,
+          180.59375,
+          16,
+          180.59375,
+          16,
+          180.609375
+        ],
+        "blankTarget": {
+          "width": 195.6875,
+          "height": 24,
+          "minHeight": "24px",
+          "display": "flex",
+          "hidden": false
+        },
+        "recordTarget": {
+          "width": 130.15625,
+          "height": 36
+        },
+        "frameTemplateColumns": "951px"
+      }
+    },
+    {
+      "id": "13-receipt-999-coarse-light",
+      "png": "hl-13-receipt-999-coarse-light.png",
+      "case": "complete",
+      "theme": "light",
+      "viewport": {
+        "innerWidth": 999,
+        "innerHeight": 900,
+        "clientWidth": 999,
+        "clientHeight": 900,
+        "scrollWidth": 999,
+        "scrollHeight": 1871,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": true,
+        "fine": false,
+        "hover": false
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "viewport",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false,
+      "receipt": {
+        "gridWidth": 951,
+        "gridTemplateColumns": "180.594px 180.594px 180.609px 180.594px 180.594px",
+        "imageWidths": [
+          16,
+          180.59375,
+          16,
+          180.59375,
+          16,
+          180.609375
+        ],
+        "blankTarget": {
+          "width": 195.6875,
+          "height": 24,
+          "minHeight": "24px",
+          "display": "flex",
+          "hidden": false
+        },
+        "recordTarget": {
+          "width": 130.15625,
+          "height": 44
+        },
+        "frameTemplateColumns": "951px"
+      }
+    },
+    {
+      "id": "14-receipt-1000-fine-light",
+      "png": "hl-14-receipt-1000-fine-light.png",
+      "case": "complete",
+      "theme": "light",
+      "viewport": {
+        "innerWidth": 1000,
+        "innerHeight": 900,
+        "clientWidth": 1000,
+        "clientHeight": 900,
+        "scrollWidth": 1000,
+        "scrollHeight": 1794,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "viewport",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false,
+      "receipt": {
+        "gridWidth": 476,
+        "gridTemplateColumns": "232px 232px",
+        "imageWidths": [
+          16,
+          232,
+          16,
+          232,
+          16,
+          232
+        ],
+        "blankTarget": {
+          "width": 195.6875,
+          "height": 24,
+          "minHeight": "24px",
+          "display": "flex",
+          "hidden": false
+        },
+        "recordTarget": {
+          "width": 117.34375,
+          "height": 32
+        },
+        "frameTemplateColumns": "476px 452px"
+      }
+    },
+    {
+      "id": "15-receipt-1000-coarse-light",
+      "png": "hl-15-receipt-1000-coarse-light.png",
+      "case": "complete",
+      "theme": "light",
+      "viewport": {
+        "innerWidth": 1000,
+        "innerHeight": 900,
+        "clientWidth": 1000,
+        "clientHeight": 900,
+        "scrollWidth": 1000,
+        "scrollHeight": 1862,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": true,
+        "fine": false,
+        "hover": false
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "viewport",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false,
+      "receipt": {
+        "gridWidth": 476,
+        "gridTemplateColumns": "232px 232px",
+        "imageWidths": [
+          16,
+          232,
+          16,
+          232,
+          16,
+          232
+        ],
+        "blankTarget": {
+          "width": 195.6875,
+          "height": 24,
+          "minHeight": "24px",
+          "display": "flex",
+          "hidden": false
+        },
+        "recordTarget": {
+          "width": 130.15625,
+          "height": 44
+        },
+        "frameTemplateColumns": "476px 452px"
+      }
+    },
+    {
+      "id": "16-editor-root200-320-light",
+      "png": "hl-16-editor-root200-320-light.png",
+      "case": "complete",
+      "theme": "light",
+      "viewport": {
+        "innerWidth": 320,
+        "innerHeight": 844,
+        "clientWidth": 320,
+        "clientHeight": 844,
+        "scrollWidth": 320,
+        "scrollHeight": 3674,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "32px",
+        "bodyFont": "32px"
+      },
+      "input": {
+        "coarse": true,
+        "fine": false,
+        "hover": false
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "full-page",
+      "rootFontStress": true,
+      "correctedDryRunCheckRecapture": true
+    },
+    {
+      "id": "17-board-mixed-1440-dark",
+      "png": "hl-17-board-mixed-1440-dark.png",
+      "case": "complete",
+      "theme": "dark",
+      "viewport": {
+        "innerWidth": 1440,
+        "innerHeight": 900,
+        "clientWidth": 1440,
+        "clientHeight": 900,
+        "scrollWidth": 1440,
+        "scrollHeight": 985,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "full-page",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false
+    },
+    {
+      "id": "18-board-mixed-320-dark",
+      "png": "hl-18-board-mixed-320-dark.png",
+      "case": "complete",
+      "theme": "dark",
+      "viewport": {
+        "innerWidth": 320,
+        "innerHeight": 844,
+        "clientWidth": 320,
+        "clientHeight": 844,
+        "scrollWidth": 320,
+        "scrollHeight": 1940,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": true,
+        "fine": false,
+        "hover": false
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "full-page",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false
+    },
+    {
+      "id": "19-variant-failed-1440-dark",
+      "png": "hl-19-variant-failed-1440-dark.png",
+      "case": "failed",
+      "theme": "dark",
+      "viewport": {
+        "innerWidth": 1440,
+        "innerHeight": 900,
+        "clientWidth": 1440,
+        "clientHeight": 900,
+        "scrollWidth": 1440,
+        "scrollHeight": 1599,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "full-page",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false
+    },
+    {
+      "id": "20-variant-running-1440-dark",
+      "png": "hl-20-variant-running-1440-dark.png",
+      "case": "running",
+      "theme": "dark",
+      "viewport": {
+        "innerWidth": 1440,
+        "innerHeight": 900,
+        "clientWidth": 1440,
+        "clientHeight": 900,
+        "scrollWidth": 1440,
+        "scrollHeight": 960,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "full-page",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false
+    },
+    {
+      "id": "21-variant-member-390-dark",
+      "png": "hl-21-variant-member-390-dark.png",
+      "case": "complete",
+      "theme": "dark",
+      "viewport": {
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "clientWidth": 390,
+        "clientHeight": 844,
+        "scrollWidth": 390,
+        "scrollHeight": 1911,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": true,
+        "fine": false,
+        "hover": false
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "full-page",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false
+    },
+    {
+      "id": "22-pair-failed-1440-dark",
+      "png": "hl-22-pair-failed-1440-dark.png",
+      "case": "failed",
+      "theme": "dark",
+      "viewport": {
+        "innerWidth": 1440,
+        "innerHeight": 900,
+        "clientWidth": 1440,
+        "clientHeight": 900,
+        "scrollWidth": 1440,
+        "scrollHeight": 900,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "full-page",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false
+    },
+    {
+      "id": "23-pair-stale-1440-dark",
+      "png": "hl-23-pair-stale-1440-dark.png",
+      "case": "stale",
+      "theme": "dark",
+      "viewport": {
+        "innerWidth": 1440,
+        "innerHeight": 900,
+        "clientWidth": 1440,
+        "clientHeight": 900,
+        "scrollWidth": 1440,
+        "scrollHeight": 1034,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "full-page",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false
+    },
+    {
+      "id": "24-receipt-429-fine-dark",
+      "png": "hl-24-receipt-429-fine-dark.png",
+      "case": "complete",
+      "theme": "dark",
+      "viewport": {
+        "innerWidth": 429,
+        "innerHeight": 900,
+        "clientWidth": 429,
+        "clientHeight": 900,
+        "scrollWidth": 429,
+        "scrollHeight": 2477,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "viewport",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false,
+      "receipt": {
+        "gridWidth": 397,
+        "gridTemplateColumns": "194.5px 194.5px",
+        "imageWidths": [
+          16,
+          194.5,
+          16,
+          194.5,
+          16,
+          194.5
+        ],
+        "blankTarget": {
+          "width": 195.6875,
+          "height": 24,
+          "minHeight": "24px",
+          "display": "flex",
+          "hidden": false
+        },
+        "recordTarget": {
+          "width": 130.15625,
+          "height": 36
+        },
+        "frameTemplateColumns": "397px"
+      }
+    },
+    {
+      "id": "25-receipt-429-coarse-dark",
+      "png": "hl-25-receipt-429-coarse-dark.png",
+      "case": "complete",
+      "theme": "dark",
+      "viewport": {
+        "innerWidth": 429,
+        "innerHeight": 900,
+        "clientWidth": 429,
+        "clientHeight": 900,
+        "scrollWidth": 429,
+        "scrollHeight": 2521,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": true,
+        "fine": false,
+        "hover": false
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "viewport",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false,
+      "receipt": {
+        "gridWidth": 397,
+        "gridTemplateColumns": "194.5px 194.5px",
+        "imageWidths": [
+          16,
+          194.5,
+          16,
+          194.5,
+          16,
+          194.5
+        ],
+        "blankTarget": {
+          "width": 195.6875,
+          "height": 24,
+          "minHeight": "24px",
+          "display": "flex",
+          "hidden": false
+        },
+        "recordTarget": {
+          "width": 130.15625,
+          "height": 44
+        },
+        "frameTemplateColumns": "397px"
+      }
+    },
+    {
+      "id": "26-receipt-430-fine-dark",
+      "png": "hl-26-receipt-430-fine-dark.png",
+      "case": "complete",
+      "theme": "dark",
+      "viewport": {
+        "innerWidth": 430,
+        "innerHeight": 900,
+        "clientWidth": 430,
+        "clientHeight": 900,
+        "scrollWidth": 430,
+        "scrollHeight": 1957,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "viewport",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false,
+      "receipt": {
+        "gridWidth": 398,
+        "gridTemplateColumns": "127.328px 127.328px 127.344px",
+        "imageWidths": [
+          16,
+          127.328125,
+          16,
+          127.328125,
+          16,
+          127.34375
+        ],
+        "blankTarget": {
+          "width": 195.6875,
+          "height": 24,
+          "minHeight": "24px",
+          "display": "flex",
+          "hidden": false
+        },
+        "recordTarget": {
+          "width": 130.15625,
+          "height": 36
+        },
+        "frameTemplateColumns": "398px"
+      }
+    },
+    {
+      "id": "27-receipt-430-coarse-dark",
+      "png": "hl-27-receipt-430-coarse-dark.png",
+      "case": "complete",
+      "theme": "dark",
+      "viewport": {
+        "innerWidth": 430,
+        "innerHeight": 900,
+        "clientWidth": 430,
+        "clientHeight": 900,
+        "scrollWidth": 430,
+        "scrollHeight": 2001,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": true,
+        "fine": false,
+        "hover": false
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "viewport",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false,
+      "receipt": {
+        "gridWidth": 398,
+        "gridTemplateColumns": "127.328px 127.328px 127.344px",
+        "imageWidths": [
+          16,
+          127.328125,
+          16,
+          127.328125,
+          16,
+          127.34375
+        ],
+        "blankTarget": {
+          "width": 195.6875,
+          "height": 24,
+          "minHeight": "24px",
+          "display": "flex",
+          "hidden": false
+        },
+        "recordTarget": {
+          "width": 130.15625,
+          "height": 44
+        },
+        "frameTemplateColumns": "398px"
+      }
+    },
+    {
+      "id": "28-receipt-999-fine-dark",
+      "png": "hl-28-receipt-999-fine-dark.png",
+      "case": "complete",
+      "theme": "dark",
+      "viewport": {
+        "innerWidth": 999,
+        "innerHeight": 900,
+        "clientWidth": 999,
+        "clientHeight": 900,
+        "scrollWidth": 999,
+        "scrollHeight": 1841,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "viewport",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false,
+      "receipt": {
+        "gridWidth": 951,
+        "gridTemplateColumns": "180.594px 180.594px 180.609px 180.594px 180.594px",
+        "imageWidths": [
+          16,
+          180.59375,
+          16,
+          180.59375,
+          16,
+          180.609375
+        ],
+        "blankTarget": {
+          "width": 195.6875,
+          "height": 24,
+          "minHeight": "24px",
+          "display": "flex",
+          "hidden": false
+        },
+        "recordTarget": {
+          "width": 130.15625,
+          "height": 36
+        },
+        "frameTemplateColumns": "951px"
+      }
+    },
+    {
+      "id": "29-receipt-999-coarse-dark",
+      "png": "hl-29-receipt-999-coarse-dark.png",
+      "case": "complete",
+      "theme": "dark",
+      "viewport": {
+        "innerWidth": 999,
+        "innerHeight": 900,
+        "clientWidth": 999,
+        "clientHeight": 900,
+        "scrollWidth": 999,
+        "scrollHeight": 1871,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": true,
+        "fine": false,
+        "hover": false
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "viewport",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false,
+      "receipt": {
+        "gridWidth": 951,
+        "gridTemplateColumns": "180.594px 180.594px 180.609px 180.594px 180.594px",
+        "imageWidths": [
+          16,
+          180.59375,
+          16,
+          180.59375,
+          16,
+          180.609375
+        ],
+        "blankTarget": {
+          "width": 195.6875,
+          "height": 24,
+          "minHeight": "24px",
+          "display": "flex",
+          "hidden": false
+        },
+        "recordTarget": {
+          "width": 130.15625,
+          "height": 44
+        },
+        "frameTemplateColumns": "951px"
+      }
+    },
+    {
+      "id": "30-receipt-1000-fine-dark",
+      "png": "hl-30-receipt-1000-fine-dark.png",
+      "case": "complete",
+      "theme": "dark",
+      "viewport": {
+        "innerWidth": 1000,
+        "innerHeight": 900,
+        "clientWidth": 1000,
+        "clientHeight": 900,
+        "scrollWidth": 1000,
+        "scrollHeight": 1794,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": false,
+        "fine": true,
+        "hover": true
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "viewport",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false,
+      "receipt": {
+        "gridWidth": 476,
+        "gridTemplateColumns": "232px 232px",
+        "imageWidths": [
+          16,
+          232,
+          16,
+          232,
+          16,
+          232
+        ],
+        "blankTarget": {
+          "width": 195.6875,
+          "height": 24,
+          "minHeight": "24px",
+          "display": "flex",
+          "hidden": false
+        },
+        "recordTarget": {
+          "width": 117.34375,
+          "height": 32
+        },
+        "frameTemplateColumns": "476px 452px"
+      }
+    },
+    {
+      "id": "31-receipt-1000-coarse-dark",
+      "png": "hl-31-receipt-1000-coarse-dark.png",
+      "case": "complete",
+      "theme": "dark",
+      "viewport": {
+        "innerWidth": 1000,
+        "innerHeight": 900,
+        "clientWidth": 1000,
+        "clientHeight": 900,
+        "scrollWidth": 1000,
+        "scrollHeight": 1862,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "16px",
+        "bodyFont": "16px"
+      },
+      "input": {
+        "coarse": true,
+        "fine": false,
+        "hover": false
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "viewport",
+      "rootFontStress": false,
+      "correctedDryRunCheckRecapture": false,
+      "receipt": {
+        "gridWidth": 476,
+        "gridTemplateColumns": "232px 232px",
+        "imageWidths": [
+          16,
+          232,
+          16,
+          232,
+          16,
+          232
+        ],
+        "blankTarget": {
+          "width": 195.6875,
+          "height": 24,
+          "minHeight": "24px",
+          "display": "flex",
+          "hidden": false
+        },
+        "recordTarget": {
+          "width": 130.15625,
+          "height": 44
+        },
+        "frameTemplateColumns": "476px 452px"
+      }
+    },
+    {
+      "id": "32-editor-root200-320-dark",
+      "png": "hl-32-editor-root200-320-dark.png",
+      "case": "complete",
+      "theme": "dark",
+      "viewport": {
+        "innerWidth": 320,
+        "innerHeight": 844,
+        "clientWidth": 320,
+        "clientHeight": 844,
+        "scrollWidth": 320,
+        "scrollHeight": 3674,
+        "devicePixelRatio": 2
+      },
+      "text": {
+        "rootFont": "32px",
+        "bodyFont": "32px"
+      },
+      "input": {
+        "coarse": true,
+        "fine": false,
+        "hover": false
+      },
+      "reducedMotion": true,
+      "fonts": {
+        "fontsStatus": "loaded",
+        "figtree": true,
+        "jetbrains": true
+      },
+      "pageErrorCount": 0,
+      "status": "captured",
+      "captureMode": "full-page",
+      "rootFontStress": true,
+      "correctedDryRunCheckRecapture": true
+    }
+  ],
+  "replacementNote": "The initial two root-font stress cases blocked the read-only check request. They were recaptured with that one dry-run endpoint allowed; only corrected stress images/metrics are published. Original attempts remain scratch evidence, not app failures.",
+  "pageErrorCount": 0,
+  "allContextsClosed": true,
+  "browserCleanup": [
+    {
+      "closed": true,
+      "headless": true,
+      "captures": 32
+    },
+    {
+      "closed": true,
+      "headless": true,
+      "captures": 2,
+      "scope": "corrected root-font stress"
+    }
+  ],
+  "documentHorizontalOverflowCases": [],
+  "allMeasuredFontsLoaded": true
+}

@@ -1,26 +1,35 @@
 /* The Testing page's Popular decks board (gauntlet-board.js, E3-S35): one row a deck, its name and facts, its
 figure and range, then Details and Play. */
 .gb { max-width: 64rem; margin-top: var(--s-3); }
+.gb-scope { margin: 0; color: var(--ink-2); font-size: var(--fs-meta); }
+.gb-help { margin: 0 0 var(--s-2); color: var(--ink-2); font-size: var(--fs-sm); }
+.gb-help > summary { min-height: var(--tap); display: flex; align-items: center; }
 .gb-intro { max-width: 72ch; margin: 0 0 var(--s-2); }
 .gb-note { margin: 0 0 var(--s-2); }
-.gb-rows { list-style: none; padding: 0; margin: 0; }
+.gb-rows {
+  list-style: none; padding: 0 var(--s-4); margin: 0;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-row);
+}
 .gb-row {
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(8rem, 14rem) max-content;
-  align-items: start; gap: var(--s-2) var(--s-3); padding: var(--s-3) 0; border-bottom: 1px solid var(--border);
+  align-items: start; gap: var(--s-3) var(--s-4); padding: var(--s-4) 0; border-bottom: 1px solid var(--border);
 }
+.gb-row:last-child { border-bottom: 0; }
 .gb-name { display: grid; align-content: start; justify-items: start; gap: var(--s-1); min-width: 0; }
 .gb-title { margin: 0; font-size: var(--fs-md); font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
 .gb-meta, .gb-state { margin: 0; font-size: var(--fs-sm); color: var(--ink-2); overflow-wrap: anywhere; }
-.gb-state { color: var(--ink-3); }
-.gb-score { display: grid; gap: var(--s-1); justify-items: end; font-variant-numeric: tabular-nums; }
+.gb-score { display: grid; grid-column: 2; gap: var(--s-2); justify-items: end; min-width: 0; font-variant-numeric: tabular-nums; }
+.gb-score-historical { justify-items: stretch; color: var(--ink-2); font-size: var(--fs-sm); }
+.gb-score-historical .gt-before { margin: 0; }
+.gb-score-historical .gt-before-bar { flex-wrap: wrap; }
+.gb-score-historical .gt-before-bar .range-bar { flex-basis: 100%; }
 .gb-score .range-bar { width: 100%; }
-.gb-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s-2); }
+.gb-actions { display: flex; grid-column: 3; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s-2); }
 .gb-playing { font-size: var(--fs-sm); color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .gb-command { max-width: 100%; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
-.gb-row:not(:has(.gb-score)) .gb-actions { grid-column: 2 / -1; }
 @media (max-width: 699px) {
-  .gb-row { grid-template-columns: minmax(0, 1fr) max-content; }
-  .gb-score { grid-column: 2; grid-row: 1; min-width: 7rem; }
-  .gb-actions { grid-column: 1 / -1; justify-content: flex-start; }
-  .gb-row:not(:has(.gb-score)) .gb-actions { grid-column: 1 / -1; }
+  .gb-row { grid-template-columns: minmax(0, 1fr); }
+  .gb-score { grid-column: 1; justify-items: start; width: min(100%, 20rem); }
+  .gb-score-historical { justify-items: stretch; }
+  .gb-actions { grid-column: 1; justify-content: flex-start; }
 }

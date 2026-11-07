@@ -66,7 +66,7 @@ details.edit-details[open] > summary { margin-bottom: var(--s-3); }
 /* Saved editor only: one retained header decoration and the existing native details fold. */
 .edit-head.edit-head-saved { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-2); }
 .edit-head-saved .edit-kicker { margin: 0; font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold); color: var(--ink-2); }
-.edit-head-saved .edit-title-row h1 { min-width: 0; font-size: var(--fs-lg); font-weight: var(--fw-heavy); overflow-wrap: anywhere; }
+.edit-head-saved .edit-title-row h1 { min-width: 0; font-size: var(--fs-xl); font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
 .edit-head-colour { min-width: 0; }
 .edit-head-colour > .deck-stripe { height: var(--stripe-h); }
 details.edit-details-fold:not([open]) { min-height: 60px; box-sizing: border-box; padding: 0 var(--s-4); }
@@ -74,7 +74,7 @@ details.edit-details-fold:not([open]) > summary { min-height: calc(60px - 2px); 
 @media (min-width: 1000px) {
   .edit-head.edit-head-saved { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2) var(--s-4); }
   .edit-head-saved .edit-kicker, .edit-head-colour { display: none; }
-  .edit-head-saved .edit-title-row h1 { font-size: var(--fs-2xl); font-weight: var(--fw-bold); }
+  .edit-head-saved .edit-title-row h1 { font-size: var(--fs-h1); }
   details.edit-details-fold:not([open]) { min-height: 0; padding: var(--s-4); }
   details.edit-details-fold:not([open]) > summary { min-height: max(32px, var(--btn-h)); }
 }
@@ -310,6 +310,22 @@ button.edit-card:hover { background: var(--hover); }
   .edit-page.has-editor-panes .edit-list > .edit-row > .edit-card .nm { flex-wrap: wrap; }
   .edit-page.has-editor-panes .edit-list > .edit-row > .edit-card .nm-text { white-space: normal; overflow-wrap: anywhere; }
   .edit-page.has-editor-panes .edit-list > .edit-row > .edit-badge-slot :is(.chip, .status) { white-space: normal; }
+}
+/* Relative to the reading size: a narrow pane or enlarged text gets an entire identity line,
+   with the existing quantity, facts and tools beneath it. DOM and keyboard order stay unchanged. */
+@container editor-cards (max-width: 30em) {
+  .edit-page.has-editor-panes .edit-list > .edit-row:not(.edit-removed) {
+    grid-template-columns: auto minmax(0, 1fr) var(--tap);
+    grid-template-areas: "card card card" "step mv more" "print print print" "badge badge badge";
+    row-gap: var(--s-1);
+    padding-block: var(--s-2);
+  }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-card .nm { max-width: 100%; }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-mv { text-align: left; }
+  .edit-page.has-editor-panes .edit-list > .edit-row > .edit-badge-slot:empty { display: none; }
+  .edit-page.has-editor-panes .edit-row .edit-problem,
+  .edit-page.has-editor-panes .edit-row .edit-block,
+  .edit-page.has-editor-panes .edit-row .edit-warn { grid-column: 1 / -1; }
 }
 
 /* ------------------------------------------------------------ the list: picture stacks */
@@ -609,14 +625,27 @@ button.edit-card:hover { background: var(--hover); }
 .is-quick .edit-row .edit-print-words { grid-area: print; display: inline-flex; align-items: center; gap: var(--s-2); color: var(--ink-2); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .is-quick .edit-row .edit-badge-slot { grid-area: badge; justify-self: start; min-width: 0; }
 .is-quick .edit-row .edit-more { grid-area: more; }
-/* A narrow list (a 320 px phone, or large text): the badge ("2 missing") takes a line of its own under the
-   printing, so it never pushes the page wider than the screen (E11-S55, WCAG 1.4.10). */
-.is-quick .edit-list { container: quick-list / inline-size; }
-@container quick-list (max-width: 20em) {
-  .is-quick .edit-list > .edit-row { grid-template-areas: "step card card more" "step print print more" "step badge badge more"; }
-  .is-quick .edit-row .edit-badge-slot:empty { display: none; }
-}
 .is-quick .edit-row .edit-problem, .is-quick .edit-row .edit-block, .is-quick .edit-row .edit-warn { grid-column: 2 / -1; }
+/* A phone or enlarged reading size: identity gets the full row instead of the leftover sliver beside
+   three quantity controls. Printing wraps independently, and no metadata overlays the name. */
+.is-quick .edit-list { container: quick-list / inline-size; }
+@container quick-list (max-width: 30em) {
+  .is-quick .edit-list > .edit-row {
+    grid-template-columns: auto minmax(0, 1fr) var(--tap);
+    grid-template-areas: "card card card" "step print more" "badge badge badge";
+    gap: var(--s-1) var(--s-2); padding-block: var(--s-2);
+  }
+  .is-quick .edit-row .edit-card { grid-area: card; padding: var(--s-1) 0; align-self: auto; align-items: center; }
+  .is-quick .edit-row .edit-card .nm { flex-wrap: wrap; max-width: 100%; }
+  .is-quick .edit-row .edit-card .nm-text { display: block; -webkit-line-clamp: unset; line-clamp: unset; }
+  .is-quick .edit-row .edit-print-words { flex-wrap: wrap; white-space: normal; overflow: visible; padding-bottom: 0; }
+  .is-quick .edit-print-words > span:last-child { overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+  .is-quick .edit-row .edit-badge-slot:empty { display: none; }
+  .is-quick .edit-row .edit-problem, .is-quick .edit-row .edit-block, .is-quick .edit-row .edit-warn { grid-column: 1 / -1; }
+}
+@container quick-list (max-width: 20em) {
+  .is-quick .edit-list > .edit-row { grid-template-areas: "card card card" "step . more" "print print print" "badge badge badge"; }
+}
 /* The search sheet: Add to and the search box stay at the top; only the results scroll. */
 dialog.sheet-search .sheet-inner { height: 90vh; height: 90dvh; }
 dialog.sheet-search .sheet-body { display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
@@ -702,6 +731,14 @@ body.has-editor-search-dock.is-searching.keyboard-up .edit-bar { display: flex; 
 /* Alternatives are a distinct editor draft; their copies never join the playable list's count. */
 .edit-considering { margin-top: var(--s-5); padding-top: var(--s-4); border-top: 1px solid var(--border); }
 .edit-considering h2 { margin: 0 0 var(--s-2); font-size: var(--fs-lg); }
+.editor-considering-head { display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: var(--s-2) var(--s-3); }
+.editor-considering-head h2 { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s-2); margin: 0; }
+.editor-considering-count { color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-regular); }
+.editor-considering-head .editor-considering-add { margin: 0; }
+.editor-considering-help > summary { display: flex; align-items: center; min-height: var(--tap);
+  color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-medium); }
+.editor-considering-help > .sub { max-width: 70ch; margin: var(--s-1) 0 0; }
 .editor-considering-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s-2);
   align-items: center; border-bottom: 1px solid var(--border); padding: var(--s-2) 0; }
 .editor-considering-row .card-row { min-width: 0; }

@@ -162,7 +162,8 @@ function drawReceipt(data, token) {
     return view;
   }
   view.resume = el("div", { class: "rcpt-resume" });
-  view.root.append(view.resume, rcptEverythingBar(view));
+  view.root.append(view.resume);
+  rcptEverythingBar(view);
   for (const c of data.components) {
     if (c.status !== "pending") continue;
     const comp = rcptMakeComp(view, c, view.comps.length);
@@ -202,6 +203,9 @@ function rcptMakeComp(view, c, index) {
 function rcptDrawBoard(view) {
   const checkFocus = new Map(view.comps.map(comp => [comp, rcptParkCheckControls(comp)]));
   clear(view.board);
+  // A single card/token part shares its tools with the delivery shortcut. Mixed orders and products
+  // keep the shortcut outside every part, including those not yet selected as arrived.
+  if (view.comps.length !== 1 || view.comps[0].kind === "product") view.board.append(view.everythingBar);
   for (const comp of view.comps) view.board.append(rcptSection(view, comp));
   for (const comp of view.comps) rcptPlaceCheckControls(view, comp, checkFocus.get(comp));
 }
@@ -221,7 +225,7 @@ function rcptSection(view, comp) {
   comp.body = el("div", { class: "rcpt-body" });
   comp.offNote = several ? el("p", { class: "sub rcpt-off-note", text: "Tick “This arrived” if this part came, to check it off." }) : null;
   comp.section = el("section", { class: "rcpt-section", id: `rcpt-${comp.index}`, "aria-labelledby": id },
-    el("div", { class: "rcpt-section-head" }, el("h2", { id, text: rcptTitle(comp.c, view.data) }), arrived),
+    el("div", { class: "rcpt-section-head" }, el("h2", { id, text: rcptTitle(comp.c, {}) }), arrived),
     comp.offNote, comp.body);
   rcptMarkSelected(comp);
   if (comp.kind === "product") {
@@ -237,7 +241,9 @@ function rcptSection(view, comp) {
     rcptProductGrid(view, comp, true);
     return comp.section;
   }
-  comp.body.append(el("p", { class: "sub", text: "Tick the cards that arrived; the rest stay on the way. Split a tile if only some copies came." }));
+  comp.body.append(el("details", { class: "rcpt-checking-help" }, el("summary", { text: "Checking help" }),
+    el("p", { class: "sub", text: "Tick the cards that arrived; the rest stay on the way. Split a tile if only some copies came." }),
+    comp.kind === "cards" ? el("p", { class: "sub", text: "Set condition and language on each card as you check it, or use Tools to fill in the blanks. Unknown details may stay blank." }) : null));
   comp.body.append(rcptPartActions(view, comp));
   if (comp.checks.length) comp.body.append(rcptChecksCard(view, comp));
   comp.body.append(rcptToolbar(view, comp));
@@ -281,9 +287,8 @@ function rcptChecksCard(view, comp) {
   return comp.checkPanel;
 }
 
-/** The filters and the layout switch above a grid, then the bulk tools (filling in blanks, Tick all, clearing
- * the arrival notes). On a phone the bulk tools and the layout switch are behind one Tools button (a sheet), so
- * the grid starts near the top. */
+/** Filters get the board width; utilities stay together below them. A single card/token part also holds
+ * the one delivery shortcut here. On a phone Tools opens layout and per-part bulk tools in a sheet. */
 function rcptToolbar(view, comp) {
   const words = (wide, narrow) => [el("span", { class: "rcpt-wide", text: wide }), el("span", { class: "rcpt-narrow", text: narrow })];
   comp.filterButtons = [["all", "All", "All"], ["todo", "Not checked", "To do"],
@@ -295,8 +300,10 @@ function rcptToolbar(view, comp) {
   comp.fill = tools.fill; comp.fillButton = tools.fillButton;
   return el("div", { class: "rcpt-toolbar" },
     el("div", { class: "rcpt-toolbar-row" },
-      el("div", { class: "segmented", role: "group", "aria-label": "Show" }, comp.filterButtons),
-      el("div", { class: "segmented rcpt-layout", role: "group", "aria-label": "Layout" }, comp.layoutButtons),
+      el("div", { class: "segmented segmented-quiet rcpt-filters", role: "group", "aria-label": "Show" }, comp.filterButtons),
+      el("div", { class: "segmented rcpt-layout", role: "group", "aria-label": "Layout" }, comp.layoutButtons)),
+    el("div", { class: "rcpt-toolbar-row rcpt-toolbar-utilities" },
+      view.comps.length === 1 ? view.everythingBar : null,
       el("button", { type: "button", class: "btn rcpt-tools-button", "aria-haspopup": "dialog", text: "Tools",
         onclick: () => rcptToolsSheet(view, comp) })),
     el("div", { class: "rcpt-toolbar-row rcpt-tools" }, tools.nodes));
@@ -377,8 +384,7 @@ function rcptDrawGrid(view, comp) {
   clear(comp.grid);
   comp.allBlank = rcptAllBlank(comp);
   if (comp.allBlank) {
-    comp.grid.append(el("p", { class: "sub rcpt-all-blank", text: "No card's condition or language is set yet. " +
-      "Set them on each card as you check it, or all at once with “Not set yet”." }));
+    comp.grid.append(el("p", { class: "sub rcpt-all-blank", text: "Condition and language are not recorded yet." }));
   }
   for (const row of comp.rows) {
     row.tile = rcptTile(view, comp, row, false);

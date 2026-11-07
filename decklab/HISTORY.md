@@ -2,6 +2,85 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Remaining UI pages and browser qualification (2026-11-07; E11-S30)
+
+- Windows CI follow-up: compare the fixture root with the canonical runtime path, so an 8.3 temporary-directory spelling does not look like an escape. Production containment and cleanup guards are unchanged. All 22 focused harness/parcel checks pass (one existing directory-symlink skip).
+- Finished table/hint hierarchy, Collection's compact conditional forecast, Shopping identity/navigation/captions and Activity day groups. Save blockers lead long diffs. Receipt controls reflow and the same bar enters normal flow when enlarged text or a short viewport would obscure the board; original checks, drafts, permissions and preview/apply remain.
+- The [final review](design/visual-polish-completion-2026-11-07.md) retains 30 unchanged PNGs, source/cleanup proof, paired comparisons and final 106 page/state, 104 actual Chromium zoom and 24 receipt/persistence cases. Existing capture/editor, composition, variant, shell and task matrices pass. A bounded 4px Keep editing overflow below the 320px target is recorded.
+- Guarded frontend regression: 3,154 tests, two skips, 457.394 seconds. Final affected checks: 179 tests, one existing skip, 58.426 seconds. Ruff, JavaScript syntax, whitespace and source lengths pass. Household Safari/touch/software-keyboard, screen-reader, real-art and production durability gates remain; `E11-S30` stays partial. No household records, visibility or Forge games changed; the normal server stays stopped.
+
+## Receipt tools and empty Considering (2026-11-07; E11-S30)
+
+- Receipt filters omit the enclosing track and use the available phone width, with relative two/one-column fallbacks. A single card/token part groups the retained delivery shortcut beside Tools; mixed/product orders keep its order-wide scope outside inactive parts. Confirmation, row selection, checks, drafts and preview/apply remain.
+- Empty Considering in full/Quick editors has one heading, zero count, Add action and native About Considering help. Populated alternatives retain their behavior; Add/Remove/Undo keep the existing local draft, history and save contract.
+- The [implementation record](design/visual-polish-receipt-considering-2026-11-07.md) retains sixteen inspected PNGs, source-bound proof and paired 28-case task runs. The sampled 430px receipt grid begins 54px earlier; empty Considering is 222→105px at 393px and 198→105px at 820px. The final 44-case capture/editor regression and a measurement-only eight-case tooling smoke complete with stable source, unchanged saved data and confirmed cleanup.
+- All 2,939 guarded UI fixture tests passed in 256.957 seconds. Final focused web/device/receipt/editor/harness/privacy/source checks ran 137 tests (one existing directory-symlink skip) in 31.690 seconds; Ruff, JavaScript syntax and the source-length guard passed. The unrelated backend suite was not repeated.
+- Receipt root-font pointer/Tools/fixed-footer limits remain explicitly open; keyboard captures do not close them. Other page/state families, actual enlargement and household Safari/touch/art/screen-reader acceptance remain. The normal local server stayed stopped; no household records, visibility or Forge games changed.
+
+## Tablet header allocation (2026-11-07; E11-S30)
+
+- The casual 600–999px search field may shrink beside a long Back link, while the contextual title uses remaining space. The avatar keeps its full target. Phone/short-landscape/desktop sizing, field/icon switching and keyboard behavior remain.
+- The [implementation record](design/visual-polish-tablet-header-2026-11-07.md) retains fourteen inspected PNGs and source-bound proof. Paired 54-case header runs fix the 600/624/625px overflow, including enlarged-root stress; the smallest sampled tablet input is 187.61px. Keyboard focus/menus, scrolled geometry, synthetic activity and owned-process cleanup passed, as did the 44-case/editor regression with unchanged saved data.
+- Guarded focused checks passed 147 tests in 30.372 seconds (one existing skip); Ruff, JavaScript syntax and the source-length guard passed. `--suite shell-layout` repeats the cases without a visible browser or household data. The normal local server stayed stopped.
+- Receipt tools, empty Considering, remaining page/state families and actual enlargement/Safari/touch/art/screen-reader acceptance remain; `E11-S30` stays partial. No real records, visibility or Forge games changed.
+
+## Narrow variant group evidence (2026-11-07; E11-S30)
+
+- Constrained By group tables now place group identity/count above full-width bars and ranges through a text-relative container query. Wider tables retain their columns; numerical evidence, unknown values, notes, common scale, actions and table/header relationships remain. The visible deck/decks unit is decorative to assistive technology, and column headers stay accessible.
+- The [implementation record](design/visual-polish-variant-groups-2026-11-07.md) retains twelve inspected before/after PNGs and source-bound proof. Both 26-case group runs and the 44-case/editor regression completed. The 393px bars grow from 166.5px to 345px; 320px/root200 document width returns from 429px to 320px. Native disclosures, evidence equality, axis alignment, saved-data checks and owned-process/runtime cleanup passed.
+- Guarded focused regressions passed 163 tests in 23.418 seconds (one existing skip); Ruff and the source-length guard passed. The opt-in `--suite variant-layout` repeats the width, transition, enlarged-root and failed/running cases. Baseline overflow is recorded diagnostically rather than treated as a visual pass.
+- Separate top-bar overflow remains at narrow tablet widths and enlarged 600px, recorded in the implementation owner. Receipt tools, empty Considering, remaining page/state families and real enlargement/Safari/touch/art/screen-reader checks stay open; `E11-S30` remains partial. No household records, visibility or Forge games changed.
+
+## Shared typography hierarchy (2026-11-07; E11-S30)
+
+- Shared page headings use 28px/600 and section headings 20px/600. Desktop task text and fine-pointer controls use 14px, metadata 13px; phone body and play-guide reading sizes remain. Body now consumes the semantic density token rather than implicitly staying 16px on desktop. Compact deck/editor titles, touch floors, focus and existing numeric scales retain explicit roles.
+- The [implementation record](design/visual-polish-typography-2026-11-07.md) retains fourteen inspected paired PNGs, type/allocation measurements and source-bound proof. Each phase completed 44 capture cases, the editor interaction sequence and 40 composition cases, adding short-phone Testing and QHD Commander Overview. Saved-data checks, source consistency, no document overflow and owned-process/runtime cleanup passed.
+- The broader guarded frontend regression passed 3,125 tests in 284.880 seconds (two skips). Focused web, density, editor-header, harness and source-inventory checks passed 111 tests (one existing link-creation skip); Ruff and the source-length guard passed. The unrelated full backend suite was not repeated.
+- The normal local server remains stopped. No household data, visibility or Forge games changed. Remaining page/state families, table typography, actual enlargement and Safari/device/art/screen-reader acceptance remain; `E11-S30` stays open.
+
+## Populated deck and library composition (2026-11-07; E11-S30)
+
+- Deck headers use compact art/identity and neutral metadata, with a full-width title above tablet actions. Availability keeps every qualification on a quieter neutral surface. Known empty play history is one line; populated and unread histories retain their separate behavior.
+- Library reading surfaces and status tags are quieter, entry actions sit with identity, and narrow desktop names wrap above their evidence instead of competing with fixed columns. Art, pips, stripes, capabilities, selection and routes remain.
+- The [implementation record](design/visual-polish-deck-library-2026-11-07.md) retains twelve inspected before/after PNGs and source-bound proof. Both paired 38-case composition runs completed, as did the existing 42-case capture matrix/editor suite; saved-data digests, source consistency and cleanup passed. The opt-in `--suite composition` makes these states repeatable without a visible browser or household data. Focused guarded deck/library/harness checks, Ruff and the source-length guard passed.
+- The full guarded fixture suite passed **12,294 tests, with 456 expected skips**, in 1,210 seconds. Database integration, native runtime, real Forge and device acceptance retain their separate qualification boundaries.
+- No normal service, household records, visibility settings or Forge games changed. Typography/state and remaining page-family qualification, QHD deck Overview, actual enlargement and device/Safari/art/screen-reader acceptance remain; `E11-S30` stays open.
+
+## Rendered UI interaction and readability repairs (2026-11-07; E11-S30)
+
+- Wishlist tiles/sheets distinguish unavailable counts from known zero and positive availability. Zoom retains the live sheet's Notes, Source and printing, with focus/history return and route/person disposal of its private nested contexts.
+- Variant result actions use current edit capability and fresh editor permission checks for home/member casual and Commander decks. Handoffs remain local drafts, preserve Commander/partner sections and reject ambiguous changes; stale route, person, result, control, confirmation and draft completions cannot replace another context. Exclusion reasons retain full text opacity and explicit omitted-state wording.
+- Library How to play reaches the existing Overview guide with owned deferred focus and sticky clearance. Accessory Save includes the visible active crop through Done's local commit and its existing single request; Cancel, failure, retry and picture replacement keep their boundaries.
+- The [repair record](design/visual-polish-repairs-2026-11-07.md) retains eight inspected light/dark captures, source-bound proof and measured exclusion-reason contrast (9.867:1 light, 9.932:1 dark). All 42 final rendered cases and the editor suite completed with unchanged saved Wishlist/deck/draft data, stable source fingerprints and complete owned-process/runtime cleanup. Guarded focused regressions, ruff and the source-length check passed.
+- The full fixture run ran 12,290 tests (456 skips) and exposed two stale source assertions about the editor's old grid and retired Git storage versus a local-crop comment. Those checks were corrected; all 56 final affected regressions passed. No application/tool source changed after capture; the full suite was not repeated after the test-only corrections.
+- No real records, visibility, services or Forge games changed. Browser persistence, actual enlargement, populated-page composition and device/Safari/art/screen-reader qualification remain open; `E11-S30` stays open.
+
+## First visual-polish implementation (2026-11-07; E11-S30)
+
+- Shared controls now distinguish neutral secondary/quiet actions, selected choices and filled primary actions. Ordinary controls use 8px corners, lighter label weight and the existing reading sizes/touch floors; main navigation and Testing views use underlined current states.
+- Testing gives its selected task the appropriate lead action and keeps historical evidence in the same desktop column as current results, with historical labels intact. Receive delivery puts general context/help into disclosures, composes its footer and restores a 44px metadata-recovery target. Editor names/printing reflow in constrained panes; Undo/Discard recover immediately after blocked, stale or failed Save checks, scoped to the original editor.
+- The [implementation record](design/visual-polish-implementation-2026-11-07.md) retains before/after captures, source-bound proof, measured typography and remaining work. All 2,914 UI fixture tests passed. All 32 final capture cases and the editor interaction suite completed, native help disclosures worked, saved deck/draft digests stayed unchanged and owned processes/runtime cleaned up. Focused static/web and tooling checks, ruff and the source-length guard passed (one separate process qualification skipped). Real-device, actual enlargement, art, wider state/page and screen-reader acceptance remain; R01–R05 and R07 are still open.
+- The normal background listener was stopped and left stopped. No household records, visibility settings or Forge games were changed.
+
+## Repeatable headless UI review (2026-11-07; E11-S30 verification)
+
+- `python scripts/ui_review.py` now runs the disposable rendered-review workflow
+  from the repository. Its 32-case light/dark matrix and editor interaction suite
+  use an isolated headless browser, so the desktop remains available. Explicit
+  `--setup` installs the pinned local Playwright dependency; normal runs install
+  nothing. Output defaults to a fresh gitignored evidence folder.
+- A dedicated worker installs fixture guards before application imports and
+  serves only synthetic inventory, drafts and result adapters. The parent checks
+  the owned worker, runtime token and HTTP identity challenge. Both HTTP layers
+  refuse mutations other than dry-run deck checks, and the browser never attaches
+  to an existing profile. Failures and cancellation retain evidence and check
+  owned-process and temporary-data cleanup.
+- The full 35-capture run, five-capture smoke, bounded timeout cleanup and guarded
+  fixture/lifecycle tests were checked on Windows. POSIX forced-process ownership
+  was tested with process-map fakes; no Linux browser run is claimed. Screenshots
+  remain review evidence, not automatic product or accessibility acceptance. The
+  seven findings in the dated review reports are not fixed by this tooling.
+
 ## Deterministic warm-worker progress checks (2026-11-06)
 
 - The warm-pool progress checks separate scripted event/clock coverage from subprocess integration. Scripted completed games prove progress before a chunk ends, throttling and heartbeats during a stall; the fake worker processes prove monotonic completed-game counts, matching wins and the final saved total. No assertion requires a busy runner to sample an arbitrary number of distinct totals.

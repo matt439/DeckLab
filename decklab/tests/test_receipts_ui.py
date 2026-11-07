@@ -451,7 +451,8 @@ class ReceiptBoardTests(unittest.TestCase):
             pictures:null,decks:null});
           clear(main);const v=drawReceipt(d,routeToken);
           assert(!v.comps.some(c=>c.selected));assert.equal(main.querySelectorAll('.rcpt-arrived').length,2);
-          assert(main.textContent.includes('1 card from Fixture shop · part cards-2'));
+          assert(v.comps[1].section.querySelector('h2').textContent==='1 card · part cards-2');
+          assert(main.querySelector('.rcpt-page-head').textContent.includes('Fixture shop'));
           // Each part's cards show before it's chosen (dimmed, no ticks); a tap opens the viewer, not the sheet.
           assert.equal(main.querySelectorAll('.card-tile').length,3);assert(!main.querySelector('.rcpt-tick'));
           assert(v.comps[0].section.classList.contains('is-off'));

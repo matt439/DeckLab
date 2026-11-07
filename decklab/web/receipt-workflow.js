@@ -78,10 +78,10 @@ function rcptBuildBar(view) {
   view.recordReason = el("span", { id: "rcpt-record-reason", class: "rcpt-record-reason", "aria-live": "polite" });
   view.primary = el("button", { type: "button", class: "btn btn-primary", text: "Record arrival",
     "aria-describedby": "rcpt-record-reason", onclick: () => rcptRecord(view) });
-  // One row on a phone too: the progress over the date on the left, the main button on the right.
-  view.bar = actionBar({ status: [el("span", { class: "rcpt-status-line" }, view.progress, view.stale), view.recordReason, view.blanks,
-    el("label", { class: "rcpt-date" }, el("span", { text: "Arrived" }), view.dateSelect, view.dateInput)],
-  actions: [view.primary] });
+  // Summary/recovery stay together; the arrival date and explicit Record action form one control row.
+  view.bar = actionBar({ status: [el("div", { class: "rcpt-progress-row" },
+    el("span", { class: "rcpt-status-line" }, view.progress, view.stale), view.blanks), view.recordReason],
+  actions: [el("label", { class: "rcpt-date" }, el("span", { class: "rcpt-date-word", text: "Arrived" }), view.dateSelect, view.dateInput), view.primary] });
   view.bar.node.classList.add("rcpt-bar");
 }
 

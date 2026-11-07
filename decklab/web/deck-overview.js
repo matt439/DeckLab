@@ -193,13 +193,13 @@ function deckOverviewPlayed(data) {
   if (data.summary.trial) return ptrDeckNotice(data);         // precon-trial.js: a trial isn't played at home (E3-S39)
   const p = data.played;
   if (!p) return null;
-  const parts = [el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-played", text: "Played at home" }))];
   if (!p.games || !p.last) {
-    parts.push(el("p", { class: "deck-played", text: "Not played at home yet" }));
-  } else {
-    parts.push(el("p", {}, factLine("deck-played", [`Last played ${p.last}`, plural(p.games, "game")])));
-    parts.push(deckPlayedSince(p.since, data.summary));
+    return el("div", { class: "deck-overview-played deck-played-empty" },
+      el("p", { class: "deck-played", text: "Not played at home yet" }));
   }
+  const parts = [el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-played", text: "Played at home" }))];
+  parts.push(el("p", {}, factLine("deck-played", [`Last played ${p.last}`, plural(p.games, "game")])));
+  parts.push(deckPlayedSince(p.since, data.summary));
   return el("section", { class: "deck-section deck-overview-played", "aria-labelledby": "h-overview-played" }, parts);
 }
 

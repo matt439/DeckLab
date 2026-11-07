@@ -75,6 +75,61 @@ class DeckPageUiTests(unittest.TestCase):
           same(deckViewOf(new URLSearchParams('id=a&v=target&tab=matchups&part=gauntlet')), {tab: 'matchups', filter: 'all'});
         """)
 
+    def test_guide_destination_opens_overview_and_focuses_after_reading_restore(self):
+        self.run_js("""
+          for (const kind of ['casual', 'commander']) {
+            const page = makePage(); page.summary.kind = kind; page.summary.id = kind + '/test';
+            page.guide = {changed_on: '2026-11-01', sections: [{title: 'Game plan', markdown: 'Use Elf.'}]};
+            const hash = deckHref(page.summary.id) + '&part=guide';
+            clear(main); location.hash = hash;
+            drawDeck(page, deckViewOf(parseHash().params));
+            const guide = main.querySelector('#sec-guide');
+            assert.equal(guide.scrolled, undefined, 'load must restore reading position before the destination');
+            assert.equal(panel('overview').hidden, false);
+            assert(guide.querySelector('.guide-stale'));
+            assert(guide.textContent.includes('Use Elf.'));
+            assert.equal(location.hash, hash, 'Back/Forward retains the supported destination');
+            flushTimers();
+            assert.equal(guide.scrolled, 1);
+            assert.equal(document.activeElement, guide);
+            assert.equal(guide.getAttribute('tabindex'), '-1');
+            assert(main.querySelector('.deck-lists').querySelectorAll('a').every((a) =>
+              a.getAttribute('href').endsWith('&part=guide')));
+            tab('cards').click();
+            assert(!location.hash.includes('part='));
+            assert(location.hash.includes('tab=cards'));
+          }
+          // A direct or formerly valid link still reaches an honest empty-guide state.
+          open('#/deck?id=casual%2Ftest&v=target&tab=stats&part=guide');
+          const empty = main.querySelector('#sec-guide'); flushTimers();
+          assert(empty.textContent.includes('No play guide yet.'));
+          assert.equal(empty.scrolled, 1);
+          assert.equal(panel('overview').hidden, false);
+        """)
+
+    def test_pending_guide_jump_cannot_move_a_replacement_route_person_draw_or_tab(self):
+        self.run_js("""
+          const hash = '#/deck?id=casual%2Ftest&v=target&part=guide';
+          for (const leave of [
+            () => { routeToken += 1; },
+            () => { state.profile = {...state.profile, id: 'user2'}; },
+            () => { location.hash = '#/library'; },
+            () => { clear(main); drawDeck(makePage()); },
+            () => { tab('stats').click(); },
+            () => { clear(main); }
+          ]) {
+            state.profile = {id: 'matt', name: 'Matt', plays_as: 'user'};
+            open(hash); const guide = main.querySelector('#sec-guide');
+            leave(); const nextFocus = document.activeElement;
+            flushTimers();
+            assert.equal(guide.scrolled, undefined);
+            assert.equal(document.activeElement, nextFocus, 'a stale jump cannot reclaim focus');
+          }
+          // Returning through the same supported address creates a fresh, owned jump.
+          open(hash); const returned = main.querySelector('#sec-guide'); flushTimers();
+          assert.equal(returned.scrolled, 1);
+        """)
+
     def test_banner_answers_can_i_build_it(self):
         self.run_js("""
           open('#/deck?id=casual%2Ftest&v=target');
@@ -625,10 +680,8 @@ class DeckPageUiTests(unittest.TestCase):
         self.assertIn("flex-wrap: wrap;", narrow)
         self.assertIn("> .menu-wrap { margin-left: auto; }", narrow)
         self.assertIn(".deck-build { flex: none; white-space: nowrap; }", css)
-        # On an iPad on its side the buttons sit over the art: the title leaves them room, and Build deck has
-        # Edit's outline there.
-        self.assertIn(".deck-page-head:has(.deck-build) .deck-title-row h1 { max-width: calc(100% - 320px); }", css)
-        self.assertIn(".deck-head-actions > .deck-actions, .deck-head-actions > .deck-build {", css)
+        # Tablet title/action allocation is measured by the populated rendered composition suite;
+        # the retired art-overlay title cap is no longer a layout requirement.
 
     def test_head_keeps_the_title_row_and_links_keep_the_tab(self):
         self.run_js("""

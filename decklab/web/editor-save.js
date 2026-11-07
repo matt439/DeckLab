@@ -459,8 +459,12 @@ async function saveNow({ viewAfter = false } = {}) {
     await doSave(null, button, { viewAfter });
   } finally {
     ed.saving = false;
-    if (button && editor === ed && button.dataset.busy) unbusy(button);
-    if (editor === ed) refreshKeyboardHints();
+    if (current()) {
+      if (button?.dataset.busy) unbusy(button);
+      // Checks redraw these retained controls while saving is still true. Restore their live state
+      // after blocked/failed/stale reviews too, without waiting for another draft edit.
+      drawBar();
+    }
   }
 }
 
@@ -571,6 +575,14 @@ function drawReview(sheet, a) {
     sheetActions(sheet, [{ text: "Keep editing", kind: "primary", onclick: () => sheet.close() }]);
     return;
   }
+  // The reason a disabled Save cannot proceed must lead even a long change list.
+  if (blocks.length) {
+    body.append(blocksBox(blocks, () => {
+      ed.confirmEmpty = true;
+      sheet.close();
+      reviewSave();
+    }));
+  }
   const title = isNew ? norm("title", ed.fields.title) : null;
   if (isNew) {
     body.append(el("dl", { class: "review-facts" },
@@ -631,13 +643,6 @@ function drawReview(sheet, a) {
     body.append(el("p", { class: "sub", text: `After saving: ${plural(counts.main, "card")}` +
       (kind === "commander" ? " with the commander" : " in the deck") +
       (counts.sideboard ? `, ${counts.sideboard} in the sideboard` : "") + "." }));
-  }
-  if (blocks.length) {
-    body.append(blocksBox(blocks, () => {
-      ed.confirmEmpty = true;
-      sheet.close();
-      reviewSave();
-    }));
   }
   if (a.warnings.length) {
     const list = warningList(a, () => sheet.close());

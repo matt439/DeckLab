@@ -1,5 +1,7 @@
 # Deck Lab: visual design (P1)
 
+> **Visual review follow-up, 2026-11-07:** Matt's clarified objective is to diagnose and resolve the current UI's amateurish feel. The [visual direction](visual-polish-direction-2026-11-07.md) owns the continuing rollout. Shared controls, Testing, receipt/editor repairs and populated deck/library composition are implemented; the [UI kit](../UI-KIT.md) records their current rules. Original study decisions below remain historical where those records supersede them. Wider state, typography and device qualification remain open.
+
 The look Deck Lab's pages are moving to, and how to get there from today's UI kit without a rewrite.
 
 - **Decided:** 2026-10-24, by Matt: "P1, split lab + mana decks".
@@ -12,7 +14,7 @@ The look Deck Lab's pages are moving to, and how to get there from today's UI ki
 
 P1 is one design system at two densities.
 
-- **Casual, on the phone (and the iPad in portrait).** Decks are tiles tinted in their mana colours, with art on the left, a colour stripe across the top and pips on the art. Big type, 44 px targets, words for counts ("60 of 60 owned"). This is User1's Deck Lab: pick a deck, see it's ready, play.
+- **Casual, on the phone (and the iPad in portrait).** Deck tiles use neutral reading surfaces, art on the left, a colour stripe across the top and pips on the art. Big type, 44 px targets, words for counts ("60 of 60 owned"). This is User1's Deck Lab: pick a deck, see it's ready, play.
 - **Lab, on the desktop (and the iPad in landscape).** A pro tool: a top bar, dense rows, a list on the left and the selected thing's detail on the right, mono numerals, keyboard hints. This is where Matt builds, shops, receives and tests.
 - **Simulations are the edge.** What Deck Lab has that a spreadsheet or Moxfield doesn't is Forge. Win rates, ranges, freshness and swap tests have their own components, look the same at both densities and are always set in mono.
 
@@ -113,9 +115,10 @@ Two families:
 **Which numbers are mono.**
 
 - **A Forge number is always mono**, at both densities: win rate, range, games, rank, points, "game 37 of 200".
-- **Lab density** also uses mono for counts (`60 / 60`, filter counts, `13 decks`), quantities, deck ids (`casual/izzet-otters`), dates in meta lines, condition and language codes, table money (`Ref AUD` columns) and `kbd` hints.
+- **Lab density** also uses mono for counts (`60 / 60`, filter counts, `13 decks`), quantities, deck ids (`casual/izzet-otters`), dates in meta lines, table money (`Ref AUD` columns) and `kbd` hints.
 - **Casual density** uses Figtree for counts, with `font-variant-numeric: tabular-nums` where they line up, and mono only for Forge numbers.
 - **Words are never mono**, even in a mono line: deck names, "basic land", "Planned", "Done" are Figtree beside their mono numbers.
+- **Condition/language abbreviations stay in the body font**, including the lab Card list. They are labels rather than numerical evidence.
 - **Printings stay in the body font** ("FDN 227"), with tabular numbers, at both densities. This keeps UI-KIT.md's existing rule; the collection and editor drawings set them in mono, and the receipt review moved them back. A printing is a name, not a measured number.
 - Ranges use an en dash (`59–63%`), negatives the real minus (`−0.4`, `−1 Abrade`).
 
@@ -123,20 +126,23 @@ Two families:
 
 | Role | Token | Casual (< 1000 px) | Lab (≥ 1000 px, fine pointer) |
 |---|---|---|---|
-| Page title | `--fs-h1` | 32 / 800 / −0.03em | 22 / 800 / −0.025em |
-| Hero deck name | `--fs-hero` | 32 / 800 | 30 / 800 / −0.03em, white on art |
+| Page title | `--fs-h1` | 28 / 600, normal tracking | 28 / 600, normal tracking |
+| Section heading | `--fs-lg` | 20 / 600 | 20 / 600 |
+| Compact deck/editor title | `--fs-xl` / `--fs-h1` | 24 / 600 on a phone; saved editor 24 below 1000px | 28 / 600, neutral header; former over-art hero retired |
 | Panel eyebrow | `--fs-eyebrow` | 13 / 800 / .08em uppercase | 11 / 800 / .08em uppercase, `--accent-strong` |
 | Group heading | `--fs-group` | 13 / 800 uppercase | 11 / 800 uppercase, mono count 11 |
-| Body | `--fs-body` | 16 | 13, line-height 1.4 |
-| Row or tile title | `--fs-row` | 17 / 700 | 14 / 700 |
-| Meta | `--fs-meta` | 14, `--ink-2` | 12, `--ink-3` |
-| Button | `--fs-btn` | 15–16 / 700 | 12.5–13 / 700 |
-| Table header | `--fs-th` | (no tables) | mono 10.5 / 600 / .07em uppercase, `--ink-3` |
+| Body | `--fs-body` | 16 | 14, line-height 1.5; guide prose 16 / 1.65 |
+| Row or tile title | `--fs-row` | 17; deck/library/Collection 600 | 14; deck/library/Collection 600, other retained roles 700 |
+| Meta | `--fs-meta` | 14, `--ink-2` | 13, `--ink-3` |
+| Button | `--fs-btn` | 15 / 500, primary 600 | 14 / 500, primary 600 |
+| Table header | `--fs-th` | reading font at `--fs-meta`, semibold | reading font at `--fs-meta` (13px), semibold sentence case, `--ink-3` |
 | Progress figure | `--fs-fig-mid` | 24 / 600 | mono 28 / 600 (Packing plan's `19 / 39`) |
 | Big win rate | `--fs-fig` | mono 40 / 600, "%" 24 | mono 36 / 600 / −0.04em, "%" 22 |
 | Inline win rate | `--fs-fig-sm` | mono 16 / 600 | mono 13 / 600, range 10.5 / 500 `--ink-2` |
 
-10.5 px is only for uppercase table headers and `kbd`. Nothing else people read goes below 11 px at lab density or 14 px at casual density.
+10.5px remains for compact `kbd` hints. Table labels use the metadata scale; ordinary reading text keeps its existing density roles.
+
+**7 November typography revision:** the [rendered comparison](visual-polish-typography-2026-11-07.md) supersedes the original title/body/meta/button values above. Base headings now consume these shared roles and `body` uses `--fs-body`; its earlier implicit desktop prose was actually 16px. Touch-lab buttons remain 15px and fields 16px; fine-pointer lab fields are 14px. The later page-family treatment gives table headers and table group names Figtree semibold sentence-case labels at the metadata size; numeric evidence, pips and touch floors retain their separate scales. The QHD 112.5% root enlargement remains.
 
 ### 2.4 Spacing
 
@@ -212,15 +218,15 @@ Same name and same look at both densities; only size changes. Each lives in `com
 ### 4.1 Deck tile (casual)
 
 - White tile, `--r-panel` 14, `--shadow-1`. A 5 px colour stripe across the top. Art on the left, 112 px wide and the tile's full height, on its art placeholder colour while loading, with the pips overlaid at its bottom-left.
-- The rest of the tile is the deck's tint gradient (135deg). Name 17 / 700; meta 14 `--ink-2`; status pill; the owned bar with words ("87 owned · 4 on the way · 9 to buy"); if tested, a Forge line (win rate mono 16 / 600, "Forge field", freshness badge 24 px). A Commander tile's Forge line is its popular-decks figure instead ("vs popular decks", E3-S36), muted with "before the last change" when it's from before the list's last change.
+- The rest of the tile is a neutral reading surface. Name 17 / 600; meta 14 `--ink-2`; quiet status tag; the owned bar with words ("87 owned · 4 on the way · 9 to buy"); if tested, a Forge line (win rate mono 16 / 600, "Forge field", freshness badge 24 px). A Commander tile's Forge line is its popular-decks figure instead ("vs popular decks", E3-S36), muted with "before the last change" when it's from before the list's last change.
 - The whole tile is one link to the deck page. No "not tested" line when there's no result.
 - At least 104 px tall, 112 with a Forge line.
 
 ### 4.2 Deck row (lab)
 
-- 54 px, `--r-row` 8, 2 px apart. A 56 × 38 art thumbnail with a 3 px stripe on its bottom edge; name 14 / 700 and meta 12 `--ink-3`; 16 px pips; the owned bar with mono text (`87 +4 … 9 to buy`: `+4` in `--accent-strong`, "to buy" in `--missing`); the Forge field column (inline win rate, range, freshness).
+- Minimum 54 px, `--r-row` 8, 2 px apart. A 56 × 38 art thumbnail with a 3 px stripe on its bottom edge; name 14 / 600 and meta 12 `--ink-3`; 16 px pips; the owned bar with mono text (`87 +4 … 9 to buy`: `+4` in `--accent-strong`, "to buy" in `--missing`); the Forge field column (inline win rate, range, freshness). From 1000 to 1280px the name uses the first line beside the art, with availability/results beneath; it wraps instead of being squeezed between fixed evidence columns.
 - Hover `--hover`. Selected: `--accent-soft` with a 1 px `--accent-line` border, owned-bar track `--accent-track`.
-- Rows grouped under Built, Building and Ideas headings (11 / 800 uppercase, mono count). Built heading `--accent-strong`, Building `--building-ink`, Ideas `--ink-2`. Rows omit the status pill; the heading says it.
+- Rows grouped under Built, Building and Ideas headings (semantic small text / 600, mono count). Built heading `--accent-strong`, Building `--building-ink`, Ideas `--ink-2`. Rows omit the status pill; the heading says it.
 - A casual deck with no field result shows `—` in `--ink-3`. A Commander deck shows its standard-sample figure in the cell (against popular decks, E3-S36), `—` when untested, blank while the numbers load; a figure from before the list's last change is muted ("before the last change"). (Changed deliberately with E3-S36: until then a Commander deck left the cell blank.)
 
 ### 4.3 Mana pips, identity stripe, tint and deck swatch
@@ -269,7 +275,7 @@ Same name and same look at both densities; only size changes. Each lives in `com
 
 | Page | List | Detail | Stacks at |
 |---|---|---|---|
-| Library | `minmax(0, 720px)` (880 px from 2200) | `1fr` (46% / 54% from 1000 to 1280); its art 5:2 but at most `min(240px, 30vh)` high | < 1000 |
+| Library | `minmax(0, 720px)` (880 px from 2200) | `1fr` (46% / 54% from 1000 to 1280); neutral reading surface, identity/actions first; its art 5:2 but at most `min(180px, 24dvh)` high | < 1000 |
 | Collection | `1fr` (the table) | 400 px (340 from 1000 to 1280) | < 1000 |
 | Shopping | 560 px (orders, follow-ups, by shop) | `1fr` (queue and missing tables) | ≤ 1280 |
 | Receive delivery | `minmax(0, 1fr)` (the parts) | 452 px, sticky | < 1000 |
@@ -283,16 +289,20 @@ Same name and same look at both densities; only size changes. Each lives in `com
 
 Today's `table.data` (sticky header, `.th-sort`, `.num`) is the base. P1 adds:
 
-- **Rows:** 36 px (44 on a coarse pointer), 1 px `--divider` lines, hover `--hover`. Header 30 px, `--surface-2`, `--fs-th`, sticky at `--shell-top`.
+- **Rows:** 36 px (44 on a coarse pointer), 1 px `--divider` lines, hover `--hover`. Header 30px minimum, `--surface-2`, Figtree semibold sentence case at `--fs-th` (`--fs-meta`), sticky at `--shell-top`; enlarged labels may grow the row.
 - **Selected row:** a table row can't have a radius or border, so: `--accent-soft` on every cell, inset 1 px `--accent-line` top and bottom, a 2 px `--accent` inset bar on the first cell, the name in `--accent-strong`. Mark it with `data-selected` on the `<tr>` and `aria-current="true"` on the row's name button (`aria-selected` isn't valid on a plain table row).
 - **Matching row** (new): rows a choice elsewhere points to (By shop's chosen shop): `--accent-soft`, no border, a 7 px accent dot and `--accent-strong` 700 in the matching cell, and a removable chip above the table ("Marking MTGMate's rows").
-- **Group rows:** the group heading style (30 px, 11 / 800 uppercase, mono count) as a `role="row"` with one `role="rowheader"` spanning the columns.
+- **Group rows:** a 30px minimum, Figtree semibold at `--fs-meta` in sentence case, with a separate mono count. Use a `role="row"` with one `role="rowheader"` spanning the columns.
 - **Unknown data:** a mono em dash in `--ink-3`, `aria-hidden`, with visually hidden words ("Condition not recorded"). Not an `aria-label` on a span.
 - **Thumbnails in rows:** 30 px wide card pictures (casual rows 52–56 px), `--r-card`, `--shadow-img-sm`, empty `alt` when the name is beside them. No picture: a `--surface-chip` card frame with a 1 px `--border-strong` inset ring and a card glyph in `--ink-4` (a target glyph for a token card).
 - **Sorting and labels:** a sort button's accessible name starts with its visible words ("Sort: Name A–Z"; "~AUD row: estimated AUD for the row, sort").
 - **Paging:** a footer row: "Rows 851–875 of 1,104", 30 px round previous and next, mono "35 / 45", `kbd` hints. Casual lists end with a secondary "Show more".
 - **ARIA:** use a real `<table>` wherever the content is tabular. If a grid of divs is needed for layout, every `columnheader` and `cell` goes inside a `role="row"` (with `display: contents` if needed). A row that's a link isn't a table row: make it a list of links with a spoken label (the iPad Matchups rows).
-- **Casual has no tables.** It has rows inside one white `--r-panel` panel: thumbnail, name 17 / 700, the main number top right, a meta line 14 `--ink-2`, and an optional deck line with a swatch. The whole row is one 44 px+ button. Keep its accessible name to the name and the one or two facts that matter, not every line joined.
+- **Casual has no tables.** It has rows inside one white `--r-panel` panel: thumbnail, name 17 / 600, the main number top right, a meta line 14 `--ink-2`, and an optional deck line with a swatch. The whole row is one 44 px+ button. Keep its accessible name to the name and the one or two facts that matter, not every line joined.
+
+Field labels are semibold; supporting `.field-hint` text stays regular, including direct child spans and Settings forms.
+
+The remaining page families use the same quiet grammar: Shopping's stacked jump links are underlined navigation rather than outlined pills; its printing and waiting captions use text-relative line height and may grow their table rows. Its Card column prefers 220px to preserve names beside the original thumbnail and menu; other columns remain available through the existing bounded scrolling. Collection's card names are semibold and busy results keep full readable ink beside their loading status. Its pending-storage scenario keeps concise conditional facts, stale/unknown/over-capacity guidance and data problems visible, with assumptions, source rows and exclusions in one native disclosure. Activity uses one neutral surface per day with dividers between changes, preserving the original per-change controls and disclosures.
 
 ### 4.8 Sheets and bars
 
@@ -465,6 +475,14 @@ What the round didn't settle, and where P1 didn't hold up as written.
 21. Receive delivery: the drawing dropped the separate Preview step. The page's preview fingerprint (UI-KIT, `receipt-workflow.js`) still has to bind what's saved; a live Where these go doesn't replace that check.
 
 ## 7. Rollout
+
+The [initial rendered review of 2026-11-07](rendered-ui-review-2026-11-07.md) and its [follow-up](rendered-ui-review-2026-11-07-pass2.md) record seven reproduced, unfixed UI findings with disposable synthetic evidence. Native interaction checks and the headless capture matrix are scoped by their coverage ledgers; remaining states and device acceptance stay separate from the implementation evidence below.
+
+The [visual diagnosis and revised direction](visual-polish-direction-2026-11-07.md) now own the overall visual delivery order. The [rendered UI change plan](rendered-ui-change-plan-2026-11-07.md) consolidates functional findings, screenshot analysis, source seams and acceptance checks. Shared visual improvement and those repairs can progress together; the planning passes made no production UI changes.
+
+**First implementation, 2026-11-07:** the shared controls now use 8px corners, neutral secondary buttons, quieter utility labels and an outlined neutral selected segment with inherited ink. Primary actions retain accent fill; page-view tabs and the main navigation use accent underlines. This supersedes the capsule, violet-secondary and filled-segment rules in the original component/navigation specification and historical rollout below; chips and counts keep their distinct pill treatment. Testing now gives pairing the lead only on Matchups, keeps historical evidence in the same evidence area as current results, and puts general scope help in a disclosure. Receipt context/help and footer composition, constrained editor row identity and retained footer recovery have their current contracts in [UI-KIT.md](../UI-KIT.md). This is a first slice; the owner reports retain the executed evidence and remaining review/device gates.
+
+For repeat rendered checks, use the [headless UI review command](../ui_review/README.md). It captures synthetic evidence without desktop input; inspect the output and retain the separate device gates.
 
 Each slice ships on its own on top of today's UI kit: no page is rewritten, and after each one Deck Lab works and looks consistent (if part old, part new). Each slice runs the web tests (`test_web.test_page_files_use_the_scales` and the page UI tests), is checked at the sizes in UI-KIT's Test devices table in both themes, updates UI-KIT.md, and is committed before the server is restarted. Turn each into a story in [stories.md](stories.md) and a row in TODO.md when it's scheduled.
 

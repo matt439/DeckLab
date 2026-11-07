@@ -1,4 +1,4 @@
-/* The Activity page (activity.js): the filter chips, then the changes grouped by day, a card each with its
+/* The Activity page (activity.js): the filter chips, then the changes in one surface per day, each with its
    headline, when and from where, and its first rows. Phone first; only the theme's tokens, so both themes and
    forced colours follow. The page keeps to a readable width on wide screens; from 1600px the filters become a
    rail beside the changes, so the screen's width holds both rather than a column with empty space beside it. */
@@ -11,9 +11,10 @@
 .activity-days { display: grid; gap: var(--s-5); margin: var(--s-4) 0; }
 .activity-day { min-width: 0; }
 .activity-day-head { margin: 0 0 var(--s-2); font-size: var(--fs-md); color: var(--ink-2); }
-.activity-list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s-3); }
-.activity-change { padding: var(--s-3) var(--s-4); border: 1px solid var(--border); border-radius: var(--r-lg);
-  background: var(--surface); box-shadow: var(--shadow-1); min-width: 0; }
+.activity-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0;
+  border: 1px solid var(--border); border-radius: var(--r-panel); background: var(--surface); }
+.activity-list > li + li { border-top: 1px solid var(--divider); }
+.activity-change { padding: var(--s-3) var(--s-4); min-width: 0; }
 .activity-headline { margin: 0; font-size: var(--fs-md); font-weight: var(--fw-semibold); line-height: var(--lh-tight);
   overflow-wrap: anywhere; }
 .activity-headline a { color: inherit; text-decoration: underline; text-decoration-color: var(--border-strong);
@@ -56,6 +57,7 @@
   .activity-filters, .activity-days, .activity-more, .activity-empty { max-width: none; }
 }
 @media (forced-colors: active) {
-  .activity-change, .activity-empty { border: 1px solid CanvasText; }
+  .activity-list, .activity-empty { border: 1px solid CanvasText; }
+  .activity-list > li + li { border-color: CanvasText; }
   .activity-when, .activity-where, .activity-reason, .activity-rows, .activity-note { color: CanvasText; }
 }

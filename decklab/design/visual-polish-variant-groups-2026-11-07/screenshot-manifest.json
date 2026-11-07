@@ -1,0 +1,86 @@
+[
+  {
+    "file": "before-groups-393-light.png",
+    "phase": "before",
+    "capture": "groups-393-light",
+    "sha256": "dd95b732c9843f0ef13cf9a902eebf044cfd9739eca23503da97d7e00883518c",
+    "source_bytes_unchanged": true
+  },
+  {
+    "file": "before-groups-393-dark.png",
+    "phase": "before",
+    "capture": "groups-393-dark",
+    "sha256": "468325f76b07b9e21cc4e57fefcde6e65cd1ada2ba0ba4581a1515b60bd794a9",
+    "source_bytes_unchanged": true
+  },
+  {
+    "file": "before-groups-393-light-lower.png",
+    "phase": "before",
+    "capture": "groups-393-light-lower",
+    "sha256": "497b5c038af4a632a7320a6fd0c0d10c393977da7946885d98e71a79b6421ac7",
+    "source_bytes_unchanged": true
+  },
+  {
+    "file": "before-groups-root200-320-light.png",
+    "phase": "before",
+    "capture": "groups-root200-320-light",
+    "sha256": "eb6e1b45bef2c4180abcadb147cfbf07bc93238f3d26d468b30ab1b5c432c0a6",
+    "source_bytes_unchanged": true
+  },
+  {
+    "file": "before-groups-root200-600-light.png",
+    "phase": "before",
+    "capture": "groups-root200-600-light",
+    "sha256": "46ea93d1bfa2f138857e12673c1c22b9e80a1452062271ae06fdca06f3a11793",
+    "source_bytes_unchanged": true
+  },
+  {
+    "file": "before-groups-1440-dark.png",
+    "phase": "before",
+    "capture": "groups-1440-dark",
+    "sha256": "372948e35eda238bde47f438d1f175e76df4cc41d46c863fbd70602d58bd4700",
+    "source_bytes_unchanged": true
+  },
+  {
+    "file": "after-groups-393-light.png",
+    "phase": "after",
+    "capture": "groups-393-light",
+    "sha256": "97d760e7b8829420ee4de584ce41678b9942acf927cdbec42d366b96e7f6e991",
+    "source_bytes_unchanged": true
+  },
+  {
+    "file": "after-groups-393-dark.png",
+    "phase": "after",
+    "capture": "groups-393-dark",
+    "sha256": "f37f6233e62e1355205f6f02af2498c368c8b3d1b3f36aeedab5bac46649164e",
+    "source_bytes_unchanged": true
+  },
+  {
+    "file": "after-groups-393-light-lower.png",
+    "phase": "after",
+    "capture": "groups-393-light-lower",
+    "sha256": "bbd5befbd7d4d5fafd88ab0f4627b2f7a84c27b0a504949a66e83b64bcfe14b2",
+    "source_bytes_unchanged": true
+  },
+  {
+    "file": "after-groups-root200-320-light.png",
+    "phase": "after",
+    "capture": "groups-root200-320-light",
+    "sha256": "90a994dc643c1a0f04a2cde8729af9835d3af27cc952bdde70a09097d0d88214",
+    "source_bytes_unchanged": true
+  },
+  {
+    "file": "after-groups-root200-600-light.png",
+    "phase": "after",
+    "capture": "groups-root200-600-light",
+    "sha256": "b8533f9ffbbad06ba9002603e8057975eff03ba64bfc79867cf58288df92af41",
+    "source_bytes_unchanged": true
+  },
+  {
+    "file": "after-groups-1440-dark.png",
+    "phase": "after",
+    "capture": "groups-1440-dark",
+    "sha256": "372948e35eda238bde47f438d1f175e76df4cc41d46c863fbd70602d58bd4700",
+    "source_bytes_unchanged": true
+  }
+]

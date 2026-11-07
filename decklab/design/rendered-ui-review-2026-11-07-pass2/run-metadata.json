@@ -1,0 +1,88 @@
+{
+  "review_date": "2026-11-07",
+  "timezone": "Australia/Brisbane",
+  "application_source": "ea781f9e5e7960690210b4783f4cbf5144918da9",
+  "checkout_at_review": "1bbda39bae4bcb7df634e68daf171c32cb59423a",
+  "source_verification": "intervening commit was documentation/evidence only; diff of web,FixtureServer,fixture data and runtime guard was empty",
+  "browser": "Native Chrome controlled via cua_repl",
+  "browser_version": "not recorded",
+  "pointer_mode": "Native unrecorded; headless fine/coarse/hover verified per case",
+  "themes": [
+    "light",
+    "dark"
+  ],
+  "fixture": {
+    "ordinary_apis": "Temporary FileInventory/MemoryStore for editor,drafts,profile settings and permissions",
+    "identity": "Allowlisted synthetic Matt/User2 tunnel-context adapter; not Cloudflare Access authentication acceptance",
+    "visibility": "Synthetic home deck Public only in temporary MemoryStore; no real visibility changed",
+    "result_adapters": "Read-only invented variant,pair and board JSON; production result-read authorization/masking bypassed",
+    "mutations": "simulation mutations denied; no Forge game or run started",
+    "guards": [
+      "fixture_runtime before application imports",
+      "FixtureServer DB/download/worker denial",
+      "loopback-only sockets/DNS",
+      "child-process denial"
+    ],
+    "data": "invented decks,card printings,receipt,results and profiles; repeated placeholder artwork"
+  },
+  "findings": [
+    {
+      "id": "R05",
+      "priority": "P1",
+      "scope": "member variant next actions omitted in renderer"
+    },
+    {
+      "id": "R06",
+      "priority": "P2",
+      "scope": "footer Undo/Discard disabled after blocked Save and Keep editing"
+    },
+    {
+      "id": "R07",
+      "priority": "P2",
+      "scope": "light omitted-result reason rendered at3.796:1"
+    }
+  ],
+  "observation": "O02 Popular lead action opens pairing; hierarchy/product judgment",
+  "screenshots": 60,
+  "scope_limits": [
+    "no actual Safari/mobile hardware/screen reader qualification",
+    "no actual Android or cross-device qualification",
+    "no production result generation,authorization,masking,sorting or number validity acceptance",
+    "no full320px reflow/keyboard/contrast qualification",
+    "no real-art recognition",
+    "not all84 source coverage groups rendered",
+    "Browser/OS200% text enlargement unqualified; CSS-root200% stress only",
+    "No blanket keyboard/focus/contrast/real-device conformance"
+  ],
+  "cleanup": {
+    "fixtureStopped": true,
+    "fixtureExitCode": 0,
+    "fixtureProcessAbsent": true,
+    "fixturePortNotListening": true,
+    "temporaryRootRemoved": true,
+    "mainHeadlessBrowserClosed": true,
+    "correctedStressBrowserClosed": true,
+    "editorHeadlessBrowserClosed": true,
+    "editorSequenceCompleted": true,
+    "computerUseSessionCompletedAndReset": true,
+    "visibleChrome": "Left under user control; no further native input and no claim that the visible window was closed",
+    "evidence": "Fixture/browser cleanup receipts plus operator process/port checks; host paths, process IDs and ephemeral port excluded"
+  },
+  "automation": {
+    "nativeCaptureCount": 25,
+    "headlessCanonicalImageCount": 35,
+    "totalImages": 60,
+    "headlessBrowserVersion": "156.0.8078.80",
+    "automationPackage": "scratch playwright-core1.65.0",
+    "appDependenciesChanged": false,
+    "headlessNoNativeInput": true,
+    "headlessSameOriginOnly": true,
+    "headlessAllowedDryRun": "POST /api/deck/check only",
+    "headlessSimulationMutationsBlocked": true,
+    "measuredFontsLoaded": true,
+    "headlessPageErrorCount": 0,
+    "editorQualificationCompleted": true,
+    "editorPageErrorCount": 0,
+    "supersededAttemptsExcluded": true
+  }
+}

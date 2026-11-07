@@ -1,0 +1,197 @@
+{
+  "sourcePin": "ea781f9e5e7960690210b4783f4cbf5144918da9",
+  "method": "Headless Chrome, ordinary Playwright inputs; no value setters or injected DOM mutations",
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "dpr": 2
+  },
+  "guards": [
+    "Chromium emulation only; no physical touch/Safari/software keyboard claim",
+    "Ordinary Playwright input actions, no value setters or injected DOM mutations",
+    "POST deck/check is a dry run; every other POST and every non-fixture origin is blocked",
+    "Existing server kept draft may be resumed read-only; no kept-draft publication/write is permitted"
+  ],
+  "emptyBlocker": {
+    "actions": [
+      "More for Llanowar Elves -> Remove",
+      "More for Elvish Mystic -> Remove",
+      "More for Forest -> Remove"
+    ],
+    "removed": {
+      "theme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "dpr": 2,
+        "coarse": true
+      },
+      "barCount": "0 / 60",
+      "openDialogCount": 0,
+      "undo": {
+        "disabled": false,
+        "connected": true,
+        "hidden": false
+      },
+      "discard": {
+        "disabled": false,
+        "connected": true,
+        "hidden": false
+      },
+      "save": {
+        "disabled": false,
+        "connected": true,
+        "hidden": false
+      },
+      "enabledRowUndoCount": 3,
+      "quantities": [],
+      "model": {
+        "asking": false,
+        "leaving": false,
+        "dirty": true,
+        "history_length": 3
+      }
+    },
+    "afterKeepEditing": {
+      "theme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "dpr": 2,
+        "coarse": true
+      },
+      "barCount": "0 / 60",
+      "openDialogCount": 0,
+      "undo": {
+        "disabled": true,
+        "connected": true,
+        "hidden": false
+      },
+      "discard": {
+        "disabled": true,
+        "connected": true,
+        "hidden": false
+      },
+      "save": {
+        "disabled": false,
+        "connected": true,
+        "hidden": false
+      },
+      "enabledRowUndoCount": 3,
+      "quantities": [],
+      "model": {
+        "saving": false,
+        "asking": false,
+        "leaving": false,
+        "dirty": true,
+        "history_length": 3
+      }
+    },
+    "afterRowUndo": {
+      "theme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "dpr": 2,
+        "coarse": true
+      },
+      "barCount": "61 / 60OK",
+      "openDialogCount": 0,
+      "undo": {
+        "disabled": false,
+        "connected": true,
+        "hidden": false
+      },
+      "discard": {
+        "disabled": false,
+        "connected": true,
+        "hidden": false
+      },
+      "save": {
+        "disabled": false,
+        "connected": true,
+        "hidden": false
+      },
+      "enabledRowUndoCount": 0,
+      "quantities": [
+        {
+          "label": "Copies of Elvish Mystic",
+          "value": "4"
+        },
+        {
+          "label": "Copies of Llanowar Elves",
+          "value": "4"
+        },
+        {
+          "label": "Copies of Forest",
+          "value": "53"
+        }
+      ],
+      "model": {
+        "saving": false,
+        "asking": false,
+        "leaving": false,
+        "dirty": true,
+        "history_length": 6
+      }
+    },
+    "footerStaleDisabledReproduced": true
+  },
+  "keptResume": {
+    "status": "observed_same_browser_resume_only",
+    "after": {
+      "theme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "dpr": 2,
+        "coarse": true
+      },
+      "barCount": "62 / 60OK",
+      "openDialogCount": 0,
+      "undo": {
+        "disabled": true,
+        "connected": true,
+        "hidden": false
+      },
+      "discard": {
+        "disabled": false,
+        "connected": true,
+        "hidden": false
+      },
+      "save": {
+        "disabled": false,
+        "connected": true,
+        "hidden": false
+      },
+      "enabledRowUndoCount": 0,
+      "quantities": [
+        {
+          "label": "Copies of Elvish Mystic",
+          "value": "4"
+        },
+        {
+          "label": "Copies of Llanowar Elves",
+          "value": "4"
+        },
+        {
+          "label": "Copies of Forest",
+          "value": "54"
+        }
+      ],
+      "model": {
+        "asking": false,
+        "leaving": false,
+        "dirty": true,
+        "history_length": 0
+      }
+    }
+  },
+  "savedDeckShaUnchanged": true,
+  "savedDeckListsUnchanged": true,
+  "keptDraftUnchanged": true,
+  "pageErrorCount": 0,
+  "completed": true,
+  "browserClosed": true,
+  "supersededAttempt": "Earlier scratch viewport/confirmation harness failure excluded; only current successful390x844 sequence is published"
+}

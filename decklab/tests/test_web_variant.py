@@ -75,12 +75,12 @@ class VariantPageTests(unittest.TestCase):
         self.assertLess(stop.index("ask("), stop.index("apiWrite("))
 
     def test_save_this_change_asks_first(self):
-        save = _function(SCRIPT, "vtSaveChange")
+        save = _function(SCRIPT, "vtEditorHandoff")
         self.assertIn("Replace your unsaved changes to ${base.title} with this tested change?", save)
-        self.assertLess(save.index("if (local.get(key))"), save.index("ask("))
+        self.assertLess(save.index("const previous = local.get(key)"), save.index("ask("))
         self.assertLess(save.index("ask("), save.index("local.set(key"))
         # The key is the editor's own draft key for that list (editor-drafts.js draftKey).
-        self.assertIn("`draft.${state.profile.id}.${base.id}.${version}`", save)
+        self.assertIn("`draft.${profile}.${base.id}.${version}`", save)
         self.assertIn("draft.${ed.profile}.${ed.id}.${ed.version}", _text("editor-drafts.js"))
 
 
@@ -125,7 +125,7 @@ class VariantScriptTests(unittest.TestCase):
                                                         {"qty": 4, "name": "Shock"}, {"qty": 2, "name": "Opt"}]})
 
     def test_the_panels_draw(self):
-        done = {"status": "done", "verdict": "better", "words": "Better against the field: +2.4 points of win rate (+0.6 to +4.2)",
+        done = {"status": "done", "may_edit": True, "verdict": "better", "words": "Better against the field: +2.4 points of win rate (+0.6 to +4.2)",
                 "margin": 0.02, "field": {"delta": 0.024, "low": 0.006, "high": 0.042}, "error": None,
                 "test": {"test": "a" * 64, "base": {"id": "casual/gruul-ramp", "version": "target", "title": "Gruul Ramp"},
                          "against": "field:Constructed", "outcome": "better", "starter_mismatch": {"games": 30, "of": 1800},
@@ -205,6 +205,35 @@ class VariantScriptTests(unittest.TestCase):
         self.assertEqual(against, "popular decks")
         self.assertIn("against popular decks", item)
         self.assertEqual(span, "0.2")                  # the groups share the page's one scale
+
+    def test_group_reflow_keeps_named_tables_headers_and_counts(self):
+        tables, = _run_page([f"""(() => {{
+          const all = n => [n, ...(n.children || []).flatMap(all)];
+          return JSON.stringify(all(vtGroups({json.dumps(self.POPULAR)})).filter(n => n.tag === 'table').map(table => ({{
+            role: table.getAttribute('role'), label: table.getAttribute('aria-labelledby'),
+            columns: all(table).filter(n => n.getAttribute('scope') === 'col').map(n =>
+              [n.textContent, n.getAttribute('role')]),
+            rows: all(table).filter(n => n.tag === 'tbody').flatMap(n => n.children).map(row => ({{
+              role: row.getAttribute('role'), header: [row.children[0].textContent,
+                row.children[0].getAttribute('scope'), row.children[0].getAttribute('role')],
+              count: row.children[1].children[0].textContent,
+              unit: [row.children[1].children[1].textContent, row.children[1].children[1].getAttribute('aria-hidden')]
+            }})),
+            decorativeFoot: all(table).find(n => n.tag === 'tfoot').getAttribute('aria-hidden')
+          }})));
+        }})()"""], self.NAMES)
+        tables = json.loads(tables)
+        self.assertEqual([t["label"] for t in tables],
+                         ["vt-groups-colour", "vt-groups-identity_size", "vt-groups-tier"])
+        for table in tables:
+            self.assertEqual(table["role"], "table")
+            self.assertEqual(table["columns"], [[name, "columnheader"] for name in ("Group", "Decks", "Difference")])
+            self.assertEqual(table["decorativeFoot"], "true")
+            for row in table["rows"]:
+                self.assertEqual(row["role"], "row")
+                self.assertEqual(row["header"][1:], ["row", "rowheader"])
+                self.assertEqual(row["unit"][1], "true")
+        self.assertEqual([(r["count"], r["unit"][0]) for r in tables[0]["rows"]], [("1", " deck"), ("2", " decks")])
 
     def test_the_sheet_offers_popular_decks(self):
         sheet = _function(SCRIPT, "vtOpenTestSheet")

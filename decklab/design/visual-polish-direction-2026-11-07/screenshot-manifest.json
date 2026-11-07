@@ -1,0 +1,86 @@
+[
+  {
+    "file": "testing-1440-light-current.png",
+    "width": 2880,
+    "height": 1800,
+    "bytes": 353708,
+    "sha256": "41401dde7aa6cccfe41e71dc148bc61709ebcf959d38616c9ee147c29492c488"
+  },
+  {
+    "file": "testing-1440-light-composed.png",
+    "width": 2880,
+    "height": 1800,
+    "bytes": 280459,
+    "sha256": "8dc8be1c0085a0a3a53aca796e01c24e6b17cd45f425de9128e7f9c6997a2cef"
+  },
+  {
+    "file": "testing-393-light-current.png",
+    "width": 786,
+    "height": 1400,
+    "bytes": 165804,
+    "sha256": "58bb3c0e4ec87687d4fed48cabcfefabd61db7d0ef4afdfd323988e1f9c3a79c"
+  },
+  {
+    "file": "testing-393-light-composed.png",
+    "width": 786,
+    "height": 1400,
+    "bytes": 111267,
+    "sha256": "cfba87a7264151a06d8dac3951bbde325067a8e463f309ff37aa607b4aed7191"
+  },
+  {
+    "file": "receipt-430-light-current.png",
+    "width": 860,
+    "height": 1400,
+    "bytes": 145515,
+    "sha256": "d59c8b745fa2e227517f3c7cab6e560abc004a14767d729ef7b4c634f9e1d3a5"
+  },
+  {
+    "file": "receipt-430-light-composed.png",
+    "width": 860,
+    "height": 1400,
+    "bytes": 107086,
+    "sha256": "b437605583af144831dfc501433f2586d5da357ac04a804c8cce115e84a60129"
+  },
+  {
+    "file": "testing-1440-dark-current.png",
+    "width": 2880,
+    "height": 1800,
+    "bytes": 346628,
+    "sha256": "d32d80ac497657c798f604ec09f75793d9e839de8ee224ce205a2d672ae55545"
+  },
+  {
+    "file": "testing-1440-dark-composed.png",
+    "width": 2880,
+    "height": 1800,
+    "bytes": 279105,
+    "sha256": "2804b2de0978e176ebf90b7e6fc677babf45e697d14a4349ba39d031a24d78bf"
+  },
+  {
+    "file": "testing-393-dark-current.png",
+    "width": 786,
+    "height": 1400,
+    "bytes": 155343,
+    "sha256": "1d6735788bd9437b2b8d89efa3ce5360e291da1f7a2733966aaccccb764bd196"
+  },
+  {
+    "file": "testing-393-dark-composed.png",
+    "width": 786,
+    "height": 1400,
+    "bytes": 109819,
+    "sha256": "71eb825d3f3133e6af079fa889ebbec087d92034d5a5d5cf4e083d5314b234d6"
+  },
+  {
+    "file": "receipt-430-dark-current.png",
+    "width": 860,
+    "height": 1400,
+    "bytes": 138905,
+    "sha256": "a27dbefbf6ab5f87a3a442e704df10587d49d729f1c26362a2612e04814075e3"
+  },
+  {
+    "file": "receipt-430-dark-composed.png",
+    "width": 860,
+    "height": 1400,
+    "bytes": 105295,
+    "sha256": "151016b28048c6a4283742f31f6d1b03c61f96ea822e7a372cdd3c968e4b8800"
+  }
+]

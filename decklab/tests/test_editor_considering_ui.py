@@ -130,6 +130,39 @@ class EditorConsideringUiTests(unittest.TestCase):
           assert.equal(requests,0);
         """)
 
+    def test_empty_section_add_remove_and_undo_keep_the_same_local_draft_contract(self):
+        self.run_js(r"""
+          let requests=0;apiWrite=async()=>{requests++;throw new Error('No immediate write');};
+          for(const isQuick of [true,false]) {
+            const ed=openConsidering({}, {}, isQuick, []),playable=listSignature(ed.lists);
+            const section=ed.dom.considering,help=section.querySelector('details');
+            assert(help);assert.equal(help.getAttribute('open'),null);
+            assert(help.querySelector('summary').textContent.includes('Considering'));
+            assert(help.textContent.includes('outside its playable lists, counts and packing'));
+            assert(help.textContent.includes('Save keeps these changes with the deck'));
+            assert(section.querySelector('h2').textContent.includes('(0)'));
+            assert.equal(section.querySelectorAll('.editor-considering-add').length,1);
+            assert.equal(section.querySelector('.editor-considering-add').getAttribute('aria-label'),'Add a card to consider');
+            assert(!isDirty());assert.equal(ed.history.length,0);assert.equal(draftBody().lists,undefined);
+            addLocal(elves.name,4);
+            assert.equal(ed.considering.length,1);assert(!ed.dom.considering.getAttribute('class').includes('is-empty'));
+            assert.equal(ed.dom.considering.querySelectorAll('.editor-considering-qty').length,1);
+            same(draftBody().lists.considering,[{name:elves.name,qty:4}]);
+            main.querySelector('.editor-considering-remove').click();
+            assert.equal(ed.considering.length,0);
+            assert(ed.dom.considering.getAttribute('class').includes('is-empty'));
+            const freshAdd=ed.dom.considering.querySelector('.editor-considering-add');
+            assert.equal(document.activeElement,freshAdd);assert(freshAdd.isConnected);
+            assert(ed.dom.considering.querySelector('details'));
+            assert(undoLast());assert.equal(ed.considering.length,1);
+            same(draftBody().lists.considering,[{name:elves.name,qty:4}]);
+            assert(undoLast());same(ed.considering,[]);assert(!isDirty());
+            assert.equal(draftBody().lists,undefined);assert.equal(listSignature(ed.lists),playable);
+            assert.equal(local.get(draftKey(ed)),null);
+          }
+          assert.equal(requests,0);
+        """)
+
     def test_missing_api_list_and_new_or_copy_editor_offer_no_considering_write(self):
         self.run_js(r"""
           for(const value of [undefined,null]) {

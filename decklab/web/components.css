@@ -9,14 +9,14 @@
 
 /* ------------------------------------------------------------------ buttons */
 
-/* Buttons (design/visual-design.md 4.5): round, 700, sized by --btn-h and --fs-btn (44 px on touch, 36 with a
+/* Buttons (visual-polish-direction-2026-11-07): modest corners, medium labels, sized by --btn-h and --fs-btn (44 px on touch, 36 with a
    mouse under 1000 px, 32 in the lab). One .btn-primary per view.
-   - .btn alone is the secondary (.btn-secondary says so explicitly): a 1.5 px accent outline and accent words, on
+   - .btn alone is the secondary (.btn-secondary says so explicitly): a neutral outline and ink words, on
      white in light and no fill in dark (--btn-bg).
    - .btn-primary: the accent fill. With aria-disabled="true" it's a primary that can't act yet (Mark as built
      before every card is ticked): --track and --ink-3, still focusable, its reason beside it, and its click
      moves focus to the first thing in the way (the page's job). Native disabled stays for busy and frozen.
-   - .btn-quiet is the tertiary: accent words, no box. .btn-quiet.btn-inline lines up with the text above it.
+   - .btn-quiet is the tertiary: secondary ink, no box. .btn-quiet.btn-inline lines up with the text above it.
    - .btn-danger is a destructive tertiary (Remove…, Stop): red words, no box. The red fill
      (.btn-danger.btn-primary) is only for the last step of a confirm sheet.
    - .btn-discard is "Discard changes": a tertiary in --ink-2, neither accent nor red. */
@@ -24,18 +24,18 @@
   display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
   min-height: var(--btn-h); min-width: var(--btn-h);
   padding: var(--s-1) var(--s-4);
-  border: 1.5px solid var(--accent);
-  border-radius: var(--r-pill);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-control);
   background: var(--btn-bg);
-  color: var(--accent-strong);
-  font: inherit; font-size: var(--fs-btn); font-weight: var(--fw-bold); line-height: var(--lh-tight);
+  color: var(--ink);
+  font: inherit; font-size: var(--fs-btn); font-weight: var(--fw-medium); line-height: var(--lh-tight);
   text-decoration: none;
   cursor: pointer;
 }
-.btn:active:not(:disabled, [aria-disabled="true"]) { background: var(--accent-soft); }
-.btn-primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; box-shadow: var(--shadow-primary); }
+.btn:active:not(:disabled, [aria-disabled="true"]) { background: var(--hover); }
+.btn-primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; box-shadow: none; font-weight: var(--fw-semibold); }
 .btn-primary:active:not(:disabled, [aria-disabled="true"]) { background: var(--accent); filter: brightness(.94); }
-.btn-quiet { border-color: transparent; background: transparent; }
+.btn-quiet { border-color: transparent; background: transparent; color: var(--ink-2); }
 /* A text button right after prose or a list ("More", "Show all 19"): no side padding, so its words line up
    with the text above. */
 .btn-quiet.btn-inline { padding-inline: 0; min-width: 0; }
@@ -89,6 +89,7 @@
 /* --------------------------------------------------------------- page head */
 
 .page-head { padding: var(--s-5) 0 var(--s-2); }
+.page-head h1 { font-weight: var(--fw-semibold); }
 .page-head p { color: var(--ink-2); margin: 0; }
 .page-head-actions { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; }
 .crumbs { padding-top: var(--s-3); }
@@ -120,7 +121,7 @@
 /* ------------------------------------------------------------------- fields */
 
 .field { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
-.field > span, .field > label { font-size: var(--fs-sm); color: var(--ink-2); font-weight: var(--fw-semibold); }
+.field > span:where(:not(.field-hint)), .field > label { font-size: var(--fs-sm); color: var(--ink-2); font-weight: var(--fw-semibold); }
 .field :where(input:not([type="checkbox"], [type="radio"]), select, textarea) { width: 100%; }
 .field-hint { color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-regular); }
 .field-problem { color: var(--crit-ink); font-weight: var(--fw-semibold); }
@@ -147,12 +148,10 @@
 }
 .form-error:empty { display: none; }
 
-/* A row of toggle buttons (aria-pressed) or links (aria-current): the one way to pick 2-6 options (4.5). A round
-   track (--seg-track) and the chosen segment filled accent. With a mouse the segments sit 3 px inside the track;
+/* Short contained choices (aria-pressed or aria-current). A neutral track and an outlined surface distinguish
+   selection from a filled primary action. With a mouse the segments sit 3 px inside the track;
    on touch (--seg-pad 0, in the floor at the end of this file) each segment is the track's full 44 px, so the
-   track stays 44 beside the buttons and fields. The track's corners are --r-seg, half its one-row height, not
-   --r-pill: a control that wraps to two rows becomes a rounded rectangle, not a tall stadium that clips its end
-   segments (each segment is one row, so it stays a pill, its curve the track's, 3 px in). */
+   track stays 44 beside the buttons and fields. Page-view navigation uses .tabs instead. */
 .segmented {
   --seg-pad: 3px;
   display: inline-flex; flex-wrap: wrap;
@@ -166,21 +165,25 @@
   min-height: calc(var(--seg-h) - 2 * var(--seg-pad));
   display: inline-flex; align-items: center; justify-content: center;
   padding: 0 var(--s-3);
-  border: 0; border-radius: var(--r-pill);
+  border: 0; border-radius: var(--r-sm);
   background: transparent;
   color: var(--ink-2);
-  font: inherit; font-size: var(--fs-btn); font-weight: var(--fw-bold);
+  font: inherit; font-size: var(--fs-btn); font-weight: var(--fw-medium);
   text-decoration: none;
   cursor: pointer;
 }
+/* Filters over a work area can omit the enclosing track. Keep the same native buttons, selected outline,
+   focus/forced-colour states and target floor, without painting a panel around wrapped choices. */
+.segmented-quiet { --seg-pad: 0px; padding: 0; gap: var(--s-1); background: transparent; }
+.segmented-quiet > *, .segmented-quiet > * > span { min-width: 0; overflow-wrap: anywhere; }
 .segmented > [aria-pressed="true"], .segmented > [aria-current="page"] {
-  background: var(--accent);
-  color: var(--accent-ink);
-  box-shadow: var(--shadow-primary);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+  font-weight: var(--fw-semibold);
 }
-/* Words inside the chosen segment (a deck page filter's count, a practice setup's sub-line, the editor's "(none
-   yet)") take its ink, not a page's grey, which is unreadable on accent. Weighted (0,3,0) to beat those page
-   rules, which load later. */
+/* Selected counts and sub-lines inherit the selected ink. Weighted (0,3,0) to beat
+   page-specific label rules, which load later. */
 .segmented.segmented > :is([aria-pressed="true"], [aria-current="page"]) * { color: inherit; }
 .segmented > :is(:disabled, [aria-disabled="true"]) { color: var(--ink-3); cursor: not-allowed; }
 .segmented > [aria-pressed="true"]:is(:disabled, [aria-disabled="true"]) { background: var(--track); color: var(--ink-3); box-shadow: none; }
@@ -188,7 +191,7 @@
   .segmented > :hover:not([aria-pressed="true"], [aria-current="page"], :disabled, [aria-disabled="true"]) { color: var(--ink); background: var(--hover); }
 }
 
-/* A stepper: − [n] +, a round group (4.5). − and + in accent; the number Figtree 16 / 700 casual, mono 12.5 / 600
+/* A stepper: − [n] +, a contained group. − and + in ink; the number Figtree 16 / 700 casual, mono 12.5 / 600
    in the lab; a typeable one (.qty-input, or any input in it) sits in a sunken well, a read-only <output> has no
    fill. A typed number is --fs-qty-input: --fs-qty, but 16 px wherever iOS might zoom on focus. A line the
    person has changed and not saved (.is-changed or data-changed="true") gets an accent edge and a bold accent
@@ -196,13 +199,13 @@
 .stepper {
   display: inline-flex; align-items: center;
   min-height: var(--stepper-h);
-  border: 1px solid var(--border-strong); border-radius: var(--r-pill);
+  border: 1px solid var(--border-strong); border-radius: var(--r-control);
   background: var(--surface);
 }
 .stepper .step {
   width: calc(var(--stepper-h) - 2px); height: calc(var(--stepper-h) - 2px); flex: none;
   display: grid; place-items: center;
-  border: 0; border-radius: var(--r-pill); background: transparent; color: var(--accent-strong);
+  border: 0; border-radius: var(--r-sm); background: transparent; color: var(--ink);
   font: var(--fw-bold) var(--fs-xl) / 1 var(--font);
   cursor: pointer;
 }
@@ -211,7 +214,7 @@
 .stepper :is(.qty-input, input, output) {
   display: inline-grid; place-items: center;
   width: 2.6em; min-width: calc(var(--stepper-h) - 2px); height: calc(var(--stepper-h) - 2px); min-height: 0; padding: 0;
-  border: 0; border-radius: var(--r-pill);
+  border: 0; border-radius: var(--r-sm);
   background: var(--surface-2); color: var(--ink);
   font: var(--fw-qty) var(--fs-qty) / 1 var(--font-num); text-align: center; font-variant-numeric: tabular-nums;
 }
@@ -568,7 +571,7 @@ details.more > summary {
   cursor: pointer;
 }
 .tabs > :hover { color: var(--ink); }
-.tabs > [aria-selected="true"], .tabs > [aria-current="page"], .tabs > [aria-current="location"] {
+.tabs > [aria-selected="true"], .tabs > [aria-current="page"], .tabs > [aria-current="location"], .tabs > [aria-pressed="true"] {
   color: var(--ink); border-bottom-color: var(--accent);
 }
 
@@ -755,8 +758,8 @@ body.has-edit-bar.keyboard-up .toast { bottom: max(var(--s-4), env(safe-area-ins
 
 /* ------------------------------------------------------------- data tables */
 
-/* A real table (4.7): rows --row-h tall (36 with a mouse, 44 on touch) with --divider lines, a 30 px sticky
-   header in mono uppercase on --surface-2, and numbers right-aligned (mono in the lab, from 1000 px; words
+/* A real table (4.7): rows --row-h tall (36 with a mouse, 44 on touch) with --divider lines, a 30 px minimum sticky
+   header in the reading font on --surface-2, and numbers right-aligned (mono in the lab, from 1000 px; words
    under a number, such as "2 in decks", stay Figtree). The row states are for the page slices to set:
    tr[data-selected] (with aria-current="true" on its name button), tr[data-match] (rows a choice elsewhere
    points to, .cell-match on the cell that matches) and tr.group-row (one th spanning the columns, role
@@ -785,8 +788,8 @@ table.data thead th {
   padding-top: var(--s-1); padding-bottom: var(--s-1);
   background: var(--surface-2);
   color: var(--ink-3);
-  font: var(--fw-semibold) var(--fs-th) / var(--lh-tight) var(--font-mono);
-  letter-spacing: var(--ls-th); text-transform: uppercase;
+  font: var(--fw-semibold) var(--fs-th) / var(--lh-tight) var(--font);
+  letter-spacing: normal; text-transform: none;
   vertical-align: middle;
   border-bottom: 1px solid var(--border-strong);
   overflow-wrap: normal;
@@ -829,7 +832,7 @@ table.data tr.group-row > * {
   padding-top: var(--s-1); padding-bottom: var(--s-1);
   background: var(--surface-2);
   color: var(--ink-2);
-  font-size: var(--fs-group); font-weight: var(--fw-heavy); letter-spacing: var(--ls-caps); text-transform: uppercase;
+  font-size: var(--fs-meta); font-weight: var(--fw-semibold); letter-spacing: normal; text-transform: none;
   text-align: left;
 }
 table.data tr.group-row .group-count { font-family: var(--font-mono); font-weight: var(--fw-semibold); letter-spacing: 0; }

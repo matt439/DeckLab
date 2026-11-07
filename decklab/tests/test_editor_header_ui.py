@@ -256,7 +256,7 @@ class EditorHeaderSourceTests(unittest.TestCase):
     def test_casual_saved_frame_and_border_inclusive_fold_have_minimum_query_lab_reset(self):
         css=(WEB/'editor.css').read_text(encoding='utf-8').split('/* Saved editor only:',1)[1].split('/*',1)[0]
         self.assertIn('font-size: var(--fs-eyebrow); font-weight: var(--fw-semibold)',css)
-        self.assertIn('font-size: var(--fs-lg); font-weight: var(--fw-heavy)',css)
+        self.assertIn('font-size: var(--fs-xl); font-weight: var(--fw-semibold)',css)
         self.assertIn('height: var(--stripe-h)',css)
         self.assertIn('min-height: 60px; box-sizing: border-box; padding: 0',css)
         self.assertIn('min-height: calc(60px - 2px)',css)

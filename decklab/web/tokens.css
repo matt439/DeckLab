@@ -56,10 +56,11 @@
 
   /* Radii */
   --r-sm: 4px;                  /* art thumbnails, small swatches, a kbd hint */
-  --r-md: 10px;                 /* anything not yet moved over to P1's radii (buttons are --r-pill since slice 4) */
+  --r-md: 10px;                 /* older containers; ordinary controls use --r-control */
   --r-lg: 14px;                 /* cards, panels, sheets */
   --r-pill: 999px;
-  --r-seg: calc(var(--seg-h) / 2);   /* a segmented track: round on one row, a rounded rectangle when it wraps */
+  --r-control: 8px;             /* ordinary controls; pills are reserved for tags and counts */
+  --r-seg: var(--r-control);    /* short contained choices, including wrapped groups */
   --r-card: 4.75% / 3.4%;       /* a Magic card's corners, on its picture */
 
   /* Control sizes: 44 px to touch; a mouse gets the denser step below. --tap is a touch target that
@@ -79,16 +80,16 @@
      values until each component moves over (the page slices); slice 4's components read the new ones. */
   --fw-medium: 500;
   --fw-heavy: 800;              /* page titles, eyebrows, group headings, pip letters */
-  --fs-h1: 2rem;                /* page title, with --ls-h1 */
+  --fs-h1: 1.75rem;             /* shared page title, semibold; compact phone deck/editor titles use --fs-xl */
   --fs-hero: 2rem;              /* a deck's name over its art */
   --fs-eyebrow: .8125rem;       /* a panel's uppercase label, --ls-caps */
   --fs-group: .8125rem;         /* a group heading (Built, Building), uppercase */
   --fs-body: 1rem;
-  --fs-row: 1.0625rem;          /* a row's or tile's title, 700 */
+  --fs-row: 1.0625rem;          /* a row's or tile's title */
   --fs-meta: .875rem;           /* a meta line, --ink-2 at casual density, --ink-3 in the lab */
-  --fs-btn: .9375rem;           /* a button's label, 700 */
+  --fs-btn: .9375rem;           /* a button's label, medium; primary semibold */
   --fs-input: 1rem;             /* a field's text: 16 px wherever iOS might zoom on focus */
-  --fs-th: .65625rem;           /* a table header, mono uppercase (casual density has no tables) */
+  --fs-th: var(--fs-meta);      /* table labels use the reading font at the density's metadata size */
   --fs-kbd: .65625rem;          /* a keyboard hint (only with a fine pointer) */
   --fs-cell-num: .875rem;       /* a table's mono numbers: quantities, money */
   --fs-qty: 1rem;               /* a stepper's number: Figtree 16 / 700 casual, mono 12.5 / 600 in the lab */
@@ -110,7 +111,7 @@
   --lh-copy: 1.5;               /* body text's line height */
   --r-panel: 14px;              /* panels, cards, notices, a phone sheet's top corners */
   --r-row: 8px;                 /* a selected row, a menu */
-  --r-field: 12px;              /* selects and plain text inputs */
+  --r-field: var(--r-control);  /* selects and plain text inputs */
   --btn-h: 44px;                /* buttons (a casual primary may go to 48) */
   --seg-h: 44px;                /* a segmented control */
   --input-h: 44px;              /* inputs and selects */
@@ -458,13 +459,12 @@
 @media (min-width: 1000px) {
   :root {
     --bar-h: 60px;
-    --fs-h1: 1.375rem;
     --fs-hero: 1.875rem;
     --fs-eyebrow: .6875rem;
     --fs-group: .6875rem;
     --fs-body: .875rem;
     --fs-row: .875rem;
-    --fs-meta: .75rem;
+    --fs-meta: .8125rem;
     --fs-btn: .9375rem;
     --fs-input: 1rem;
     --fs-cell-num: .875rem;
@@ -495,13 +495,13 @@
     --ring-size: 16px;
   }
 }
-/* ... and with a mouse, the dense lab: 13 px body, buttons, fields and inline win rates (12-12.5 px meta and
-   table numbers) and 28-32 px controls. */
+/* ... and with a mouse, 14 px task copy, buttons and fields. Meta stays 13 px; table/Forge numeric sizes
+   retain their separate scale. Controls stay 28-32 px and can grow with their labels. */
 @media (min-width: 1000px) and (pointer: fine) {
   :root {
-    --fs-body: .8125rem;
-    --fs-btn: .8125rem;
-    --fs-input: .8125rem;
+    --fs-body: .875rem;
+    --fs-btn: .875rem;
+    --fs-input: .875rem;
     --fs-cell-num: .78125rem;
     --fs-qty: .78125rem;
     --fs-qty-input: .78125rem;
@@ -512,8 +512,8 @@
     --fs-flag: .75rem;
   }
 }
-/* ... and on a maximized QHD screen (2,200 px and up, a mouse) every rem size one step bigger: 13 px lab body
-   becomes 14.6 px, so the type keeps its size against a 2,560 px page. Controls and rows (px) stay as they are. */
+/* ... and on a maximized QHD screen (2,200 px and up, a mouse) every rem size one step bigger: 14 px task copy
+   becomes 15.75 px. Controls and rows (px) keep their minimum sizes. */
 @media (min-width: 2200px) and (pointer: fine) {
   :root { font-size: 112.5%; }
 }

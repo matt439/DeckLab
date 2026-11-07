@@ -72,10 +72,12 @@ class PageSourceTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertIn(path, script)
         # Phase 4: saves are the database's; nothing about git, commits or retrying them is left.
-        for gone in ('"/api/accessories/commit"', "commit_pending", "uncommitted", "Retry saving history",
+        for gone in ('"/api/accessories/commit"', "commit_pending", "Retry saving history",
                      "accCommitWords"):
             with self.subTest(gone=gone):
                 self.assertNotIn(gone, script)
+        # Retired persistence state must not return; a comment about a local crop draft is unrelated.
+        self.assertNotIn("uncommitted", _function(script, "saveFromSheet"))
         self.assertIn('placeholder: "Product or picture link"', script)
         self.assertIn('type: "url", inputmode: "url"', script)
         self.assertIn('type: "number", inputmode: "numeric"', script)

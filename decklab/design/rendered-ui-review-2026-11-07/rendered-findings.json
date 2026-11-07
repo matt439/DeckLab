@@ -1,0 +1,109 @@
+{
+  "source_commit": "ea781f9e5e7960690210b4783f4cbf5144918da9",
+  "review_date": "2026-11-07",
+  "timezone": "Australia/Brisbane",
+  "browser": "Native Google Chrome via cua_repl; Responsive emulation",
+  "dpr": 2,
+  "findings": [
+    {
+      "id": "R01",
+      "priority": "P2",
+      "status": "reproduced",
+      "task": "Wishlist edit -> Zoom -> close -> reopen",
+      "observed": "Unsaved Notes replaced by original saved Notes, with no discard warning.",
+      "viewport": "390x844",
+      "theme": "light",
+      "screenshots": [
+        "02-wishlist-unsaved-note-390-light.png",
+        "03-wishlist-after-zoom-note-lost-390-light.png"
+      ]
+    },
+    {
+      "id": "R02",
+      "priority": "P1",
+      "status": "reproduced",
+      "task": "Wishlist with unknown collection availability",
+      "observed": "Null counts rendered as None in your collection yet for a card with known positive baseline copies.",
+      "viewport": "390x844",
+      "theme": "light",
+      "screenshots": [
+        "01-wishlist-known-390-light.png",
+        "04-wishlist-unknown-counts-false-zero-390-light.png"
+      ],
+      "api_evidence": "wishlist-unknown-response.json"
+    },
+    {
+      "id": "R03",
+      "priority": "P2",
+      "status": "reproduced",
+      "task": "Library How to play -> deck guide",
+      "observed": "Link opens Overview at top without section destination; guide exists below.",
+      "viewport": "1440x900",
+      "theme": "light",
+      "screenshots": [
+        "10-library-how-to-play-1440-light.png",
+        "11-how-to-play-lands-overview-top-1440-light.png"
+      ]
+    },
+    {
+      "id": "R04",
+      "priority": "P2",
+      "status": "reproduced",
+      "task": "Accessory crop -> outer Save without Done",
+      "observed": "75%x87% active crop discarded; sheet reports saved. Done -> Save positive control persists crop.",
+      "viewport": "1440x900",
+      "theme": "light",
+      "screenshots": [
+        "12-accessory-active-crop-1440-light.png",
+        "13-accessory-done-and-save-1440-light.png",
+        "14-accessory-after-done-save-1440-light.png"
+      ],
+      "api_evidence": [
+        "accessory-after-outer-save.json",
+        "accessory-after-done-save.json"
+      ]
+    },
+    {
+      "id": "O01",
+      "priority": "candidate",
+      "status": "rendered_geometry_only",
+      "task": "Receipt Pictures near 430px breakpoint",
+      "observed": "Two columns at displayed 428px and three at 430px. Displayed 429px also showed three; exact CSS boundary not established. Placeholder recognition not qualified.",
+      "viewport": [
+        "428x844",
+        "430x844"
+      ],
+      "theme": "light",
+      "screenshots": [
+        "05-receipt-two-columns-428-light.png",
+        "08-receipt-three-columns-cards-430-light.png",
+        "09-receipt-selected-recovery-430-light.png"
+      ]
+    }
+  ],
+  "unqualified": [
+    "real artwork recognition",
+    "physical devices",
+    "Safari",
+    "dark theme",
+    "200% text",
+    "320px reflow",
+    "screen reader",
+    "complete member/privacy variants",
+    "populated Forge results",
+    "all 84 source coverage groups"
+  ],
+  "cleanup": {
+    "fixture_stopped": true,
+    "temporary_data_removed": true,
+    "process_absent": true,
+    "port_closed": true,
+    "exit_code": 0
+  },
+  "continuation": {
+    "status": "stopped_before_rendering",
+    "reason": "Computer-use tool could not confidently verify the current browser URL for policy enforcement",
+    "fixture_started": false,
+    "new_rendered_checks": 0
+  }
+}

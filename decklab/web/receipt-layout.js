@@ -1,7 +1,7 @@
 /* Receive delivery's header and loaded-data guidance. Checking, preview and recording stay in their existing modules. */
 "use strict";
 
-/** The order's sub-page head; notes retain their existing More/Less control. */
+/** Order identity leads; secondary metadata and notes remain in a native disclosure. */
 function rcptHead(data, title, view = null) {
   const notes = data.notes ? el("p", { class: "rcpt-notes", text: data.notes }) : null;
   const more = notes && data.notes.length > 140 ? el("button", { type: "button", class: "btn btn-quiet btn-inline rcpt-more",
@@ -15,11 +15,12 @@ function rcptHead(data, title, view = null) {
     description: data.seller || "Seller not recorded" });
   const progress = view ? el("div", { class: "rcpt-head-progress" }) : null;
   if (view) { view.headProgress = progress; rcptHeadProgress(view); }
-  return [el("header", { class: "rcpt-page-head" }, head[0],
-    el("div", { class: "rcpt-head-grid" }, el("div", { class: "rcpt-head-details" }, head[1],
-      el("p", { class: "rcpt-order-meta" }, el("span", { text: `Order ${data.order || "not recorded"}` }),
+  return [el("header", { class: "rcpt-page-head" }, head[0], head[1],
+    el("details", { class: "rcpt-order-details" }, el("summary", { text: "Order details" }),
+      el("div", { class: "rcpt-head-grid" }, el("div", { class: "rcpt-head-details" },
+        el("p", { class: "rcpt-order-meta" }, el("span", { text: `Order ${data.order || "not recorded"}` }),
         data.ordered_on ? el("time", { datetime: data.ordered_on, text: `Ordered ${rcptDate(data.ordered_on)}` })
-          : el("span", { text: "Order date not recorded" }))), progress)), notes, more];
+          : el("span", { text: "Order date not recorded" })), notes, more), progress)))];
 }
 
 /** Copy counts use the same working-state unit as rcptProgress; whole products stay separate. */
@@ -241,15 +242,30 @@ function rcptSyncLayout(view, progress) {
     el("p", { class: "sub rcpt-guidance-note", text: "Guidance uses the loaded deck needs. Preview still checks the exact changes; nothing is recorded before confirmation." })]);
 }
 
-/** The Record bar can grow with warnings or wrapping; keep the lab pane above its actual height. */
+/** Keep a compact Record bar sticky. Enlarged text or a short viewport puts the same bar in normal flow
+ * rather than covering the checking task; focus/guidance clearance counts only the occluding height. */
 function rcptWatchBar(view) {
-  if (!view.bar?.node || view.barObserver) return;
+  if (!view.bar?.node || view.measureBar) return;
+  const disconnect = () => {
+    view.barObserver?.disconnect();
+    window.removeEventListener("resize", measure);
+    window.visualViewport?.removeEventListener("resize", measure);
+  };
   const measure = () => {
-    if (!receiptActive(view) || view.done) { view.barObserver?.disconnect(); return; }
+    if (!receiptActive(view) || view.done) { disconnect(); return; }
     const height = Math.ceil(view.bar.node.getBoundingClientRect().height);
-    if (Number.isFinite(height) && height > 0) view.root.style.setProperty("--rcpt-bar-height", `${height}px`);
+    if (!Number.isFinite(height) || height <= 0) return;
+    const viewport = window.visualViewport?.height || window.innerHeight;
+    const shellTop = document.querySelector(".topbar")?.getBoundingClientRect().height || 0;
+    const shellBottom = document.querySelector(".tabbar")?.getBoundingClientRect().height || 0;
+    const available = Math.max(0, viewport - shellTop - shellBottom);
+    const inline = Number.isFinite(available) && height > available * .4;
+    view.bar.node.classList.toggle("is-inline", inline);
+    view.root.style.setProperty("--rcpt-bar-height", `${inline ? 0 : height}px`);
   };
   view.measureBar = measure;
+  window.addEventListener("resize", measure);
+  window.visualViewport?.addEventListener("resize", measure);
   if (typeof window.ResizeObserver === "function") {
     view.barObserver = new window.ResizeObserver(measure);
     view.barObserver.observe(view.bar.node);

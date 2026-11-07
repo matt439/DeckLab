@@ -1,0 +1,73 @@
+{
+  "profile": "matt",
+  "entries": [
+    {
+      "name": "Llanowar Elves",
+      "set": "",
+      "number": "",
+      "notes": "Synthetic saved note: keep me after Zoom.",
+      "source": "Synthetic review source",
+      "card": {
+        "name": "Llanowar Elves",
+        "mana_cost": "{G}",
+        "cmc": 1,
+        "type_line": "Creature \u2014 Elf Druid",
+        "colors": [
+          "G"
+        ],
+        "color_identity": [
+          "G"
+        ],
+        "roles": [],
+        "img": "/img/sft/1/normal",
+        "img_small": "/img/sft/1/small",
+        "oracle_text": "{T}: Add {G}.",
+        "power": "1",
+        "toughness": "1",
+        "loyalty": null,
+        "defense": null
+      },
+      "have": {
+        "owned": null,
+        "on_the_way": null
+      },
+      "source_deck": null,
+      "short_in": null
+    },
+    {
+      "name": "Forest",
+      "set": "",
+      "number": "",
+      "notes": "Synthetic second wishlist entry for a known-zero state.",
+      "source": "",
+      "card": {
+        "name": "Forest",
+        "mana_cost": "",
+        "cmc": 0,
+        "type_line": "Basic Land \u2014 Forest",
+        "colors": [],
+        "color_identity": [
+          "G"
+        ],
+        "roles": [],
+        "img": "/img/sft/4/normal",
+        "img_small": "/img/sft/4/small",
+        "oracle_text": "{T}: Add {G}.",
+        "power": null,
+        "toughness": null,
+        "loyalty": null,
+        "defense": null
+      },
+      "have": {
+        "owned": null,
+        "on_the_way": null
+      },
+      "source_deck": null,
+      "short_in": null
+    }
+  ],
+  "warnings": [
+    "Synthetic review: collection counts are unavailable."
+  ],
+  "short_warnings": []
+}

@@ -11,6 +11,9 @@ Thumbs.db
 # Deck Lab local cache (Scryfall bulk, images, simulation results)
 decklab/data/
 
+# Development-only headless UI review dependency (installed explicitly with --setup)
+decklab/ui_review/node_modules/
+
 # Deck Lab Forge trial: keep its scripts and notes; ignore its logs, results,
 # generated decks, Forge user folders and old card-log builds (java/; the card
 # log's source is decklab/lib/forge/java/ now)

@@ -9,6 +9,36 @@ from decklab.tests import test_receipts_ui as board
 class ReceiptLayoutTests(unittest.TestCase):
     run_js = board.ReceiptBoardTests.run_js
 
+    def test_context_and_help_disclosures_keep_required_state_and_original_controls_available(self):
+        self.run_js("""
+          const d=delivery();d.notes='Keep this order note available while checking.';
+          d.components[0].rows[1].condition='';d.components[0].rows[1].language='';
+          const v=drawReceipt(d,routeToken),comp=v.comps[0],request=rcptRequestKey(v);
+          let writes=0;apiWrite=async()=>{writes++;throw new Error('no write');};
+          const head=main.querySelector('.rcpt-page-head'),context=head.querySelector('.rcpt-order-details');
+          assert(head.querySelector('.page-head'));assert(!context.contains(head.querySelector('.page-head')));
+          assert.equal(context.tag,'details');assert.equal(context.getAttribute('open'),null);
+          assert.equal(context.querySelector('summary').textContent,'Order details');
+          assert(context.textContent.includes('Order test'));assert(context.textContent.includes('1 Oct 2026'));
+          assert(context.textContent.includes(d.notes));assert(context.contains(v.headProgress));
+          assert.equal(comp.section.querySelector('h2').textContent,'3 cards');
+          const help=comp.section.querySelector('.rcpt-checking-help');
+          assert.equal(help.tag,'details');assert.equal(help.querySelector('summary').textContent,'Checking help');
+          assert(help.textContent.includes('the rest stay on the way'));assert(help.textContent.includes('Unknown details may stay blank'));
+          assert(!help.contains(comp.checkControls?.[0]));
+          assert(comp.grid.querySelector('.rcpt-all-blank').textContent.includes('not recorded yet'));
+          assert.equal(comp.section.querySelectorAll('.rcpt-tick').length,2);
+          const progress=v.bar.node.querySelector('.rcpt-progress-row'),actions=v.bar.node.querySelector('.actions');
+          assert(progress.contains(v.progress));assert(progress.contains(v.blanks));
+          assert(actions.contains(v.dateSelect));assert(actions.contains(v.dateInput));assert(actions.contains(v.primary));
+          assert(!v.bar.node.querySelector('.action-bar-status').contains(v.dateSelect));
+          assert.equal(v.bar.node.querySelectorAll('.rcpt-blanks').length,1);
+          assert.equal(v.bar.node.querySelectorAll('.btn-primary').length,1);
+          assert.equal(v.primary.getAttribute('aria-describedby'),v.recordReason.id);
+          context.setAttribute('open','');help.setAttribute('open','');
+          assert.equal(rcptRequestKey(v),request);assert.equal(writes,0);assert(!v.preview);assert(!v.sheet);
+        """, draw=False)
+
     def test_order_head_counts_selected_copies_including_splits_and_keeps_products_separate(self):
         self.run_js("""
           const d=delivery();d.components[0].rows[0].quantity='7';
@@ -196,6 +226,25 @@ class ReceiptLayoutTests(unittest.TestCase):
             expire(v);v.bar.node.box.height=999;observer.callback();
             assert(observer.disconnected);assert.equal(v.root.style['--rcpt-bar-height'],before);
           }
+        """,draw=False)
+
+    def test_large_bar_uses_normal_flow_and_restores_stickiness_when_it_fits(self):
+        self.run_js("""
+          const v=drawReceipt(delivery(),routeToken),before=rcptRequestKey(v);
+          window.innerHeight=700;v.bar.node.box.height=400;v.measureBar();
+          assert(v.bar.node.classList.contains('is-inline'));
+          assert.equal(v.root.style['--rcpt-bar-height'],'0px');
+          assert.equal(rcptRequestKey(v),before);assert(v.primary.isConnected);
+          v.bar.node.box.height=120;window.fire('resize');
+          assert(!v.bar.node.classList.contains('is-inline'));
+          assert.equal(v.root.style['--rcpt-bar-height'],'120px');
+          window.innerHeight=250;window.fire('resize');
+          assert(v.bar.node.classList.contains('is-inline'));
+          assert.equal(v.root.style['--rcpt-bar-height'],'0px');
+          const handlers=window.events.get('resize').length;
+          routeToken++;window.fire('resize');
+          assert.equal(window.events.get('resize').length,handlers-1);
+          assert.equal(rcptRequestKey(v),before);
         """,draw=False)
 
 class ReceiptLayoutCssTests(unittest.TestCase):

@@ -1,0 +1,86 @@
+[
+  {
+    "file": "01-wishlist-known-390-light.png",
+    "width": 780,
+    "height": 1688,
+    "sha256": "73381d6f7df24d5fe5655367412bc890f3f199387300c1033e692726d43ae790"
+  },
+  {
+    "file": "02-wishlist-unsaved-note-390-light.png",
+    "width": 780,
+    "height": 1688,
+    "sha256": "4b67da63811f1022f02cfe6c21fcc83bf933a9b7df3f7afd10fd7bc468863e42"
+  },
+  {
+    "file": "03-wishlist-after-zoom-note-lost-390-light.png",
+    "width": 780,
+    "height": 1688,
+    "sha256": "d0d9a879f23f1564e1ac53df15e2cad0ed12b176bf28c604c8bc945c100fd318"
+  },
+  {
+    "file": "04-wishlist-unknown-counts-false-zero-390-light.png",
+    "width": 780,
+    "height": 1688,
+    "sha256": "5b0b4414c2bef995a5f4328a2d6f899976c6d0452f242e5ef5657dc43c6a7c51"
+  },
+  {
+    "file": "05-receipt-two-columns-428-light.png",
+    "width": 856,
+    "height": 1688,
+    "sha256": "04636080a40d821c845b58fd8e1d00fd3327b1c0b2fd76da47eace6db78dc7d9"
+  },
+  {
+    "file": "06-receipt-three-columns-430-light.png",
+    "width": 860,
+    "height": 1688,
+    "sha256": "0738c311a196b3029684027e96beeb588d4204cb854cfc0521ca5b6c59abff90"
+  },
+  {
+    "file": "07-receipt-three-columns-full-430-light.png",
+    "width": 858,
+    "height": 3786,
+    "sha256": "d41acd4c01419fce279066ceefef517e796679b550f4ca16f3232537ae54bea6"
+  },
+  {
+    "file": "08-receipt-three-columns-cards-430-light.png",
+    "width": 860,
+    "height": 1688,
+    "sha256": "4e68bf5f779dba5b10fa7e69686ad32753cf86d6c0cb2bd25a89d02aafb9d311"
+  },
+  {
+    "file": "09-receipt-selected-recovery-430-light.png",
+    "width": 860,
+    "height": 1688,
+    "sha256": "3f37918dfc7fc4fde4d678358b13bc477ea98729297d4b6a29ae7c9e5feb7f15"
+  },
+  {
+    "file": "10-library-how-to-play-1440-light.png",
+    "width": 2880,
+    "height": 1800,
+    "sha256": "002a7a823b78b2f9b3c39d6759d2ba7661d2b3ef09e58dd5b3564c915f6151d7"
+  },
+  {
+    "file": "11-how-to-play-lands-overview-top-1440-light.png",
+    "width": 2880,
+    "height": 1800,
+    "sha256": "259dda63bc1a40c0546d61eeba739a7776390c4b99fc9365a65230f2b268609b"
+  },
+  {
+    "file": "12-accessory-active-crop-1440-light.png",
+    "width": 2880,
+    "height": 1800,
+    "sha256": "893967b4ea6d281cc03d8230d6c2134775ec3315dcb1dad79b21244fb7e7e676"
+  },
+  {
+    "file": "13-accessory-done-and-save-1440-light.png",
+    "width": 2880,
+    "height": 1800,
+    "sha256": "d49fb9eb36bc17f0539a39d4e434ab347b3fa2fc5fe8cc80723e547c594fc6b4"
+  },
+  {
+    "file": "14-accessory-after-done-save-1440-light.png",
+    "width": 2880,
+    "height": 1800,
+    "sha256": "dd94310f60add3a983046d5351c146e04fe5d672f778058759ba0e5a9bb871d4"
+  }
+]

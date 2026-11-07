@@ -163,17 +163,18 @@ MACBOOK = _device(1470, 956, "fine")
 QHD = _device(2560, 1440, "fine")
 
 # Every token slices 3, 4 and 6 added, and the older ones they leave alone, at each of the three levels
-# (design/visual-design.md 2.3-2.5, 3 and 4.9; 1rem = 16 px). Slice 4 moved --r-sm to 4 px.
+# (design/visual-design.md 2.3-2.5, 3 and 4.9; 1rem = 16 px), with the November typography revision.
+# Slice 4 moved --r-sm to 4 px. Touch target sizes remain independent of the type scale.
 CASUAL = {
     "--fw-medium": "500", "--fw-heavy": "800",
-    "--fs-h1": "2rem", "--fs-hero": "2rem", "--fs-eyebrow": ".8125rem", "--fs-group": ".8125rem",
+    "--fs-h1": "1.75rem", "--fs-hero": "2rem", "--fs-eyebrow": ".8125rem", "--fs-group": ".8125rem",
     "--fs-body": "1rem", "--fs-row": "1.0625rem", "--fs-meta": ".875rem", "--fs-btn": ".9375rem",
-    "--fs-input": "1rem", "--fs-th": ".65625rem", "--fs-kbd": ".65625rem", "--fs-cell-num": ".875rem",
+    "--fs-input": "1rem", "--fs-th": "var(--fs-meta)", "--fs-kbd": ".65625rem", "--fs-cell-num": ".875rem",
     "--fs-fig-mid": "1.5rem", "--fs-fig": "2.5rem", "--fs-fig-unit": "1.5rem", "--fs-fig-sm": "1rem",
     "--fs-fig-range": ".875rem", "--fs-qty": "1rem", "--fs-qty-input": "1rem", "--fw-qty": "700", "--font-num": "var(--font)",
     "--ls-h1": "-.03em", "--ls-hero": "-.03em", "--ls-fig": "0em", "--ls-caps": ".08em", "--ls-th": ".07em",
     "--lh-copy": "1.5",
-    "--r-panel": "14px", "--r-row": "8px", "--r-field": "12px",
+    "--r-panel": "14px", "--r-row": "8px", "--r-field": "var(--r-control)",
     "--btn-h": "44px", "--seg-h": "44px", "--input-h": "44px", "--stepper-h": "46px", "--check-size": "24px",
     "--row-h": "44px", "--th-h": "30px", "--seg-track": "var(--track)", "--list-row-h": "54px", "--tile-min": "104px", "--tile-min-forge": "112px",
     "--flag-h": "30px", "--gutter-list": "var(--gutter)",
@@ -187,8 +188,8 @@ CASUAL = {
 CASUAL_MOUSE = {**CASUAL, "--btn-h": "36px", "--seg-h": "36px", "--input-h": "38px", "--stepper-h": "36px",
                 "--check-size": "22px", "--row-h": "36px", "--ctl-h": "36px", "--field-h": "38px"}
 TOUCH_LAB = {**CASUAL,
-    "--fs-h1": "1.375rem", "--fs-hero": "1.875rem", "--fs-eyebrow": ".6875rem", "--fs-group": ".6875rem",
-    "--fs-body": ".875rem", "--fs-row": ".875rem", "--fs-meta": ".75rem", "--fs-btn": ".9375rem",
+    "--fs-hero": "1.875rem", "--fs-eyebrow": ".6875rem", "--fs-group": ".6875rem",
+    "--fs-body": ".875rem", "--fs-row": ".875rem", "--fs-meta": ".8125rem", "--fs-btn": ".9375rem",
     "--fs-input": "1rem", "--fs-cell-num": ".875rem", "--fs-fig-mid": "1.75rem", "--fs-fig": "2.25rem",
     "--fs-fig-unit": "1.375rem", "--fs-fig-sm": ".875rem", "--fs-fig-range": ".6875rem",
     "--fs-qty": ".875rem", "--fw-qty": "600", "--font-num": "var(--font-mono)",
@@ -198,7 +199,7 @@ TOUCH_LAB = {**CASUAL,
     "--fs-fresh": ".75rem", "--fs-fresh-row": ".6875rem", "--fs-swap": ".9375rem", "--activity-size": "20px",
     "--ring-size": "16px"}
 LAB = {**TOUCH_LAB, **{k: CASUAL_MOUSE[k] for k in ("--row-h", "--ctl-h", "--field-h")},
-    "--fs-body": ".8125rem", "--fs-btn": ".8125rem", "--fs-input": ".8125rem", "--fs-cell-num": ".78125rem",
+    "--fs-body": ".875rem", "--fs-btn": ".875rem", "--fs-input": ".875rem", "--fs-cell-num": ".78125rem",
     "--fs-fig-sm": ".8125rem", "--fs-fig-range": ".65625rem", "--fs-qty": ".78125rem", "--fs-qty-input": ".78125rem",
     "--btn-h": "32px", "--seg-h": "28px", "--input-h": "32px", "--stepper-h": "28px", "--check-size": "18px",
     "--flag-h": "22px", "--fs-flag": ".75rem"}
@@ -278,10 +279,12 @@ class ComponentTests(unittest.TestCase):
         css = _css("components.css")
         rule = lambda selector: re.search(rf"^{re.escape(selector)} \{{(.*?)^\}}", css, re.S | re.M).group(1)
         button = rule(".btn")
-        for part in ("min-height: var(--btn-h)", "border: 1.5px solid var(--accent)", "border-radius: var(--r-pill)",
-                     "color: var(--accent-strong)", "font-size: var(--fs-btn)", "font-weight: var(--fw-bold)"):
+        for part in ("min-height: var(--btn-h)", "border: 1px solid var(--border-strong)", "border-radius: var(--r-control)",
+                     "color: var(--ink)", "font-size: var(--fs-btn)", "font-weight: var(--fw-medium)"):
             self.assertIn(part, button)
-        self.assertIn("box-shadow: var(--shadow-primary)", re.search(r"^\.btn-primary \{([^}]*)\}", css, re.M).group(1))
+        primary = re.search(r"^\.btn-primary \{([^}]*)\}", css, re.M).group(1)
+        self.assertIn("background: var(--accent)", primary)
+        self.assertIn("color: var(--accent-ink)", primary)
         self.assertIn("min-height: var(--seg-h)", rule(".segmented"))
         self.assertIn("background: var(--seg-track)", rule(".segmented"))
         self.assertIn("min-height: var(--stepper-h)", rule(".stepper"))
@@ -293,9 +296,10 @@ class ComponentTests(unittest.TestCase):
         # The focus ring follows an element's corners; it never squares a round button.
         self.assertNotIn("border-radius", re.search(r"^:focus-visible \{([^}]*)\}", base, re.M).group(1))
 
-    def test_the_selected_and_changed_states_are_the_accent_and_delivery_states_are_not(self):
+    def test_selection_is_distinct_from_primary_actions_and_changed_values(self):
         css = _css("components.css")
-        self.assertRegex(css, r'\.segmented > \[aria-pressed="true"\], \.segmented > \[aria-current="page"\] \{[^}]*background: var\(--accent\)')
+        self.assertRegex(css, r'\.segmented > \[aria-pressed="true"\], \.segmented > \[aria-current="page"\] \{[^}]*background: var\(--surface\)')
+        self.assertIn('box-shadow: inset 0 0 0 1px var(--border-strong)', css)
         self.assertRegex(css, r'\.stepper:is\(\.is-changed, \[data-changed="true"\]\) \{ border-color: var\(--accent\); \}')
         # "Part received" is a neutral outline (Matt, 2026-10-24: section 6 question 2), never the accent.
         outline = re.search(r"\.chip-outline, \.status-outline \{([^}]*)\}", css).group(1)
@@ -402,11 +406,10 @@ class ShellTests(unittest.TestCase):
         self.assertIn("bottom: calc(var(--shell-bottom) + var(--bar-h) + var(--s-2))", casual)
         self.assertIn("body:is(.has-edit-bar, :has(#main .action-bar)) .toast {", _css("components.css"))
 
-    def test_the_lab_nav_is_round_pills(self):
+    def test_the_lab_nav_marks_the_current_section_without_an_action_fill(self):
         shell = _css("shell.css")
-        self.assertIn("border-radius: var(--r-pill)", _rule(shell, ".nav-item"))
-        self.assertIn('.nav-item[aria-current="page"], .nav-more.is-current { background: var(--accent-soft); color: var(--accent-strong); }', shell)
-        self.assertNotIn("border-bottom-color: var(--accent)", shell)
+        self.assertIn("border-radius: var(--r-sm)", _rule(shell, ".nav-item"))
+        self.assertRegex(shell, r'\.nav-item\[aria-current="page"\], \.nav-more.is-current \{\s*color: var\(--ink\); box-shadow: inset 0 -2px var\(--accent\)')
         self.assertIn(".nav-item:hover { background: var(--hover); }", _block(shell, "(hover: hover) and (pointer: fine)"))
 
     def test_the_ipad_in_portrait_caps_the_tabs_at_640_px(self):

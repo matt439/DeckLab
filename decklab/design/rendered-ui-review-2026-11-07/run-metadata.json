@@ -1,0 +1,83 @@
+{
+  "source_commit": "ea781f9e5e7960690210b4783f4cbf5144918da9",
+  "review_date": "2026-11-07",
+  "timezone": "Australia/Brisbane",
+  "data": "Disposable synthetic records only; no household records",
+  "browser": "Native Chrome via computer-use tool; Responsive emulation",
+  "dpr": 2,
+  "theme": "light",
+  "fixture": "decklab.safari.fixture.FixtureServer in a dedicated process",
+  "process_guards": [
+    "fixture_runtime before application imports",
+    "FixtureServer temporary config/inventory/MemoryStore",
+    "database/download/simulation denial",
+    "loopback-only sockets and DNS",
+    "child-process denial"
+  ],
+  "synthetic_states": [
+    "long-title casual deck with guide",
+    "wishlist with persisted notes and source",
+    "known-owned and known-zero wishlist cards",
+    "unknown wishlist counts when control file exists",
+    "shared accessory with placeholder picture and box",
+    "three-card pending receipt"
+  ],
+  "initial_http_smoke": {
+    "/": {
+      "status": 200
+    },
+    "/api/status": {
+      "status": 200
+    },
+    "/api/decks": {
+      "status": 200
+    },
+    "/api/deck?id=casual/safari-fixture": {
+      "status": 200,
+      "guide_sections": [
+        "Game plan",
+        "Opening hand",
+        "Mulligans",
+        "Play tips"
+      ]
+    },
+    "/api/profiles/matt/wishlist": {
+      "status": 200,
+      "availability": [
+        {
+          "name": "Llanowar Elves",
+          "have": {
+            "owned": 3,
+            "on_the_way": 1
+          }
+        },
+        {
+          "name": "Forest",
+          "have": {
+            "owned": 0,
+            "on_the_way": 0
+          }
+        }
+      ]
+    },
+    "/api/accessories": {
+      "status": 200
+    },
+    "/api/receipt?order=2000-01-01-safari-fixture": {
+      "status": 200
+    }
+  },
+  "cleanup": {
+    "fixture_stopped": true,
+    "temporary_data_removed": true,
+    "process_absent": true,
+    "port_closed": true,
+    "exit_code": 0
+  },
+  "continuation": {
+    "status": "stopped_before_rendering",
+    "reason": "Computer-use tool could not confidently verify the current browser URL for policy enforcement",
+    "fixture_started": false,
+    "new_rendered_checks": 0
+  }
+}

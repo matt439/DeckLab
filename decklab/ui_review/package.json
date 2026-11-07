@@ -1,0 +1,13 @@
+{
+  "name": "decklab-ui-review",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Headless rendered review of disposable Deck Lab fixtures",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "playwright-core": "1.65.0"
+  }
+}

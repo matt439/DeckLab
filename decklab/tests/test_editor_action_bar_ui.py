@@ -79,6 +79,53 @@ class EditorActionBarTests(unittest.TestCase):
           assert.equal(removed,1);assert.equal(routed,1);assert(ed.leaving);
         ''')
 
+    def test_save_review_and_failed_check_restore_retained_recovery_without_another_edit(self):
+        self.run_js(r'''
+          for(const mode of ['edit','new']) for(const outcome of ['blocked','stale','failed']) {
+            const ed=mode==='edit'?full():(startEditor({mode:'new',kind:'casual',restoreDraft:false}),editor);
+            if(mode==='new') {ed.fields.title='New fixture';changed({list:false});addCard(elves,'Deck',1);}
+            else for(const line of [...ed.lists.Deck,...ed.lists.Sideboard])removeLine(line.uid);
+            const p=ed.dom.barParts,payload=JSON.stringify(draftBody()),history=ed.history.length;
+            assert(history>0);assert(!p.undo.disabled);let requests=0;
+            apiWrite=async path=>{
+              assert.equal(path,'/api/deck/check');requests++;
+              if(outcome==='failed')throw new ApiError(503,'Fixture unavailable');
+              return {blocks:outcome==='blocked'?[{problem:'Fixture empty-list blocker'}]:[],warnings:[],
+                file_changed:outcome==='stale',changes:{decklist:true,fields:[],prose:[]}};
+            };
+            await saveNow();await settle();
+            const dialog=document.querySelector('dialog[open]');assert(dialog);
+            if(outcome==='blocked') {
+              const body=dialog.querySelector('.sheet-body');
+              assert(body.children[0].matches('.box-crit'),'Save blockers must precede the change list');
+              assert.equal(body.querySelectorAll('.box-crit').length,1);
+              assert(button(dialog,mode==='new'?'Create':'Save').disabled);
+            }
+            button(dialog,'Keep editing').click();await settle();
+            assert.equal(ed.dom.barParts,p);assert(!p.undo.disabled,mode+'/'+outcome);
+            assert.equal(p.discard.hidden,mode==='new');assert(!p.discard.disabled);
+            assert.equal(JSON.stringify(draftBody()),payload);assert.equal(ed.history.length,history);
+            assert.equal(requests,1);p.undo.click();assert.equal(ed.history.length,history-1);
+          }
+        ''')
+
+    def test_finished_save_attempt_does_not_redraw_a_stale_or_replacement_editor(self):
+        self.run_js(r'''
+          for(const alter of [ed=>{routeToken++;},ed=>{state.profile=state.profiles[0];},
+            ed=>{ed.version='owned';},ed=>{ed.dom.page.remove();},ed=>{full();}]) {
+            state.profile=state.profiles[1];const ed=full();setQty(ed.lists.Deck[0].uid,5);
+            let reply;runCheck=()=>new Promise(resolve=>reply=resolve);
+            const pending=saveNow();assert(reply);alter(ed);
+            const active=document.activeElement,p=editor.dom.barParts,children=[...p.bar.children];
+            const draw=drawBar;let draws=0;drawBar=()=>{draws++;draw();};
+            reply({blocks:[],warnings:[],changes:{decklist:true,fields:[],prose:[]}});await pending;
+            drawBar=draw;assert.equal(draws,0);
+            assert.equal(editor.dom.barParts,p);assert.equal(p.bar.children.length,children.length);
+            assert(children.every((node,index)=>p.bar.children[index]===node));assert(document.activeElement===active);
+            assert(!document.querySelector('dialog[open]'));
+          }
+        ''')
+
     def test_discard_confirmation_cannot_act_after_same_editor_scope_or_page_changes(self):
         self.run_js(r'''
           let removed=0;removeDraft=()=>{removed++;return true;};route=()=>{};toast=()=>{};

@@ -113,17 +113,26 @@ function drawEditorConsidering() {
       "Considering could not be loaded. Your alternatives are kept on this device; reload the deck before saving." }));
     return;
   }
-  const section = ed.dom.considering = el("section", { class: "edit-considering", "aria-labelledby": "h-edit-considering" },
-    el("h2", { id: "h-edit-considering", text: "Considering" }),
-    el("p", { class: "sub", text: "Alternatives for this deck. They stay outside its playable lists, counts and packing. Save keeps these changes with the deck." }));
-  const rows = el("div", { class: "editor-considering-rows" });
-  section.append(rows);
-  if (!ed.considering.length) rows.append(el("p", { class: "sub", text: "No cards being considered." }));
-  for (const line of ed.considering) rows.append(editorConsideringRow(ed, line));
-  if (!ed.readOnly) section.append(el("button", { type: "button", class: "btn btn-quiet editor-considering-add",
-    "data-focus": "considering:add", text: "Add a card to consider", onclick: (event) => {
+  const empty = !ed.considering.length;
+  const section = ed.dom.considering = el("section", { class: `edit-considering${empty ? " is-empty" : ""}`,
+    "aria-labelledby": "h-edit-considering" });
+  const heading = el("h2", { id: "h-edit-considering", text: "Considering" });
+  const explanation = el("p", { class: "sub", text:
+    "Alternatives for this deck. They stay outside its playable lists, counts and packing. Save keeps these changes with the deck." });
+  const add = !ed.readOnly ? el("button", { type: "button", class: "btn btn-quiet editor-considering-add",
+    "data-focus": "considering:add", text: empty ? "Add a card" : "Add a card to consider",
+    "aria-label": "Add a card to consider", onclick: (event) => {
       if (ed.dom.considering === section && section.isConnected && section.contains(event.currentTarget)) openEditorConsideringAdd(ed);
-    } }));
+    } }) : null;
+  if (empty) {
+    heading.append(el("span", { class: "editor-considering-count", text: "(0)", "aria-label": "0 cards" }));
+    section.append(el("div", { class: "editor-considering-head" }, heading, add),
+      el("details", { class: "editor-considering-help" }, el("summary", { text: "About Considering" }), explanation));
+  } else {
+    section.append(heading, explanation,
+      el("div", { class: "editor-considering-rows" }, ed.considering.map(line => editorConsideringRow(ed, line))));
+    if (add) section.append(add);
+  }
   host.append(section);
   drawEditorPromotionState(ed, section);
   markEditorConsideringRows();
