@@ -169,7 +169,7 @@ CASUAL = {
     "--fw-medium": "500", "--fw-heavy": "800",
     "--fs-h1": "1.75rem", "--fs-hero": "2rem", "--fs-eyebrow": ".8125rem", "--fs-group": ".8125rem",
     "--fs-body": "1rem", "--fs-row": "1.0625rem", "--fs-meta": ".875rem", "--fs-btn": ".9375rem",
-    "--fs-input": "1rem", "--fs-th": ".65625rem", "--fs-kbd": ".65625rem", "--fs-cell-num": ".875rem",
+    "--fs-input": "1rem", "--fs-th": "var(--fs-meta)", "--fs-kbd": ".65625rem", "--fs-cell-num": ".875rem",
     "--fs-fig-mid": "1.5rem", "--fs-fig": "2.5rem", "--fs-fig-unit": "1.5rem", "--fs-fig-sm": "1rem",
     "--fs-fig-range": ".875rem", "--fs-qty": "1rem", "--fs-qty-input": "1rem", "--fw-qty": "700", "--font-num": "var(--font)",
     "--ls-h1": "-.03em", "--ls-hero": "-.03em", "--ls-fig": "0em", "--ls-caps": ".08em", "--ls-th": ".07em",

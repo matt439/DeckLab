@@ -31,10 +31,10 @@
 .shop-jumps a {
   display: inline-flex; align-items: center; gap: var(--s-2);
   min-height: var(--tap); padding: 0 var(--s-3);
-  border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--surface);
-  color: var(--ink); font-size: var(--fs-sm); font-weight: var(--fw-semibold); text-decoration: none; white-space: nowrap;
+  border: 0; border-radius: 0; background: none;
+  color: var(--link); font-size: var(--fs-sm); font-weight: var(--fw-medium); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap;
 }
-.shop-jumps a:hover { border-color: var(--border-strong); }
+.shop-jumps a:hover { color: var(--accent-strong); }
 .shop-jumps .shop-count { min-width: 0; }
 @media (min-width: 1281px) { .shop-jumps { display: none; } }
 .shop-description { margin: 0 0 var(--s-3); color: var(--ink-2); font-size: var(--fs-sm); }
@@ -275,15 +275,15 @@
 .shop-queue-table-wrap { width: 100%; min-width: 0; max-width: 100%; max-height: calc(100dvh - var(--shell-top) - var(--s-8)); overflow: auto;
   scroll-padding-top: var(--th-h); border: 1px solid var(--border); border-radius: var(--r-panel); background: var(--surface); }
 .shop-queue-table-wrap:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
-table.shop-queue-table { min-width: 840px; border-collapse: separate; border-spacing: 0; }
-.shop-queue-table.shop-queue-no-for { min-width: 750px; }
+table.shop-queue-table { min-width: 920px; border-collapse: separate; border-spacing: 0; }
+.shop-queue-table.shop-queue-no-for { min-width: 830px; }
 table.shop-queue-table thead th { top: 0; padding-top: 0; padding-bottom: 0; }
 table.shop-queue-table tbody tr.group-row { height: var(--th-h); }
 table.shop-queue-table tbody tr.group-row > th { padding-top: 0; padding-bottom: 0; }
 table.shop-queue-table :is(th, td) { padding: 0 var(--s-1); }
 .shop-queue-table td { height: var(--row-h); vertical-align: middle; }
 table.shop-queue-table .shop-queue-lab-row > td { border-bottom: 0; box-shadow: inset 0 -1px 0 var(--divider); }
-.shop-queue-table .shop-q-head-name { width: 140px; }
+.shop-queue-table .shop-q-head-name { width: 220px; }
 .shop-queue-table .shop-q-head-printing { width: 156px; }
 .shop-queue-table .shop-q-head-for { width: 90px; }
 .shop-queue-table .shop-q-head-qty { width: 40px; }
@@ -305,15 +305,15 @@ table.shop-queue-table .shop-queue-lab-row > td { border-bottom: 0; box-shadow: 
   padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shop-q-clip, .shop-q-printing-line { display: block; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shop-q-printing { font-variant-numeric: tabular-nums; }
-.shop-q-printing-line { line-height: 16px; }
-.shop-q-printing-visual { display: flex; align-items: center; gap: var(--s-1); min-width: 0; max-width: 100%; height: 16px; overflow: hidden; }
+.shop-q-printing-line { line-height: 1.35; }
+.shop-q-printing-visual { display: flex; align-items: center; gap: var(--s-1); min-width: 0; max-width: 100%; min-height: 1.35em; overflow: hidden; }
 .shop-q-printing-visual .shop-exact-tag, .shop-q-printing-kind { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shop-q-printing-visual .shop-exact-tag { margin-right: 0; }
 .shop-q-printing-number { flex: none; }
-.shop-q-printing-visual .chip-foil { flex: none; height: 16px; min-height: 0; padding: 0 var(--s-1); gap: var(--s-1); font-size: var(--fs-meta); line-height: 16px; }
+.shop-q-printing-visual .chip-foil { flex: none; min-height: 1.35em; padding: 0 var(--s-1); gap: var(--s-1); font-size: var(--fs-meta); line-height: 1.35; }
 .shop-exact-tag { display: inline-block; padding: 0 2px; margin-right: 3px; box-shadow: inset 0 0 0 1px var(--ink-4);
-  font: var(--fw-semibold) var(--fs-kbd) / 16px var(--font-mono); white-space: nowrap; }
-.shop-q-reason { display: block; color: var(--building-ink); font-size: var(--fs-meta); line-height: 14px; }
+  font: var(--fw-semibold) var(--fs-kbd) / 1.35 var(--font-mono); white-space: nowrap; }
+.shop-q-reason { display: block; color: var(--building-ink); font-size: var(--fs-meta); line-height: 1.35; }
 .shop-q-shop { position: relative; }
 .shop-q-checked { font: var(--fs-meta) var(--font-num); white-space: nowrap; }
 .shop-queue-table :is(.shop-q-qty, .shop-q-price) { font: var(--fw-semibold) var(--fs-cell-num) var(--font-num); text-align: right; }
@@ -338,8 +338,8 @@ table.shop-queue-table .shop-queue-lab-row > td { border-bottom: 0; box-shadow: 
 .shop-q-extra-body > p { margin: 0; white-space: pre-wrap; }
 @media (pointer: coarse) {
   .shop-queue-table .shop-q-head-actions { width: 150px; }
-  table.shop-queue-table { min-width: 890px; }
-  .shop-queue-table.shop-queue-no-for { min-width: 800px; }
+  table.shop-queue-table { min-width: 970px; }
+  .shop-queue-table.shop-queue-no-for { min-width: 880px; }
   .shop-q-name .card-row > :is(.thumb, .thumb-missing) { width: 30px; height: 42px; }
 }
 /* Baskets (E5-S27): one card a shop, the rows inside as plain lines (shopping-baskets.js). */

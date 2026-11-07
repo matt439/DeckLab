@@ -95,6 +95,12 @@ class EditorActionBarTests(unittest.TestCase):
             };
             await saveNow();await settle();
             const dialog=document.querySelector('dialog[open]');assert(dialog);
+            if(outcome==='blocked') {
+              const body=dialog.querySelector('.sheet-body');
+              assert(body.children[0].matches('.box-crit'),'Save blockers must precede the change list');
+              assert.equal(body.querySelectorAll('.box-crit').length,1);
+              assert(button(dialog,mode==='new'?'Create':'Save').disabled);
+            }
             button(dialog,'Keep editing').click();await settle();
             assert.equal(ed.dom.barParts,p);assert(!p.undo.disabled,mode+'/'+outcome);
             assert.equal(p.discard.hidden,mode==='new');assert(!p.discard.disabled);

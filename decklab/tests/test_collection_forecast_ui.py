@@ -92,6 +92,38 @@ class CollectionForecastUiTests(unittest.TestCase):
           assert.equal(note().querySelectorAll('input').length,0);same(reads,[]);
         ''')
 
+    def test_collapsed_guidance_keeps_conditional_facts_and_uncertainty_visible(self):
+        self.run_js(r'''
+          draw(forecast());
+          const disclosure=note().querySelector('.col-forecast-details');
+          assert(disclosure);assert.equal(disclosure.getAttribute('open'),null);
+          assert(disclosure.querySelector('summary').textContent.includes('Assumptions, sources and exclusions'));
+          const visibleWords=()=>note().children.filter(node=>node!==note().querySelector('.col-forecast-details'))
+            .map(node=>node.textContent).join(' ');
+          assert(visibleWords().includes('5 known pending card copies'));
+          assert(visibleWords().includes('5 box candidates'));
+          assert(visibleWords().includes('Conditional box scenario: about 8 of 10 places'));
+          assert(visibleWords().includes('Excluded and unknown deliveries are outside this comparison'));
+          assert(disclosure.textContent.includes("same printing's recorded location"));
+          assert(disclosure.textContent.includes('none has been deducted or assigned'));
+          disclosure.setAttribute('open','');same(reads,[]);
+          const value=rich();value.stale=true;value.cards_if_candidates_filed=null;
+          value.over_if_candidates_filed=null;value.possible_current_holder_shortfall=null;
+          draw(value);
+          for(const words of ['Last-snapshot facts','Unverified sources: 1','unknown copies are not counted as zero',
+            'holder shortfalls is unknown']){
+            assert(visibleWords().includes(words),words);
+          }
+          const uncertain=rich();uncertain.pending_products.known_reference_cards=0;
+          uncertain.pending_products.unknown_contents=1;uncertain.tokens_excluded={known_cards:0,unknown_components:1};
+          uncertain.sources[1].known_cards=null;uncertain.sources[1].unknown=true;
+          uncertain.sources[2].known_cards=null;uncertain.sources[2].unknown=true;uncertain.unknown_sources=3;
+          draw(uncertain);
+          for(const words of ['reference with unknown contents','component with unknown quantity'])assert(visibleWords().includes(words),words);
+          draw(forecast(20));assert(visibleWords().includes('That conditional scenario exceeds capacity'));
+          same(reads,[]);
+        ''')
+
     def test_zero_is_a_valid_known_scenario_without_claiming_no_other_deliveries(self):
         self.run_js(r'''
           draw(forecast(0));assert(visible());assert(note().textContent.includes('0 known pending card copies'));

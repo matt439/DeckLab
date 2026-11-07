@@ -1,0 +1,182 @@
+[
+  {
+    "file": "before-collection-rows-populated-1440-light.png",
+    "source_run": "families-final-before",
+    "source_file": "families/collection-rows-populated-1440-light.png",
+    "sha256": "abb51e88d29d1d71d0af95de89d4416801cb20889e8e162258d775022640c73e"
+  },
+  {
+    "file": "after-collection-rows-populated-1440-light.png",
+    "source_run": "families-final-verified",
+    "source_file": "families/collection-rows-populated-1440-light.png",
+    "sha256": "b7bdf0030da95895cd2b85ea88f6739aacb5acfd6e510c0e762a096b91e0f90c"
+  },
+  {
+    "file": "before-shopping-populated-393-light.png",
+    "source_run": "families-final-before",
+    "source_file": "families/shopping-populated-393-light.png",
+    "sha256": "89e6af52ef9b334c30b2147b05c7845aeb6707192fbd1a52c9c1a59c9ddacfb9"
+  },
+  {
+    "file": "after-shopping-populated-393-light.png",
+    "source_run": "families-final-verified",
+    "source_file": "families/shopping-populated-393-light.png",
+    "sha256": "df654922c038288308c9f4840e803dd8f4caf9890fef7cd45fcd5de9b48c636a"
+  },
+  {
+    "file": "before-activity-populated-1440-light.png",
+    "source_run": "families-final-before",
+    "source_file": "families/activity-populated-1440-light.png",
+    "sha256": "0b86b6a43a070d42c1b05bd779eee1086da7b2225a261317de06ac56dcb3d450"
+  },
+  {
+    "file": "after-activity-populated-1440-light.png",
+    "source_run": "families-final-verified",
+    "source_file": "families/activity-populated-1440-light.png",
+    "sha256": "aeb37eee6298c83670e652518a5163002e4849b98d086dc30c9234fc4f4f4fdb"
+  },
+  {
+    "file": "before-settings-populated-1440-light.png",
+    "source_run": "families-final-before",
+    "source_file": "families/settings-populated-1440-light.png",
+    "sha256": "8e23906012a69be91be89f27ba40d40cff891ca2f8655d544d8745ae08145c7b"
+  },
+  {
+    "file": "after-settings-populated-1440-light.png",
+    "source_run": "families-final-verified",
+    "source_file": "families/settings-populated-1440-light.png",
+    "sha256": "5276aa445f71b0c0137d5ea2b75e0f11f3089d814a8a5b670e1d3ea6494aad24"
+  },
+  {
+    "file": "before-collection-rows-populated-1440-dark.png",
+    "source_run": "families-final-before",
+    "source_file": "families/collection-rows-populated-1440-dark.png",
+    "sha256": "ad8ddbb9f1c146c93a1fce11ede7141082b7813a1b6570ba25399d8efbe07708"
+  },
+  {
+    "file": "after-collection-rows-populated-1440-dark.png",
+    "source_run": "families-final-verified",
+    "source_file": "families/collection-rows-populated-1440-dark.png",
+    "sha256": "4faceaacdfedd602cd5be608bc8adf2b0ef5ad37fe8ebee045b64ba857c0f573"
+  },
+  {
+    "file": "before-shopping-populated-393-dark.png",
+    "source_run": "families-final-before",
+    "source_file": "families/shopping-populated-393-dark.png",
+    "sha256": "4738fe83db9d52e71bb3dc11f6b6a20c4b1b434400bc14084005b0954cae4321"
+  },
+  {
+    "file": "after-shopping-populated-393-dark.png",
+    "source_run": "families-final-verified",
+    "source_file": "families/shopping-populated-393-dark.png",
+    "sha256": "4d982c96f90e7ffbce0764604e55523c21448259896bf4cd79aa46c6cc4f77ca"
+  },
+  {
+    "file": "before-activity-populated-1440-dark.png",
+    "source_run": "families-final-before",
+    "source_file": "families/activity-populated-1440-dark.png",
+    "sha256": "18428f577e169f5a81e4fcdf67eaadbf1f3f5a1f3b1824a27511ae4ae7a9e2d6"
+  },
+  {
+    "file": "after-activity-populated-1440-dark.png",
+    "source_run": "families-final-verified",
+    "source_file": "families/activity-populated-1440-dark.png",
+    "sha256": "f6414b60e461376fc2681e36a02ae97d290774d6100e85a8f1a923799b655b76"
+  },
+  {
+    "file": "before-settings-populated-1440-dark.png",
+    "source_run": "families-final-before",
+    "source_file": "families/settings-populated-1440-dark.png",
+    "sha256": "df9117bab5bc7cd10bdcf0c538c2fb88475b2009b71621be56436efd654d811a"
+  },
+  {
+    "file": "after-settings-populated-1440-dark.png",
+    "source_run": "families-final-verified",
+    "source_file": "families/settings-populated-1440-dark.png",
+    "sha256": "e0ddc17f9da23653298a4f30c8697bc43aa85523394e7af9ecb5a5d24e43d85e"
+  },
+  {
+    "file": "before-receipt-320x700-root200-coarse-dark-tools.png",
+    "source_run": "receipt-final-baseline",
+    "source_file": "receipt-layout/receipt-320x700-root200-coarse-dark-tools.png",
+    "sha256": "55c533b415575b488e4a2f8855d45e3f1720e67a10428553e35352710a22450c"
+  },
+  {
+    "file": "before-receipt-600x700-root200-coarse-light-top.png",
+    "source_run": "receipt-final-baseline",
+    "source_file": "receipt-layout/receipt-600x700-root200-coarse-light-top.png",
+    "sha256": "38d942855db80d0587f4855d4f9054069114d65edb3be4c15ef79aaba01ad546"
+  },
+  {
+    "file": "after-receipt-320x700-root200-coarse-dark-tools.png",
+    "source_run": "receipt-final-after1",
+    "source_file": "receipt-layout/receipt-320x700-root200-coarse-dark-tools.png",
+    "sha256": "3cc8e550dc03012344beed41bc935cc70c639243117d21b8b81cc642f0cb7471"
+  },
+  {
+    "file": "after-receipt-600x700-root200-coarse-light-top.png",
+    "source_run": "receipt-final-after1",
+    "source_file": "receipt-layout/receipt-600x700-root200-coarse-light-top.png",
+    "sha256": "9eea0c73f472ea3c386750ccbb5373e1595f4ad0ef5dbc7165ebd881727ed901"
+  },
+  {
+    "file": "final-receipt-320x700-root200-coarse-dark-primary-focus.png",
+    "source_run": "receipt-final-after",
+    "source_file": "receipt-layout/receipt-320x700-root200-coarse-dark-primary-focus.png",
+    "sha256": "4b75e98ddc1907d8ed3911cbfea27f07ac0f0bea708ca39dd5f1da9f024b54b2"
+  },
+  {
+    "file": "final-split_receipt-393x700-coarse-light-resumed.png",
+    "source_run": "receipt-final-after",
+    "source_file": "receipt-layout/split_receipt-393x700-coarse-light-resumed.png",
+    "sha256": "b5ca0f8d852218537ab435a3746ad9585aa08426f78ea50be54c09b02ce33d69"
+  },
+  {
+    "file": "final-large_receipt-820x1106-coarse-dark-last-row.png",
+    "source_run": "receipt-final-after",
+    "source_file": "receipt-layout/large_receipt-820x1106-coarse-dark-last-row.png",
+    "sha256": "0530f1035cb88f6d7d13270292b10cd292d5d8a7509d62d171709c365752641f"
+  },
+  {
+    "file": "final-collection-rows-393-dark-forecast.png",
+    "source_run": "families-final-verified",
+    "source_file": "families/collection-rows-393-dark-forecast.png",
+    "sha256": "e1f54b2daf6866ad7e7f4bbdcd07716878f7bbb544836d4bc6d338b7381623be"
+  },
+  {
+    "file": "final-settings-failed-393-light.png",
+    "source_run": "families-final-verified",
+    "source_file": "families/settings-failed-393-light.png",
+    "sha256": "85a1594ecc42531ff68bf682c1f2a70a6795f442a0bab83797fdccb7dc26221f"
+  },
+  {
+    "file": "final-settings-busy-393-dark.png",
+    "source_run": "families-final-verified",
+    "source_file": "families/settings-busy-393-dark.png",
+    "sha256": "871b642e7c598f391f4b59c28d8308fc4bab98f4a7bfa9028d277d90f8cecbc4"
+  },
+  {
+    "file": "zoom-editor-window-640-zoom2-light.png",
+    "source_run": "zoom-final-verified",
+    "source_file": "zoom/editor-window-640-zoom2-light.png",
+    "sha256": "1239aa44c3ac822af0f363ca1dbc3a61f93afde202b57199dac3b05bc2f2afc7"
+  },
+  {
+    "file": "zoom-receipt-window-640-zoom2-dark.png",
+    "source_run": "zoom-final-verified",
+    "source_file": "zoom/receipt-window-640-zoom2-dark.png",
+    "sha256": "4877e41f3514ee156f7fc58e5c37b4e58b8a30b4eca07c2e786baaebf8fd5447"
+  },
+  {
+    "file": "zoom-settings-window-640-zoom2-light.png",
+    "source_run": "zoom-final-verified",
+    "source_file": "zoom/settings-window-640-zoom2-light.png",
+    "sha256": "0fa6a467c45bde85751a945521f8aeff0c84bfa547d26026999dbc47c46e83c2"
+  },
+  {
+    "file": "zoom-editor-blocker-window-1470-zoom2-light-review-initial.png",
+    "source_run": "zoom-final-verified",
+    "source_file": "zoom/editor-blocker-window-1470-zoom2-light-review-initial.png",
+    "sha256": "794e000537b104438cd1e39d0078782ac8e3ba84b05a89e5369a82a824a6012f"
+  }
+]

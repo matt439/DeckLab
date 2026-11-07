@@ -53,6 +53,9 @@ python scripts/ui_review.py --suite composition
 python scripts/ui_review.py --suite variant-layout
 python scripts/ui_review.py --suite shell-layout
 python scripts/ui_review.py --suite task-layout
+python scripts/ui_review.py --suite receipt-layout
+python scripts/ui_review.py --suite families
+python scripts/ui_review.py --suite zoom
 python scripts/ui_review.py --output C:/Temp/decklab-ui-review-01
 python scripts/ui_review.py --browser "C:/Program Files/Google/Chrome/Application/chrome.exe"
 ```
@@ -120,6 +123,30 @@ pass. Overflow is diagnostic at each retained snapshot; transitions can still
 have unmeasured geometry. No fill, bulk tick, preview, arrival or Save is
 invoked. Its smoke subset is eight ordinary phone/tablet cases. `all` still
 means capture/editor only.
+
+The opt-in `receipt-layout` suite qualifies ordinary pointer input, Tools layout
+switches, the last card, native date input, Record's pointer hit area without
+activating it, and keyboard clearance. It includes explicit CSS root-font stress,
+short landscape, a 24-copy parcel and a two-part parcel with a local copy split.
+Reload requires explicit Resume and must retain exactly the local checking draft;
+the saved receipt response stays unchanged. No preview or arrival write is allowed.
+
+The opt-in `families` suite covers Collection Find/Card list, Shopping, Tokens,
+accessories, Game log, Activity, Settings and Wishlist in both themes at phone,
+tablet and desktop widths. Its 106 cases include empty primary lists, unavailable
+and pending GET responses; `--smoke` captures the 36 ordinary phone/desktop cases.
+The Activity and database-only Settings panels use invented read adapters. Tokens,
+accessories, queued cards and larger parcels are seeded only in the owned temporary
+inventory. A token search preference is checked through browser reload.
+
+The opt-in `zoom` suite uses fresh owned Chrome profiles below the private runtime
+to compare 100% and 200% **actual browser page zoom** at fixed physical window sizes.
+It requires CDP zoom=2, a halved CSS layout viewport, doubled CSS-to-device scale
+and unchanged outer window width; unsupported browser preferences fail the suite.
+It uses the same origin/write guards as the other suites. All 13 task/page families
+are captured in both themes; native editor Remove/Undo/More and a long blocked Save
+review preserve the saved deck. This is desktop Chromium page zoom, separately
+from CSS root-font stress, OS text scaling or physical Safari/touch acceptance.
 
 Explicit output directories must be new or empty and must not pass through
 symlinks/junctions. Prior evidence is never overwritten or pruned.

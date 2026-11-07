@@ -219,6 +219,12 @@ class Review {
       reducedMotion: 'reduce', acceptDownloads: false, serviceWorkers: 'block',
       locale: 'en-AU', timezoneId: 'Australia/Brisbane',
     });
+    return this.guardContext(context);
+  }
+
+  async guardContext(context) {
+    // Also used by an owned, temporary-profile zoom experiment. Keep identical
+    // read/write/origin guards instead of making browser qualification a bypass.
     this.contexts.add(context);
     context.on('close', () => this.contexts.delete(context));
     await context.route('**/*', async route => {
@@ -266,7 +272,7 @@ class Review {
     assert(typeof pathname === 'string' && pathname.startsWith('/') && !pathname.startsWith('//'), 'Expected a local API path');
     const url = new URL(pathname, this.origin);
     assert.equal(url.origin, this.origin);
-    assert(['/api/deck/edit', '/api/deck/draft', '/api/profiles/matt/wishlist'].includes(url.pathname),
+    assert(['/api/deck/edit', '/api/deck/draft', '/api/profiles/matt/wishlist', '/api/receipt'].includes(url.pathname),
       'Unapproved fixture proof read');
     this.checkCancelled();
     const response = await context.request.get(url.href, { timeout: 15000, maxRedirects: 0 });
@@ -292,7 +298,9 @@ class Review {
     if (this.browser) {
       try { await this.browser.close(); } catch (error) { errors.push(this.safeText(error.message)); }
     }
-    this.report.cleanup.browser_closed = !this.browser || !this.browser.isConnected();
+    const replacementsClosed = !this.report.zoomBrowsers
+      || this.report.zoomBrowsers.every(row => row.started && row.closed);
+    this.report.cleanup.browser_closed = (!this.browser || !this.browser.isConnected()) && replacementsClosed;
     this.report.browser_closed = this.report.cleanup.browser_closed;
     this.report.cleanup.contexts_closed = this.contexts.size === 0;
     try {

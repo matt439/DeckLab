@@ -242,15 +242,30 @@ function rcptSyncLayout(view, progress) {
     el("p", { class: "sub rcpt-guidance-note", text: "Guidance uses the loaded deck needs. Preview still checks the exact changes; nothing is recorded before confirmation." })]);
 }
 
-/** The Record bar can grow with warnings or wrapping; keep the lab pane above its actual height. */
+/** Keep a compact Record bar sticky. Enlarged text or a short viewport puts the same bar in normal flow
+ * rather than covering the checking task; focus/guidance clearance counts only the occluding height. */
 function rcptWatchBar(view) {
-  if (!view.bar?.node || view.barObserver) return;
+  if (!view.bar?.node || view.measureBar) return;
+  const disconnect = () => {
+    view.barObserver?.disconnect();
+    window.removeEventListener("resize", measure);
+    window.visualViewport?.removeEventListener("resize", measure);
+  };
   const measure = () => {
-    if (!receiptActive(view) || view.done) { view.barObserver?.disconnect(); return; }
+    if (!receiptActive(view) || view.done) { disconnect(); return; }
     const height = Math.ceil(view.bar.node.getBoundingClientRect().height);
-    if (Number.isFinite(height) && height > 0) view.root.style.setProperty("--rcpt-bar-height", `${height}px`);
+    if (!Number.isFinite(height) || height <= 0) return;
+    const viewport = window.visualViewport?.height || window.innerHeight;
+    const shellTop = document.querySelector(".topbar")?.getBoundingClientRect().height || 0;
+    const shellBottom = document.querySelector(".tabbar")?.getBoundingClientRect().height || 0;
+    const available = Math.max(0, viewport - shellTop - shellBottom);
+    const inline = Number.isFinite(available) && height > available * .4;
+    view.bar.node.classList.toggle("is-inline", inline);
+    view.root.style.setProperty("--rcpt-bar-height", `${inline ? 0 : height}px`);
   };
   view.measureBar = measure;
+  window.addEventListener("resize", measure);
+  window.visualViewport?.addEventListener("resize", measure);
   if (typeof window.ResizeObserver === "function") {
     view.barObserver = new window.ResizeObserver(measure);
     view.barObserver.observe(view.bar.node);

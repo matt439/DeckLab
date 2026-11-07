@@ -14,6 +14,40 @@ from urllib.parse import urlsplit
 
 
 class ReviewRunnerTests(unittest.TestCase):
+    def test_replaced_zoom_browsers_require_every_cleanup_proof(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is needed for the browser-helper lifecycle check")
+        script = r'''
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const {Review} = require('./decklab/ui_review/common.js');
+(async () => {
+  for (const [replacements, expected] of [
+    [undefined, true], [[{started:true, closed:true}], true],
+    [[{started:true, closed:false}, {started:true, closed:true}], false],
+    [[{started:false, closed:true}], false],
+  ]) {
+    process.exitCode = 0;
+    const review = {suite:'zoom', contexts:new Set(), browser:{isConnected:() => false, close:async () => {}},
+      config:{profileControl:path.join(process.argv[1],'profile.txt'),
+        caseControl:path.join(process.argv[1],'case.txt')},
+      originalProfile:'matt', originalCase:'complete', save:() => {},
+      report:{completed:true, zoomBrowsers:replacements, cleanup:{cancelled:false}}};
+    await Review.prototype.finish.call(review);
+    assert.equal(review.report.browser_closed, expected);
+    assert.equal(review.report.completed, expected);
+    assert.equal(process.exitCode, expected ? 0 : 1);
+  }
+  process.exitCode = 0;
+})().catch(error => {console.error(error); process.exitCode = 1;});
+'''
+        with tempfile.TemporaryDirectory() as runtime:
+            result = subprocess.run([node, "-e", script, runtime],
+                                    cwd=Path(__file__).resolve().parents[2],
+                                    text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_source_fingerprint_failure_never_leaves_a_private_runtime(self):
         from decklab.ui_review import runner
 
@@ -104,7 +138,7 @@ class ReviewRunnerTests(unittest.TestCase):
     def test_started_browser_requires_positive_cleanup_proof(self):
         from decklab.ui_review import runner
 
-        for suite, proof in ((suite, proof) for suite in ("capture", "variant-layout", "shell-layout", "task-layout") for proof in (None, False, True)):
+        for suite, proof in ((suite, proof) for suite in ("capture", "variant-layout", "shell-layout", "task-layout", "receipt-layout", "families", "zoom") for proof in (None, False, True)):
             with self.subTest(suite=suite, browser_closed=proof), tempfile.TemporaryDirectory() as outer:
                 output = runner.prepare_output(Path(outer) / "evidence")
 
@@ -383,6 +417,25 @@ class ReviewFixtureTests(unittest.TestCase):
                 Path(fixture.ready["case_control"]).write_text("library-failed", encoding="utf-8")
                 self.request(fixture, "/api/decks", status=503)
                 self.request(fixture, "/api/deck/save", method="POST", payload={}, status=403)
+
+    def test_page_family_records_and_admin_adapters_remain_disposable(self):
+        from decklab.ui_review.fixture import review_fixture
+
+        with tempfile.TemporaryDirectory() as parent:
+            runtime = self.runtime(parent)
+            with review_fixture(runtime, "unit-review-test-token") as fixture:
+                tokens = self.request(fixture, "/api/tokens")
+                self.assertEqual(len(tokens["rows"]), 2)
+                kit = self.request(fixture, "/api/accessories")
+                self.assertEqual(len(kit["items"]), 3)
+                self.assertTrue(all(row["owner"] in {"matt", "shared"} for row in kit["items"]))
+                activity = self.request(fixture, "/api/activity")
+                self.assertEqual(len(activity["changes"]), 4)
+                self.assertTrue(self.request(fixture, "/api/settings/maintenance")["available"])
+                members = self.request(fixture, "/api/settings/members")
+                self.assertEqual(members["members"][0]["emails"], ["user2@example.com"])
+                for path in ("/api/tokens/save", "/api/accessories/save", "/api/settings/members"):
+                    self.request(fixture, path, method="POST", payload={}, status=403)
 
     def test_owner_nonce_is_required_before_fixture_start(self):
         from decklab.ui_review.fixture import review_fixture

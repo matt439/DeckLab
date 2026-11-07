@@ -228,6 +228,25 @@ class ReceiptLayoutTests(unittest.TestCase):
           }
         """,draw=False)
 
+    def test_large_bar_uses_normal_flow_and_restores_stickiness_when_it_fits(self):
+        self.run_js("""
+          const v=drawReceipt(delivery(),routeToken),before=rcptRequestKey(v);
+          window.innerHeight=700;v.bar.node.box.height=400;v.measureBar();
+          assert(v.bar.node.classList.contains('is-inline'));
+          assert.equal(v.root.style['--rcpt-bar-height'],'0px');
+          assert.equal(rcptRequestKey(v),before);assert(v.primary.isConnected);
+          v.bar.node.box.height=120;window.fire('resize');
+          assert(!v.bar.node.classList.contains('is-inline'));
+          assert.equal(v.root.style['--rcpt-bar-height'],'120px');
+          window.innerHeight=250;window.fire('resize');
+          assert(v.bar.node.classList.contains('is-inline'));
+          assert.equal(v.root.style['--rcpt-bar-height'],'0px');
+          const handlers=window.events.get('resize').length;
+          routeToken++;window.fire('resize');
+          assert.equal(window.events.get('resize').length,handlers-1);
+          assert.equal(rcptRequestKey(v),before);
+        """,draw=False)
+
 class ReceiptLayoutCssTests(unittest.TestCase):
     def test_lab_aside_has_452px_only_at_lab_width_and_scrolls_without_hiding_the_action_bar(self):
         css = re.sub(r"/\*.*?\*/", "", (board.WEB / "receipts.css").read_text(encoding="utf-8"), flags=re.S)

@@ -1,6 +1,8 @@
 # Rendered UI review: change plan
 
-Date: 7 November 2026, Australia/Brisbane. Status: **repair lane implemented; wider visual rollout and acceptance open**. Owner: `E11-S30`.
+Date: 7 November 2026, Australia/Brisbane. Status: **implementation lane complete; household acceptance open**. Owner: `E11-S30`.
+
+The [final review](visual-polish-completion-2026-11-07.md) completes the remaining implementation and desktop Chromium qualification. It supersedes historical next-step wording below, records actual page zoom separately from CSS stress, and preserves the device/art/screen-reader/durability gates.
 
 The [first implementation record](visual-polish-implementation-2026-11-07.md) supersedes the planned status for R06, O03 and O02, and records bounded editor/receipt/board composition work for O04–O06. The [second repair slice](visual-polish-repairs-2026-11-07.md) implements R01–R05 and R07, with 42 rendered cases and separate guarded permission/crop coverage. Browser persistence and device qualification remain open. Earlier observations and acceptance criteria below are retained; original capture reports describe the pre-fix code.
 

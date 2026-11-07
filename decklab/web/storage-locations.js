@@ -250,19 +250,38 @@ function drawColStorageForecast(cv) {
   if (forecast.unverified) {
     host.append(el("p", { text: "The pending delivery forecast could not be verified. No future occupancy estimate is shown." })); return;
   }
-  host.append(el("p", { class: "sub", text: "A conditional scenario for the known loose card copies recorded as pending. "
+  const products = forecast.pending_products, tokens = forecast.tokens_excluded;
+  const contents = el("div", { class: "col-forecast-body" });
+  const details = el("details", { class: "col-forecast-details" },
+    el("summary", { text: "Assumptions, sources and exclusions" }), contents);
+  host.append(el("p", { class: "col-forecast-summary", text:
+    `${plural(forecast.known_loose_cards, "known pending card copy", "known pending card copies")}; `
+    + (forecast.box_candidates === null ? "box candidates could not be checked. " : `${plural(forecast.box_candidates, "box candidate")}. `)
+    + (forecast.cards_if_candidates_filed === null ? "No combined occupancy scenario is available from these facts."
+      : `Conditional box scenario: about ${num(forecast.cards_if_candidates_filed)} of ${num(forecast.capacity)} places if only these candidates are filed. `
+        + "Excluded and unknown deliveries are outside this comparison.") }));
+  contents.append(el("p", { class: "sub", text: "A conditional scenario for the known loose card copies recorded as pending. "
     + "It assumes those copies remain unsleeved and follow the same printing's recorded location; an unrecorded location means the box. "
     + "This does not predict final occupancy or guarantee that future deliveries will fit." }));
   if (forecast.stale) host.append(el("p", { class: "box box-warn", text: "Last-snapshot facts: pending deliveries and current stock may have changed." }));
-  host.append(el("p", { text: `${plural(forecast.known_loose_cards, "known pending card copy", "known pending card copies")}. `
+  if (forecast.over_if_candidates_filed) host.append(el("p", { class: "box box-warn", text: "That conditional scenario exceeds capacity." }));
+  if (forecast.unknown_sources) host.append(el("p", { class: "sub", text:
+    `Unverified sources: ${num(forecast.unknown_sources)}. Their unknown copies are not counted as zero.` }));
+  if (forecast.recorded_elsewhere === null) host.append(el("p", { class: "sub", text: "Copies following an off-box location: unknown." }));
+  if (products.unknown_contents) host.append(el("p", { class: "sub", text:
+    `Pending products: ${plural(products.unknown_contents, "reference with unknown contents", "references with unknown contents")}.` }));
+  if (tokens.unknown_components) host.append(el("p", { class: "sub", text:
+    `Pending tokens: ${plural(tokens.unknown_components, "component with unknown quantity", "components with unknown quantities")}.` }));
+  if (forecast.possible_current_holder_shortfall === null) host.append(el("p", { class: "sub", text:
+    "Overlap of these candidates with current holder shortfalls is unknown; none has been deducted or assigned." }));
+  contents.append(el("p", { text: `${plural(forecast.known_loose_cards, "known pending card copy", "known pending card copies")}. `
     + (forecast.box_candidates === null ? "How many belong in the box could not be checked."
       : `${plural(forecast.box_candidates, "box candidate", "box candidates")} under these assumptions.`) }));
-  if (forecast.cards_if_candidates_filed !== null) host.append(el("p", { text:
+  if (forecast.cards_if_candidates_filed !== null) contents.append(el("p", { text:
     `If only those candidates were filed in the box: about ${num(forecast.cards_if_candidates_filed)} cards against ${num(forecast.capacity)} places. `
     + (forecast.over_if_candidates_filed ? "That conditional scenario exceeds capacity." : "Excluded and unknown deliveries are outside this comparison.") }));
-  else host.append(el("p", { text: "No combined occupancy scenario is available from these facts." }));
-  const products = forecast.pending_products, tokens = forecast.tokens_excluded;
-  host.append(el("ul", {},
+  else contents.append(el("p", { text: "No combined occupancy scenario is available from these facts." }));
+  contents.append(el("ul", {},
     el("li", { text: `Basic lands excluded: ${num(forecast.basic_excluded)} copies, including special basics.` }),
     el("li", { text: forecast.recorded_elsewhere === null ? "Copies following an off-box location: unknown."
       : `Copies following an off-box location: ${num(forecast.recorded_elsewhere)}.` }),
@@ -270,11 +289,11 @@ function drawColStorageForecast(cv) {
       + `and ${plural(products.unknown_contents, "reference with unknown contents", "references with unknown contents")}. Whether they stay intact is chosen when received.` }),
     el("li", { text: `Tokens excluded: ${num(tokens.known_cards)} known physical card copies; ${plural(tokens.unknown_components, "component with unknown quantity", "components with unknown quantities")}.` }),
     el("li", { text: `Unverified sources: ${num(forecast.unknown_sources)}. Their unknown copies are not counted as zero.` })));
-  host.append(el("p", { class: "sub", text: forecast.possible_current_holder_shortfall === null
+  contents.append(el("p", { class: "sub", text: forecast.possible_current_holder_shortfall === null
     ? "Overlap of these candidates with current holder shortfalls is unknown; none has been deducted or assigned."
     : `Up to ${num(forecast.possible_current_holder_shortfall)} of these known box candidates overlap current holder shortfalls; none has been deducted or assigned.` }));
   for (const code of forecast.problems) host.append(el("p", { class: "sub", text: COL_FORECAST_PROBLEMS[code] }));
-  const details = el("details", {}, el("summary", { text: "Inspect counted sources and exclusions" }));
+  contents.append(el("h3", { text: "Counted sources and exclusions" }));
   const list = el("ol", { "aria-label": "Pending delivery sources and printing copies", tabindex: 0 });
   const count = el("p", { class: "result-count", role: "status" });
   let shown = 0;
@@ -304,7 +323,7 @@ function drawColStorageForecast(cv) {
         || document.querySelector("dialog[open]") || keyboardMenuOpen()) return;
     draw(); if (more.hidden) list.focus({ preventScroll: true });
   } });
-  draw(); details.append(list, count, more); host.append(details);
+  draw(); contents.append(list, count, more); host.append(details);
 }
 
 /** Build decks: where a card to pull or put back is kept, as a tile's meta line, or null. */

@@ -89,7 +89,7 @@
   --fs-meta: .875rem;           /* a meta line, --ink-2 at casual density, --ink-3 in the lab */
   --fs-btn: .9375rem;           /* a button's label, medium; primary semibold */
   --fs-input: 1rem;             /* a field's text: 16 px wherever iOS might zoom on focus */
-  --fs-th: .65625rem;           /* a table header, mono uppercase (casual density has no tables) */
+  --fs-th: var(--fs-meta);      /* table labels use the reading font at the density's metadata size */
   --fs-kbd: .65625rem;          /* a keyboard hint (only with a fine pointer) */
   --fs-cell-num: .875rem;       /* a table's mono numbers: quantities, money */
   --fs-qty: 1rem;               /* a stepper's number: Figtree 16 / 700 casual, mono 12.5 / 600 in the lab */

@@ -121,7 +121,7 @@
 /* ------------------------------------------------------------------- fields */
 
 .field { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
-.field > span, .field > label { font-size: var(--fs-sm); color: var(--ink-2); font-weight: var(--fw-semibold); }
+.field > span:where(:not(.field-hint)), .field > label { font-size: var(--fs-sm); color: var(--ink-2); font-weight: var(--fw-semibold); }
 .field :where(input:not([type="checkbox"], [type="radio"]), select, textarea) { width: 100%; }
 .field-hint { color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-regular); }
 .field-problem { color: var(--crit-ink); font-weight: var(--fw-semibold); }
@@ -758,8 +758,8 @@ body.has-edit-bar.keyboard-up .toast { bottom: max(var(--s-4), env(safe-area-ins
 
 /* ------------------------------------------------------------- data tables */
 
-/* A real table (4.7): rows --row-h tall (36 with a mouse, 44 on touch) with --divider lines, a 30 px sticky
-   header in mono uppercase on --surface-2, and numbers right-aligned (mono in the lab, from 1000 px; words
+/* A real table (4.7): rows --row-h tall (36 with a mouse, 44 on touch) with --divider lines, a 30 px minimum sticky
+   header in the reading font on --surface-2, and numbers right-aligned (mono in the lab, from 1000 px; words
    under a number, such as "2 in decks", stay Figtree). The row states are for the page slices to set:
    tr[data-selected] (with aria-current="true" on its name button), tr[data-match] (rows a choice elsewhere
    points to, .cell-match on the cell that matches) and tr.group-row (one th spanning the columns, role
@@ -788,8 +788,8 @@ table.data thead th {
   padding-top: var(--s-1); padding-bottom: var(--s-1);
   background: var(--surface-2);
   color: var(--ink-3);
-  font: var(--fw-semibold) var(--fs-th) / var(--lh-tight) var(--font-mono);
-  letter-spacing: var(--ls-th); text-transform: uppercase;
+  font: var(--fw-semibold) var(--fs-th) / var(--lh-tight) var(--font);
+  letter-spacing: normal; text-transform: none;
   vertical-align: middle;
   border-bottom: 1px solid var(--border-strong);
   overflow-wrap: normal;
@@ -832,7 +832,7 @@ table.data tr.group-row > * {
   padding-top: var(--s-1); padding-bottom: var(--s-1);
   background: var(--surface-2);
   color: var(--ink-2);
-  font-size: var(--fs-group); font-weight: var(--fw-heavy); letter-spacing: var(--ls-caps); text-transform: uppercase;
+  font-size: var(--fs-meta); font-weight: var(--fw-semibold); letter-spacing: normal; text-transform: none;
   text-align: left;
 }
 table.data tr.group-row .group-count { font-family: var(--font-mono); font-weight: var(--fw-semibold); letter-spacing: 0; }

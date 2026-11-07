@@ -4981,11 +4981,13 @@ Evidence:
 
 **E11-S30** · Matt · should · L · partial
 
+2026-11-07: the [visual-polish implementation and Chromium review](visual-polish-completion-2026-11-07.md) are complete, including remaining page/state families, receipt pointer/footer recovery, local reload persistence and actual 200% page zoom. This supersedes older component styling, not household acceptance: Safari/touch, software keyboards, screen readers, varied real art and production durability remain. The story stays partial.
+
 As Matt, I want Deck Lab to look like one app with two densities, casual on the phone and a "lab" on the desktop, so that User1 and the members find it friendly on their phones while I get a dense tool for building, buying and testing decks, and the Forge results that set it apart from collection apps are visible where we already look.
 
 - Given the phone or the iPad in portrait, when any page opens, then it uses the casual density of [visual-design.md](visual-design.md): mana-tinted deck tiles, words for counts and 44 px targets.
 - Given a window 1000 px or wider (the desktop or the iPad in landscape), when the library, a deck page, Matchups, Collection or Shopping opens, then it uses the lab density: a list beside the selected item's detail, mono numerals, and keyboard hints only with a fine pointer; on a touch screen every target stays 44 px.
-- Given either density, then teal is the only action and selection colour, deck colours appear only on decks, and both themes (light and dark) pass 4.5:1 text contrast.
+- Given either density, then shared accent tokens define action and selection emphasis, deck identity colours remain distinct from actions, and both themes (light and dark) pass 4.5:1 text contrast.
 - Given a tested casual deck, when the library or its Overview shows, then its field win rate and how long ago it was tested show without opening Matchups (E1-S12 separately retains the poor-AI caveat).
 - Given the fonts, then Figtree and JetBrains Mono are self-hosted; the page still loads nothing from the internet.
 - Given each rollout slice in visual-design.md section 7, when it ships, then it ships alone on the existing UI kit with its tests, a device check in both themes and UI-KIT.md updated in the same commit.

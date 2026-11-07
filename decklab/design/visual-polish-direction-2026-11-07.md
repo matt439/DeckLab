@@ -1,6 +1,8 @@
 # Deck Lab: visual diagnosis and proposed direction
 
-Date: 7 November 2026, Australia/Brisbane. Owner: `E11-S30`. Status: **direction with a first production slice implemented; wider rollout and acceptance remain**.
+Date: 7 November 2026, Australia/Brisbane. Owner: `E11-S30`. Status: **implementation lane complete; household acceptance remains**.
+
+The [final implementation and browser qualification](visual-polish-completion-2026-11-07.md) completes receipt pointer/footer recovery, remaining page/state composition, typography, long-review blocker placement, local reload persistence and actual Chromium page zoom. It supersedes historical next-step implementation wording below. Household Safari/touch, software keyboards, screen readers, real art and production durability remain separate acceptance; `E11-S30` stays partial.
 
 The [first implementation and rendered comparisons](visual-polish-implementation-2026-11-07.md) record shared controls, Testing composition, receipt guidance/footer and editor recovery/reflow. The original study below remains historical proposal evidence; it does not describe the final production markup.
 

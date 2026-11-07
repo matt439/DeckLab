@@ -198,6 +198,14 @@ def _install_handler(fixture, runtime, run_id):
                     raise ApiError(403, "Review identity challenge did not match this disposable run.")
                 return self._send_json(200, {"fixture_type": FIXTURE_TYPE, "run_id": run_id, "isolated": True})
             case = _control(case_path, CASES, "complete")
+            if path == "/api/activity":
+                from .family_data import activity
+
+                return self._send_json(200, activity())
+            if path in {"/api/settings/maintenance", "/api/visits", "/api/settings/members"}:
+                from .family_data import settings
+
+                return self._send_json(200, settings(path))
             if path == "/api/decks" and case == "library-failed":
                 return self._send_json(503, {"error": "Synthetic fixture: the deck library could not be read.",
                                              "reason": "database"})
@@ -237,6 +245,9 @@ def _install_handler(fixture, runtime, run_id):
                 return self._send_json(200, {"overall": None, "played": 0, "of": 20, "games": 0})
             if path == "/api/gauntlet":
                 return self._send_json(200, {"catalogue": False, "format": "constructed", "build_command": None})
+            if path == "/api/gauntlet/catalogue":
+                return self._send_json(200, {"built": None, "format": query.get("format", ["commander"])[0],
+                                             "build_command": None, "standard": None})
             return super()._route()
 
     fixture.httpd.RequestHandlerClass = ReviewHandler
@@ -295,6 +306,10 @@ def review_fixture(runtime, run_id, *, lifecycle=None, _validated=False):
         for deck_id, body in ((HOME, text), (MEMBER, member_text)):
             fixture.inventory._remember(deck_id, body, "matt", "Create synthetic UI fixture", "A")
         composition_data.seed(fixture, text)
+        from . import family_data
+        family_data.seed(fixture)
+        from . import receipt_data
+        receipt_data.seed(fixture)
         (runtime / "profile.txt").write_text("matt\n", encoding="utf-8")
         (runtime / "case.txt").write_text("complete\n", encoding="utf-8")
         _install_handler(fixture, runtime, run_id)
@@ -316,6 +331,8 @@ def review_fixture(runtime, run_id, *, lifecycle=None, _validated=False):
                                     "empty_deck": f"/#/deck?id={composition_data.EMPTY}",
                                     "commander_guide": f"/#/deck?id={composition_data.COMMANDER}&part=guide",
                                     "guide": "/#/deck?id=casual%2Fsafari-fixture&part=guide",
+                                    "large_receipt": f"/#/receipt?order={receipt_data.LARGE}",
+                                    "split_receipt": f"/#/receipt?order={receipt_data.SPLIT}",
                                     "receipt": f"/#/receipt?order={fixture.order_id}"}}
         yield fixture
 

@@ -115,9 +115,10 @@ Two families:
 **Which numbers are mono.**
 
 - **A Forge number is always mono**, at both densities: win rate, range, games, rank, points, "game 37 of 200".
-- **Lab density** also uses mono for counts (`60 / 60`, filter counts, `13 decks`), quantities, deck ids (`casual/izzet-otters`), dates in meta lines, condition and language codes, table money (`Ref AUD` columns) and `kbd` hints.
+- **Lab density** also uses mono for counts (`60 / 60`, filter counts, `13 decks`), quantities, deck ids (`casual/izzet-otters`), dates in meta lines, table money (`Ref AUD` columns) and `kbd` hints.
 - **Casual density** uses Figtree for counts, with `font-variant-numeric: tabular-nums` where they line up, and mono only for Forge numbers.
 - **Words are never mono**, even in a mono line: deck names, "basic land", "Planned", "Done" are Figtree beside their mono numbers.
+- **Condition/language abbreviations stay in the body font**, including the lab Card list. They are labels rather than numerical evidence.
 - **Printings stay in the body font** ("FDN 227"), with tabular numbers, at both densities. This keeps UI-KIT.md's existing rule; the collection and editor drawings set them in mono, and the receipt review moved them back. A printing is a name, not a measured number.
 - Ranges use an en dash (`59–63%`), negatives the real minus (`−0.4`, `−1 Abrade`).
 
@@ -131,17 +132,17 @@ Two families:
 | Panel eyebrow | `--fs-eyebrow` | 13 / 800 / .08em uppercase | 11 / 800 / .08em uppercase, `--accent-strong` |
 | Group heading | `--fs-group` | 13 / 800 uppercase | 11 / 800 uppercase, mono count 11 |
 | Body | `--fs-body` | 16 | 14, line-height 1.5; guide prose 16 / 1.65 |
-| Row or tile title | `--fs-row` | 17; deck/library 600 | 14; deck/library 600, other retained roles 700 |
+| Row or tile title | `--fs-row` | 17; deck/library/Collection 600 | 14; deck/library/Collection 600, other retained roles 700 |
 | Meta | `--fs-meta` | 14, `--ink-2` | 13, `--ink-3` |
 | Button | `--fs-btn` | 15 / 500, primary 600 | 14 / 500, primary 600 |
-| Table header | `--fs-th` | (no tables) | mono 10.5 / 600 / .07em uppercase, `--ink-3` |
+| Table header | `--fs-th` | reading font at `--fs-meta`, semibold | reading font at `--fs-meta` (13px), semibold sentence case, `--ink-3` |
 | Progress figure | `--fs-fig-mid` | 24 / 600 | mono 28 / 600 (Packing plan's `19 / 39`) |
 | Big win rate | `--fs-fig` | mono 40 / 600, "%" 24 | mono 36 / 600 / −0.04em, "%" 22 |
 | Inline win rate | `--fs-fig-sm` | mono 16 / 600 | mono 13 / 600, range 10.5 / 500 `--ink-2` |
 
-10.5 px is only for uppercase table headers and `kbd`. Nothing else people read goes below 11 px at lab density or 14 px at casual density.
+10.5px remains for compact `kbd` hints. Table labels use the metadata scale; ordinary reading text keeps its existing density roles.
 
-**7 November typography revision:** the [rendered comparison](visual-polish-typography-2026-11-07.md) supersedes the original title/body/meta/button values above. Base headings now consume these shared roles and `body` uses `--fs-body`; its earlier implicit desktop prose was actually 16px. Touch-lab buttons remain 15px and fields 16px; fine-pointer lab fields are 14px. Table headers, numeric evidence, pips and touch floors retain their existing scales pending their own page-family review. The QHD 112.5% root enlargement remains.
+**7 November typography revision:** the [rendered comparison](visual-polish-typography-2026-11-07.md) supersedes the original title/body/meta/button values above. Base headings now consume these shared roles and `body` uses `--fs-body`; its earlier implicit desktop prose was actually 16px. Touch-lab buttons remain 15px and fields 16px; fine-pointer lab fields are 14px. The later page-family treatment gives table headers and table group names Figtree semibold sentence-case labels at the metadata size; numeric evidence, pips and touch floors retain their separate scales. The QHD 112.5% root enlargement remains.
 
 ### 2.4 Spacing
 
@@ -288,16 +289,20 @@ Same name and same look at both densities; only size changes. Each lives in `com
 
 Today's `table.data` (sticky header, `.th-sort`, `.num`) is the base. P1 adds:
 
-- **Rows:** 36 px (44 on a coarse pointer), 1 px `--divider` lines, hover `--hover`. Header 30 px, `--surface-2`, `--fs-th`, sticky at `--shell-top`.
+- **Rows:** 36 px (44 on a coarse pointer), 1 px `--divider` lines, hover `--hover`. Header 30px minimum, `--surface-2`, Figtree semibold sentence case at `--fs-th` (`--fs-meta`), sticky at `--shell-top`; enlarged labels may grow the row.
 - **Selected row:** a table row can't have a radius or border, so: `--accent-soft` on every cell, inset 1 px `--accent-line` top and bottom, a 2 px `--accent` inset bar on the first cell, the name in `--accent-strong`. Mark it with `data-selected` on the `<tr>` and `aria-current="true"` on the row's name button (`aria-selected` isn't valid on a plain table row).
 - **Matching row** (new): rows a choice elsewhere points to (By shop's chosen shop): `--accent-soft`, no border, a 7 px accent dot and `--accent-strong` 700 in the matching cell, and a removable chip above the table ("Marking MTGMate's rows").
-- **Group rows:** the group heading style (30 px, 11 / 800 uppercase, mono count) as a `role="row"` with one `role="rowheader"` spanning the columns.
+- **Group rows:** a 30px minimum, Figtree semibold at `--fs-meta` in sentence case, with a separate mono count. Use a `role="row"` with one `role="rowheader"` spanning the columns.
 - **Unknown data:** a mono em dash in `--ink-3`, `aria-hidden`, with visually hidden words ("Condition not recorded"). Not an `aria-label` on a span.
 - **Thumbnails in rows:** 30 px wide card pictures (casual rows 52–56 px), `--r-card`, `--shadow-img-sm`, empty `alt` when the name is beside them. No picture: a `--surface-chip` card frame with a 1 px `--border-strong` inset ring and a card glyph in `--ink-4` (a target glyph for a token card).
 - **Sorting and labels:** a sort button's accessible name starts with its visible words ("Sort: Name A–Z"; "~AUD row: estimated AUD for the row, sort").
 - **Paging:** a footer row: "Rows 851–875 of 1,104", 30 px round previous and next, mono "35 / 45", `kbd` hints. Casual lists end with a secondary "Show more".
 - **ARIA:** use a real `<table>` wherever the content is tabular. If a grid of divs is needed for layout, every `columnheader` and `cell` goes inside a `role="row"` (with `display: contents` if needed). A row that's a link isn't a table row: make it a list of links with a spoken label (the iPad Matchups rows).
-- **Casual has no tables.** It has rows inside one white `--r-panel` panel: thumbnail, name 17 / 700, the main number top right, a meta line 14 `--ink-2`, and an optional deck line with a swatch. The whole row is one 44 px+ button. Keep its accessible name to the name and the one or two facts that matter, not every line joined.
+- **Casual has no tables.** It has rows inside one white `--r-panel` panel: thumbnail, name 17 / 600, the main number top right, a meta line 14 `--ink-2`, and an optional deck line with a swatch. The whole row is one 44 px+ button. Keep its accessible name to the name and the one or two facts that matter, not every line joined.
+
+Field labels are semibold; supporting `.field-hint` text stays regular, including direct child spans and Settings forms.
+
+The remaining page families use the same quiet grammar: Shopping's stacked jump links are underlined navigation rather than outlined pills; its printing and waiting captions use text-relative line height and may grow their table rows. Its Card column prefers 220px to preserve names beside the original thumbnail and menu; other columns remain available through the existing bounded scrolling. Collection's card names are semibold and busy results keep full readable ink beside their loading status. Its pending-storage scenario keeps concise conditional facts, stale/unknown/over-capacity guidance and data problems visible, with assumptions, source rows and exclusions in one native disclosure. Activity uses one neutral surface per day with dividers between changes, preserving the original per-change controls and disclosures.
 
 ### 4.8 Sheets and bars
 
