@@ -468,6 +468,8 @@ What the round didn't settle, and where P1 didn't hold up as written.
 
 The [initial rendered review of 2026-11-07](rendered-ui-review-2026-11-07.md) and its [follow-up](rendered-ui-review-2026-11-07-pass2.md) record seven reproduced, unfixed UI findings with disposable synthetic evidence. Native interaction checks and the headless capture matrix are scoped by their coverage ledgers; remaining states and device acceptance stay separate from the implementation evidence below.
 
+The [rendered UI change plan](rendered-ui-change-plan-2026-11-07.md) consolidates those findings with fresh screenshot analysis, source seams and acceptance checks. Its proposed order is data/action correctness, editing recovery, navigation/readability/touch sizing, then task hierarchy and measured layout improvements. No application fixes were made by the planning pass.
+
 For repeat rendered checks, use the [headless UI review command](../ui_review/README.md). It captures synthetic evidence without desktop input; inspect the output and retain the separate device gates.
 
 Each slice ships on its own on top of today's UI kit: no page is rewritten, and after each one Deck Lab works and looks consistent (if part old, part new). Each slice runs the web tests (`test_web.test_page_files_use_the_scales` and the page UI tests), is checked at the sizes in UI-KIT's Test devices table in both themes, updates UI-KIT.md, and is committed before the server is restarted. Turn each into a story in [stories.md](stories.md) and a row in TODO.md when it's scheduled.
