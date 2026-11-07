@@ -96,7 +96,7 @@ function libGauntletLine(d) {
   return el("span", { class: "deck-forge lib-gauntlet" + (f.stale ? " is-stale" : "") },
     winRateFigure(f.rate, { size: "tile", caption: LIB_GT_CAPTION, what: libGauntletWords(f),
       games: f.stale ? null : n.games }),
-    libGauntletFresh(f, { size: "casual", onTint: true }));
+    libGauntletFresh(f, { size: "casual" }));
 }
 
 /** A Commander deck's lab-row Forge cell (4.2): the inline figure, its range and freshness; "—" without one;
@@ -129,14 +129,14 @@ function libDetailGauntlet(d) {
   if (f && hero && !f.stale) {
     parts.push(el("div", { class: "lib-detail-forge-figure" },
       winRateFigure(f.rate, { size: "hero", what: LIB_GT_WHAT, games: n.games, barred: true }),
-      libGauntletFresh(f, { size: "panel", onTint: true })),
+      libGauntletFresh(f, { size: "panel" })),
     rangeBar(f.rate, { axis: true, decorative: true }));
   } else if (f && hero) {
     parts.push(gtBeforeLine(n));                                  // the board's words (gauntlet.js)
   } else if (f) {
     parts.push(el("div", { class: "lib-detail-forge-figure" + (f.stale ? " is-stale" : "") },
       winRateFigure(f.rate, { what: libGauntletWords(f), games: f.stale ? null : n.games }),
-      libGauntletFresh(f, { size: "panel", onTint: true })));
+      libGauntletFresh(f, { size: "panel" })));
   } else if (n && n.state === "stale_older") {
     parts.push(gtOlderLine(n, { note: !hero }));
   } else {

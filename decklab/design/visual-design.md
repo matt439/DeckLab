@@ -1,6 +1,6 @@
 # Deck Lab: visual design (P1)
 
-> **Visual review follow-up, 2026-11-07:** Matt's clarified objective is to diagnose and resolve the current UI's amateurish feel. The [new visual diagnosis and proposed direction](visual-polish-direction-2026-11-07.md) reassess P1's shared control language and page composition. This document retains the original decisions and implemented rules; the proposed replacements are not production changes yet.
+> **Visual review follow-up, 2026-11-07:** Matt's clarified objective is to diagnose and resolve the current UI's amateurish feel. The [visual direction](visual-polish-direction-2026-11-07.md) owns the continuing rollout. Shared controls, Testing, receipt/editor repairs and populated deck/library composition are implemented; the [UI kit](../UI-KIT.md) records their current rules. Original study decisions below remain historical where those records supersede them. Wider state, typography and device qualification remain open.
 
 The look Deck Lab's pages are moving to, and how to get there from today's UI kit without a rewrite.
 
@@ -14,7 +14,7 @@ The look Deck Lab's pages are moving to, and how to get there from today's UI ki
 
 P1 is one design system at two densities.
 
-- **Casual, on the phone (and the iPad in portrait).** Decks are tiles tinted in their mana colours, with art on the left, a colour stripe across the top and pips on the art. Big type, 44 px targets, words for counts ("60 of 60 owned"). This is User1's Deck Lab: pick a deck, see it's ready, play.
+- **Casual, on the phone (and the iPad in portrait).** Deck tiles use neutral reading surfaces, art on the left, a colour stripe across the top and pips on the art. Big type, 44 px targets, words for counts ("60 of 60 owned"). This is User1's Deck Lab: pick a deck, see it's ready, play.
 - **Lab, on the desktop (and the iPad in landscape).** A pro tool: a top bar, dense rows, a list on the left and the selected thing's detail on the right, mono numerals, keyboard hints. This is where Matt builds, shops, receives and tests.
 - **Simulations are the edge.** What Deck Lab has that a spreadsheet or Moxfield doesn't is Forge. Win rates, ranges, freshness and swap tests have their own components, look the same at both densities and are always set in mono.
 
@@ -214,15 +214,15 @@ Same name and same look at both densities; only size changes. Each lives in `com
 ### 4.1 Deck tile (casual)
 
 - White tile, `--r-panel` 14, `--shadow-1`. A 5 px colour stripe across the top. Art on the left, 112 px wide and the tile's full height, on its art placeholder colour while loading, with the pips overlaid at its bottom-left.
-- The rest of the tile is the deck's tint gradient (135deg). Name 17 / 700; meta 14 `--ink-2`; status pill; the owned bar with words ("87 owned · 4 on the way · 9 to buy"); if tested, a Forge line (win rate mono 16 / 600, "Forge field", freshness badge 24 px). A Commander tile's Forge line is its popular-decks figure instead ("vs popular decks", E3-S36), muted with "before the last change" when it's from before the list's last change.
+- The rest of the tile is a neutral reading surface. Name 17 / 600; meta 14 `--ink-2`; quiet status tag; the owned bar with words ("87 owned · 4 on the way · 9 to buy"); if tested, a Forge line (win rate mono 16 / 600, "Forge field", freshness badge 24 px). A Commander tile's Forge line is its popular-decks figure instead ("vs popular decks", E3-S36), muted with "before the last change" when it's from before the list's last change.
 - The whole tile is one link to the deck page. No "not tested" line when there's no result.
 - At least 104 px tall, 112 with a Forge line.
 
 ### 4.2 Deck row (lab)
 
-- 54 px, `--r-row` 8, 2 px apart. A 56 × 38 art thumbnail with a 3 px stripe on its bottom edge; name 14 / 700 and meta 12 `--ink-3`; 16 px pips; the owned bar with mono text (`87 +4 … 9 to buy`: `+4` in `--accent-strong`, "to buy" in `--missing`); the Forge field column (inline win rate, range, freshness).
+- Minimum 54 px, `--r-row` 8, 2 px apart. A 56 × 38 art thumbnail with a 3 px stripe on its bottom edge; name 14 / 600 and meta 12 `--ink-3`; 16 px pips; the owned bar with mono text (`87 +4 … 9 to buy`: `+4` in `--accent-strong`, "to buy" in `--missing`); the Forge field column (inline win rate, range, freshness). From 1000 to 1280px the name uses the first line beside the art, with availability/results beneath; it wraps instead of being squeezed between fixed evidence columns.
 - Hover `--hover`. Selected: `--accent-soft` with a 1 px `--accent-line` border, owned-bar track `--accent-track`.
-- Rows grouped under Built, Building and Ideas headings (11 / 800 uppercase, mono count). Built heading `--accent-strong`, Building `--building-ink`, Ideas `--ink-2`. Rows omit the status pill; the heading says it.
+- Rows grouped under Built, Building and Ideas headings (semantic small text / 600, mono count). Built heading `--accent-strong`, Building `--building-ink`, Ideas `--ink-2`. Rows omit the status pill; the heading says it.
 - A casual deck with no field result shows `—` in `--ink-3`. A Commander deck shows its standard-sample figure in the cell (against popular decks, E3-S36), `—` when untested, blank while the numbers load; a figure from before the list's last change is muted ("before the last change"). (Changed deliberately with E3-S36: until then a Commander deck left the cell blank.)
 
 ### 4.3 Mana pips, identity stripe, tint and deck swatch
@@ -271,7 +271,7 @@ Same name and same look at both densities; only size changes. Each lives in `com
 
 | Page | List | Detail | Stacks at |
 |---|---|---|---|
-| Library | `minmax(0, 720px)` (880 px from 2200) | `1fr` (46% / 54% from 1000 to 1280); its art 5:2 but at most `min(240px, 30vh)` high | < 1000 |
+| Library | `minmax(0, 720px)` (880 px from 2200) | `1fr` (46% / 54% from 1000 to 1280); neutral reading surface, identity/actions first; its art 5:2 but at most `min(180px, 24dvh)` high | < 1000 |
 | Collection | `1fr` (the table) | 400 px (340 from 1000 to 1280) | < 1000 |
 | Shopping | 560 px (orders, follow-ups, by shop) | `1fr` (queue and missing tables) | ≤ 1280 |
 | Receive delivery | `minmax(0, 1fr)` (the parts) | 452 px, sticky | < 1000 |

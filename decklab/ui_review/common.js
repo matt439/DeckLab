@@ -206,7 +206,7 @@ class Review {
   select(profile = 'matt', fixtureCase = 'complete') {
     this.checkCancelled();
     assert(['matt', 'user2'].includes(profile), 'Unknown synthetic profile');
-    assert(['complete', 'stale', 'failed', 'running', 'unknown-counts'].includes(fixtureCase), 'Unknown synthetic case');
+    assert(['complete', 'stale', 'failed', 'running', 'unknown-counts', 'library-failed'].includes(fixtureCase), 'Unknown synthetic case');
     fs.writeFileSync(this.config.profileControl, profile, 'utf8');
     fs.writeFileSync(this.config.caseControl, fixtureCase, 'utf8');
   }
@@ -248,8 +248,9 @@ class Review {
       const knownGap = status === 404 && url.pathname === '/api/deck'
         && url.searchParams.get('id') === 'casual/synthetic-opponent'
         || status === 403 && url.pathname === '/api/gauntlet/catalogue';
-      const expectedState = status === 503 && url.pathname === '/api/gauntlet/board'
-        && fs.readFileSync(this.config.caseControl, 'utf8').trim() === 'failed';
+      const selectedCase = fs.readFileSync(this.config.caseControl, 'utf8').trim();
+      const expectedState = status === 503 && (url.pathname === '/api/gauntlet/board' && selectedCase === 'failed'
+        || url.pathname === '/api/decks' && selectedCase === 'library-failed');
       httpErrors.push({ url: this.safeUrl(response.url()), status,
         category: knownGap ? 'expected_fixture_gap' : expectedState ? 'expected_failure_state' : 'unexpected_http_error' });
     });

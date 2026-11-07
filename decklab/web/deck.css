@@ -24,14 +24,15 @@
 .deck-page-head > .deck-head-actions { grid-column: 2; grid-row: 1; }
 /* Scoped to the head: the library's tiles have a .deck-title-row of their own (library.css). */
 .deck-page-head .deck-title-row {
-  display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: var(--s-2) var(--s-3); min-width: 0;
+  display: grid; align-items: center; grid-template-columns: minmax(0, 1fr); gap: var(--s-3); min-width: 0;
 }
+.deck-page-head .deck-title-row:has(.deck-head-cover) { grid-template-columns: auto minmax(0, 1fr); }
 .deck-head-cover {
   flex: none; display: block; width: 64px; aspect-ratio: 626 / 457; overflow: hidden;
-  border-radius: var(--r-sm); background: var(--deck-art, var(--surface-3)); box-shadow: var(--shadow-1);
+  border-radius: var(--r-sm); background: var(--deck-art, var(--surface-3));
 }
 .deck-head-cover-img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.deck-page-head .deck-title-row h1 { margin: 0; font-size: var(--fs-2xl); overflow-wrap: break-word; hyphens: auto; min-width: 0; }
+.deck-page-head .deck-title-row h1 { margin: 0; font-size: var(--fs-h1); font-weight: var(--fw-semibold); overflow-wrap: break-word; hyphens: auto; min-width: 0; }
 .deck-meta { margin: 0; color: var(--ink-2); }
 .deck-page-head > .deck-meta { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); }
 .deck-page-head > .deck-stripe, .deck-header-id { display: none; }
@@ -48,6 +49,7 @@
 @media (max-width: 599px) {
   .deck-page-head .deck-title-row h1 { font-size: var(--fs-xl); }
   .deck-head-cover { display: none; }   /* the title keeps the row beside Edit and ⋯ */
+  .deck-page-head .deck-title-row:has(.deck-head-cover) { grid-template-columns: minmax(0, 1fr); }
   /* On a phone More is a square "⋯" beside Edit, so the title keeps most of the row. */
   .deck-head-actions .menu-button { width: var(--tap); padding: 0; justify-content: center; }
   .deck-head-actions .menu-button .menu-caret, .deck-more-words { display: none; }
@@ -71,56 +73,31 @@
   .deck-page-head:has(.deck-build) .deck-edit-which { display: none; }
 }
 @media (min-width: 1000px) {
-  /* The full deck page promotes the library's art to a hero. The editor keeps its own head. */
-  .deck-page-head { position: relative; gap: 0; grid-template-columns: minmax(0, 1fr) auto; }
-  .deck-page-head > .deck-head-actions { grid-column: 2; grid-row: 1; padding-bottom: var(--s-2); }
-  .deck-page-head > .deck-stripe { display: block; grid-row: 2; }
-  .deck-page-head > .deck-title-row {
-    grid-column: 1 / -1; grid-row: 3; position: relative; isolation: isolate;
-    align-items: flex-end; min-height: 184px; padding: var(--s-5);
-    background: var(--deck-art, var(--surface-2));
-  }
-  .deck-page-head .deck-head-cover {
-    display: block; position: absolute; inset: 0; width: auto; height: auto; aspect-ratio: auto;
-    border-radius: 0; box-shadow: none;
-  }
-  .deck-page-head .deck-title-row:has(.deck-head-cover)::after {
-    content: ""; position: absolute; inset: 0; pointer-events: none;
-    background: linear-gradient(180deg, transparent, var(--scrim-strong) 60%);
-  }
-  .deck-page-head .deck-title-row h1 { position: relative; z-index: 1; font-size: var(--fs-hero); }
-  .deck-page-head .deck-title-row:has(.deck-head-cover) h1 { color: var(--on-scrim); }
-  .deck-page-head > .deck-meta {
-    grid-row: 4; padding: var(--s-3) var(--s-5); background: var(--deck-tint, none), var(--surface-2);
-  }
+  /* Art supplies identity beside a readable title; actions never overlap either. */
+  .deck-page-head { row-gap: var(--s-3); }
+  .deck-page-head .deck-head-cover { width: 88px; }
+  .deck-page-head > .deck-stripe { display: block; grid-row: 3; }
+  .deck-page-head > .deck-meta { grid-row: 2; }
   .deck-header-id { display: inline; margin-left: auto; font-size: var(--fs-xs); overflow-wrap: anywhere; }
-  .deck-page-head > .deck-head-note, .deck-page-head > .pairings-of { margin-top: var(--s-2); }
 }
 @media (min-width: 1000px) and (max-width: 1280px) {
-  /* A touch lab has room for art, title and actions in one row, rather than a second toolbar. */
-  .deck-page-head > .deck-title-row { min-height: 148px;
-    padding: calc(var(--tap) + 2 * var(--s-3)) var(--s-3) var(--s-3); }
-  .deck-page-head .deck-title-row h1 { max-width: calc(100% - 240px); }
-  .deck-page-head:has(.deck-build) .deck-title-row h1 { max-width: calc(100% - 320px); }
+  /* The full title keeps the width on a tablet; its tools have their own row. */
+  .deck-page-head > .deck-title-row { grid-column: 1 / -1; }
   .deck-page-head > .deck-head-actions {
-    grid-column: 1 / -1; grid-row: 3; position: relative; z-index: 2; align-self: end; justify-self: end;
-    margin: var(--s-3); padding: 0;
+    grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; flex-wrap: wrap;
   }
-  .deck-head-actions > .deck-actions, .deck-head-actions > .deck-build {
-    outline: 2px solid var(--on-scrim); outline-offset: 2px; border-radius: var(--r-pill);
-  }
-  .deck-page-head > .deck-meta { padding-inline: var(--s-3); }
-}
-@media (forced-colors: active) {
-  .deck-page-head .deck-title-row:has(.deck-head-cover) h1 { color: CanvasText; background: Canvas; }
-  .deck-page-head .deck-title-row:has(.deck-head-cover)::after { display: none; }
+  .deck-page-head > .deck-head-actions > .menu-wrap { margin-left: auto; }
+  .deck-page-head > .deck-meta { grid-row: 3; }
+  .deck-page-head > .deck-stripe { grid-row: 4; }
 }
 
 /* The availability banner (deck.js availabilityBanner): the answer, its button, the list picker. */
 .deck-avail { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); max-width: none; }
+.deck-avail.box { background: var(--surface); color: var(--ink); border-color: var(--border); border-radius: var(--r-control); box-shadow: none; }
+.deck-avail.box-warn .deck-avail-head b { color: var(--warn-text); }
 .deck-avail-text { flex: 1 1 260px; min-width: 0; }
 .deck-avail-head { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-1) var(--s-3); }
-.deck-avail-head b { font-size: var(--fs-md); }
+.deck-avail-head b { font-size: var(--fs-md); font-weight: var(--fw-semibold); }
 .deck-avail-more { color: var(--ink-2); font-size: var(--fs-sm); }
 .deck-avail-sources { margin: var(--s-2) 0 0; overflow-wrap: anywhere; }
 .deck-avail .btn { flex: none; }
@@ -159,6 +136,7 @@
 .deck-section > h3 { margin-top: var(--s-4); }
 .deck-section-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: var(--s-2); margin-bottom: var(--s-3); }
 .deck-section-head h2 { margin: 0; }
+.deck-section-head h2, .commander-readiness > h2 { font-weight: var(--fw-semibold); }
 /* "All the stats", "All 60 cards": links in look (the link colour and a chevron), still a full-height target. */
 .deck-more-link { padding-left: 0; padding-right: 0; color: var(--link); }
 .deck-more-link::after { content: "\203A"; content: "\203A" / ""; margin-left: var(--s-1); font-size: var(--fs-lg); line-height: 1; }
@@ -471,30 +449,18 @@ table.data tfoot .total-cost { font-weight: var(--fw-semibold); text-align: left
   .swap-row > .swap-use { grid-column: 1; grid-row: auto; justify-self: start; margin-top: var(--s-2); }
 }
 
-/* The fresh visible library supplies previous/next; narrow lab navigation sits over the art. */
+/* The fresh visible library supplies previous/next, alongside the header facts. */
 .deck-neighbours { display: none; }
 .deck-changed { color: var(--ink-2); font-size: var(--fs-xs); white-space: nowrap; }
 .deck-neighbour-count { font-family: var(--font-num); font-size: var(--fs-sm); white-space: nowrap; }
 @media (min-width: 1000px) {
-  .deck-page-head > .deck-neighbours { display: flex; grid-column: 1; grid-row: 1; align-items: center;
-    align-self: start; gap: var(--s-2); padding-bottom: var(--s-2); min-width: 0; }
-}
-/* Above 1,280 px previous/next sit on the page, not over the art: the plain secondary button, so a dark page
-   doesn't get two white discs (btn-art's opaque surface is for art only). */
-@media (min-width: 1281px) {
-  .deck-page-head > .deck-neighbours > .btn.btn-art {
-    border: 1.5px solid var(--accent); background: var(--btn-bg); color: var(--accent-strong); box-shadow: none;
+  .deck-meta > .deck-neighbours { display: flex; align-items: center; gap: var(--s-2); min-width: 0; flex-wrap: wrap; }
+  .deck-meta > .deck-neighbours > .btn.btn-art {
+    border: 1px solid var(--border-strong); background: var(--btn-bg); color: var(--ink-2); box-shadow: none;
   }
 }
-@media (min-width: 1281px) and (hover: hover) and (pointer: fine) {
-  .deck-page-head > .deck-neighbours > .btn.btn-art:hover:not(:disabled, [aria-disabled="true"]) { background: var(--hover); }
-}
-@media (min-width: 1000px) and (max-width: 1280px) {
-  .deck-page-head > .deck-neighbours { grid-column: 1 / -1; grid-row: 3; position: relative;
-    z-index: 2; justify-self: start; margin: var(--s-3); padding: 0; max-width: calc(100% - 2 * var(--s-3)); }
-  .deck-neighbour-count { padding: var(--s-1) var(--s-2); border-radius: var(--r-pill);
-    background: var(--scrim-strong); color: var(--on-scrim); }
-  .deck-neighbours > .sub { background: var(--surface); color: var(--ink); padding: var(--s-1); }
+@media (min-width: 1000px) and (hover: hover) and (pointer: fine) {
+  .deck-meta > .deck-neighbours > .btn.btn-art:hover:not(:disabled, [aria-disabled="true"]) { background: var(--hover); }
 }
 
 /* The Considering list (deck-considering.js): each card row with its ⋯ (move or remove) beside it. */

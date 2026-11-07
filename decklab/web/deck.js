@@ -297,14 +297,13 @@ function deckHeader(data) {
   const cover = deckHeadCover(s);
   return el("header", { class: "deck-head deck-page-head", style: colours ? colours.vars(90) : null },
     colours ? colours.stripe() : null,
-    deckNeighbours(data),
     el("div", { class: "deck-title-row" },
       cover,
       el("h1", {}, s.title)),
     el("div", { class: "actions deck-head-actions" }, edit, build, more),
     el("div", { class: "deck-meta" },
       colours ? colours.pips(22, { cls: "deck-head-pips" }) : null,
-      deckPill(s), deckHeadMeta(data), deckChangedDate(s.edited),
+      deckPill(s), deckHeadMeta(data), deckChangedDate(s.edited), deckNeighbours(data),
       el("code", { class: "deck-header-id", text: s.id })),
     said.length ? el("p", { class: "sub deck-head-note", text: said.join(" ") }) : null,
     s.id.startsWith(BOX_PREFIX) ? pairingLinks(s.id) : null);

@@ -49,6 +49,7 @@ python scripts/ui_review.py --check
 python scripts/ui_review.py --smoke
 python scripts/ui_review.py --suite capture
 python scripts/ui_review.py --suite editor
+python scripts/ui_review.py --suite composition
 python scripts/ui_review.py --output C:/Temp/decklab-ui-review-01
 python scripts/ui_review.py --browser "C:/Program Files/Google/Chrome/Application/chrome.exe"
 ```
@@ -57,6 +58,19 @@ python scripts/ui_review.py --browser "C:/Program Files/Google/Chrome/Applicatio
 board in light, a narrow coarse-pointer receipt in dark and the ten Wishlist/guide
 cases (12 cases total); the editor suite still runs its complete interaction
 sequence. `--suite` selects one suite.
+The opt-in `composition` suite adds populated Commander/casual Overview,
+multi-deck library and empty/failed states at short phone, tablet, laptop and QHD
+sizes in both themes. Its `--smoke` subset is 20 matched deck and library captures,
+including library work areas at a consistent 80px top clearance. Top-of-page
+captures retain the synthetic stale-table warning; the scrolled captures expose
+the actual rows/detail instead of inferring composition from hidden content.
+The complete suite also captures the populated Played at home line and guide
+after scrolling, tests native library selection, and confirms the saved Commander
+deck response is unchanged. Its fixtures use the ordinary deck, guide and Game log
+readers, with invented records and placeholder art. Scores and a realistic mana
+base are not being assessed. `all` retains the original capture/editor suites;
+run `composition` separately when changing these page compositions.
+
 Explicit output directories must be new or empty and must not pass through
 symlinks/junctions. Prior evidence is never overwritten or pruned.
 

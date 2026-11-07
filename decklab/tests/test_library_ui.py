@@ -67,14 +67,14 @@ class LibraryShelfTests(_Shelf):
           assert.equal(gruul.querySelectorAll("a").length, 0);             // nothing nested: the tile is the link
           assert.equal(gruul.querySelector(".deck-cover-img").getAttribute("src"), "/img/fdn/1/art_crop");
           // The deck's colour pieces (ui.js deckColourPieces): spoken pips over the art's corner, a silent stripe on
-          // top, and the rest of the tile on the deck's tint.
+          // top, and a neutral reading surface. Colour stays in the cover, pips and stripe.
           const pips = gruul.querySelector(".deck-cover").querySelector(".deck-pips");
           assert.equal(pips.getAttribute("role"), "img");
           assert.equal(pips.getAttribute("aria-label"), "Colours: red, green");
           same(pips.querySelectorAll(".id-pip").map((p) => p.textContent), ["R", "G"]);
           assert(pips.matches(".id-pips-md"));                              // 20 px, a casual tile's
           assert(pips.getAttribute("class").includes("is-over-art"));
-          assert.equal(gruul.querySelector(".deck-body").getAttribute("class"), "deck-body deck-tint");
+          assert.equal(gruul.querySelector(".deck-body").getAttribute("class"), "deck-body");
           assert.equal(gruul.children[0].getAttribute("class"), "deck-stripe");
           assert.equal(gruul.children[0].getAttribute("aria-hidden"), "true");
           // While the art loads, the cover is on the deck's art placeholder colour.
@@ -183,6 +183,7 @@ class LibraryShelfTests(_Shelf):
           let detail = main.querySelector(".lib-detail");
           assert.equal(detail.getAttribute("data-id"), "commander/giada");
           assert.equal(detail.querySelector(".deck-status").textContent, "Building");
+          assert.equal(detail.querySelector(".lib-detail-body").getAttribute("class"), "lib-detail-body");
           same(detail.querySelectorAll(".btn").map((b) => b.textContent), ["Edit deck", "Open deck"]);
           assert.equal(detail.querySelector(".btn-primary").getAttribute("href"), editHref("commander/giada"));
           // A click selects (the page stays) and keeps the choice in the address.
@@ -258,7 +259,7 @@ class LibraryShelfTests(_Shelf):
           assert.equal(otters.querySelector(".wr-value").textContent, "61%");
           assert.equal(otters.querySelector(".wr-caption").textContent, "Forge field");
           assert(figure.getAttribute("aria-label").startsWith("Forge field win rate 61 percent, range 59 to 63"));
-          assert(otters.querySelector(".fresh").getAttribute("class").includes("on-tint"));
+          assert(!otters.querySelector(".fresh").getAttribute("class").includes("on-tint"));
           // The lab: the column on every row, the summary in the detail pane.
           const wide = window.matchMedia(LIB_LAB_QUERY);
           wide.matches = true;

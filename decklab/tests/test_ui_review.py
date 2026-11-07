@@ -359,6 +359,31 @@ class ReviewFixtureTests(unittest.TestCase):
                 self.request(fixture, "/api/profiles/matt/wishlist", status=403)
                 self.assertEqual(self.request(fixture, "/api/me")["profile"], "user2")
 
+    def test_populated_composition_uses_real_deck_and_game_readers(self):
+        from decklab.ui_review.fixture import HOME, review_fixture
+        from decklab.ui_review.composition_data import COMMANDER, EMPTY
+
+        with tempfile.TemporaryDirectory() as parent:
+            runtime = self.runtime(parent)
+            with review_fixture(runtime, "unit-review-test-token") as fixture:
+                commander = self.request(fixture, f"/api/deck?id={COMMANDER}&omit=matchups")
+                self.assertEqual(commander["summary"]["kind"], "commander")
+                self.assertEqual(sum(line["qty"] for rows in commander["sections"].values() for line in rows), 100)
+                self.assertEqual(commander["played"]["games"], 3)
+                self.assertEqual(commander["played"]["last"], "2000-01-05")
+                self.assertEqual(commander["played"]["since"]["changes"], [])
+                self.assertGreaterEqual(len(commander["guide"]["sections"]), 2)
+                casual = self.request(fixture, f"/api/deck?id={HOME}&omit=matchups")
+                self.assertEqual(casual["played"]["games"], 0)
+                empty = self.request(fixture, f"/api/deck?id={EMPTY}&omit=matchups")
+                self.assertFalse(any(empty["sections"].values()))
+                index = self.request(fixture, "/api/decks")
+                self.assertGreaterEqual(len(index["decks"]), 4)
+                self.assertTrue(all(not d.get("error") for d in index["decks"]))
+                Path(fixture.ready["case_control"]).write_text("library-failed", encoding="utf-8")
+                self.request(fixture, "/api/decks", status=503)
+                self.request(fixture, "/api/deck/save", method="POST", payload={}, status=403)
+
     def test_owner_nonce_is_required_before_fixture_start(self):
         from decklab.ui_review.fixture import review_fixture
 

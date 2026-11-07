@@ -4,6 +4,8 @@ Date: 7 November 2026, Australia/Brisbane. Status: **repair lane implemented; wi
 
 The [first implementation record](visual-polish-implementation-2026-11-07.md) supersedes the planned status for R06, O03 and O02, and records bounded editor/receipt/board composition work for O04–O06. The [second repair slice](visual-polish-repairs-2026-11-07.md) implements R01–R05 and R07, with 42 rendered cases and separate guarded permission/crop coverage. Browser persistence and device qualification remain open. Earlier observations and acceptance criteria below are retained; original capture reports describe the pre-fix code.
 
+The [populated deck/library slice](visual-polish-deck-library-2026-11-07.md) implements their next composition work, with 38-case paired runs and a repeat of the existing capture/editor suites. Wider typography/state and remaining page-family qualification still follow the visual direction.
+
 Matt's clarified objective is to understand and resolve why the interface looks amateurish, rather than only fix individual defects. The [visual diagnosis and proposed direction](visual-polish-direction-2026-11-07.md) now lead this work. Revise the shared control language, hierarchy and page composition while preserving product behavior, privacy and accessibility. The functional fixes below remain a separate necessary repair lane; completing them alone will not deliver a polished interface.
 
 This plan consolidates the [initial rendered review](rendered-ui-review-2026-11-07.md) and [pass 2](rendered-ui-review-2026-11-07-pass2.md), and adds a fresh screenshot analysis. Those reports retain the original reproductions and their limits. The older [UI-REVIEW.md](../UI-REVIEW.md) describes the already implemented October redesign.

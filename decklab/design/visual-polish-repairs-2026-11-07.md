@@ -42,4 +42,4 @@ Every rendered run used disposable invented records and a temporary headless bro
 
 Rendered final Wishlist Save, crop persistence, and final deck publication were deliberately not attempted by this harness. Crop persistence has deterministic DOM/request coverage; database durability and browser persistence remain separate qualification. Guide browser cases use a casual fixture; populated Commander guides, long content, actual browser enlargement, real art, physical Safari/touch/software keyboards and a screen reader remain open.
 
-Next: compare populated deck Overview/library pages with the same restrained visual grammar, and qualify typography/spacing and the remaining page/state families. Keep `E11-S30` open.
+Subsequent work: the [populated deck/library slice](visual-polish-deck-library-2026-11-07.md) implements their composition with matched captures. Next: qualify typography/spacing and the remaining page/state families. Keep `E11-S30` open.

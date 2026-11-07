@@ -241,13 +241,13 @@ class PreconTrialUiTests(unittest.TestCase):
           ask = async () => 'cancel';
           button(notice, 'Keep as a deck idea').click(); await flush();
           assert.equal(calls.length, 1);
-          // A viewer who can't change the deck reads the notice without its actions; an ordinary idea deck keeps its panel.
+          // A viewer who can't change the deck reads the notice without its actions; an ordinary idea keeps its history line.
           as('user1', MAY.user1);
           const readOnly = ptrDeckNotice({summary: {...TRIAL, player: 'user'}, version: 'target'});
           assert.equal(button(readOnly, 'Keep as a deck idea'), null);
           assert.equal(button(readOnly, 'Remove trial'), null);
           const idea = deckOverviewPlayed({summary: {...TRIAL, trial: null}, played: {games: 0}});
-          assert(idea.textContent.includes('Played at home'));
+          assert(idea.textContent.includes('Not played at home yet'));
         """)
 
     def test_library_group_picker_and_board_marks(self):

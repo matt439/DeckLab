@@ -26,7 +26,7 @@ HOME_TEST = "a" * 64
 MEMBER_TEST = "b" * 64
 PAIR_KEY = "d" * 64
 PROFILES = ("matt", "user2")
-CASES = ("complete", "stale", "failed", "running", "unknown-counts")
+CASES = ("complete", "stale", "failed", "running", "unknown-counts", "library-failed")
 FORGE = {"ok": True, "installed": True, "version": "synthetic-review", "error": None, "workers": 1}
 
 
@@ -198,6 +198,9 @@ def _install_handler(fixture, runtime, run_id):
                     raise ApiError(403, "Review identity challenge did not match this disposable run.")
                 return self._send_json(200, {"fixture_type": FIXTURE_TYPE, "run_id": run_id, "isolated": True})
             case = _control(case_path, CASES, "complete")
+            if path == "/api/decks" and case == "library-failed":
+                return self._send_json(503, {"error": "Synthetic fixture: the deck library could not be read.",
+                                             "reason": "database"})
             if path == "/api/variant":
                 from decklab.lib.api import variant_page
 
@@ -255,7 +258,10 @@ def review_fixture(runtime, run_id, *, lifecycle=None, _validated=False):
     config = copy.deepcopy(fixture_data.CONFIG)
     config["profiles"].append({"id": "user2", "name": "User2", "role": "member", "space": "user2",
                                "emails": ["user2@example.com"]})
+    from . import composition_data
+    original_rows = fixture_data.card_rows
     with mock.patch.object(fixture_data, "CONFIG", config), \
+            mock.patch.object(fixture_data, "card_rows", lambda: composition_data.card_rows(original_rows)), \
             mock.patch("tempfile.tempdir", str(runtime)), FixtureServer() as fixture:
         if lifecycle is not None:
             lifecycle["root"] = fixture.root
@@ -285,6 +291,7 @@ def review_fixture(runtime, run_id, *, lifecycle=None, _validated=False):
                 Actor("matt", "Matt"), "Seed disposable review wishlist")
         for deck_id, body in ((HOME, text), (MEMBER, member_text)):
             fixture.inventory._remember(deck_id, body, "matt", "Create synthetic UI fixture", "A")
+        composition_data.seed(fixture, text)
         (runtime / "profile.txt").write_text("matt\n", encoding="utf-8")
         (runtime / "case.txt").write_text("complete\n", encoding="utf-8")
         _install_handler(fixture, runtime, run_id)
@@ -299,7 +306,12 @@ def review_fixture(runtime, run_id, *, lifecycle=None, _validated=False):
                                     "member_variant": f"/#/variant?test={MEMBER_TEST}",
                                     "board": "/#/matchups?view=popular", "pair": f"/#/matchup?key={PAIR_KEY}",
                                     "editor": "/#/edit?id=casual%2Fsafari-fixture&v=target",
-                                    "wishlist": "/#/wishlist", "library": "/#/library",
+                                    "wishlist": "/#/wishlist", "library": f"/#/library?deck={HOME}",
+                                    "populated_library": f"/#/library?deck={composition_data.COMMANDER}",
+                                    "commander": f"/#/deck?id={composition_data.COMMANDER}",
+                                    "casual": f"/#/deck?id={HOME}",
+                                    "empty_deck": f"/#/deck?id={composition_data.EMPTY}",
+                                    "commander_guide": f"/#/deck?id={composition_data.COMMANDER}&part=guide",
                                     "guide": "/#/deck?id=casual%2Fsafari-fixture&part=guide",
                                     "receipt": f"/#/receipt?order={fixture.order_id}"}}
         yield fixture

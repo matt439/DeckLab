@@ -1,0 +1,74 @@
+[
+  {
+    "file": "before-commander-1440-light.png",
+    "source_case": "commander-1440-light",
+    "run": "before",
+    "sha256": "5a17c5addca2b506921081962b44cd96cf2a10de197e0448c6f30f4c0845291d"
+  },
+  {
+    "file": "before-commander-1440-dark.png",
+    "source_case": "commander-1440-dark",
+    "run": "before",
+    "sha256": "3b96f1b2564c6d75bfddaf55f4ab016b993051b2280b91685d5d157ac979b751"
+  },
+  {
+    "file": "before-casual-393-light.png",
+    "source_case": "casual-393-light",
+    "run": "before",
+    "sha256": "eb1291b29888115574b0540204179129cdf4b4e2348349d4a90658c73de20779"
+  },
+  {
+    "file": "before-casual-393-dark.png",
+    "source_case": "casual-393-dark",
+    "run": "before",
+    "sha256": "a6e726607714013e20862e51505942b007695e4b76fd518dc37d1effc01687a3"
+  },
+  {
+    "file": "before-library-work-1180-light.png",
+    "source_case": "library-work-1180-light",
+    "run": "before",
+    "sha256": "873733cdac03ea704c942a969cf6afecd3f36da1cf598dd0cc8beb167d03f0f1"
+  },
+  {
+    "file": "before-library-work-1180-dark.png",
+    "source_case": "library-work-1180-dark",
+    "run": "before",
+    "sha256": "e7aee69515e201fd7eafdf81556282b9446d901429c23a27ea6392b5219107b2"
+  },
+  {
+    "file": "after-commander-1440-light.png",
+    "source_case": "commander-1440-light",
+    "run": "after",
+    "sha256": "c9aa9e78627ec3551475d0c2d02247e52b1938e818f6d45cc691782b45f3d930"
+  },
+  {
+    "file": "after-commander-1440-dark.png",
+    "source_case": "commander-1440-dark",
+    "run": "after",
+    "sha256": "64167102f4bc38dd03396b2ebd0c6ecd84c903f33f0308e0d836e044c30fcf5b"
+  },
+  {
+    "file": "after-casual-393-light.png",
+    "source_case": "casual-393-light",
+    "run": "after",
+    "sha256": "13c6a66bd96138c5ce0c604383f9a1aad6147005cfeeff0d979c09a02b0c1193"
+  },
+  {
+    "file": "after-casual-393-dark.png",
+    "source_case": "casual-393-dark",
+    "run": "after",
+    "sha256": "81bd3310811c5410d7b610dfef8fa444f34768528e49cd4d0c60c4930e014a51"
+  },
+  {
+    "file": "after-library-work-1180-light.png",
+    "source_case": "library-work-1180-light",
+    "run": "after",
+    "sha256": "abd08c5bd42669ff010c71243e2b656b68597e16f83f3af9a62d76d3d5e80de1"
+  },
+  {
+    "file": "after-library-work-1180-dark.png",
+    "source_case": "library-work-1180-dark",
+    "run": "after",
+    "sha256": "248fea943b70c9225cdb0ff3cd0bf19054ffd567b2463f13289af5c84b81b365"
+  }
+]

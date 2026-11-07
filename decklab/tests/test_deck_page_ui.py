@@ -680,10 +680,8 @@ class DeckPageUiTests(unittest.TestCase):
         self.assertIn("flex-wrap: wrap;", narrow)
         self.assertIn("> .menu-wrap { margin-left: auto; }", narrow)
         self.assertIn(".deck-build { flex: none; white-space: nowrap; }", css)
-        # On an iPad on its side the buttons sit over the art: the title leaves them room, and Build deck has
-        # Edit's outline there.
-        self.assertIn(".deck-page-head:has(.deck-build) .deck-title-row h1 { max-width: calc(100% - 320px); }", css)
-        self.assertIn(".deck-head-actions > .deck-actions, .deck-head-actions > .deck-build {", css)
+        # Tablet title/action allocation is measured by the populated rendered composition suite;
+        # the retired art-overlay title cap is no longer a layout requirement.
 
     def test_head_keeps_the_title_row_and_links_keep_the_tab(self):
         self.run_js("""

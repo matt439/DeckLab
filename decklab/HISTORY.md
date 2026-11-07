@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Populated deck and library composition (2026-11-07; E11-S30)
+
+- Deck headers use compact art/identity and neutral metadata, with a full-width title above tablet actions. Availability keeps every qualification on a quieter neutral surface. Known empty play history is one line; populated and unread histories retain their separate behavior.
+- Library reading surfaces and status tags are quieter, entry actions sit with identity, and narrow desktop names wrap above their evidence instead of competing with fixed columns. Art, pips, stripes, capabilities, selection and routes remain.
+- The [implementation record](design/visual-polish-deck-library-2026-11-07.md) retains twelve inspected before/after PNGs and source-bound proof. Both paired 38-case composition runs completed, as did the existing 42-case capture matrix/editor suite; saved-data digests, source consistency and cleanup passed. The opt-in `--suite composition` makes these states repeatable without a visible browser or household data. Focused guarded deck/library/harness checks, Ruff and the source-length guard passed.
+- The full guarded fixture suite passed **12,294 tests, with 456 expected skips**, in 1,210 seconds. Database integration, native runtime, real Forge and device acceptance retain their separate qualification boundaries.
+- No normal service, household records, visibility settings or Forge games changed. Typography/state and remaining page-family qualification, QHD deck Overview, actual enlargement and device/Safari/art/screen-reader acceptance remain; `E11-S30` stays open.
+
 ## Rendered UI interaction and readability repairs (2026-11-07; E11-S30)
 
 - Wishlist tiles/sheets distinguish unavailable counts from known zero and positive availability. Zoom retains the live sheet's Notes, Source and printing, with focus/history return and route/person disposal of its private nested contexts.

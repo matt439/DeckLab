@@ -16,6 +16,7 @@
 .deck-overview-swap .vt-test-item { min-width: 0; }
 .deck-overview-played p { margin: 0; }
 .deck-overview-played .sub { margin-top: var(--s-2); }
+.deck-overview-played.deck-played-empty { margin-top: var(--s-3); padding: 0; border: 0; border-radius: 0; background: none; color: var(--ink-2); }
 .deck-played-since ul { margin: var(--s-1) 0 0; padding-left: 1.25em; }
 .deck-played-since li { overflow-wrap: anywhere; }
 .deck-overview-bars { display: flex; align-items: stretch; gap: var(--s-2); height: 160px; max-width: 900px; }
