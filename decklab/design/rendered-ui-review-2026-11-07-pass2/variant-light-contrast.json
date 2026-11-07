@@ -1,0 +1,31 @@
+{
+  "file": "p2-02-member-variant-missing-actions-1440-light.png",
+  "region_pixels": [
+    80,
+    1610,
+    2000,
+    1760
+  ],
+  "foreground_rgb": [
+    124,
+    129,
+    125
+  ],
+  "background_rgb": [
+    250,
+    250,
+    248
+  ],
+  "foreground_exact_pixel_count": 1038,
+  "foreground_bbox_pixels": [
+    116,
+    1689,
+    732,
+    1713
+  ],
+  "contrast": 3.796,
+  "method": "Repeated flat screenshot pixels corroborated by CSS ink-2 at parent opacity .65; not antialias fringe or blanket accessibility certificate",
+  "status": "R07 reproduced: operator confirmed ordinary explanatory text; actual screenshot composite below normal-text threshold",
+  "criterion": "WCAG2.2 SC1.4.3 ordinary text4.5:1",
+  "reference": "https://www.w3.org/TR/WCAG22/#contrast-minimum"
+}

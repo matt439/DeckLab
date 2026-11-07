@@ -1,0 +1,18 @@
+{
+  "source": "ordinary GET /api/deck/draft on disposable fixture",
+  "id": "casual/safari-fixture",
+  "version": "target",
+  "available": true,
+  "revision": 1,
+  "base": {
+    "forest": 53,
+    "total_cards": 61
+  },
+  "draft": {
+    "forest": 54,
+    "total_cards": 62
+  },
+  "device_label": "Android",
+  "device_label_provenance": "Browser emulation User-Agent, not actual Android or cross-device acceptance",
+  "state_store": "temporary MemoryStore"
+}

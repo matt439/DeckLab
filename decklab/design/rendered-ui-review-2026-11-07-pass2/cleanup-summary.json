@@ -1,0 +1,14 @@
+{
+  "fixtureStopped": true,
+  "fixtureExitCode": 0,
+  "fixtureProcessAbsent": true,
+  "fixturePortNotListening": true,
+  "temporaryRootRemoved": true,
+  "mainHeadlessBrowserClosed": true,
+  "correctedStressBrowserClosed": true,
+  "editorHeadlessBrowserClosed": true,
+  "editorSequenceCompleted": true,
+  "computerUseSessionCompletedAndReset": true,
+  "visibleChrome": "Left under user control; no further native input and no claim that the visible window was closed",
+  "evidence": "Fixture/browser cleanup receipts plus operator process/port checks; host paths, process IDs and ephemeral port excluded"
+}

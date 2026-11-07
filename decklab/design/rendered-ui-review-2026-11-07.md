@@ -2,6 +2,8 @@
 
 Source: `matt439/DeckLab@ea781f9e5e7960690210b4783f4cbf5144918da9`. Review date: 7 November 2026, Australia/Brisbane. This dated report continues an earlier source assessment of 84 screen/state coverage groups.
 
+**Follow-up:** [rendered-ui-review-2026-11-07-pass2.md](rendered-ui-review-2026-11-07-pass2.md) adds member/editor/Testing observations and headless capture evidence. This report retains the initial pass and its historical limits.
+
 This pass reproduced four bounded UI problems in disposable synthetic states. It also captured receipt layout observations. It does **not** complete the prior 84-group rendered review, qualify real devices or authorize implementation.
 
 ## Prioritized findings

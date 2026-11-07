@@ -1,0 +1,11 @@
+{
+  "before_external_saved_forest": 52,
+  "after_reapply_saved_forest": 53,
+  "observed_local_before": 53,
+  "observed_reapplied_draft": 54,
+  "automatic_save": false,
+  "fixture_external_change_ack": {
+    "done": true,
+    "changed": true
+  }
+}

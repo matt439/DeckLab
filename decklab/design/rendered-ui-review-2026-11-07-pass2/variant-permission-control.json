@@ -1,0 +1,14 @@
+{
+  "synthetic_identity": "user2",
+  "identity_adapter": "Synthetic allowlisted tunnel identity, not authentication acceptance",
+  "member": {
+    "editable": true,
+    "may_save": true,
+    "why_not_save": null
+  },
+  "public_home": {
+    "editable": true,
+    "may_save": false,
+    "why_not_save": "That's one of the home decks; you can change the decks in your own collection."
+  }
+}
