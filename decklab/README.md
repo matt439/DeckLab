@@ -1871,6 +1871,22 @@ python scripts/test_db.py 0 2 --require-db
 
 The second runs one of two shards, as CI does, and fails instead of skipping every test when the database can't be used. (On Linux, `python3.14` or whichever python the server uses.) On 2026-11-02, in WSL's Ubuntu against PostgreSQL 18, that ran 105 modules, 1,897 tests in about 5 minutes (7 skipped: commits only in the private repo, Node.js, a Windows-only case and an old-backend case). A trial restore of a dump into a scratch database uses the same `DECKLAB_DB_NAME` override: see `restore` under "Backups" above.
 
+## Headless rendered UI review
+
+The [repeatable UI review workflow](ui_review/README.md) captures disposable
+synthetic screens without controlling the desktop. Set up its pinned local
+browser dependency once, then run it whenever the UI needs review:
+
+```powershell
+python scripts/ui_review.py --setup
+python scripts/ui_review.py
+```
+
+The command starts its own guarded fixture and isolated headless browser, writes
+screenshots and measurements under the gitignored `decklab/data/ui-review/`, and
+checks cleanup. It never targets the normal server or runs Forge. The workflow
+documents smoke/selected suites, output directories and remaining device limits.
+
 ## Tests
 
 Safari on iPhone and iPad Simulators has a separate [Mac setup and runner](safari/README.md)

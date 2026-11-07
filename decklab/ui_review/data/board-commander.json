@@ -1,0 +1,157 @@
+{
+  "format": "commander",
+  "state": "ok",
+  "build_command": null,
+  "sample": {
+    "id": "sample:abcdefabcdef",
+    "size": 20,
+    "tiers": [
+      "core"
+    ]
+  },
+  "default_budget": "fixed:100",
+  "note": null,
+  "notes": [
+    "Synthetic board adapter. Ordering is invented and does not qualify production sorting.",
+    "Commander games are one against one; these figures describe sampled opponents only."
+  ],
+  "rows": [
+    {
+      "deck": {
+        "id": "commander/synthetic-0",
+        "title": "Synthetic complete",
+        "kind": "commander",
+        "version": "target",
+        "card_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      "state": "done",
+      "problem": null,
+      "overall": {
+        "rate": 0.54,
+        "low": 0.46,
+        "high": 0.62
+      },
+      "played": 20,
+      "of": 20,
+      "games": 2000,
+      "updated": "2026-11-06T23:00:00Z",
+      "hardest": null,
+      "before": null,
+      "older": null,
+      "playing": null,
+      "notes": [
+        "Synthetic results for UI review only; never measured game evidence."
+      ]
+    },
+    {
+      "deck": {
+        "id": "commander/synthetic-1",
+        "title": "Synthetic partial",
+        "kind": "commander",
+        "version": "target",
+        "card_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      "state": "partial",
+      "problem": null,
+      "overall": {
+        "rate": 0.67,
+        "low": 0.5900000000000001,
+        "high": 0.75
+      },
+      "played": 3,
+      "of": 20,
+      "games": 300,
+      "updated": "2026-11-06T23:00:00Z",
+      "hardest": null,
+      "before": null,
+      "older": null,
+      "playing": null,
+      "notes": [
+        "Synthetic results for UI review only; never measured game evidence."
+      ]
+    },
+    {
+      "deck": {
+        "id": "commander/synthetic-2",
+        "title": "Synthetic changed list",
+        "kind": "commander",
+        "version": "target",
+        "card_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      "state": "stale_list",
+      "problem": null,
+      "overall": null,
+      "played": 0,
+      "of": 20,
+      "games": 0,
+      "updated": "2026-11-06T23:00:00Z",
+      "hardest": null,
+      "before": {
+        "rate": 0.48,
+        "low": 0.4,
+        "high": 0.56,
+        "updated": "2026-10-27T00:00:00Z"
+      },
+      "older": null,
+      "playing": null,
+      "notes": [
+        "Synthetic results for UI review only; never measured game evidence."
+      ]
+    },
+    {
+      "deck": {
+        "id": "commander/synthetic-3",
+        "title": "Synthetic older engine",
+        "kind": "commander",
+        "version": "target",
+        "card_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      "state": "stale_older",
+      "problem": null,
+      "overall": null,
+      "played": 0,
+      "of": 20,
+      "games": 0,
+      "updated": "2026-11-06T23:00:00Z",
+      "hardest": null,
+      "before": null,
+      "older": {
+        "reason": "forge",
+        "opponents": 20,
+        "overall": {
+          "rate": 0.61,
+          "low": 0.53,
+          "high": 0.69
+        },
+        "updated": "2026-10-20T00:00:00Z"
+      },
+      "playing": null,
+      "notes": [
+        "Synthetic results for UI review only; never measured game evidence."
+      ]
+    },
+    {
+      "deck": {
+        "id": "commander/synthetic-4",
+        "title": "Synthetic unreadable",
+        "kind": "commander",
+        "version": "target",
+        "card_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      "state": "unreadable",
+      "problem": "Synthetic fixture: this list cannot be read.",
+      "overall": null,
+      "played": 0,
+      "of": 20,
+      "games": 0,
+      "updated": "2026-11-06T23:00:00Z",
+      "hardest": null,
+      "before": null,
+      "older": null,
+      "playing": null,
+      "notes": [
+        "Synthetic results for UI review only; never measured game evidence."
+      ]
+    }
+  ]
+}

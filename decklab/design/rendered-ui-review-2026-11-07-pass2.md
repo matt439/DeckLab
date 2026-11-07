@@ -4,6 +4,8 @@ Date: 7 November 2026, Australia/Brisbane. Application source pin: `ea781f9e5e79
 
 This pass continues [the first rendered report](rendered-ui-review-2026-11-07.md). The first pass's four reproduced findings remain recorded there; they are not automatically retested or fixed by this continuation. The wider 84-group source review is not equivalent to completed rendered coverage.
 
+**Reusable workflow:** the [headless review command](../ui_review/README.md) is now checked in. The dated evidence below retains this run and its original scratch-tool provenance.
+
 ## Scope and evidence boundary
 
 Requested order: member variant actions, editor recovery, populated Testing, then responsive/style/keyboard checks. Only disposable invented records and explicit synthetic result payloads are permitted. No real Forge games, household records, production writes or application implementation are part of this review.

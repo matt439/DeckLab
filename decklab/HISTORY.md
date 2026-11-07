@@ -2,6 +2,25 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Repeatable headless UI review (2026-11-07; E11-S30 verification)
+
+- `python scripts/ui_review.py` now runs the disposable rendered-review workflow
+  from the repository. Its 32-case light/dark matrix and editor interaction suite
+  use an isolated headless browser, so the desktop remains available. Explicit
+  `--setup` installs the pinned local Playwright dependency; normal runs install
+  nothing. Output defaults to a fresh gitignored evidence folder.
+- A dedicated worker installs fixture guards before application imports and
+  serves only synthetic inventory, drafts and result adapters. The parent checks
+  the owned worker, runtime token and HTTP identity challenge. Both HTTP layers
+  refuse mutations other than dry-run deck checks, and the browser never attaches
+  to an existing profile. Failures and cancellation retain evidence and check
+  owned-process and temporary-data cleanup.
+- The full 35-capture run, five-capture smoke, bounded timeout cleanup and guarded
+  fixture/lifecycle tests were checked on Windows. POSIX forced-process ownership
+  was tested with process-map fakes; no Linux browser run is claimed. Screenshots
+  remain review evidence, not automatic product or accessibility acceptance. The
+  seven findings in the dated review reports are not fixed by this tooling.
+
 ## Deterministic warm-worker progress checks (2026-11-06)
 
 - The warm-pool progress checks separate scripted event/clock coverage from subprocess integration. Scripted completed games prove progress before a chunk ends, throttling and heartbeats during a stall; the fake worker processes prove monotonic completed-game counts, matching wins and the final saved total. No assertion requires a busy runner to sample an arbitrary number of distinct totals.
