@@ -1,0 +1,24 @@
+{
+  "stage": "after Done then Save",
+  "row": {
+    "id": "synthetic-review-sleeves",
+    "kind": "sleeves",
+    "owner": "shared",
+    "brand": "Synthetic",
+    "name": "Review sleeves",
+    "colour": "fixture green",
+    "quantity": 100,
+    "capacity": null,
+    "image": "synthetic-review-sleeves.jpg",
+    "crop": "0,0.1269,0.752,0.8731",
+    "link": "",
+    "image_source": "",
+    "notes": "Invented accessory using placeholder artwork for crop-control review.",
+    "label": "Synthetic Review sleeves (fixture green)",
+    "owner_name": "shared",
+    "editable": true,
+    "image_url": "/accessory-img/synthetic-review-sleeves.jpg?v=53a6a888#crop=0,0.1269,0.752,0.8731",
+    "used_by": [],
+    "short": 0
+  }
+}
