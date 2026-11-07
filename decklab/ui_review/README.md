@@ -50,6 +50,7 @@ python scripts/ui_review.py --smoke
 python scripts/ui_review.py --suite capture
 python scripts/ui_review.py --suite editor
 python scripts/ui_review.py --suite composition
+python scripts/ui_review.py --suite variant-layout
 python scripts/ui_review.py --output C:/Temp/decklab-ui-review-01
 python scripts/ui_review.py --browser "C:/Program Files/Google/Chrome/Application/chrome.exe"
 ```
@@ -70,6 +71,25 @@ deck response is unchanged. Its fixtures use the ordinary deck, guide and Game l
 readers, with invented records and placeholder art. Scores and a realistic mana
 base are not being assessed. `all` retains the original capture/editor suites;
 run `composition` separately when changing these page compositions.
+
+The opt-in 26-case `variant-layout` suite captures the existing popular-decks
+variant adapter at 320/393/599/600/624/625/820/1440px, short 740×360 landscape,
+explicit 320/600px CSS root-font stress, and failed/running 393px states, in both themes.
+Complete-result captures anchor By group at an 80px top clearance, with two
+supplementary 393px captures targeting By number of colours for unknown and
+negative evidence (shorter pages can reach their bottom scroll limit first); failed/running
+captures retain the top-of-page verdict/progress. The suite records every group
+cell, bar, axis label and its text fragments, container width/font, explicit roles and a browser
+accessibility snapshot. Counts exclude decorative hidden unit labels in the
+comparison text while retaining raw rendered text separately. Assertions preserve
+the four finished synthetic rows, counts, no-difference state, common numerical scale and
+native explanation disclosure; running results retain progress and have no finished
+group table. Configured Playwright viewport, layout/visual viewports and document
+overflow are recorded separately, with up to fifteen visible elements that extend
+past the configured width for bounded diagnosis. Layout expansion/overflow remains diagnostic in
+the matched baseline, rather than being rejected as a harness viewport mismatch
+or automatically labelled a group-layout defect. Its smoke
+subset is eight cases. `all` continues to mean capture/editor only.
 
 Explicit output directories must be new or empty and must not pass through
 symlinks/junctions. Prior evidence is never overwritten or pruned.

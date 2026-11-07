@@ -206,6 +206,35 @@ class VariantScriptTests(unittest.TestCase):
         self.assertIn("against popular decks", item)
         self.assertEqual(span, "0.2")                  # the groups share the page's one scale
 
+    def test_group_reflow_keeps_named_tables_headers_and_counts(self):
+        tables, = _run_page([f"""(() => {{
+          const all = n => [n, ...(n.children || []).flatMap(all)];
+          return JSON.stringify(all(vtGroups({json.dumps(self.POPULAR)})).filter(n => n.tag === 'table').map(table => ({{
+            role: table.getAttribute('role'), label: table.getAttribute('aria-labelledby'),
+            columns: all(table).filter(n => n.getAttribute('scope') === 'col').map(n =>
+              [n.textContent, n.getAttribute('role')]),
+            rows: all(table).filter(n => n.tag === 'tbody').flatMap(n => n.children).map(row => ({{
+              role: row.getAttribute('role'), header: [row.children[0].textContent,
+                row.children[0].getAttribute('scope'), row.children[0].getAttribute('role')],
+              count: row.children[1].children[0].textContent,
+              unit: [row.children[1].children[1].textContent, row.children[1].children[1].getAttribute('aria-hidden')]
+            }})),
+            decorativeFoot: all(table).find(n => n.tag === 'tfoot').getAttribute('aria-hidden')
+          }})));
+        }})()"""], self.NAMES)
+        tables = json.loads(tables)
+        self.assertEqual([t["label"] for t in tables],
+                         ["vt-groups-colour", "vt-groups-identity_size", "vt-groups-tier"])
+        for table in tables:
+            self.assertEqual(table["role"], "table")
+            self.assertEqual(table["columns"], [[name, "columnheader"] for name in ("Group", "Decks", "Difference")])
+            self.assertEqual(table["decorativeFoot"], "true")
+            for row in table["rows"]:
+                self.assertEqual(row["role"], "row")
+                self.assertEqual(row["header"][1:], ["row", "rowheader"])
+                self.assertEqual(row["unit"][1], "true")
+        self.assertEqual([(r["count"], r["unit"][0]) for r in tables[0]["rows"]], [("1", " deck"), ("2", " decks")])
+
     def test_the_sheet_offers_popular_decks(self):
         sheet = _function(SCRIPT, "vtOpenTestSheet")
         # Asked once as it opens; offered only when the server says the sample is available, with its size.

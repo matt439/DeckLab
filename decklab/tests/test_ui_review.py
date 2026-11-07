@@ -104,8 +104,8 @@ class ReviewRunnerTests(unittest.TestCase):
     def test_started_browser_requires_positive_cleanup_proof(self):
         from decklab.ui_review import runner
 
-        for proof in (None, False, True):
-            with self.subTest(browser_closed=proof), tempfile.TemporaryDirectory() as outer:
+        for suite, proof in ((suite, proof) for suite in ("capture", "variant-layout") for proof in (None, False, True)):
+            with self.subTest(suite=suite, browser_closed=proof), tempfile.TemporaryDirectory() as outer:
                 output = runner.prepare_output(Path(outer) / "evidence")
 
                 def failed_browser(node, browser, suite, runtime, output, run_id, smoke, deadline):
@@ -120,7 +120,7 @@ class ReviewRunnerTests(unittest.TestCase):
                 source = {"commit": "synthetic", "dirty": True, "digest": "stable-test-digest", "files": {}}
                 with mock.patch.object(runner, "_run_browser", side_effect=failed_browser), \
                         mock.patch.object(runner, "_source_state", return_value=source):
-                    report = runner.run_review(output, "unused-browser", "unused-node", suite="capture", timeout=15)
+                    report = runner.run_review(output, "unused-browser", "unused-node", suite=suite, timeout=15)
                 self.assertFalse(report["completed"])
                 self.assertEqual(report["cleanup"]["browsers_closed"], proof is True, report)
                 self.assertEqual(report["cleanup"]["complete"], proof is True, report)

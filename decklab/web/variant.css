@@ -130,3 +130,27 @@
 .vt-group-diff .vt-diff { margin-top: var(--s-1); }
 .vt-group-diff .sub { display: block; font-size: var(--fs-sm); color: var(--ink-2); }
 .vt-group-table tfoot td { border-top: 0; padding-top: 0; }
+
+/* Reflow against the available evidence width and text size, including enlarged text.
+   Keep one table and its headers/roles; only the visual arrangement changes. */
+.vt-groups { container: variant-groups / inline-size; }
+.vt-group-unit { display: none; }
+@container variant-groups (max-width: 36em) {
+  .vt-group-table, .vt-group-table tbody, .vt-group-table tfoot { display: block; }
+  .vt-group-table thead {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .vt-group-table tbody tr {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline;
+    gap: 0 var(--s-3); padding: var(--s-3) var(--s-2); border-top: 1px solid var(--border);
+  }
+  .vt-group-table th, .vt-group-table td { padding: 0; border: 0; min-width: 0; }
+  .vt-group-table th:first-child, .vt-group-table th:nth-child(2), .vt-group-table .vt-group-n { width: auto; }
+  .vt-group-table .vt-group-n { text-align: right; color: var(--ink-2); font-size: var(--fs-sm); white-space: nowrap; }
+  .vt-group-unit { display: inline; }
+  .vt-group-table .vt-group-diff { grid-column: 1 / -1; padding-top: var(--s-1); }
+  .vt-group-table tfoot tr { display: block; }
+  .vt-group-table tfoot td { display: none; }
+  .vt-group-table tfoot td:last-child { display: block; padding-inline: var(--s-2); }
+}

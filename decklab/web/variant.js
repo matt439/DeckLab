@@ -595,21 +595,26 @@ function vtGroups(data, span = vtSpan(data)) {
     const name = g.label || g.key;
     const words = [g.delta != null ? `${vtPoints(g.delta)} points (${vtPoints(g.low)} to ${vtPoints(g.high)})`
       : "No difference yet", g.note || null].filter(Boolean).join(" · ");
-    return el("tr", {},
-      el("th", { scope: "row", text: name }),
-      el("td", { class: "vt-group-n", text: thousands(g.opponents || 0) }),
-      el("td", { class: "vt-group-diff" },
+    return el("tr", { role: "row" },
+      el("th", { scope: "row", role: "rowheader", text: name }),
+      el("td", { class: "vt-group-n", role: "cell" }, String(thousands(g.opponents || 0)),
+        el("span", { class: "vt-group-unit", "aria-hidden": "true", text: g.opponents === 1 ? " deck" : " decks" })),
+      el("td", { class: "vt-group-diff", role: "cell" },
         vtDiffBar(g.delta, g.low, g.high, { label: `${name}: difference in win rate`, span }),
         el("span", { class: "sub", text: words })));
   };
   const parts = VT_GROUPS.filter(([key]) => (groups[key] || []).length).map(([key, title]) => {
     const id = `vt-groups-${key}`;
-    const head = el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "Group" }),
-      el("th", { scope: "col", text: "Decks" }), el("th", { scope: "col", text: "Difference" })));
+    const head = el("thead", { role: "rowgroup" }, el("tr", { role: "row" },
+      el("th", { scope: "col", role: "columnheader", text: "Group" }),
+      el("th", { scope: "col", role: "columnheader", text: "Decks" }),
+      el("th", { scope: "col", role: "columnheader", text: "Difference" })));
     // The scale sits under the bars' own column, so its 0 and ends line up with them.
-    const foot = el("tfoot", {}, el("tr", {}, el("td", {}), el("td", {}), el("td", {}, vtAxis(span))));
+    const foot = el("tfoot", { "aria-hidden": "true" },
+      el("tr", {}, el("td", {}), el("td", {}), el("td", {}, vtAxis(span))));
     return el("div", { class: "vt-group" }, el("h3", { id, text: title }),
-      el("table", { class: "vt-group-table", "aria-labelledby": id }, head, el("tbody", {}, groups[key].map(row)), foot));
+      el("table", { class: "vt-group-table", role: "table", "aria-labelledby": id }, head,
+        el("tbody", { role: "rowgroup" }, groups[key].map(row)), foot));
   });
   if (!parts.length) return null;
   return el("section", { class: "vt-rows vt-groups", "aria-labelledby": "vt-groups-h" },

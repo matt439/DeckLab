@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Narrow variant group evidence (2026-11-07; E11-S30)
+
+- Constrained By group tables now place group identity/count above full-width bars and ranges through a text-relative container query. Wider tables retain their columns; numerical evidence, unknown values, notes, common scale, actions and table/header relationships remain. The visible deck/decks unit is decorative to assistive technology, and column headers stay accessible.
+- The [implementation record](design/visual-polish-variant-groups-2026-11-07.md) retains twelve inspected before/after PNGs and source-bound proof. Both 26-case group runs and the 44-case/editor regression completed. The 393px bars grow from 166.5px to 345px; 320px/root200 document width returns from 429px to 320px. Native disclosures, evidence equality, axis alignment, saved-data checks and owned-process/runtime cleanup passed.
+- Guarded focused regressions passed 163 tests in 23.418 seconds (one existing skip); Ruff and the source-length guard passed. The opt-in `--suite variant-layout` repeats the width, transition, enlarged-root and failed/running cases. Baseline overflow is recorded diagnostically rather than treated as a visual pass.
+- Separate top-bar overflow remains at narrow tablet widths and enlarged 600px, recorded in the implementation owner. Receipt tools, empty Considering, remaining page/state families and real enlargement/Safari/touch/art/screen-reader checks stay open; `E11-S30` remains partial. No household records, visibility or Forge games changed.
+
 ## Shared typography hierarchy (2026-11-07; E11-S30)
 
 - Shared page headings use 28px/600 and section headings 20px/600. Desktop task text and fine-pointer controls use 14px, metadata 13px; phone body and play-guide reading sizes remain. Body now consumes the semantic density token rather than implicitly staying 16px on desktop. Compact deck/editor titles, touch floors, focus and existing numeric scales retain explicit roles.
