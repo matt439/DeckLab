@@ -1,0 +1,45 @@
+/* Proposal-only composition after proposed.css and explicit DOM regrouping.
+   This is a design study, not production code or qualified page behavior. */
+.design-composed .study-details { color: var(--ink-2); font-size: var(--fs-sm); }
+.design-composed .study-details > summary {
+  display: flex; align-items: center; gap: var(--s-2); min-height: var(--tap);
+  font-weight: var(--fw-medium); list-style: none; cursor: pointer;
+}
+.design-composed .study-details > summary::before { content: ''; }
+.design-composed .study-details > summary::-webkit-details-marker { display: none; }
+.design-composed .study-details[open] { padding-bottom: var(--s-3); }
+.design-composed .study-details > p { max-width: 72ch; margin: var(--s-2) 0; }
+.design-composed .study-order-tools { display: flex; align-items: start; justify-content: space-between; gap: var(--s-3); }
+.design-composed .study-order-tools > * { min-width: 0; }
+.design-composed .rcpt-everything-bar { margin: 0; }
+.design-composed .rcpt-everything-bar .btn { background: transparent; border-color: transparent; padding-inline: 0; font-size: var(--fs-sm); font-weight: var(--fw-medium); text-decoration: underline; text-underline-offset: 3px; }
+.design-composed .rcpt-head-grid { margin: 0; }
+.design-composed .rcpt-page-head > .page-head { padding-top: var(--s-4); }
+.design-composed .rcpt-section-head { align-items: start; }
+.design-composed .rcpt-section-head h2 { flex: 1 1 55%; }
+.design-composed .rcpt-section-head .study-details { flex: 0 1 auto; }
+.design-composed .rcpt-section-head .study-details[open] { flex: 1 1 100%; }
+.design-composed .study-board-title { flex: 1; font-size: var(--fs-lg); font-weight: var(--fw-semibold); padding-block: var(--s-2); }
+.design-composed .study-scope { margin: var(--s-3) 0 0; color: var(--ink-2); font-size: var(--fs-meta); }
+.design-composed .rcpt-body { margin-top: var(--s-2); }
+.design-composed .mu-group { margin-top: var(--s-4); }
+.design-composed .mu-home-head { padding-bottom: var(--s-2); }
+.design-composed .gb-board > .study-details { margin-top: var(--s-1); }
+.design-composed .gb-rows { margin-top: var(--s-2); }
+@media (max-width: 599px) {
+  .design-composed .rcpt-layout-frame { margin-top: var(--s-2); }
+  .design-composed .rcpt-section-head h2 { font-size: var(--fs-lg); }
+  .design-composed .rcpt-bar {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--s-1) var(--s-3); align-items: center;
+  }
+  .design-composed .rcpt-bar .action-bar-status { display: contents; }
+  .design-composed .study-progress { grid-row: 1; grid-column: 1 / -1; display: flex; gap: var(--s-3); align-items: center; }
+  .design-composed .rcpt-status-line { flex: none; font-size: var(--fs-sm); }
+  .design-composed .rcpt-blanks { font-size: var(--fs-sm); }
+  .design-composed .rcpt-date { grid-row: 2; grid-column: 1; flex-wrap: nowrap; }
+  .design-composed .rcpt-date select { min-width: 0; max-width: 100%; }
+  .design-composed .rcpt-bar .actions { grid-row: 2; grid-column: 2; justify-content: end; }
+  .design-composed .rcpt-bar .btn-primary { max-width: 100%; width: 100%; }
+  .design-composed .rcpt-record-reason { grid-row: 3; grid-column: 1 / -1; font-size: var(--fs-sm); }
+}

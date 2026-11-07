@@ -2,7 +2,7 @@
 
 Date: 7 November 2026, Australia/Brisbane. Status: **proposed; no application fixes implemented by this task**. Owner: `E11-S30`.
 
-The next work should correct misleading information and interrupted editing first, then improve task emphasis and constrained layouts. Keep the current visual system. The screenshots support specific changes to existing components; they do not justify another whole-app redesign.
+Matt's clarified objective is to understand and resolve why the interface looks amateurish, rather than only fix individual defects. The [visual diagnosis and proposed direction](visual-polish-direction-2026-11-07.md) now lead this work. Revise the shared control language, hierarchy and page composition while preserving product behavior, privacy and accessibility. The functional fixes below remain a separate necessary repair lane; completing them alone will not deliver a polished interface.
 
 This plan consolidates the [initial rendered review](rendered-ui-review-2026-11-07.md) and [pass 2](rendered-ui-review-2026-11-07-pass2.md), and adds a fresh screenshot analysis. Those reports retain the original reproductions and their limits. The older [UI-REVIEW.md](../UI-REVIEW.md) describes the already implemented October redesign.
 
@@ -48,7 +48,7 @@ At [430px light](rendered-ui-change-plan-2026-11-07/receipt-430-coarse-light.png
 
 The [light](rendered-ui-change-plan-2026-11-07/variant-member-390-light.png) and [dark](rendered-ui-change-plan-2026-11-07/variant-member-390-dark.png) member results still show Play more without the editor return/save handoffs. R05's earlier ordinary editor API control established `may_save: true` for the synthetic own-space member deck. Fix capability handling rather than merely accepting one more ID prefix.
 
-The omitted-opponent explanation is visibly faded. Pass 2 measured its ordinary light text at 3.796:1; R07's fix must retain readable necessary text in both themes. Narrow By group tables also wrap Worse/Better scale labels across lines. A later compact vertical group layout is worth comparing, preserving the identical numerical scale and explicit figures. This latter observation and Testing row alignment are O06 polish, below the correctness and recovery fixes.
+The omitted-opponent explanation is visibly faded. Pass 2 measured its ordinary light text at 3.796:1; R07's fix must retain readable necessary text in both themes. Narrow By group tables also wrap Worse/Better scale labels across lines. A later compact vertical group layout is worth comparing, preserving the identical numerical scale and explicit figures. O06's stable Testing row alignment contributes to the core visual composition alongside repairs; optional narrow-group refinement follows that work.
 
 ## Typography, emphasis, colour and useful space
 
@@ -84,7 +84,7 @@ Use the existing typography, colour and spacing tokens; component changes belong
 
 ## Implementation order
 
-Each row is a bounded slice. Status is **planned**, not built. R02/R05 are P1; the remaining reproduced findings and O03 are P2. O02/O04/O05 are recommended design work; O06 is P3 polish. Complete the confirmed fixes before expanding the polish scope.
+The [visual direction](visual-polish-direction-2026-11-07.md#delivery-order) owns the overall delivery order: prove the shared design on representative screens, implement the common visual foundations, then compose each task page and extend the comparison. The following table orders the repair lane and records its existing seams; it is no longer a claim that aesthetic work should wait until all bugs are fixed. Status is **planned**, not built. R02/R05 are P1; the remaining reproduced findings and O03 are P2. O02/O04/O05 also contribute to the visual direction. O06's stable result alignment is part of that composition work; optional narrow-group polish follows it.
 
 O07's typography/space audit accompanies the relevant slices and informs layout decisions before slices 9–12. Its page/element findings receive their own measured priority; it is not a completed audit or a thirteenth blanket restyling task.
 

@@ -1,0 +1,318 @@
+/* PROPOSAL ONLY: a rendered visual-direction study, never a production stylesheet.
+   Inject after Deck Lab's existing CSS and add .design-study to <html> or <body>.
+   Real selectors, existing theme/type/spacing tokens and the original DOM remain.
+   No instructions, controls, state facts, warnings or error messages are hidden.
+   This tests restraint, grouping and alignment; it does not change action labels,
+   permissions, the Testing lead action, data or save/receipt behavior. Historical
+   board figures remain in their existing markup; a true common result column is
+   a later structural proposal. Placeholder art cannot qualify recognition.
+   Both themes, keyboard/focus, forced colors, short heights and physical touch
+   still require separate inspection; this file is not acceptance evidence. */
+
+/* Ordinary actions read as controls rather than a collection of violet pills.
+   Leave primary/destructive/discard/disabled/open-menu semantic colors intact. */
+.design-study .btn {
+  border-radius: var(--r-row);
+  font-weight: var(--fw-semibold);
+  box-shadow: none;
+}
+.design-study .btn:not(.btn-primary, .btn-quiet, .btn-danger, .btn-discard) {
+  border-width: 1px;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+.design-study .btn:not(.btn-primary, .btn-quiet, .btn-danger, .btn-discard)[aria-expanded="true"] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.design-study .btn-primary {
+  font-weight: var(--fw-semibold);
+}
+.design-study :is(input, select, textarea) {
+  border-radius: var(--r-row);
+}
+/* Preserve the source's focus rings, native disabled states and blocker logic. */
+@media (hover: hover) and (pointer: fine) {
+  .design-study .btn:not(.btn-primary, .btn-quiet, .btn-danger, .btn-discard):hover:not(:disabled, [aria-disabled="true"]) {
+    background: var(--hover);
+    border-color: var(--ink-3);
+  }
+}
+
+/* A calmer shell keeps the active section visible with a line, not a capsule.
+   The original current attributes and phone navigation remain unchanged. */
+.design-study .nav-item {
+  border-radius: var(--r-sm);
+  font-weight: var(--fw-medium);
+}
+.design-study .nav-item[aria-current="page"],
+.design-study .nav-more.is-current {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 -2px var(--accent);
+  font-weight: var(--fw-semibold);
+}
+.design-study .gs-form {
+  border-radius: var(--r-row);
+}
+
+/* Typography: retain the source reading sizes and font families. Only hierarchy
+   weights change; compactness comes from grouping, not blanket smaller text. */
+.design-study .page-head h1 {
+  font-weight: var(--fw-semibold);
+}
+.design-study .page-head p {
+  max-width: 72ch;
+  line-height: var(--lh-body);
+}
+.design-study .page-head-actions {
+  align-items: center;
+}
+.design-study .mu-home-head h2,
+.design-study .rcpt-section-head h2 {
+  font-weight: var(--fw-semibold);
+}
+
+/* Testing: view navigation is a quiet tab strip. The independent format choice
+   remains a small neutral segmented control, so the two choices look distinct. */
+.design-study .mu-group {
+  margin-top: var(--s-5);
+}
+.design-study .mu-home-head {
+  gap: var(--s-2) var(--s-5);
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--border);
+}
+.design-study .mu-home-head .mu-view {
+  --seg-pad: 0px;
+  flex-wrap: nowrap;
+  gap: var(--s-3);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.design-study .mu-home-head .mu-view > * {
+  padding-inline: var(--s-1);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-weight: var(--fw-medium);
+  box-shadow: none;
+}
+.design-study .mu-home-head .mu-view > [aria-pressed="true"] {
+  color: var(--ink);
+  font-weight: var(--fw-semibold);
+  box-shadow: inset 0 -2px var(--accent);
+}
+.design-study .mu-home-head :is(.gb-format, .mu-format) {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-row);
+  background: var(--surface-2);
+}
+.design-study .mu-home-head :is(.gb-format, .mu-format) > * {
+  border-radius: var(--r-sm);
+  font-weight: var(--fw-medium);
+}
+.design-study .mu-home-head :is(.gb-format, .mu-format) > [aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+  font-weight: var(--fw-semibold);
+}
+
+/* One coherent result surface, clear row divisions and predictable action width.
+   All synthetic notes are deliberately retained in the comparison. */
+.design-study .gb {
+  margin-top: var(--s-4);
+}
+.design-study .gb-intro {
+  line-height: var(--lh-body);
+}
+.design-study .gb-board > .gb-note {
+  margin-bottom: var(--s-2);
+}
+.design-study .gb-rows {
+  margin-top: var(--s-4);
+  padding: 0 var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-row);
+  background: var(--surface);
+}
+.design-study .gb-row {
+  column-gap: var(--s-4);
+  padding-block: var(--s-4);
+  border-bottom-color: var(--divider);
+}
+.design-study .gb-row:last-child {
+  border-bottom: 0;
+}
+.design-study .gb-title {
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+}
+.design-study .gb-name {
+  gap: var(--s-1);
+}
+.design-study .gb-score {
+  gap: var(--s-2);
+}
+.design-study .gb-actions {
+  gap: var(--s-1);
+}
+.design-study .gb-actions a.btn {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-2);
+  font-weight: var(--fw-medium);
+}
+.design-study .gb-actions button.btn {
+  font-weight: var(--fw-semibold);
+}
+.design-study .gb-name .gt-before {
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+}
+@media (min-width: 1000px) {
+  .design-study .gb-row {
+    grid-template-columns: minmax(0, 1fr) 12rem 10rem;
+  }
+}
+@media (max-width: 699px) {
+  .design-study .mu-home-head {
+    gap: var(--s-2) var(--s-3);
+  }
+  .design-study .mu-home-head .mu-view {
+    flex: 1 1 100%;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .design-study .mu-home-head .mu-view > * {
+    flex: none;
+    white-space: nowrap;
+  }
+  .design-study .mu-home-head .mu-view > :focus-visible {
+    outline-offset: -3px;
+  }
+  .design-study .gb-row {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    gap: var(--s-3);
+  }
+  .design-study .gb-actions {
+    gap: var(--s-2);
+  }
+}
+
+/* Receipt: keep every instruction and state fact, but group the work more
+   deliberately. Geometry and styling only: no new disclosure or truncation. */
+.design-study .rcpt-layout-frame {
+  margin-top: var(--s-4);
+  gap: var(--s-5);
+}
+.design-study .rcpt-section {
+  margin-top: var(--s-5);
+}
+.design-study .rcpt-body > p {
+  line-height: var(--lh-body);
+}
+.design-study .rcpt-toolbar {
+  margin-bottom: var(--s-3);
+}
+.design-study .rcpt-guidance {
+  border-radius: var(--r-row);
+}
+.design-study .rcpt-picture-inspect {
+  border-radius: var(--r-row);
+  font-weight: var(--fw-medium);
+}
+.design-study .rcpt-bar {
+  background: var(--surface);
+  box-shadow: none;
+}
+.design-study .rcpt-bar .action-bar-status {
+  gap: var(--s-1);
+}
+.design-study .rcpt-record-reason {
+  line-height: var(--lh-body);
+}
+
+@media (max-width: 599px) {
+  /* The Show filters scroll as one row while Tools stays at the trailing edge.
+     A visible native scrollbar and clipped next option supply scroll cues;
+     focus stays inside the scroller instead of losing its ring at its edge. */
+  .design-study .rcpt-toolbar-row > .segmented:first-child {
+    --seg-pad: 0px;
+    flex: 1 1 0;
+    min-width: 0;
+    flex-wrap: nowrap;
+    align-self: stretch;
+    gap: var(--s-2);
+    padding: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-radius: 0;
+    border-bottom: 1px solid var(--border-strong);
+    background: transparent;
+    scrollbar-width: thin;
+    scroll-snap-type: x proximity;
+  }
+  .design-study .rcpt-toolbar-row > .segmented:first-child > * {
+    flex: none;
+    min-height: var(--tap);
+    padding-inline: var(--s-2);
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink-2);
+    font-weight: var(--fw-medium);
+    white-space: nowrap;
+    box-shadow: none;
+    scroll-snap-align: start;
+  }
+  .design-study .rcpt-toolbar-row > .segmented:first-child > [aria-pressed="true"] {
+    color: var(--ink);
+    font-weight: var(--fw-semibold);
+    box-shadow: inset 0 -2px var(--accent);
+  }
+  .design-study .rcpt-toolbar-row > .segmented:first-child > :focus-visible {
+    outline-offset: -3px;
+  }
+  .design-study .rcpt-tools-button {
+    align-self: flex-start;
+    font-weight: var(--fw-medium);
+  }
+  /* A deliberate picture-reading experiment, not proof of real-card recognition.
+     The original check, Inspect, split, metadata and provenance elements remain. */
+  .design-study .rcpt-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--s-3);
+  }
+  .design-study .rcpt-section-head h2 {
+    font-size: var(--fs-lg);
+    line-height: var(--lh-tight);
+  }
+}
+
+/* Study floor: visible controls may look quieter, but touch areas never shrink.
+   Include the existing metadata-recovery button that currently measures24px. */
+@media (pointer: coarse) {
+  .design-study .btn,
+  .design-study .segmented > *,
+  .design-study .rcpt-blanks {
+    min-height: var(--tap);
+  }
+  .design-study .btn {
+    min-width: var(--tap);
+  }
+}
+
+/* Keep selected tabs visible in forced colors, independent of subtle surfaces.
+   Native focus/disabled styles and all original warnings remain in force. */
+@media (forced-colors: active) {
+  .design-study .mu-home-head .mu-view > [aria-pressed="true"],
+  .design-study .mu-home-head :is(.gb-format, .mu-format) > [aria-pressed="true"],
+  .design-study .rcpt-toolbar-row > .segmented:first-child > [aria-pressed="true"] {
+    forced-color-adjust: auto;
+    outline: 2px solid Highlight;
+    outline-offset: -3px;
+  }
+}

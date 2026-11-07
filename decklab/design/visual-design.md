@@ -1,5 +1,7 @@
 # Deck Lab: visual design (P1)
 
+> **Visual review follow-up, 2026-11-07:** Matt's clarified objective is to diagnose and resolve the current UI's amateurish feel. The [new visual diagnosis and proposed direction](visual-polish-direction-2026-11-07.md) reassess P1's shared control language and page composition. This document retains the original decisions and implemented rules; the proposed replacements are not production changes yet.
+
 The look Deck Lab's pages are moving to, and how to get there from today's UI kit without a rewrite.
 
 - **Decided:** 2026-10-24, by Matt: "P1, split lab + mana decks".
@@ -468,7 +470,7 @@ What the round didn't settle, and where P1 didn't hold up as written.
 
 The [initial rendered review of 2026-11-07](rendered-ui-review-2026-11-07.md) and its [follow-up](rendered-ui-review-2026-11-07-pass2.md) record seven reproduced, unfixed UI findings with disposable synthetic evidence. Native interaction checks and the headless capture matrix are scoped by their coverage ledgers; remaining states and device acceptance stay separate from the implementation evidence below.
 
-The [rendered UI change plan](rendered-ui-change-plan-2026-11-07.md) consolidates those findings with fresh screenshot analysis, source seams and acceptance checks. Its proposed order is data/action correctness, editing recovery, navigation/readability/touch sizing, then task hierarchy and measured layout improvements. No application fixes were made by the planning pass.
+The [visual diagnosis and revised direction](visual-polish-direction-2026-11-07.md) now own the overall visual delivery order. The [rendered UI change plan](rendered-ui-change-plan-2026-11-07.md) consolidates functional findings, screenshot analysis, source seams and acceptance checks. Shared visual improvement and those repairs can progress together; the planning passes made no production UI changes.
 
 For repeat rendered checks, use the [headless UI review command](../ui_review/README.md). It captures synthetic evidence without desktop input; inspect the output and retain the separate device gates.
 
