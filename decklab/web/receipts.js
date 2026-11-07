@@ -221,7 +221,7 @@ function rcptSection(view, comp) {
   comp.body = el("div", { class: "rcpt-body" });
   comp.offNote = several ? el("p", { class: "sub rcpt-off-note", text: "Tick “This arrived” if this part came, to check it off." }) : null;
   comp.section = el("section", { class: "rcpt-section", id: `rcpt-${comp.index}`, "aria-labelledby": id },
-    el("div", { class: "rcpt-section-head" }, el("h2", { id, text: rcptTitle(comp.c, view.data) }), arrived),
+    el("div", { class: "rcpt-section-head" }, el("h2", { id, text: rcptTitle(comp.c, {}) }), arrived),
     comp.offNote, comp.body);
   rcptMarkSelected(comp);
   if (comp.kind === "product") {
@@ -237,7 +237,9 @@ function rcptSection(view, comp) {
     rcptProductGrid(view, comp, true);
     return comp.section;
   }
-  comp.body.append(el("p", { class: "sub", text: "Tick the cards that arrived; the rest stay on the way. Split a tile if only some copies came." }));
+  comp.body.append(el("details", { class: "rcpt-checking-help" }, el("summary", { text: "Checking help" }),
+    el("p", { class: "sub", text: "Tick the cards that arrived; the rest stay on the way. Split a tile if only some copies came." }),
+    comp.kind === "cards" ? el("p", { class: "sub", text: "Set condition and language on each card as you check it, or use Tools to fill in the blanks. Unknown details may stay blank." }) : null));
   comp.body.append(rcptPartActions(view, comp));
   if (comp.checks.length) comp.body.append(rcptChecksCard(view, comp));
   comp.body.append(rcptToolbar(view, comp));
@@ -377,8 +379,7 @@ function rcptDrawGrid(view, comp) {
   clear(comp.grid);
   comp.allBlank = rcptAllBlank(comp);
   if (comp.allBlank) {
-    comp.grid.append(el("p", { class: "sub rcpt-all-blank", text: "No card's condition or language is set yet. " +
-      "Set them on each card as you check it, or all at once with “Not set yet”." }));
+    comp.grid.append(el("p", { class: "sub rcpt-all-blank", text: "Condition and language are not recorded yet." }));
   }
   for (const row of comp.rows) {
     row.tile = rcptTile(view, comp, row, false);

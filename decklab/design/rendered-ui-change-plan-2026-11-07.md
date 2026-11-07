@@ -1,6 +1,8 @@
 # Rendered UI review: change plan
 
-Date: 7 November 2026, Australia/Brisbane. Status: **proposed; no application fixes implemented by this task**. Owner: `E11-S30`.
+Date: 7 November 2026, Australia/Brisbane. Status: **first implementation complete; remaining repairs and acceptance open**. Owner: `E11-S30`.
+
+The [first implementation record](visual-polish-implementation-2026-11-07.md) supersedes the planned status for R06, O03 and O02, and records bounded editor/receipt/board composition work for O04–O06. R01–R05 and R07 remain unfixed. Earlier observations and acceptance criteria below are retained; original capture reports describe the pre-fix code.
 
 Matt's clarified objective is to understand and resolve why the interface looks amateurish, rather than only fix individual defects. The [visual diagnosis and proposed direction](visual-polish-direction-2026-11-07.md) now lead this work. Revise the shared control language, hierarchy and page composition while preserving product behavior, privacy and accessibility. The functional fixes below remain a separate necessary repair lane; completing them alone will not deliver a polished interface.
 
@@ -84,7 +86,7 @@ Use the existing typography, colour and spacing tokens; component changes belong
 
 ## Implementation order
 
-The [visual direction](visual-polish-direction-2026-11-07.md#delivery-order) owns the overall delivery order: prove the shared design on representative screens, implement the common visual foundations, then compose each task page and extend the comparison. The following table orders the repair lane and records its existing seams; it is no longer a claim that aesthetic work should wait until all bugs are fixed. Status is **planned**, not built. R02/R05 are P1; the remaining reproduced findings and O03 are P2. O02/O04/O05 also contribute to the visual direction. O06's stable result alignment is part of that composition work; optional narrow-group polish follows it.
+The [visual direction](visual-polish-direction-2026-11-07.md#delivery-order) owns the overall delivery order: prove the shared design on representative screens, implement the common visual foundations, then compose each task page and extend the comparison. The following table retains the repair order and source seams; the implementation record above identifies delivered scopes. R02/R05 are P1; the remaining reproduced findings and O03 are P2. O02/O04/O05 also contribute to the visual direction. O06's board alignment is implemented; optional narrow-group polish follows it.
 
 O07's typography/space audit accompanies the relevant slices and informs layout decisions before slices 9–12. Its page/element findings receive their own measured priority; it is not a completed audit or a thirteenth blanket restyling task.
 

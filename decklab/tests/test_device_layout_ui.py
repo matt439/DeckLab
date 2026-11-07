@@ -173,7 +173,7 @@ CASUAL = {
     "--fs-fig-range": ".875rem", "--fs-qty": "1rem", "--fs-qty-input": "1rem", "--fw-qty": "700", "--font-num": "var(--font)",
     "--ls-h1": "-.03em", "--ls-hero": "-.03em", "--ls-fig": "0em", "--ls-caps": ".08em", "--ls-th": ".07em",
     "--lh-copy": "1.5",
-    "--r-panel": "14px", "--r-row": "8px", "--r-field": "12px",
+    "--r-panel": "14px", "--r-row": "8px", "--r-field": "var(--r-control)",
     "--btn-h": "44px", "--seg-h": "44px", "--input-h": "44px", "--stepper-h": "46px", "--check-size": "24px",
     "--row-h": "44px", "--th-h": "30px", "--seg-track": "var(--track)", "--list-row-h": "54px", "--tile-min": "104px", "--tile-min-forge": "112px",
     "--flag-h": "30px", "--gutter-list": "var(--gutter)",
@@ -278,10 +278,12 @@ class ComponentTests(unittest.TestCase):
         css = _css("components.css")
         rule = lambda selector: re.search(rf"^{re.escape(selector)} \{{(.*?)^\}}", css, re.S | re.M).group(1)
         button = rule(".btn")
-        for part in ("min-height: var(--btn-h)", "border: 1.5px solid var(--accent)", "border-radius: var(--r-pill)",
-                     "color: var(--accent-strong)", "font-size: var(--fs-btn)", "font-weight: var(--fw-bold)"):
+        for part in ("min-height: var(--btn-h)", "border: 1px solid var(--border-strong)", "border-radius: var(--r-control)",
+                     "color: var(--ink)", "font-size: var(--fs-btn)", "font-weight: var(--fw-medium)"):
             self.assertIn(part, button)
-        self.assertIn("box-shadow: var(--shadow-primary)", re.search(r"^\.btn-primary \{([^}]*)\}", css, re.M).group(1))
+        primary = re.search(r"^\.btn-primary \{([^}]*)\}", css, re.M).group(1)
+        self.assertIn("background: var(--accent)", primary)
+        self.assertIn("color: var(--accent-ink)", primary)
         self.assertIn("min-height: var(--seg-h)", rule(".segmented"))
         self.assertIn("background: var(--seg-track)", rule(".segmented"))
         self.assertIn("min-height: var(--stepper-h)", rule(".stepper"))
@@ -293,9 +295,10 @@ class ComponentTests(unittest.TestCase):
         # The focus ring follows an element's corners; it never squares a round button.
         self.assertNotIn("border-radius", re.search(r"^:focus-visible \{([^}]*)\}", base, re.M).group(1))
 
-    def test_the_selected_and_changed_states_are_the_accent_and_delivery_states_are_not(self):
+    def test_selection_is_distinct_from_primary_actions_and_changed_values(self):
         css = _css("components.css")
-        self.assertRegex(css, r'\.segmented > \[aria-pressed="true"\], \.segmented > \[aria-current="page"\] \{[^}]*background: var\(--accent\)')
+        self.assertRegex(css, r'\.segmented > \[aria-pressed="true"\], \.segmented > \[aria-current="page"\] \{[^}]*background: var\(--surface\)')
+        self.assertIn('box-shadow: inset 0 0 0 1px var(--border-strong)', css)
         self.assertRegex(css, r'\.stepper:is\(\.is-changed, \[data-changed="true"\]\) \{ border-color: var\(--accent\); \}')
         # "Part received" is a neutral outline (Matt, 2026-10-24: section 6 question 2), never the accent.
         outline = re.search(r"\.chip-outline, \.status-outline \{([^}]*)\}", css).group(1)
@@ -402,11 +405,10 @@ class ShellTests(unittest.TestCase):
         self.assertIn("bottom: calc(var(--shell-bottom) + var(--bar-h) + var(--s-2))", casual)
         self.assertIn("body:is(.has-edit-bar, :has(#main .action-bar)) .toast {", _css("components.css"))
 
-    def test_the_lab_nav_is_round_pills(self):
+    def test_the_lab_nav_marks_the_current_section_without_an_action_fill(self):
         shell = _css("shell.css")
-        self.assertIn("border-radius: var(--r-pill)", _rule(shell, ".nav-item"))
-        self.assertIn('.nav-item[aria-current="page"], .nav-more.is-current { background: var(--accent-soft); color: var(--accent-strong); }', shell)
-        self.assertNotIn("border-bottom-color: var(--accent)", shell)
+        self.assertIn("border-radius: var(--r-sm)", _rule(shell, ".nav-item"))
+        self.assertRegex(shell, r'\.nav-item\[aria-current="page"\], \.nav-more.is-current \{\s*color: var\(--ink\); box-shadow: inset 0 -2px var\(--accent\)')
         self.assertIn(".nav-item:hover { background: var(--hover); }", _block(shell, "(hover: hover) and (pointer: fine)"))
 
     def test_the_ipad_in_portrait_caps_the_tabs_at_640_px(self):

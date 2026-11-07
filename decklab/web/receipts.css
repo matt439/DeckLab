@@ -8,6 +8,11 @@
 .rcpt-head-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); margin-bottom: var(--s-4); }
 .rcpt-head-details, .rcpt-head-progress { min-width: 0; }
 .rcpt-head-details .page-head { margin-bottom: var(--s-2); }
+.rcpt-order-details > summary, .rcpt-checking-help > summary { display: flex; align-items: center; min-height: var(--tap);
+  color: var(--ink-2); font-size: var(--fs-meta); font-weight: var(--fw-medium); cursor: pointer; }
+.rcpt-order-details > .rcpt-head-grid { margin: var(--s-2) 0; }
+.rcpt-order-details .rcpt-notes { margin-top: var(--s-2); }
+.rcpt-checking-help > p { max-width: 72ch; margin: var(--s-2) 0; }
 .rcpt-order-meta { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-4); margin: 0;
   color: var(--ink-2); font: var(--fs-meta)/var(--lh-copy) var(--font-mono); overflow-wrap: anywhere; }
 .rcpt-head-progress { display: flex; flex-direction: column; justify-content: center; gap: var(--s-2); }
@@ -16,7 +21,7 @@
 .rcpt-head-progress .sub { margin: 0; }
 
 /* This first frame preserves the existing board and Record bar; the aside is advice, not confirmation. */
-.rcpt-layout-frame { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-5); margin-top: var(--s-5); }
+.rcpt-layout-frame { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-5); margin-top: var(--s-3); }
 .rcpt-layout-frame .rcpt-board { min-width: 0; }
 .rcpt-layout-frame .rcpt-board > .rcpt-section:first-child { margin-top: 0; }
 .rcpt-guidance { min-width: 0; align-self: start; overflow-wrap: anywhere; }
@@ -71,7 +76,7 @@
 /* A section per part of the order. */
 .rcpt-section { margin: var(--s-6) 0 0; }
 .rcpt-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2) var(--s-4); }
-.rcpt-section-head h2 { margin: 0; font-size: var(--fs-xl); }
+.rcpt-section-head h2 { margin: 0; font-size: var(--fs-lg); }
 .rcpt-h-state { color: var(--ink-2); font-size: var(--fs-md); font-weight: var(--fw-regular); }
 .rcpt-arrived { flex: none; }
 .rcpt-body { margin-top: var(--s-3); }
@@ -256,13 +261,14 @@
 /* One Record action, with its blocker reason and native arrival date beside it. The measured bar may grow. */
 .rcpt-bar { flex-wrap: nowrap; }
 .rcpt-bar .action-bar-status { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: var(--s-1); }
-.rcpt-bar .actions { flex: none; align-items: center; }
+.rcpt-bar .actions { flex: 0 1 auto; align-items: center; justify-content: flex-end; }
+.rcpt-progress-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-3); }
 .rcpt-status-line { line-height: var(--lh-tight); }
 .rcpt-progress { color: var(--ink); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
 .rcpt-record-reason { max-width: 72ch; color: var(--ink-2); line-height: var(--lh-tight); overflow-wrap: anywhere; }
 .rcpt-stale { color: var(--warn-text); font-weight: var(--fw-semibold); }
 .rcpt-blanks {
-  display: inline-flex; align-items: center; min-height: 24px; padding: 0;
+  display: inline-flex; align-items: center; min-height: var(--tap); padding: 0;
   border: 0; background: none; color: var(--link); font: inherit; text-align: left;
   text-decoration: underline; text-underline-offset: 2px; cursor: pointer;
 }
@@ -273,6 +279,12 @@
 .rcpt-message:empty { display: none; }
 .rcpt-message { margin-top: var(--s-4); }
 @media (max-width: 599px) {
+  .rcpt-bar { flex-direction: column; align-items: stretch; }
+  .rcpt-bar .action-bar-status { flex: none; margin: 0; }
+  .rcpt-bar .actions { justify-content: space-between; }
+  .rcpt-date { flex: 1 1 0; min-width: 0; }
+  .rcpt-date-word { display: none; }
+  .rcpt-date select { min-width: 0; }
   .rcpt-date select, .rcpt-date input { min-height: var(--field-h); max-width: 100%; padding-top: 2px; padding-bottom: 2px; }
   .rcpt-bar .btn-primary { max-width: 46vw; white-space: normal; line-height: var(--lh-tight); }
 }

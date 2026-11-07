@@ -525,11 +525,12 @@ function drawMatchups(library, matchups, params, token) {
   const opener = () => openPlaySheet(library, () => data, token, {}, view.format);
   // The empty states' Play a matchup (drawHome), with a deck picked or this format's first.
   view.openPlay = (preset = {}) => openPlaySheet(library, () => data, token, preset, view.format);
-  const play = gate.may ? el("button", { type: "button", class: "btn btn-primary", text: "Play a matchup",
+  const play = gate.may ? el("button", { type: "button", class: `btn ${view.mode === "matchups" ? "btn-primary" : "btn-quiet"}`, text: "Play a matchup",
     onclick: opener }) : null;
+  view.playButton = play;
   add(main, [
-    pageHead({ title: routeH1("matchups"), description: "Forge plays your decks hundreds of times on the PC, against each other " +
-      "and popular decks, and counts who wins.", primary: play, badge: simulationsChip() }),
+    pageHead({ title: routeH1("matchups"), description: "Test your decks against popular decks or each other.",
+      primary: play, badge: simulationsChip() }),
     gate.may ? null : el("p", { class: "run-blocked mu-gate", text: gate.why }),
     forgeBox(data.forge),
     updates.node, lists]);
@@ -562,6 +563,10 @@ function drawHome(host, data, library, view) {
   if (running.length) host.append(el("section", { class: "mu-group", "aria-labelledby": "h-running" },
     el("h2", { id: "h-running", text: "Playing now" }), el("ul", { class: "mu-list" }, running.map(r => runningRow(r)))));
   view.mode = GB_VIEWS.includes(view.mode) ? view.mode : "matchups";
+  if (view.playButton) {
+    view.playButton.classList.toggle("btn-primary", view.mode === "matchups");
+    view.playButton.classList.toggle("btn-quiet", view.mode !== "matchups");
+  }
   const formats = view.mode === "popular" ? [] : view.mode === "rankings" ? MATRIX_FORMATS
     : MATRIX_FORMATS.filter(([format]) => matrixDecks(library, results, format).length > 1);
   if (view.mode !== "popular" && !formats.some(([f]) => f === view.format)) {
@@ -569,8 +574,8 @@ function drawHome(host, data, library, view) {
     view.format = formats.some(([f]) => f === kept) ? kept : (formats[0] || MATRIX_FORMATS[0])[0];
   }
   const section = el("section", { class: "mu-group mu-home", "aria-labelledby": "h-results" });
-  const head = el("div", { class: "mu-home-head" }, el("h2", { id: "h-results", text: "Results" }),
-    el("div", { class: "segmented mu-view", role: "group", "aria-label": "Results view" },
+  const head = el("div", { class: "mu-home-head" }, el("h2", { id: "h-results", class: "sr-only", text: "Results" }),
+    el("div", { class: "tabs mu-view", role: "group", "aria-label": "Results view" },
       [["popular", "Popular decks"], ["matchups", "Matchups"], ["rankings", "Rankings"]].map(([mode, text]) => el("button", { type: "button", text,
         "aria-pressed": String(view.mode === mode), onclick: () => {
           if (view.token != null && (view.token !== routeToken || view.profile !== state.profile?.id)) return;

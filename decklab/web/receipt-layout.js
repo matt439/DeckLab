@@ -1,7 +1,7 @@
 /* Receive delivery's header and loaded-data guidance. Checking, preview and recording stay in their existing modules. */
 "use strict";
 
-/** The order's sub-page head; notes retain their existing More/Less control. */
+/** Order identity leads; secondary metadata and notes remain in a native disclosure. */
 function rcptHead(data, title, view = null) {
   const notes = data.notes ? el("p", { class: "rcpt-notes", text: data.notes }) : null;
   const more = notes && data.notes.length > 140 ? el("button", { type: "button", class: "btn btn-quiet btn-inline rcpt-more",
@@ -15,11 +15,12 @@ function rcptHead(data, title, view = null) {
     description: data.seller || "Seller not recorded" });
   const progress = view ? el("div", { class: "rcpt-head-progress" }) : null;
   if (view) { view.headProgress = progress; rcptHeadProgress(view); }
-  return [el("header", { class: "rcpt-page-head" }, head[0],
-    el("div", { class: "rcpt-head-grid" }, el("div", { class: "rcpt-head-details" }, head[1],
-      el("p", { class: "rcpt-order-meta" }, el("span", { text: `Order ${data.order || "not recorded"}` }),
+  return [el("header", { class: "rcpt-page-head" }, head[0], head[1],
+    el("details", { class: "rcpt-order-details" }, el("summary", { text: "Order details" }),
+      el("div", { class: "rcpt-head-grid" }, el("div", { class: "rcpt-head-details" },
+        el("p", { class: "rcpt-order-meta" }, el("span", { text: `Order ${data.order || "not recorded"}` }),
         data.ordered_on ? el("time", { datetime: data.ordered_on, text: `Ordered ${rcptDate(data.ordered_on)}` })
-          : el("span", { text: "Order date not recorded" }))), progress)), notes, more];
+          : el("span", { text: "Order date not recorded" })), notes, more), progress)))];
 }
 
 /** Copy counts use the same working-state unit as rcptProgress; whole products stay separate. */

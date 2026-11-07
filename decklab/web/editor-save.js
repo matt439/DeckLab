@@ -459,8 +459,12 @@ async function saveNow({ viewAfter = false } = {}) {
     await doSave(null, button, { viewAfter });
   } finally {
     ed.saving = false;
-    if (button && editor === ed && button.dataset.busy) unbusy(button);
-    if (editor === ed) refreshKeyboardHints();
+    if (current()) {
+      if (button?.dataset.busy) unbusy(button);
+      // Checks redraw these retained controls while saving is still true. Restore their live state
+      // after blocked/failed/stale reviews too, without waiting for another draft edit.
+      drawBar();
+    }
   }
 }
 

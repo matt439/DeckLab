@@ -303,7 +303,7 @@ function ptrTestingButton(main, params, token) {
   if (!head) return;
   let buttons = head.querySelector(".page-head-buttons");
   if (!buttons) head.append(buttons = el("div", { class: "actions page-head-buttons" }));
-  buttons.append(el("button", { type: "button", class: "btn", text: "Try a precon…", onclick: () => openTrialSearch(space) }));
+  buttons.append(el("button", { type: "button", class: "btn btn-quiet", text: "Try a precon…", onclick: () => openTrialSearch(space) }));
   if (params.get("open") !== "precon") return;
   setTimeout(() => {
     if (token !== routeToken) return;

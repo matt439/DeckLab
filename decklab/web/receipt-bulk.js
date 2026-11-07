@@ -20,7 +20,7 @@ function rcptMarkSingleSided(v) {
 
 /** The delivery-level action, above the parts. */
 function rcptEverythingBar(view) {
-  view.everything = el("button", { type: "button", class: "btn rcpt-everything", text: "Everything arrived as ordered",
+  view.everything = el("button", { type: "button", class: "btn btn-quiet rcpt-everything", text: "Everything arrived as ordered",
     onclick: () => rcptEverythingArrived(view) });
   view.everythingBar = el("div", { class: "actions rcpt-everything-bar" }, view.everything);
   return view.everythingBar;

@@ -180,9 +180,11 @@ function gbBoard(view, a, words) {
   const size = a.sample?.size || 0;
   const rows = a.rows || [];
   return el("div", { class: "gb-board" },
-    el("p", { class: "sub gb-intro", text: `Each deck against the same ${plural(size, `popular ${words} deck`)} ` +
+    el("p", { class: "gb-scope", text: `${words} · 1v1 · ${plural(size, "sampled opponent")} · Win rate, not a rating` }),
+    el("details", { class: "gb-help" }, el("summary", { text: "About these results" }),
+      el("p", { class: "sub gb-intro", text: `Each deck against the same ${plural(size, `popular ${words} deck`)} ` +
       `(${GB_SOURCES[a.format] || GB_SOURCES.commander}). A figure is its average win rate against those decks only: ` +
-      "not a rating. Rankings are separate." }),
+      "not a rating. Rankings are separate." })),
     (a.notes || []).map((n) => el("p", { class: "gt-small gb-note", text: n })),
     rows.length ? el("ul", { class: "gb-rows", "aria-label": `${words} decks against popular decks` },
       rows.map((row) => gbRow(view, row)))
@@ -204,16 +206,17 @@ function gbRow(view, row) {
     if (h && h.rate != null) facts.push(el("p", { class: "gb-meta gb-hardest" }, simNumbers(`Hardest: ${h.title} ${simPoints(h.rate)}%`)));
   }
   if (row.state === "partial") facts.push(status("warn", "Partly tested"));
-  if (row.state === "stale_list") facts.push(gtBeforeLine(row));
-  if (row.state === "stale_older") facts.push(gtOlderLine(row));
+  const history = row.state === "stale_list" ? gtBeforeLine(row) : row.state === "stale_older" ? gtOlderLine(row) : null;
+  if (rate && history) facts.push(history);
   for (const n of row.notes || []) facts.push(el("p", { class: "gt-small gb-note", text: n }));
   return el("li", { class: "gb-row", "data-deck": d.id, "data-state": row.state },
     el("div", { class: "gb-name" }, el("h3", { class: "gb-title", text: d.title }), facts),
     rate ? el("div", { class: "gb-score" },
       winRateFigure(rate, { what: "Win rate against popular decks", games: row.games || null, barred: true }),
-      rangeBar(rate, { compact: true, decorative: true }), freshnessBadge(row.updated, { size: "row" })) : null,
+      rangeBar(rate, { compact: true, decorative: true }), freshnessBadge(row.updated, { size: "row" }))
+      : history ? el("div", { class: "gb-score gb-score-historical" }, history) : null,
     el("div", { class: "gb-actions" }, gbPlaying(row),
-      el("a", { class: "btn", href: `${deckHref(d.id, "target")}&tab=matchups&part=gauntlet`, text: "Details",
+      el("a", { class: "btn btn-quiet", href: `${deckHref(d.id, "target")}&tab=matchups&part=gauntlet`, text: "Details",
         "aria-label": `Details: ${d.title}`, "data-focus": `details:${d.id}` }),
       gbPlayButton(view, row)));
 }

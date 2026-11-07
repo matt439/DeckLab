@@ -1,6 +1,8 @@
 # Deck Lab: visual diagnosis and proposed direction
 
-Date: 7 November 2026, Australia/Brisbane. Owner: `E11-S30`. Status: **diagnosis and design proposal; production UI unchanged**.
+Date: 7 November 2026, Australia/Brisbane. Owner: `E11-S30`. Status: **direction with a first production slice implemented; wider rollout and acceptance remain**.
+
+The [first implementation and rendered comparisons](visual-polish-implementation-2026-11-07.md) record shared controls, Testing composition, receipt guidance/footer and editor recovery/reflow. The original study below remains historical proposal evidence; it does not describe the final production markup.
 
 Matt's clarification is the brief: the current UI looks amateurish, and he wants us to identify why and resolve it. He does not need to identify the individual CSS problems or prescribe a style. The review must supply a defensible visual diagnosis, an actual proposed treatment and a coherent implementation plan.
 

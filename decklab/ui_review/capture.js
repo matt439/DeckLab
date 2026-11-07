@@ -12,6 +12,8 @@ async function metrics(page) {
       const style = getComputedStyle(node);
       return { x: rect.x, y: rect.y, width: rect.width, height: rect.height,
         display: style.display, visibility: style.visibility, fontSize: style.fontSize,
+        fontFamily: style.fontFamily, fontWeight: style.fontWeight, lineHeight: style.lineHeight,
+        fontStyle: style.fontStyle, textDecoration: style.textDecorationLine,
         color: style.color, background: style.backgroundColor, opacity: style.opacity,
         gridTemplateColumns: style.gridTemplateColumns, overflowX: style.overflowX,
         minHeight: style.minHeight, disabled: node.disabled === true, hidden: node.hidden === true };
@@ -52,6 +54,14 @@ async function metrics(page) {
         .filter(node => /^(Save|Check|Save draft for later)$/.test(node.textContent.trim()))
         .map(node => ({ text: node.textContent.trim(), box: box(node) })),
       headingText: [...document.querySelectorAll('#main h1,#main h2,#main h3')].map(node => node.textContent.trim()),
+      typeSamples: ['.page-head h1', '.gb-title', '.gb-scope', '.gb-help > summary', '.btn-primary', '.btn-quiet',
+        '.rcpt-section-head h2', '.rcpt-blanks', '.edit-card .nm-text'].map(selector => ({ selector,
+          box: box(document.querySelector(selector)) })),
+      boardRows: [...document.querySelectorAll('.gb-row')].map(node => ({ state: node.dataset.state,
+        identity: box(node.querySelector('.gb-name')), evidence: box(node.querySelector('.gb-score')),
+        actions: box(node.querySelector('.gb-actions')) })),
+      editorRows: [...document.querySelectorAll('.edit-list > .edit-row:not(.edit-removed)')].map(node => ({
+        row: box(node), identity: box(node.querySelector('.edit-card')), printing: box(node.querySelector('.edit-print-words')) })),
       errorText: [...document.querySelectorAll('#main .load-failed,#main .form-error,#main [role=alert]')]
         .map(node => node.textContent.trim()),
       styleRows,
@@ -59,6 +69,25 @@ async function metrics(page) {
         naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight, loading: img.loading, box: box(img) })),
     };
   });
+}
+
+async function checkDisclosures(page, spec) {
+  const selectors = spec.receipt ? ['.rcpt-order-details', '.rcpt-checking-help']
+    : spec.name.startsWith('board-') ? ['.gb-help'] : [];
+  const result = [];
+  for (const selector of selectors) {
+    const details = page.locator(selector).first();
+    await details.locator(':scope > summary').click();
+    assert.equal(await details.getAttribute('open'), '', 'Native disclosure did not open');
+    await details.locator(':scope > summary').click();
+    assert.equal(await details.getAttribute('open'), null, 'Native disclosure did not close');
+    result.push(selector);
+  }
+  if (spec.receipt) {
+    assert(await page.getByRole('checkbox', { name: 'Check off 1 copy of Llanowar Elves', exact: true }).isChecked(),
+      'Disclosure changed the local receipt selection');
+  }
+  return result;
 }
 
 function matrix(routes) {
@@ -122,6 +151,14 @@ async function capture(review, spec, index) {
     result.png = id + '.png';
     await page.screenshot({ path: path.join(review.out, result.png), fullPage: spec.fullPage !== false,
       animations: 'disabled', timeout: 30000 });
+    result.disclosures_checked = await checkDisclosures(page, spec);
+    if (spec.coarse && spec.receipt) assert(result.metrics.blankTarget.height >= 44, 'Receipt recovery target is too short');
+    if (spec.root200) {
+      for (const row of result.metrics.editorRows) {
+        assert(row.identity.width >= row.row.width * .8, 'Enlarged editor identity is squeezed');
+        if (row.printing) assert(row.printing.width >= row.row.width * .8, 'Enlarged printing details are squeezed');
+      }
+    }
     assert.equal(result.page_errors.length, 0, 'Uncaught page error during capture');
     assert(!result.http_errors.some(row => row.category === 'unexpected_http_error'), 'Unexpected fixture HTTP failure');
     result.status = 'captured';

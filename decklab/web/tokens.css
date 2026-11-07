@@ -56,10 +56,11 @@
 
   /* Radii */
   --r-sm: 4px;                  /* art thumbnails, small swatches, a kbd hint */
-  --r-md: 10px;                 /* anything not yet moved over to P1's radii (buttons are --r-pill since slice 4) */
+  --r-md: 10px;                 /* older containers; ordinary controls use --r-control */
   --r-lg: 14px;                 /* cards, panels, sheets */
   --r-pill: 999px;
-  --r-seg: calc(var(--seg-h) / 2);   /* a segmented track: round on one row, a rounded rectangle when it wraps */
+  --r-control: 8px;             /* ordinary controls; pills are reserved for tags and counts */
+  --r-seg: var(--r-control);    /* short contained choices, including wrapped groups */
   --r-card: 4.75% / 3.4%;       /* a Magic card's corners, on its picture */
 
   /* Control sizes: 44 px to touch; a mouse gets the denser step below. --tap is a touch target that
@@ -110,7 +111,7 @@
   --lh-copy: 1.5;               /* body text's line height */
   --r-panel: 14px;              /* panels, cards, notices, a phone sheet's top corners */
   --r-row: 8px;                 /* a selected row, a menu */
-  --r-field: 12px;              /* selects and plain text inputs */
+  --r-field: var(--r-control);  /* selects and plain text inputs */
   --btn-h: 44px;                /* buttons (a casual primary may go to 48) */
   --seg-h: 44px;                /* a segmented control */
   --input-h: 44px;              /* inputs and selects */

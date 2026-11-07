@@ -75,6 +75,12 @@ The capture matrix uses both themes and DPR 2:
 - A 320px editor with explicit 200% **CSS root-font stress**. This is not browser
   zoom, OS text scaling or a claim that every absolute-size control doubled.
 
+Capture measurements include element typography and board/editor row allocations.
+Native board/receipt help disclosures are opened and closed through their summaries
+after each PNG, retaining the local receipt selection. Coarse receipt recovery must
+measure at least 44px; root-font editor identity/printing must retain at least 80%
+of the row width. These bounded assertions do not qualify every page or device.
+
 The editor suite uses ordinary Playwright clicks to remove the three fixture
 rows, open the blocked empty-list Save review, return with Keep editing and
 measure the live Undo/Discard state. It records whether the reviewed footer

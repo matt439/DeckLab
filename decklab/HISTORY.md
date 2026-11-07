@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## First visual-polish implementation (2026-11-07; E11-S30)
+
+- Shared controls now distinguish neutral secondary/quiet actions, selected choices and filled primary actions. Ordinary controls use 8px corners, lighter label weight and the existing reading sizes/touch floors; main navigation and Testing views use underlined current states.
+- Testing gives its selected task the appropriate lead action and keeps historical evidence in the same desktop column as current results, with historical labels intact. Receive delivery puts general context/help into disclosures, composes its footer and restores a 44px metadata-recovery target. Editor names/printing reflow in constrained panes; Undo/Discard recover immediately after blocked, stale or failed Save checks, scoped to the original editor.
+- The [implementation record](design/visual-polish-implementation-2026-11-07.md) retains before/after captures, source-bound proof, measured typography and remaining work. All 2,914 UI fixture tests passed. All 32 final capture cases and the editor interaction suite completed, native help disclosures worked, saved deck/draft digests stayed unchanged and owned processes/runtime cleaned up. Focused static/web and tooling checks, ruff and the source-length guard passed (one separate process qualification skipped). Real-device, actual enlargement, art, wider state/page and screen-reader acceptance remain; R01–R05 and R07 are still open.
+- The normal background listener was stopped and left stopped. No household records, visibility settings or Forge games were changed.
+
 ## Repeatable headless UI review (2026-11-07; E11-S30 verification)
 
 - `python scripts/ui_review.py` now runs the disposable rendered-review workflow
