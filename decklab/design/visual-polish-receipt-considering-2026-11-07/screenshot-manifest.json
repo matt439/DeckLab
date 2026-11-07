@@ -1,0 +1,146 @@
+[
+  {
+    "file": "before-receipt-430-light-top.png",
+    "phase": "before",
+    "capture": "receipt-430-light",
+    "source_screenshot": "receipt-430-light-top.png",
+    "sha256": "9fe4eb63cda6c5afab652f03d82980243212dbbe8283504fdae4892b37273c39",
+    "source_bytes_unchanged": true,
+    "view": "Top of page; matched original scroll position."
+  },
+  {
+    "file": "before-receipt-430-dark-top.png",
+    "phase": "before",
+    "capture": "receipt-430-dark",
+    "source_screenshot": "receipt-430-dark-top.png",
+    "sha256": "bdbd1f6696d3162b1692dca75ba9ba446e0b7abcfd173537cf5976e5090a3ccf",
+    "source_bytes_unchanged": true,
+    "view": "Top of page; matched original scroll position."
+  },
+  {
+    "file": "before-considering-393-light.png",
+    "phase": "before",
+    "capture": "considering-393-light",
+    "source_screenshot": "considering-393-light.png",
+    "sha256": "6801b843e33568bf599a61d16aa8c5aa8bf346c05c2749611631f9ec199b9b5d",
+    "source_bytes_unchanged": true,
+    "view": "Considering section anchored at 80px top clearance, subject to the page scroll limit."
+  },
+  {
+    "file": "before-considering-393-dark.png",
+    "phase": "before",
+    "capture": "considering-393-dark",
+    "source_screenshot": "considering-393-dark.png",
+    "sha256": "3983a46287cce2dd228d1fa8422da6719eb84e7ea3f60546a8c728c11a021f76",
+    "source_bytes_unchanged": true,
+    "view": "Considering section anchored at 80px top clearance, subject to the page scroll limit."
+  },
+  {
+    "file": "before-considering-820-light.png",
+    "phase": "before",
+    "capture": "considering-820-light",
+    "source_screenshot": "considering-820-light.png",
+    "sha256": "acd4675da81a62be13fdbc4686deaa283881dcde0cc5f305a5b3fbf8e763574f",
+    "source_bytes_unchanged": true,
+    "view": "Considering section anchored at 80px top clearance, subject to the page scroll limit."
+  },
+  {
+    "file": "before-considering-820-dark.png",
+    "phase": "before",
+    "capture": "considering-820-dark",
+    "source_screenshot": "considering-820-dark.png",
+    "sha256": "1a956223fc4613b1e153774e4f15127741e85cf3590ba315eec4fa8039c632d0",
+    "source_bytes_unchanged": true,
+    "view": "Considering section anchored at 80px top clearance, subject to the page scroll limit."
+  },
+  {
+    "file": "after-receipt-430-light-top.png",
+    "phase": "after",
+    "capture": "receipt-430-light",
+    "source_screenshot": "receipt-430-light-top.png",
+    "sha256": "83981340084201675fb612f25a92a7730620b28a151f04e806037ebfc6dc96c5",
+    "source_bytes_unchanged": true,
+    "view": "Top of page; matched original scroll position."
+  },
+  {
+    "file": "after-receipt-430-dark-top.png",
+    "phase": "after",
+    "capture": "receipt-430-dark",
+    "source_screenshot": "receipt-430-dark-top.png",
+    "sha256": "852f67a8b03f4a4360fbd53ff2607060d167f41ef1f5152cf7468bf7d333f06e",
+    "source_bytes_unchanged": true,
+    "view": "Top of page; matched original scroll position."
+  },
+  {
+    "file": "after-considering-393-light.png",
+    "phase": "after",
+    "capture": "considering-393-light",
+    "source_screenshot": "considering-393-light.png",
+    "sha256": "7e7fb867e9e3469a29f6be89176fe9aeda6430e07497cfb81ec69eef20df8054",
+    "source_bytes_unchanged": true,
+    "view": "Considering section anchored at 80px top clearance, subject to the page scroll limit."
+  },
+  {
+    "file": "after-considering-393-dark.png",
+    "phase": "after",
+    "capture": "considering-393-dark",
+    "source_screenshot": "considering-393-dark.png",
+    "sha256": "4a307d57ac88791285b875b69c7d53a962f037956c7d92360a9b321ccec6f2fd",
+    "source_bytes_unchanged": true,
+    "view": "Considering section anchored at 80px top clearance, subject to the page scroll limit."
+  },
+  {
+    "file": "after-considering-820-light.png",
+    "phase": "after",
+    "capture": "considering-820-light",
+    "source_screenshot": "considering-820-light.png",
+    "sha256": "17d666b453792d188fbb29d8d89364fc9fa8e027dab893d23107e23de8ee8a1a",
+    "source_bytes_unchanged": true,
+    "view": "Considering section anchored at 80px top clearance, subject to the page scroll limit."
+  },
+  {
+    "file": "after-considering-820-dark.png",
+    "phase": "after",
+    "capture": "considering-820-dark",
+    "source_screenshot": "considering-820-dark.png",
+    "sha256": "cc2bea6bf120be3b7668e97743494c4b8f5d3ca5962bed396237a3ee827f4911",
+    "source_bytes_unchanged": true,
+    "view": "Considering section anchored at 80px top clearance, subject to the page scroll limit."
+  },
+  {
+    "file": "after-receipt-320-root200-light.png",
+    "phase": "after",
+    "capture": "receipt-320-root200-light",
+    "source_screenshot": "receipt-320-root200-light.png",
+    "sha256": "123c1d1838f08da541f31097af64d8ce693ec053061a236202799f69ec8adb40",
+    "source_bytes_unchanged": true,
+    "view": "Toolbar anchored at 80px top clearance; exposes root-stress filter allocation."
+  },
+  {
+    "file": "after-receipt-320-root200-dark.png",
+    "phase": "after",
+    "capture": "receipt-320-root200-dark",
+    "source_screenshot": "receipt-320-root200-dark.png",
+    "sha256": "0a64b87224381a334a8b4627a0420d74390dc4a4bc977c30187f50180849043c",
+    "source_bytes_unchanged": true,
+    "view": "Toolbar anchored at 80px top clearance; exposes root-stress filter allocation."
+  },
+  {
+    "file": "after-receipt-393-light-tools.png",
+    "phase": "after",
+    "capture": "receipt-393-light",
+    "source_screenshot": "receipt-393-light-tools.png",
+    "sha256": "752f429d6182cf7aedc03bab587d0729b2e40bc0a41e0edc6f95b80c22e4fff6",
+    "source_bytes_unchanged": true,
+    "view": "Native Tools dialog open."
+  },
+  {
+    "file": "after-considering-393-dark-help.png",
+    "phase": "after",
+    "capture": "considering-393-dark",
+    "source_screenshot": "considering-393-dark-help.png",
+    "sha256": "d30eed7636ac82519f11df0f9ff95f9f6bb8c023be3b53bb1809a1bded4cd99b",
+    "source_bytes_unchanged": true,
+    "view": "Native Considering help disclosure open."
+  }
+]

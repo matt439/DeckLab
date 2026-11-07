@@ -172,6 +172,10 @@
   text-decoration: none;
   cursor: pointer;
 }
+/* Filters over a work area can omit the enclosing track. Keep the same native buttons, selected outline,
+   focus/forced-colour states and target floor, without painting a panel around wrapped choices. */
+.segmented-quiet { --seg-pad: 0px; padding: 0; gap: var(--s-1); background: transparent; }
+.segmented-quiet > *, .segmented-quiet > * > span { min-width: 0; overflow-wrap: anywhere; }
 .segmented > [aria-pressed="true"], .segmented > [aria-current="page"] {
   background: var(--surface);
   color: var(--ink);

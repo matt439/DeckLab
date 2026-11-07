@@ -18,9 +18,9 @@ function rcptMarkSingleSided(v) {
   Object.assign(v, { back: "", back_collector_number: "", back_details: "", notes: [notes, RCPT_SINGLE].filter(Boolean).join("; ") });
 }
 
-/** The delivery-level action, above the parts. */
+/** One retained delivery-level action, mounted with a single part's tools or above a mixed/product board. */
 function rcptEverythingBar(view) {
-  view.everything = el("button", { type: "button", class: "btn btn-quiet rcpt-everything", text: "Everything arrived as ordered",
+  view.everything = el("button", { type: "button", class: "btn btn-quiet btn-inline rcpt-everything", text: "Everything arrived as ordered",
     onclick: () => rcptEverythingArrived(view) });
   view.everythingBar = el("div", { class: "actions rcpt-everything-bar" }, view.everything);
   return view.everythingBar;

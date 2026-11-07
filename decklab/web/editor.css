@@ -731,6 +731,14 @@ body.has-editor-search-dock.is-searching.keyboard-up .edit-bar { display: flex; 
 /* Alternatives are a distinct editor draft; their copies never join the playable list's count. */
 .edit-considering { margin-top: var(--s-5); padding-top: var(--s-4); border-top: 1px solid var(--border); }
 .edit-considering h2 { margin: 0 0 var(--s-2); font-size: var(--fs-lg); }
+.editor-considering-head { display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: var(--s-2) var(--s-3); }
+.editor-considering-head h2 { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s-2); margin: 0; }
+.editor-considering-count { color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-regular); }
+.editor-considering-head .editor-considering-add { margin: 0; }
+.editor-considering-help > summary { display: flex; align-items: center; min-height: var(--tap);
+  color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-medium); }
+.editor-considering-help > .sub { max-width: 70ch; margin: var(--s-1) 0 0; }
 .editor-considering-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s-2);
   align-items: center; border-bottom: 1px solid var(--border); padding: var(--s-2) 0; }
 .editor-considering-row .card-row { min-width: 0; }

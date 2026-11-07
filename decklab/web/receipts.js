@@ -162,7 +162,8 @@ function drawReceipt(data, token) {
     return view;
   }
   view.resume = el("div", { class: "rcpt-resume" });
-  view.root.append(view.resume, rcptEverythingBar(view));
+  view.root.append(view.resume);
+  rcptEverythingBar(view);
   for (const c of data.components) {
     if (c.status !== "pending") continue;
     const comp = rcptMakeComp(view, c, view.comps.length);
@@ -202,6 +203,9 @@ function rcptMakeComp(view, c, index) {
 function rcptDrawBoard(view) {
   const checkFocus = new Map(view.comps.map(comp => [comp, rcptParkCheckControls(comp)]));
   clear(view.board);
+  // A single card/token part shares its tools with the delivery shortcut. Mixed orders and products
+  // keep the shortcut outside every part, including those not yet selected as arrived.
+  if (view.comps.length !== 1 || view.comps[0].kind === "product") view.board.append(view.everythingBar);
   for (const comp of view.comps) view.board.append(rcptSection(view, comp));
   for (const comp of view.comps) rcptPlaceCheckControls(view, comp, checkFocus.get(comp));
 }
@@ -283,9 +287,8 @@ function rcptChecksCard(view, comp) {
   return comp.checkPanel;
 }
 
-/** The filters and the layout switch above a grid, then the bulk tools (filling in blanks, Tick all, clearing
- * the arrival notes). On a phone the bulk tools and the layout switch are behind one Tools button (a sheet), so
- * the grid starts near the top. */
+/** Filters get the board width; utilities stay together below them. A single card/token part also holds
+ * the one delivery shortcut here. On a phone Tools opens layout and per-part bulk tools in a sheet. */
 function rcptToolbar(view, comp) {
   const words = (wide, narrow) => [el("span", { class: "rcpt-wide", text: wide }), el("span", { class: "rcpt-narrow", text: narrow })];
   comp.filterButtons = [["all", "All", "All"], ["todo", "Not checked", "To do"],
@@ -297,8 +300,10 @@ function rcptToolbar(view, comp) {
   comp.fill = tools.fill; comp.fillButton = tools.fillButton;
   return el("div", { class: "rcpt-toolbar" },
     el("div", { class: "rcpt-toolbar-row" },
-      el("div", { class: "segmented", role: "group", "aria-label": "Show" }, comp.filterButtons),
-      el("div", { class: "segmented rcpt-layout", role: "group", "aria-label": "Layout" }, comp.layoutButtons),
+      el("div", { class: "segmented segmented-quiet rcpt-filters", role: "group", "aria-label": "Show" }, comp.filterButtons),
+      el("div", { class: "segmented rcpt-layout", role: "group", "aria-label": "Layout" }, comp.layoutButtons)),
+    el("div", { class: "rcpt-toolbar-row rcpt-toolbar-utilities" },
+      view.comps.length === 1 ? view.everythingBar : null,
       el("button", { type: "button", class: "btn rcpt-tools-button", "aria-haspopup": "dialog", text: "Tools",
         onclick: () => rcptToolsSheet(view, comp) })),
     el("div", { class: "rcpt-toolbar-row rcpt-tools" }, tools.nodes));

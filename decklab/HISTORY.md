@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Receipt tools and empty Considering (2026-11-07; E11-S30)
+
+- Receipt filters omit the enclosing track and use the available phone width, with relative two/one-column fallbacks. A single card/token part groups the retained delivery shortcut beside Tools; mixed/product orders keep its order-wide scope outside inactive parts. Confirmation, row selection, checks, drafts and preview/apply remain.
+- Empty Considering in full/Quick editors has one heading, zero count, Add action and native About Considering help. Populated alternatives retain their behavior; Add/Remove/Undo keep the existing local draft, history and save contract.
+- The [implementation record](design/visual-polish-receipt-considering-2026-11-07.md) retains sixteen inspected PNGs, source-bound proof and paired 28-case task runs. The sampled 430px receipt grid begins 54px earlier; empty Considering is 222→105px at 393px and 198→105px at 820px. The final 44-case capture/editor regression and a measurement-only eight-case tooling smoke complete with stable source, unchanged saved data and confirmed cleanup.
+- All 2,939 guarded UI fixture tests passed in 256.957 seconds. Final focused web/device/receipt/editor/harness/privacy/source checks ran 137 tests (one existing directory-symlink skip) in 31.690 seconds; Ruff, JavaScript syntax and the source-length guard passed. The unrelated backend suite was not repeated.
+- Receipt root-font pointer/Tools/fixed-footer limits remain explicitly open; keyboard captures do not close them. Other page/state families, actual enlargement and household Safari/touch/art/screen-reader acceptance remain. The normal local server stayed stopped; no household records, visibility or Forge games changed.
+
 ## Tablet header allocation (2026-11-07; E11-S30)
 
 - The casual 600–999px search field may shrink beside a long Back link, while the contextual title uses remaining space. The avatar keeps its full target. Phone/short-landscape/desktop sizing, field/icon switching and keyboard behavior remain.

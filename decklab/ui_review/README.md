@@ -52,6 +52,7 @@ python scripts/ui_review.py --suite editor
 python scripts/ui_review.py --suite composition
 python scripts/ui_review.py --suite variant-layout
 python scripts/ui_review.py --suite shell-layout
+python scripts/ui_review.py --suite task-layout
 python scripts/ui_review.py --output C:/Temp/decklab-ui-review-01
 python scripts/ui_review.py --browser "C:/Program Files/Google/Chrome/Application/chrome.exe"
 ```
@@ -103,6 +104,22 @@ past the configured width for bounded diagnosis. Layout expansion/overflow remai
 the matched baseline, rather than being rejected as a harness viewport mismatch
 or automatically labelled a group-layout defect. Its smoke
 subset is eight cases. `all` continues to mean capture/editor only.
+
+The opt-in 28-case `task-layout` suite captures receipt tools at
+320/393/430/600/820/1440px and empty Considering at 320/393/820/1440px,
+in both themes, plus explicit CSS root-font stress at 320/600px for each task.
+The real responsive editor selects Quick or full mode. Receipt captures retain
+top-of-page and 80px toolbar anchors; editor captures anchor the alternatives
+section, subject to the page's scroll limit. Supplemental PNGs show Tools,
+Considering help and Add. The suite checks local receipt selection, layout,
+filter and note preferences, plus opening/closing Add and unchanged saved-deck
+responses. Ordinary cases use pointer clicks; the eight root-font cases use
+native keyboard activation. This distinction preserves baseline pointer/footer
+occlusion as a separate finding, rather than calling it fixed by a keyboard
+pass. Overflow is diagnostic at each retained snapshot; transitions can still
+have unmeasured geometry. No fill, bulk tick, preview, arrival or Save is
+invoked. Its smoke subset is eight ordinary phone/tablet cases. `all` still
+means capture/editor only.
 
 Explicit output directories must be new or empty and must not pass through
 symlinks/junctions. Prior evidence is never overwritten or pruned.
@@ -205,7 +222,8 @@ confirmed UI defects distinct in the written report.
 `fixture.py` owns the synthetic records, read-only adapters and guarded transport;
 `data/` owns the invented result payloads. `capture.js` owns matrix cases and DOM
 measurements; `wishlist-checks.js` and `repair-checks.js` own local Wishlist and
-guide interactions; `editor.js` owns editor sequences; `common.js` owns browser
+guide interactions; `editor.js` owns editor sequences; `task-layout.js` owns
+receipt tools and empty Considering comparisons; `common.js` owns browser
 isolation, requests, cancellation and artifact sanitization. `runner.py` owns
 setup, source provenance and child-process lifecycle.
 

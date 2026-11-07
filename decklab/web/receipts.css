@@ -23,7 +23,7 @@
 /* This first frame preserves the existing board and Record bar; the aside is advice, not confirmation. */
 .rcpt-layout-frame { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-5); margin-top: var(--s-3); }
 .rcpt-layout-frame .rcpt-board { min-width: 0; }
-.rcpt-layout-frame .rcpt-board > .rcpt-section:first-child { margin-top: 0; }
+.rcpt-layout-frame .rcpt-board > .rcpt-section:first-of-type { margin-top: 0; }
 .rcpt-guidance { min-width: 0; align-self: start; overflow-wrap: anywhere; }
 .rcpt-guidance > h2 { margin: 0 0 var(--s-4); font-size: var(--fs-lg); }
 .rcpt-guidance h3 { margin: 0 0 var(--s-2); font-size: var(--fs-body); }
@@ -68,7 +68,8 @@
 .rcpt-resume-box { margin: var(--s-4) 0; }
 .rcpt-done { margin-top: var(--s-5); }
 /* E6-S27's shortcuts: the delivery's "Everything arrived as ordered", a part's checks and blank backs. */
-.rcpt-everything-bar { margin: var(--s-4) 0 0; }
+.rcpt-everything-bar { margin: 0; min-width: 0; }
+.rcpt-board > .rcpt-everything-bar { margin-bottom: var(--s-3); }
 .rcpt-part-actions { margin: var(--s-2) 0; }
 .rcpt-everything-bar[hidden], .rcpt-part-actions[hidden] { display: none; }
 .rcpt-backs-list { list-style: none; padding: 0; margin: var(--s-2) 0; }
@@ -89,10 +90,12 @@
 .rcpt-check { align-items: flex-start; padding: var(--s-2) 0; }
 .rcpt-check input { margin-top: 3px; flex: none; }
 
-/* The toolbar: show and layout switches, then the bulk tools. On a phone, one row: the filters (short words)
-   and a Tools button, whose sheet has the layout switch and the bulk tools. */
-.rcpt-toolbar { display: flex; flex-direction: column; gap: var(--s-2); margin-bottom: var(--s-4); }
+/* Filters occupy their own row on phones; delivery and per-part utilities stay beside the checking area.
+   Relative container width also keeps enlarged labels from squeezing into a narrow shared track. */
+.rcpt-toolbar { container: receipt-tools / inline-size; display: flex; flex-direction: column; gap: var(--s-2); margin-bottom: var(--s-4); }
 .rcpt-toolbar-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); }
+.rcpt-toolbar-utilities { justify-content: space-between; }
+.rcpt-toolbar-utilities:not(:has(> .rcpt-everything-bar:not([hidden]))) { display: none; }
 .rcpt-fill { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
 .rcpt-fill-label { color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
 .rcpt-fill select { width: auto; }
@@ -101,10 +104,18 @@
 .rcpt-tools-sheet { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-4); }
 @media (max-width: 599px) {
   .rcpt-toolbar { margin-bottom: var(--s-3); }
-  .rcpt-toolbar-row { flex-wrap: nowrap; justify-content: space-between; gap: var(--s-2); }
+  .rcpt-toolbar-row { gap: var(--s-2); }
+  .rcpt-filters { width: 100%; }
+  .rcpt-toolbar-utilities, .rcpt-toolbar-utilities:not(:has(> .rcpt-everything-bar:not([hidden]))) { display: flex; }
   .rcpt-wide, .rcpt-layout, .rcpt-tools { display: none; }
   .rcpt-narrow, .rcpt-tools-button { display: inline; }
   .rcpt-tools-button { display: inline-flex; flex: none; }
+}
+@container receipt-tools (max-width: 21rem) {
+  .rcpt-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+}
+@container receipt-tools (max-width: 14rem) {
+  .rcpt-filters { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* The grid: 2 tiles on an iPhone (the cards are being checked by hand, so their names matter more than

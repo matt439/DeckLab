@@ -104,7 +104,7 @@ class ReviewRunnerTests(unittest.TestCase):
     def test_started_browser_requires_positive_cleanup_proof(self):
         from decklab.ui_review import runner
 
-        for suite, proof in ((suite, proof) for suite in ("capture", "variant-layout", "shell-layout") for proof in (None, False, True)):
+        for suite, proof in ((suite, proof) for suite in ("capture", "variant-layout", "shell-layout", "task-layout") for proof in (None, False, True)):
             with self.subTest(suite=suite, browser_closed=proof), tempfile.TemporaryDirectory() as outer:
                 output = runner.prepare_output(Path(outer) / "evidence")
 
