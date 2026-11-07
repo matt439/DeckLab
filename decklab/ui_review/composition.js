@@ -12,17 +12,33 @@ async function measure(page) {
       const b = node.getBoundingClientRect(), s = getComputedStyle(node);
       return { x: b.x, y: b.y, width: b.width, height: b.height, fontFamily: s.fontFamily,
         fontSize: s.fontSize, fontWeight: s.fontWeight, lineHeight: s.lineHeight,
+        fontStyle: s.fontStyle, letterSpacing: s.letterSpacing,
         color: s.color, background: s.backgroundColor, padding: s.padding, gap: s.gap,
-        borderRadius: s.borderRadius, opacity: s.opacity };
+        margin: s.margin, borderRadius: s.borderRadius, opacity: s.opacity };
+    };
+    const typeSample = selector => {
+      const node = [...document.querySelectorAll(selector)].find(n => {
+        const rect = n.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && getComputedStyle(n).visibility !== 'hidden';
+      });
+      return { selector, text: node?.textContent.trim().slice(0, 200) || '', box: box(node) };
     };
     return { innerWidth, innerHeight, scrollY, clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth, scrollHeight: document.documentElement.scrollHeight,
       coarse: matchMedia('(pointer:coarse)').matches,
+      rootFont: getComputedStyle(document.documentElement).fontSize,
+      bodyFont: getComputedStyle(document.body).fontSize,
       title: document.querySelector('#main h1')?.textContent,
       elements: Object.fromEntries(['.deck-page-head','.deck-title-row','.deck-avail','.deck-meta','.deck-top',
         '.deck-tabs','.deck-overview-played','.deck-played','.lib-detail','.lib-detail-body',
         '.lib-detail h2','.lib-glance-facts','.lib-key-cards','.deck-row-main','.deck-row-title','#sec-guide']
         .map(selector => [selector, box(document.querySelector(selector))])),
+      typeSamples: ['#main h1', '.deck-section h2', '.deck-section h3', '.deck-meta', '.deck-avail',
+        '.deck-tabs a', '.deck-overview-played', '.deck-played', '.lib-detail h2', '.lib-detail h3',
+        '.lib-glance-facts', '.lib-key-cards', '.deck-row-title', '.deck-row .deck-availability',
+        '.deck-card-title', '.deck-group h2', '.deck-group h3', '.btn-primary', '.btn-quiet',
+        '#main input:not([type="checkbox"],[type="radio"],[type="hidden"])', '.nav-item', '.tabbar a',
+        '#main .box-crit', '#main .empty'].map(typeSample),
       headings: [...document.querySelectorAll('#main h1,#main h2,#main h3')].map(n => n.textContent.trim()),
       libraryRows: document.querySelectorAll('.deck-row,.deck-card').length,
       selected: document.querySelector('.lib-detail')?.dataset.id,
@@ -53,6 +69,8 @@ run('composition', async review => {
           scrollTo: width >= 1000 ? '.lib-split' : '.deck-grid' });
     }
     if (!review.options.smoke) {
+      specs.push({ name: `commander-2560-${theme}`, route: routes.commander,
+        ready: '.deck-tabs', width:2560, height:1305, theme });
       specs.push({ name: `empty-deck-393-${theme}`, route: routes.empty_deck,
         ready: '.deck-tabs', width:393, height:700, coarse:true, theme });
       specs.push({ name: `commander-guide-393-${theme}`, route: routes.commander_guide,

@@ -31,7 +31,7 @@ runs never install or update dependencies.
 python scripts/ui_review.py
 ```
 
-The default runs the 42-case capture matrix followed by the editor interaction
+The default runs the 44-case capture matrix followed by the editor interaction
 qualification. The fixture is fresh for each invocation; the editor suite does
 not depend on a draft or browser left behind by an earlier review.
 
@@ -58,13 +58,13 @@ python scripts/ui_review.py --browser "C:/Program Files/Google/Chrome/Applicatio
 board in light, a narrow coarse-pointer receipt in dark and the ten Wishlist/guide
 cases (12 cases total); the editor suite still runs its complete interaction
 sequence. `--suite` selects one suite.
-The opt-in `composition` suite adds populated Commander/casual Overview,
+The opt-in 40-case `composition` suite adds populated Commander/casual Overview,
 multi-deck library and empty/failed states at short phone, tablet, laptop and QHD
 sizes in both themes. Its `--smoke` subset is 20 matched deck and library captures,
 including library work areas at a consistent 80px top clearance. Top-of-page
 captures retain the synthetic stale-table warning; the scrolled captures expose
 the actual rows/detail instead of inferring composition from hidden content.
-The complete suite also captures the populated Played at home line and guide
+The complete suite also captures QHD Commander Overview in both themes, the populated Played at home line and guide
 after scrolling, tests native library selection, and confirms the saved Commander
 deck response is unchanged. Its fixtures use the ordinary deck, guide and Game log
 readers, with invented records and placeholder art. Scores and a realistic mana
@@ -82,7 +82,7 @@ script can also be invoked by its full path from another working directory.
 The capture matrix uses both themes and DPR 2:
 
 - Popular decks with complete, partial, changed-list, older-engine and unreadable
-  synthetic rows at 1440px and 320px.
+  synthetic rows at 1440px, 320px and a short 393×700 viewport.
 - Failed/running variant results, a member result, and failed/stale pair results.
 - Receipt Pictures at exactly 429, 430, 999 and 1000 CSS pixels, independently
   with fine and coarse pointer emulation. One local checkbox is selected to
@@ -96,7 +96,10 @@ The capture matrix uses both themes and DPR 2:
 - Library How to play at 1440px and copied guide destinations at 390px: Overview,
   guide focus and sticky clearance, plus desktop Back/Forward, in both themes.
 
-Capture measurements include element typography and board/editor row allocations.
+Capture and composition measurements include bounded element text, typography,
+spacing and board/editor row allocations. Absent samples remain null; they are
+not evidence about an element's appearance. The matrices retain explicit viewport,
+pointer and theme settings, including the existing QHD root enlargement.
 Native board/receipt help disclosures are opened and closed through their summaries
 after each PNG, retaining the local receipt selection. Coarse receipt recovery must
 measure at least 44px; root-font editor identity/printing must retain at least 80%

@@ -4,7 +4,7 @@ Date: 7 November 2026, Australia/Brisbane. Owner: `E11-S30`. Status: **direction
 
 The [first implementation and rendered comparisons](visual-polish-implementation-2026-11-07.md) record shared controls, Testing composition, receipt guidance/footer and editor recovery/reflow. The original study below remains historical proposal evidence; it does not describe the final production markup.
 
-The [second repair slice](visual-polish-repairs-2026-11-07.md) implements the remaining Wishlist, result, guide, crop and contrast repairs. The [populated deck/library slice](visual-polish-deck-library-2026-11-07.md) applies compact neutral deck headers, concise empty history and name-first library rows, with matched light/dark comparisons. Typography/state qualification and the remaining page families are next; device acceptance stays open.
+The [second repair slice](visual-polish-repairs-2026-11-07.md) implements the remaining Wishlist, result, guide, crop and contrast repairs. The [populated deck/library slice](visual-polish-deck-library-2026-11-07.md) applies compact neutral deck headers, concise empty history and name-first library rows. The [shared typography slice](visual-polish-typography-2026-11-07.md) unifies page/section headings, desktop task copy and controls, retaining phone and guide reading sizes, with paired captures including QHD deck Overview. Remaining page/state families, actual enlargement and device acceptance stay open.
 
 Matt's clarification is the brief: the current UI looks amateurish, and he wants us to identify why and resolve it. He does not need to identify the individual CSS problems or prescribe a style. The review must supply a defensible visual diagnosis, an actual proposed treatment and a coherent implementation plan.
 

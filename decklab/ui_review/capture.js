@@ -17,6 +17,8 @@ async function metrics(page) {
         fontFamily: style.fontFamily, fontWeight: style.fontWeight, lineHeight: style.lineHeight,
         fontStyle: style.fontStyle, textDecoration: style.textDecorationLine,
         color: style.color, background: style.backgroundColor, opacity: style.opacity,
+        padding: style.padding, margin: style.margin, gap: style.gap,
+        letterSpacing: style.letterSpacing,
         gridTemplateColumns: style.gridTemplateColumns, overflowX: style.overflowX,
         minHeight: style.minHeight, disabled: node.disabled === true, hidden: node.hidden === true };
     };
@@ -32,6 +34,13 @@ async function metrics(page) {
     };
     const styleRows = [...document.querySelectorAll('.vt-row-dropped,.vt-row-dropped .sub,.vt-row-dropped a,.gt-muted,.fv-muted,.gb-meta,.gb-note,.gt-small')]
       .slice(0, 30).map(node => ({ text: node.textContent.trim(), box: box(node), ancestors: ancestorStyles(node) }));
+    const typeSample = selector => {
+      const node = [...document.querySelectorAll(selector)].find(n => {
+        const rect = n.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && getComputedStyle(n).visibility !== 'hidden';
+      });
+      return { selector, text: node?.textContent.trim().slice(0, 200) || '', box: box(node) };
+    };
     return {
       url: location.href, title: document.title, theme: document.documentElement.dataset.theme,
       innerWidth, innerHeight, clientWidth: document.documentElement.clientWidth,
@@ -56,9 +65,13 @@ async function metrics(page) {
         .filter(node => /^(Save|Check|Save draft for later)$/.test(node.textContent.trim()))
         .map(node => ({ text: node.textContent.trim(), box: box(node) })),
       headingText: [...document.querySelectorAll('#main h1,#main h2,#main h3')].map(node => node.textContent.trim()),
-      typeSamples: ['.page-head h1', '.gb-title', '.gb-scope', '.gb-help > summary', '.btn-primary', '.btn-quiet',
-        '.rcpt-section-head h2', '.rcpt-blanks', '.edit-card .nm-text'].map(selector => ({ selector,
-          box: box(document.querySelector(selector)) })),
+      typeSamples: ['.page-head h1', '#main h2', '#main h3', '.nav-item', '.tabbar a',
+        '.segmented > *', '.gb-title', '.gb-scope', '.gb-help > summary', '.gb-meta', '.gb-note',
+        '.btn-primary', '.btn-quiet', '#main input:not([type="checkbox"],[type="radio"],[type="hidden"])',
+        '#main select', 'table.data thead th', 'table.data tbody td', 'table.data tbody td.num',
+        '.rcpt-section-head h2', '.rcpt-blanks', '.edit-card .nm-text', '.edit-print-words',
+        '.vt-head h1', '.vt-page h2', '.vt-row-dropped .sub', '.vt-group-table th',
+        '.vt-group-table td', '.vt-axis', '.gt-small', '.mu-meta'].map(typeSample),
       boardRows: [...document.querySelectorAll('.gb-row')].map(node => ({ state: node.dataset.state,
         identity: box(node.querySelector('.gb-name')), evidence: box(node.querySelector('.gb-score')),
         actions: box(node.querySelector('.gb-actions')) })),
@@ -99,6 +112,8 @@ function matrix(routes) {
       specs.push({ name: `board-mixed-${width}-${theme}`, route: routes.board, ready: '.gb-row',
         width, height: width === 320 ? 844 : 900, coarse: width === 320, theme });
     }
+    specs.push({ name: `board-mixed-393-${theme}`, route: routes.board, ready: '.gb-row',
+      width: 393, height: 700, coarse: true, theme, fullPage: false });
     for (const state of ['failed', 'running']) {
       specs.push({ name: `variant-${state}-1440-${theme}`, route: routes.home_variant, ready: '.vt-page',
         case: state, width: 1440, height: 900, theme });

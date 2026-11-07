@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Shared typography hierarchy (2026-11-07; E11-S30)
+
+- Shared page headings use 28px/600 and section headings 20px/600. Desktop task text and fine-pointer controls use 14px, metadata 13px; phone body and play-guide reading sizes remain. Body now consumes the semantic density token rather than implicitly staying 16px on desktop. Compact deck/editor titles, touch floors, focus and existing numeric scales retain explicit roles.
+- The [implementation record](design/visual-polish-typography-2026-11-07.md) retains fourteen inspected paired PNGs, type/allocation measurements and source-bound proof. Each phase completed 44 capture cases, the editor interaction sequence and 40 composition cases, adding short-phone Testing and QHD Commander Overview. Saved-data checks, source consistency, no document overflow and owned-process/runtime cleanup passed.
+- The broader guarded frontend regression passed 3,125 tests in 284.880 seconds (two skips). Focused web, density, editor-header, harness and source-inventory checks passed 111 tests (one existing link-creation skip); Ruff and the source-length guard passed. The unrelated full backend suite was not repeated.
+- The normal local server remains stopped. No household data, visibility or Forge games changed. Remaining page/state families, table typography, actual enlargement and Safari/device/art/screen-reader acceptance remain; `E11-S30` stays open.
+
 ## Populated deck and library composition (2026-11-07; E11-S30)
 
 - Deck headers use compact art/identity and neutral metadata, with a full-width title above tablet actions. Availability keeps every qualification on a quieter neutral surface. Known empty play history is one line; populated and unread histories retain their separate behavior.

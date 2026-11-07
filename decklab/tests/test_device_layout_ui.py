@@ -163,10 +163,11 @@ MACBOOK = _device(1470, 956, "fine")
 QHD = _device(2560, 1440, "fine")
 
 # Every token slices 3, 4 and 6 added, and the older ones they leave alone, at each of the three levels
-# (design/visual-design.md 2.3-2.5, 3 and 4.9; 1rem = 16 px). Slice 4 moved --r-sm to 4 px.
+# (design/visual-design.md 2.3-2.5, 3 and 4.9; 1rem = 16 px), with the November typography revision.
+# Slice 4 moved --r-sm to 4 px. Touch target sizes remain independent of the type scale.
 CASUAL = {
     "--fw-medium": "500", "--fw-heavy": "800",
-    "--fs-h1": "2rem", "--fs-hero": "2rem", "--fs-eyebrow": ".8125rem", "--fs-group": ".8125rem",
+    "--fs-h1": "1.75rem", "--fs-hero": "2rem", "--fs-eyebrow": ".8125rem", "--fs-group": ".8125rem",
     "--fs-body": "1rem", "--fs-row": "1.0625rem", "--fs-meta": ".875rem", "--fs-btn": ".9375rem",
     "--fs-input": "1rem", "--fs-th": ".65625rem", "--fs-kbd": ".65625rem", "--fs-cell-num": ".875rem",
     "--fs-fig-mid": "1.5rem", "--fs-fig": "2.5rem", "--fs-fig-unit": "1.5rem", "--fs-fig-sm": "1rem",
@@ -187,8 +188,8 @@ CASUAL = {
 CASUAL_MOUSE = {**CASUAL, "--btn-h": "36px", "--seg-h": "36px", "--input-h": "38px", "--stepper-h": "36px",
                 "--check-size": "22px", "--row-h": "36px", "--ctl-h": "36px", "--field-h": "38px"}
 TOUCH_LAB = {**CASUAL,
-    "--fs-h1": "1.375rem", "--fs-hero": "1.875rem", "--fs-eyebrow": ".6875rem", "--fs-group": ".6875rem",
-    "--fs-body": ".875rem", "--fs-row": ".875rem", "--fs-meta": ".75rem", "--fs-btn": ".9375rem",
+    "--fs-hero": "1.875rem", "--fs-eyebrow": ".6875rem", "--fs-group": ".6875rem",
+    "--fs-body": ".875rem", "--fs-row": ".875rem", "--fs-meta": ".8125rem", "--fs-btn": ".9375rem",
     "--fs-input": "1rem", "--fs-cell-num": ".875rem", "--fs-fig-mid": "1.75rem", "--fs-fig": "2.25rem",
     "--fs-fig-unit": "1.375rem", "--fs-fig-sm": ".875rem", "--fs-fig-range": ".6875rem",
     "--fs-qty": ".875rem", "--fw-qty": "600", "--font-num": "var(--font-mono)",
@@ -198,7 +199,7 @@ TOUCH_LAB = {**CASUAL,
     "--fs-fresh": ".75rem", "--fs-fresh-row": ".6875rem", "--fs-swap": ".9375rem", "--activity-size": "20px",
     "--ring-size": "16px"}
 LAB = {**TOUCH_LAB, **{k: CASUAL_MOUSE[k] for k in ("--row-h", "--ctl-h", "--field-h")},
-    "--fs-body": ".8125rem", "--fs-btn": ".8125rem", "--fs-input": ".8125rem", "--fs-cell-num": ".78125rem",
+    "--fs-body": ".875rem", "--fs-btn": ".875rem", "--fs-input": ".875rem", "--fs-cell-num": ".78125rem",
     "--fs-fig-sm": ".8125rem", "--fs-fig-range": ".65625rem", "--fs-qty": ".78125rem", "--fs-qty-input": ".78125rem",
     "--btn-h": "32px", "--seg-h": "28px", "--input-h": "32px", "--stepper-h": "28px", "--check-size": "18px",
     "--flag-h": "22px", "--fs-flag": ".75rem"}

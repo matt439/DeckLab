@@ -125,20 +125,23 @@ Two families:
 
 | Role | Token | Casual (< 1000 px) | Lab (≥ 1000 px, fine pointer) |
 |---|---|---|---|
-| Page title | `--fs-h1` | 32 / 800 / −0.03em | 22 / 800 / −0.025em |
-| Hero deck name | `--fs-hero` | 32 / 800 | 30 / 800 / −0.03em, white on art |
+| Page title | `--fs-h1` | 28 / 600, normal tracking | 28 / 600, normal tracking |
+| Section heading | `--fs-lg` | 20 / 600 | 20 / 600 |
+| Compact deck/editor title | `--fs-xl` / `--fs-h1` | 24 / 600 on a phone; saved editor 24 below 1000px | 28 / 600, neutral header; former over-art hero retired |
 | Panel eyebrow | `--fs-eyebrow` | 13 / 800 / .08em uppercase | 11 / 800 / .08em uppercase, `--accent-strong` |
 | Group heading | `--fs-group` | 13 / 800 uppercase | 11 / 800 uppercase, mono count 11 |
-| Body | `--fs-body` | 16 | 13, line-height 1.4 |
-| Row or tile title | `--fs-row` | 17 / 700 | 14 / 700 |
-| Meta | `--fs-meta` | 14, `--ink-2` | 12, `--ink-3` |
-| Button | `--fs-btn` | 15–16 / 700 | 12.5–13 / 700 |
+| Body | `--fs-body` | 16 | 14, line-height 1.5; guide prose 16 / 1.65 |
+| Row or tile title | `--fs-row` | 17; deck/library 600 | 14; deck/library 600, other retained roles 700 |
+| Meta | `--fs-meta` | 14, `--ink-2` | 13, `--ink-3` |
+| Button | `--fs-btn` | 15 / 500, primary 600 | 14 / 500, primary 600 |
 | Table header | `--fs-th` | (no tables) | mono 10.5 / 600 / .07em uppercase, `--ink-3` |
 | Progress figure | `--fs-fig-mid` | 24 / 600 | mono 28 / 600 (Packing plan's `19 / 39`) |
 | Big win rate | `--fs-fig` | mono 40 / 600, "%" 24 | mono 36 / 600 / −0.04em, "%" 22 |
 | Inline win rate | `--fs-fig-sm` | mono 16 / 600 | mono 13 / 600, range 10.5 / 500 `--ink-2` |
 
 10.5 px is only for uppercase table headers and `kbd`. Nothing else people read goes below 11 px at lab density or 14 px at casual density.
+
+**7 November typography revision:** the [rendered comparison](visual-polish-typography-2026-11-07.md) supersedes the original title/body/meta/button values above. Base headings now consume these shared roles and `body` uses `--fs-body`; its earlier implicit desktop prose was actually 16px. Touch-lab buttons remain 15px and fields 16px; fine-pointer lab fields are 14px. Table headers, numeric evidence, pips and touch floors retain their existing scales pending their own page-family review. The QHD 112.5% root enlargement remains.
 
 ### 2.4 Spacing
 
