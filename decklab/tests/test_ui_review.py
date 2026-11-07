@@ -326,7 +326,9 @@ class ReviewFixtureTests(unittest.TestCase):
                 self.assertNotEqual(address.port, 8642)
                 self.assertNotEqual(root, Path(__file__).resolve().parents[2])
                 self.assertEqual(config.CONFIG_FILE, root / "config.json")
-                self.assertTrue(root.is_relative_to(runtime))
+                # The fixture resolves Windows 8.3 aliases (and macOS /var).
+                # Compare canonical paths, as the production ownership guard does.
+                self.assertTrue(root.is_relative_to(runtime.resolve()))
                 self.request(fixture, "/_ui_review/ready", status=403)
                 identity = self.request(fixture, "/_ui_review/ready", extra_headers={
                     "X-DeckLab-Review-Run": "unit-review-test-token"})
