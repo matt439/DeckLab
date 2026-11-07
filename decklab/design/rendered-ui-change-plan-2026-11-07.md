@@ -50,9 +50,43 @@ The [light](rendered-ui-change-plan-2026-11-07/variant-member-390-light.png) and
 
 The omitted-opponent explanation is visibly faded. Pass 2 measured its ordinary light text at 3.796:1; R07's fix must retain readable necessary text in both themes. Narrow By group tables also wrap Worse/Better scale labels across lines. A later compact vertical group layout is worth comparing, preserving the identical numerical scale and explicit figures. This latter observation and Testing row alignment are O06 polish, below the correctness and recovery fixes.
 
+## Typography, emphasis, colour and useful space
+
+Added after Matt's follow-up on 7 November: the initial plan considered enlargement, contrast and some layout allocation, but did not systematically review all these visual choices. **O07 is an explicit cross-page visual audit**, to run alongside the fixes and before choosing the layout changes in slices 9–12. A new serious readability finding takes its appropriate priority; typography and spacing are not automatically low-priority polish. This section proposes the audit and records bounded visual judgments, not a completed computed-style audit.
+
+The current baseline is declared in [tokens.css](../web/tokens.css), [base.css](../web/base.css) and the [UI kit](../UI-KIT.md): Figtree for UI/prose, JetBrains Mono for numerical evidence and code, semantic size/weight tokens, and a 4px spacing ladder. Casual, touch-lab and fine-pointer lab densities have different intended sizes. Those declarations are verified source facts; the rendered value of each element still needs measuring. The sampled board, result and blocker screenshots generally distinguish headings, item names and supporting facts. They provide no reason to replace the font families globally.
+
+| Aspect | What to assess | Recommended starting direction |
+|---|---|---|
+| Font family | Readability of names, prose, controls and numerals; actual loaded face/fallback, italic face and alignment of comparable figures. | Retain Figtree and JetBrains Mono in their existing roles. Keep printing labels and ordinary words in the reading font; avoid making a whole sentence mono just because it contains a number. Confirm guide/Notes prose and special characters separately. |
+| Size, line height and line length | Actual CSS-pixel sizes at each density; heading/body/meta distinction; long titles, wrapping, enlarged text and text over art. | Use semantic type tokens and readable supporting text. Fix constrained allocation before shrinking text, as with O04's fragmented editor names. Keep reading lines bounded on large screens; compare the actual short laptop/phone viewports as well as large captures. |
+| Boldness | Whether the first, second and supporting facts have a clear order; how many elements compete through heavy text, filled buttons or badges. | Use regular text for prose and supporting facts, stronger weights for names/key figures, and the strongest emphasis for the page/task lead. Start from existing weight tokens; do not make every line bold. O02 needs action emphasis to match the selected task. |
+| Italics | Whether emphasis has meaning and remains readable, including rules reminder text, guides and Notes. | Retain semantic reminder/emphasis styling. Avoid long italic instructions and using italics alone to convey a warning, state or action. No misuse was established in the sampled screens; prose-heavy examples remain to inspect. |
+| Underlining | Whether readers can distinguish links, card-inspection links, buttons and ordinary labels, including hover/focus/touch behavior. | Keep inline links recognizable and the existing dotted treatment for inline card links where appropriate. Avoid decorative underlining on noninteractive text. Do not depend on hover to reveal that an inline action exists. No general underline defect was established by these samples. |
+| Colour and opacity | Text on its final composited surface, links, selection, warning/error, deck identity and historical/disabled states in both themes. | Preserve the current semantic palette. Use colour with words/icons for states; keep action/selection emphasis intentional. R07 requires readable exclusion reasons rather than whole-row fading. A smaller/lighter caption is not a solution for important text competing with a heading. |
+| Spacing and alignment | Margins, padding, row/column gaps, grouping, reading width, distance from a fact to its action, and usable content area after sticky/fixed chrome. | Keep gaps within a task smaller than gaps between tasks. Reclaim space from repeated guidance, arbitrary minimum heights and disconnected controls before reducing readable type, card size or touch separation. Reflow related content together; do not fill every blank area. |
+
+### Where whitespace earns its place
+
+Keep room around paragraphs and section headings so people can read and group information; between controls so taps are distinct; inside cards so text does not crowd their edges; and around a consequential confirmation so its decision is clear. A bounded text column can deliberately leave unused width on a large screen. Reserved space can also prevent disruptive movement while content loads. Each serves a task and should survive a density change when still useful.
+
+On the wide Testing board, some right-hand space comes from deliberate results/reading-width limits (`.gb` is capped at 64rem; its introduction at 72ch). Stretching the prose across the window to consume that space is not the goal. Instead check whether titles, figures and their actions stay easy to associate. The current/historical alignment difference in O06 is a more concrete improvement candidate than the mere presence of a blank right edge.
+
+On the phone receipt, the instruction/filter/help stack and arrival bar compete with the checking area. O05 should first compare shorter repeated guidance and better grouping at equal viewport/scroll positions. Keep useful separation around the arrival action and preserve touch targets. On the enlarged-text editor, space is misallocated when the name becomes a sliver beside controls: reflow the row so the name can use the width rather than compressing everything equally.
+
+### Audit record and acceptance
+
+For each representative page and sheet, record the title, section heading, item/card name, body instruction, metadata, key number, link, primary/secondary action and state message. Capture each element's font family, size, weight, style, decoration, line height, foreground/background/ancestor opacity, available width and wrapping. Record container padding/gaps and the viewport area consumed by fixed/sticky controls. Keep measured values separate from judgments about hierarchy or wasted space.
+
+Compare both themes at the relevant casual, touch-lab and fine-pointer lab widths, with long/short content, empty/populated/error states, 320px reflow and actual 200% enlargement. Include guide/Notes prose to qualify italics and inline-link treatment, and real-art backgrounds where text overlays them. Before/after captures must use the same content, viewport, pointer, theme and scroll position. Accept a change when the intended reading/action order is clearer, important words remain readable, related controls remain associated, and the existing touch/focus/contrast requirements hold. A lower whitespace percentage or fewer pixels scrolled is not, alone, a successful design outcome.
+
+Use the existing typography, colour and spacing tokens; component changes belong in the shared component owner. If a shared token itself is wrong, compare its effects across representative pages before changing it globally. O07 produces element-level findings with evidence and priorities, then feeds the relevant slice instead of authorizing blanket size, boldness or colour changes.
+
 ## Implementation order
 
 Each row is a bounded slice. Status is **planned**, not built. R02/R05 are P1; the remaining reproduced findings and O03 are P2. O02/O04/O05 are recommended design work; O06 is P3 polish. Complete the confirmed fixes before expanding the polish scope.
+
+O07's typography/space audit accompanies the relevant slices and informs layout decisions before slices 9–12. Its page/element findings receive their own measured priority; it is not a completed audit or a thirteenth blanket restyling task.
 
 | Order | Scope | Concrete change | Source seam / existing regression coverage |
 |---|---|---|---|
