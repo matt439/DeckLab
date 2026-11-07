@@ -220,7 +220,10 @@ def _install_handler(fixture, runtime, run_id):
             if path == "/api/matchup":
                 return self._send_json(200, pair_payload(case))
             if path == "/api/matchups":
-                return self._send_json(200, {"running": [], "results": [], "choices": [200, 400, 800, 1600, 3200],
+                running = ([{"key": "synthetic-shell-run", "status": "running", "kind": "gauntlet",
+                             "title": "Synthetic shell run", "done": 200, "total": 1600, "may_stop": False}]
+                           if case == "running" else [])
+                return self._send_json(200, {"running": running, "results": [], "choices": [200, 400, 800, 1600, 3200],
                                              "default_games": 800, "forge": FORGE, "workers": 1, "batch_size": 25})
             if path == "/api/gauntlet/board":
                 if case == "failed":

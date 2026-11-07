@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Tablet header allocation (2026-11-07; E11-S30)
+
+- The casual 600–999px search field may shrink beside a long Back link, while the contextual title uses remaining space. The avatar keeps its full target. Phone/short-landscape/desktop sizing, field/icon switching and keyboard behavior remain.
+- The [implementation record](design/visual-polish-tablet-header-2026-11-07.md) retains fourteen inspected PNGs and source-bound proof. Paired 54-case header runs fix the 600/624/625px overflow, including enlarged-root stress; the smallest sampled tablet input is 187.61px. Keyboard focus/menus, scrolled geometry, synthetic activity and owned-process cleanup passed, as did the 44-case/editor regression with unchanged saved data.
+- Guarded focused checks passed 147 tests in 30.372 seconds (one existing skip); Ruff, JavaScript syntax and the source-length guard passed. `--suite shell-layout` repeats the cases without a visible browser or household data. The normal local server stayed stopped.
+- Receipt tools, empty Considering, remaining page/state families and actual enlargement/Safari/touch/art/screen-reader acceptance remain; `E11-S30` stays partial. No real records, visibility or Forge games changed.
+
 ## Narrow variant group evidence (2026-11-07; E11-S30)
 
 - Constrained By group tables now place group identity/count above full-width bars and ranges through a text-relative container query. Wider tables retain their columns; numerical evidence, unknown values, notes, common scale, actions and table/header relationships remain. The visible deck/decks unit is decorative to assistive technology, and column headers stay accessible.

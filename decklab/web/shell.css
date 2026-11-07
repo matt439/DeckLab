@@ -290,6 +290,11 @@ svg.icon-more { stroke-width: 4; }
 }
 /* The iPad in portrait (600-999 px): the tab bar's tabs in the middle 640 px, their 12 px labels as on the phone (3.2). */
 @media (min-width: 600px) and (max-width: 999px) and (min-height: 501px), (min-width: 600px) and (max-width: 999px) and (orientation: portrait) {
+  /* Prefer the search field's 300px, then give the contextual title the remainder.
+     A long Back label may shrink the field; the avatar still keeps its full target. */
+  .global-search { flex-shrink: 1; min-width: 0; }
+  .global-search .gs-box { max-width: 100%; }
+  .topbar-title { flex-basis: 0; }
   body.has-shell .tabbar:not([hidden]) {
     padding-left: max(env(safe-area-inset-left), (100% - 640px) / 2);
     padding-right: max(env(safe-area-inset-right), (100% - 640px) / 2);

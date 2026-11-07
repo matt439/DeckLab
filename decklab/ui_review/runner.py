@@ -172,7 +172,7 @@ def _spawn(command, runtime, label):
     env = os.environ.copy()
     env.update({name: str(runtime) for name in ("TMPDIR", "TEMP", "TMP")})
     env["PYTHONUTF8"] = "1"
-    if label in {"capture", "editor", "composition", "variant-layout"}:
+    if label in {"capture", "editor", "composition", "variant-layout", "shell-layout"}:
         (runtime / f"browser-{label}.started").touch()
     with (runtime / f"{label}.log").open("wb") as log:
         return subprocess.Popen(command, cwd=ROOT, env=env, stdin=subprocess.DEVNULL,
@@ -367,7 +367,7 @@ def run_review(output, browser, node, suite="all", smoke=False, timeout=180):
         except Exception as error:
             report["cleanup"]["error"] = _public_error(error, runtime, run_id)
         browser_closed = True
-        for selected in ("capture", "editor", "composition", "variant-layout"):
+        for selected in ("capture", "editor", "composition", "variant-layout", "shell-layout"):
             if not (runtime / f"browser-{selected}.started").exists():
                 continue
             try:
@@ -408,7 +408,7 @@ def main(argv=None):
     parser.add_argument("--setup", action="store_true", help="Install the pinned local browser dependency, then check prerequisites")
     parser.add_argument("--check", action="store_true", help="Check prerequisites without starting a fixture or browser")
     parser.add_argument("--output", type=Path, help="New or empty output folder; default: gitignored decklab/data/ui-review/<run>")
-    parser.add_argument("--suite", choices=("all", "capture", "editor", "composition", "variant-layout"), default="all")
+    parser.add_argument("--suite", choices=("all", "capture", "editor", "composition", "variant-layout", "shell-layout"), default="all")
     parser.add_argument("--smoke", action="store_true", help="Use the small capture matrix; editor qualification remains complete")
     parser.add_argument("--browser", help="Installed Chrome/Chromium/Edge executable; otherwise detected")
     parser.add_argument("--timeout", type=int, default=180, help="Maximum fixture/capture time in seconds (default: 180)")

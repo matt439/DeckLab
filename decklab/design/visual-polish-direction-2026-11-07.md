@@ -8,7 +8,7 @@ The [second repair slice](visual-polish-repairs-2026-11-07.md) implements the re
 
 Matt's clarification is the brief: the current UI looks amateurish, and he wants us to identify why and resolve it. He does not need to identify the individual CSS problems or prescribe a style. The review must supply a defensible visual diagnosis, an actual proposed treatment and a coherent implementation plan.
 
-The [narrow variant group slice](visual-polish-variant-groups-2026-11-07.md) now gives constrained/enlarged evidence full-width bars below its name/count line, retaining table relationships and identical numerical evidence. Paired 26-case runs cover the transition, unknown/negative and failed/running states. A separate narrow-shell overflow is recorded for follow-up before receipt tools and empty Considering; wider page/state and device acceptance remain open.
+The [narrow variant group slice](visual-polish-variant-groups-2026-11-07.md) now gives constrained/enlarged evidence full-width bars below its name/count line, retaining table relationships and identical numerical evidence. Paired 26-case runs cover the transition, unknown/negative and failed/running states. The [tablet header slice](visual-polish-tablet-header-2026-11-07.md) fixes the recorded narrow-shell overflow with paired 54-case header comparisons. Next: receipt tools and empty Considering; wider page/state and device acceptance remain open.
 
 The [rendered change plan](rendered-ui-change-plan-2026-11-07.md) retains functional findings, typography/spacing criteria and acceptance details. Those are useful foundations, but a list of bugs and checks is not a visual direction. This document replaces that plan's earlier assumption that the current visual system should be preserved unchanged.
 
