@@ -4,6 +4,8 @@ Date: 7 November 2026, Australia/Brisbane. Owner: `E11-S30`. Status: **direction
 
 The [first implementation and rendered comparisons](visual-polish-implementation-2026-11-07.md) record shared controls, Testing composition, receipt guidance/footer and editor recovery/reflow. The original study below remains historical proposal evidence; it does not describe the final production markup.
 
+The [second repair slice](visual-polish-repairs-2026-11-07.md) implements the remaining Wishlist, result, guide, crop and contrast repairs. Wider populated deck/library composition and typography/state qualification are the next visual work; device acceptance stays open.
+
 Matt's clarification is the brief: the current UI looks amateurish, and he wants us to identify why and resolve it. He does not need to identify the individual CSS problems or prescribe a style. The review must supply a defensible visual diagnosis, an actual proposed treatment and a coherent implementation plan.
 
 The [rendered change plan](rendered-ui-change-plan-2026-11-07.md) retains functional findings, typography/spacing criteria and acceptance details. Those are useful foundations, but a list of bugs and checks is not a visual direction. This document replaces that plan's earlier assumption that the current visual system should be preserved unchanged.

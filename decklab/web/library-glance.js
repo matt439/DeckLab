@@ -73,7 +73,7 @@ function libGlancePlan(d, data) {
   return el("section", { class: "lib-glance-part", "aria-label": "How to play" },
     el("div", { class: "lib-glance-head" },
       el("p", { class: "lib-detail-label", text: first.title || "How to play" }),
-      el("a", { class: "btn btn-quiet btn-inline", href: deckHref(d.id), text: "How to play" })),
+      el("a", { class: "btn btn-quiet btn-inline", href: `${deckHref(d.id)}&part=guide`, text: "How to play" })),
     el("p", { class: "lib-glance-plan", text: libGlanceText(first.markdown) }));
 }
 

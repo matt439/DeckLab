@@ -68,16 +68,18 @@ function showDeck(params, token) {
   });
 }
 
-/** The tab and filter an address asks for: ?tab= (a ?part=field, ?part=group or ?part=gauntlet link opens Testing, where
- * those parts are) and ?filter=. */
+/** The tab and filter an address asks for: ?part=guide opens Overview at its guide; field/group/gauntlet
+ * open Testing, where those parts are. Other addresses use ?tab= and ?filter=. */
 function deckViewOf(params) {
-  let tab = params.get("tab");
+  const guide = params.get("part") === "guide";
+  let tab = guide ? "overview" : params.get("tab");
   if (tab === "testing") tab = "matchups";
   if (!DECK_TABS.some(([name]) => name === tab)) {
     tab = ["field", "group", "gauntlet"].includes(params.get("part")) ? "matchups" : "overview";
   }
   const filter = params.get("filter");
-  return { tab, filter: CARD_FILTERS.some(([name]) => name === filter) ? filter : "all" };
+  return { tab, filter: CARD_FILTERS.some(([name]) => name === filter) ? filter : "all",
+    ...(guide ? { part: "guide" } : {}) };
 }
 
 function drawDeck(data, view = { tab: "overview", filter: "all" }) {
@@ -102,6 +104,19 @@ function drawDeck(data, view = { tab: "overview", filter: "all" }) {
       warningsBox(deckWarnings(data), "Warnings")),
     tabs])]);
   selectDeckTab(screen.view.tab, { initial: true });
+  if (screen.view.part === "guide") reachDeckGuide(screen);
+}
+
+/** Wait until load's ordinary reading-position restore finishes, then reach this route's guide. A later
+ * route/person/tab or replacement draw owns its own focus and must never be moved by this callback. */
+function reachDeckGuide(screen) {
+  const token = routeToken, profile = state.profile && state.profile.id, hash = location.hash;
+  requestAnimationFrame(() => {
+    if (deckScreen !== screen || token !== routeToken || !state.profile || state.profile.id !== profile
+        || location.hash !== hash || !screen.strip.isConnected || screen.view.tab !== "overview") return;
+    const guide = screen.panels.get("overview").querySelector("#sec-guide");
+    if (guide) jumpTo(guide.id);  // app.js; .deck-section supplies sticky-header/tab clearance.
+  });
 }
 
 /** The tab strip (role tablist, sticky under the top bar) and an empty panel per tab. */
@@ -173,6 +188,7 @@ function stackPanels(root) {
 function selectDeckTab(name, opts = {}) {
   const screen = deckScreen;
   if (!screen || !screen.panels.has(name)) return;
+  if (!opts.initial) delete screen.view.part;
   if (opts.filter) screen.view.filter = opts.filter;
   screen.view.tab = name;
   for (const button of screen.strip.querySelectorAll("[role=tab]")) {
@@ -236,11 +252,14 @@ function deckAddress(screen) {
   const { tab, filter } = screen.view;
   if (tab === "overview") params.delete("tab"); else params.set("tab", tab);
   if (tab === "cards" && filter !== "all") params.set("filter", filter); else params.delete("filter");
-  params.delete("part");
+  if (tab === "overview" && screen.view.part === "guide") params.set("part", "guide");
+  else params.delete("part");
   const hash = `#/deck?${params.toString()}`;
   if (hash !== location.hash) history.replaceState(history.state, "", hash);
   // The Planned list / Play-now list links open the other list on the same tab (opened in a new tab too).
-  for (const [v, link] of screen.versionLinks || []) link.setAttribute("href", versionHref(screen.data, v, tab));
+  for (const [v, link] of screen.versionLinks || []) {
+    link.setAttribute("href", versionHref(screen.data, v, tab) + (screen.view.part === "guide" ? "&part=guide" : ""));
+  }
   syncDeckNeighbours(screen);
 }
 

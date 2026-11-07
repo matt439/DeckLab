@@ -2,6 +2,15 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Rendered UI interaction and readability repairs (2026-11-07; E11-S30)
+
+- Wishlist tiles/sheets distinguish unavailable counts from known zero and positive availability. Zoom retains the live sheet's Notes, Source and printing, with focus/history return and route/person disposal of its private nested contexts.
+- Variant result actions use current edit capability and fresh editor permission checks for home/member casual and Commander decks. Handoffs remain local drafts, preserve Commander/partner sections and reject ambiguous changes; stale route, person, result, control, confirmation and draft completions cannot replace another context. Exclusion reasons retain full text opacity and explicit omitted-state wording.
+- Library How to play reaches the existing Overview guide with owned deferred focus and sticky clearance. Accessory Save includes the visible active crop through Done's local commit and its existing single request; Cancel, failure, retry and picture replacement keep their boundaries.
+- The [repair record](design/visual-polish-repairs-2026-11-07.md) retains eight inspected light/dark captures, source-bound proof and measured exclusion-reason contrast (9.867:1 light, 9.932:1 dark). All 42 final rendered cases and the editor suite completed with unchanged saved Wishlist/deck/draft data, stable source fingerprints and complete owned-process/runtime cleanup. Guarded focused regressions, ruff and the source-length check passed.
+- The full fixture run ran 12,290 tests (456 skips) and exposed two stale source assertions about the editor's old grid and retired Git storage versus a local-crop comment. Those checks were corrected; all 56 final affected regressions passed. No application/tool source changed after capture; the full suite was not repeated after the test-only corrections.
+- No real records, visibility, services or Forge games changed. Browser persistence, actual enlargement, populated-page composition and device/Safari/art/screen-reader qualification remain open; `E11-S30` stays open.
+
 ## First visual-polish implementation (2026-11-07; E11-S30)
 
 - Shared controls now distinguish neutral secondary/quiet actions, selected choices and filled primary actions. Ordinary controls use 8px corners, lighter label weight and the existing reading sizes/touch floors; main navigation and Testing views use underlined current states.

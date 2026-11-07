@@ -2,6 +2,8 @@
 
 7 November 2026, Australia/Brisbane. Owner: `E11-S30`. This is the first production slice of the [visual direction](visual-polish-direction-2026-11-07.md), with the remaining work still open.
 
+The subsequent [interaction/readability repairs](visual-polish-repairs-2026-11-07.md) implement R01–R05 and R07. Unfixed status below records the boundary of this first slice.
+
 ## What changed
 
 - Shared secondary buttons use neutral borders and ink, quieter labels and 8px corners. Primary actions keep their violet fill. Short segmented choices use a neutral selected surface; page-view navigation uses underlined tabs. The main navigation has a current-section underline. Font families, reading sizes, focus rings, disabled states and touch floors remain.

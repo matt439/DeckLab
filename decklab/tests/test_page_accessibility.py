@@ -41,7 +41,11 @@ class EditorTests(unittest.TestCase):
         css = _text("editor.css")
         self.assertIn("container: quick-list / inline-size", _rule(css, ".is-quick .edit-list"))
         self.assertIn('@container quick-list (max-width: 20em)', css)
-        self.assertIn('"step badge badge more"', css)
+        narrow = css[css.index('@container quick-list (max-width: 20em)'):]
+        row = _rule(narrow, ".is-quick .edit-list > .edit-row")
+        # Identity and badge each get a full line; tools no longer consume the name's remaining width.
+        self.assertIn('"card card card"', row)
+        self.assertIn('"badge badge badge"', row)
         # The list switch stays one row while it fits, and wraps its words rather than widening the page.
         switch = _rule(css, ".edit-head .version-pick .segmented > *")
         self.assertIn("white-space: normal", switch)

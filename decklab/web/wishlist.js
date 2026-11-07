@@ -14,6 +14,12 @@
 
 const WISH_NOTES_MAX = 2000;        // the store's limits (lib/state/rules.py)
 const WISH_SOURCE_MAX = 300;
+const wishlistSheets = new Set();
+
+/** Dispose private editing context before changing page or person, including its nested inspection/picker. */
+function closeWishlistSheets() {
+  for (const ctx of [...wishlistSheets]) ctx.sheet.close();
+}
 
 async function showWishlist(token) {
   const profile = state.profile;
@@ -74,12 +80,11 @@ function drawWishlist(data, profile, token) {
   return view;
 }
 
-/** "2 owned · 1 on the way" in the profile's own space, without zeros; null when there's neither (or the
- * counts aren't known). */
+/** Availability in the profile's own space. An unread count never implies a known empty collection. */
 function wishlistAvailability(have) {
-  if (!have || have.owned == null || have.on_the_way == null) return null;
+  if (!have || have.owned == null || have.on_the_way == null) return "Collection counts unavailable";
   return [have.owned ? `${have.owned} owned` : null, have.on_the_way ? `${have.on_the_way} on the way` : null]
-    .filter(Boolean).join(" · ") || null;
+    .filter(Boolean).join(" · ") || "None in your collection yet";
 }
 
 /** An entry's source: the deck it names (its title, linked), or a buylist as "Suggested in Goblins upgrades ·
@@ -159,7 +164,7 @@ function updateWishlist(view) {
   setWishlistBusy(view, view.busy);
 }
 
-/** One wished-for card: its picture, how many you have (only when some), the deck or buylist it came from, and
+/** One wished-for card: its picture, known availability or uncertainty, the deck or buylist it came from, and
  * its notes in the viewer. A tap opens its sheet. */
 function wishlistTile(view, entry) {
   const card = entry.card;
@@ -197,9 +202,17 @@ function setWishlistBusy(view, busy) {
 /** A card's sheet: its picture (Zoom), notes, printing and source, Save, and Remove at the bottom. */
 function openWishlistSheet(view, entry) {
   if (!wishlistActive(view) || view.busy) return null;
-  const sheet = openSheet({ title: entry.name, wide: true });
+  const ctx = { sheet: null, viewer: null, picker: null,
+    printing: entry.set ? { set: entry.set, number: entry.number } : null };
+  const sheet = openSheet({ title: entry.name, wide: true, onClose: () => {
+    wishlistSheets.delete(ctx);
+    if (ctx.picker && !ctx.picker.closed) ctx.picker.close();
+    if (ctx.viewer && viewerState === ctx.viewer) closeViewer();
+  } });
+  ctx.sheet = sheet;
+  wishlistSheets.add(ctx);
+  const current = () => wishlistActive(view) && !sheet.closed && sheet.dialog.isConnected;
   const id = (key) => `wish-${key}-${sheet.heading.id}`;
-  const ctx = { sheet, printing: entry.set ? { set: entry.set, number: entry.number } : null };
   const notes = el("textarea", { id: id("notes"), rows: 3, maxlength: WISH_NOTES_MAX, text: entry.notes || "" });
   notes.value = entry.notes || "";
   const source = el("input", { id: id("source"), type: "text", maxlength: WISH_SOURCE_MAX, value: entry.source || "",
@@ -212,11 +225,13 @@ function openWishlistSheet(view, entry) {
   };
   sayPrinting();
   const message = el("div", { class: "wishlist-sheet-message", role: "status", "aria-live": "polite" });
-  const zoom = () => {
-    // openCard opens the viewer over the tile's group (the whole list), at this card.
+  const zoom = (event) => {
+    if (!current() || !entry.card) return;
+    // Keep the live editor under the viewer, including its unsaved inputs and printing choice.
+    // Use the list's group, but return focus to Zoom inside this sheet when inspection ends.
     const tile = [...view.cards.querySelectorAll(".card-tile")].find((t) => t.dataset.name === entry.name);
-    sheet.close();
-    if (entry.card) openCard(entry.card, tile ? tile.querySelector(".card-tile-open") : null);
+    const group = viewerGroup(tile && tile.querySelector(".card-tile-open"));
+    ctx.viewer = openCardViewer(group ? group.items : [entry.card], group ? group.index : 0, { trigger: event.currentTarget });
   };
   const leave = () => sheet.close();
   add(sheet.body, [el("div", { class: "wishlist-sheet" }, message,
@@ -225,16 +240,18 @@ function openWishlistSheet(view, entry) {
         el("img", { src: entry.card.img_small, alt: "", width: 146, height: 204 })) : null,
       el("div", { class: "wishlist-sheet-facts" },
         entry.card ? el("p", { class: "sub", text: entry.card.type_line }) : null,
-        el("p", { text: wishlistAvailability(entry.have) || "None in your collection yet" }),
+        el("p", { text: wishlistAvailability(entry.have) }),
         wishlistShort(entry, leave),
         wishlistSource(entry, leave))),
     el("label", { class: "field", for: notes.id }, el("span", { text: "Notes" }), notes),
     el("div", { class: "field wishlist-printing" }, el("span", { text: "Printing" }),
       el("div", { class: "wishlist-printing-row" }, printingWords,
         el("button", { type: "button", class: "btn", text: "Choose…", onclick: async () => {
+          if (!current()) return;
           const picked = await pickPrinting(entry.name, { current: ctx.printing ? { ...ctx.printing, finish: "nonfoil" } : null,
-            title: `${entry.name}: the printing you'd like` });
-          if (!picked || sheet.closed) return;
+            title: `${entry.name}: the printing you'd like`, onOpen: (picker) => { ctx.picker = picker; } });
+          ctx.picker = null;
+          if (!picked || !current()) return;
           ctx.printing = picked.set ? { set: picked.set, number: picked.number, set_name: picked.set_name } : null;
           sayPrinting();
         } }))),

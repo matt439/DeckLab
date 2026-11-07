@@ -63,7 +63,8 @@
 .vt-row-name { display: flex; justify-content: space-between; gap: var(--s-2); flex-wrap: wrap; font-weight: var(--fw-semibold); }
 .vt-row-name a { min-height: 44px; display: inline-flex; align-items: center; }
 .vt-row-n { font-weight: var(--fw-regular); color: var(--ink-2); font-size: var(--fs-sm); align-self: center; }
-.vt-row-dropped { opacity: 0.65; }
+/* Exclusion reasons are necessary reading, not inactive controls. Keep their text/links fully opaque. */
+.vt-row-dropped { border-style: dashed; }
 
 /* The deck page's list. */
 .vt-test-list { list-style: none; margin: 0; padding: 0; }

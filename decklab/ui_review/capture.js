@@ -3,6 +3,8 @@
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { run } = require('./common.js');
+const { checkWishlist, checkWishlistCancel } = require('./wishlist-checks.js');
+const { checkGuideDestination } = require('./repair-checks.js');
 
 async function metrics(page) {
   return page.evaluate(() => {
@@ -28,7 +30,7 @@ async function metrics(page) {
       }
       return rows;
     };
-    const styleRows = [...document.querySelectorAll('.vt-row-dropped,.gt-muted,.fv-muted,.gb-meta,.gb-note,.gt-small')]
+    const styleRows = [...document.querySelectorAll('.vt-row-dropped,.vt-row-dropped .sub,.vt-row-dropped a,.gt-muted,.fv-muted,.gb-meta,.gb-note,.gt-small')]
       .slice(0, 30).map(node => ({ text: node.textContent.trim(), box: box(node), ancestors: ancestorStyles(node) }));
     return {
       url: location.href, title: document.title, theme: document.documentElement.dataset.theme,
@@ -116,6 +118,16 @@ function matrix(routes) {
     }
     specs.push({ name: `editor-root200-320-${theme}`, route: routes.editor,
       ready: '.edit-page', width: 320, height: 844, coarse: true, theme, root200: true, fullPage: true });
+    for (const width of [390, 1440]) {
+      specs.push({ name: `wishlist-zoom-${width}-${theme}`, route: routes.wishlist,
+        ready: '.wishlist-grid', width, height: width === 390 ? 844 : 900, coarse: width === 390,
+        theme, wishlist: 'zoom', fullPage: false });
+      specs.push({ name: `guide-${width}-${theme}`, route: width === 1440 ? routes.library : routes.guide,
+        ready: width === 1440 ? '.lib-glance-part' : '#sec-guide', width,
+        height: width === 390 ? 844 : 900, coarse: width === 390, theme, guide: true, fullPage: false });
+    }
+    specs.push({ name: `wishlist-unknown-390-${theme}`, route: routes.wishlist, ready: '.wishlist-grid',
+      width: 390, height: 844, coarse: true, theme, wishlist: 'unknown', case: 'unknown-counts', fullPage: false });
   }
   return specs;
 }
@@ -132,6 +144,9 @@ async function capture(review, spec, index) {
     await page.goto(review.pageUrl(spec.route, spec.theme), { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForSelector(spec.ready, { timeout: 15000 });
     await page.evaluate(() => document.fonts.ready);
+    if (spec.wishlist) result.wishlist = await checkWishlist(review, page,
+      { unknown: spec.wishlist === 'unknown', zoom: spec.wishlist === 'zoom' });
+    if (spec.guide) result.guide = await checkGuideDestination(review, page, { fromLibrary: spec.width === 1440 });
     if (spec.root200) {
       // Deliberate CSS layout stress only; all other interactions use ordinary browser input.
       await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
@@ -152,6 +167,7 @@ async function capture(review, spec, index) {
     await page.screenshot({ path: path.join(review.out, result.png), fullPage: spec.fullPage !== false,
       animations: 'disabled', timeout: 30000 });
     result.disclosures_checked = await checkDisclosures(page, spec);
+    if (spec.wishlist === 'zoom') result.wishlist.cancel = await checkWishlistCancel(page);
     if (spec.coarse && spec.receipt) assert(result.metrics.blankTarget.height >= 44, 'Receipt recovery target is too short');
     if (spec.root200) {
       for (const row of result.metrics.editorRows) {
@@ -190,15 +206,18 @@ async function capture(review, spec, index) {
 run('capture', async review => {
   const full = matrix(review.config.ready.routes);
   const specs = review.options.smoke
-    ? full.filter(spec => ['board-mixed-1440-light', 'receipt-430-coarse-dark'].includes(spec.name)) : full;
+    ? full.filter(spec => spec.wishlist || spec.guide
+      || ['board-mixed-1440-light', 'receipt-430-coarse-dark'].includes(spec.name)) : full;
   review.report.results = [];
   review.report.expected_captures = specs.length;
   review.report.scope = {
-    full_matrix_captures: 32, themes: ['light', 'dark'], dpr: 2,
+    full_matrix_captures: full.length, themes: ['light', 'dark'], dpr: 2,
     board: 'Synthetic mixed Commander and constructed rows; most Details targets are intentionally unseeded.',
     variant: 'Synthetic failed/running and member control; adapter does not qualify backend masking.',
     receipt: '429/430 and 999/1000 CSS-pixel boundaries with fine/coarse emulation; one local check only.',
     editor: '320 CSS pixels with root-font 200% stress; dry-check POST is permitted, Save is never invoked.',
+    wishlist: 'Known/unknown counts and local Notes/Source/printing through Zoom, Close/Escape/Back; no final Save.',
+    guide: 'Library How to play and copied phone destination; focus, sticky clearance and desktop Back/Forward.',
   };
   for (let index = 0; index < specs.length; index++) await capture(review, specs[index], index);
   const failures = review.report.results.filter(row => row.status !== 'captured').length;

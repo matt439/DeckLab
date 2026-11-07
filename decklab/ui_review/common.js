@@ -206,7 +206,7 @@ class Review {
   select(profile = 'matt', fixtureCase = 'complete') {
     this.checkCancelled();
     assert(['matt', 'user2'].includes(profile), 'Unknown synthetic profile');
-    assert(['complete', 'stale', 'failed', 'running'].includes(fixtureCase), 'Unknown synthetic case');
+    assert(['complete', 'stale', 'failed', 'running', 'unknown-counts'].includes(fixtureCase), 'Unknown synthetic case');
     fs.writeFileSync(this.config.profileControl, profile, 'utf8');
     fs.writeFileSync(this.config.caseControl, fixtureCase, 'utf8');
   }
@@ -265,7 +265,8 @@ class Review {
     assert(typeof pathname === 'string' && pathname.startsWith('/') && !pathname.startsWith('//'), 'Expected a local API path');
     const url = new URL(pathname, this.origin);
     assert.equal(url.origin, this.origin);
-    assert(['/api/deck/edit', '/api/deck/draft'].includes(url.pathname), 'Unapproved fixture proof read');
+    assert(['/api/deck/edit', '/api/deck/draft', '/api/profiles/matt/wishlist'].includes(url.pathname),
+      'Unapproved fixture proof read');
     this.checkCancelled();
     const response = await context.request.get(url.href, { timeout: 15000, maxRedirects: 0 });
     assert(response.ok(), 'Fixture proof GET failed: ' + url.pathname + ' ' + response.status());

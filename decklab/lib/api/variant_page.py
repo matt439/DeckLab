@@ -36,7 +36,7 @@ kind "variant", title, by, link ("#/variant?test=<id>"), test, deck_id, version 
 wall-clock time it started playing), next to the progress detail run_test reports (section 10.3's
 "pairs" record with "stage", "next_look" and "games_per_opponent").
 """
-from decklab.lib import decks, inventory, jobs, permissions
+from decklab.lib import decks, inventory, jobs, permissions, spaces
 
 from . import common, drafts, forge_runs
 from .commits import _deck_file
@@ -241,6 +241,21 @@ def _sees_test(summary, seen, opponents=()):
     return seen.sides([row for row in named if row is not None]) and all(isinstance(row, dict) for row in named)
 
 
+def _may_edit(deck_id):
+    """Response-only handoff capability, from the current deck and visitor, never the saved ID prefix."""
+    if not isinstance(deck_id, str):
+        return False
+    try:
+        summary = decks.find_summary(deck_id)
+        if summary is None or summary.get("read_only") or summary.get("error"):
+            return False
+        _, kind, _ = spaces.split_deck_id(summary["id"])
+        return kind in decks.KINDS and permissions.reason(
+            guard.viewer(), "deck.edit", summary, script=guard.script()) is None
+    except (inventory.StateError, OSError, ValueError, RuntimeError):
+        return False
+
+
 def _view(forge, test, seen=None):
     """The test view (section 15): forge.variants.view's, with status, job and error; TEST_NONE's
     404 for a test seen (a forge_runs._Seen, this request's when None) may not see."""
@@ -280,6 +295,7 @@ def _view(forge, test, seen=None):
     if status in WAITING:
         out["words"] = None             # no verdict words while it plays (section 11.6)
     base_id = (out["test"].get("base") or {}).get("id")
+    out["may_edit"] = _may_edit(base_id)
     if status == "done" and isinstance(base_id, str) and base_id.startswith(("casual/", "commander/")) \
             and guard.sees_home_records():
         from . import variant_buying

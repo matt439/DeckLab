@@ -520,7 +520,6 @@ function vtHowItWorks(data) {
 
 function vtVerdictPanel(page, data) {
   const t = data.test || {};
-  const base = t.base || {};
   const looks = t.looks || [];
   const last = looks[looks.length - 1];
   const kind = VT_KINDS[data.verdict] || "info";
@@ -542,10 +541,10 @@ function vtVerdictPanel(page, data) {
     el("div", { class: "actions vt-actions" },
       canMore ? el("button", { type: "button", class: "btn btn-primary", text: "Play more", "data-run": true,
         onclick: () => vtMore(page) }) : null,
-      base.id && /^(casual|commander)\//.test(base.id)
-        ? el("a", { class: "btn", href: editHref(base.id, base.version), text: "Back to the editor" }) : null,
-      base.id && /^(casual|commander)\//.test(base.id)
-        ? el("button", { type: "button", class: "btn", text: "Save this change", onclick: () => vtSaveChange(data) }) : null));
+      vtMayEdit(data) ? el("button", { type: "button", class: "btn", text: "Back to the editor",
+        onclick: (event) => vtEditorHandoff(page, data, event.currentTarget) }) : null,
+      vtMayEdit(data) ? el("button", { type: "button", class: "btn", text: "Save this change",
+        onclick: (event) => vtSaveChange(page, data, event.currentTarget) }) : null));
 }
 
 async function vtMore(page) {
@@ -619,57 +618,106 @@ function vtGroups(data, span = vtSpan(data)) {
     parts);
 }
 
-/** "Save this change": the editor opens with the tested list as its draft (asking first when it already
- * holds other unsaved changes to that list). */
-async function vtSaveChange(data) {
-  const t = data.test || {};
-  const base = t.base || {};
-  let view;
-  try {
-    view = await api(`/api/deck/edit?id=${encodeURIComponent(base.id)}`);
-  } catch (e) {
-    toast(e.message);
-    return;
-  }
-  const version = base.version === "owned" ? "owned" : "target";
-  const key = `draft.${state.profile.id}.${base.id}.${version}`;
-  if (local.get(key)) {
-    const answer = await ask("Replace your unsaved changes?",
-      [`Replace your unsaved changes to ${base.title} with this tested change?`],
-      [{ text: "Replace them", kind: "primary", value: "replace" }, { text: "Keep my changes", value: "keep" }]);
-    if (answer !== "replace") return;
-  }
-  const lists = vtApplyChange(view.lists[version] || {}, (t.variant || {}).changes || {});
-  local.set(key, JSON.stringify({ v: 1, saved: Date.now(), sha256: view.sha256, starting: false,
-    base: { lists: view.lists[version] || {}, fields: pickFields(view.fields) },
-    lists, fields: pickFields(view.fields), addSection: "Deck" }));
-  location.hash = editHref(base.id, version);
+/** A real saved-deck kind, including member IDs. The server's current capability still decides access. */
+function vtDeckKind(id) {
+  const parts = String(id || "").split("/");
+  if (!parts.every(Boolean)) return null;
+  const kind = parts.length === 2 ? parts[0] : parts.length === 3 ? parts[1] : null;
+  return ["casual", "commander"].includes(kind) ? kind : null;
 }
 
-/** The saved list's lines with a test's change made: copies taken off the lines of each removed name
- * (Commander first, then the deck), and added names put on a line of that name or a new one. */
-function vtApplyChange(sections, changes) {
+function vtMayEdit(data) { return data.may_edit === true && !!vtDeckKind(data.test?.base?.id); }
+
+/** "Save this change" prepares a local editor draft; it never saves the deck. */
+async function vtSaveChange(page, data, trigger) { return vtEditorHandoff(page, data, trigger, true); }
+
+/** Both next actions check fresh editor permission. A late answer or Replace confirmation cannot change
+ * a different person's draft, a replacement page/control, or a draft changed while the confirmation waited. */
+async function vtEditorHandoff(page, data, trigger, apply = false) {
+  const t = data.test || {};
+  const base = t.base || {};
+  const profile = state.profile?.id, token = routeToken, hash = location.hash;
+  const current = () => !!profile && profile === state.profile?.id && page.profile === profile
+    && token === routeToken && page.token === token && location.hash === hash && page.data === data
+    && !!page.host?.isConnected && !!trigger?.isConnected && page.host.contains(trigger);
+  if (!current() || !vtMayEdit(data) || page.handoffBusy) return;
+  const version = base.version === "owned" ? "owned" : "target";
+  const kind = vtDeckKind(base.id);
+  const key = `draft.${profile}.${base.id}.${version}`;
+  const read = () => api(`/api/deck/edit?id=${encodeURIComponent(base.id)}`);
+  const permitted = view => view?.id === base.id && view.kind === kind && view.editable === true
+    && view.may_save === true && view.lists?.[version] != null;
+  page.handoffBusy = true; trigger.disabled = true;
+  try {
+    let view = await read();
+    if (!current()) return;
+    if (!permitted(view)) { toast("This deck can't be saved by you now. Reopen its page to check the available actions."); return; }
+    if (apply) {
+      const previous = local.get(key);
+      if (previous) {
+        const answer = await ask("Replace your unsaved changes?",
+          [`Replace your unsaved changes to ${base.title} with this tested change?`],
+          [{ text: "Replace them", kind: "primary", value: "replace" }, { text: "Keep my changes", value: "keep" }]);
+        if (!current() || answer !== "replace") return;
+        view = await read();              // permissions or the saved list can change while the sheet is open
+        if (!current()) return;
+        if (!permitted(view)) { toast("This deck can't be saved by you now. Reopen its page to check the available actions."); return; }
+      }
+      if (local.get(key) !== previous) { toast("Your draft changed. Open the editor to review it before replacing it."); return; }
+      const lists = vtApplyChange(view.lists[version], (t.variant || {}).changes || {}, t.variant?.cards);
+      local.set(key, JSON.stringify({ v: 1, saved: Date.now(), sha256: view.sha256, starting: false,
+        base: { lists: view.lists[version], fields: pickFields(view.fields) },
+        lists, fields: pickFields(view.fields), addSection: "Deck" }));
+    }
+    location.hash = editHref(base.id, version);
+  } catch (e) {
+    if (current()) toast(e.message);
+  } finally {
+    page.handoffBusy = false;
+    if (current()) trigger.disabled = false;
+  }
+}
+
+/** The current list with the tested change: retain printing rows and untested sections. Saved recipe sections
+ * identify Commander additions; a missing removal or ambiguous Commander change cannot silently become a draft. */
+function vtApplyChange(sections, changes, recipe = null) {
   const out = {};
   for (const [name, lines] of Object.entries(sections)) out[name] = lines.map((l) => ({ ...l }));
   const front = (n) => n.split(" // ")[0].trim();
+  const commander = Array.isArray(recipe?.Commander) ? recipe.Commander : null;
+  const commanderCount = (out.Commander || []).reduce((sum, line) => sum + line.qty, 0);
+  let removedCommander = false;
   for (const [qty, name] of changes.remove || []) {
     let left = qty;
     for (const section of ["Commander", "Deck"]) {
       for (const line of out[section] || []) {
         if (left && front(line.name) === name) {
           const take = Math.min(left, line.qty);
+          if (section === "Commander" && take) removedCommander = true;
           line.qty -= take;
           left -= take;
         }
       }
       if (out[section]) out[section] = out[section].filter((l) => l.qty > 0);
     }
+    if (left) throw new Error("The saved list has changed. Open the editor to review this change.");
   }
-  for (const [qty, name] of changes.add || []) {
-    const deck = out.Deck || (out.Deck = []);
-    const line = deck.find((l) => front(l.name) === name);
+  if (removedCommander && !commander) throw new Error("This test has no saved Commander section. Open the editor to review this change.");
+  const put = (section, qty, name) => {
+    if (!qty) return;
+    const lines = out[section] || (out[section] = []), line = lines.find(l => front(l.name) === name);
     if (line) line.qty += qty;
-    else deck.push({ qty, name });
+    else lines.push({ qty, name });
+  };
+  for (const [qty, name] of changes.add || []) {
+    const wanted = (commander || []).filter(([, n]) => front(n) === name).reduce((sum, [q]) => sum + q, 0);
+    const already = (out.Commander || []).filter(l => front(l.name) === name).reduce((sum, l) => sum + l.qty, 0);
+    const take = Math.min(qty, Math.max(0, wanted - already));
+    put("Commander", take, name);
+    put("Deck", qty - take, name);
+  }
+  if ((out.Commander || []).reduce((sum, line) => sum + line.qty, 0) !== commanderCount) {
+    throw new Error("The saved Commander section has changed. Open the editor to review this change.");
   }
   return out;
 }

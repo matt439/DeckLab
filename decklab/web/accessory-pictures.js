@@ -51,6 +51,7 @@ function accSheetHere(ctx) {
 function accDisposeSheet(ctx) {
   if (!ctx || ctx.cancelled) return;
   ctx.cancelled = true;
+  ctx.activeCrop = null;
   ctx.photoSeq = (ctx.photoSeq || 0) + 1;
   const reader = ctx.photoReader;
   ctx.photoReader = null;
@@ -83,6 +84,7 @@ async function accReadPhoto(ctx, file) {
     return;
   }
   const sequence = ctx.photoSeq = (ctx.photoSeq || 0) + 1;
+  drawPicture(ctx); // Replacing a picture leaves its uncommitted crop before asynchronous work.
   accSheetBusy(ctx, true);
   clear(ctx.message).append(loadingBox("Reading the photo on this device…"));
   let reader;
@@ -115,6 +117,7 @@ async function accReadPhoto(ctx, file) {
 
 function drawPicture(ctx) {
   if (!accSheetHere(ctx)) return;
+  ctx.activeCrop = null;
   const pic = ctx.pic;
   const row = ctx.row;
   clear(ctx.picture);
@@ -165,9 +168,11 @@ function accCropText(r) {
 }
 
 /** Crop the sheet's picture in place: the whole picture with a box to drag (or its corners), on any
- * device; arrow keys move the box, Shift and arrow keys resize it. Done keeps the crop for Save. */
+ * device; arrow keys move the box, Shift and arrow keys resize it. Done previews it locally;
+ * the sheet's Save resolves the same owned rectangle even without Done. */
 function openCropper(ctx, url) {
   if (!accSheetHere(ctx) || ctx.busy) return;
+  const pic = ctx.pic;
   const start = accCropOf(accWithCrop(url, ctx.pic.crop)) || [0, 0, 1, 1];
   const r = { x: start[0], y: start[1], w: start[2], h: start[3] };
   const img = el("img", { src: accImgSrc(url), alt: "", draggable: "false" });
@@ -182,9 +187,17 @@ function openCropper(ctx, url) {
   // Until the picture loads the stage is a square of the picture placeholder's colour; a picture that won't
   // load says so instead of leaving a cropper with nothing in it.
   const stage = el("div", { class: "acc-crop-stage acc-crop-loading" }, img, el("div", { class: "acc-crop-clip", "aria-hidden": "true" }, shade), box);
-  img.addEventListener("load", () => stage.classList.remove("acc-crop-loading"));
+  const crop = { pic, stage, ready: false, failed: false, commit: null };
+  const here = () => accSheetHere(ctx) && !ctx.busy && ctx.activeCrop === crop
+    && ctx.pic === pic && stage.isConnected;
+  img.addEventListener("load", () => {
+    if (!here()) return;
+    crop.ready = true;
+    stage.classList.remove("acc-crop-loading");
+  });
   img.addEventListener("error", () => {
-    if (!accSheetHere(ctx) || !stage.isConnected) return;
+    if (!here()) return;
+    crop.failed = true;
     clear(ctx.picture).append(el("div", { class: "acc-cropper" },
       el("p", { class: "form-error", role: "alert", text: "The picture couldn't be loaded for cropping." }),
       el("div", { class: "acc-picture-actions" }, button("Back", close))));
@@ -211,7 +224,7 @@ function openCropper(ctx, url) {
   };
   let drag = null;
   box.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0) return;
+    if (!here() || !crop.ready || event.button !== 0) return;
     event.preventDefault();
     const rect = stage.getBoundingClientRect();
     drag = { id: event.pointerId, corner: event.target.dataset.corner || null, from: { ...r },
@@ -220,7 +233,7 @@ function openCropper(ctx, url) {
     box.focus({ preventScroll: true });
   });
   box.addEventListener("pointermove", (event) => {
-    if (!drag || event.pointerId !== drag.id) return;
+    if (!here() || !drag || event.pointerId !== drag.id) return;
     change(drag.from, drag.corner, (event.clientX - drag.x) / drag.width, (event.clientY - drag.y) / drag.height);
     draw();
   });
@@ -228,6 +241,7 @@ function openCropper(ctx, url) {
   box.addEventListener("pointerup", stop);
   box.addEventListener("pointercancel", stop);
   box.addEventListener("keydown", (event) => {
+    if (!here() || !crop.ready) return;
     const step = { ArrowLeft: [-0.01, 0], ArrowRight: [0.01, 0], ArrowUp: [0, -0.01], ArrowDown: [0, 0.01] }[event.key];
     if (!step) return;
     event.preventDefault();
@@ -235,6 +249,7 @@ function openCropper(ctx, url) {
     draw();
   });
   const square = () => {
+    if (!here() || !crop.ready) return;
     // As big a square (on screen) as fits, centred on the box as it is now.
     const aspect = img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 1;
     const side = Math.min(r.w * aspect, r.h, 1, aspect);       // in picture heights
@@ -243,15 +258,31 @@ function openCropper(ctx, url) {
     r.x = clamp(cx - r.w / 2, 0, 1 - r.w); r.y = clamp(cy - r.h / 2, 0, 1 - r.h);
     draw();
   };
-  const button = (text, onclick, kind = "btn") => el("button", { type: "button", class: `${kind} acc-sheet-mutate`, text, onclick });
+  const button = (text, onclick, kind = "btn") => el("button", { type: "button", class: `${kind} acc-sheet-mutate`, text,
+    onclick: () => { if (accSheetHere(ctx) && !ctx.busy && ctx.activeCrop === crop && ctx.pic === pic) onclick(); } });
   const close = () => { drawPicture(ctx); };
+  crop.commit = () => {
+    if (!here() || !crop.ready || crop.failed) {
+      if (accSheetHere(ctx) && ctx.activeCrop === crop) {
+        clear(ctx.message).append(el("p", { class: "form-error", role: "alert", text: crop.failed
+          ? "The picture couldn't be loaded. Go back to keep the previous crop, or try cropping again."
+          : "Wait for the picture to load before saving its crop." }));
+      }
+      return false;
+    }
+    pic.crop = accCropText(r);
+    ctx.touched.add("crop");
+    close();
+    return true;
+  };
+  ctx.activeCrop = crop;
   clear(ctx.picture).append(el("div", { class: "acc-cropper" },
     el("p", { class: "sub", text: "Drag the box to choose the part of the picture to show, or drag its corners to resize it. The picture file isn't changed." }),
     stage, said,
     el("div", { class: "acc-picture-actions" },
-      button("Done", () => { if (!accSheetHere(ctx)) return; ctx.pic.crop = accCropText(r); ctx.touched.add("crop"); close(); }, "btn btn-primary"),
+      button("Done", crop.commit, "btn btn-primary"),
       button("Square", square),
-      button("Whole picture", () => { Object.assign(r, { x: 0, y: 0, w: 1, h: 1 }); draw(); }),
+      button("Whole picture", () => { if (here() && crop.ready) { Object.assign(r, { x: 0, y: 0, w: 1, h: 1 }); draw(); } }),
       button("Cancel", close, "btn btn-quiet"))));
   draw();
   box.focus({ preventScroll: true });
@@ -272,6 +303,7 @@ async function findPicture(ctx) {
     ctx.inputs.link.focus();
     return;
   }
+  drawPicture(ctx); // The pending replacement must not leave an abandoned crop visible.
   accSheetBusy(ctx, true);
   ctx.find.setAttribute("aria-busy", "true");
   clear(ctx.message).append(loadingBox("Finding the picture…"));

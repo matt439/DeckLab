@@ -31,7 +31,7 @@ runs never install or update dependencies.
 python scripts/ui_review.py
 ```
 
-The default runs the 32-case capture matrix followed by the editor interaction
+The default runs the 42-case capture matrix followed by the editor interaction
 qualification. The fixture is fresh for each invocation; the editor suite does
 not depend on a draft or browser left behind by an earlier review.
 
@@ -54,8 +54,9 @@ python scripts/ui_review.py --browser "C:/Program Files/Google/Chrome/Applicatio
 ```
 
 `--check` does not start any application processes. `--smoke` captures a desktop
-board in light and a narrow coarse-pointer receipt in dark; the editor suite
-still runs its complete interaction sequence. `--suite` selects one suite.
+board in light, a narrow coarse-pointer receipt in dark and the ten Wishlist/guide
+cases (12 cases total); the editor suite still runs its complete interaction
+sequence. `--suite` selects one suite.
 Explicit output directories must be new or empty and must not pass through
 symlinks/junctions. Prior evidence is never overwritten or pruned.
 
@@ -74,6 +75,12 @@ The capture matrix uses both themes and DPR 2:
   expose the blank-metadata recovery control; arrival is never recorded.
 - A 320px editor with explicit 200% **CSS root-font stress**. This is not browser
   zoom, OS text scaling or a claim that every absolute-size control doubled.
+- Wishlist local Notes/Source/printing through Zoom and Close/Escape/Back at
+  390px coarse and 1440px fine, plus unknown-count sheets at 390px. Known-zero
+  and positive-count tiles are checked too. Saved Wishlist digests stay unchanged;
+  explicit sheet closure reopens saved values. No final Save is clicked.
+- Library How to play at 1440px and copied guide destinations at 390px: Overview,
+  guide focus and sticky clearance, plus desktop Back/Forward, in both themes.
 
 Capture measurements include element typography and board/editor row allocations.
 Native board/receipt help disclosures are opened and closed through their summaries
@@ -147,7 +154,8 @@ confirmed UI defects distinct in the written report.
 
 `fixture.py` owns the synthetic records, read-only adapters and guarded transport;
 `data/` owns the invented result payloads. `capture.js` owns matrix cases and DOM
-measurements; `editor.js` owns interaction sequences; `common.js` owns browser
+measurements; `wishlist-checks.js` and `repair-checks.js` own local Wishlist and
+guide interactions; `editor.js` owns editor sequences; `common.js` owns browser
 isolation, requests, cancellation and artifact sanitization. `runner.py` owns
 setup, source provenance and child-process lifecycle.
 

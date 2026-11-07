@@ -333,6 +333,22 @@ crop and shared accessory-dialog tracking. Photos stay local until atomic Save.
 away-lock changes, including nested accessory pickers and confirmations; late
 work checks its original viewer and route.
 
+An active accessory crop belongs to its current picture, sheet, route and person.
+Outer Save resolves that rectangle through Done's local commit before its one
+existing request. Cancel keeps the previous crop; loading/failed images require
+recovery before Save. Replacing or disposing a picture clears its crop handler.
+
+Wishlist Zoom layers the viewer over the existing edit sheet and returns focus
+to Zoom, retaining Notes, Source and printing locally. Route/person/away-lock
+cleanup closes that sheet and its owned picker/viewer. Unknown availability
+says **Collection counts unavailable** in tiles and sheets; known zero alone
+says **None in your collection yet**. Inspection never persists a draft.
+
+Result-to-editor actions follow current capability and recheck fresh editor
+permission plus their original route, person and draft before handoff. Save this
+change prepares a local draft for ordinary editor Save. Necessary exclusion
+reasons retain full text opacity; wording and a dashed boundary mark omission.
+
 `shopping-order-edit.js` shares reviewed order changes. Cancellation and mistaken-order
 removal collect a one-line reason, then show queue-restoration quantities and affected
 deck tables before the final destructive primary action. Cancellation has an explicit

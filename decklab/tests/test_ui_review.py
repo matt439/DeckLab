@@ -334,7 +334,16 @@ class ReviewFixtureTests(unittest.TestCase):
             with review_fixture(runtime, "unit-review-test-token") as fixture:
                 complete = self.request(fixture, f"/api/variant?test={HOME_TEST}")
                 self.assertNotEqual(complete["status"], "running")
+                self.assertTrue(complete["may_edit"])
+                wished = self.request(fixture, "/api/profiles/matt/wishlist")
+                self.assertEqual(wished["entries"][0]["have"], {"owned": 3, "on_the_way": 1})
+                self.assertEqual(wished["entries"][1]["have"], {"owned": 0, "on_the_way": 0})
                 case = Path(fixture.ready["case_control"])
+                case.write_text("unknown-counts", encoding="utf-8")
+                unknown = self.request(fixture, "/api/profiles/matt/wishlist")
+                self.assertTrue(all(entry["have"] == {"owned": None, "on_the_way": None}
+                                    for entry in unknown["entries"]))
+                self.request(fixture, "/api/profiles/matt/wishlist", method="POST", payload={}, status=403)
                 case.write_text("running", encoding="utf-8")
                 running = self.request(fixture, f"/api/variant?test={HOME_TEST}")
                 self.assertEqual(running["status"], "running")
@@ -345,6 +354,9 @@ class ReviewFixtureTests(unittest.TestCase):
                 Path(fixture.ready["profile_control"]).write_text("user2", encoding="utf-8")
                 member = self.request(fixture, f"/api/variant?test={MEMBER_TEST}")
                 self.assertEqual(member["test"]["base"]["id"], "user2/casual/member-fixture")
+                self.assertTrue(member["may_edit"])
+                self.assertFalse(self.request(fixture, f"/api/variant?test={HOME_TEST}")["may_edit"])
+                self.request(fixture, "/api/profiles/matt/wishlist", status=403)
                 self.assertEqual(self.request(fixture, "/api/me")["profile"], "user2")
 
     def test_owner_nonce_is_required_before_fixture_start(self):

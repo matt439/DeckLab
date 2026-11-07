@@ -75,12 +75,12 @@ class VariantPageTests(unittest.TestCase):
         self.assertLess(stop.index("ask("), stop.index("apiWrite("))
 
     def test_save_this_change_asks_first(self):
-        save = _function(SCRIPT, "vtSaveChange")
+        save = _function(SCRIPT, "vtEditorHandoff")
         self.assertIn("Replace your unsaved changes to ${base.title} with this tested change?", save)
-        self.assertLess(save.index("if (local.get(key))"), save.index("ask("))
+        self.assertLess(save.index("const previous = local.get(key)"), save.index("ask("))
         self.assertLess(save.index("ask("), save.index("local.set(key"))
         # The key is the editor's own draft key for that list (editor-drafts.js draftKey).
-        self.assertIn("`draft.${state.profile.id}.${base.id}.${version}`", save)
+        self.assertIn("`draft.${profile}.${base.id}.${version}`", save)
         self.assertIn("draft.${ed.profile}.${ed.id}.${ed.version}", _text("editor-drafts.js"))
 
 
@@ -125,7 +125,7 @@ class VariantScriptTests(unittest.TestCase):
                                                         {"qty": 4, "name": "Shock"}, {"qty": 2, "name": "Opt"}]})
 
     def test_the_panels_draw(self):
-        done = {"status": "done", "verdict": "better", "words": "Better against the field: +2.4 points of win rate (+0.6 to +4.2)",
+        done = {"status": "done", "may_edit": True, "verdict": "better", "words": "Better against the field: +2.4 points of win rate (+0.6 to +4.2)",
                 "margin": 0.02, "field": {"delta": 0.024, "low": 0.006, "high": 0.042}, "error": None,
                 "test": {"test": "a" * 64, "base": {"id": "casual/gruul-ramp", "version": "target", "title": "Gruul Ramp"},
                          "against": "field:Constructed", "outcome": "better", "starter_mismatch": {"games": 30, "of": 1800},

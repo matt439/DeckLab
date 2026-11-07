@@ -1,0 +1,90 @@
+[
+  {
+    "file": "variant-member-light.png",
+    "capture": "05-variant-member-390-light",
+    "sha256": "98c893924673427d0b4a3f6deee65f5ec2a30876905bb1a8ca397c71dd51fba6",
+    "theme": "light",
+    "viewport": [
+      390,
+      844
+    ],
+    "dpr": 2
+  },
+  {
+    "file": "wishlist-zoom-light.png",
+    "capture": "17-wishlist-zoom-390-light",
+    "sha256": "18ff8642aaf61a9993c51bcc7327652dbe622dbc5882d87e9c24e7bd388ad01f",
+    "theme": "light",
+    "viewport": [
+      390,
+      844
+    ],
+    "dpr": 2
+  },
+  {
+    "file": "guide-desktop-light.png",
+    "capture": "20-guide-1440-light",
+    "sha256": "63ffee0c7ffd3df580a360c8ddb49aa5c392bf2470cefe3b2d77eeed710f3702",
+    "theme": "light",
+    "viewport": [
+      1440,
+      900
+    ],
+    "dpr": 2
+  },
+  {
+    "file": "wishlist-unknown-light.png",
+    "capture": "21-wishlist-unknown-390-light",
+    "sha256": "38186231e94605d910e6212b3b70babda2f6713031a18636894b1a10f5f0579f",
+    "theme": "light",
+    "viewport": [
+      390,
+      844
+    ],
+    "dpr": 2
+  },
+  {
+    "file": "variant-member-dark.png",
+    "capture": "26-variant-member-390-dark",
+    "sha256": "c7d6779cfa2d4c034b186d8bb4cc82546ca744d3ffd833daad7187f4d944f2c7",
+    "theme": "dark",
+    "viewport": [
+      390,
+      844
+    ],
+    "dpr": 2
+  },
+  {
+    "file": "wishlist-zoom-dark.png",
+    "capture": "38-wishlist-zoom-390-dark",
+    "sha256": "b9149e2c996cc65b07c18d94eeea4075c7cd65eec4e070e784a15e878fe0757a",
+    "theme": "dark",
+    "viewport": [
+      390,
+      844
+    ],
+    "dpr": 2
+  },
+  {
+    "file": "guide-desktop-dark.png",
+    "capture": "41-guide-1440-dark",
+    "sha256": "79dc45b53745995f65bbdd0666ae35058bb205fca8d80042ca73b9043d9da95f",
+    "theme": "dark",
+    "viewport": [
+      1440,
+      900
+    ],
+    "dpr": 2
+  },
+  {
+    "file": "wishlist-unknown-dark.png",
+    "capture": "42-wishlist-unknown-390-dark",
+    "sha256": "079f5e01775bfc8f73a91863df1f834fb48c545afc0be8162992ba2223c6e3b5",
+    "theme": "dark",
+    "viewport": [
+      390,
+      844
+    ],
+    "dpr": 2
+  }
+]

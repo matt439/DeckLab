@@ -26,7 +26,7 @@ HOME_TEST = "a" * 64
 MEMBER_TEST = "b" * 64
 PAIR_KEY = "d" * 64
 PROFILES = ("matt", "user2")
-CASES = ("complete", "stale", "failed", "running")
+CASES = ("complete", "stale", "failed", "running", "unknown-counts")
 FORGE = {"ok": True, "installed": True, "version": "synthetic-review", "error": None, "workers": 1}
 
 
@@ -199,7 +199,21 @@ def _install_handler(fixture, runtime, run_id):
                 return self._send_json(200, {"fixture_type": FIXTURE_TYPE, "run_id": run_id, "isolated": True})
             case = _control(case_path, CASES, "complete")
             if path == "/api/variant":
-                return self._send_json(200, variant_payload(query.get("test", [HOME_TEST])[0] == MEMBER_TEST, case))
+                from decklab.lib.api import variant_page
+
+                answer = variant_payload(query.get("test", [HOME_TEST])[0] == MEMBER_TEST, case)
+                answer["may_edit"] = variant_page._may_edit(answer["test"]["base"]["id"])
+                return self._send_json(200, answer)
+            wishlist = re.fullmatch(r"/api/profiles/(matt|user2)/wishlist", path)
+            if wishlist:
+                from decklab.lib.api import wishlists
+
+                answer = wishlists.get_wishlist(wishlist[1])
+                if case == "unknown-counts":
+                    for entry in answer["entries"]:
+                        entry["have"] = {"owned": None, "on_the_way": None}
+                    answer["warnings"].append("Synthetic fixture: collection counts unavailable.")
+                return self._send_json(200, answer)
             if path == "/api/matchup":
                 return self._send_json(200, pair_payload(case))
             if path == "/api/matchups":
@@ -248,6 +262,8 @@ def review_fixture(runtime, run_id, *, lifecycle=None, _validated=False):
             lifecycle["fixture"] = fixture
         home_path = fixture.root / f"magic/decks/{HOME}.md"
         text = fixture_data.DECK.replace("# Safari Fixture", "# Synthetic home woodland deck", 1)
+        text = text.replace("## Notes\n", "## Notes\n\n### Game plan\n\n"
+                            "Develop mana with the Elves, then use the extra mana for your threats.\n", 1)
         home_path.write_text(text, encoding="utf-8")
         member_path = fixture.root / "magic/people/user2/decks/casual/member-fixture.md"
         member_path.parent.mkdir(parents=True, exist_ok=True)
@@ -262,6 +278,11 @@ def review_fixture(runtime, run_id, *, lifecycle=None, _validated=False):
         fixture.state._seeded_mode["mode"] = "everyone"  # UI branches only; every simulation mutation is refused.
         fixture.state.visibility_set("home", "decks", True, Actor("matt", "Matt"),
                                      "Synthetic fixture public-deck control")
+        for name in ("Llanowar Elves", "Forest"):
+            fixture.state.wishlist_add("matt", {"name": name, "set": "", "number": "",
+                "notes": "Synthetic saved note: keep me after Zoom.",
+                "source": "magic/buylists/2000-01-01-synthetic-suggestions.md"},
+                Actor("matt", "Matt"), "Seed disposable review wishlist")
         for deck_id, body in ((HOME, text), (MEMBER, member_text)):
             fixture.inventory._remember(deck_id, body, "matt", "Create synthetic UI fixture", "A")
         (runtime / "profile.txt").write_text("matt\n", encoding="utf-8")
@@ -278,6 +299,8 @@ def review_fixture(runtime, run_id, *, lifecycle=None, _validated=False):
                                     "member_variant": f"/#/variant?test={MEMBER_TEST}",
                                     "board": "/#/matchups?view=popular", "pair": f"/#/matchup?key={PAIR_KEY}",
                                     "editor": "/#/edit?id=casual%2Fsafari-fixture&v=target",
+                                    "wishlist": "/#/wishlist", "library": "/#/library",
+                                    "guide": "/#/deck?id=casual%2Fsafari-fixture&part=guide",
                                     "receipt": f"/#/receipt?order={fixture.order_id}"}}
         yield fixture
 

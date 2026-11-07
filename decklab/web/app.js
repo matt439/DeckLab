@@ -124,6 +124,7 @@ async function chooseProfile(profile) {
   if (typeof closePodLifeCounter === "function") closePodLifeCounter();
   closeAccessorySheets();
   closeReceiptSheets();
+  closeWishlistSheets();
   state.profile = profile;
   session.set("profile", profile.id);
   local.set("lastProfile", profile.id);
@@ -220,6 +221,7 @@ function drawWho() {
   if (typeof closePodLifeCounter === "function") closePodLifeCounter();
   closeAccessorySheets();
   closeReceiptSheets();
+  closeWishlistSheets();
   stopMatchupRefresh();
   routeToken += 1;
   setTitle("Who are you?");
@@ -268,6 +270,7 @@ function route() {
   if (typeof closePodLifeCounter === "function") closePodLifeCounter();
   closeAccessorySheets();
   closeReceiptSheets();
+  closeWishlistSheets();
   stopMatchupRefresh();
   const token = ++routeToken;
   const { path, params, alias } = parseHash();

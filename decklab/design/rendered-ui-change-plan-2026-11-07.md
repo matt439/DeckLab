@@ -1,8 +1,8 @@
 # Rendered UI review: change plan
 
-Date: 7 November 2026, Australia/Brisbane. Status: **first implementation complete; remaining repairs and acceptance open**. Owner: `E11-S30`.
+Date: 7 November 2026, Australia/Brisbane. Status: **repair lane implemented; wider visual rollout and acceptance open**. Owner: `E11-S30`.
 
-The [first implementation record](visual-polish-implementation-2026-11-07.md) supersedes the planned status for R06, O03 and O02, and records bounded editor/receipt/board composition work for O04–O06. R01–R05 and R07 remain unfixed. Earlier observations and acceptance criteria below are retained; original capture reports describe the pre-fix code.
+The [first implementation record](visual-polish-implementation-2026-11-07.md) supersedes the planned status for R06, O03 and O02, and records bounded editor/receipt/board composition work for O04–O06. The [second repair slice](visual-polish-repairs-2026-11-07.md) implements R01–R05 and R07, with 42 rendered cases and separate guarded permission/crop coverage. Browser persistence and device qualification remain open. Earlier observations and acceptance criteria below are retained; original capture reports describe the pre-fix code.
 
 Matt's clarified objective is to understand and resolve why the interface looks amateurish, rather than only fix individual defects. The [visual diagnosis and proposed direction](visual-polish-direction-2026-11-07.md) now lead this work. Revise the shared control language, hierarchy and page composition while preserving product behavior, privacy and accessibility. The functional fixes below remain a separate necessary repair lane; completing them alone will not deliver a polished interface.
 
@@ -126,7 +126,7 @@ For O02, compare every Testing view with populated, empty, failed/no-catalogue a
 
 ## Validation and remaining review
 
-Use `python scripts/test_fixtures.py <affected modules>` for each implementation slice, then repeat its relevant screenshot family. Measure changes instead of treating captured PNGs as tests. Update UI-KIT/HISTORY when behavior ships. After the combined fixes, run `python scripts/ui_review.py` and inspect its captures, request classifications, source consistency and cleanup proof. Run the repository's required code/CI checks when implementation is made. This task changes documentation/evidence only.
+Use `python scripts/test_fixtures.py <affected modules>` for each implementation slice, then repeat its relevant screenshot family. Measure changes instead of treating captured PNGs as tests. Update UI-KIT/HISTORY when behavior ships. After the combined fixes, run `python scripts/ui_review.py` and inspect its captures, request classifications, source consistency and cleanup proof. Run the repository's required code/CI checks when implementation is made.
 
 Add bounded disposable cases as each missing state is needed. Current fixture write denial means Wishlist Save, crop persistence, draft publication and final receipt recording need separately guarded disposable qualification; do not point this harness at the live server or relax its blanket write protections for convenience. R05 also needs a production-authorized read-only result fixture before its full permission experience can be accepted.
 

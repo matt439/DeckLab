@@ -1001,6 +1001,19 @@ class LibraryGlanceTests(_Shelf):
           assert.equal(libGlanceText(""), "");
         """)
 
+    def test_how_to_play_links_to_the_existing_overview_guide(self):
+        self.run_js(r"""
+          for (const id of ["casual/otters", "commander/giada"]) {
+            const data = {guide: {sections: [{title: "Plan", markdown: "Hold up interaction."}]}};
+            const part = libGlancePlan({id}, data);
+            const href = part.querySelector("a").getAttribute("href");
+            assert.equal(href, deckHref(id) + "&part=guide");
+            same(deckViewOf(new URLSearchParams(href.split("?")[1])),
+              {tab: "overview", filter: "all", part: "guide"});
+          }
+          assert.equal(libGlancePlan({id: "casual/empty"}, {guide: {sections: []}}), null);
+        """)
+
     def test_key_cards_follow_this_decks_guide_not_the_last_deck_page(self):
         self.run_js(r"""
           state.cards = new Map([["Elsewhere", {}]]);       // the last deck page's cards, not this deck's
