@@ -30,7 +30,7 @@ SETUP = r"""
       spaces: ["home"], deck_spaces: ["home"], home_player: null, create: [{ space: "home", player: null }] },
     user1: { admin: false, runs: true, accessories: false, receipts: false, products: false, orders: false, see_accessories: true,
       spaces: ["home"], deck_spaces: [], home_player: "wife", create: [{ space: "home", player: "wife" }] },
-    user2: { admin: false, runs: true, accessories: false, receipts: false, products: false, orders: false, see_accessories: false,
+    user2: { admin: false, runs: true, accessories: true, receipts: false, products: false, orders: false, see_accessories: true,
       spaces: ["user2"], deck_spaces: ["user2"], home_player: null, create: [{ space: "user2", player: null }] },
   };
   state.profiles = PROFILES;
@@ -269,9 +269,10 @@ class AccountsUiTests(unittest.TestCase):
           assert(button(main, "Record arrival"));
         """)
 
-    def test_accessories_are_hidden_from_person_spaces(self):
-        # The sleeves, deck boxes and playmats are the home's: User2 (his own space) sees none of them, through
-        # the tunnel ("may" says so) or chosen on the home network (app.js says so); User1 and Matt do.
+    def test_every_profile_has_its_own_accessories(self):
+        # Matt and User1 see home's sleeves, deck boxes and playmats, and User2 (his own space) his own (E8-S26),
+        # through the tunnel ("may" says so) or chosen on the home network (app.js says so). Only a viewer
+        # whose "may" says they see none gets the page's private words and no kit.
         self.run_js("""
           const kit = { sleeves: { name: "Black Matte", label: "Black Matte", state: "linked", quantity: 100, image_url: null },
             deck_box: null, short: 0, need: 60, warnings: ["Too few sleeves"] };
@@ -281,8 +282,9 @@ class AccountsUiTests(unittest.TestCase):
           const page = { summary: { ...deck, read_only: false, card_count: 60, sideboard_count: 0, holder_sha256: "s" },
             versions: ["target"], version: "target", warnings: ["Too few sleeves", "Other"], info: [] };
           const links = () => main.querySelectorAll("a").map((a) => a.getAttribute("href"));
-          for (const [who, sees] of [["matt", true], ["user1", true], ["user2", false]]) {
-            as(who, MAY[who === "matt" ? "admin" : who]);
+          const nobody = { ...MAY.user2, accessories: false, see_accessories: false };
+          for (const [who, sees] of [["matt", true], ["user1", true], ["user2", true], ["user2", false]]) {
+            as(who, who === "matt" ? MAY.admin : sees ? MAY[who] : nobody);
             assert.equal(mayDo("see_accessories"), sees, who);
             drawLibrary(data, libraryFilters(new URLSearchParams("all=1")));
             assert.equal(navRoutes("more").some((r) => r.path === "accessories"), sees, who);     // the shell's nav
@@ -297,7 +299,7 @@ class AccountsUiTests(unittest.TestCase):
             editor = null;
           }
           // The page itself says why, and never asks the server for the list.
-          as("user2", MAY.user2);
+          as("user2", nobody);
           api = async (path) => { throw new Error("unexpected " + path); };
           location.hash = "#/accessories"; route(); await flush();
           // Its words name no space (E10-S38).
@@ -311,14 +313,15 @@ class AccountsUiTests(unittest.TestCase):
             if (path === "/api/decks") return data;
             throw new Error("unexpected " + path);
           };
-          for (const [i, sees] of [[0, true], [1, true], [2, false], [3, false]]) {
+          for (const [i, sees] of [[0, true], [1, true], [2, true], [3, true]]) {
             await chooseProfile(PROFILES[i]); await flush();
             assert.equal(state.may.admin, i === 0, PROFILES[i].id);      // by role (E10-S03)
             assert.equal(mayDo("see_accessories"), sees, PROFILES[i].id);
             assert.equal(mayDo("accessories"), sees, PROFILES[i].id);
           }
           // An older server's "may" without the key: worked out the same way.
-          assert.equal(deriveMay(PROFILES[2], true).see_accessories, false);
+          assert.equal(deriveMay(PROFILES[2], true).see_accessories, true);
+          assert.equal(deriveMay(null, true).see_accessories, false);
           assert.equal(deriveMay(PROFILES[1], true).see_accessories, true);
           state.may = { admin: true }; assert.equal(mayDo("see_accessories"), true);
         """)
