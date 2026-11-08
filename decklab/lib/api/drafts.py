@@ -390,9 +390,9 @@ def _read_draft(data, kind, deck=None, source=None, space=None):
             if draft.fields.get(key) is not None and status not in decks.HOLDER_STATUSES:
                 draft.block(_BUILT_ONLY[key], field=key)
     if space != spaces.HOME:
-        # A person's deck is theirs by where it lives, and accessories are home's:
-        # these fields aren't written there (a value already in the file may stay).
-        held = {"player": deck.player, "sleeves": deck.sleeves, "deck_box": deck.deck_box} if deck else {}
+        # A person's deck is theirs by where it lives: no Played by is written there (a value
+        # already in the file may stay). Its sleeves and deck box are its member's own (E8-S25).
+        held = {"player": deck.player} if deck else {}
         for key, words in _HOME_ONLY.items():
             value = draft.fields.get(key)
             if value is not None and value != held.get(key) and not any(b["field"] == key for b in draft.blocks):
@@ -414,11 +414,10 @@ _TAKEN_APART = {"sleeves": "Taken apart, a deck's cards go back into storage uns
                             "choose one again in a later save"}
 
 
-# The blocks for fields a deck in a person's space doesn't have (lib/spaces.py).
+# The blocks for fields a deck in a person's space doesn't have (lib/spaces.py). Its sleeves and
+# deck box are its member's own accessories (E8-S25).
 _HOME_ONLY = {
-    "player": "A deck in a person's own space has no Played by: it's theirs by where it's kept",
-    "sleeves": "Sleeves are recorded only for the home decks (the accessories are home's)",
-    "deck_box": "Deck boxes are recorded only for the home decks (the accessories are home's)"}
+    "player": "A deck in a person's own space has no Played by: it's theirs by where it's kept"}
 
 
 def _new_fields(draft, kind, profile, space=spaces.HOME):
@@ -506,7 +505,7 @@ def _sleeve_warnings(draft, deck):
         from .accessories import read_kit
         kit = read_kit(deck.deck_id if deck is not None else None,
                               _built_sections(draft, deck), values=values,
-                              owner=accessories.player_owner(player))
+                              owner=accessories.deck_owner(draft.space, player))
     except Exception:           # a warning only; the log has the details
         common._log("The other decks' sleeves couldn't be read:\n" + traceback.format_exc())
         return
@@ -530,12 +529,12 @@ def _rule_warnings(draft, deck):
             and (deck is None or assembled.get(deck) is None)):
         draft.warnings.append("This deck is built and has both lists: set Built version to say which one is put "
                               "together (until then its play-now list counts as in use)")
-    # Accessories are home's, and a deck's seen only by those who see its owner's (guard.sees_kit):
+    # A deck's kit is seen only by those who see its owner's (guard.sees_kit; a member's own, E8-S25):
     # its stored owner's as well as the draft's, so a draft can't change Played by to have the
     # stored Sleeves and Deck box (another owner's) resolved for it.
     player = draft.fields["player"] if "player" in draft.fields else (deck.player if deck is not None else None)
     sees_stored = deck is None or guard.sees_kit({"space": deck.space, "player": deck.player})
-    if (status in decks.HOLDER_STATUSES and draft.space == spaces.HOME and sees_stored
+    if (status in decks.HOLDER_STATUSES and sees_stored
             and guard.sees_kit({"space": draft.space, "player": player})):
         _sleeve_warnings(draft, deck)
     bracket = None

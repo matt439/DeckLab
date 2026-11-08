@@ -178,9 +178,10 @@ class AccessoryUndoApiTests(ApiTestCase):
         for function, args in ((self.view, ()), (self.apply, ())):
             error = self.refused(404, function, *args, **({"expect": "bad"} if function == self.apply else {}))
             self.assertEqual(error.message, accessory_undo.NO_CHANGE)
-        with self.identity("user2"), mock.patch.object(self.store, "accessory_undo_review", side_effect=AssertionError("No source read")):
-            self.refused(403, self.view)
-            self.refused(403, self.apply, profile="user2", expect="bad")
+        # A member writes only their own kit (E8-S26): User1's change is, to him, not there.
+        with self.identity("user2"):
+            self.assertEqual(self.refused(404, self.view).message, accessory_undo.NO_CHANGE)
+            self.refused(404, self.apply, profile="user2", expect="bad")
         self.assertEqual(self.store.writes, [])
 
     def test_script_and_chooser_follow_ordinary_accessory_writer_semantics(self):

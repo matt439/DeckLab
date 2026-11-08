@@ -399,7 +399,14 @@ class OwnerTests(AccessoriesTestCase):
         self.assertTrue(accessories.csv_bytes(inv.rows_by_id.values()).decode().startswith("id,kind,owner,"))
 
     def test_a_decks_owner_is_its_players(self):
-        self.assertEqual(accessories.owner_ids(), ["matt", "user1", "shared"])
+        # A member owns their own kit too (E8-S25), but never uses the shared kit, which is home's.
+        self.assertEqual(accessories.owner_ids(), ["matt", "user1", "user2", "shared"])
+        self.assertEqual(accessories.deck_owner("user2", None), "user2")
+        self.assertEqual(accessories.deck_owner("home", "wife"), "user1")
+        self.assertTrue(accessories.usable("user2", "user2"))
+        self.assertFalse(accessories.usable("shared", "user2"))
+        self.assertFalse(accessories.usable("matt", "user2"))
+        self.assertFalse(accessories.usable("user2", "matt"))
         self.assertEqual([accessories.player_owner(p) for p in ("user", "wife", "either", None, "nobody")],
                          ["matt", "user1", "shared", "shared", "shared"])
         self.assertEqual(accessories.owner_name("user1"), "User1")
@@ -633,10 +640,10 @@ class CheckTests(AccessoriesTestCase):
 
     def test_owners(self):
         self.inventory(BLACK.replace(",shared,", ",user1,").format(qty=100),
-                       BOX.replace(",shared,", ",user2,").format(qty=1))
+                       BOX.replace(",shared,", ",nobody,").format(qty=1))
         self.deck("otters", "Izzet Otters", sleeves="dragon-shield-matte-black")
         self.assertEqual(self.check(), [
-            "ultimate-guard-boulder-100-black: its owner 'user2' isn't a home profile or shared",
+            "ultimate-guard-boulder-100-black: its owner 'nobody' isn't a profile or shared",
             "Izzet Otters: Sleeves Dragon Shield Matte (black) are User1's: this deck uses only shared ones."])
         self.write("decks/casual/otters.md", deck_md("Izzet Otters", player="wife",
                                                      sleeves="dragon-shield-matte-black"))

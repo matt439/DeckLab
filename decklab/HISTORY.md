@@ -9,6 +9,14 @@ What each milestone and feature built, the decisions made along the way, and the
 - The [final review](design/visual-polish-completion-2026-11-07.md) retains 30 unchanged PNGs, source/cleanup proof, paired comparisons and final 106 page/state, 104 actual Chromium zoom and 24 receipt/persistence cases. Existing capture/editor, composition, variant, shell and task matrices pass. A bounded 4px Keep editing overflow below the 320px target is recorded.
 - Guarded frontend regression: 3,154 tests, two skips, 457.394 seconds. Final affected checks: 179 tests, one existing skip, 58.426 seconds. Ruff, JavaScript syntax, whitespace and source lengths pass. Household Safari/touch/software-keyboard, screen-reader, real-art and production durability gates remain; `E11-S30` stays partial. No household records, visibility or Forge games changed; the normal server stays stopped.
 
+## Members' own sleeves, deck boxes and playmats (2026-11-08; E8-S26)
+
+- A member (a person with their own space, such as User5) now owns sleeves, deck boxes and playmats of their own: `permissions.accessory_owners` gives them their own id (never `shared`, which stays home's), so the Sleeves & boxes page, its pictures, Add, Edit, photos and Remove work for them over their own rows only. No kit is lent between spaces.
+- Their own decks being built or built hold that kit: the deck page's Sleeves and deck box tiles and Choose…, the editor's Deck details and Quick edit, and `deck push` accept only the member's own rows (`accessories.deck_owner`, `usable`), and the enough-sleeves, deck box and `accessories check` rules count them as home's. The person's-deck refusal of Sleeves and Deck box lines is gone; Played by and Printings in box stay home-only.
+- Home's kit stays hidden from members, and a member's from home, unless its owner makes it Public; the member's Public/Private switch and its Activity rows are the member's own. A kit choice for another space's deck is an ordinary 403 naming nobody.
+- No migration: the `accessory` table's owner already takes any profile id. Needs a pull and restart on the PC.
+- Tests: `decklab/tests/test_member_accessories.py`; the permission, public-kit, editor and visibility tests now pin the member's own kit.
+
 ## Receipt tools and empty Considering (2026-11-07; E11-S30)
 
 - Receipt filters omit the enclosing track and use the available phone width, with relative two/one-column fallbacks. A single card/token part groups the retained delivery shortcut beside Tools; mixed/product orders keep its order-wide scope outside inactive parts. Confirmation, row selection, checks, drafts and preview/apply remain.

@@ -29,7 +29,8 @@ for a product, of status.csv as rendered (accessories.status_sha256); a changed 
 names its last revision (inventory.last_revision), a changed product's the audit trail's last
 change of any product row.
 
-Each row has an owner (lib/accessories.py): a home profile's id or "shared". Every answer shows
+Each row has an owner (lib/accessories.py): a profile's id (a member's own too, E8-S25) or
+"shared". Every answer shows
 the viewer the rows of guard.accessory_readers (own/shared plus Public), each with editable.
 Holder titles also need deck visibility; outsiders see "a home deck" and receive no holder or
 product options. Writes use guard.accessory_owners (own/shared only). A write may
@@ -46,7 +47,7 @@ decks part's revision (Inventory.decks_revision).
 """
 import traceback
 
-from decklab.lib import accessories, accessory_fetch, accessory_upload, inventory, spaces
+from decklab.lib import accessories, accessory_fetch, accessory_upload, inventory
 from decklab.lib.inventory import audit, ops_accessories, rules
 from decklab.lib.state import StateError
 from decklab.lib.state import rules as state_rules
@@ -98,6 +99,8 @@ def _sees_holder(holder):
 
 
 def _hidden_holder(holder):
+    if holder["kind"] == "deck" and holder["owner"] in accessories.member_owners():
+        return accessories.hidden_title(holder["owner"])        # a member's own deck (E8-S25)
     return (accessories.hidden_title(holder["owner"], holder["kind"]) if guard.sees_home_records()
             else "a home deck")
 
@@ -492,15 +495,13 @@ def _holder_id(value, what):
             raise ApiError(400, f"Bad {what} {value!r}")
         return f"product/{stem}"
     commits._deck_file(value)
-    if spaces.space_of(value) != spaces.HOME:
-        raise ApiError(400, f"{value} is in a person's own space: sleeves and deck boxes are recorded only for "
-                            f"the home decks")
     return value
 
 
 def _require_holder_rights(profile, holder_id):
     """ApiError 403 unless profile may change this holder's kit: for a deck, deck.edit on it as
-    stored (permissions: a member changes only the home decks Played by them); for a product, home's
+    stored (permissions: a home member changes only the home decks Played by them, a person their own
+    space's, E8-S25); for a product, home's
     inventory to see (the product storage panel's read; accessories.edit and the shared kit are
     checked for every holder). A deck that isn't there or can't be read is left to kit.set's
     refusal, which checks deck.edit again under the lock."""

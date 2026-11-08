@@ -535,7 +535,7 @@ async function start() {
   window.addEventListener("pageshow", (event) => { if (event.persisted) backFromAway(); });
 }
 
-/** #/accessories for someone who may not see the sleeves, deck boxes and playmats (they're the home's; the words
+/** #/accessories for someone who may not see the sleeves, deck boxes and playmats (nobody chosen yet; the words
  * name no space, as the server's 403 doesn't: E10-S38). */
 function showNoAccessories() {
   // The page's usual head, then the shared empty state: one line and the one way on.
