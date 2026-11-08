@@ -434,7 +434,8 @@ class PlayerKitSaveTests(PermissionTestCase):
                 mock.patch.object(accessories, "read", side_effect=AssertionError("Accessory reader ran")) as read:
             error = self.assertApiError(403, guard.require_kit_choice, profile,
                                        {"space": "user2", "player": None}, {"sleeves": None, "deck_box": None})
-        self.assertEqual(error.message, "A deck in a person's own collection has no sleeves or deck box.")
+        # Another space's deck: an ordinary refusal naming nobody (its kit is its member's, E8-S25).
+        self.assertEqual(error.message, "The sleeves, deck boxes and playmats are private.")
         self.assertNotEqual(error.extra.get("reason"), "kit_ownership")
         read.assert_not_called()
 

@@ -141,7 +141,9 @@ class HomeListenerTests(unittest.TestCase):
             with self.subTest(headers=headers):
                 status, answer = self.remote_get("/api/collection?space=user2", "user1@example.com", headers)
                 self.assertEqual(status, 403, answer)
-                self.assertEqual(self.remote_get("/api/accessories", "user2@example.com", headers)[0], 403)
+                # His own kit only (E8-S26), whatever the header: none of home's rows.
+                status, kit = self.remote_get("/api/accessories", "user2@example.com", headers)
+                self.assertEqual((status, kit["items"]), (200, []))
                 status, me = self.remote_get("/api/me", "user1@example.com", headers)
                 self.assertEqual((me["profile"], me["may"]["admin"]), ("user1", False))
         status, _ = self.request(self.remote, "GET", "/api/collection", headers={"Host": HOSTS[0], **SCRIPT})

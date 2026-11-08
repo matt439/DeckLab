@@ -328,10 +328,11 @@ def remove_image(inv, *, name):
 # ------------------------------------------------------------------ kit.set
 
 class _Holder:
-    """One holder kit.set changes: a home deck, or an intact product's status.csv row."""
+    """One holder kit.set changes: a deck (home's or a member's own, E8-S25), or an intact product's
+    status.csv row."""
 
     def __init__(self, inv, holder_id, expected, owners, editor=None):
-        from decklab.lib import accessories, permissions, spaces
+        from decklab.lib import accessories, permissions
         from . import kit
         self.id = holder_id
         self.product = holder_id.startswith("product/")
@@ -361,9 +362,6 @@ class _Holder:
             deck = inv.decks.get(holder_id)
             if deck is None:
                 raise AccessoryRefused(f"There's no deck {holder_id}.", 404, ids=[holder_id])
-            if deck.space != spaces.HOME:
-                raise AccessoryRefused(f"{holder_id} is in a person's own space: sleeves and deck boxes are "
-                                       "recorded only for the home decks", 400, ids=[holder_id])
             if deck.error is not None:
                 raise AccessoryRefused(f"{holder_id} can't be read ({deck.error}){rules.UNTIL_PUT_RIGHT}", 409,
                                        ids=[holder_id])
@@ -379,7 +377,7 @@ class _Holder:
             self.deck, self.parsed = deck, parsed
             self.title = parsed.title
             self.can_hold = parsed.status in HOLDER_STATUSES     # building or built, never an idea
-            self.owner = accessories.player_owner(parsed.player)
+            self.owner = accessories.deck_owner(deck.space, parsed.player)
         if not accessories.visible(self.owner, owners):
             raise AccessoryRefused(f"{self.title}'s sleeves and deck box are {accessories.owner_name(self.owner)}'s "
                                    "to choose.", 403, ids=[holder_id])

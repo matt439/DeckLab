@@ -90,7 +90,10 @@ class DeckKitUiTests(unittest.TestCase):
           page.summary.read_only = false; page.summary.kit.editable = false;
           assert.equal(deckKit(page).querySelectorAll('.deck-kit-choose').length, 0, 'kit of another owner is not chosen here');
           page.summary.kit.editable = true; page.summary.space = 'user2'; page.summary.id = 'user2/casual/test';
-          assert.equal(deckKit(page), null, 'a personal deck never shows home kit');
+          // A personal deck shows its member's own kit (E8-S26); the server sends none to anyone else.
+          assert.equal(deckKit(page).querySelectorAll('.deck-kit-tile').length, 2, "a member's deck shows his own kit");
+          page.summary.kit = null;
+          assert.equal(deckKit(page), null, 'no kit sent: nothing shown');
         """)
 
     def test_shared_sleeves_are_named_plainly_on_the_tile(self):

@@ -351,12 +351,12 @@ function strayBuiltVersion() {
 /** Whether the editor offers a header field now (it follows the status and the lists). */
 function fieldOffered(key) {
   const ed = editor;
-  // Sleeves and deck boxes are home's (the accessories): a person's deck has none, unless its text has one.
-  // Nor are they shown to a person-space profile (mayDo("see_accessories")); the server leaves them out too.
+  // Sleeves and deck boxes: a home deck's from home's kit, a person's deck's from their own (E8-S25), shown only
+  // to whoever sees the deck owner's kit (mayDo("see_accessories"); the server leaves them out too).
   if (KIT_FIELDS.includes(key)) {
     if (!mayDo("see_accessories")) return false;
     // A deck being built or built picks them, unless this save frees its kit (kitLeaves: taken apart, or an idea).
-    return (holdsKit(ed.fields.status) && !kitLeaves() && (!ed.space || ed.space === HOME_SPACE)) || strayKit(key);
+    return (holdsKit(ed.fields.status) && !kitLeaves()) || strayKit(key);
   }
   if (ed.mode === "new") return key !== "built_version" && (key !== "target_bracket" || ed.fields.kind === "commander");
   if (key === "built_version") return (ed.fields.status === "built" && hasBothLists()) || strayBuiltVersion();
@@ -472,7 +472,7 @@ function fieldValueWords(key, value) {
  * list loaded since (after a row is added here, or for a new deck from scratch, which has no edit view). */
 function kitRows(key) {
   const ed = editor;
-  const rows = ed.playerKitItems ? kitRowsOf(ed.playerKitItems, accessoryOwnerOf(ed.fields.player)) : editorPlayerKitCatalogNeeded(ed) ? {} : ed.accRows || (ed.view && ed.view.accessories) || {};
+  const rows = ed.playerKitItems ? kitRowsOf(ed.playerKitItems, accessoryOwnerOf(ed.fields.player, ed.space)) : editorPlayerKitCatalogNeeded(ed) ? {} : ed.accRows || (ed.view && ed.view.accessories) || {};
   return rows[key] || [];
 }
 

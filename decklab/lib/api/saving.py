@@ -414,9 +414,9 @@ def create_deck(body):
     person's space (ApiError 404 for one config.json doesn't list); by
     default the profile's own (drafts._new_space). A member may create only
     in their own space, or at home Played by them (guard.py: 403). A
-    person's deck has no Played by line (it's theirs by where it lives), and
-    no Sleeves or Deck box (accessories are home's), so those fields are
-    blocks there; its table is worked out from their pool, and its id is
+    person's deck has no Played by line (it's theirs by where it lives), so
+    that field is a block there, and its Sleeves and Deck box are its member's
+    own accessories (E8-S25); its table is worked out from their pool, and its id is
     "<space>/<kind>/<slug>". The slug comes from the title
     (decks.title_slug); one taken by a deck of either kind in the space is
     ApiError 409 with "conflict". The text is decks.new_deck_text with the

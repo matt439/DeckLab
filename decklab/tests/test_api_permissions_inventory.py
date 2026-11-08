@@ -44,18 +44,23 @@ class AccessoryVisibilityTests(permission_tests.PermissionTestCase):
             return call()
 
     def test_the_accessories_list_and_pictures(self):
-        self.check(lambda p: permission_tests.accessories.accessories_view(), self.SEE_SHARED)
+        # A member has a kit of their own (E8-S25), so the page is theirs too, holding only their rows.
+        everyone = self.SEE_SHARED | {"user2"}
+        self.check(lambda p: permission_tests.accessories.accessories_view(), everyone)
         from decklab.tests.test_accessory_fetch import png
         from decklab.tests.test_api_accessories import image_version
         version = image_version(png())                      # both pictures' bytes
-        self.check(lambda p: permission_tests.accessories.image_file("grey-sleeves.png", version), self.SEE_SHARED)
-        self.check(lambda p: permission_tests.accessories.staged_image("0" * 32 + ".png"), self.SEE_SHARED)
+        self.check(lambda p: permission_tests.accessories.image_file("grey-sleeves.png", version), self.SEE_SHARED,
+                   {"user2"})
+        self.check(lambda p: permission_tests.accessories.staged_image("0" * 32 + ".png"), everyone)
         with permission_tests.access.using({"profile": "user2", "email": "", "remote": True}):
-            # Its words name no space (E10-S38).
-            self.assertApiError(403, permission_tests.accessories.accessories_view, contains="are private")
-            with self.assertRaises(permission_tests.api.ApiError) as hidden:
-                permission_tests.accessories.accessories_view()
-            self.assertNotIn("home", hidden.exception.message)
+            # None of home's rows, holders or owners, and no word of home (E10-S38).
+            view = permission_tests.accessories.accessories_view()
+            self.assertEqual((view["items"], view["holders_options"], view["products"], view["owners"]),
+                             ([], [], [], [{"id": "user2", "name": "User2"}]))
+            words = permission_tests.json.dumps(view)
+            for hidden in ("grey", "black", "home", "Gruul", "Elf"):
+                self.assertNotIn(hidden, words)
         # User1's picture: as if it weren't there for Matt.
         with permission_tests.access.using({"profile": "matt", "email": "", "remote": True}):
             self.assertApiError(404, permission_tests.accessories.image_file, "black-sleeves.png", version)
@@ -90,7 +95,7 @@ class AccessoryVisibilityTests(permission_tests.PermissionTestCase):
             self.assertEqual([i["id"] for i in permission_tests.accessories.accessories_view()["items"]],
                              ["black-sleeves", "grey-sleeves"])
         with permission_tests.access.viewing("user2"):
-            self.assertApiError(403, permission_tests.accessories.accessories_view)
+            self.assertEqual(permission_tests.accessories.accessories_view()["items"], [])
         with permission_tests.access.viewing("nobody-known"):          # not in config.json: as if nobody were named
             self.assertEqual(len(permission_tests.accessories.accessories_view()["items"]), 2)
 
@@ -259,17 +264,22 @@ class AccessoryVisibilityTests(permission_tests.PermissionTestCase):
     def test_me_says_who_sees_them(self):
         for who in ("matt", "user1", "user2"):
             may = permission_tests.access.me({"profile": who, "email": "", "remote": True})["may"]
-            self.assertEqual(may["see_accessories"], who != "user2", who)
+            self.assertTrue(may["see_accessories"], who)      # a member's own kit too (E8-S25)
+            self.assertEqual(may["accessory_owners"], {"matt": ["matt", "shared"], "user1": ["shared", "user1"],
+                                                       "user2": ["user2"]}[who], who)
         self.assertTrue(permission_tests.access.me(None)["may"]["see_accessories"])
 
-    def test_hiding_them_never_clears_a_files_lines(self):
-        # A Sleeves line written by hand in User2's own deck: hidden from him, but his save keeps it.
+    def test_a_members_own_deck_shows_him_its_kit(self):
+        # A Sleeves line in User2's own deck is his own kit (E8-S25): shown to him, and his save keeps it.
         path = self.box.magic / "people" / "user2" / "decks" / "casual" / "r-elves.md"
         permission_tests._write(path, path.read_text(encoding="utf-8").replace(
             "- **Status:** idea\n", "- **Status:** built\n- **Sleeves:** red\n"))
         with permission_tests.access.using({"profile": "user2", "email": "", "remote": True}):
             view = permission_tests.api.edit_view("user2/casual/r-elves")
-            self.assertIsNone(view["fields"]["sleeves"])
+            self.assertEqual(view["fields"]["sleeves"], "red")
+            self.assertIn("sleeves", view["editable_fields"])
+            # Its pickers offer only his own rows: never home's, the shared ones included.
+            self.assertEqual(view["accessories"], {"sleeves": [], "deck_box": []})
             answer = permission_tests.api.save_deck(self.body("user2", id="user2/casual/r-elves", sha256=view["sha256"],
                                              fields={"archetype": "Elves"}))
         self.assertTrue(answer["saved"])

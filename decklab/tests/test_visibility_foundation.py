@@ -29,7 +29,7 @@ def folder(test, prefix):
 
 class VisibilityCliTests(unittest.TestCase):
     def setUp(self):
-        self.enterContext(mock.patch.object(values, "_home_profiles", return_value={"matt": "Matt", "user1": "User1"}))
+        self.enterContext(mock.patch.object(values, "_profiles", return_value={"matt": "Matt", "user1": "User1"}))
 
     def test_every_missing_switch_is_reported_as_private(self):
         rows = visibility_cli.rows({}, ["home", "guest"])
@@ -80,7 +80,7 @@ class VisibilityCliTests(unittest.TestCase):
     def test_kit_owners_are_the_configured_home_profiles(self):
         # E11-S48: another household's home profiles own kit; the original household's ids don't
         store = MemoryStore()
-        with mock.patch.object(values, "_home_profiles", return_value={"alex": "Alex"}), \
+        with mock.patch.object(values, "_profiles", return_value={"alex": "Alex"}), \
                 mock.patch.object(switches, "READY_THINGS", frozenset(values.THINGS)), \
                 mock.patch.object(visibility_cli.pg, "PgStore", return_value=store), \
                 redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
@@ -90,7 +90,7 @@ class VisibilityCliTests(unittest.TestCase):
             self.assertEqual(cli.main(["visibility", "set", "matt", "accessories", "on", "-m", "Owner asked"]), 1)
             rows = visibility_cli.rows({}, ["home"])
         self.assertEqual({r["owner"] for r in rows if r["thing"] == "accessories"}, {"alex", "shared"})
-        with mock.patch.object(values, "_home_profiles", return_value={}):
+        with mock.patch.object(values, "_profiles", return_value={}):
             self.assertEqual(values.kit_owners(), ("shared",))             # unreadable config: no personal owner
 
     def test_cli_readiness_and_nonblank_reason_are_checked_before_connecting(self):
@@ -117,7 +117,7 @@ class VisibilityDatabaseTests(db_support.DbTestCase):
         db_support.seed_membership(self.dbname)
         self.store = pg.PgStore(dbname=self.dbname, breaker=pg.Breaker())
         # The kit owners writes and db check accept (E11-S48: the configured home profiles)
-        self.enterContext(mock.patch.object(values, "_home_profiles", return_value={"matt": "Matt", "user1": "User1"}))
+        self.enterContext(mock.patch.object(values, "_profiles", return_value={"matt": "Matt", "user1": "User1"}))
 
     def save(self, owner="home", thing="decks", on=True):
         return self.store.visibility_set(owner, thing, on, ACTOR, f"Make {owner} {thing} {'public' if on else 'private'}")
@@ -173,7 +173,7 @@ class VisibilityDatabaseTests(db_support.DbTestCase):
         # E11-S48: kit owners are any home profile, so a removed one's Public kit must not pass to a reused id
         alex = dict(HOME, id="alex", name="Alex", role="member", plays_as="wife")
         profiles_sync.sync(listed=[HOME, alex], dbname=self.dbname)
-        with mock.patch.object(values, "_home_profiles", return_value={"matt": "Matt", "alex": "Alex"}):
+        with mock.patch.object(values, "_profiles", return_value={"matt": "Matt", "alex": "Alex"}):
             self.save("alex", "accessories")
             self.save("shared", "accessories")
         profiles_sync.sync(listed=[HOME], dbname=self.dbname)

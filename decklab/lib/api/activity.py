@@ -13,7 +13,7 @@ what) and only through its table's allow-list of fields, never the raw row:
     profile_setting   everyone in the profile's space (an admin too:   key, value
                       only his own space's, E10-S29)
     simulation_mode   everyone                                         mode, set_by_name
-    visibility        its space (all accessory flips: home)             owner, thing, set_by_name
+    visibility        its space (an accessory flip: its owner's)       owner, thing, set_by_name
     play_record       everyone in the space of one of a game's sides,  the summary only, a deck the
                       of a plan's deck only (permissions.sees_play_    viewer may not see named
                       record, as the Game log, an admin's too; a deck  "one of the home decks"; the

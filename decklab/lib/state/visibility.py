@@ -14,20 +14,21 @@ SHARED = "shared"               # lib/accessories.py's owner of the kit every ho
 THINGS = SPACE_THINGS + ("accessories",)
 
 
-def _home_profiles():
-    """{id: name} of config.json's home profiles; {} when it can't be read (fail closed)."""
+def _profiles():
+    """{id: name} of every config.json profile; {} when it can't be read (fail closed)."""
     try:
         from decklab.lib import profiles
-        return {p["id"]: p["name"] for p in profiles.read() if p["space"] == profiles.HOME}
+        return {p["id"]: p["name"] for p in profiles.read()}
     except Exception:           # noqa: BLE001 - an unreadable config offers no personal kit owner
         return {}
 
 
 def kit_owners():
-    """The accessory owners a switch may belong to (E11-S48): each home profile and SHARED.
+    """The accessory owners a switch may belong to (E11-S48): each profile (a member's own kit
+    too, E8-S25) and SHARED.
     Reads config.json, so only switch() (every write) checks it, never key(), which readers
     use (the command line's read notices don't read the config); db check checks the rows."""
-    return tuple(sorted(_home_profiles())) + (SHARED,)
+    return tuple(sorted(_profiles())) + (SHARED,)
 
 
 def key(owner, thing):
@@ -52,7 +53,7 @@ def message(owner, thing, public):
     switch(owner, thing, public)
     state_word = "public" if public else "private"
     if thing == "accessories":
-        subject = "the shared" if owner == SHARED else f"{_home_profiles().get(owner, owner)}'s"
+        subject = "the shared" if owner == SHARED else f"{_profiles().get(owner, owner)}'s"
         return f"Make {subject} sleeves, deck boxes and playmats {state_word}"
     subject = "the home" if owner == "home" else "my"
     return f"Make {subject} {thing} {state_word}"

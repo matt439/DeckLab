@@ -57,7 +57,7 @@ function accWithCrop(url, crop = "") {
 
 /** The address an <img> loads an /accessory-img/ picture from: url without its crop, and on the home network
  * with the profile chosen as &viewer=<id>. An <img> sends no X-Deck-Lab-Viewer header, so this is how the
- * server knows whose pictures to show (a person with their own space none, a home member their own and the shared ones); an address per
+ * server knows whose pictures to show (a person with their own space their own, a home member their own and the shared ones); an address per
  * viewer also keeps a shared iPad's browser cache from showing one profile's picture to another. Through the
  * tunnel the login decides, so nothing is added. Comparisons of two pictures use accWithCrop, not this. */
 function accImgSrc(url) {
@@ -240,7 +240,8 @@ function accessoriesActive(view) {
 
 function drawAccessories(data, token) {
   const root = el("div", { class: "acc-page" });
-  // Each home profile sees and changes its own accessories and the shared ones (lib/permissions.py).
+  // Each home profile sees and changes its own accessories and the shared ones, a member their own (E8-S25;
+  // lib/permissions.py).
   const view = { root, token, profile: state.profile.id, seq: 0, data, busy: false, canEdit: mayDo("accessories"),
     filter: local.get("accessories.filter") || "all" };
   if (!ACC_FILTERS.some(([key]) => key === view.filter)) view.filter = "all";
@@ -619,7 +620,9 @@ function accFields(ctx, row, kind) {
     ctx.owners.map((o) => el("option", { value: o.id, text: o.id === "shared" ? "Shared (both of us)"
       : o.id === mine ? `Mine (${o.name})` : o.name })));
   const start = row ? row.owner : ctx.owner || mine;
-  ownerSelect.value = ctx.owners.some((o) => o.id === start) ? start : "shared";
+  // A member owns only their own (E8-S25): no shared choice to fall back on.
+  ownerSelect.value = ctx.owners.some((o) => o.id === start) ? start
+    : ctx.owners.some((o) => o.id === "shared") ? "shared" : (ctx.owners[0] || {}).id || "";
   const quantity = el("input", { id: id("quantity"), type: "number", inputmode: "numeric", min: 0, max: 9999, step: 1,
     value: row ? String(row.quantity) : "", "aria-describedby": id("quantity-hint") });
   const capacity = el("input", { id: id("capacity"), type: "number", inputmode: "numeric", min: 1, max: 9999, step: 1,
@@ -644,7 +647,9 @@ function accFields(ctx, row, kind) {
   add(grid, [
     field("kind", "Kind", kindSelect),
     field("owner", "Whose", ownerSelect,
-      el("span", { id: id("owner-hint"), class: "field-hint", text: "Only its owner sees it; shared ones are seen by both of you. A deck uses its player's or shared ones; an “either” deck or a product only shared ones." })),
+      el("span", { id: id("owner-hint"), class: "field-hint", text: ctx.owners.some((o) => o.id === "shared")
+        ? "Only its owner sees it; shared ones are seen by both of you. A deck uses its player's or shared ones; an “either” deck or a product only shared ones."
+        : "Only you see it, unless you make your kit public. Your decks use your own sleeves and deck boxes." })),
     field("brand", "Brand", ctx.inputs.brand),
     field("name", "Name", ctx.inputs.name),
     field("colour", "Colour", ctx.inputs.colour),

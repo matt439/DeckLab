@@ -357,21 +357,23 @@ class AdminRouteTests(PermissionTestCase):
         self.check(lambda p: shopping_order_changes.apply_order_change(self.body(p, preview="0")), {"matt", "script"})
 
     def test_accessories(self):
-        # Not admin-only: each home profile changes its own and the shared ones (the routes check the rows).
-        home = {"matt", "user1", "local", "script"}
-        self.check(lambda p: accessories.fetch_picture(self.body(p, url="")), home)
-        self.check(lambda p: accessories.save_accessory(self.body(p)), home)
-        self.check(lambda p: accessories.assign_accessory(self.body(p)), home)
+        # Not admin-only: each home profile changes its own and the shared ones, and a member their
+        # own (E8-S25); the routes check the rows.
+        everyone = {"matt", "user1", "user2", "local", "script"}
+        self.check(lambda p: accessories.fetch_picture(self.body(p, url="")), everyone)
+        self.check(lambda p: accessories.save_accessory(self.body(p)), everyone)
+        self.check(lambda p: accessories.assign_accessory(self.body(p)), everyone)
 
     def test_choosing_a_decks_kit_is_an_edit_of_the_deck(self):
         # E10-S42: deck.edit on the holder and on the deck a move takes them from, as the editor's save needs.
         def assign(p, holder, **extra):
             return accessories.assign_accessory(self.body(p, holder=holder, field="sleeves", id=None,
                                                           holder_sha256="0" * 64, **extra))
-        self.check(lambda p: assign(p, "casual/gruul-test"), {"matt", "script"})          # either: Matt's
-        self.check(lambda p: assign(p, "commander/elf-commander"), {"matt", "user1", "local", "script"})
+        # A member, who has kit of their own since E8-S25, finds no home deck (E10-S30): 404.
+        self.check(lambda p: assign(p, "casual/gruul-test"), {"matt", "script"}, {"user2"})   # either: Matt's
+        self.check(lambda p: assign(p, "commander/elf-commander"), {"matt", "user1", "local", "script"}, {"user2"})
         self.check(lambda p: assign(p, "commander/elf-commander", move_from="casual/gruul-test"),
-                   {"matt", "script"})
+                   {"matt", "script"}, {"user2"})
 
 
 class InventoryRouteTests(PermissionTestCase):

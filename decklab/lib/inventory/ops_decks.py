@@ -43,8 +43,9 @@ DeckRefused, code 409, reason "kit"; kit.set clears them first. deck.create (and
 give a new building or built deck kit lines (an idea's are refused, code 400), checked as kit.set
 checks a choice (each value an accessory id the owners see and the deck's owner may use, or older
 free text: guard.require_kit_choice's rule; refused with code 400 or 403, reason "kit"). A deck in
-a person's own space has no Played by, Sleeves or Deck box line (drafts._HOME_ONLY): a text adding
+a person's own space has no Played by or Printings in box line (drafts._HOME_ONLY): a text adding
 one, or changing one already there, is refused (Invalid); a value already in the file may stay.
+Its Sleeves and Deck box (E8-S25) are its member's own accessories, checked as home's are.
 
 A deck's Printings in box line (lib/decks/printings.py) is checked when a save or a new deck
 changes it: it must describe what the built box holds (DeckRefused, code 400, reason
@@ -63,10 +64,9 @@ from . import Summary, files, register, rules
 from .model import Deck
 
 MAX_TEXT = 1024 * 1024                  # a deck text's most bytes (the history's 1 MiB limit)
-# The header fields a deck in a person's own space doesn't have (drafts._HOME_ONLY's).
+# The header fields a deck in a person's own space doesn't have (drafts._HOME_ONLY's). Its Sleeves
+# and Deck box are its member's own accessories (E8-S25).
 HOME_ONLY = {"Played by": "a deck in a person's own space has no Played by: it's theirs by where it's kept",
-             "Sleeves": "sleeves are recorded only for the home decks (the accessories are home's)",
-             "Deck box": "deck boxes are recorded only for the home decks (the accessories are home's)",
              "Printings in box": "printings in box are recorded only for the home decks (Build decks is home's)"}
 KIT_FIELDS = ("sleeves", "deck_box")    # kit.set's fields, the header lines Sleeves and Deck box
 HOLDER_STATUSES = ("building", "built")  # the statuses that may hold them (decks.HOLDER_STATUSES)
@@ -160,16 +160,13 @@ def check_kit(inv, deck_id, parsed, owners):
     """Sleeves and Deck box values a deck is given, checked as a choice is (guard.require_kit_choice's
     rule): each value that's an accessory id in inv's accessories.csv must be one owners
     (permissions.accessory_owners; None: all) see that the deck's owner may use (its own or
-    shared); older free text isn't checked. DeckRefused (reason "kit", code 403 when the deck's
+    shared; a member's deck only its member's own, E8-S25); older free text isn't checked. DeckRefused (reason "kit", code 403 when the deck's
     kit isn't the owners' to choose, else 400) otherwise."""
     from decklab.lib import accessories, spaces
     chosen = [(key, value) for key, value in zip(KIT_FIELDS, kit_of(parsed)) if value]
     if not chosen:
         return
-    if parsed.space not in (None, spaces.HOME):
-        raise DeckRefused(f"{deck_id}: a deck in a person's own space has no sleeves or deck box.", 400, "kit",
-                          [deck_id])
-    owner = accessories.player_owner(parsed.player)
+    owner = accessories.deck_owner(parsed.space or spaces.HOME, parsed.player)
     if not accessories.visible(owner, owners):
         raise DeckRefused(f"{deck_id}: this deck's sleeves and deck box are {accessories.owner_name(owner)}'s "
                           "to choose.", 403, "kit", [deck_id])

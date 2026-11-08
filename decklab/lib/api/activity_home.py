@@ -71,7 +71,7 @@ def field_policy_row(row, scope, profiles, me):
 
 
 def visibility_row(row, scope, profiles, me):
-    """A switch's audit words belong only to its space; accessory flips belong to home.
+    """A switch's audit words belong only to its space; accessory flips to their kit owner's space.
     Public switches never make their own Activity rows public."""
     records = [r for r in (row.get("before"), row.get("after")) if isinstance(r, dict) and r]
     if not records:
@@ -80,7 +80,8 @@ def visibility_row(row, scope, profiles, me):
         owner, thing = record.get("owner"), record.get("thing")
         if not isinstance(owner, str) or thing not in ("collection", "decks", "games", "accessories"):
             return None
-        space = permissions.HOME if thing == "accessories" else owner
+        # A kit flip belongs to its owner's space: home's for the shared and home kit, a member's own (E8-S25).
+        space = ((profiles.get(owner) or {}).get("space") or permissions.HOME) if thing == "accessories" else owner
         if scope != "all" and scope["space"] != space:
             return None
     record = records[-1]

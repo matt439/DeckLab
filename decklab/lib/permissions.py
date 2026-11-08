@@ -36,7 +36,8 @@ The rules:
   - their own wishlist and settings (an admin those of his own space's profiles too);
   - play records that involve at least one deck they can change;
   - the owned-vs-needed tables of decks they can change;
-- accessories: each home profile its own and the shared ones
+- accessories: each home profile its own and the shared ones, and a
+  person with their own space their own (E8-S25)
   (accessory_owners), whatever its role: not even an admin changes
   another's. The route checks the row's owner and the deck's; this only
   says whether the profile has any;
@@ -61,7 +62,8 @@ Deck box lines and status.csv's sleeves and deck_box columns) are the
 home's, and each row has an owner: a home profile's id or "shared"
 (lib/accessories.py). accessory_owners says which owners a profile sees:
 its own id and shared for a home profile (Matt sees Matt's and shared, an
-admin no more than that), none for a person with their own space, and
+admin no more than that), only its own id for a person with their own space
+(E8-S25: a member's own sleeves, boxes and playmats; never the shared ones), and
 everything for a script that names nobody (a request naming nobody
 that isn't a script sees none).
 sees_accessories is whether that's any at all.
@@ -220,14 +222,14 @@ def sees_commander_night(profile, *, script=False):
 def accessory_owners(profile, *, script=False):
     """The owners (lib/accessories.py's owner column) whose sleeves, deck
     boxes and playmats profile may change: frozenset({its id, SHARED})
-    for a home profile, whatever its role; an empty set for a person with
-    their own space; with no profile, None (everything) for a script and
+    for a home profile, whatever its role; frozenset({its id}) for a person
+    with their own space (E8-S25: shared kit is home's); with no profile, None (everything) for a script and
     nothing for any other request (the page before anyone is chosen, the
     tunnel)."""
     if not profile:
         return None if script else frozenset()
     if _space_of(profile) != HOME:
-        return frozenset()
+        return frozenset({profile["id"]})
     return frozenset({profile["id"], SHARED})
 
 

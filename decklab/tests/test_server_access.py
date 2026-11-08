@@ -232,19 +232,20 @@ class TwoListenersTests(unittest.TestCase):
                                          headers={"X-Deck-Lab-Viewer": "user1"})
         self.assertEqual(code, 403)
 
-    def test_a_person_space_never_gets_the_accessories(self):
-        # The sleeves, deck boxes and playmats are the home's: 403 for User2 (his own space), list and pictures,
-        # whatever the picture's name; User1 gets past the check (404: no such picture), as does the home network.
+    def test_a_person_space_sees_only_its_own_accessories(self):
+        # A person with their own space has their own sleeves, deck boxes and playmats (E8-S26): User2 gets
+        # past the check (his own list, none of home's rows; 404 for a picture he has no row of), as do
+        # User1 and the home network's script; the page before a pick doesn't.
         listed = [{"id": "matt", "name": "Matt", "plays_as": "user", "role": "admin", "space": "home"},
                   {"id": "user1", "name": "User1", "plays_as": "wife", "role": "member", "space": "home"},
                   {"id": "user2", "name": "User2", "plays_as": None, "role": "member", "space": "user2"}]
         with mock.patch.object(api.settings, "_config_profiles", lambda emails=False: listed):
-            for path in ("/api/accessories", "/accessory-img/black.png", "/accessory-img/staged/" + "0" * 32 + ".png"):
-                status, _, body = self.remote_request("GET", path, email="user2@example.com")
-                self.assertEqual(status, 403, path)
-                self.assertEqual(json.loads(body)["error"], "The sleeves, deck boxes and playmats are private.")
-            status, _, body = self.remote_request("GET", "/api/me", email="user2@example.com")
-            self.assertFalse(json.loads(body)["may"]["see_accessories"])
+            status, _, body = self.remote_request("GET", "/api/accessories", email="user2@example.com")
+            self.assertEqual(status, 200, body)
+            self.assertEqual(json.loads(body)["items"], [])
+            for path in ("/accessory-img/black.png", "/accessory-img/staged/" + "0" * 32 + ".png"):
+                status, _, _ = self.remote_request("GET", path, email="user2@example.com")
+                self.assertEqual(status, 404, path)
             status, _, _ = self.remote_request("GET", "/accessory-img/black.png", email="user1@example.com")
             self.assertEqual(status, 404)
             # At home only a script naming nobody gets past the check (E10-S35); the page before a pick doesn't.
@@ -254,7 +255,7 @@ class TwoListenersTests(unittest.TestCase):
             # login decides, whatever it names; at home it names who's looking.
             for path in ("/accessory-img/black.png?v=0123abcd&viewer=user1",
                          "/accessory-img/staged/" + "0" * 32 + ".png?viewer=matt"):
-                self.assertEqual(self.remote_request("GET", path, email="user2@example.com")[0], 403, path)
+                self.assertEqual(self.remote_request("GET", path, email="user2@example.com")[0], 404, path)
                 self.assertEqual(self.remote_request("GET", path.replace("=user1", "=user2").replace(
                     "=matt", "=user2"), email="user1@example.com")[0], 404, path)
                 self.assertEqual(self.request(self.home, "GET", path)[0], 404, path)

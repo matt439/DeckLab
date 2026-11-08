@@ -976,8 +976,8 @@ function cardNames(entries, group = "names") {
  * a pairing gets nothing. info (free text Deck Lab can't check) is a note under the tiles. */
 function deckKit(data) {
   const s = data.summary, kit = s.kit;
-  if (!kit || (s.space || deckSpaceOf(s.id)) !== HOME_SPACE
-    || s.id.startsWith("pairing/") || !mayDo("see_accessories")) return null;
+  // Every space's decks hold kit: home's and, since E8-S25, a member's own.
+  if (!kit || s.id.startsWith("pairing/") || !mayDo("see_accessories")) return null;
   const product = s.id.startsWith("product/");
   if (!product && !holdsKit(s.status)) {
     if (!canEditDeck(s)) return null;

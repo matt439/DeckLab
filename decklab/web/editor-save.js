@@ -525,7 +525,7 @@ function showEditorKitOwnership(sheet, error) {
 function newDeckFacts() {
   const f = editor.fields;
   const home = !editor.space || editor.space === HOME_SPACE;
-  const kitShown = holdsKit(f.status) && home && mayDo("see_accessories");
+  const kitShown = holdsKit(f.status) && mayDo("see_accessories");     // a member's deck too (E8-S25)
   return [["Title", norm("title", f.title) || "(none yet)"], ["Format", KIND_WORDS[f.kind]],
     home ? null : ["Whose deck", spaceName(editor.space)],
     home ? ["Played by", fieldValueWords("player", f.player)] : null, ["Status", STATUS_WORDS[f.status]],
