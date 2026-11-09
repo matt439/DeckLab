@@ -98,16 +98,16 @@ class _Ops:
     def test_add_edit_and_remove_with_pictures(self):
         after, summary = self.apply("accessory.add", row={"kind": "playmat", "owner": "matt", "name": "Mat", "quantity": 1},
                                     sha256=self.token(MATT_OWNERS), owners=MATT_OWNERS, image=png())
-        self.assertEqual(summary.extra["id"], "mat")
-        self.assertEqual(self.rows()["mat"]["image"], "mat.png")
-        self.assertEqual(inventory.image("mat.png"), png())
-        self.apply("accessory.edit", id="mat", row={"quantity": 2}, sha256=self.token(MATT_OWNERS),
+        self.assertEqual(summary.extra["id"], "matt-mat")
+        self.assertEqual(self.rows()["matt-mat"]["image"], "matt-mat.png")
+        self.assertEqual(inventory.image("matt-mat.png"), png())
+        self.apply("accessory.edit", id="matt-mat", row={"quantity": 2}, sha256=self.token(MATT_OWNERS),
                    owners=MATT_OWNERS, image=jpeg())
-        self.assertIsNone(inventory.current().image_meta("mat.png"))
-        self.assertEqual(inventory.image("mat.jpg"), jpeg())
-        self.apply("accessory.remove", id="mat", sha256=self.token(MATT_OWNERS), owners=MATT_OWNERS)
-        self.assertNotIn("mat", self.rows())
-        self.assertIsNone(inventory.current().image_meta("mat.jpg"))
+        self.assertIsNone(inventory.current().image_meta("matt-mat.png"))
+        self.assertEqual(inventory.image("matt-mat.jpg"), jpeg())
+        self.apply("accessory.remove", id="matt-mat", sha256=self.token(MATT_OWNERS), owners=MATT_OWNERS)
+        self.assertNotIn("matt-mat", self.rows())
+        self.assertIsNone(inventory.current().image_meta("matt-mat.jpg"))
 
     def test_a_token_is_the_viewers_and_a_stale_one_refuses(self):
         user1 = frozenset({"user1", "shared"})

@@ -19,7 +19,7 @@ USER3 = {"id": "user3", "name": "User3", "role": "member", "space": "user3"}
 WITH_USER3 = {"profiles": PROFILES["profiles"] + [USER3]}
 BY_ID = {p["id"]: p for p in WITH_USER3["profiles"]}
 HIS = {**SLEEVES, "owner": "user2", "brand": "KMC", "name": "Hyper Matte", "colour": "green", "quantity": 50}
-HIS_ID = "kmc-hyper-matte-green"
+HIS_ID = "user2-kmc-hyper-matte-green"
 
 
 def member_deck(title, **kwargs):
@@ -149,6 +149,19 @@ class MemberAccessoryTests(AccessoriesApiTestCase):
         self.assertEqual(self.view("user3")["items"], [])
         self.assertEqual(self.view("user3")["owners"], [{"id": "user3", "name": "User3"}])
         self.assertIn(f"- **Sleeves:** {HIS_ID}", inventory.current().deck(ELVES).text)
+
+    def test_the_same_product_gets_no_hint_of_anothers_row(self):
+        # His row and then Matt's and User3's of the same product: each id starts with its owner's, so no
+        # one's comes back with a -2 that would tell them someone else has one.
+        self.add_his()
+        matt = self.add({**HIS, "owner": "matt"})["changed_id"]
+        with access.viewing("user3"):
+            his_neighbour = self.call(api_acc.save_accessory, profile="user3", sha256=self.view("user3")["sha256"],
+                                      action="add", row={**HIS, "owner": "user3"})["changed_id"]
+        shared = self.add({**HIS, "owner": "shared"})["changed_id"]
+        self.assertEqual((matt, his_neighbour, shared),
+                         ("matt-kmc-hyper-matte-green", "user3-kmc-hyper-matte-green", "kmc-hyper-matte-green"))
+        self.assertEqual(accessories.new_id({**HIS, "owner": "matt"}, {matt}), "matt-kmc-hyper-matte-green-2")
 
     def test_owner_rules(self):
         member = {"id": "user2", "space": "user2", "role": "member"}

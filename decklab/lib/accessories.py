@@ -226,8 +226,14 @@ def validate_row(row):
 def new_id(row, taken):
     """A new row's id, from its brand, name and colour (decks.title_slug, cut
     to 40 characters), with -2, -3... added while it's in taken (ids of any
-    kind) or a name Windows reserves."""
-    base = decks.title_slug(" ".join(str(row.get(k) or "") for k in ("brand", "name", "colour")))
+    kind) or a name Windows reserves. A row with its own owner (not shared)
+    starts with that owner's id ("user2-kmc-hyper-matte-green"), so the -2 an
+    owner sees comes only from rows of their own (or shared ones): ids are
+    unique across every owner, and a clash with a row another owner keeps
+    private would hint that someone owns that product."""
+    owner = str(row.get("owner") or "").strip().lower()
+    words = " ".join(str(row.get(k) or "") for k in ("brand", "name", "colour"))
+    base = decks.title_slug(f"{owner} {words}" if owner and owner != SHARED else words)
     base = base[:MAX_ID].rstrip("-") or "accessory"
     taken = {str(t).lower() for t in taken}
     candidate, n = base, 1

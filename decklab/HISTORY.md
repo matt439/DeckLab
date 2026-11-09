@@ -9,6 +9,12 @@ What each milestone and feature built, the decisions made along the way, and the
 - The [final review](design/visual-polish-completion-2026-11-07.md) retains 30 unchanged PNGs, source/cleanup proof, paired comparisons and final 106 page/state, 104 actual Chromium zoom and 24 receipt/persistence cases. Existing capture/editor, composition, variant, shell and task matrices pass. A bounded 4px Keep editing overflow below the 320px target is recorded.
 - Guarded frontend regression: 3,154 tests, two skips, 457.394 seconds. Final affected checks: 179 tests, one existing skip, 58.426 seconds. Ruff, JavaScript syntax, whitespace and source lengths pass. Household Safari/touch/software-keyboard, screen-reader, real-art and production durability gates remain; `E11-S30` stays partial. No household records, visibility or Forge games changed; the normal server stays stopped.
 
+## Accessory ids that hint at no one else's kit (2026-11-09; E8-S26)
+
+- Matt asked whether everyone's kit is private after E8-S26. It is, and a new test pins it (`test_his_kit_is_private_from_home_and_other_members`: Matt, User1 and another member see no trace of a member's row, picture, deck or kit, and changing or clearing it answers as for a row that isn't there).
+- One hint was left: ids are unique across every owner, so adding a product someone else kept privately came back with a `-2`. A new row with its own owner (not shared) now starts with that owner's id (`user2-kmc-hyper-matte-green`, `accessories.new_id`), so its `-2` comes only from the owner's own rows. Shared rows keep plain ids, and existing ids never change, so a clash with a personal row made before this can still give a `-2`.
+- No migration. Needs a pull and restart on the PC.
+
 ## Members' own sleeves, deck boxes and playmats (2026-11-08; E8-S26)
 
 - A member (a person with their own space, such as User5) now owns sleeves, deck boxes and playmats of their own: `permissions.accessory_owners` gives them their own id (never `shared`, which stays home's), so the Sleeves & boxes page, its pictures, Add, Edit, photos and Remove work for them over their own rows only. No kit is lent between spaces.
