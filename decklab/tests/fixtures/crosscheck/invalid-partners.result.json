@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "engine": "xmage",
+  "version": "1.4.63-dev (2026-10-31 09-42)",
+  "source_revision": "79aec614fc29d0c3eebd10fff0d5c1b40852bd52",
+  "engine_sha256": "596c4ca03d3be39230714bf28672543d30109c9c8eb8396d6f0ecdec20a67805",
+  "reproducible": false,
+  "ai": "MAD skill 6; one simulation thread",
+  "coverage": [
+    {
+      "deck_id": "baseline",
+      "missing": [],
+      "errors": [
+        "Thrun, Breaker of Silence=Invalid commander pair (Thrun, Breaker of Silence), Goreclaw, Terror of Qal Sisma=Invalid commander pair (Goreclaw, Terror of Qal Sisma)"
+      ],
+      "cards": 100,
+      "status": "invalid"
+    },
+    {
+      "deck_id": "opponent",
+      "missing": [],
+      "errors": [],
+      "cards": 100,
+      "status": "supported"
+    }
+  ],
+  "games": [
+    {
+      "arm": "baseline",
+      "number": 2,
+      "seed": 1501,
+      "starting_player": 1,
+      "status": "unsupported",
+      "winner": null,
+      "turns": 0,
+      "errors": 0
+    }
+  ],
+  "request_sha256": "5487755ea4e2de79e1e5c5ec487b2418bad796a507e9b182019c2ef1103a919d",
+  "bridge_sha256": "6330838c170dc9efbb68aecd25197c920286f4ae9db70fd409e7bd79532357dd",
+  "bridge_source_sha256": "8f524860e97a2ad78df2bab190ab038af020507386ac88d4e85123fb89e8c5d0",
+  "identity_sha256": "647f120e39799bedf12766d6e0327543ddd5d696601f19d77e618acda184f4af",
+  "format": "commander",
+  "seed": 1501,
+  "rules": "commander-1v1-40-life-21-commander-damage-london-no-free-mulligan",
+  "status": "unsupported"
+}
