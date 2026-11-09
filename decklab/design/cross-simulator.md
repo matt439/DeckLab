@@ -26,7 +26,50 @@ Record protocol/schema version, input digest, exact list digests, engine release
 
 ## Qualification and remaining work
 
-Implementation is in progress. Before the PR is complete, record focused fixture checks, native bridge compilation and disposable game evidence separately. Fixtures never establish actual XMage support or throughput. A game with synthetic cards never establishes all household cards work. Installation and acceptance on the live Linux server, broad Commander coverage, four-player pods, automatic engine selection and comparisons against a whole gauntlet are separate later work.
+Implemented and qualified on the development PC on 2026-11-09:
+
+- Guarded focused checks: 119 tests passed across the core, process ownership,
+  recorded native protocol, API/UI, build identity, restart and source inventory;
+  six additional CLI boundary tests passed. A broader existing integration run
+  completed 175 tests with six expected native/database qualification skips.
+- The pinned XMage bridge passed 15 native cases: four completed synthetic games,
+  four unsupported/invalid-list refusals, one timeout and six strict-JSON refusals.
+  Cases include casual Sol Ring without tournament filtering, exact double-faced
+  names, single and partner commanders, invalid colors and invalid partners.
+  The core independently parsed all 15 actual outputs; four public synthetic
+  request/result pairs now have 14 offline regression tests.
+- Final full-path validation completed eight games: baseline and changed lists
+  against an opponent, separately in Forge and XMage, for casual and Commander.
+  Both engines reported complete evidence in both formats. The immutable receipt
+  ids are `d6955988287617a3ef264b39346036ece5bc2999bb66e5dc1a6f8d97fe19f5b5`
+  (casual) and `ce5b774f703b625d6b9cf8b413af248afffccdd1e27585938aa30e942c26e426`
+  (Commander). These are synthetic integration proofs, not deck-strength samples.
+- Two native Windows ownership probes confirmed that a child is stopped both
+  after its parent exits and on cancellation, with separate stdout/stderr.
+  POSIX ownership and Forge group inheritance are fixture-tested; real Linux
+  process/runtime qualification remains separate.
+- The rendered review passed 20 cases in light/dark at 320, 393, 820 and 1440px,
+  with saved, unavailable, playing, partial, failed and loading states and an
+  intercepted explicit start/Stop. Manual inspection found and repaired a sticky
+  table heading covering the first engine's row; element-from-point assertions
+  now verify both engine names remain unoccluded. Full final evidence is under
+  `decklab/data/ui-review/20261109T130344Z-2b3c8496/` (ignored). A final eight-case
+  smoke after the CLI boundary changes also passed, under
+  `decklab/data/ui-review/20261109T130725Z-4f7af33b/`. Cleanup completed.
+
+Native XMage evidence is in the separate scratch release's `qualification-final/`;
+full-path receipts and plans are under the worktree's ignored
+`decklab/data/crosscheck/`. No household/member records, visibility settings,
+installed services or live server configuration were changed. No simulator JVM
+was left running after qualification.
+
+Fixtures never establish actual XMage support or throughput. A game with synthetic
+cards never establishes all household cards work. The first UI checks saved
+matchups; testing changes is available through the CLI. Installation and acceptance
+on the live Linux server, household Safari/touch, broader Commander coverage,
+four-player pods, automatic engine selection and comparisons against a whole
+gauntlet remain outside this initial slice. Sideboards and companions are excluded
+equally from both engines. XMage seeded replay is explicitly unproven.
 
 ## Setup and use
 

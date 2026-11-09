@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Independent Forge and XMage checks (2026-11-09; E3-S40)
+
+- A deck's Testing tab can explicitly play its saved list against one visible same-format opponent in both engines. The CLI also checks a card swap against its baseline. Scores, 95% ranges, unsupported cards and unfinished games remain separate; no combined rating or games enter Forge's field, gauntlet, Rankings or card statistics.
+- The optional pinned XMage 1.4.63 bridge uses its own rules and MAD AI in a disposable headless 1 GiB JVM, without a network server. Exact lists, request/build/JDK identities and immutable receipts are checked; missing cards, invalid lists, timeouts and native errors never become losses. Commander is regular Commander 1v1, including partners, not a multiplayer pod. Seed reproducibility is explicitly unproven.
+- Existing deck visibility and simulations permissions apply before readiness and result details. Both list fingerprints are mandatory on web starts. The bounded worker/queue has Stop, keepawake, shutdown and restart-busy handling; process ownership includes children after a crashed or exited leader. Late/detached controls and lost-write retries preserve deliberate user actions.
+- Validation: 119 focused guarded tests plus six CLI boundary tests; 175 broader integration tests with six expected separate-qualification skips; 15 native XMage cases; eight completed full-path baseline/changed games across both formats/engines; two native Windows descendant-cleanup probes; and 20 rendered Chromium cases with manual inspection and an occlusion regression. [The owner](design/cross-simulator.md) records exact evidence and limits.
+- No migration, live deployment, household data change or new service. Enable it deliberately with the pinned local release, explicit bridge build and `xmage_dir`; [setup](design/cross-simulator.md#setup-and-use). Live Linux and household-device acceptance remain separate. The initial web flow is saved matchups; swap comparisons are in the CLI.
+
 ## Remaining UI pages and browser qualification (2026-11-07; E11-S30)
 
 - Windows CI follow-up: compare the fixture root with the canonical runtime path, so an 8.3 temporary-directory spelling does not look like an escape. Production containment and cleanup guards are unchanged. All 22 focused harness/parcel checks pass (one existing directory-symlink skip).
