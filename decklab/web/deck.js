@@ -981,6 +981,13 @@ function deckKit(data) {
   const product = s.id.startsWith("product/");
   if (!product && !holdsKit(s.status)) {
     if (!canEditDeck(s)) return null;
+    if (!deckBuildLink(data)) {
+      return el("section", { class: "deck-section deck-kit", "aria-labelledby": "h-kit" },
+        el("h2", { id: "h-kit", text: "Sleeves and deck box" }),
+        el("p", { class: "sub" }, "An idea has no sleeves or deck box. ",
+          el("a", { href: editHref(s.id, data.version), text: "Edit this deck" }),
+          ", set Status to Building and save. Then choose its sleeves and deck box here."));
+    }
     return el("section", { class: "deck-section deck-kit", "aria-labelledby": "h-kit" },
       el("h2", { id: "h-kit", text: "Sleeves and deck box" }),
       el("p", { class: "sub" }, "An idea has no sleeves or deck box: choose them once you start building it, or when you mark it built in ",

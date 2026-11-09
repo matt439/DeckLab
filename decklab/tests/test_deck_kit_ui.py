@@ -42,6 +42,34 @@ class DeckKitUiTests(unittest.TestCase):
           assert.equal(kit.querySelectorAll('.deck-kit-tile').length, 0);
         """)
 
+    def test_member_idea_guidance_uses_the_editor_not_home_build_decks(self):
+        self.run_js("""
+          state.profile = {id: 'user2', name: 'User2', role: 'member', space: 'user2'};
+          state.profiles = [state.profile];
+          state.may = {see_accessories: true, accessories: true, see_inventory: ['user2'],
+            spaces: ['user2'], deck_spaces: ['user2']};
+          const page = withKit(); page.summary.status = 'idea';
+          page.summary.id = 'user2/casual/test'; page.summary.space = 'user2';
+          for (const version of ['target', 'owned']) {
+            page.version = version;
+            const kit = deckKit(page);
+            assert(kit.textContent.includes('set Status to Building and save'));
+            assert(kit.textContent.includes('Then choose its sleeves and deck box here.'));
+            assert.equal(kit.querySelector('a').getAttribute('href'),
+              `#/edit?id=user2%2Fcasual%2Ftest&v=${version}`);
+            assert(!kit.textContent.includes('Build decks'));
+            assert.equal(kit.querySelectorAll('button').length, 0);
+            assert.equal(kit.querySelectorAll('.deck-kit-tile').length, 0);
+          }
+          delete page.summary.space;
+          assert(deckKit(page).querySelector('a').getAttribute('href').startsWith('#/edit?'),
+            'older summaries still use the member editor');
+          page.summary.read_only = true;
+          assert.equal(deckKit(page), null);
+          page.summary.read_only = false; state.may.deck_spaces = [];
+          assert.equal(deckKit(page), null, 'no editor hint for a deck the member cannot edit');
+        """)
+
     def test_the_hint_respects_space_visibility_and_edit_rights(self):
         self.run_js("""
           const page = withKit(); page.summary.status = 'idea';
