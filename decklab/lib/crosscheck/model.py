@@ -201,6 +201,9 @@ def request(plan, arm, number):
 def engine_request(plan, name, arm, number):
     result = request(plan, arm, number)
     if name == "forge":
+        # Forge seeds a coin flip for the actual first player. Its alternating
+        # deck-seat assignment is a different fact from XMage's requested start.
+        result["seat_assignment"] = result.pop("starting_player")
         result.update(engine_sha256=plan["engine_identities"][name],
                       forge_stream=digest([plan["decks"]["baseline"]["card_sha"],
                                            plan["decks"]["opponent"]["card_sha"]])[:16],

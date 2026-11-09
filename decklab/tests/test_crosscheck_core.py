@@ -37,7 +37,7 @@ def response(request, name="xmage", state="completed", winner="subject"):
             "reproducible": name == "forge", "status": state,
             "coverage": [{"deck_id": d["id"], "status": "supported", "missing": []} for d in request["decks"]],
             "games": [{"arm": role, "number": request["game_number"], "seed": request["seed"],
-                       "starting_player": request["starting_player"], "status": state,
+                       "starting_player": request.get("starting_player", request.get("seat_assignment")), "status": state,
                        "winner": winner if state == "completed" else None, "turns": 8}]}
 
 
@@ -255,6 +255,7 @@ class ResponseTests(unittest.TestCase):
             lambda v: v.update(identity_sha256="f" * 64), lambda v: v.update(seed=True),
             lambda v: v["games"][0].update(number=2), lambda v: v["games"][0].update(arm="variant"),
             lambda v: v["games"][0].update(seed=2), lambda v: v["games"][0].update(starting_player=False),
+            lambda v: v["games"][0].update(starting_player=1),
             lambda v: v["games"].append(deepcopy(v["games"][0])),
             lambda v: v["games"][0].update(status="failed", winner="subject"),
             lambda v: v.update(duration_seconds=float("nan")),

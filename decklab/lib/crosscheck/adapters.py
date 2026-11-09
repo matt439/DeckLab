@@ -222,6 +222,8 @@ def validate_response(value, name, request_data, expected_identity, provenance=N
     first = game.get("starting_player")
     if first is not None:
         integer(first, "The starting player", 0, 1)
+    if name == "xmage" and first != request_data["starting_player"]:
+        raise CrosscheckError("The simulator did not use the requested starting player.")
     turns = game.get("turns")
     if turns is not None:
         integer(turns, "The turn count", 0, 100000)

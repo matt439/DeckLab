@@ -52,7 +52,7 @@ def run(request_data, request_sha):
     # switch the random stream; engines' random schemes still differ from each other.
     stream = request_data["forge_stream"]
     ordered = sorted(entries, key=lambda e: e["card_sha"])
-    flip = int(ordered[0]["card_sha"] != entries[0]["card_sha"]) ^ request_data["starting_player"]
+    flip = int(ordered[0]["card_sha"] != entries[0]["card_sha"]) ^ request_data["seat_assignment"]
     with tempfile.TemporaryDirectory(prefix="forge-crosscheck-") as folder:
         result = runner.run(entries[0], entries[1], 1, by="crosscheck", results_dir=folder,
                             workers=1, local=True, exact=True, save=False, numbers=[0],
