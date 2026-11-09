@@ -1,4 +1,5 @@
 """Exact-list second opinions, separated rates and immutable partial evidence."""
+import contextlib
 import json
 import tempfile
 import threading
@@ -35,7 +36,9 @@ def response(request, name="xmage", state="completed", winner="subject"):
     return {"schema": 1, "engine": name, "version": "fixture-1", identity_key: ("f" if name == "forge" else "a") * 64,
             "request_sha256": model.digest(request), "format": request["format"], "seed": request["seed"],
             "reproducible": name == "forge", "status": state,
-            "coverage": [{"deck_id": d["id"], "status": "supported", "missing": []} for d in request["decks"]],
+            "coverage": [{"deck_id": d["id"], "status": "supported", "missing": [],
+                          "cards": sum(row["quantity"] for key in ("main", "commander") for row in d[key])}
+                         for d in request["decks"]],
             "games": [{"arm": role, "number": request["game_number"], "seed": request["seed"],
                        "starting_player": request.get("starting_player", request.get("seat_assignment")), "status": state,
                        "winner": winner if state == "completed" else None, "turns": 8}]}
@@ -98,6 +101,11 @@ class CrosscheckCoreTests(unittest.TestCase):
         bad_schema["id"] = model.digest(bad_schema)
         with self.assertRaises(crosscheck.CrosscheckError):
             model.validate_plan(bad_schema)
+
+    def test_duplicate_json_members_and_nonfinite_literals_are_refused(self):
+        for raw in (b'{"schema":1,"schema":1}', b'{"value":NaN}', b'{"value":Infinity}'):
+            with self.subTest(raw=raw), self.assertRaises(crosscheck.CrosscheckError):
+                model.parse_json(raw)
 
     def test_current_revision_is_checked_even_when_cards_have_not_changed(self):
         captured = self.plan()
@@ -285,7 +293,7 @@ class ProcessBoundaryTests(unittest.TestCase):
             raise jobs.Stopped()
         with tempfile.TemporaryDirectory() as folder:
             target = Path(folder) / "game"
-            with mock.patch.object(adapters.subprocess, "Popen", return_value=process) as launch, mock.patch.object(adapters, "_terminate") as terminate, mock.patch.dict(adapters.os.environ, {
+            with mock.patch("decklab.lib.crosscheck.processes.spawn", return_value=process) as launch, mock.patch.object(adapters, "_terminate") as terminate, mock.patch.dict(adapters.os.environ, {
                 "JAVA_TOOL_OPTIONS": "fixture", "_JAVA_OPTIONS": "fixture", "JDK_JAVA_OPTIONS": "fixture", "CLASSPATH": "fixture"
             }):
                 with self.assertRaises(jobs.Stopped):
@@ -299,9 +307,47 @@ class ProcessBoundaryTests(unittest.TestCase):
     def test_process_watchdog_is_not_counted_as_a_completed_draw(self):
         process = mock.Mock()
         process.poll.return_value = None
-        with tempfile.TemporaryDirectory() as folder, mock.patch.object(adapters.subprocess, "Popen", return_value=process), mock.patch.object(adapters, "_terminate") as terminate, mock.patch.object(adapters.time, "monotonic", side_effect=[0, 1000]):
+        with tempfile.TemporaryDirectory() as folder, mock.patch("decklab.lib.crosscheck.processes.spawn", return_value=process), mock.patch.object(adapters, "_terminate") as terminate, mock.patch.object(adapters.time, "monotonic", side_effect=[0, 1000]):
             with self.assertRaisesRegex(crosscheck.CrosscheckError, "process-timeout"):
                 adapters._execute(["fixture-java"], {"schema": 1}, Path(folder) / "game", 5, lambda: None)
             terminate.assert_called_once_with(process)
+
+
+class ForgeMirrorTests(unittest.TestCase):
+    def _play(self, captured, role):
+        from decklab.lib.crosscheck import processes, worker
+        from decklab.lib.forge import engine, install, runner
+        current = {"kind": engine.KIND_DECKLAB, "ai_sha": {"Default": "d" * 64, "Zed": "e" * 64}}
+        request = model.engine_request(captured, "forge", role, 1)
+        called = {}
+        def simulated(subject, opponent, games, **kwargs):
+            called.update(kwargs)
+            ordered = runner._ordered(subject, opponent, current)
+            subject_side = 0 if ordered[0] is subject else 1
+            return {"sides": ordered, "engine": {"fixture": True},
+                    "batches": [{"games": [{"r": "win", "w": subject_side, "first": subject_side,
+                                             "turns": 9, "ai_to": 0}]}]}
+        with mock.patch.object(adapters, "details", side_effect=details), mock.patch.object(install, "script_index", return_value={}), mock.patch.object(install, "_forge_card", return_value="supported"), mock.patch.object(engine, "today", return_value=current), mock.patch.object(runner, "run", side_effect=simulated), mock.patch.object(processes, "install_inherited_group_launch", side_effect=contextlib.nullcontext):
+            result = worker.run(request, model.digest(request))
+        self.assertEqual(result["games"][0]["winner"], "subject")
+        self.assertEqual(result["games"][0]["starting_player"], 0)
+        self.assertEqual(called["seeds"]["flip"], 1)
+
+    def test_mirror_cards_with_different_pilots_keep_subject_winner_and_seat(self):
+        a, b = entry("casual/a"), entry("casual/b")
+        a["pilot"]["profile"] = "Zed"
+        with mock.patch.object(crosscheck, "status", side_effect=readiness):
+            captured = crosscheck.plan(a, b, games=1)
+        self._play(captured, "baseline")
+
+    def test_variant_that_becomes_opponents_list_keeps_its_own_pilot_and_winner(self):
+        a, b = entry("casual/a"), entry("casual/b", "Savannah Lions")
+        a["pilot"]["profile"] = "Zed"
+        with mock.patch.object(crosscheck, "status", side_effect=readiness):
+            captured = crosscheck.plan(a, b, games=1, remove=["4 Elite Vanguard"], add=["4 Savannah Lions"])
+        self.assertEqual(captured["decks"]["variant"]["card_sha"], captured["decks"]["opponent"]["card_sha"])
+        self._play(captured, "variant")
+
+
 if __name__ == "__main__":
     unittest.main()

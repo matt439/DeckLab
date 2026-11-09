@@ -5,13 +5,13 @@ results directory; its game summaries and per-card data never enter rankings.
 """
 import contextlib
 import hashlib
-import json
 import sys
 import tempfile
 from pathlib import Path
 
 from . import adapters
-from .model import MAX_BYTES, SCHEMA, CrosscheckError, canonical
+from . import processes as owned_processes
+from .model import MAX_BYTES, SCHEMA, CrosscheckError, canonical, parse_json
 
 
 def _entry(deck, pilot):
@@ -25,7 +25,7 @@ def _entry(deck, pilot):
 
 
 def run(request_data, request_sha):
-    from decklab.lib.forge import install, runner, seeds
+    from decklab.lib.forge import engine, install, runner, seeds
     found = adapters.details("forge")
     if found["identity"] != request_data.get("engine_sha256"):
         raise CrosscheckError("Forge changed after this game was planned.")
@@ -51,9 +51,13 @@ def run(request_data, request_sha):
     # Both arms use the baseline/opponent stream. Switching a card cannot silently
     # switch the random stream; engines' random schemes still differ from each other.
     stream = request_data["forge_stream"]
-    ordered = sorted(entries, key=lambda e: e["card_sha"])
-    flip = int(ordered[0]["card_sha"] != entries[0]["card_sha"]) ^ request_data["seat_assignment"]
-    with tempfile.TemporaryDirectory(prefix="forge-crosscheck-") as folder:
+    current = engine.today(engine.KIND_DECKLAB, read_only=True)
+    ordered = runner._ordered(entries[0], entries[1], current)
+    # Mirror lists may differ only by their AI profile/switches. Use the same
+    # complete side ordering as Forge, preserving stable order for exact mirrors.
+    subject_side = 0 if ordered[0] is entries[0] else 1
+    flip = subject_side ^ request_data["seat_assignment"]
+    with tempfile.TemporaryDirectory(prefix="forge-crosscheck-") as folder, owned_processes.install_inherited_group_launch():
         result = runner.run(entries[0], entries[1], 1, by="crosscheck", results_dir=folder,
                             workers=1, local=True, exact=True, save=False, numbers=[0],
                             seeds={"base": request_data["seed"], "stream": stream, "flip": flip},
@@ -63,7 +67,11 @@ def run(request_data, request_sha):
         raise CrosscheckError("Forge did not return exactly one game.")
     game = games[0]
     sides = result["sides"]
-    subject_side = next(i for i, side in enumerate(sides) if side["card_sha"] == entries[0]["card_sha"])
+    if (len(sides) != 2 or any(engine.side_list(side, current) != engine.side_list(ordered[i], current)
+                               for i, side in enumerate(sides))):
+        raise CrosscheckError("Forge did not preserve the captured cards and pilots.")
+    if game["r"] not in ("win", "draw", "timeout", "error"):
+        raise CrosscheckError("Forge returned an unrecognized game outcome.")
     state = "timeout" if game["r"] == "timeout" else "failed" if game["r"] == "error" else "completed"
     winner = None
     if state == "completed":
@@ -91,7 +99,7 @@ def main():
         if path.stat().st_size > MAX_BYTES:
             raise CrosscheckError("The game request is too large.")
         raw = path.read_bytes()
-        request_data = json.loads(raw)
+        request_data = parse_json(raw)
         if canonical(request_data) != raw:
             raise CrosscheckError("The game request is not canonical JSON.")
         with contextlib.redirect_stdout(sys.stderr):

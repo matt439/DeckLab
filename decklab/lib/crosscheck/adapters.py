@@ -4,17 +4,14 @@ Forge retains its existing one-worker slot accounting. XMage claims one of the
 same PC-wide slots, and fails closed when that accounting is unavailable.
 """
 import hashlib
-import json
 import os
-import signal
-import subprocess
 import sys
 import time
 from contextlib import nullcontext
 from functools import lru_cache
 from pathlib import Path
 
-from .model import CrosscheckError, ENGINES, SCHEMA, canonical, digest, integer
+from .model import CrosscheckError, ENGINES, SCHEMA, canonical, digest, integer, parse_json
 
 MAX_OUTPUT = 1024 * 1024
 MAX_LOG = 8 * 1024 * 1024
@@ -45,7 +42,8 @@ def _forge_details():
     provenance = {k: current[k] for k in engine.ENGINE_FIELDS}
     java = Path(setup["java"])
     release = java.parent.parent / "release"
-    own_source = {name: file_digest(Path(__file__).parent / name) for name in ("adapters.py", "model.py", "worker.py")}
+    own_source = {name: file_digest(Path(__file__).parent / name)
+                  for name in ("adapters.py", "model.py", "worker.py", "processes.py")}
     provenance.update(ai_sha=current.get("ai_sha"), jar_sha256=file_digest(jar),
                       bridge_source_sha256=simjar.source_sha256(), java_sha256=file_digest(java),
                       java_release_sha256=file_digest(release) if release.is_file() else None,
@@ -93,24 +91,8 @@ def status():
 
 
 def _terminate(process):
-    if process.poll() is not None:
-        return
-    try:
-        if os.name == "nt":
-            subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL, check=False, timeout=15,
-                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-        else:
-            os.killpg(process.pid, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
-    except (OSError, subprocess.TimeoutExpired):
-        process.kill()
-    try:
-        process.wait(timeout=10)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait(timeout=10)
+    from . import processes
+    processes.terminate(process)
 
 
 def _execute(command, request_data, folder, timeout_seconds, tick):
@@ -119,8 +101,6 @@ def _execute(command, request_data, folder, timeout_seconds, tick):
     folder.mkdir(parents=True, exist_ok=False)
     request_path, stdout_path, stderr_path = (folder / n for n in ("request.json", "response.json", "engine.log"))
     request_path.write_bytes(canonical(request_data))
-    options = {"creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)} if os.name == "nt" else {
-        "start_new_session": True}
     # A disposable cwd contains any engine-created caches. The Python Forge worker
     # still imports this exact checkout rather than depending on that cwd.
     from decklab.lib import config
@@ -131,9 +111,10 @@ def _execute(command, request_data, folder, timeout_seconds, tick):
     process = None
     began = time.monotonic()
     try:
+        from . import processes
         with stdout_path.open("wb") as output, stderr_path.open("wb") as error:
-            process = subprocess.Popen([*command, str(request_path.resolve())], stdin=subprocess.DEVNULL,
-                                       stdout=output, stderr=error, cwd=folder, env=environment, **options)
+            process = processes.spawn([*command, str(request_path.resolve())], cwd=folder, env=environment,
+                                      stdout=output, stderr=error)
             while process.poll() is None:
                 tick()
                 if time.monotonic() - began > timeout_seconds + STARTUP_SECONDS:
@@ -147,7 +128,7 @@ def _execute(command, request_data, folder, timeout_seconds, tick):
             raise CrosscheckError("process-failed")
         raw = stdout_path.read_bytes()
         try:
-            parsed = json.loads(raw.decode("utf-8"))
+            parsed = parse_json(raw)
         except (ValueError, UnicodeError):
             raise CrosscheckError("invalid-response") from None
         return parsed, hashlib.sha256(raw).hexdigest()
@@ -183,11 +164,15 @@ def validate_response(value, name, request_data, expected_identity, provenance=N
     if not isinstance(version, str) or not version or len(version) > 160:
         raise CrosscheckError("The simulator response has no valid engine version.")
     role = request_data["decks"][0]["id"]
-    coverage = value.get("coverage")
-    if not isinstance(coverage, list) or len(coverage) != 2:
+    games, coverage = value.get("games"), value.get("coverage")
+    early_timeout = (value.get("status") == "timeout" and coverage == [] and isinstance(games, list)
+                     and len(games) == 1 and isinstance(games[0], dict) and games[0].get("status") == "timeout")
+    if not isinstance(coverage, list) or (len(coverage) != 2 and not early_timeout):
         raise CrosscheckError("The simulator did not confirm both exact deck lists.")
     known = {d["id"]: {c["name"] for key in ("main", "commander") for c in d[key]}
              for d in request_data["decks"]}
+    counts = {d["id"]: sum(c["quantity"] for key in ("main", "commander") for c in d[key])
+              for d in request_data["decks"]}
     seen = set()
     unsupported = False
     for item in coverage:
@@ -201,11 +186,25 @@ def validate_response(value, name, request_data, expected_identity, provenance=N
             raise CrosscheckError("The simulator returned invalid card coverage.")
         if item["status"] != "invalid" and ((item["status"] == "supported") != (not missing)):
             raise CrosscheckError("The simulator returned contradictory card coverage.")
+        if (name == "xmage" and item["status"] == "supported"
+                and (type(item.get("cards")) is not int or item["cards"] != counts[item["deck_id"]])):
+            raise CrosscheckError("The simulator did not load every requested card unchanged.")
         unsupported |= bool(missing) or item["status"] == "invalid"
-    games = value.get("games")
     if unsupported:
         if games != []:
-            raise CrosscheckError("A simulator played a list with unsupported cards.")
+            # XMage retains its initialized, nonplayed game stub after preflight
+            # refusal. It is evidence of no game only under this exact contract.
+            if (value.get("status") not in ("unsupported", "invalid") or not isinstance(games, list)
+                    or len(games) != 1 or not isinstance(games[0], dict)):
+                raise CrosscheckError("A simulator played a list with unsupported cards.")
+            stub = games[0]
+            if (stub.get("status") not in ("unsupported", "invalid") or stub.get("winner") is not None
+                    or type(stub.get("turns")) is not int or stub["turns"] != 0 or stub.get("arm") != role
+                    or type(stub.get("number")) is not int or stub["number"] != request_data["game_number"]
+                    or type(stub.get("seed")) is not int or stub["seed"] != request_data["seed"]
+                    or type(stub.get("starting_player")) is not int
+                    or stub["starting_player"] != request_data.get("starting_player")):
+                raise CrosscheckError("The simulator's preflight refusal did not match its exact request.")
         return None, coverage
     if not isinstance(games, list) or len(games) != 1:
         raise CrosscheckError("The simulator must return exactly one requested game.")

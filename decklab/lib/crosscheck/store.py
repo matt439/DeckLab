@@ -1,5 +1,4 @@
 """Immutable, content-addressed receipts outside all Forge result readers."""
-import json
 import math
 import os
 import tempfile
@@ -7,7 +6,7 @@ from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 
-from .model import HASH, MAX_BYTES, SCHEMA, CrosscheckError, canonical, digest, engine_request, integer, text, validate_plan
+from .model import HASH, MAX_BYTES, SCHEMA, CrosscheckError, canonical, digest, engine_request, integer, parse_json, text, validate_plan
 
 ENGINE_STATES = ("complete", "partial", "unavailable", "unsupported", "invalid", "cancelled")
 REASONS = (None, "bridge_unavailable", "engine_changed", "unsupported_cards", "invalid_list", "timeout",
@@ -155,7 +154,7 @@ def load(receipt_id, results_dir=None):
     try:
         if path.stat().st_size > MAX_BYTES:
             return None
-        found = validate_receipt(json.loads(path.read_bytes()))
+        found = validate_receipt(parse_json(path.read_bytes()))
         return found if found["id"] == receipt_id else None
     except (OSError, ValueError, TypeError, OverflowError, RecursionError):
         return None

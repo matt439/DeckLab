@@ -27,6 +27,25 @@ class CrosscheckError(ValueError):
     """A bounded request, installation or saved receipt could not be used."""
 
 
+def parse_json(raw):
+    """Reject duplicate members/nonfinite literals instead of silently normalizing."""
+    if not isinstance(raw, (str, bytes)) or len(raw) > MAX_BYTES:
+        raise CrosscheckError("The cross-check JSON is too large or invalid.")
+    def members(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise CrosscheckError("The cross-check JSON repeats an object member.")
+            result[key] = value
+        return result
+    def constant(value):
+        raise CrosscheckError("The cross-check JSON contains a nonfinite number.")
+    try:
+        return json.loads(raw, object_pairs_hook=members, parse_constant=constant)
+    except (ValueError, UnicodeError, RecursionError):
+        raise CrosscheckError("The cross-check JSON is invalid.") from None
+
+
 def canonical(value):
     try:
         data = json.dumps(value, sort_keys=True, ensure_ascii=False, allow_nan=False,
