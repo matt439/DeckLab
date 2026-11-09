@@ -101,9 +101,10 @@ class XMageBuildTests(unittest.TestCase):
         self.assertFalse(describe(self.home, build_dir=self.output)["ready"])
 
     def test_changed_engine_and_extra_jar_are_refused(self):
-        for kind in ("changed", "extra"):
+        for kind in ("changed", "extra", "extra-uppercase"):
             with self.subTest(kind=kind):
-                target = self.home / "lib" / ("mage-1.4.63.jar" if kind == "changed" else "extra.jar")
+                name = "mage-1.4.63.jar" if kind == "changed" else "extra.JAR" if kind == "extra-uppercase" else "extra.jar"
+                target = self.home / "lib" / name
                 before = target.read_bytes() if target.exists() else None
                 target.write_bytes(b"unexpected")
                 self.assertFalse(describe(self.home, build_dir=self.output)["ready"])

@@ -36,7 +36,8 @@ def _server(home):
 def _engine_sha(home):
     entries = sorted((f.relative_to(home).as_posix(), _sha(f))
                      for directory in ("lib", "plugins")
-                     for f in (home / directory).glob("*.jar"))
+                     for f in (home / directory).iterdir()
+                     if f.is_file() and f.suffix.lower() == ".jar")
     return hashlib.sha256("".join(f"{name}\0{sha}\n" for name, sha in entries).encode()).hexdigest()
 
 
