@@ -240,6 +240,13 @@ class PreviewTests(PreconTestCase):
                          {"name": "Ghalta, Primal Hunger", "set": "rix", "finish": "foil", "condition": "",
                           "language": "", "notes": "Test Dinos precon (Test Commander)"})
 
+    def test_the_preview_says_random_box_contents_are_not_added(self):
+        self.assertEqual(api.precon_preview("TestDinos_TST", "user2")["notes"], [precons.RANDOM_NOTE])
+
+    def test_a_jumpstart_pack_also_asks_for_the_right_version(self):
+        self.assertEqual(precons.notes("Jumpstart"), [precons.VERSION_NOTE, precons.RANDOM_NOTE])
+        self.assertEqual(precons.notes("Theme Deck"), [precons.RANDOM_NOTE])
+
     def test_a_casual_deck_with_a_sideboard(self):
         view = api.precon_preview("ElfTheme_TST", "user3")
         self.assertEqual((view["kind"], view["title"]), ("casual", "Elf Theme"))

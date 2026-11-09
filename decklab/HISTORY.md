@@ -23,6 +23,10 @@ What each milestone and feature built, the decisions made along the way, and the
 - No migration: the `accessory` table's owner already takes any profile id. Needs a pull and restart on the PC.
 - Tests: `decklab/tests/test_member_accessories.py`; the permission, public-kit, editor and visibility tests now pin the member's own kit.
 
+## Add a precon: what the box held beyond its list (2026-11-09)
+
+- Some boxes held random cards beside the fixed deck: boosters with Intro Packs and Planeswalker Decks, a 2-card Collector Booster sample pack with many Commander decks from 2022. MTGJSON's deck file is only the fixed list, so Add a precon adds the fixed part correctly and never the random part. Its preview (`notes` in `GET /api/precons/preview`, `precons.notes`) and `collection add-precon --dry-run` now say so, and point to Import or Add card for those cards; a Jumpstart pack also asks you to check that the chosen list is the version you opened.
+
 ## Receipt tools and empty Considering (2026-11-07; E11-S30)
 
 - Receipt filters omit the enclosing track and use the available phone width, with relative two/one-column fallbacks. A single card/token part groups the retained delivery shortcut beside Tools; mixed/product orders keep its order-wide scope outside inactive parts. Confirmation, row selection, checks, drafts and preview/apply remain.

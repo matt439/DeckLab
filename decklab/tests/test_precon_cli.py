@@ -42,6 +42,7 @@ class CommandLineTests(PreconTestCase):
         self.assertIn("Would make user2/commander/ghalta-test-dinos (Ghalta: Test Dinos), a built commander deck: "
                       "Commander 1, Deck 24.", out)
         self.assertIn("4 Dinosaur", out)
+        self.assertIn("Any booster or sample pack that came in the box isn't included", out)
         self.assertTrue(out.rstrip().endswith("Nothing saved (--dry-run)."))
         self.assertEqual((self.writes_made(), self.rows("user2")["rows"]), (before, rows))
 
