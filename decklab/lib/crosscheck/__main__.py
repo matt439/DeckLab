@@ -62,6 +62,13 @@ def _print(result, as_json=False):
 
 
 def main(argv=None):
+    from decklab.lib.inventory import entry
+    with entry.command():
+        return _main(argv)
+
+
+def _main(argv=None):
+    from decklab.lib import decks, inventory, keepawake
     args = _parser().parse_args(argv)
     try:
         if args.command == "status":
@@ -89,9 +96,16 @@ def main(argv=None):
             return 0
         if any(identity is None for identity in captured["engine_identities"].values()):
             raise CrosscheckError("A selected simulator is not ready. Check crosscheck status and build the local bridge explicitly.")
-        receipt = run(captured)
+        with keepawake.hold_while():
+            receipt = run(captured)
         _print(view(receipt), args.json)
         return 0 if receipt["status"] == "completed" else 1
+    except inventory.Unavailable:
+        print("Deck Lab's database is unavailable; no cross-check was started.", file=sys.stderr)
+        return 2
+    except (decks.DeckNotFound, decks.DeckFileError) as error:
+        print(str(error), file=sys.stderr)
+        return 1
     except (CrosscheckError, OSError) as error:
         if isinstance(error, OSError):
             print("Deck Lab could not read or save cross-check evidence.", file=sys.stderr)
@@ -100,8 +114,10 @@ def main(argv=None):
         if isinstance(error, CrosscheckStopped) and getattr(error, "receipt_id", None):
             print("Partial receipt: " + error.receipt_id, file=sys.stderr)
         return 1
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as error:
         print("Cross-check stopped; completed evidence was preserved.", file=sys.stderr)
+        if getattr(error, "receipt_id", None):
+            print("Partial receipt: " + error.receipt_id, file=sys.stderr)
         return 1
 
 
