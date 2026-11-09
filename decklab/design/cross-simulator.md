@@ -32,6 +32,8 @@ Implemented and qualified on the development PC on 2026-11-09:
   recorded native protocol, API/UI, build identity, restart and source inventory;
   six additional CLI boundary tests passed. A broader existing integration run
   completed 175 tests with six expected native/database qualification skips.
+  The existing gauntlet, page asset/script-order and matchup-layout contracts
+  passed all 74 tests after including the new section and deferred script.
 - The pinned XMage bridge passed 15 native cases: four completed synthetic games,
   four unsupported/invalid-list refusals, one timeout and six strict-JSON refusals.
   Cases include casual Sol Ring without tournament filtering, exact double-faced
