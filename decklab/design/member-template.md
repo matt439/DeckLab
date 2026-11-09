@@ -23,7 +23,7 @@ Decision 3 is PBD's rule with one word changed. PBD already says "a visible thin
 - their profile settings;
 - the Forge results, field runs and variant tests made only of their own decks.
 
-A member has no orders, products, watchlist, accessories, Packing plan or Commander-night notes. Those stay home-only for good.
+A member has no orders, products, watchlist, Packing plan or Commander-night notes. Those stay home-only for good. (Accessories were on this list until Matt asked on 2026-11-08 for members to have their own: E8-S26.)
 
 **What a member sees of others.** Nothing, unless the owner made that thing public. A hidden thing gets exactly the answer a missing thing gets: no id, title, count, existence, "who" or "when", no Forge side and no other profile's details (PBD §1, "Hidden looks the same as missing").
 

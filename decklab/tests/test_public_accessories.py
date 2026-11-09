@@ -58,8 +58,9 @@ class PublicAccessoryTests(AccessoriesApiTestCase):
     def test_outside_readers_get_hidden_holder_words_and_no_writer_lists(self):
         self.public("shared", True)
         view = self.view("user2")
+        # A member's own kit is theirs to change (E8-S25): User2 has no rows yet, so no token.
         self.assertEqual((view["sha256"], view["exists"], view["owners"], view["products"], view["holders_options"]),
-                         (None, False, [], [], []))
+                         (None, False, [{"id": "user2", "name": "User2"}], [], []))
         self.assertTrue(all(not i["editable"] for i in view["items"]))
         for item in view["items"]:
             for user in item["used_by"]:
@@ -86,25 +87,33 @@ class PublicAccessoryTests(AccessoriesApiTestCase):
         self.assertEqual(caught.exception.status, 404)
 
     def test_public_reader_stays_out_of_save_fetch_and_staged_endpoints(self):
+        # User2 has a kit of his own (E8-S25), so he may write, but never another owner's public rows.
         with access.viewing("user2"):
-            for function, body in ((api_acc.save_accessory, {"profile": "user2"}),
-                                   (api_acc.fetch_picture, {"profile": "user2", "url": "https://example.test/a"})):
-                # The fixture's writer resolver includes User2, as the real one would.
-                with self.subTest(function=function.__name__), self.assertRaises(api_acc.ApiError) as caught:
-                    function(json.dumps(body).encode())
-                self.assertEqual(caught.exception.status, 403)
-            with self.assertRaises(api_acc.ApiError) as caught:
-                api_acc.staged_image("0" * 32 + ".png")
-            self.assertEqual(caught.exception.status, 403)
+            token = api_acc.accessories_view()["sha256"]
+        with mock.patch.object(api_acc.accessory_fetch, "fetch", side_effect=AssertionError("downloaded")):
+            for function, fields in (
+                (api_acc.save_accessory, {"sha256": token, "action": "edit", "id": self.hers,
+                                          "row": {"quantity": 1}}),
+                (api_acc.save_accessory, {"sha256": token, "action": "remove", "id": self.hers}),
+                (api_acc.save_accessory, {"sha256": token, "action": "add",
+                                          "row": {**SLEEVES, "owner": "shared"}}),
+                (api_acc.fetch_picture, {"id": self.hers, "url": "https://example.test/image.png"})):
+                with self.subTest(function=function.__name__, fields=fields), access.viewing("user2"):
+                    status = self.error(function, profile="user2", **fields).status
+                    self.assertIn(status, (400, 403, 404, 409))
+        with access.viewing("user1"):
+            self.assertEqual(next(i for i in api_acc.accessories_view()["items"] if i["id"] == self.hers)["quantity"],
+                             100)
 
     def test_reader_helpers_do_not_widen_write_helpers_even_for_an_admin(self):
         matt = {"id": "matt", "space": "home", "role": "admin"}
         member = {"id": "user2", "space": "user2", "role": "member"}
         self.assertEqual(permissions.accessory_owners(matt), {"matt", "shared"})
         self.assertEqual(permissions.accessory_readers(matt, public={"user1"}), {"matt", "shared", "user1"})
-        self.assertEqual(permissions.accessory_readers(member, public={"user1"}), {"user1"})
+        self.assertEqual(permissions.accessory_owners(member), {"user2"})       # his own only (E8-S25)
+        self.assertEqual(permissions.accessory_readers(member, public={"user1"}), {"user1", "user2"})
         self.assertEqual(permissions.accessory_readers(None, public={"user1"}), {"user1"})
-        self.assertFalse(permissions.can(member, "accessories.edit"))
+        self.assertTrue(permissions.can(member, "accessories.edit"))
         with access.viewing("matt"):
             self.assertTrue(guard.sees_kit("casual/hers"))
             self.assertFalse(guard.sees_kit("casual/hers", guard.accessory_owners()))

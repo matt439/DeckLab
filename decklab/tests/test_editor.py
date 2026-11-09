@@ -20,7 +20,7 @@ import shutil
 import unittest
 from unittest import mock
 
-from decklab.lib import access, accessories, api, cards, decks, permissions
+from decklab.lib import access, accessories, api, cards, decks
 from decklab.tests.test_api import FIXTURES, ApiTestCase, _write
 from decklab.tests.test_decks import prose
 
@@ -797,7 +797,7 @@ class PersonSpaceTests(EditorTestCase):
         self.assertEqual(index["casual/gruul-test"]["space"], "home")
         view = api.deck_view("user2/casual/user2-elves")
         self.assertEqual(view["owned"]["totals"]["missing"], 3)
-        self.assertIsNone(view["summary"]["kit"])
+        self.assertEqual(view["summary"]["kit"]["owner"], "user2")     # his own kit (E8-S26)
         self.assertIs(view["table"]["stale"], False)            # worked out in User2's pool
         self.assertEqual(api.edit_view("user2/casual/user2-elves")["id"], "user2/casual/user2-elves")
 
@@ -813,11 +813,11 @@ class PersonSpaceTests(EditorTestCase):
         error = self.assertApiError(400, api.save_deck, self.body(
             "user2", id=deck_id, sha256=saved["sha256"], fields={"player": "user"}))
         self.assertIn("player", {b["field"] for b in error.extra["blocks"]})
-        # Sleeves and deck boxes are the home's: a person may not set them at all (permissions), and the
-        # refusal names no space (E10-S38).
-        self.assertApiError(403, api.save_deck, self.body(
-            "user2", id=deck_id, sha256=saved["sha256"], fields={"status": "built", "sleeves": "red"}),
-            contains=permissions.ACCESSORIES_PRIVATE)
+        # His deck's sleeves and deck box are his own kit (E8-S26), set as a home deck's are.
+        built = api.save_deck(self.body(
+            "user2", id=deck_id, sha256=saved["sha256"], fields={"status": "built", "sleeves": "red"}))
+        self.assertTrue(built["saved"])
+        self.assertIn("- **Sleeves:** red", path.read_text(encoding="utf-8"))
         error = self.assertApiError(400, lambda: self.create_user2s(fields={"player": "wife"}))
         self.assertEqual(error.extra["blocks"][0]["field"], "player")
         self.assertApiError(404, api.create_deck, self.body(title="X", kind="casual", space="user3"))
@@ -841,10 +841,10 @@ class PersonSpaceTests(EditorTestCase):
                                                                                     "name": "Llanowar Elves"}]}}))
         self.assertLess(home["owned"]["totals"]["missing"], 3)       # home's five copies count there
 
-    def test_a_person_deck_gets_no_accessories(self):
+    def test_a_person_deck_holds_its_own_accessories(self):
         self.create_user2s()
         from decklab.lib.api import accessories as accessories_api
-        self.assertApiError(400, accessories_api._holder_id, "user2/casual/user2-elves", "holder")
+        self.assertEqual(accessories_api._holder_id("user2/casual/user2-elves", "holder"), "user2/casual/user2-elves")
 
     def test_a_person_wishlist_counts_their_own_collection(self):
         self.box.state.seed_wishlist("user2", [{"name": "Llanowar Elves", "set": "", "number": ""}])

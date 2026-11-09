@@ -140,7 +140,8 @@ viewer is an admin. The table's Activity rows and mixed-change words follow it.
 
 One rule is about reading (permissions.accessory_owners): each accessory
 is seen only by its owner, a shared one by every home profile, and a
-person with their own space (User2, User3, User4) sees none. The
+person with their own space (User2, User3, User4) sees only their own
+(E8-S25), never the shared ones. The
 viewer is the tunnel login's profile, or on the home network the profile
 the page's chooser names in access.VIEWER_HEADER (none named: everything for
 a script, none for anyone else). A deck's sleeves and deck box are seen only by those who
@@ -155,8 +156,8 @@ info), the editor (fields and field_text of Sleeves and Deck box None, not
 in editable_fields, no other_sleeves or accessory rows, also in a save's or
 create's "deck"), a deck's history revision, "Try a change" (no sleeve
 warnings) and the packing plan (sleeves, kit, sleeves_need None). Such a
-visitor can't save a deck that has those lines (they're home decks, or
-lines Deck Lab never writes in a person's deck), and the editor only sends
+visitor can't save a deck that has those lines (another kit owner's
+decks), and the editor only sends
 changed fields, so leaving them out can't clear them.
 
 A second rule is about reading wishlists (permissions.sees_wishlist): a
@@ -428,10 +429,13 @@ def require_kit_choice(profile, deck, fields):
     require(profile, "accessories.edit")
     owners = accessory_owners(profile)
     owner = holder_owner(deck)
+    if profile and (permissions._get(deck, "space") or "home") != permissions._space_of(profile):
+        # Another space's deck (E8-S25: every space has kit owners now): an ordinary refusal naming
+        # nobody, never the private-owner one, which belongs to home's own kit owners.
+        raise ApiError(403, permissions.ACCESSORIES_PRIVATE)
     if owner is None or not accessories.visible(owner, owners):
-        raise ApiError(403, f"This deck's sleeves and deck box are {accessories.owner_name(owner)}'s to choose."
-                       if owner else "A deck in a person's own collection has no sleeves or deck box.",
-                       **({"reason": KIT_OWNERSHIP} if owner else {}))
+        raise ApiError(403, f"This deck's sleeves and deck box are {accessories.owner_name(owner)}'s to choose.",
+                       reason=KIT_OWNERSHIP)
     inv = None
     for key in accessories.HOLDER_FIELDS:
         value = fields.get(key)
@@ -446,8 +450,7 @@ def require_kit_choice(profile, deck, fields):
             raise ApiError(400, f"There's no {'sleeves' if key == 'sleeves' else 'deck box'} {value} in the "
                                 f"accessories list")
         if not accessories.usable(row["owner"], owner):
-            whose = ("only shared ones" if owner == accessories.SHARED
-                     else f"only {accessories.owner_name(owner)}'s or shared ones")
+            whose = accessories.uses_words(owner)
             raise ApiError(400, f"{accessories.label(row)} {'are' if key == 'sleeves' else 'is'} "
                                 f"{accessories.owner_name(row['owner'])}'s: this deck uses {whose}.")
 
@@ -463,14 +466,15 @@ def holder_owner(target):
     """The owner of a holder's accessories: a deck (a library summary or a
     DeckFile; a product deck's is its product's) or a holder id. SHARED for
     a product, pairing or "either" deck, the profile whose plays_as is a
-    home deck's Played by, None for a deck in a person's space (it has none)."""
+    home deck's Played by, and for a deck in a person's space that space's
+    owner (E8-S25: accessories.space_owner, the member themselves)."""
     from decklab.lib import accessories, spaces
     deck_id = target if isinstance(target, str) else permissions._get(target, "id")
     if isinstance(deck_id, str) and deck_id.startswith(("product/", "pairing/")):
         return accessories.SHARED
     space = (spaces.space_of(target) if isinstance(target, str) else permissions._get(target, "space")) or "home"
     if space != "home":
-        return None
+        return accessories.space_owner(space)
     if isinstance(target, str):
         summary = _summary(target)
         player = summary.get("player") if summary else None

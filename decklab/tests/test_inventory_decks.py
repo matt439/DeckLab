@@ -326,10 +326,15 @@ class DeckOpTests(_Tree):
         self.assertNotIn("Played by", person)
         self.put("people/user2/decks/casual/mine.md", person.encode())
         sha = self.sha("user2/casual/mine")
-        for line in ("- **Played by:** user\n", "- **Sleeves:** red\n", "- **Deck box:** box\n"):
-            with self.subTest(line), self.assertRaisesRegex(Invalid, "own space|home decks"):
+        with self.assertRaisesRegex(Invalid, "own space"):
+            self.apply("deck.save", deck_id="user2/casual/mine",
+                       text=person.replace("- **Status:**", "- **Played by:** user\n- **Status:**"), base_sha256=sha)
+        # Sleeves and Deck box are its member's own kit (E8-S26): chosen with kit.set, as at home.
+        for line in ("- **Sleeves:** red\n", "- **Deck box:** box\n"):
+            with self.subTest(line), self.assertRaises(Exception) as refused:
                 self.apply("deck.save", deck_id="user2/casual/mine",
                            text=person.replace("- **Status:**", line + "- **Status:**"), base_sha256=sha)
+            self.assertEqual(getattr(refused.exception, "reason", None), "kit")
         with self.assertRaisesRegex(Invalid, "Played by"):
             self.apply("deck.create", space="user2", kind="casual", slug="new", text=DECK)
         held = person.replace("- **Status:**", "- **Played by:** user\n- **Status:**")

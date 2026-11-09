@@ -370,9 +370,10 @@ function deriveMay(profile, remote) {
 }
 
 /** Whether a profile sees any sleeves, deck boxes and playmats (lib/permissions.py's sees_accessories):
- * a home profile does (its own and the shared ones), a person with their own space (Jordan, say) doesn't. */
+ * a home profile does (its own and the shared ones), and so does a person with their own space (Jordan, say:
+ * their own, E8-S25). */
 function seesAccessoriesAs(profile) {
-  return !profile || (profile.space || HOME_SPACE) === HOME_SPACE;
+  return true;
 }
 
 /** The spaces whose inventory a profile sees (lib/permissions.py's inventory_spaces): its own space's, an
@@ -391,17 +392,30 @@ function seesInventory(space) {
   return !Array.isArray(seen) || seen.includes(space || HOME_SPACE);
 }
 
-/** The owner of a home deck's accessories (lib/accessories.py's player_owner): the home profile whose
- * plays_as is its Played by, or "shared" for "either" (and products). */
-function accessoryOwnerOf(player) {
+/** The owner of a deck's accessories (lib/accessories.py's deck_owner): for a home deck the home profile whose
+ * plays_as is its Played by, or "shared" for "either" (and products); for a deck in a person's own space,
+ * that person (E8-S25: the profile whose space it is, else the space's id). */
+function accessoryOwnerOf(player, space = HOME_SPACE) {
+  if ((space || HOME_SPACE) !== HOME_SPACE) {
+    const member = state.profiles.find((p) => p.space === space && p.id === space)
+      || state.profiles.find((p) => p.space === space);
+    return member ? member.id : space;
+  }
   const found = player && player !== "either"
     ? state.profiles.find((p) => (p.space || HOME_SPACE) === HOME_SPACE && p.plays_as === player) : null;
   return found ? found.id : "shared";
 }
 
-/** True when a deck of owner may take an accessory row of row.owner: its owner's own, or a shared one. */
+/** True when owner is a person with their own space (lib/accessories.py's member_owners). */
+function memberOwner(owner) {
+  return state.profiles.some((p) => p.id === owner && (p.space || HOME_SPACE) !== HOME_SPACE);
+}
+
+/** True when a deck of owner may take an accessory row of row.owner: its owner's own, or a shared one for
+ * a home deck (a member's deck takes only the member's own: the shared kit is home's, E8-S25). */
 function accessoryUsable(row, owner) {
-  return !row.owner || row.owner === "shared" || row.owner === owner;
+  if (row.owner === owner) return true;
+  return (!row.owner || row.owner === "shared") && !memberOwner(owner);
 }
 
 /** True when the visitor may do this (a key of /api/me's "may": admin, accessories, receipts, products,

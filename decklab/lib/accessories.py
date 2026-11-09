@@ -16,12 +16,13 @@ The CSV has the columns FIELDS, one row per accessory:
   colour by new_id() and never changed. Deck files' "Sleeves" and "Deck box"
   lines and status.csv's sleeves and deck_box columns hold it;
 - kind: sleeves, deck_box or playmat;
-- owner: whose it is: a home profile's id (matt, user1) or "shared". Deck
-  Lab shows a row only to its owner, and a shared one to every home
-  profile (permissions.accessory_owners). A holder belongs to the home
-  profile whose plays_as is its Played by, or is shared ("either" decks and
-  intact products: holder_owner), and uses only its owner's accessories or
-  shared ones;
+- owner: whose it is: a profile's id (matt, user1, or a member such as user5,
+  E8-S25) or "shared". Deck Lab shows a row only to its owner, and a shared
+  one to every home profile (permissions.accessory_owners). A home holder
+  belongs to the home profile whose plays_as is its Played by, or is shared
+  ("either" decks and intact products: holder_owner), and uses only its
+  owner's accessories or shared ones; a member's deck belongs to that member
+  and uses only their own (shared kit is home's: usable);
 - brand, name (required), colour (the back colour or design, which tells a
   stray card's deck by its back), notes: one line each;
 - quantity: 0-9999. For sleeves it counts individual sleeves of the design,
@@ -225,8 +226,14 @@ def validate_row(row):
 def new_id(row, taken):
     """A new row's id, from its brand, name and colour (decks.title_slug, cut
     to 40 characters), with -2, -3... added while it's in taken (ids of any
-    kind) or a name Windows reserves."""
-    base = decks.title_slug(" ".join(str(row.get(k) or "") for k in ("brand", "name", "colour")))
+    kind) or a name Windows reserves. A row with its own owner (not shared)
+    starts with that owner's id ("user2-kmc-hyper-matte-green"), so the -2 an
+    owner sees comes only from rows of their own (or shared ones): ids are
+    unique across every owner, and a clash with a row another owner keeps
+    private would hint that someone owns that product."""
+    owner = str(row.get("owner") or "").strip().lower()
+    words = " ".join(str(row.get(k) or "") for k in ("brand", "name", "colour"))
+    base = decks.title_slug(f"{owner} {words}" if owner and owner != SHARED else words)
     base = base[:MAX_ID].rstrip("-") or "accessory"
     taken = {str(t).lower() for t in taken}
     candidate, n = base, 1
@@ -441,20 +448,35 @@ def resolve(value, kind, inv):
 
 # ------------------------------------------------------------------ owners
 
-def _home_profiles(listed=None):
-    """The home profiles (lib/profiles.py); [] when config.json can't be read."""
+def _profiles(listed=None):
+    """Every profile (lib/profiles.py); [] when config.json can't be read."""
     from decklab.lib import profiles
     if listed is None:
         try:
             listed = profiles.read()
         except (OSError, ValueError):
             return []
-    return [p for p in listed if p.get("space", profiles.HOME) == profiles.HOME]
+    return list(listed)
+
+
+def _home_profiles(listed=None):
+    """The home profiles (lib/profiles.py); [] when config.json can't be read."""
+    from decklab.lib import profiles
+    return [p for p in _profiles(listed) if p.get("space", profiles.HOME) == profiles.HOME]
+
+
+def member_owners(listed=None):
+    """The ids of the profiles with a space of their own (E8-S25): each owns its own kit, which
+    only that space's decks use, never a shared row (SHARED is home's)."""
+    from decklab.lib import profiles
+    return frozenset(p["id"] for p in _profiles(listed) if p.get("space", profiles.HOME) != profiles.HOME)
 
 
 def owner_ids(listed=None):
-    """Every owner a row may have: the home profiles' ids, then SHARED."""
-    return [p["id"] for p in _home_profiles(listed)] + [SHARED]
+    """Every owner a row may have: the home profiles' ids, the members' ids (E8-S25), then SHARED."""
+    listed = _profiles(listed)
+    home = [p["id"] for p in _home_profiles(listed)]
+    return home + sorted(member_owners(listed)) + [SHARED]
 
 
 def player_owner(player, listed=None):
@@ -467,11 +489,26 @@ def player_owner(player, listed=None):
     return SHARED
 
 
+def space_owner(space, listed=None):
+    """The owner of the kit a person's space's decks use (E8-S25): the profile whose space it is
+    (a member's space is their profile id), else the space id itself."""
+    found = [p["id"] for p in _profiles(listed) if p.get("space") == space]
+    return space if space in found or not found else found[0]
+
+
+def deck_owner(space, player, listed=None):
+    """Whose accessories a deck uses: a home deck's player_owner, a person's deck its space's owner."""
+    from decklab.lib import spaces
+    if (space or spaces.HOME) == spaces.HOME:
+        return player_owner(player, listed)
+    return space_owner(space, listed)
+
+
 def owner_name(owner, listed=None):
     """"User1" for an owner's id (the id itself when it's no profile's); "shared" for SHARED."""
     if owner == SHARED:
         return "shared"
-    return next((p["name"] for p in _home_profiles(listed) if p["id"] == owner), owner)
+    return next((p["name"] for p in _profiles(listed) if p["id"] == owner), owner)
 
 
 def visible(owner, owners):
@@ -480,9 +517,24 @@ def visible(owner, owners):
     return owners is None or owner in owners
 
 
-def usable(row_owner, holder_owner):
-    """True when a holder of holder_owner may use a row of row_owner: its own, or a shared one."""
-    return row_owner in (holder_owner, SHARED)
+def usable(row_owner, holder_owner, members=None):
+    """True when a holder of holder_owner may use a row of row_owner: its own, or a shared one
+    for a home holder. A member's deck (E8-S25) uses only that member's own: SHARED is home's.
+    members (member_owners()) saves reading the profiles again."""
+    if row_owner == holder_owner:
+        return True
+    if row_owner != SHARED:
+        return False
+    return holder_owner not in (member_owners() if members is None else members)
+
+
+def uses_words(holder_owner, members=None):
+    """"only User1's or shared ones": what a holder of holder_owner may use, in words."""
+    if holder_owner == SHARED:
+        return "only shared ones"
+    if holder_owner in (member_owners() if members is None else members):
+        return f"only {owner_name(holder_owner)}'s own"
+    return f"only {owner_name(holder_owner)}'s or shared ones"
 
 
 def hidden_title(owner, kind="deck", listed=None):
@@ -578,9 +630,10 @@ def _scan(warnings):
         with inventory.pinned():
             return _scan(warnings)
     found, strays = [], []
-    listed = _home_profiles()
+    listed = _profiles()
     for summary in decks.list_decks():
-        if summary["id"].startswith(("product/", "pairing/")) or summary.get("space", "home") != "home":
+        # Every space's decks hold kit: home's and, since E8-S25, each member's own.
+        if summary["id"].startswith(("product/", "pairing/")):
             continue
         values = {"sleeves": (summary.get("sleeves") or "").strip(),
                   "deck_box": (summary.get("deck_box") or "").strip()}
@@ -613,7 +666,8 @@ def _scan(warnings):
                 warnings.append(f"{inventory_paths.place(summary['source'])} can't be read: {e}")
             continue
         found.append({"holder": summary["id"], "title": summary["title"], "kind": "deck", "status": status,
-                      "owner": player_owner(summary.get("player"), listed), **values, "sections": sections})
+                      "owner": deck_owner(summary.get("space"), summary.get("player"), listed), **values,
+                      "sections": sections})
     inv = inventory.current()
     statuses = _statuses(inv, warnings)
     product_decks = None
@@ -728,7 +782,7 @@ def _own(holder_id, warnings):
     if sections is None:
         version = pool._built_version(summary, warnings) if built else "target"
         sections = decks.load_deck(holder_id, version)
-    return (summary["title"], "deck", player_owner(summary.get("player")), values,
+    return (summary["title"], "deck", deck_owner(summary.get("space"), summary.get("player")), values,
             sections, can_hold)
 
 
@@ -833,8 +887,9 @@ def kit(holder_id, sections=None, inv=None, usage=None, *, values=None, owner=No
 def _not_theirs(f, ref, row_owner, holder_owner, kind):
     """"Sleeves X are User1's: ...": a holder uses an accessory that isn't its owner's or shared."""
     whose = ("a product" if kind == "product" else "this deck") if holder_owner == SHARED else         f"{owner_name(holder_owner)}'s deck"
-    uses = "only shared ones" if holder_owner == SHARED else f"only {owner_name(holder_owner)}'s or shared ones"
-    return (f"{_FIELD_WORDS[f]} {ref['label']} {'are' if f == 'sleeves' else 'is'} {owner_name(row_owner)}'s: "
+    uses = uses_words(holder_owner)
+    belongs = "shared" if row_owner == SHARED else f"{owner_name(row_owner)}'s"
+    return (f"{_FIELD_WORDS[f]} {ref['label']} {'are' if f == 'sleeves' else 'is'} {belongs}: "
             f"{whose} uses {uses}.")
 
 
@@ -872,11 +927,12 @@ def check(root=None):
     if len(owners) > 1:         # without config.json's profiles, owners can't be checked
         for row in inv.rows_by_id.values():
             if row["owner"] not in owners:
-                problems.append(f"{row['id']}: its owner {row['owner']!r} isn't a home profile or {SHARED}")
+                problems.append(f"{row['id']}: its owner {row['owner']!r} isn't a profile or {SHARED}")
+    members = member_owners()
     for h in found:
         for f in HOLDER_FIELDS:
             row = inv.rows_by_id.get(" ".join(h[f].split()))
-            if row is not None and row["kind"] == f and not usable(row["owner"], h["owner"]):
+            if row is not None and row["kind"] == f and not usable(row["owner"], h["owner"], members):
                 problems.append(f"{h['title']}: {_not_theirs(f, resolve(row['id'], f, inv), row['owner'], h['owner'], h['kind'])}")
 
     pictures = inventory.current().accessory_images

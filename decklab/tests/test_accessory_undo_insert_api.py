@@ -146,9 +146,9 @@ class AccessoryInsertUndoApiTests(ApiTestCase):
         self.assertNotIn("user1", guard.accessory_owners())
         for function in (self.view, lambda: self.apply(expect="bad", reason=None)):
             self.assertEqual(self.refused(404, function).message, accessory_undo.NO_CHANGE)
-        with self.identity("user2"):
-            self.refused(403, self.view)
-            self.refused(403, self.apply, profile="user2", expect="bad", reason=None)
+        with self.identity("user2"):            # his own kit only (E8-S26): not there for him
+            self.refused(404, self.view)
+            self.refused(404, self.apply, profile="user2", expect="bad", reason=None)
         with access.using(None), access.viewing(None), access.answering(True):
             self.assertEqual(self.view()["current"]["owner"], "user1")
             self.assertIsNone(self.store.calls[-1][2])

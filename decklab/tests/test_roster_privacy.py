@@ -214,7 +214,8 @@ class RefusalWordsTests(RosterTestCase):
         for what, words in texts.items():
             self.assertIsNone(names.search(words), (what, words))
         user5 = {"id": "user5", "role": "member", "space": "user5"}
-        for action, target in (("accessories.edit", None), ("commander_night.edit", None),
+        # accessories.edit isn't refused: a member has a kit of their own (E8-S26).
+        for action, target in (("commander_night.edit", None),
                                ("deck.create", {"space": "home"}), ("deck.create", {"space": "user2"}),
                                ("collection.edit", "home"), ("tokens.edit", "user2"),
                                ("settings.edit", "matt"), ("wishlist.edit", "user1"), ("orders.edit", None)):

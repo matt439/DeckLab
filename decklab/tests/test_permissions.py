@@ -177,35 +177,38 @@ class OtherActionTests(unittest.TestCase):
         for who in (MATT, USER1, USER2, None):
             self.assertTrue(permissions.can(who, "run"))
 
-    def test_only_the_home_sees_the_accessories(self):
+    def test_each_profile_sees_its_own_accessories(self):
         # Seeing: Matt and User1 (home profiles, any role) see theirs; a person with their own space
-        # sees none, even as an admin or on the home network; a local request naming nobody sees all.
+        # sees their own (E8-S25), even as an admin or on the home network; a local request naming
+        # nobody sees all, and any other request naming nobody none.
         self.assertTrue(permissions.sees_accessories(MATT))
         self.assertTrue(permissions.sees_accessories(USER1))
-        self.assertFalse(permissions.sees_accessories(USER2))
-        self.assertFalse(permissions.sees_accessories(USER3))
+        self.assertTrue(permissions.sees_accessories(USER2))
+        self.assertTrue(permissions.sees_accessories(USER3))
         self.assertFalse(permissions.sees_accessories(None))
-        self.assertFalse(permissions.sees_accessories(USER2, script=True))
+        self.assertTrue(permissions.sees_accessories(USER2, script=True))
         self.assertTrue(permissions.sees_accessories(None, script=True))
-        self.assertFalse(permissions.sees_accessories({**USER2, "role": "admin"}))
+        self.assertTrue(permissions.sees_accessories({**USER2, "role": "admin"}))
 
     def test_each_home_profile_sees_its_own_and_the_shared_accessories(self):
         for local in (False, True):
             with self.subTest(local=local):
                 self.assertEqual(permissions.accessory_owners(MATT, script=local), {"matt", "shared"})
                 self.assertEqual(permissions.accessory_owners(USER1, script=local), {"user1", "shared"})
-                self.assertEqual(permissions.accessory_owners(USER2, script=local), frozenset())
+                # A member's own only, never the shared kit (it's home's: E8-S25).
+                self.assertEqual(permissions.accessory_owners(USER2, script=local), {"user2"})
         self.assertIsNone(permissions.accessory_owners(None, script=True))
         self.assertEqual(permissions.accessory_owners(None), frozenset())
 
-    def test_any_home_profile_edits_accessories(self):
-        # Which rows is the route's check (the owner); the action only needs some of its own.
+    def test_every_profile_edits_its_own_accessories(self):
+        # Which rows is the route's check (the owner); the action only needs some of its own, and a
+        # member has their own since E8-S25.
         self.assertTrue(permissions.can(MATT, "accessories.edit"))
         self.assertTrue(permissions.can(USER1, "accessories.edit"))
         self.assertTrue(permissions.can(None, "accessories.edit", script=True))
         for who, local in ((USER2, False), (USER2, True), ({**USER2, "role": "admin"}, False)):
             with self.subTest(who=who["id"], local=local):
-                self.assertFalse(permissions.can(who, "accessories.edit", script=local))
+                self.assertTrue(permissions.can(who, "accessories.edit", script=local))
         self.assertEqual(permissions.reason(None, "accessories.edit"), "Choose who you are first.")
 
     def test_no_profile_and_unknown_actions(self):
@@ -269,13 +272,15 @@ class SummaryTests(unittest.TestCase):
                           "spaces": ["home"], "deck_spaces": [],                  # home's collection (E10-S43)
                           "home_player": "wife",
                           "create": [{"space": "home", "player": "wife"}]})
+        mine = {"accessories": True, "see_accessories": True, "accessory_owners": ["user2"],
+                "accessory_readers": ["user2"]}         # a member's own kit (E8-S25)
         self.assertEqual(permissions.summary(USER2, space_ids=SPACES),
-                         {**member, "see_accessories": False, "see_inventory": ["user2"], "spaces": ["user2"],
+                         {**member, **mine, "see_inventory": ["user2"], "spaces": ["user2"],
                           "deck_spaces": ["user2"], "home_player": None,
                           "create": [{"space": "user2", "player": None}]})
         # An admin of a person's space: that space only, and none of home's records.
         self.assertEqual(permissions.summary({**USER2, "role": "admin"}, space_ids=SPACES),
-                         {**member, "admin": True, "see_accessories": False, "see_inventory": ["user2"],
+                         {**member, **mine, "admin": True, "see_inventory": ["user2"],
                           "spaces": ["user2"], "deck_spaces": ["user2"], "home_player": None,
                           "create": [{"space": "user2", "player": None}]})
         self.assertEqual(permissions.summary(None, space_ids=SPACES),

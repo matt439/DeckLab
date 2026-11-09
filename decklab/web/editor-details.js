@@ -73,7 +73,7 @@ function drawDetails() {
     status_.append(el("small", { class: "field-hint field-note", text: `Its Built version line (${fieldValueWords("built_version",
       ed.base.fields.built_version)}) goes too when it's saved: only a built deck has one.` }));
   }
-  // Not for a person-space profile, who doesn't see the home's sleeves (the server still clears the lines).
+  // Only for whoever sees the deck owner's sleeves (the server still clears the lines).
   const kitSeen = mayDo("see_accessories");
   // Taken apart, its cards go back into storage unsleeved; an idea has no sleeves or deck box at all.
   const toIdea = !holdsKit(f.status);
@@ -292,7 +292,7 @@ function loadKitRows() {
   ed.accLoad = "loading";
   api("/api/accessories").then((data) => {
     if (editor !== ed) return;
-    ed.accRows = kitRowsOf(data.items, accessoryOwnerOf(ed.fields.player));
+    ed.accRows = kitRowsOf(data.items, accessoryOwnerOf(ed.fields.player, ed.space));
     ed.accLoad = "done";
     redrawKitFields();
   }, (error) => {
@@ -336,7 +336,7 @@ function loadPlayerKitCatalog(ed) {
       && previous.token === routeToken && previous.profile === state.profile?.id) return;
   const record = {key, host: ed.dom.details, view: ed.view, token: routeToken, profile: ed.profile, status: "loading", error: null};
   ed.playerKitCatalog = record; ed.accLoad = "loading"; ed.accError = null;
-  if (!["shared", ed.profile].includes(accessoryOwnerOf(ed.fields.player))) {
+  if (!["shared", ed.profile].includes(accessoryOwnerOf(ed.fields.player, ed.space))) {
     record.status = "blocked"; ed.accLoad = null; return;
   }
   api("/api/accessories").then(answer => {
@@ -393,7 +393,7 @@ function redrawKitFields() {
 /** "+ Add new sleeves": add a row on the Accessories sheet, then pick it here (saved with the deck). */
 function addKitRow(key) {
   const ed = editor;
-  const owner = accessoryOwnerOf(ed.fields.player);
+  const owner = accessoryOwnerOf(ed.fields.player, ed.space);
   openAccessorySheet({ kind: key, lockKind: true, owner, onSaved: (answer, words) => {
     toast(words);
     if (editor !== ed) return;

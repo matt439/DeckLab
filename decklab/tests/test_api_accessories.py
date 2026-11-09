@@ -558,11 +558,12 @@ class AssignTests(AccessoriesApiTestCase):
         self.assertEqual(e.status, 409)
         self.assertEqual(e.extra["conflict"]["reason"], "changed")
 
-    def test_a_persons_deck_is_400(self):
+    def test_a_persons_deck_is_hidden_from_home(self):
+        # A member's deck holds the member's own kit (E8-S25); to a home writer it's a missing deck.
         self.write("people/user2/decks/casual/elves.md", deck_md("Elves"))
         e = self.error(api_acc.assign_accessory, holder="user2/casual/elves", field="sleeves", id=BLACK,
                        holder_sha256="0" * 64)
-        self.assertEqual(e.status, 400)
+        self.assertEqual(e.status, 404)
 
 
 class ViewTests(AccessoriesApiTestCase):
@@ -1022,7 +1023,7 @@ class DatabaseTests(AccessoriesApiTestCase, db_support.DbTestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         self.add({**SLEEVES, "colour": "pink", "owner": "user1"}, profile="user1")
-        self.assign("casual/hers", "dragon-shield-matte-pink", profile="user1")
+        self.assign("casual/hers", "user1-dragon-shield-matte-pink", profile="user1")
         with access.viewing("matt"):
             seen = activity.activity_view()
         with access.viewing("user1"):

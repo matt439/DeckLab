@@ -120,8 +120,9 @@ class ActivityInteractionTests(unittest.TestCase):
           api = async () => page([change(1, {actor: "user2", actor_name: "User2"})]);
           await route();
           const labels = chips('"Kind of change"').map(a => a.textContent);
-          assert(!labels.includes("Shopping")); assert(!labels.includes("Sleeves & boxes"));
+          assert(!labels.includes("Shopping"));
           assert(labels.includes("Decks")); assert(labels.includes("Wishlist"));
+          assert(labels.includes("Sleeves & boxes"));           // his own kit (E8-S26)
           // One person only: no person chips.
           assert.equal(chips('"Whose changes"').length, 0);
         """)

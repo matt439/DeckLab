@@ -56,7 +56,7 @@ def _file_edit_json(deck, p, warnings):
     elif not deck.has_decklist:
         why_not = f"The deck has {decks.NO_DECKLIST}."
     home = deck.space == spaces.HOME
-    # A person's deck has no Played by, Sleeves or Deck box (drafts._HOME_ONLY), unless the file has them.
+    # A person's deck has no Played by (drafts._HOME_ONLY), unless the file has one.
     editable_fields = ["status", "player", "archetype"] if home or deck.get_field("Played by") is not None \
         else ["status", "archetype"]
     # A Built version left on a deck that isn't built (any more) is offered too, so it can be removed.
@@ -64,8 +64,8 @@ def _file_edit_json(deck, p, warnings):
         editable_fields.append("built_version")
     if deck.kind == "commander":
         editable_fields.append("target_bracket")
-    # Sleeves likewise: a building or built home deck's, or one left on a deck idea.
-    holds_kit = deck.status in decks.HOLDER_STATUSES and home
+    # Sleeves likewise: a building or built deck's (a member's too, E8-S25), or one left on a deck idea.
+    holds_kit = deck.status in decks.HOLDER_STATUSES
     if holds_kit or deck.get_field("Sleeves") is not None:
         editable_fields.append("sleeves")
     if holds_kit or deck.get_field("Deck box") is not None:
@@ -139,7 +139,7 @@ def edit_view(deck_id):
     "name"}] of the Commander Brackets, for the bracket picker) and warnings.
     editable_fields has built_version for a built deck with both lists, and
     for any deck whose file has a Built version (so a stray one can be removed);
-    sleeves and deck_box likewise for a building or built home deck or a file with that line
+    sleeves and deck_box likewise for a building or built deck (a member's too, E8-S25) or a file with that line
     (fields.sleeves and fields.deck_box are an accessory id, or older free
     text). other_sleeves lists the sleeves other holders use ([{"id",
     "title", "sleeves"}], drafts.built_sleeves), for the Sleeves hint.

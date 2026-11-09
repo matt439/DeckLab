@@ -401,7 +401,7 @@ function assemblyKitName(ref) { return ref.state === "linked" ? ref.label : `“
  * none recorded gets Choose sleeves (accessories.js kitPicker) when it's being built or built and the visitor
  * may choose, else a link to the deck. view (optional): the plan, worked out again once sleeves are chosen. */
 function assemblyKit(deck, need, view = null) {
-  if (!mayDo("see_accessories")) return null;      // the home's sleeves aren't shown to a person-space profile
+  if (!mayDo("see_accessories")) return null;      // kit isn't shown to someone who sees none
   const kit = deck.kit, sleeves = kit && kit.sleeves;
   let words = `Sleeves: ${deck.sleeves || "Not recorded"}`;
   let action = null;

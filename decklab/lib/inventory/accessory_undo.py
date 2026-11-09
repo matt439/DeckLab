@@ -172,7 +172,7 @@ def owner_pair(old, new):
     """Only one configured home owner's record and Shared, even for a script."""
     pair = {old.get("owner"), new.get("owner")}
     return len(pair) == 2 and accessories.SHARED in pair \
-        and pair - {accessories.SHARED} <= set(accessories.owner_ids()) - {accessories.SHARED}
+        and pair - {accessories.SHARED} <= {p["id"] for p in accessories._home_profiles()}   # never a member (E8-S26)
 
 
 def _unchanged(before, after):

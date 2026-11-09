@@ -215,9 +215,8 @@ def _index_kits(summaries):
     cache = {}
 
     def kits(summary):
-        # A person's decks keep no accessories (they're home's).
-        if summary.get("error") or summary["id"].startswith("pairing/") \
-                or summary.get("space", spaces.HOME) != spaces.HOME:
+        # A person's decks keep their member's own accessories (E8-S25), as home's do.
+        if summary.get("error") or summary["id"].startswith("pairing/"):
             return dict(_NO_KIT)
         holder = accessories._holder_id(summary["id"])
         if holder.startswith("product/"):
@@ -474,12 +473,9 @@ def _view_kit(summary, sections, warnings):
     version shown ("would need"); and the sha256
     of the file an assign must still match (the deck file, or a product's
     status.csv as rendered from the inventory; None for a pairing). kit is None when it can't be worked
-    out, and for a deck in a person's space (accessories are home's), with
-    holder_sha None."""
+    out. A deck in a person's space holds its member's own kit (E8-S25)."""
     deck_id = summary["id"]
     holder_sha = None
-    if summary.get("space", spaces.HOME) != spaces.HOME:
-        return None, None
     try:
         if deck_id.startswith("product/"):
             holder_sha = accessories.status_sha256()        # status.csv as rendered from the inventory

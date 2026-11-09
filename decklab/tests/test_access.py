@@ -367,7 +367,7 @@ class IdentityTests(unittest.TestCase):
     def test_me_for_a_member(self):
         listed = [dict(p, role="admin" if p["id"] == "matt" else "member") for p in PROFILES]
         may = access.me({"profile": "user2", "email": "r", "remote": True}, listed)["may"]
-        self.assertEqual((may["admin"], may["spaces"], may["accessories"]), (False, ["user2"], False))
+        self.assertEqual((may["admin"], may["spaces"], may["accessories"]), (False, ["user2"], True))   # his own kit (E8-S26)
         may = access.me({"profile": "user1", "email": "c", "remote": True}, listed)["may"]
         self.assertEqual((may["admin"], may["spaces"], may["home_player"]), (False, ["home"], "wife"))   # E10-S43
 
