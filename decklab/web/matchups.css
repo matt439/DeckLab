@@ -427,6 +427,7 @@
 .cc-field select { display: block; width: 100%; max-width: 100%; min-width: 0; }
 .cc-table { min-width: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
 .cc-table table.data { min-width: 34rem; table-layout: auto; }
+.cc-table table.data th { position: static; }
 .cc-table table.data caption { text-align: left; margin-bottom: var(--s-2); }
 .cc-table table.data td { white-space: nowrap; }
 @media (min-width: 600px) {

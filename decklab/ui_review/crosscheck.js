@@ -24,7 +24,7 @@ function response(state, chosen = false) {
     engines:{forge:{ready:true,version:'synthetic-forge',problem:null},
       xmage:{ready:state !== 'unavailable',version:'synthetic-xmage',problem:state === 'unavailable'
         ? 'XMage is not set up on this synthetic server.' : null}},
-    note:'Each simulator keeps its own score. These are 1v1 games, including Commander; they do not predict a multiplayer pod.'};
+    note:'These are 1v1 games, including Commander; they do not predict a multiplayer pod.'};
   if(state === 'running') answer.job = {test:TEST,status:'running',by:'Matt',done:7,total:40,ahead:0,
     may_stop:true,error:null,cancelled_by:null};
   if(saved) answer.result = {id:TEST,plan_id:TEST,format:'casual',mode:'one-on-one',games_per_arm:20,
@@ -102,6 +102,13 @@ run('crosscheck', async review => {
       await page.waitForTimeout(150);
       if(spec.state==='saved') {
         assert.equal(await section.getByRole('rowheader').count(),2);
+        for(const label of ['Forge','XMage']) {
+          const unoccluded=await section.getByRole('rowheader',{name:label,exact:true}).evaluate(node=>{
+            const box=node.getBoundingClientRect();
+            return node.contains(document.elementFromPoint(box.left+box.width/2,box.top+box.height/2));
+          });
+          assert(unoccluded,`The ${label} result is covered by another element`);
+        }
         assert(await section.getByText('60.0%',{exact:true}).isVisible());
         assert(await section.getByText('35.0%',{exact:true}).isVisible());
         assert(await section.getByText(/no combined win rate/).first().isVisible());
