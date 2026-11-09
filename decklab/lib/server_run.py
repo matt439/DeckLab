@@ -204,7 +204,8 @@ def _wait_for_matchup(wait=FORGE_STOP_WAIT):
     to wait seconds for them before the server exits (and stops the warm
     pool). (Should it take longer, lib/forge/processes.py's Windows job object
     still kills every Forge process when the server's process ends.)"""
-    if api.forge_runs.FORGE_JOBS.active() or api.forge_runs.COORD_JOBS.active():
+    from decklab.lib.api.crosscheck_page import CROSSCHECK_JOBS
+    if api.forge_runs.FORGE_JOBS.active() or api.forge_runs.COORD_JOBS.active() or CROSSCHECK_JOBS.active():
         server_http.log("Stopping the Forge matchups that are playing...")
         if not _join_runs(wait):
             server_http.log(f"The Forge matchups didn't stop within {wait} seconds.")
@@ -215,7 +216,9 @@ def _join_runs(seconds):
     field runs and variant tests (COORD_JOBS) to stop; True when both have."""
     deadline = time.monotonic() + seconds
     done = api.forge_runs.FORGE_JOBS.join(seconds)
-    return api.forge_runs.COORD_JOBS.join(max(0.0, deadline - time.monotonic())) and done
+    done = api.forge_runs.COORD_JOBS.join(max(0.0, deadline - time.monotonic())) and done
+    from decklab.lib.api.crosscheck_page import CROSSCHECK_JOBS
+    return CROSSCHECK_JOBS.join(max(0.0, deadline - time.monotonic())) and done
 
 
 _CTRL_C = None
@@ -272,6 +275,9 @@ def _forge_runs_busy():
     """"a Forge run is going" while any Forge job waits or plays: a matchup or variant test
     (FORGE_JOBS), or a field run, a gauntlet run (an overnight "All" one included) or a test of a
     change (COORD_JOBS); else None."""
+    from decklab.lib.api.crosscheck_page import CROSSCHECK_JOBS
+    if CROSSCHECK_JOBS.active():
+        return "a simulator check is going"
     if api.forge_runs.FORGE_JOBS.active() or api.forge_runs.COORD_JOBS.active():
         return "a Forge run is going"
     return None

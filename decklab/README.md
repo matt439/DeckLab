@@ -1004,6 +1004,20 @@ detect an update after the server restarts.
 - **Unsaved changes** are kept on the device, per person, deck and list. If browser storage is full or blocked, the editor warns that the changes exist only in the open tab and requires saving or explicitly discarding them before leaving or switching people. Closing the browser can still lose edits that it could not store.
 - **Write protection:** the server takes changes only from Deck Lab's own page. Every POST and PUT must be JSON with the header `X-Deck-Lab: 1` (and an `Origin`, if sent, that matches the page's address) and name a profile from `config.json`. Another web page open on a phone can't send that, so it can't change decks.
 
+## Check with another simulator
+
+A deck's **Testing** tab has **Check with another simulator**. Open it, choose
+one saved opponent of the same format, then explicitly **Run both simulators**.
+Forge and XMage keep separate scores, 95% ranges and unfinished-game counts.
+The check uses the saved lists; it does not change a deck or contribute games to
+Forge's Rankings, popular-decks figures or card statistics. Commander means 1v1
+here, not a multiplayer pod. Both engines play the main and commander sections;
+sideboards and companions are excluded.
+
+This is optional local software. The page never downloads or installs an engine.
+For setup, pinned release details, command-line card-swap checks and native
+qualification, see [Independent simulator setup](design/cross-simulator.md#setup-and-use).
+
 ## Matchups (Forge)
 
 V2 runs checkpoint completed, validated chunks during play (the first chunk,

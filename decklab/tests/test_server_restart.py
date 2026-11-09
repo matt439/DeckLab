@@ -146,11 +146,20 @@ class HelperCommandTests(unittest.TestCase):
         self.assertEqual(command[-7:], ["-m", "decklab.lib.homenet", "restart", "--port", "8642", "--after", "3"])
 
     def test_busy_counts_running_jobs(self):
-        from decklab.lib.api import forge_runs, practice
+        from decklab.lib.api import crosscheck_page, forge_runs, practice
         with mock.patch.object(forge_runs.FORGE_JOBS, "active", return_value=[1, 2]), \
                 mock.patch.object(forge_runs.COORD_JOBS, "active", return_value=[]), \
+                mock.patch.object(crosscheck_page.CROSSCHECK_JOBS, "active", return_value=[]), \
                 mock.patch.object(practice.JOBS, "active", return_value=[1]):
             self.assertEqual(server_restart._busy(), ["2 Forge matchups playing or waiting", "1 practice-hand run"])
+
+    def test_busy_includes_independent_simulator_checks(self):
+        from decklab.lib.api import crosscheck_page, forge_runs, practice
+        with mock.patch.object(forge_runs.FORGE_JOBS, "active", return_value=[]), \
+                mock.patch.object(forge_runs.COORD_JOBS, "active", return_value=[]), \
+                mock.patch.object(practice.JOBS, "active", return_value=[]), \
+                mock.patch.object(crosscheck_page.CROSSCHECK_JOBS, "active", return_value=[object()]):
+            self.assertEqual(server_restart._busy(), ["1 simulator check playing or waiting"])
 
 
 

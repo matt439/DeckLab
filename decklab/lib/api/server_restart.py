@@ -23,7 +23,7 @@ Refused (why_not, and POST's 409, in plain words naming nobody) when:
 - the checkout has uncommitted application changes, or its version can't be checked
   (AGENTS.md: commit before restarting), since the new server would run them;
 - a restart was asked for in the last RESTART_GRACE seconds.
-Forge matchups, field runs, variant tests and practice hands in progress are "busy": the POST
+Forge matchups, field runs, variant tests, simulator checks and practice hands in progress are "busy": the POST
 answers 409 with them unless "anyway", as they stop (keeping the games they finished).
 Migrations are never applied here: `python -m decklab.db migrate` stays on the PC.
 """
@@ -115,17 +115,20 @@ def _why_not():
 
 def _busy():
     """What a restart would stop, in plain words: [] when nothing is running."""
-    from . import forge_runs, practice
+    from . import crosscheck_page, forge_runs, practice
     out = []
     matchups = sum(1 for job in forge_runs.FORGE_JOBS.active())
     coordinated = sum(1 for job in forge_runs.COORD_JOBS.active())
     hands = sum(1 for job in practice.JOBS.active())
+    checks = len(crosscheck_page.CROSSCHECK_JOBS.active())
     if matchups:
         out.append(f"{matchups} Forge matchup{'s' if matchups != 1 else ''} playing or waiting")
     if coordinated:
         out.append(f"{coordinated} field run{'s' if coordinated != 1 else ''} or variant test{'s' if coordinated != 1 else ''}")
     if hands:
         out.append(f"{hands} practice-hand run{'s' if hands != 1 else ''}")
+    if checks:
+        out.append(f"{checks} simulator check{'s' if checks != 1 else ''} playing or waiting")
     return out
 
 
