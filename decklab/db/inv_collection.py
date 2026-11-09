@@ -878,6 +878,8 @@ def _add_precon(args):
         if left:
             print(f"Left out: {', '.join(left)}.")
         print(f"Would make {made['deck_id']} ({plan['title']}), a built {plan['kind']} deck: {sections}.")
+        for note in page.precons.notes(entry["type"]):
+            print(note)
         if made["table"].get("note"):
             print(made["table"]["note"])
         candidate = built["token_candidates"]

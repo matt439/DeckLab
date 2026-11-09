@@ -9,6 +9,10 @@ What each milestone and feature built, the decisions made along the way, and the
 - The [final review](design/visual-polish-completion-2026-11-07.md) retains 30 unchanged PNGs, source/cleanup proof, paired comparisons and final 106 page/state, 104 actual Chromium zoom and 24 receipt/persistence cases. Existing capture/editor, composition, variant, shell and task matrices pass. A bounded 4px Keep editing overflow below the 320px target is recorded.
 - Guarded frontend regression: 3,154 tests, two skips, 457.394 seconds. Final affected checks: 179 tests, one existing skip, 58.426 seconds. Ruff, JavaScript syntax, whitespace and source lengths pass. Household Safari/touch/software-keyboard, screen-reader, real-art and production durability gates remain; `E11-S30` stays partial. No household records, visibility or Forge games changed; the normal server stays stopped.
 
+## Add a precon: what the box held beyond its list (2026-11-09)
+
+- Some boxes held random cards beside the fixed deck: boosters with Intro Packs and Planeswalker Decks, a 2-card Collector Booster sample pack with many Commander decks from 2022. MTGJSON's deck file is only the fixed list, so Add a precon adds the fixed part correctly and never the random part. Its preview (`notes` in `GET /api/precons/preview`, `precons.notes`) and `collection add-precon --dry-run` now say so, and point to Import or Add card for those cards; a Jumpstart pack also asks you to check that the chosen list is the version you opened.
+
 ## Receipt tools and empty Considering (2026-11-07; E11-S30)
 
 - Receipt filters omit the enclosing track and use the available phone width, with relative two/one-column fallbacks. A single card/token part groups the retained delivery shortcut beside Tools; mixed/product orders keep its order-wide scope outside inactive parts. Confirmation, row selection, checks, drafts and preview/apply remain.

@@ -149,6 +149,7 @@ function drawPreconPreview(ctx) {
       leftOut.length ? `Not added: ${leftOut.join(", ")}. ` : "",
       !p.token_import && p.tokens && p.tokens.length ? ["Its token cards (", p.tokens.map((t) => `${t.count} ${t.name}`).join(", "),
         ") aren't added: record them on the ", el("a", { href: "#/tokens", text: "Tokens page" }), " once checked."] : null) : null,
+    (p.notes || []).length ? el("p", { class: "sub precon-notes" }, p.notes.join(" ")) : null,
     preconTokenChoice(ctx),
     Object.entries(lists).map(([section, lines]) => el("section", { class: "precon-section" },
       el("h3", { text: `${section === "Deck" ? "Deck" : section} (${num(counts[section] || 0)})` }),

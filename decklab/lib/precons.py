@@ -77,6 +77,16 @@ BOARDS = (("commander", "Commander"), ("mainBoard", "Deck"), ("sideBoard", "Side
 DISPLAY = "displayCommander"
 LEFT_OUT = (("planes", "plane"), ("schemes", "scheme"))
 
+# Some boxes held more than the deck: a booster or two (Intro Packs, Planeswalker
+# Decks), a 2-card Collector Booster sample pack (many Commander decks from 2022)
+# or other random cards. MTGJSON's deck file is only the fixed list, so those
+# never come with it (left_out_note); a Jumpstart theme has several fixed lists,
+# one file each (VERSIONED).
+RANDOM_NOTE = ("Only the deck's fixed list is added. Any booster or sample pack that came "
+               "in the box isn't included: add those cards with Import or Add card.")
+VERSIONED = frozenset(("Jumpstart", "Halfdeck"))
+VERSION_NOTE = "Each theme has several lists: check this one matches the pack you opened."
+
 _lock = threading.Lock()            # held for every _load, so one fetch serves everyone waiting for it
 _failed = {}                        # url -> time.monotonic() of its last failed fetch
 _kept = {}                          # path -> ((mtime_ns, size), what read() made of it), see _copy
@@ -257,6 +267,12 @@ def deck(file):
     if not isinstance(data, dict):
         raise PreconError(f"MTGJSON's file for {file} isn't a deck")
     return data
+
+
+def notes(deck_type):
+    """What the preview says about cards a box held that its list doesn't:
+    RANDOM_NOTE for every deck, and VERSION_NOTE first for a Jumpstart pack."""
+    return ([VERSION_NOTE] if deck_type in VERSIONED else []) + [RANDOM_NOTE]
 
 
 def _finish(card):

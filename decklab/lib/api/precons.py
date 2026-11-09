@@ -248,7 +248,8 @@ def precon_preview(file=None, space=None):
     problems), "problems" (cards that can't be matched), "deck_problems"
     (what stops its list being made into a deck), "adds" {"rows", "cards"},
     "dropped_basics", "left_out" ({"display commander": 1, ...}: cards not
-    added), "tokens" ([{"name", "count"}], the token cards it comes with),
+    added), "notes" (sentences on what a box held beyond its fixed list:
+    precons.notes), "tokens" ([{"name", "count"}], the token cards it comes with),
     "ready" (neither kind of problem), "sha256" (the collection's now),
     "editable" (may this visitor add it here: never in a space whose decks
     it can't see)}. 403 for a space whose
@@ -269,6 +270,7 @@ def precon_preview(file=None, space=None):
             "rows": built["rows"], "problems": built["problems"], "deck_problems": built["deck_problems"],
             "adds": {"rows": len(built["good"]), "cards": sum(int(r["quantity"]) for r in built["good"])},
             "dropped_basics": built["dropped"], "left_out": built["left_out"], "tokens": built["tokens"],
+            "notes": precons.notes(built["entry"]["type"]),
             "ready": not built["problems"] and not built["deck_problems"], "sha256": built["sha256"],
             "editable": _may_add(space), "token_import": _token_import(built, space, guard.viewer())}
 
