@@ -1023,7 +1023,7 @@ class DatabaseTests(AccessoriesApiTestCase, db_support.DbTestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         self.add({**SLEEVES, "colour": "pink", "owner": "user1"}, profile="user1")
-        self.assign("casual/hers", "dragon-shield-matte-pink", profile="user1")
+        self.assign("casual/hers", "user1-dragon-shield-matte-pink", profile="user1")
         with access.viewing("matt"):
             seen = activity.activity_view()
         with access.viewing("user1"):

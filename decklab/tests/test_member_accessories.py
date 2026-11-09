@@ -3,17 +3,23 @@ playmats and chooses them for their own decks, and nobody else's kit crosses bet
 
 Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_member_accessories
 """
+import json
 import unittest
+from unittest import mock
 
-from decklab.lib import access, accessories, inventory, permissions
+from decklab.lib import access, accessories, config, inventory, permissions
 from decklab.lib.api import accessories as api_acc, guard
 from decklab.lib.api.common import ApiError
 from decklab.tests.test_api_accessories import AccessoriesApiTestCase, BLACK, BOX_ROW, SLEEVES
-from decklab.tests.test_accessories import deck_md
+from decklab.tests.test_accessories import PROFILES, deck_md
+from decklab.tests.test_accessory_fetch import png
 
 ELVES = "user2/casual/elves"
+USER3 = {"id": "user3", "name": "User3", "role": "member", "space": "user3"}
+WITH_USER3 = {"profiles": PROFILES["profiles"] + [USER3]}
+BY_ID = {p["id"]: p for p in WITH_USER3["profiles"]}
 HIS = {**SLEEVES, "owner": "user2", "brand": "KMC", "name": "Hyper Matte", "colour": "green", "quantity": 50}
-HIS_ID = "kmc-hyper-matte-green"
+HIS_ID = "user2-kmc-hyper-matte-green"
 
 
 def member_deck(title, **kwargs):
@@ -25,6 +31,11 @@ class MemberAccessoryTests(AccessoriesApiTestCase):
 
     def setUp(self):
         super().setUp()
+        (self.root / "config.json").write_text(json.dumps(WITH_USER3), encoding="utf-8")
+        patcher = mock.patch.object(api_acc, "_writer", lambda data: dict(BY_ID[data.get("profile")]))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.assertEqual(config.CONFIG_FILE, self.root / "config.json")
         self.write("people/user2/decks/casual/elves.md", member_deck("Elves"))
         self.add()                                              # home's shared black sleeves, by Matt
 
@@ -100,6 +111,57 @@ class MemberAccessoryTests(AccessoriesApiTestCase):
         self.as_user2(api_acc.assign_accessory, holder=ELVES, field="deck_box", id=box, holder_sha256=self.his_sha())
         self.assertIn(f"- **Deck box:** {box}", inventory.current().deck(ELVES).text)
         self.assertEqual(accessories.check(), [])
+
+    def test_his_kit_is_private_from_home_and_other_members(self):
+        # His sleeves with a photo, on his deck: Matt (an admin), User1 and User3 (another member) see no
+        # trace of them, the row, its picture, his deck or its kit, in any answer that lists accessories.
+        self.as_user2(api_acc.save_accessory, sha256=self.view("user2")["sha256"], action="add", row=HIS,
+                      image=self.staged(png()))
+        self.as_user2(api_acc.assign_accessory, holder=ELVES, field="sleeves", id=HIS_ID,
+                      holder_sha256=self.his_sha())
+        mine = next(i for i in self.view("user2")["items"] if i["id"] == HIS_ID)
+        self.assertTrue(mine["image_url"])
+        self.assertEqual([u["holder"] for u in mine["used_by"]], [ELVES])
+        name, version = mine["image_url"].split("/accessory-img/")[1].split("#")[0].split("?v=")
+        with access.viewing("user2"), inventory.pinned():
+            self.assertTrue(api_acc.image_file(name, version)[0])
+        for who in ("matt", "user1", "user3"):
+            with self.subTest(who=who):
+                seen = json.dumps(self.view(who))
+                for words in (HIS_ID, "Hyper Matte", "KMC", "User2", "user2", "Elves", name):
+                    self.assertNotIn(words, seen)
+                with access.viewing(who), inventory.pinned(), self.assertRaises(ApiError) as caught:
+                    api_acc.image_file(name, version)
+                self.assertEqual(caught.exception.status, 404)
+                with access.viewing(who):
+                    self.assertFalse(guard.sees_kit(ELVES))
+                # Changing it, choosing it, or taking it off his deck: answered as for a row that isn't there.
+                with access.viewing(who), self.assertRaises(ApiError) as caught:
+                    self.call(api_acc.save_accessory, profile=who, sha256=self.view(who)["sha256"],
+                              action="edit", id=HIS_ID, row={"quantity": 1})
+                self.assertIn(caught.exception.status, (403, 404))
+                self.assertNotIn("Hyper Matte", str(caught.exception))
+                with access.viewing(who), self.assertRaises(ApiError) as caught:
+                    self.call(api_acc.assign_accessory, profile=who, holder=ELVES, field="sleeves", id=None,
+                              holder_sha256=self.his_sha())
+                self.assertEqual(caught.exception.status, 404)
+        # User3 has his own, empty list, and gets none of home's shared rows either.
+        self.assertEqual(self.view("user3")["items"], [])
+        self.assertEqual(self.view("user3")["owners"], [{"id": "user3", "name": "User3"}])
+        self.assertIn(f"- **Sleeves:** {HIS_ID}", inventory.current().deck(ELVES).text)
+
+    def test_the_same_product_gets_no_hint_of_anothers_row(self):
+        # His row and then Matt's and User3's of the same product: each id starts with its owner's, so no
+        # one's comes back with a -2 that would tell them someone else has one.
+        self.add_his()
+        matt = self.add({**HIS, "owner": "matt"})["changed_id"]
+        with access.viewing("user3"):
+            his_neighbour = self.call(api_acc.save_accessory, profile="user3", sha256=self.view("user3")["sha256"],
+                                      action="add", row={**HIS, "owner": "user3"})["changed_id"]
+        shared = self.add({**HIS, "owner": "shared"})["changed_id"]
+        self.assertEqual((matt, his_neighbour, shared),
+                         ("matt-kmc-hyper-matte-green", "user3-kmc-hyper-matte-green", "kmc-hyper-matte-green"))
+        self.assertEqual(accessories.new_id({**HIS, "owner": "matt"}, {matt}), "matt-kmc-hyper-matte-green-2")
 
     def test_owner_rules(self):
         member = {"id": "user2", "space": "user2", "role": "member"}
