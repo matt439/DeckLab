@@ -18,6 +18,23 @@ class CrosscheckCliTests(unittest.TestCase):
             code = cli.main(args)
         return code, output.getvalue(), error.getvalue()
 
+    def test_unavailable_forge_setup_has_a_plain_nonzero_failure(self):
+        from decklab.lib.forge.common import ForgeError
+        with mock.patch.object(cli, "prepare_forge", side_effect=ForgeError("Forge is not installed.")), \
+                mock.patch.object(cli, "run") as run:
+            code, _, error = self.invoke(["prepare"])
+        self.assertEqual(code, 1)
+        self.assertEqual(error.strip(), "Forge is not installed.")
+        run.assert_not_called()
+
+    def test_unconfirmed_prepared_identity_is_not_success(self):
+        with mock.patch.object(cli, "prepare_forge", return_value={"ready": False}), \
+                mock.patch.object(cli, "run") as run:
+            code, output, _ = self.invoke(["prepare"])
+        self.assertEqual(code, 1)
+        self.assertFalse(json.loads(output)["ready"])
+        run.assert_not_called()
+
     def test_status_uses_the_inventory_entry_boundary_without_reading_or_playing(self):
         from decklab.lib.inventory import entry
         with mock.patch.object(entry, "command", return_value=contextlib.nullcontext()) as command, \

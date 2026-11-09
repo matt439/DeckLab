@@ -30,7 +30,7 @@ Implemented and qualified on the development PC on 2026-11-09:
 
 - Guarded focused checks: 119 tests passed across the core, process ownership,
   recorded native protocol, API/UI, build identity, restart and source inventory;
-  six additional CLI boundary tests passed. A broader existing integration run
+  eight additional CLI boundary tests passed. A broader existing integration run
   completed 175 tests with six expected native/database qualification skips.
   The existing gauntlet, page asset/script-order and matchup-layout contracts
   passed all 74 tests after including the new section and deferred script.

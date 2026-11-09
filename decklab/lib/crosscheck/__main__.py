@@ -69,14 +69,16 @@ def main(argv=None):
 
 def _main(argv=None):
     from decklab.lib import decks, inventory, keepawake
+    from decklab.lib.forge.common import ForgeError
     args = _parser().parse_args(argv)
     try:
         if args.command == "status":
             _print(status(), True)
             return 0
         if args.command == "prepare":
-            _print(prepare_forge(), True)
-            return 0
+            prepared = prepare_forge()
+            _print(prepared, True)
+            return 0 if prepared.get("ready") is True else 1
         if args.command == "view":
             if bool(args.receipt) == bool(args.deck):
                 raise CrosscheckError("Supply a receipt id or --deck, once each.")
@@ -106,7 +108,7 @@ def _main(argv=None):
     except (decks.DeckNotFound, decks.DeckFileError) as error:
         print(str(error), file=sys.stderr)
         return 1
-    except (CrosscheckError, OSError) as error:
+    except (CrosscheckError, ForgeError, OSError) as error:
         if isinstance(error, OSError):
             print("Deck Lab could not read or save cross-check evidence.", file=sys.stderr)
         else:
