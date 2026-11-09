@@ -106,6 +106,7 @@ DEFAULTS = {
     "forge_performance_mode": True,
     "forge_game_patches": True,
     "forge_decision_log": [],
+    "xmage_dir": None,                       # optional local XMage release; cross-checks never download it
     "goldfish_workers": min(16, os.cpu_count() or 1),
 }
 
