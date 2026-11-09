@@ -49,6 +49,9 @@ def _build_dir(value):
 
 def _java(value=None):
     from decklab.lib.forge.install import find_java
+    if value is None:
+        from decklab.lib import config
+        value = config.load().get("forge_java")
     found = find_java(value)
     if found is None:
         raise ValueError("A full Java installation was not found.")

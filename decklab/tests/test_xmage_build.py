@@ -12,6 +12,24 @@ import importlib
 bridge = importlib.import_module("decklab.xmage.build")
 
 
+class XMageJavaSelectionTests(unittest.TestCase):
+    def test_configured_forge_jdk_is_used_when_no_override_is_supplied(self):
+        with tempfile.TemporaryDirectory() as folder:
+            runtime = Path(folder) / "java"
+            with mock.patch("decklab.lib.config.load", return_value={"forge_java": str(runtime)}), \
+                    mock.patch("decklab.lib.forge.install.find_java", return_value=runtime) as find:
+                self.assertEqual(bridge._java(), runtime.resolve())
+            find.assert_called_once_with(str(runtime))
+
+    def test_explicit_java_override_takes_precedence_over_configuration(self):
+        with tempfile.TemporaryDirectory() as folder:
+            runtime = Path(folder) / "java"
+            with mock.patch("decklab.lib.config.load", side_effect=AssertionError("explicit override")), \
+                    mock.patch("decklab.lib.forge.install.find_java", return_value=runtime) as find:
+                self.assertEqual(bridge._java(str(runtime)), runtime.resolve())
+            find.assert_called_once_with(str(runtime))
+
+
 class XMageBuildTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
