@@ -56,6 +56,7 @@ python scripts/ui_review.py --suite task-layout
 python scripts/ui_review.py --suite receipt-layout
 python scripts/ui_review.py --suite families
 python scripts/ui_review.py --suite zoom
+python scripts/ui_review.py --suite crosscheck
 python scripts/ui_review.py --output C:/Temp/decklab-ui-review-01
 python scripts/ui_review.py --browser "C:/Program Files/Google/Chrome/Application/chrome.exe"
 ```
@@ -76,6 +77,14 @@ deck response is unchanged. Its fixtures use the ordinary deck, guide and Game l
 readers, with invented records and placeholder art. Scores and a realistic mana
 base are not being assessed. `all` retains the original capture/editor suites;
 run `composition` separately when changing these page compositions.
+
+The opt-in `crosscheck` suite exercises the new second-simulator section on the
+Testing tab, in light and dark at phone, tablet and desktop widths. Ready saved
+results, an unavailable engine, running and partial games, failed reads and
+loading states use explicitly intercepted synthetic responses. It checks that
+the collapsed section makes no request, the opponent picker remains usable and
+the two scores stay separate. No engine or database write is made; these
+captures qualify rendering only, not native XMage behavior or device acceptance.
 
 The opt-in 54-case `shell-layout` suite measures header siblings, search form/input,
 focus decoration, activity control and viewport bounds in both themes. Cases cover
