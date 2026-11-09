@@ -147,8 +147,24 @@ def _group_stop(body):
     return stop_group(body)
 
 
+def _crosscheck_view(**params):
+    from decklab.lib.api.crosscheck_page import check_view
+    return check_view(**params)
+
+
+def _crosscheck_run(body):
+    from decklab.lib.api.crosscheck_page import run_check
+    return run_check(body)
+
+
+def _crosscheck_stop(body):
+    from decklab.lib.api.crosscheck_page import stop_check
+    return stop_check(body)
+
+
 GAUNTLET_ROUTES = {("gauntlet",), ("gauntlet", "run"), ("gauntlet", "stop"),
-                   ("field", "group"), ("field", "group", "run"), ("field", "group", "stop")}
+                   ("field", "group"), ("field", "group", "run"), ("field", "group", "stop"),
+                   ("crosscheck",), ("crosscheck", "run"), ("crosscheck", "stop")}
 
 
 def _status(key, answer):
@@ -203,6 +219,7 @@ def dispatch(handler, route, query):
         ("rankings",): (rankings.rankings_view, ("format",)),
         ("field", "membership"): (_field_membership_view, ("id", "version")),
         ("field", "group"): (_group_view, ("id", "version", "opponents", "profile")),
+        ("crosscheck",): (_crosscheck_view, ("id", "version", "opponent", "opponent_version", "test")),
         ("library", "forge"): (library_forge.library_forge_view, ()),
         ("library", "gauntlet"): (_library_gauntlet, ()),
         ("product",): (products.product_state, ("stem",)),
@@ -295,6 +312,8 @@ def dispatch(handler, route, query):
         ("gauntlet", "stop"): (_gauntlet_stop, MAX_BODY),     # run.stop: its starter, its deck's space or an admin
         ("field", "group", "run"): _group_run,       # run.start (require_start), after every deck's 404
         ("field", "group", "stop"): (_group_stop, MAX_BODY),  # run.stop, as the field's
+        ("crosscheck", "run"): (_crosscheck_run, MAX_BODY),
+        ("crosscheck", "stop"): (_crosscheck_stop, MAX_BODY),
         ("visit",): (visits.beacon, MAX_BODY),      # not a data write: no guard rule, the requester's own visit
     }
     key = tuple(route)

@@ -245,6 +245,8 @@ def stop_jobs():
     practice.JOBS.stop()
     FORGE_JOBS.stop()
     COORD_JOBS.stop()
+    from .crosscheck_page import CROSSCHECK_JOBS
+    CROSSCHECK_JOBS.stop()
 
 
 def _forge_module():

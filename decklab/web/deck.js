@@ -240,9 +240,9 @@ function deckTabParts(name, data, screen) {
   if (name === "practice") return [manualHandsSection(data), practiceSection(data)];
   // deck-tools.js, field.js, field-group.js, gauntlet.js, variant.js; a Commander deck's popular decks first (E3-S33)
   if (data.summary.kind === "commander") {
-    return [gauntletSection(data), deckMatchupsPart(data), fieldSection(data), groupSection(data), variantTestsSection(data)];
+    return [gauntletSection(data), deckMatchupsPart(data), fieldSection(data), groupSection(data), variantTestsSection(data), crosscheckSection(data)];
   }
-  return [deckMatchupsPart(data), fieldSection(data), groupSection(data), gauntletSection(data), variantTestsSection(data)];
+  return [deckMatchupsPart(data), fieldSection(data), groupSection(data), gauntletSection(data), variantTestsSection(data), crosscheckSection(data)];
 }
 
 /** Write the tab (and the Cards filter) into the address in place: Back still leaves the deck in one step. */
