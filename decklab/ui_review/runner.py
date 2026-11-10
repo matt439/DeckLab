@@ -108,20 +108,23 @@ def _process_options():
 def _requirements(browser=None):
     node = shutil.which("node")
     if not node:
-        raise ReviewError("Node.js 20 or later is required")
+        raise ReviewError("Node.js 20.19, 22.13 or 24 and later is required")
     try:
         version = subprocess.check_output([node, "--version"], timeout=10, text=True).strip()
-        if int(version.lstrip("v").split(".")[0]) < 20:
-            raise ReviewError("Node.js 20 or later is required")
-        expected = json.loads((TOOL / "package.json").read_text(encoding="utf-8"))["dependencies"]["playwright-core"]
-        installed = TOOL / "node_modules/playwright-core/package.json"
-        actual = json.loads(installed.read_text(encoding="utf-8"))["version"]
-        if actual != expected:
-            raise ReviewError("Browser dependencies differ from the pinned version; run --setup")
+        major, minor = (int(part) for part in version.lstrip("v").split(".")[:2])
+        if not (major >= 24 or major == 22 and minor >= 13 or major == 20 and minor >= 19):
+            raise ReviewError("Node.js 20.19, 22.13 or 24 and later is required")
+        expected = json.loads((TOOL / "package.json").read_text(encoding="utf-8"))["dependencies"]
+        for name, wanted in expected.items():
+            installed = TOOL / "node_modules" / name / "package.json"
+            actual = json.loads(installed.read_text(encoding="utf-8"))["version"]
+            if actual != wanted:
+                raise ReviewError("Development dependencies differ from the pinned version; run --setup")
     except (OSError, ValueError, KeyError, subprocess.SubprocessError):
-        raise ReviewError("Browser dependencies are unavailable; run python scripts/ui_review.py --setup") from None
+        raise ReviewError("Development dependencies are unavailable; run python scripts/ui_review.py --setup") from None
     return {"node": node, "node_version": version, "browser": discover_browser(browser),
-            "playwright_core": actual}
+            "playwright_core": expected["playwright-core"], "javascript_parser": expected["acorn"],
+            "javascript_scopes": expected["eslint-scope"]}
 
 
 def setup():
@@ -287,11 +290,13 @@ def _read_browser_summary(path):
     return result
 
 
-def _run_browser(node, browser, suite, runtime, output, run_id, smoke, deadline):
+def _run_browser(node, browser, suite, runtime, output, run_id, smoke, deadline, *, strict_console=False):
     command = [node, str(TOOL / f"{suite}.js"), "--runtime", str(runtime), "--output", str(output),
                "--run-id", run_id, "--browser", browser]
     if smoke:
         command.append("--smoke")
+    if strict_console:
+        command.append("--strict-console")
     proc = _spawn(command, runtime, suite)
     try:
         while proc.poll() is None:
@@ -324,7 +329,7 @@ def _write_index(output, report):
     (output / "README.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def run_review(output, browser, node, suite="all", smoke=False, timeout=180):
+def run_review(output, browser, node, suite="all", smoke=False, timeout=180, *, strict_console=False):
     """Start only owned children; retain evidence and always attempt full cleanup."""
     output = Path(output).resolve()
     source = _source_state()  # No private runtime exists yet if source fingerprinting fails.
@@ -335,7 +340,7 @@ def run_review(output, browser, node, suite="all", smoke=False, timeout=180):
     run_id = uuid.uuid4().hex
     report = {"schema": 1, "started_at_utc": datetime.now(timezone.utc).isoformat(),
               "completed": False, "interrupted": False, "headless": True, "desktop_input": False,
-              "source": source, "suite": suite, "smoke": smoke, "results": {},
+              "source": source, "suite": suite, "smoke": smoke, "strict_console": strict_console, "results": {},
               "limits": ["Synthetic data and renderer adapters; no real Forge results or authentication acceptance",
                          "CSS root-font stress is not OS/browser text zoom", "No physical-device or screen-reader acceptance"],
               "cleanup": {"complete": False}}
@@ -348,7 +353,8 @@ def run_review(output, browser, node, suite="all", smoke=False, timeout=180):
                          "--run-id", run_id], runtime, "fixture")
         ready = _wait_ready(worker, runtime, run_id, deadline)
         for selected in ("capture", "editor") if suite == "all" else (suite,):
-            report["results"][selected] = _run_browser(node, browser, selected, runtime, output, run_id, smoke, deadline)
+            options = {"strict_console": True} if strict_console else {}
+            report["results"][selected] = _run_browser(node, browser, selected, runtime, output, run_id, smoke, deadline, **options)
         report["completed"] = True
     except KeyboardInterrupt:
         report["interrupted"] = True
@@ -407,11 +413,12 @@ def run_review(output, browser, node, suite="all", smoke=False, timeout=180):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--setup", action="store_true", help="Install the pinned local browser dependency, then check prerequisites")
+    parser.add_argument("--setup", action="store_true", help="Install pinned browser/static-audit dependencies, then check prerequisites")
     parser.add_argument("--check", action="store_true", help="Check prerequisites without starting a fixture or browser")
     parser.add_argument("--output", type=Path, help="New or empty output folder; default: gitignored decklab/data/ui-review/<run>")
     parser.add_argument("--suite", choices=("all", *SUITES), default="all")
     parser.add_argument("--smoke", action="store_true", help="Use the small capture matrix; editor qualification remains complete")
+    parser.add_argument("--strict-console", action="store_true", help="Fail on every browser console error, including resource errors")
     parser.add_argument("--browser", help="Installed Chrome/Chromium/Edge executable; otherwise detected")
     parser.add_argument("--timeout", type=int, default=180, help="Maximum fixture/capture time in seconds (default: 180)")
     args = parser.parse_args(argv)
@@ -422,10 +429,12 @@ def main(argv=None):
             setup()
         requirements = _requirements(args.browser)
         if args.setup or args.check:
-            print(f"Ready: {requirements['node_version']}; playwright-core {requirements['playwright_core']}; headless browser available")
+            print(f"Ready: {requirements['node_version']}; playwright-core {requirements['playwright_core']}; "
+                  f"Acorn {requirements['javascript_parser']}; eslint-scope {requirements['javascript_scopes']}; headless browser available")
             return 0
         output = prepare_output(args.output)
-        result = run_review(output, requirements["browser"], requirements["node"], args.suite, args.smoke, args.timeout)
+        result = run_review(output, requirements["browser"], requirements["node"], args.suite, args.smoke, args.timeout,
+                            strict_console=args.strict_console)
         print(f"Evidence: {output}")
         print(f"Completed: {result['completed']}; cleanup complete: {result['cleanup']['complete']}")
         if result.get("error"):

@@ -1,0 +1,44 @@
+# Experimental browser signal, separate from required tests/ruff. Uses disposable fixtures only.
+name: UI browser smoke
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-review-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - name: Pinned tools, without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund --prefix decklab/ui_review
+      - name: Python dependencies (all application connections stay fixture guarded)
+        run: python -m pip install -r decklab/requirements.txt tzdata
+      - name: Chrome over disposable fixtures, failing on page and console errors
+        run: >-
+          python scripts/ui_review.py --smoke --suite capture --strict-console --timeout 240
+          --output decklab/data/ci-ui-smoke
+      - name: Keep synthetic browser evidence and cleanup receipts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ui-review-smoke
+          path: decklab/data/ci-ui-smoke
+          if-no-files-found: ignore
+          retention-days: 7

@@ -699,6 +699,23 @@ class WebFileTests(unittest.TestCase):
                     self.assertNotIn(defined, seen, f"{defined} is in {seen.get(defined)} and {name}")
                 seen[defined] = name
 
+    @unittest.skipUnless(NODE, "Node.js is needed for the sheet-closer inventory")
+    def test_every_global_sheet_family_closes_through_the_shared_entry_point(self):
+        from decklab.tests.test_js_globals import audit
+        found = audit([(name, _text(name)) for name in SCRIPTS])
+        # This per-view redraw helper uses the same tracked sheets closed by shopCloseQueueSheets.
+        scoped = {"shopCloseCopySheets"}
+        families = {row["name"] for row in found["sheetClosers"]} - {"closeAllSheets"} - scoped
+        self.assertEqual(families - set(found["closeCalls"]), set())
+        self.assertEqual(found["closeCalls"], ["shopCloseQueueSheets", "closeReprintSheets", "colCloseSheets",
+            "closeDeckOpponentSheets", "closeDeckRetirementSheets", "closeAssemblySheets", "closeProductStorageSheets",
+            "closeTokenPlanSheets", "closeLifeCounter", "closePodLifeCounter", "closeAccessorySheets",
+            "closeReceiptSheets", "closeWishlistSheets"])
+        for name in ("chooseProfile", "drawWho", "route"):
+            body = _function(_text("app.js"), name)
+            self.assertIn("closeAllSheets();", body)
+            self.assertFalse(any(re.search(rf"\b{family}\(", body) for family in families))
+
     def test_shadow_token_works_inside_a_list_of_shadows(self):
         # Review finding: dark mode's "--shadow: none" made "box-shadow: 0 0 0 1px ..., var(--shadow)"
         # invalid, so the selected button of a segmented switch lost its outline in dark mode.

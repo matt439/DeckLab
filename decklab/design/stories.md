@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 45 | 13 | 17 | 4 |
-| **Total** | **376** | **283** | **21** | **56** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 46 | 13 | 16 | 4 |
+| **Total** | **376** | **284** | **21** | **55** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6342,7 +6342,7 @@ Gap: the stem is repeated as a literal in three places beside its constant, and 
 
 First slice: use `decks.BEGINNER_BOX` in `space_forge.py` and `goldfish/cli.py`, add a `LOCALE` constant and helpers to `decklab/web/core.js`, and add `decklab/tests/test_no_household_literals.py`.
 
-**E11-S74** · Matt · could · M · missing
+**E11-S74** · Matt · could · M · built
 
 As Matt, changing a page built from many scripts sharing one global scope, I want CI to catch a call to a function that no longer exists and a page that throws in a real browser, and the router to close every sheet through one function, so that a renamed helper or a new sheet family can't break a page unnoticed.
 
@@ -6350,9 +6350,9 @@ As Matt, changing a page built from many scripts sharing one global scope, I wan
 - Given a page script calling a bare name that no script defines and that isn't a browser global, a local or a `typeof`-guarded name, when the fixture suite runs, then a test names the file and the name.
 - Given a pull request, when CI runs, then a Linux job runs `python scripts/ui_review.py --smoke` in the runner's Chrome and fails on any page error or console error; it stays outside the required `tests` check until it has proved stable.
 
-Gap: none of the three exists. The fixture suite already runs every script in page order under Node, and `decklab/tests/test_web.py` has `test_scripts_load_in_order` and `test_no_name_is_defined_twice`, so syntax and load-time errors are caught; the browser smoke exists but no workflow runs it. From the product review of 2026-11-10.
+Built 2026-11-11: choose-profile, chooser and route transitions use one `closeAllSheets()` in the original close order. A lexical Acorn/eslint-scope audit checks every classic page script for unresolved bare calls and inventories global sheet closers; tests cover scopes, cross-file definitions and protected `typeof` paths without executing the source. Exact parser dependencies are pinned/locked and installed with scripts disabled before fixture CI. A separate Linux Chrome workflow runs the isolated capture smoke with strict page/console errors, retaining synthetic receipts and cleanup evidence; required tests/ruff gates and rules remain unchanged. Suppressed synthetic visit telemetry is fulfilled locally with204 rather than making its intentional abort a console error; other unauthorized/external writes still abort.
 
-First slice: extract `closeAllSheets()` in `decklab/web/app.js` from its three repeated blocks and add the every-closer-is-called test to `decklab/tests/test_web.py`.
+Evidence: 65 targeted lexical/web/supply-chain/harness fixtures pass (one existing platform skip). The local CI-equivalent strict-console capture passed12/12 cases, without page/console errors or unexpected requests and with complete cleanup (`data/ui-review/20261110T160223Z-a8403650/`). Hosted Linux CI remains to be observed on the final PR. Production has no npm dependency/build step; developer setup is documented in ui_review/README. From the product review of 2026-11-10.
 
 **E11-S75** · Matt · could · M · missing
 

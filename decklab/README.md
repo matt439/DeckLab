@@ -1953,6 +1953,11 @@ A new epic's row in design/README.md is added by hand (its "What it covers" cell
 
 From the repo root, run the default fixture checks:
 
+When Node.js is installed, prepare the pinned JavaScript audit tools first with
+`npm ci --ignore-scripts --prefix decklab/ui_review`. No browser is needed for
+these static scope/closer checks; fixture CI prepares them automatically. The
+supported Node versions are 20.19+ (20.x), 22.13+ (22.x), or 24+.
+
 ```
 python scripts/test_fixtures.py
 python scripts/test_fixtures.py decklab.tests.test_collection_import_groups

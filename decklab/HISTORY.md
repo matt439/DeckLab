@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## JavaScript scope checks and an independent browser CI signal (2026-11-11; E11-S74)
+
+- One closeAllSheets() preserves existing global sheet cleanup order for profile/chooser/route changes. The fixture suite inventories closer definitions and fails if the shared entry point omits a family.
+- Pinned Acorn/eslint-scope tools parse classic scripts with real lexical scopes, checking unresolved bare calls while recognizing local bindings, cross-file globals and protected typeof paths. Fixture CI installs the exact locked dev dependencies with lifecycle scripts disabled; production still has no npm/build requirement.
+- A separate, non-required Linux Chrome workflow runs disposable capture smoke with strict page/console error handling and retained evidence. Synthetic visit telemetry is suppressed with a local204 reply, avoiding a harness-created abort error without contacting the app/database. Other unapproved/external writes remain blocked; existing required CI gates are unchanged.
+- Validation: 65 targeted fixture checks pass (one platform skip), and the CI-equivalent12-case strict-console browser run passed with clean cleanup (`data/ui-review/20261110T160223Z-a8403650/`). Hosted CI is followed on the final PR; no workflow or branch protection setting was changed remotely.
+
 ## Life-counter wake, Undo and rules-derived markers (2026-11-11; E4-S32)
 
 - The duel/pod counters share guarded wake-lock handling, with visible-return reacquisition and stale-lock release. Unsupported/rejected locks say when the screen may sleep, distinguishing a saved count from storage failure.

@@ -111,7 +111,8 @@ function homeProfiles() {
   return state.profiles.filter((p) => (p.space || HOME_SPACE) === HOME_SPACE);
 }
 
-async function chooseProfile(profile) {
+/** Every global sheet family closes before leaving its page or profile, in the existing order. */
+function closeAllSheets() {
   shopCloseQueueSheets();
   closeReprintSheets();
   colCloseSheets();
@@ -125,6 +126,10 @@ async function chooseProfile(profile) {
   closeAccessorySheets();
   closeReceiptSheets();
   closeWishlistSheets();
+}
+
+async function chooseProfile(profile) {
+  closeAllSheets();
   state.profile = profile;
   session.set("profile", profile.id);
   local.set("lastProfile", profile.id);
@@ -209,19 +214,7 @@ function backFromAway() {
 }
 
 function drawWho() {
-  shopCloseQueueSheets();
-  closeReprintSheets();
-  colCloseSheets();
-  closeDeckOpponentSheets();
-  closeDeckRetirementSheets();
-  closeAssemblySheets();
-  closeProductStorageSheets();
-  closeTokenPlanSheets();
-  if (typeof closeLifeCounter === "function") closeLifeCounter();     // life-counter.js: its game stays kept
-  if (typeof closePodLifeCounter === "function") closePodLifeCounter();
-  closeAccessorySheets();
-  closeReceiptSheets();
-  closeWishlistSheets();
+  closeAllSheets();
   stopMatchupRefresh();
   routeToken += 1;
   setTitle("Who are you?");
@@ -259,19 +252,7 @@ function parseHash() {
 }
 
 function route() {
-  shopCloseQueueSheets();
-  closeReprintSheets();
-  colCloseSheets();
-  closeDeckOpponentSheets();
-  closeDeckRetirementSheets();
-  closeAssemblySheets();
-  closeProductStorageSheets();
-  closeTokenPlanSheets();
-  if (typeof closeLifeCounter === "function") closeLifeCounter();     // life-counter.js: its game stays kept
-  if (typeof closePodLifeCounter === "function") closePodLifeCounter();
-  closeAccessorySheets();
-  closeReceiptSheets();
-  closeWishlistSheets();
+  closeAllSheets();
   stopMatchupRefresh();
   const token = ++routeToken;
   const { path, params, alias } = parseHash();

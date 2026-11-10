@@ -14,6 +14,69 @@ from urllib.parse import urlsplit
 
 
 class ReviewRunnerTests(unittest.TestCase):
+    def test_telemetry_is_answered_inside_the_browser_guard_without_permitting_writes(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is needed for the browser guard check")
+        script = r'''
+const assert = require('node:assert/strict');
+const {Review} = require('./decklab/ui_review/common.js');
+(async () => {
+  let handler;
+  const context = {on:() => {}, route:async (pattern, value) => {handler = value;}};
+  const review = {contexts:new Set(), origin:'http://127.0.0.1:18643',
+    report:{network:{blocked:[],allowed_reads:0,dry_checks:0}}, safeUrl:value => new URL(value).pathname};
+  await Review.prototype.guardContext.call(review, context);
+  async function request(method, url) {
+    const events = [];
+    await handler({request:() => ({url:() => url,method:() => method}),
+      fulfill:async response => events.push(['fulfill',response.status]),
+      abort:async reason => events.push(['abort',reason]), continue:async () => events.push(['continue'])});
+    return events;
+  }
+  assert.deepEqual(await request('POST',review.origin+'/api/visit'), [['fulfill',204]]);
+  assert.equal(review.report.network.blocked[0].category,'expected_fixture_telemetry');
+  assert.deepEqual(await request('POST',review.origin+'/api/collection'), [['abort','blockedbyclient']]);
+  assert.deepEqual(await request('POST','https://example.com/api/visit'), [['abort','blockedbyclient']]);
+  assert.deepEqual(await request('GET',review.origin+'/app.js'), [['continue']]);
+  assert.deepEqual(await request('POST',review.origin+'/api/deck/check'), [['continue']]);
+  assert.equal(review.report.network.dry_checks,1);
+  assert.equal(review.report.network.allowed_reads,1);
+})().catch(error => {console.error(error);process.exitCode=1;});
+'''
+        result = subprocess.run([node, "-e", script], cwd=Path(__file__).resolve().parents[2],
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_strict_console_mode_records_errors_without_relaxing_page_errors(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is needed for the browser observer check")
+        script = r'''
+const assert = require('node:assert/strict');
+const {Review, argumentsFor} = require('./decklab/ui_review/common.js');
+for (const strictConsole of [false, true]) {
+  const handlers = {}, errors = [];
+  const page = {on:(name, callback) => {handlers[name] = callback;}};
+  const review = {options:{strictConsole}, safeText: value => value};
+  Review.prototype.observe.call(review, page, errors, []);
+  handlers.pageerror({message:'Uncaught synthetic failure'});
+  assert.deepEqual(errors, ['Uncaught synthetic failure']);
+  if (strictConsole) {
+    handlers.console({type:() => 'warning', text:() => 'Warning'});
+    assert.equal(errors.length, 1);
+    handlers.console({type:() => 'error', text:() => 'Synthetic resource or console failure'});
+    assert.deepEqual(errors, ['Uncaught synthetic failure', 'Console error: Synthetic resource or console failure']);
+  } else assert.equal(handlers.console, undefined);
+}
+const args = ['--runtime','runtime','--output','output','--run-id','a'.repeat(32),'--browser','browser'];
+assert.equal(argumentsFor([...args,'--strict-console']).strictConsole, true);
+assert.throws(() => argumentsFor([...args,'--strict-console','--strict-console']));
+'''
+        result = subprocess.run([node, "-e", script], cwd=Path(__file__).resolve().parents[2],
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_spawn_marks_every_supported_browser_for_cleanup_audit(self):
         from decklab.ui_review import runner
 

@@ -27,8 +27,16 @@ def uses_lines(path):
 
 @unittest.skipUnless(WORKFLOWS.is_dir(), "no .github/workflows here (a release zip leaves it out)")
 class WorkflowPinTests(unittest.TestCase):
-    def test_the_three_workflows_are_the_ones_checked(self):
-        self.assertEqual({"lint.yml", "release.yml", "tests.yml"}, {p.name for p in WORKFLOWS.glob("*.y*ml")})
+    def test_all_workflows_are_checked(self):
+        self.assertEqual({"lint.yml", "release.yml", "tests.yml", "ui-review-smoke.yml"},
+                         {p.name for p in WORKFLOWS.glob("*.y*ml")})
+
+    def test_browser_smoke_stays_separate_from_the_required_test_aggregate(self):
+        smoke = (WORKFLOWS / "ui-review-smoke.yml").read_text(encoding="utf-8")
+        self.assertIn("scripts/ui_review.py --smoke --suite capture --strict-console", smoke)
+        self.assertNotIn("ui-review-smoke", (WORKFLOWS / "tests.yml").read_text(encoding="utf-8"))
+        self.assertNotIn("pull_request_target", smoke)
+        self.assertRegex(smoke, r"(?m)^permissions:\n  contents: read$")
 
     def test_every_action_is_pinned_to_a_commit_with_its_version_in_a_comment(self):
         seen = 0
