@@ -19,6 +19,13 @@ shop that can't be read leaves only its own prices unknown:
        "error": words}},
      "previous": {name: {"at": ISO, "listings": [...]}}}
 
+A card's entry also has "partial": True when the shop's page was only part of its results (Games
+Portal's first page of a search with more, E5-S33), so its lines say "first page only, more
+results not read". A token or reminder row of the queue is never looked up (rows.is_token): its
+shop line says token cards aren't checked at the shop. An exact row's printing is matched with
+rows.py's tolerance, and when the shop lists the card but not that printing the line says
+"listed, but not matched to your printing" with the shop's sets.
+
 "previous" is the snapshot before (its names that were read), so a row can say it is newly
 in stock. Each day's reading of a name still on the queue is kept 90 days in a file of its
 own beside the snapshot (history_path(): mtgmate.history.json, history.py, E5-S29), so the
@@ -51,8 +58,10 @@ Shopping only reads the files (match() below), so a page load never reaches a sh
     python -m decklab.lib.shops lookup NAME [--shop KEY]
         one name's listings at one shop (MTGMate unless --shop), printed (one request after
         robots.txt; nothing saved)
-    python -m decklab.lib.shops history NAME [--shop KEY] [--json]
-        a queued name's dated price and stock at each shop, the last 90 days (no network)
+    python -m decklab.lib.shops history NAME [--row N] [--shop KEY] [--json]
+        a queued name's dated price and stock at each shop, the last 90 days (no network);
+        --row N (the row's number in `watchlist list`) reads them for that row's own printing
+        and finish, else as an any-printing row
 """
 import argparse
 import contextlib
@@ -68,8 +77,9 @@ from pathlib import Path
 from decklab.lib import config
 from decklab.lib.shops import gamesportal, mtgmate
 from decklab.lib.shops import history as _history
+from decklab.lib.shops import rows as _rows
 from decklab.lib.shops.base import (FINISHES, LISTING_FIELDS, MAX_PAGE, TIMEOUT, USER_AGENT,  # noqa: F401 (the package's names)
-                                    Adapter, Disallowed, ShopError, allowed, fetch_page, robots_rules)
+                                    Adapter, Disallowed, Listings, ShopError, allowed, fetch_page, robots_rules)
 from decklab.lib.shops.mtgmate import NAME_PATH, name_url, parse_name_page  # noqa: F401 (as before the split)
 
 if sys.platform == "win32":
@@ -288,9 +298,12 @@ def fresh(data, now):
 
 
 def queue_names(rows):
-    """The distinct card names of the queue's rows, in queue order."""
+    """The distinct card names of the queue's rows, in queue order. A row marked is_token (a token
+    or reminder card, as _queue() marks them) is left out: the shops aren't asked for token cards."""
     seen, names = set(), []
     for row in rows:
+        if row.get("is_token"):
+            continue
         name = str(row.get("name") or "").strip()
         if name and name.casefold() not in seen:
             seen.add(name.casefold())
@@ -344,6 +357,8 @@ def take(names, *, session=None, previous=None, now=None, progress=None, budget=
             if old is not None and old.get("status") in ("ok", "not_listed"):
                 cards_out[name] = {"status": old["status"], "at": old.get("at"), "listings": old.get("listings") or [],
                                    "carried": True}
+                if old.get("partial"):
+                    cards_out[name]["partial"] = True
             else:
                 cards_out[name] = {"status": "error", "at": _iso(now()), "listings": [],
                                    "error": "Not checked: this run's time ran out"}
@@ -366,7 +381,10 @@ def take(names, *, session=None, previous=None, now=None, progress=None, budget=
                 stop = f"{shop.name} failed {failures} times in a row"
         else:
             failures = 0
-            cards_out[name] = {"status": "ok" if listings else "not_listed", "at": _iso(now()), "listings": listings}
+            cards_out[name] = {"status": "ok" if listings else "not_listed", "at": _iso(now()),
+                               "listings": list(listings)}
+            if getattr(listings, "partial", False):
+                cards_out[name]["partial"] = True     # the page was only part of the shop's results
         if progress:
             progress(count, len(names), name, cards_out[name])
     kept = {}
@@ -402,15 +420,13 @@ def _cheapest(listings):
 def pick(row, listings):
     """(the listing that answers the row, how many listings in its scope are in stock), or (None, 0).
 
-    An exact row wants its printing and finish (nonfoil when blank). Any other row wants the
+    An exact row wants its printing and finish (nonfoil when blank), the shop's set code and
+    collector number compared with rows.py's tolerance (case, spaces, leading zeros). Any other row wants the
     cheapest in-stock nonfoil, else the cheapest in-stock listing of any finish, else the cheapest
     nonfoil out of stock (AGENTS.md: the cheapest printing, non-foil, unless asked)."""
     listings = [item for item in listings or () if isinstance(item, dict)]
-    finish = (row.get("finish") or "nonfoil").lower()
-    if row.get("printing") == "exact" and row.get("set") and row.get("collector_number"):
-        scope = [item for item in listings if item.get("set") == str(row["set"]).lower()
-                 and str(item.get("number", "")).casefold() == str(row["collector_number"]).casefold()
-                 and item.get("finish") == finish]
+    if _rows.exact(row):
+        scope = _rows.own(row, listings)
         stocked = [item for item in scope if item.get("stock", 0) > 0]
         return (_cheapest(stocked) or _cheapest(scope)), len(stocked)
     stocked = [item for item in listings if item.get("stock", 0) > 0]
@@ -422,9 +438,13 @@ def pick(row, listings):
 
 def match(row, data):
     """What the snapshot says about one queue row, or None when there is no snapshot:
-    {"shop", "status": "in_stock" | "out_of_stock" | "not_listed" | "unknown" | "not_checked",
-     "fetched_at", "price_aud", "stock", "set", "collector_number", "finish", "url",
-     "in_stock_printings", "error", "back_in_stock", "newly_in_stock", "carried"}.
+    {"shop", "status": "in_stock" | "out_of_stock" | "not_listed" | "not_matched" | "token" | "unknown"
+     | "not_checked", "fetched_at", "price_aud", "stock", "set", "collector_number", "finish", "url",
+     "in_stock_printings", "error", "back_in_stock", "newly_in_stock", "carried", "partial", "shop_sets"}.
+    not_matched (E5-S33): an exact row whose card the shop lists, but not in that printing and
+    finish; shop_sets then names the set codes it does list. token: a token or reminder row
+    (is_token), which the shops are never asked for. partial: the shop's page was only part of
+    its results (Games Portal's first page), so more listings may exist than were read.
     back_in_stock: a waiting_for_stock row the snapshot finds in stock (E5-S19's highlight);
     newly_in_stock: in stock now and not in the snapshot before; carried: a name the last run
     didn't reach in its time, shown as an earlier run read it (fetched_at is then that run's)."""
@@ -435,7 +455,10 @@ def match(row, data):
     shown = {"shop": data.get("shop") or SHOP, "status": "not_checked", "fetched_at": None, "price_aud": None,
              "stock": None, "set": None, "collector_number": None, "finish": None, "url": None,
              "in_stock_printings": 0, "error": None, "back_in_stock": False, "newly_in_stock": False,
-             "carried": False}
+             "carried": False, "partial": False, "shop_sets": []}
+    if row.get("is_token"):
+        shown["status"] = "token"
+        return shown
     if entry is None:
         return shown
     shown["fetched_at"] = entry.get("at") or data.get("fetched_at")
@@ -444,9 +467,11 @@ def match(row, data):
     if status == "error":
         shown.update(status="unknown", error=str(entry.get("error") or f"{shown['shop']} couldn't be read"))
         return shown
+    shown["partial"] = bool(entry.get("partial"))
     choice, stocked = pick(row, entry.get("listings"))
     if choice is None:
-        shown["status"] = "not_listed"
+        shown["shop_sets"] = _rows.shop_sets(entry.get("listings") or ()) if _rows.exact(row) else []
+        shown["status"] = "not_matched" if shown["shop_sets"] else "not_listed"
         return shown
     in_stock = choice.get("stock", 0) > 0
     shown.update(status="in_stock" if in_stock else "out_of_stock", price_aud=choice.get("price"),
@@ -472,10 +497,12 @@ def summary(data):
 
 def _queue():
     """The watchlist's rows as dicts, read as saved (purchases.read_queue would also insist
-    every source file exists, which a name lookup doesn't need)."""
+    every source file exists, which a name lookup doesn't need), its token and reminder rows
+    marked is_token (rows.flag_tokens: from the card index, none marked without it)."""
     from decklab.lib import inventory, purchases
     with contextlib.nullcontext() if inventory.is_pinned() else inventory.pinned():
-        return [{key: row.text(key) for key in purchases.QUEUE_FIELDS} for row in inventory.current().watchlist.rows]
+        found = [{key: row.text(key) for key in purchases.QUEUE_FIELDS} for row in inventory.current().watchlist.rows]
+    return _rows.flag_tokens(found)
 
 
 def _lock_path(adapter=None):
@@ -530,9 +557,21 @@ def _describe(shown):
         stock = counted if shown["status"] == "in_stock" else "out of stock"
         flags = " BACK IN STOCK" if shown["back_in_stock"] else (" new" if shown["newly_in_stock"] else "")
         when = f", as read {shown['fetched_at']}" if shown.get("carried") else ""
-        return f"{price}, {stock} ({where}){flags}{when}"
-    return {"not_listed": "not listed", "not_checked": "not in the snapshot"}.get(
+        return f"{price}, {stock} ({where}){flags}{when}{_partial_words(shown)}"
+    if shown["status"] == "not_matched":
+        sets = ", ".join(code.upper() for code in shown.get("shop_sets") or ())
+        return f"listed, but not matched to your printing (the shop's sets: {sets}){_partial_words(shown)}"
+    if shown["status"] == "not_listed":
+        return f"not listed{_partial_words(shown)}"
+    return {"token": "token cards aren't checked at this shop", "not_checked": "not in the snapshot"}.get(
         shown["status"], f"price unknown: {shown['error']}")
+
+
+PARTIAL_WORDS = "first page only, more results not read"
+
+
+def _partial_words(shown):
+    return f"; {PARTIAL_WORDS}" if shown.get("partial") else ""
 
 
 def _minutes(names, delay=DEFAULT_DELAY):
@@ -772,9 +811,31 @@ def _lookup(args):
     return 0
 
 
+def queue_row(rows, number, name):
+    """The queue's row at number (one-based, as `watchlist list` numbers them) when it is name's
+    (ignoring case), else None: the row a price history is read for."""
+    if isinstance(number, bool) or not isinstance(number, int) or not 1 <= number <= len(rows):
+        return None
+    row = rows[number - 1]
+    return row if str(row.get("name") or "").strip().casefold() == str(name).strip().casefold() else None
+
+
 def _history_command(args):
     adapters = _chosen(args)
-    answer = _history.report(args.name, [(adapter, {"history": load_history(adapter)}) for adapter in adapters], pick)
+    row = None
+    if args.row is not None:
+        from decklab.lib.inventory import Unavailable
+        try:
+            row = queue_row(_queue(), args.row, args.name)
+        except (Unavailable, ValueError) as error:
+            print(f"The purchase queue couldn't be read: {error}", file=sys.stderr)
+            return 2
+        if row is None:
+            print(f"Row #{args.row} of the purchase queue isn't {args.name} (python -m decklab.db watchlist list).",
+                  file=sys.stderr)
+            return 1
+    answer = _history.report(args.name, [(adapter, {"history": load_history(adapter)}) for adapter in adapters], pick,
+                             row=row)
     if args.json:
         print(json.dumps(answer, indent=1))
     else:
@@ -803,6 +864,8 @@ def main(argv=None):
     look.set_defaults(func=_lookup)
     past = sub.add_parser("history", help="a queued name's dated price and stock at each shop, kept 90 days (no network)")
     past.add_argument("name")
+    past.add_argument("--row", type=int, metavar="N",
+                      help="read them for this queue row's own printing and finish (its number in `watchlist list`)")
     past.add_argument("--shop", choices=sorted(ADAPTERS), help="only this shop (default: every shop)")
     past.add_argument("--json", action="store_true", help="print it as JSON")
     past.set_defaults(func=_history_command)

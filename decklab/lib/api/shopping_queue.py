@@ -178,6 +178,10 @@ def save_queue_state(body):
         result["reprints"] = evidence({key: current_item.text(key) for key in purchases.QUEUE_FIELDS}, queued=True)
         from .shop_prices import capture, for_row, for_row_shops
         captured, queued = capture(), {key: current_item.text(key) for key in purchases.QUEUE_FIELDS}
+        if captured:
+            from .shopping_missing import is_token as _is_token
+            if _is_token(queued):       # a token row's shop lines say tokens aren't checked (E5-S33)
+                queued["is_token"] = True
         shown = for_row(queued, captured) if captured else None
         if shown is not None:
             result["shop_snapshot"] = shown

@@ -7,6 +7,9 @@ reading a day for each card name still on the purchase queue:
     "history": {name: [{"on": "YYYY-MM-DD", "at": ISO, "listings": [{"set", "number", "finish",
                          "condition", "price", "stock"}]}, ...]}      # days in order, oldest first
 
+A reading whose page was only part of the shop's results (Games Portal's first page, E5-S33)
+also has "partial": True.
+
 A reading is what a run read of that name ("ok" or "not_listed", the latter with no listings);
 a name the run couldn't read or didn't reach adds nothing that day. A second run on the same day
 replaces that day's reading. Each snapshot drops readings older than KEEP_DAYS and every name no
@@ -14,8 +17,14 @@ longer on the queue (a card bought or removed loses its history with the next sn
 nightly step's saved-home missing names, never queued, get none; a run that finds the queue
 empty prunes it too). Listings keep only what a price trend needs: no links. Games Portal's
 stock is only 1 or 0 (in stock or not). A missing history file is an empty history.
+
+report() reads a history for one queue row's own printing and finish (rows.history_scope,
+E5-S33): an exact row only its printing and finish, a foil or etched row only that finish, any
+other row the cheapest nonfoil as an any-printing row is answered.
 """
 from datetime import date, timedelta
+
+from decklab.lib.shops import rows as _rows
 
 KEEP_DAYS = 90
 FIELDS = ("set", "number", "finish", "condition", "price", "stock")
@@ -75,6 +84,8 @@ def record(previous, cards, queued, today):
             continue
         on = _day(entry.get("at")) or today
         reading = {"on": on.isoformat(), "at": entry.get("at"), "listings": _compact(entry.get("listings"))}
+        if entry.get("partial"):
+            reading["partial"] = True
         old[folded] = [item for item in old.get(folded, []) if str(item["on"])[:10] != reading["on"]] + [reading]
     oldest = today - timedelta(days=KEEP_DAYS - 1)
     history = {}
@@ -92,45 +103,56 @@ def _price(item):
         return None
 
 
-def day_summary(reading, pick):
-    """One reading's answer for an any-printing row (pick: the package's pick()):
-    {"on", "at", "price", "stock", "in_stock", "set", "number", "finish", "in_stock_printings"}."""
-    choice, stocked = pick({"printing": "any"}, reading.get("listings"))
+def day_summary(reading, pick, row=None):
+    """One reading's answer for the queue row's own printing and finish (row None: an any-printing
+    row; pick: the package's pick()): {"on", "at", "price", "stock", "in_stock", "set", "number",
+    "finish", "in_stock_printings", "listed", "partial", "elsewhere"}. listed: a listing in the
+    row's scope; elsewhere: none, though the shop listed the card in another printing or finish
+    that day; partial: the shop's page was only part of its results."""
+    asked, listings = _rows.history_scope(row, reading.get("listings"))
+    choice, stocked = pick(asked, listings)
     shown = {"on": reading.get("on"), "at": reading.get("at"), "price": None, "stock": None, "in_stock": False,
-             "set": None, "number": None, "finish": None, "in_stock_printings": stocked, "listed": choice is not None}
+             "set": None, "number": None, "finish": None, "in_stock_printings": stocked, "listed": choice is not None,
+             "partial": bool(reading.get("partial")),
+             "elsewhere": choice is None and any(isinstance(item, dict) for item in reading.get("listings") or ())}
     if choice is not None:
         shown.update(price=choice.get("price"), stock=choice.get("stock", 0), in_stock=(choice.get("stock") or 0) > 0,
                      set=choice.get("set"), number=choice.get("number"), finish=choice.get("finish"))
     return shown
 
 
-def report(name, snapshots, pick):
-    """{"name", "shops": [{"shop", "counts_stock", "days": [day_summary + "lowest"]}]} for each
-    (adapter, data) in snapshots. lowest marks the day (or days) with that shop's lowest price a
+def report(name, snapshots, pick, row=None):
+    """{"name", "scope", "shops": [{"shop", "counts_stock", "days": [day_summary + "lowest"]}]} for
+    each (adapter, data) in snapshots, read for the queue row's own printing and finish (row None:
+    as an any-printing row); scope says which in words ("LTC 12 foil", "any printing"). lowest marks the day (or days) with that shop's lowest price a
     copy could be bought at: only days whose chosen listing was in stock count, never an
     out-of-stock fallback's price."""
     out = []
     for adapter, data in snapshots:
-        days = [day_summary(reading, pick) for reading in find(data, name)]
+        days = [day_summary(reading, pick, row) for reading in find(data, name)]
         prices = [_price(day) for day in days if day["in_stock"] and _price(day) is not None]
         low = min(prices) if prices else None
         for day in days:
             day["lowest"] = low is not None and day["in_stock"] and _price(day) == low
         out.append({"shop": adapter.name, "counts_stock": adapter.counts_stock, "days": days})
-    return {"name": name, "shops": out}
+    return {"name": name, "scope": _rows.scope_words(row), "shops": out}
 
 
 def lines(answer):
     """report()'s answer as printed lines."""
     said = []
+    if answer.get("scope") and answer["scope"] != "any printing":
+        said.append(f"Read for {answer['scope']}.")
     for shop in answer["shops"]:
         if not shop["days"]:
             said.append(f"{shop['shop']}: no history for {answer['name']}")
             continue
         said.append(f"{shop['shop']}: {len(shop['days'])} days")
         for day in shop["days"]:
+            more = "; first page only, more results not read" if day.get("partial") else ""
             if not day["listed"]:
-                said.append(f"  {day['on']}  not listed")
+                words = "listed, but not in this printing" if day.get("elsewhere") else "not listed"
+                said.append(f"  {day['on']}  {words}{more}")
                 continue
             # A$ whatever the configured currency (E11-S53): the shops list in AUD, never converted.
             price = f"A${day['price']}" if day["price"] else "price not shown"
@@ -141,5 +163,5 @@ def lines(answer):
             else:
                 stock = "in stock"
             where = f"{str(day['set'] or '').upper()} {day['number']} {day['finish']}"
-            said.append(f"  {day['on']}  {price}, {stock} ({where}){'  lowest in stock' if day['lowest'] else ''}")
+            said.append(f"  {day['on']}  {price}, {stock} ({where}){more}{'  lowest in stock' if day['lowest'] else ''}")
     return said

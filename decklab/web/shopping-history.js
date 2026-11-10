@@ -2,8 +2,11 @@
  * Loaded after shopping-snapshot.js. A queued row with a shop snapshot has a "Price history" button beside its
  * snapshot line (in the lab table, in the row's extra details with the snapshot); it opens a sheet that asks for
  * the card's daily readings at each shop (kept 90 days, only while the card is queued) and shows, per shop, the
- * lowest in-stock price first, then each day newest first with its price and stock. Read only: nothing is saved,
- * and an answer that comes after the sheet closed, or for another profile or route, is dropped. */
+ * lowest in-stock price first, then each day newest first with its price and stock. The sheet asks for the
+ * row itself (its queue_row, E5-S33), so each day is read for that row's own printing and finish, and says which;
+ * a day the shop listed the card only in another printing says so, and so does a day whose page was only the
+ * first of the shop's results. Read only: nothing is saved, and an answer that comes after the sheet closed, or
+ * for another profile or route, is dropped. */
 "use strict";
 
 /** "2 Nov" for a reading's day. */
@@ -20,9 +23,17 @@ function shopHistoryPrice(day) {
 
 /** One day's stock in the shop's own terms (Games Portal says only in stock or not). */
 function shopHistoryStock(day, counts) {
-  if (!day.listed) return "not listed";
-  if (!day.in_stock) return "out of stock";
-  return counts ? `${num(day.stock)} in stock` : "in stock";
+  const more = day.partial === true ? `; ${SHOP_SNAPSHOT_PARTIAL}` : "";
+  if (!day.listed) return `${day.elsewhere === true ? "listed, but not in this printing" : "not listed"}${more}`;
+  if (!day.in_stock) return `out of stock${more}`;
+  return `${counts ? `${num(day.stock)} in stock` : "in stock"}${more}`;
+}
+
+/** A day's printing: "LTC 12", with its finish when it isn't nonfoil. */
+function shopHistoryPrinting(day) {
+  if (!day.set) return "";
+  return `${String(day.set).toUpperCase()} ${day.number || ""}`.trim()
+    + (day.finish && day.finish !== "nonfoil" ? ` ${day.finish}` : "");
 }
 
 /** One shop's part: its lowest in-stock price first, then the days, newest first. */
@@ -39,7 +50,7 @@ function shopHistoryShop(shop) {
     el("td", {text: shopHistoryDay(day.on)}),
     el("td", {class: "num", text: day.listed ? shopHistoryPrice(day) : "—"}),
     el("td", {text: shopHistoryStock(day, shop.counts_stock !== false)}),
-    el("td", {text: day.set ? `${String(day.set).toUpperCase()} ${day.number || ""}`.trim() : ""})));
+    el("td", {text: shopHistoryPrinting(day)})));
   return el("section", {class: "shop-history-shop", "data-shop-history": shop.shop}, head,
     el("p", {class: "shop-history-lowest", text: low}),
     el("p", {class: "sub", text: `${plural(days.length, "day")} kept.`}),
@@ -60,7 +71,8 @@ async function shopHistorySheet(card, view) {
   const alive = () => !sheet.closed && shopQueueActive(view);
   let answer;
   try {
-    answer = await api(`/api/shopping/price-history?name=${encodeURIComponent(card.name)}`);
+    const row = Number.isSafeInteger(card.queue_row) && card.queue_row > 0 ? `&row=${card.queue_row}` : "";
+    answer = await api(`/api/shopping/price-history?name=${encodeURIComponent(card.name)}${row}`);
   } catch (failure) {
     if (!alive()) return sheet;
     body.removeAttribute("aria-busy");
@@ -74,6 +86,9 @@ async function shopHistorySheet(card, view) {
   add(clear(body), [
     el("p", {class: "sub", text: "Each day's price and stock from the nightly snapshot, kept 90 days while the card is on the queue."}),
     !answer.queued ? el("p", {class: "sub", text: "This card isn't on the purchase queue now, so no history is kept for it."}) : null,
+    answer.queued && typeof answer.scope === "string" && answer.scope ? el("p", {class: "sub", "data-shop-history-scope": answer.scope,
+      text: answer.scope === "any printing" ? "Read as any printing: each day's cheapest nonfoil in stock."
+        : `Read for this row's own printing and finish: ${answer.scope}.`}) : null,
     ...shops.map(shopHistoryShop)]);
   return sheet;
 }

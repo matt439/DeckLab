@@ -241,7 +241,7 @@ def dispatch(handler, route, query):
         ("gauntlet", "catalogue"): (_gauntlet_catalogue, ("format",)),
         ("gauntlet", "board"): (_gauntlet_board, ("format", "profile")),
         ("shopping", "combined"): (_shopping_combined, ("decks",)),
-        ("shopping", "price-history"): (_price_history, ("name",)),
+        ("shopping", "price-history"): (_price_history, ("name", "row")),
     }
     posts = {
         ("activity", "undo"): activity_undo.apply_undo,

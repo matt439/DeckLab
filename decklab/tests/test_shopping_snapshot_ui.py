@@ -95,7 +95,7 @@ class ShoppingPriceHistoryTests(unittest.TestCase):
           assert(button, "a row with a snapshot has Price history");
           assert.equal(asked.length, 0, "nothing is asked until it's opened");
           button.click(); await null; await null; await null; await null;
-          same(asked, ["/api/shopping/price-history?name=Sol%20Ring"]);
+          same(asked, ["/api/shopping/price-history?name=Sol%20Ring&row=1"]);
           const sheet = sheets.at(-1);
           const mate = sheet.body.querySelector('[data-shop-history="MTGMate"]');
           assert(mate.querySelector(".shop-history-lowest").textContent.includes("Lowest in stock: A$3.50 on 2 Nov"),

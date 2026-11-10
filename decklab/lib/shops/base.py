@@ -9,6 +9,10 @@ A listing is {"set", "number", "finish", "price", "stock", "condition", "url"} (
 the lowercase set code, the collector number, a FINISHES value (else the shop's own word, or
 "unknown"), the shop's own AUD price as "4.50" or None when it showed none, a whole number in
 stock (0 when it showed none), the shop's condition words and the listing's page.
+
+A page that was only part of the shop's answer (Games Portal's first page of search results,
+when there are more) comes back as Listings with partial True (E5-S33), so a "not listed" or a
+cheapest price read from it can say more results weren't read.
 """
 import urllib.error
 import urllib.request
@@ -20,6 +24,16 @@ TIMEOUT = 30
 MAX_PAGE = 5 * 1024 * 1024
 FINISHES = {"nonfoil", "foil", "etched"}
 LISTING_FIELDS = ("set", "number", "finish", "price", "stock", "condition", "url")
+
+
+class Listings(list):
+    """A name page's listings. partial: the shop had more results than the page read."""
+
+    partial = False
+
+    def __init__(self, items=(), partial=False):
+        super().__init__(items)
+        self.partial = bool(partial)
 
 
 class ShopError(Exception):
@@ -50,7 +64,8 @@ class Adapter:
 
     def parse_name_page(self, text, name):
         """That page's listings of name (and its variants), sorted: [] when the shop has none,
-        ShopError when the page isn't the one expected (the shop changed its pages)."""
+        ShopError when the page isn't the one expected (the shop changed its pages). A Listings
+        with partial True when the page was only part of the shop's results."""
         raise NotImplementedError
 
 
