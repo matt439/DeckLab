@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 32 | 1 | 2 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 48 | 14 | 13 | 4 |
-| **Total** | **376** | **291** | **22** | **47** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 49 | 14 | 12 | 4 |
+| **Total** | **376** | **292** | **22** | **46** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6449,16 +6449,16 @@ Built 2026-11-11: SELF-HOSTING opens with planning allowances, required/optional
 
 The root README accurately names Windows/Linux background/nightly support, optional outside access and the release/git boundary. The full reference now has contents and a neutral opening; Database starts with roles/pgpass and keeps historical migration notes after current operations. Exact quoted reference headings are linked. Validation: both contents lists resolve against real headings outside fences, the main JSON example parses, restore flags match the guarded CLI parser, public audit/whitespace pass; current vendor download/package/authentication links were read. Commands are documentation, not executed installs or hardware qualification. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md).
 
-**E11-S81** · Self-hoster · could · M · missing
+**E11-S81** · Self-hoster · could · M · built
 
 As a self-hoster who wants Deck Lab from outside the home, I want step 10 to walk me through making the Cloudflare Tunnel and Access application, so that I don't have to work it out from one household's finished setup.
 
 - Given SELF-HOSTING.md step 10, then it numbers the steps: add the domain to Cloudflare; `cloudflared tunnel login`, `tunnel create`, `tunnel route dns`; an example `config.yml` with ingress to `http://127.0.0.1:8644` and `originRequest.access`; the Access application and policy, and where its team name and AUD tag are; the `config.json` blocks; then `homenet status` to check.
 - Given decklab/README.md's "From outside the home", then it stays the reference, written for any install.
 
-Gap: step 10 points to `decklab/config.full.example.json` and a reference section that describes an existing tunnel; the tunnel commands appear only under moving to another PC. Documentation only. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (docs-readability 1).
+Built 2026-11-11: step10 is a numbered local-tunnel/Access walkthrough: prepare the domain/tool, login/create/route DNS, save a restricted full-hostname Access policy, identify team/AUD, write loopback8644 ingress with origin Access validation, merge private config blocks and check/start deliberately. It separates credentials from profiles and never implies login publishes a private space. The full reference is installation-neutral and links to the how-to. Current official tunnel, Access application, audience and origin-parameter docs were checked against `lib/tunnel.py`'s managed command and loopback listener.
 
-First slice: the numbered how-to in SELF-HOSTING.md step 10 with an example `config.yml`, checked against `decklab/lib/homenet`'s tunnel start.
+Example validation exposed a small reader bug: nested audTag list items were treated as extra ingress rules. The reader now ignores nested lists and a regression preserves both real ingress rules. All32 tunnel fixtures pass; the guide's YAML/JSON parse through repository helpers, public/whitespace audits pass. No login, DNS, policy, credentials, tunnel or deployment was created by this documentation task. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (docs-readability 1).
 
 **E11-S82** · Self-hoster · could · M · missing
 

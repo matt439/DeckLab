@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## A new-install tunnel and Access walkthrough (2026-11-11; E11-S81)
+
+- SELF-HOSTING step10 now walks through domain/tool prerequisites, local tunnel login/create/DNS commands, a restricted Access application/policy, team/AUD lookup, origin-validated loopback8644 ingress and private config merging. It preserves existing profiles/space privacy, and the general reference links back to the how-to.
+- Current primary Cloudflare docs were checked against the app's managed tunnel command/listener. The example revealed that the simple ingress reader counted nested audTag list entries as new routes; it now skips nested lists, with a direct regression for real hostname/catch-all preservation.
+- Validation:32 tunnel fixtures pass; repository parsers accept the exact YAML/JSON examples; public/whitespace checks pass. No Cloudflare command, DNS/policy change or deployment ran. Real outside-browser/worker acceptance remains in its existing operational gates.
+
 ## Pinned picture requests and bounded scan/staging resources (2026-11-11; E10-S45)
 
 - Picture fetches connect only to validated numeric addresses while preserving the original HTTP Host and HTTPS certificate/SNI identity. Redirect, private-address and no-proxy checks remain. The wrapped TLS socket is tracked by the deadline watchdog; DNS itself still follows OS resolver timeouts.

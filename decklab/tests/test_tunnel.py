@@ -154,6 +154,24 @@ class StartTests(unittest.TestCase):
 
 
 class IngressTests(unittest.TestCase):
+    def test_origin_access_audiences_are_not_extra_ingress_rules(self):
+        text = """tunnel: example-uuid
+ingress:
+  - hostname: decklab.example.com
+    service: http://127.0.0.1:8644
+    originRequest:
+      access:
+        required: true
+        teamName: example-team
+        audTag:
+          - example-audience
+          - another-audience
+  - service: http_status:404
+"""
+        self.assertEqual(tunnel.ingress_rules(text), [
+            {"hostname": "decklab.example.com", "service": "http://127.0.0.1:8644"},
+            {"service": "http_status:404"}])
+
     def problems(self, text):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "config.yml"

@@ -127,6 +127,8 @@ def ingress_rules(text):
         if not inside:
             continue
         if stripped.startswith("- "):
+            if current is not None and indent != item_indent - 2:
+                continue            # a nested list, such as originRequest.access.audTag
             current = {}
             rules.append(current)
             stripped = stripped[2:].strip()

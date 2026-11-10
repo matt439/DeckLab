@@ -383,9 +383,52 @@ Steps 2 to 6 run in the code just pulled. When a step fails, it says how to go b
 
 ## 10. From outside your home (optional)
 
-Deck Lab can start a Cloudflare Tunnel itself, behind Cloudflare Access's email login. That needs a domain on Cloudflare, `cloudflared`, and `allowed_hosts`, `tunnel` and `access` blocks in `config.json` (see `config.full.example.json`, and the reference’s [From outside the home](decklab/README.md#from-outside-the-home)). Leave those blocks out of `config.json` until you set this up. Without them, Deck Lab serves your home network only.
+This adds a locally managed Cloudflare Tunnel and an email-gated Access application. Deck Lab owns starting/stopping its tunnel process, using the local config file below. Leave these blocks absent until the policy and credentials are ready. Replace every example domain, UUID, path, team and audience with your own; no household values belong in git.
 
-On Linux, install `cloudflared` from [pkg.cloudflare.com](https://pkg.cloudflare.com/) (Deck Lab also finds it in `/usr/bin`, `/usr/local/bin`, `~/.local/bin`, `/snap/bin` and `/opt/cloudflared`) and update it with `sudo apt upgrade cloudflared`, then `homenet restart`. Its files are in `~/.cloudflared`: `chmod 600 ~/.cloudflared/*.json ~/.cloudflared/cert.pem`. The tunnel won't start, and `homenet status` shows a PROBLEM, while `config.yml`'s `credentials-file:` names a file that isn't there, or a Windows path. Under the background service `cloudflared` ends with the server; a server run in a terminal and killed outright can leave it running.
+1. **Prepare the domain and tool.** Add a domain you control to Cloudflare and finish its zone/nameserver setup. Install `cloudflared` on the server PC using [Cloudflare's downloads](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/); Linux packages are at [pkg.cloudflare.com](https://pkg.cloudflare.com/). The app needs no public inbound firewall port. See the [local-tunnel guide](https://developers.cloudflare.com/tunnel/features/locally-managed-tunnels/create-local-tunnel/) for the CLI workflow.
+2. **Create the named tunnel.** From your normal server account, run:
+
+   ```text
+   cloudflared tunnel login
+   cloudflared tunnel create decklab
+   cloudflared tunnel route dns decklab decklab.example.com
+   ```
+
+   Login opens a browser for your Cloudflare account/zone. Creation prints a tunnel UUID and writes its credentials JSON under that account's `.cloudflared` folder. DNS routing creates the hostname's CNAME. Keep the printed UUID/path; do not start a separate tunnel service, since Deck Lab manages this one.
+3. **Protect the full hostname with Access.** In Cloudflare One, go to **Access controls > Applications**, create a **Self-hosted and private** application and add the public hostname `decklab.example.com`. Add an Allow policy limited to the intended email addresses and enable your desired identity provider (email one-time PIN is sufficient for this example). Save it before starting the tunnel. Do not add a Bypass/Everyone policy. The [self-hosted application instructions](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/) describe the dashboard flow.
+4. **Record team and audience.** Your Access login domain is `https://<team>.cloudflareaccess.com`; use just its team prefix below. In the application's **Edit > Additional settings**, copy its **Application Audience (AUD) Tag**. This is the application's audience, not the tunnel UUID. Put the same audience/team in both files below; Cloudflare's [JWT guide](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/) shows where to find it.
+5. **Write `.cloudflared/config.yml`.** Use the credentials path printed in step 2 (forward slashes also work for a Windows path such as `C:/Users/YOUR-ACCOUNT/.cloudflared/TUNNEL-UUID.json`):
+
+   ```yaml
+   tunnel: TUNNEL-UUID
+   credentials-file: /absolute/path/.cloudflared/TUNNEL-UUID.json
+   ingress:
+     - hostname: decklab.example.com
+       service: http://127.0.0.1:8644
+       originRequest:
+         access:
+           required: true
+           teamName: example-team
+           audTag:
+             - ACCESS-APPLICATION-AUD
+     - service: http_status:404
+   ```
+
+   Port 8644 is Deck Lab's loopback Access listener; do not point this hostname at the home listener on 8642. The final 404 is the catch-all. Cloudflared's [origin Access parameters](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/configure-tunnels/origin-parameters/#access) require the same team/audience; Deck Lab independently checks the signed token and maps its email to a configured profile.
+6. **Merge blocks into your existing `decklab/config.json`.** Keep the profiles/timezone from step 4 and add each permitted person's lowercase email to that existing profile's `emails` array. An Access Allow policy does not create a Deck Lab profile or make its space Public.
+
+   ```json
+   {
+     "allowed_hosts": ["decklab.example.com"],
+     "tunnel": {"config": "~/.cloudflared/config.yml", "hostname": "decklab.example.com"},
+     "access": {"team": "example-team", "aud": "ACCESS-APPLICATION-AUD", "port": 8644}
+   }
+   ```
+
+   This snippet is not a replacement for your whole config. Both config files and the credentials/cert stay private. On Linux/macOS use `chmod 600` on their individual files; do not publish a tunnel credential, cert.pem, team policy or real hostname in this public repo.
+7. **Check and start deliberately.** Run `cloudflared tunnel --config /path/to/config.yml ingress validate` (using your actual config path), then `python -m decklab.doctor`. Start/restart the installed Deck Lab service and run `python -m decklab.lib.homenet status`: it checks the credentials/config path, loopback ingress and tunnel state. Deck Lab runs `cloudflared tunnel --config <path> --no-autoupdate run` itself. Test the HTTPS hostname from an outside browser: Access should require your permitted email, and Deck Lab should show only what that profile may read. A tunnel login does not override private deck/inventory/kit permissions.
+
+For port/path/credential diagnostics and updating cloudflared, use the [From outside the home reference](decklab/README.md#from-outside-the-home). On a background install the tunnel ends with Deck Lab. An abruptly killed foreground process can leave a tunnel behind, so use normal stop. The off-page Worker and wake-on-request are separate optional setup, not prerequisites for this tunnel. These instructions do not create a DNS record, policy, tunnel or deployment automatically.
 
 ## 11. Moving Deck Lab to another PC
 
