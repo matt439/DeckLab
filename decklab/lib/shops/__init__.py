@@ -15,7 +15,7 @@ shop that can't be read leaves only its own prices unknown:
 
     {"version": 1, "shop": "MTGMate", "site": SITE, "started_at": ISO, "fetched_at": ISO,
      "crawl_delay": seconds, "cards": {name: {"status": "ok" | "not_listed" | "error",
-       "at": ISO, "listings": [{"set", "number", "finish", "price", "stock", "condition", "url"}],
+       "at": ISO, "listings": [{"set", "number", "finish", "price", "stock", "condition", "language", "url"}],
        "error": words}},
      "previous": {name: {"at": ISO, "listings": [...]}}}
 
@@ -78,6 +78,7 @@ from decklab.lib import config
 from decklab.lib.shops import gamesportal, mtgmate
 from decklab.lib.shops import history as _history
 from decklab.lib.shops import rows as _rows
+from decklab.lib.shops import listing_preferences
 from decklab.lib.shops.base import (FINISHES, LISTING_FIELDS, MAX_PAGE, TIMEOUT, USER_AGENT,  # noqa: F401 (the package's names)
                                     Adapter, Disallowed, Listings, ShopError, allowed, fetch_page, robots_rules)
 from decklab.lib.shops.mtgmate import NAME_PATH, name_url, parse_name_page  # noqa: F401 (as before the split)
@@ -417,7 +418,7 @@ def _cheapest(listings):
     return min(listings, key=key) if listings else None
 
 
-def pick(row, listings):
+def _pick_unfiltered(row, listings):
     """(the listing that answers the row, how many listings in its scope are in stock), or (None, 0).
 
     An exact row wants its printing and finish (nonfoil when blank), the shop's set code and
@@ -436,11 +437,54 @@ def pick(row, listings):
     return choice, len(stocked)
 
 
-def match(row, data):
+_UNSET_PREFERENCE = object()
+
+
+def listing_preference():
+    from decklab.lib.listing_preference import current
+    return current()
+
+
+def selection(row, listings, preference=_UNSET_PREFERENCE):
+    """The normal printing/finish choice within one verified condition/language preference."""
+    from decklab.lib import listing_preference as household
+    preference = listing_preference() if preference is _UNSET_PREFERENCE else preference
+    if preference is household.UNAVAILABLE:
+        return None, 0, {"unavailable": True}
+    listings = [item for item in listings or () if isinstance(item, dict)]
+    eligible = listing_preferences.filter_listings(listings, preference)
+    choice, stocked = _pick_unfiltered(row, eligible)
+    original = _rows.own(row, listings) if _rows.exact(row) else listings
+    scope = _rows.own(row, eligible) if _rows.exact(row) else eligible
+    baseline = _pick_unfiltered(row, listings)[0] if preference and choice is not None else None
+    return choice, stocked, {"unavailable": False, "preference": preference,
+                             "excluded": bool(preference and original and not scope),
+                             "skipped_cheaper": listing_preferences.cheaper_skipped(baseline, choice, preference)}
+
+
+def pick(row, listings, preference=_UNSET_PREFERENCE):
+    """The existing (choice, stocked) contract, with optional household quality filtering."""
+    choice, stocked, _ = selection(row, listings, preference)
+    return choice, stocked
+
+
+def selection_reader(preference=_UNSET_PREFERENCE):
+    """Capture one preference for an entire history, basket or price projection."""
+    preference = listing_preference() if preference is _UNSET_PREFERENCE else preference
+    def read(row, listings):
+        return selection(row, listings, preference)
+    read.preference = preference
+    return read
+
+
+def match(row, data, preference=_UNSET_PREFERENCE):
     """What the snapshot says about one queue row, or None when there is no snapshot:
     {"shop", "status": "in_stock" | "out_of_stock" | "not_listed" | "not_matched" | "token" | "unknown"
-     | "not_checked", "fetched_at", "price_aud", "stock", "set", "collector_number", "finish", "url",
+     | "not_checked" | "not_eligible", "fetched_at", "price_aud", "stock", "set", "collector_number", "finish", "url",
      "in_stock_printings", "error", "back_in_stock", "newly_in_stock", "carried", "partial", "shop_sets"}.
+    Chosen listings also name condition/language (None: unknown), and may say a
+    cheaper copy was skipped. not_eligible means the printing was listed but its
+    known facts didn't meet the household preference; no setting leaves picks unchanged.
     not_matched (E5-S33): an exact row whose card the shop lists, but not in that printing and
     finish; shop_sets then names the set codes it does list. token: a token or reminder row
     (is_token), which the shops are never asked for. partial: the shop's page was only part of
@@ -468,7 +512,19 @@ def match(row, data):
         shown.update(status="unknown", error=str(entry.get("error") or f"{shown['shop']} couldn't be read"))
         return shown
     shown["partial"] = bool(entry.get("partial"))
-    choice, stocked = pick(row, entry.get("listings"))
+    preference = listing_preference() if preference is _UNSET_PREFERENCE else preference
+    choice, stocked, details = selection(row, entry.get("listings"), preference)
+    if details.get("unavailable"):
+        from decklab.lib.listing_preference import UNKNOWN
+        shown.update(status="unknown", error=UNKNOWN, preference_unknown=True)
+        return shown
+    if preference:
+        shown["listing_preferences"] = preference
+    if details.get("skipped_cheaper"):
+        shown["skipped_cheaper"] = True
+    if details.get("excluded"):
+        shown["status"] = "not_eligible"
+        return shown
     if choice is None:
         listed = [item for item in entry.get("listings") or () if isinstance(item, dict)]
         elsewhere = bool(listed) and _rows.exact(row)       # listed, though under a set the shop left blank too
@@ -479,10 +535,11 @@ def match(row, data):
     shown.update(status="in_stock" if in_stock else "out_of_stock", price_aud=choice.get("price"),
                  stock=choice.get("stock", 0), set=choice.get("set"), collector_number=choice.get("number"),
                  finish=choice.get("finish"), url=choice.get("url"), in_stock_printings=stocked)
+    shown.update(listing_preferences.words(choice))
     shown["back_in_stock"] = in_stock and row.get("state") == "waiting_for_stock"
     before = _by_name(data.get("previous"), name)
     if in_stock and before is not None:
-        old, _ = pick(row, before.get("listings"))
+        old, _ = pick(row, before.get("listings"), preference)
         shown["newly_in_stock"] = old is None or old.get("stock", 0) <= 0
     return shown
 
@@ -559,7 +616,11 @@ def _describe(shown):
         stock = counted if shown["status"] == "in_stock" else "out of stock"
         flags = " BACK IN STOCK" if shown["back_in_stock"] else (" new" if shown["newly_in_stock"] else "")
         when = f", as read {shown['fetched_at']}" if shown.get("carried") else ""
-        return f"{price}, {stock} ({where}){flags}{when}{_partial_words(shown)}"
+        quality = f"{shown.get('condition') or 'Condition unknown'}, {shown.get('language') or 'language unknown'}"
+        skipped = "; cheaper copy skipped by household preference" if shown.get("skipped_cheaper") else ""
+        return f"{price}, {stock} ({where}; {quality}){flags}{when}{_partial_words(shown)}{skipped}"
+    if shown["status"] == "not_eligible":
+        return f"no listing meets the household condition/language preference{_partial_words(shown)}"
     if shown["status"] == "not_matched":
         sets = ", ".join(code.upper() for code in shown.get("shop_sets") or ())
         named = f" (the shop's sets: {sets})" if sets else ""
@@ -806,10 +867,11 @@ def _show(_args):
         return 2
     for adapter, data in snapshots:
         print(f"{adapter.name} snapshot of {data.get('fetched_at')}")
+    preference = listing_preference()
     for number, row in enumerate(rows, 1):
         # A$ whatever the configured currency (E11-S53): the shops list in AUD, never converted.
         reference = f"ref A${row['listed_aud']} at {row['listed_at']}" if row.get("listed_aud") else "no reference"
-        seen = "; ".join(f"{adapter.name}: {_describe(match(row, data))}" for adapter, data in snapshots)
+        seen = "; ".join(f"{adapter.name}: {_describe(match(row, data, preference))}" for adapter, data in snapshots)
         print(f"#{number} {row['name']} [{row.get('state')}] {reference}; {seen}")
     return 0
 
@@ -827,7 +889,9 @@ def _lookup(args):
         # A$ whatever the configured currency (E11-S53): the shops list in AUD, never converted.
         price = f"A${item['price']}" if item["price"] else "no price"
         stock = f"{item['stock']} in stock" if adapter.counts_stock else ("in stock" if item["stock"] else "out of stock")
-        print(f"{item['set'].upper()} {item['number']} {item['finish']} {item['condition']}: {price}, {stock}")
+        quality = listing_preferences.words(item)
+        words = f"{quality['condition'] or 'Condition unknown'}, {quality['language'] or 'language unknown'}"
+        print(f"{item['set'].upper()} {item['number']} {item['finish']} {words}: {price}, {stock}")
     return 0
 
 
@@ -855,7 +919,7 @@ def _history_command(args):
                   file=sys.stderr)
             return 1
     answer = _history.report(args.name, [(adapter, {"history": load_history(adapter)}) for adapter in adapters], pick,
-                             row=row)
+                             row=row, details=selection_reader())
     if args.json:
         print(json.dumps(answer, indent=1))
     else:

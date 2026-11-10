@@ -39,14 +39,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 21 | 2 | 2 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 32 | 3 | 4 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 29 | 0 | 3 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 30 | 0 | 2 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 35 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 54 | 14 | 7 | 4 |
-| **Total** | **376** | **310** | **22** | **28** | **16** |
+| **Total** | **376** | **311** | **22** | **27** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -2475,7 +2475,7 @@ Built 2026-11-10 (status: built). All four criteria: Price history is read for t
 
 First slice: `day_summary` and `report` in `decklab/lib/shops/history.py` take the queue row, `decklab/lib/api/shop_history.py` accepts a row selector and `decklab/web/shopping-history.js` sends it.
 
-**E5-S34** · Matt · should · M · missing
+**E5-S34** · Matt · should · M · built
 
 As Matt, comparing shops for cards to play with, I want each shop line to say the condition and language of the listing it chose, and to follow one household preference, so that the cheapest price isn't a damaged or non-English copy.
 
@@ -2487,6 +2487,8 @@ As Matt, comparing shops for cards to play with, I want each shop line to say th
 Gap: `pick()` and `_cheapest()` in `decklab/lib/shops/__init__.py` never read condition, `match()` returns none, and `gamesportal.py` folds language into the condition text, so every consumer (E5-S08, E5-S19, E5-S27, E5-S29) inherits the choice unseen. From the product review of 2026-11-10, compared with TCGplayer's optimiser, Mana Pool and Cardsphere.
 
 First slice: display only: add `language` to `LISTING_FIELDS` in `decklab/lib/shops/base.py`, emit it from `gamesportal.py`, return condition and language from `match()`, and show them in `decklab/web/shopping-snapshot.js`.
+
+Built (2026-11-11): saved listings separate condition/language, including older Games Portal comma-language evidence; unknowns stay explicit. Home admins can choose minimum condition and/or English-only in Prices; neutral defaults preserve every existing pick. Revision-checked pricing v2 (migration0025) preserves v1/currency/shops and protects preferences from older clients. One frozen preference drives shop lines, deck/missing Prices, eligible exact-printing basket variants, Fewest shops totals and history lows; cheaper rejected/no-eligible choices are explained. Unknown facts fail only the named restriction. Last verified settings hold during outages; without them no qualifying price is claimed. Generic unit facts expose only an applied flag, not the private setting.291 broad checks pass (two guarded DB skips),80 latest focused and61 CLI/default-store review checks pass;33 strict version/rules checks cover explicitnull/bool/string rejection and unversioned compatibility. Guarded PG v2/readiness/rollback cases await CI. No actual setting, vendor request, purchase or migration was made.
 
 **E5-S35** · Matt · could · M · missing
 

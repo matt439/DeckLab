@@ -48,7 +48,7 @@ class RulesTests(_Fresh):
         for code in currency.ECB_CODES:
             self.assertEqual(rules_pricing.normalize({"currency": code})["currency"], currency.valid(code))
         for bad in ({"currency": "XYZ"}, {"currency": 5}, {"shops": ["nowhere"]}, {"shops": "mtgmate"},
-                    {"shops": [1]}, {"other": 1}, {"v": 2}, {"v": True}, []):
+                    {"shops": [1]}, {"other": 1}, {"v": 2}, {"v": None}, {"v": True}, {"v": "1"}, {"v": "2"}, []):
             with self.subTest(bad=bad), self.assertRaises(Invalid):
                 rules_pricing.normalize(bad)
         self.assertIsNone(shops.normalize_keys(["mtgmate", "nowhere"]))

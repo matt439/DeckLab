@@ -207,14 +207,14 @@ class GamesPortalPageTests(unittest.TestCase):
 
     def test_the_saved_search_page_gives_that_cards_listings_only(self):
         listings = self.adapter.parse_name_page(saved("gamesportal", "sol-ring.html"), "Sol Ring")
-        self.assertEqual([(item["set"], item["number"], item["finish"], item["price"], item["stock"], item["condition"])
+        self.assertEqual([(item["set"], item["number"], item["finish"], item["price"], item["stock"], item["condition"], item["language"])
                           for item in listings],
-                         [("c16", "272", "nonfoil", "4.50", 1, "Lightly Played"),
-                          ("c16", "272", "nonfoil", "5.00", 0, "Near Mint"),
-                          ("cmm", "410", "nonfoil", None, 0, "Lightly Played, JA"),
-                          ("cmm", "410", "nonfoil", "3.00", 1, "Near Mint, JA"),
-                          ("sld", "1011", "foil", "35.00", 1, "Near Mint"),
-                          ("sld", "1011", "nonfoil", "30.00", 0, "Near Mint")])
+                         [("c16", "272", "nonfoil", "4.50", 1, "Lightly Played", "en"),
+                          ("c16", "272", "nonfoil", "5.00", 0, "Near Mint", "en"),
+                          ("cmm", "410", "nonfoil", None, 0, "Lightly Played", "ja"),
+                          ("cmm", "410", "nonfoil", "3.00", 1, "Near Mint", "ja"),
+                          ("sld", "1011", "foil", "35.00", 1, "Near Mint", "en"),
+                          ("sld", "1011", "nonfoil", "30.00", 0, "Near Mint", "en")])
         for item in listings:
             self.assertEqual(tuple(item), base.LISTING_FIELDS, "nothing else from the page is kept")
             self.assertRegex(item["url"], r"^https://gamesportal\.com\.au/products/sol-ring-[a-z0-9-]+\?variant=\d+$")
@@ -293,8 +293,8 @@ class GamesPortalPageTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(pages.urls[0], "https://gamesportal.com.au/robots.txt")
         # its pages say only whether a listing is available, never how many
-        self.assertIn("SLD 1011 foil Near Mint: A$35.00, in stock", out.getvalue())
-        self.assertIn("C16 272 nonfoil Near Mint: A$5.00, out of stock", out.getvalue())
+        self.assertIn("SLD 1011 foil Near Mint, English: A$35.00, in stock", out.getvalue())
+        self.assertIn("C16 272 nonfoil Near Mint, English: A$5.00, out of stock", out.getvalue())
         self.assertIs(shops.ADAPTER, mtgmate.ADAPTER, "MTGMate stays the first shop")
         with mock.patch.object(shops, "_fetch", side_effect=AssertionError("no network")) as fetch, \
                 mock.patch("sys.stderr"), self.assertRaises(SystemExit):

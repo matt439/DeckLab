@@ -84,7 +84,7 @@ class TwoShopQueueTests(unittest.TestCase):
           assert(marker.getAttribute("aria-label").includes("MTGMate: out of stock"));
           assert(marker.getAttribute("aria-label").includes("Games Portal: A$3.00, in stock"));
           const single = shopSnapshotMarker(row("Sol Ring", {shop_snapshot: mtg()}));
-          assert.equal(single.getAttribute("aria-label"), "MTGMate: A$4.50, 2 in stock (40K 249)");
+          assert.equal(single.getAttribute("aria-label"), "MTGMate: A$4.50, 2 in stock (40K 249); Condition unknown, language unknown");
         """)
 
 

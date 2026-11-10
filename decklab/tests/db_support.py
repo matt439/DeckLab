@@ -244,6 +244,18 @@ def reset(dbname, tables=STATE_TABLES):
 # What undoes each later migration, for tests that roll a throwaway database back to an older
 # schema and migrate it forward again (roll_back_schema). A new migration needs its entry here.
 UNDO_MIGRATION = {
+    # Disposable schema rollback only: remove the new preference while retaining
+    # the earlier currency/shops and revision. No production migration rewrites it.
+    25: ("alter table pricing_setting disable trigger audit_row",
+         "update pricing_setting set content = (content - 'listing_preferences') || '{\"v\":1}'::jsonb "
+         "where content ->> 'v' = '2'",
+         "alter table pricing_setting enable trigger audit_row",
+         "alter table pricing_setting drop constraint pricing_listing_preferences_check",
+         "alter table pricing_setting add constraint pricing_setting_content_check check ("
+         "jsonb_typeof(content) = 'object' and content ?& array['v', 'currency', 'shops'] "
+         "and content - array['v', 'currency', 'shops'] = '{}'::jsonb and content ->> 'v' = '1' "
+         "and (jsonb_typeof(content -> 'currency') = 'null' or (jsonb_typeof(content -> 'currency') = 'string' "
+         "and content ->> 'currency' ~ '^[A-Z]{3}$')) and jsonb_typeof(content -> 'shops') in ('null', 'array'))"),
     24: ("drop table public.card_loan",),
     23: ("delete from ops.backup_run where kind = 'nightly'",
          "alter table ops.backup_run drop constraint backup_run_kind_check",

@@ -164,14 +164,12 @@ def parse_name_page(text, name):
             if not set_code or not number:
                 continue                    # a real single's SKU always names its printing; a sealed product's doesn't
             finish, condition = _finish(variant.get("public_title"), code)
-            if language and language != "EN":
-                condition = f"{condition}, {language}" if condition else language
             ident = variant.get("id")
             listings.append({
                 "set": set_code, "number": number, "finish": finish, "price": _price(variant.get("price")),
-                "stock": 1 if variant.get("available") is True else 0, "condition": condition,
+                "stock": 1 if variant.get("available") is True else 0, "condition": condition, "language": language.lower(),
                 "url": f"{page}?variant={ident}" if isinstance(ident, int) and page != name_url(name) else page})
-    listings.sort(key=lambda item: (item["set"], item["number"], item["finish"], item["condition"]))
+    listings.sort(key=lambda item: (item["set"], item["number"], item["finish"], item["condition"], item["language"]))
     return listings
 
 

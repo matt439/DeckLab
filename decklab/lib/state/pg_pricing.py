@@ -53,6 +53,10 @@ def put(store, pricing, expected_revision, actor, message):
                     raise Conflict(rules_pricing.CHANGED)
                 if saved["pricing"] == pricing:
                     raise _Unchanged(saved)
+                if pricing["v"] == 2 and not cur.execute(
+                        "select exists(select 1 from pg_catalog.pg_constraint where "
+                        "conrelid=to_regclass('public.pricing_setting') and conname='pricing_listing_preferences_check')").fetchone()[0]:
+                    raise Unavailable(rules_pricing.PREFERENCES_MIGRATE)
                 revision = saved["revision"] + 1
                 cur.execute("insert into pricing_setting (id, revision, content) values (true, %s, %s) "
                             "on conflict (id) do update set revision = excluded.revision, content = excluded.content",

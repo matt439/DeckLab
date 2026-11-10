@@ -24,6 +24,8 @@ function shopHistoryPrice(day) {
 /** One day's stock in the shop's own terms (Games Portal says only in stock or not). */
 function shopHistoryStock(day, counts) {
   const more = day.partial === true ? `; ${SHOP_SNAPSHOT_PARTIAL}` : "";
+  if (day.preference_unknown) return "Household listing preference unavailable";
+  if (day.preference_excluded) return "No listing meets household preference";
   if (!day.listed) return `${day.elsewhere === true ? "listed, but not in this printing" : "not listed"}${more}`;
   if (!day.in_stock) return `out of stock${more}`;
   return `${counts ? `${num(day.stock)} in stock` : "in stock"}${more}`;
@@ -50,7 +52,9 @@ function shopHistoryShop(shop) {
     el("td", {text: shopHistoryDay(day.on)}),
     el("td", {class: "num", text: day.listed ? shopHistoryPrice(day) : "—"}),
     el("td", {text: shopHistoryStock(day, shop.counts_stock !== false)}),
-    el("td", {text: shopHistoryPrinting(day)})));
+    el("td", {}, el("span", {text: shopHistoryPrinting(day)}),
+      day.listed ? el("small", {text: shopSnapshotQuality(day)}) : null,
+      day.skipped_cheaper ? el("small", {text: "Cheaper copy skipped by household preference"}) : null)));
   return el("section", {class: "shop-history-shop", "data-shop-history": shop.shop}, head,
     el("p", {class: "shop-history-lowest", text: low}),
     el("p", {class: "sub", text: `${plural(days.length, "day")} kept.`}),
@@ -89,6 +93,7 @@ async function shopHistorySheet(card, view) {
     answer.queued && typeof answer.scope === "string" && answer.scope ? el("p", {class: "sub", "data-shop-history-scope": answer.scope,
       text: answer.scope === "any printing" ? "Read as any printing: each day's cheapest nonfoil in stock."
         : `Read for this row's own printing and finish: ${answer.scope}.`}) : null,
+    shopSnapshotPreference(answer) ? el("p", {class: "sub", text: `Listing preference: ${shopSnapshotPreference(answer)}.`}) : null,
     ...shops.map(shopHistoryShop)]);
   return sheet;
 }

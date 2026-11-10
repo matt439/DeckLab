@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Listing condition/language and matching preferences (2026-11-11; E5-S34)
+
+- Listings retain separate condition and language, with explicit unknowns and recovery of older Games Portal comma-language records. Home admins can choose minimum condition and/or English-only in Prices; neutral choices preserve prior picks exactly.
+- Pricing v2/migration0025 stores the optional choice with existing revision checks, preserving v1, currency/shops and old-client preferences. A frozen choice governs lines, deck/missing quotes, eligible exact-printing basket variants, Fewest shops plans and historical lows; skipped cheaper/no-eligible choices are explained. Unknowns fail only their relevant constraint.
+- Outages retain last verified choices, otherwise no qualifying price is claimed. Review verified normal standalone CLI lazy-PgStore behavior and narrowed neutral bootstrap fallback to protected fixtures; explicit malformed version values remain invalid. Generic unit facts disclose only an applied flag; existing settings/history privacy stays in place.
+- Validation:291 broad checks pass (two guarded DB skips),80 focused,61 CLI/bootstrap and33 rules/version checks pass (overlap), plus guarded PG v2/readiness/rollback coverage. Ruff/Node/source guards pass. No actual settings activation, vendor fetch, purchase, database or migration was exercised; live formats/device acceptance are unclaimed.
+
 ## Cached Commander cut evidence and reviewed draft moves (2026-11-11; E2-S28)
 
 - Commander EDHREC ideas and Review cuts show Planned nonlands, ordered by known cached inclusion. Absent cards, unquantified entries and unavailable cache remain separate from0%. Optional cited role surpluses and settled visible current-list Forge evidence add countable reasons without selecting a worst card or fetching/running anything.

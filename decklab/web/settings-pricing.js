@@ -81,6 +81,19 @@ function drawPricingSettings(host, data, token, profile) {
     box.checked = ticked.has(shop.key);
     return {key: shop.key, box, label: el("label", {class: "choice", for: box.id}, box, el("span", {text: ` ${shop.name}`}))};
   });
+  let preferenceFields = null;
+  if (data.listing_preferences && Array.isArray(data.listing_preferences.conditions)) {
+    const chosen = data.listing_preferences.saved;
+    ctx.minimum = el("select", {id: "pricing-minimum-condition"}, el("option", {value: "", text: "Any condition"}),
+      data.listing_preferences.conditions.map(item => el("option", {value: item.code, text: `${item.label} or better`})));
+    ctx.minimum.value = chosen?.minimum_condition || "";
+    ctx.english = el("input", {type: "checkbox", id: "pricing-english-only"});
+    ctx.english.checked = chosen?.english_only === true;
+    preferenceFields = el("fieldset", {class: "pricing-listing-preferences"}, el("legend", {text: "Listings to compare"}),
+      el("label", {class: "field", for: ctx.minimum.id}, el("span", {text: "Minimum condition"}), ctx.minimum),
+      el("label", {class: "choice", for: ctx.english.id}, ctx.english, el("span", {text: "English only"})),
+      el("p", {class: "field-hint", text: "Applies to shop lines, Baskets, the Fewest shops plan and price history. Unknown facts don't meet an active restriction. Any condition and any language keep every listing."}));
+  }
   ctx.off = el("p", {class: "field-hint", id: "pricing-shops-off"});
   const sync = () => {
     for (const item of ctx.shops) item.box.disabled = ctx.useConfig.checked || ctx.busy;
@@ -101,10 +114,13 @@ function drawPricingSettings(host, data, token, profile) {
       el("label", {class: "choice", for: ctx.useConfig.id}, ctx.useConfig,
         el("span", {text: ` Use config.json's (${configShops ? (configShops.length ? configShops.join(", ") : "none") : "every shop, the default"})`})),
       ctx.shops.map(item => item.label), ctx.off),
+    ...(preferenceFields ? [preferenceFields] : []),
     ...notes, ctx.error, ctx.status, ctx.reload, el("div", {class: "actions"}, ctx.save));
   ctx.currency.addEventListener("change", sync);
   ctx.useConfig.addEventListener("change", sync);
   for (const item of ctx.shops) item.box.addEventListener("change", sync);
+  if (ctx.minimum) ctx.minimum.addEventListener("change", sync);
+  if (ctx.english) ctx.english.addEventListener("change", sync);
   clear(host).append(ctx.form);
   sync();
   return ctx;
@@ -112,8 +128,11 @@ function drawPricingSettings(host, data, token, profile) {
 
 /** {currency, shops} as the form says: null for "use config.json's", [] when no shop is ticked. */
 function pricingInput(ctx) {
-  return {currency: ctx.currency.value || null,
+  const input = {currency: ctx.currency.value || null,
     shops: ctx.useConfig.checked ? null : ctx.shops.filter(item => item.box.checked).map(item => item.key)};
+  if (ctx.minimum) input.listing_preferences = ctx.minimum.value || ctx.english.checked
+    ? {minimum_condition: ctx.minimum.value || null, english_only: ctx.english.checked} : null;
+  return input;
 }
 
 /** A /api/status read that starts after the save: one already in flight began before it and would answer with
@@ -127,7 +146,7 @@ async function freshPricingStatus() {
 async function savePricing(ctx) {
   if (!ctx.here() || ctx.busy || ctx.stale) return;
   const chosen = pricingInput(ctx);
-  const controls = [ctx.currency, ctx.useConfig, ...ctx.shops.map(item => item.box)];
+  const controls = [ctx.currency, ctx.useConfig, ...ctx.shops.map(item => item.box), ctx.minimum, ctx.english].filter(Boolean);
   ctx.busy = true; ctx.error.textContent = ""; ctx.status.textContent = "Saving the price settings…";
   controls.forEach(input => { input.disabled = true; }); ctx.save.disabled = true;
   try {
@@ -146,6 +165,8 @@ async function savePricing(ctx) {
     ctx.busy = false;
     if (ctx.here()) {
       ctx.currency.disabled = false; ctx.useConfig.disabled = false;
+      if (ctx.minimum) ctx.minimum.disabled = false;
+      if (ctx.english) ctx.english.disabled = false;
       for (const item of ctx.shops) item.box.disabled = ctx.useConfig.checked;
       ctx.save.disabled = ctx.stale;
     }

@@ -146,3 +146,4 @@ on any server. The route-access fixture check fails when a source migration is a
 - `0022_pricing_setting.sql`
 - `0023_nightly_receipts.sql`
 - `0024_card_loans.sql`
+- `0025_listing_preferences.sql`

@@ -27,7 +27,7 @@ from datetime import date, timedelta
 from decklab.lib.shops import rows as _rows
 
 KEEP_DAYS = 90
-FIELDS = ("set", "number", "finish", "condition", "price", "stock")
+FIELDS = ("set", "number", "finish", "condition", "language", "price", "stock")
 
 
 def _day(value):
@@ -103,14 +103,14 @@ def _price(item):
         return None
 
 
-def day_summary(reading, pick, row=None):
+def day_summary(reading, pick, row=None, details=None):
     """One reading's answer for the queue row's own printing and finish (row None: an any-printing
     row; pick: the package's pick()): {"on", "at", "price", "stock", "in_stock", "set", "number",
     "finish", "in_stock_printings", "listed", "partial", "elsewhere"}. listed: a listing in the
     row's scope; elsewhere: none, though the shop listed the card in another printing or finish
     that day; partial: the shop's page was only part of its results."""
     asked, listings = _rows.history_scope(row, reading.get("listings"))
-    choice, stocked = pick(asked, listings)
+    choice, stocked, quality = details(asked, listings) if details else (*pick(asked, listings), {})
     shown = {"on": reading.get("on"), "at": reading.get("at"), "price": None, "stock": None, "in_stock": False,
              "set": None, "number": None, "finish": None, "in_stock_printings": stocked, "listed": choice is not None,
              "partial": bool(reading.get("partial")),
@@ -118,10 +118,18 @@ def day_summary(reading, pick, row=None):
     if choice is not None:
         shown.update(price=choice.get("price"), stock=choice.get("stock", 0), in_stock=(choice.get("stock") or 0) > 0,
                      set=choice.get("set"), number=choice.get("number"), finish=choice.get("finish"))
+        from . import listing_preferences
+        shown.update(listing_preferences.words(choice))
+    if quality.get("excluded"):
+        shown.update(preference_excluded=True, elsewhere=False)
+    if quality.get("unavailable"):
+        shown.update(preference_unknown=True, elsewhere=False)
+    if quality.get("skipped_cheaper"):
+        shown["skipped_cheaper"] = True
     return shown
 
 
-def report(name, snapshots, pick, row=None):
+def report(name, snapshots, pick, row=None, details=None):
     """{"name", "scope", "shops": [{"shop", "counts_stock", "days": [day_summary + "lowest"]}]} for
     each (adapter, data) in snapshots, read for the queue row's own printing and finish (row None:
     as an any-printing row); scope says which in words ("LTC 12 foil", "any printing"). lowest marks the day (or days) with that shop's lowest price a
@@ -129,13 +137,21 @@ def report(name, snapshots, pick, row=None):
     out-of-stock fallback's price."""
     out = []
     for adapter, data in snapshots:
-        days = [day_summary(reading, pick, row) for reading in find(data, name)]
+        days = [day_summary(reading, pick, row, details) for reading in find(data, name)]
         prices = [_price(day) for day in days if day["in_stock"] and _price(day) is not None]
         low = min(prices) if prices else None
         for day in days:
             day["lowest"] = low is not None and day["in_stock"] and _price(day) == low
         out.append({"shop": adapter.name, "counts_stock": adapter.counts_stock, "days": days})
-    return {"name": name, "scope": _rows.scope_words(row), "shops": out}
+    answer = {"name": name, "scope": _rows.scope_words(row), "shops": out}
+    preference = getattr(details, "preference", None)
+    if isinstance(preference, dict):
+        answer["listing_preferences"] = preference
+    else:
+        from decklab.lib.listing_preference import UNAVAILABLE
+        if preference is UNAVAILABLE:
+            answer["preference_unknown"] = True
+    return answer
 
 
 def lines(answer):
@@ -151,7 +167,9 @@ def lines(answer):
         for day in shop["days"]:
             more = "; first page only, more results not read" if day.get("partial") else ""
             if not day["listed"]:
-                words = "listed, but not in this printing" if day.get("elsewhere") else "not listed"
+                words = ("household preference unavailable" if day.get("preference_unknown") else
+                         "no listing meets the household preference" if day.get("preference_excluded") else
+                         "listed, but not in this printing" if day.get("elsewhere") else "not listed")
                 said.append(f"  {day['on']}  {words}{more}")
                 continue
             # A$ whatever the configured currency (E11-S53): the shops list in AUD, never converted.
@@ -163,5 +181,7 @@ def lines(answer):
             else:
                 stock = "in stock"
             where = f"{str(day['set'] or '').upper()} {day['number']} {day['finish']}"
-            said.append(f"  {day['on']}  {price}, {stock} ({where}){more}{'  lowest in stock' if day['lowest'] else ''}")
+            quality = f"{day.get('condition') or 'Condition unknown'}, {day.get('language') or 'language unknown'}"
+            skipped = "; cheaper copy skipped by household preference" if day.get("skipped_cheaper") else ""
+            said.append(f"  {day['on']}  {price}, {stock} ({where}; {quality}){more}{skipped}{'  lowest in stock' if day['lowest'] else ''}")
     return said

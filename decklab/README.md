@@ -2056,3 +2056,6 @@ A card viewer's **Open on Scryfall** uses the shown printing, or an exact-name s
 
 
 Commander **EDHREC ideas → Cuts** (or **Review cuts**) reviews the Planned list against already-cached inclusion, cited role counts and any qualifying visible current-list Forge figures. It does not fetch a page or run games. Missing/absent/unquantified evidence is labelled separately. A saved editable deck can move a card into Considering as a local draft with Undo, or choose a free replacement for Test this change; normal Check/Save/Start remain explicit. Commander drafts over100 have a direct Review cuts link; save a new deck before using Considering/testing actions.
+
+
+In **Settings → Prices**, a home admin can restrict matching to a minimum listing condition and/or English. The default accepts every condition/language, including unknowns. Unknown facts are shown explicitly; when a restriction needs that fact, the listing is left out. Shop lines, Baskets/plans and historical lows use the same choice and explain skipped cheaper offers. These are market listing facts and matching preferences, never prices paid or spending records. Migration0025 is needed for saving a non-neutral choice; older currency/shops settings remain compatible.
