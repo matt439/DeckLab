@@ -616,6 +616,9 @@ def main(argv=None):
             stream = _log_to(log_path, announce=console)
         host = settings.get("host", "0.0.0.0") if args.host is None else args.host
         return server_run._serve(host, port, args.no_update, settings, log_path, background=background)
+    except config.InvalidConfig as error:
+        server_http.log(str(error))
+        return 1
     except Exception:
         server_http.log(f"{server_run._stamp()} Deck Lab stopped with an error:\n{traceback.format_exc()}")
         return 1

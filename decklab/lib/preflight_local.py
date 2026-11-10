@@ -160,11 +160,17 @@ class Local:
         self._settings = None
         self._loaded_driver = None
         self._results = {}
+        self._config_location = None
 
     @property
     def settings(self):
         """Already validated private settings, for the optional adapter; never reads."""
         return self._settings
+
+    @property
+    def config_location(self):
+        """The already checked JSON line/column, with no source text or additional read."""
+        return self._config_location
 
     def probe(self, check_id):
         if check_id not in ("runtime", "config", "driver", "database", "cards", "ocr", "timezone", "backups"):
@@ -245,7 +251,7 @@ class Local:
         except Exception:
             return "config_unavailable"
         try:
-            settings = _json(raw)
+            settings = _json(raw.removeprefix(b"\xef\xbb\xbf"))
             if not isinstance(settings, dict):
                 return "config_invalid"
             from decklab.lib import access, config, profiles
@@ -282,6 +288,9 @@ class Local:
             if not _text(database["host"]) or not _port(database["port"]) or not _text(database["name"], 63):
                 return "config_invalid"
             settings["database"] = database
+        except json.JSONDecodeError as error:
+            self._config_location = (error.lineno, error.colno)
+            return "config_invalid"
         except Exception:
             return "config_invalid"
         self._settings = settings

@@ -41,6 +41,7 @@ def _provider():
                 optional_failed = True
                 return "probe_unverified"
         return optional.probe(ident)
+    probe.config_location = lambda: local.config_location
     return probe
 
 
@@ -62,7 +63,7 @@ def main(argv=None, *, provider_factory=None):
             probe = (_provider if provider_factory is None else provider_factory)()
         except Exception:               # noqa: BLE001 - a broken adapter import is a fixed finding
             probe = None
-        result = preflight.report(probe)
+        result = preflight.report(probe, config_location=lambda: probe.config_location())
     except KeyboardInterrupt:
         _say_error("Preflight cancelled.")
         return 130

@@ -5,6 +5,8 @@ integrity of household records. Optional files never establish game execution.
 """
 from types import MappingProxyType
 
+from decklab.lib.config_errors import syntax_message, valid_location
+
 
 VERSION = 1
 CHECKS = (
@@ -21,8 +23,8 @@ CHECKS = (
 )
 SIMULATION_FILES = ("java", "forge")     # the optional checks optional_files_status sums up
 
-# Each outcome contains only public, fixed wording. The adapter's submitted
-# values, paths, exception messages and configuration never enter the report.
+# Each outcome contains only public, fixed wording, apart from validated JSON
+# line/column integers. Submitted values, paths and exception messages never enter the report.
 OUTCOMES = MappingProxyType({
     "runtime_ready": ("ready", "The supported Python 3.14 runtime is selected.", None),
     "runtime_unsupported": ("needs_setup", "This runtime is outside the supported Python 3.14 setup.",
@@ -166,10 +168,11 @@ ALLOWED = MappingProxyType({
 })
 
 
-def report(probe):
+def report(probe, *, config_location=None):
     """Call eligible probes once in order; every output field comes from this catalog.
 
-    A provider returns a code string. Unknown values and ordinary exceptions fail
+    A provider returns a code string. The optional config_location callback returns
+    only an already checked (line, column) tuple. Unknown values and ordinary exceptions fail
     closed; cancellation is deliberately not caught or converted into readiness.
     """
     checks, by_id = [], {}
@@ -187,6 +190,13 @@ def report(probe):
             if type(code) is not str or code not in ALLOWED[ident]:
                 code = "probe_unverified"
             status, message, next_step = OUTCOMES[code]
+            if ident == "config" and code == "config_invalid" and config_location is not None:
+                try:
+                    location = config_location()
+                    if type(location) is tuple and len(location) == 2 and valid_location(*location):
+                        message = syntax_message(*location)
+                except Exception:           # noqa: BLE001 - diagnostics cannot add arbitrary output or fail a report
+                    pass
         row = {"id": ident, "label": label, "scope": scope, "status": status, "code": code,
                "message": message, "next_step": next_step, "blocked_by": blocked}
         checks.append(row)

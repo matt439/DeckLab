@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 44 | 12 | 19 | 4 |
-| **Total** | **376** | **278** | **20** | **62** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 44 | 13 | 18 | 4 |
+| **Total** | **376** | **278** | **21** | **61** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6407,7 +6407,7 @@ Gap: the doctor gives one wording for every database cause (`decklab/lib/preflig
 
 First slice: split `database_unavailable` in `decklab/lib/preflight_local.py` into "no answer at host:port" and "couldn't sign in", with plain wording and a next step naming `db status` in `decklab/lib/preflight.py`, and widen SELF-HOSTING.md's troubleshooting entry to the timeout wording with the service check and the Windows password recipe.
 
-**E11-S79** · Self-hoster · should · S · missing
+**E11-S79** · Self-hoster · should · S · partial
 
 As a newcomer editing `decklab/config.json` by hand, I want a mistake in it to be named with its line, and a missing file to be noticed, so that a stray comma doesn't end in a Python traceback or an empty "Who are you?" screen.
 
@@ -6417,9 +6417,11 @@ As a newcomer editing `decklab/config.json` by hand, I want a mistake in it to b
 - Given no config.json, then the server logs at start that it's missing and to copy `decklab/config.example.json` (SELF-HOSTING.md step 4), `/api/status` says the config is missing or unreadable (no contents), and the empty "Who are you?" box on the home listener says where profiles come from.
 - Given no `timezone`, then dates follow the PC's own zone on a new install, or the example config carries `timezone` (needs Matt's decision: the UTC+10 fallback suits only his household).
 
-Gap: `decklab/lib/config.py` reads with `utf-8` and doesn't catch `JSONDecodeError`; `decklab/lib/profiles.py` silently maps an unknown role to member; a missing file falls back silently; `decklab/web/app.js`'s empty box gives no hint. E11-S52's setup page would replace hand editing later. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (windows-walkthrough 1, errors-and-recovery 0, 7, database-and-config 2, 3, first-run-ui 0, linux-mac 9).
+Built 2026-11-10: the config loader and doctor accept a UTF-8 BOM. Malformed JSON reports the same sanitized line and column through the server, database command line and doctor's text/JSON output; server startup prints no traceback for this error. Non-object JSON and invalid UTF-8 also get fixed configuration messages. The doctor's provider still returns fixed code strings; its separate location callback accepts only bounded integer coordinates and never arbitrary adapter text (`config_errors.py`, `test_config_diagnostics.py`).
 
-First slice: `utf-8-sig` and a wrapped `JSONDecodeError` naming line and column in `decklab/lib/config.py`, with the doctor's `config_invalid` text carrying them and tests for a BOM, a trailing comma and a single backslash.
+Left: unknown-role/no-admin warnings, explicit missing/unreadable-file status and the empty profile chooser's hint. The timezone default still needs Matt's decision. E11-S52's setup page would replace hand editing later. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (windows-walkthrough 1, errors-and-recovery 0, 7, database-and-config 2, 3, first-run-ui 0, linux-mac 9).
+
+Next slice: add fixed missing/unreadable configuration status and startup/empty-chooser guidance without exposing file contents or changing profile rights.
 
 **E11-S80** · Self-hoster · should · M · missing
 

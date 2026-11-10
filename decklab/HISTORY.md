@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Configuration syntax diagnostics (2026-11-10; E11-S79 first slice)
+
+- Config files saved with a UTF-8 BOM now load in Deck Lab and the doctor. A malformed file is named with its JSON line and column, consistently in the server log, database commands and doctor text/JSON; server startup reports it without a traceback or private file contents.
+- Non-object JSON and invalid UTF-8 get fixed, actionable messages. The doctor's adapter keeps its code-string contract, with only validated location integers permitted as additional output.
+- Validation: 78 targeted guarded config, server, database-CLI, doctor and preflight fixtures. Missing-file/role guidance and the timezone decision remain open; no household configuration was changed.
+
 ## Config safety for updates and release installs (2026-11-10; E11-S84 first slice)
 
 - Update's `decklab/config.json.before-forge-update` backup is now gitignored, keeping copied profiles and tunnel settings out of an ordinary `git add .`.

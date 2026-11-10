@@ -10,6 +10,8 @@ import sys
 import threading
 from pathlib import Path
 
+from decklab.lib.config_errors import ConfigSyntaxError, InvalidConfig
+
 REPO = Path(__file__).resolve().parents[2]
 CHECKOUT = REPO                  # this checkout, even while a test points REPO at a temporary one
 DECKLAB = REPO / "decklab"
@@ -124,7 +126,15 @@ def load():
     file DECKLAB_CONFIG_EXTRA names, if set (_extra)."""
     settings = dict(DEFAULTS)
     if CONFIG_FILE.exists():
-        settings.update(json.loads(CONFIG_FILE.read_text(encoding="utf-8")))
+        try:
+            configured = json.loads(CONFIG_FILE.read_text(encoding="utf-8-sig"))
+        except json.JSONDecodeError as error:
+            raise ConfigSyntaxError(error.lineno, error.colno) from None
+        except UnicodeError:
+            raise InvalidConfig("decklab/config.json isn't readable UTF-8; save it as UTF-8 and try again.") from None
+        if not isinstance(configured, dict):
+            raise InvalidConfig("decklab/config.json must contain a JSON object; see decklab/config.example.json.")
+        settings.update(configured)
     extra = os.environ.get(EXTRA_ENV)
     if extra:
         settings.update(_extra(extra))
