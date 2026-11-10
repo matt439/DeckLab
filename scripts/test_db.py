@@ -39,6 +39,8 @@ def main():
     if args.hang_after:
         faulthandler.dump_traceback_later(args.hang_after, exit=True)
     from decklab.tests import db_support
+    from decklab.tests import inventory_backend_coverage as coverage
+    coverage.reset()
     reason = db_support.unavailable()
     if reason and args.require_db:
         print(f"The database can't be used: {reason}", file=sys.stderr)
@@ -55,7 +57,16 @@ def main():
     result = unittest.TextTestRunner(verbosity=1, durations=15).run(suite)
     test_report.report(f"Database shard {args.index + 1} of {args.count}", result, counted, timed,
                        args.timings_out)
-    return 0 if result.wasSuccessful() else 1
+    missing = coverage.unmet(names) if not reason else {}
+    if missing:
+        print("Inventory operations missing a successful changed database write in their claimed module:", file=sys.stderr)
+        for kind, module in sorted(missing.items()):
+            print(f"  {kind}: {module}", file=sys.stderr)
+    elif not reason:
+        claimed = sum(module in names for module in coverage.CLAIMS.values())
+        print(f"Inventory coverage: all {claimed} claimed operations for this shard completed changed database writes; "
+              f"{len(coverage.GAPS)} listed suite gaps remain.")
+    return 0 if result.wasSuccessful() and not missing else 1
 
 
 if __name__ == "__main__":

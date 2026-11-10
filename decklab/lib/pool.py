@@ -1,118 +1,53 @@
-"""Owned vs needed for a deck, counting the shared card pool (PLAN.md part 3).
+"""Owned, incoming and reserved copies within one space's database inventory snapshot.
 
-Usage (from the repo root):
-    python -m decklab.lib.pool                        what's owned, on the way and in use
-        [--space user2]    in a person's space (lib/spaces.py) instead of home's
-    python -m decklab.lib.pool casual/gruul-ramp      owned vs needed for one deck
-    python -m decklab.lib.pool user2/casual/elves   ... a deck in User2's space, against his pool
-        [--owned]        use the deck file's owned-only list instead of the target list
-        [--no-prices]    skip the price estimates (AUD, or the configured currency)
-
-From code:
+    python -m decklab.lib.pool [--space user2]
+    python -m decklab.lib.pool casual/gruul-ramp [--owned] [--no-prices]
+    python -m decklab.lib.pool user2/casual/elves
 
     from decklab.lib import decks, pool
-    result = pool.owned_vs_needed("casual/gruul-ramp")   # version="owned" for the owned-only list
-    result = pool.compare(sections, pool.load_pool(), pool.self_ids(deck_id))   # an unsaved list
-
-    # A deck file's table, worked out from the target list in memory (edits included):
+    result = pool.owned_vs_needed("casual/gruul-ramp")
+    result = pool.compare(sections, pool.load_pool(), pool.self_ids(deck_id))
     decks.set_table(deck, *pool.deck_table(deck))
 
-    pool.table_changes(deck, p)       # how that file's table differs from the pool now
-    pool.stale_tables(p)              # every deck file whose table is out of date
-    pool.table_blockers(p)            # what stops those tables being refreshed (never raises)
-    pool.printing_counts()            # copies of each printing: owned and on the way
+Every reader uses inventory.current(), normally PostgreSQL: collection_card, pending
+order components/products, saved deck text, packed tokens and loan records share one
+pinned request/command snapshot. A FileInventory is an isolated test adapter only.
+Historical path-shaped source keys are compatibility identifiers, never live files.
+No code here recreates inventory/deck directories.
 
-Any id decks.load_deck() takes works: "casual/<slug>", "commander/<slug>",
-"product/<file>[/<deck>]", "pairing/<half>+<half>" and a person's
-"<space>/<kind>/<slug>". To check many decks, load the pool once with
-load_pool() and pass it in.
+load_pool(space) counts only that physical collection. Orders/products/incoming are
+home-only; a member's pool is separate, with no cross-space movement. Built decks
+reserve their selected Built version (with existing fallback warnings for malformed
+legacy metadata). Intact owned products reserve all their decks and packed tokens.
+Building decks reserve no cards. Every kept section, including sideboard/commander,
+counts; a deck excludes itself, and a pairing excludes both of its halves. Loose
+cards on an active loan remain owned but unavailable; returns release the copies.
 
-Spaces (lib/spaces.py)
-    A pool is one space's: load_pool("user2") reads
-    magic/people/user2/collection.csv (empty while it doesn't exist) and
-    counts only User2's built decks as in use. Orders, products and
-    on-the-way cards are home's only, so a person's pool has none. A deck is
-    always checked against its own space's pool: owned_vs_needed, deck_table
-    and stale_tables load that pool (for_space) when the one passed in is
-    another space's. The table in a deck file
-always describes its target list, so table_rows() refuses an owned-only
-result; the owned-only comparison is for showing, not for writing.
+Owned and pending quantities come from database rows. Received products have already
+been merged into the collection and are not counted again. Pending printings already
+fully owned warn about possible double counting unless explicitly acknowledged as
+extra copies. That acknowledgement is a person's audited statement, not inferred
+per-copy history. Cancelled/received components don't contribute incoming copies.
+Unreadable rows/sources remain explicit warnings; invalid collection counts cannot
+be trusted and refuse a complete pool/table refresh.
 
-Owned
-    magic/collection.csv, plus cards that haven't arrived yet, which count as
-    owned but are labelled "on the way":
-    - magic/orders/*.csv (not orders/received/, which is already merged);
-    - the whole card list of each product whose status in
-      magic/products/status.csv is preordered or ordered.
-    Products with status owned are already merged into collection.csv, so
-    they aren't counted a second time. When every printing an order or
-    incoming product lists is already in the collection, its cards may have
-    been added without receiving it, so there's a warning: its cards would
-    then count twice. Like every pool warning it makes the pool incomplete,
-    which stops every deck table refresh and receipt. A real order for more
-    copies of printings already owned looks the same, so a pending cards or
-    product component can be acknowledged as extra copies of owned printings
-    (python -m decklab.db order extra-copies ID COMPONENT; a sentence in the
-    order record's audit_notes, inventory.rules.extra_copies), and then there's
-    no warning for it. The rule is deliberately the plain one: an acknowledged
-    component is never warned about, whatever the collection holds, since the
-    collection keeps no per-copy history from which the pool could tell
-    copies merged early from copies already owned before; the acknowledgement
-    is the person's word, kept in the audit trail. Only pending components are
-    read, so once one is received or cancelled its marker (left in the record)
-    means nothing. A row of an order or
-    incoming product that can't be read (a bad quantity, no name) is left out
-    with a warning, and so is a whole file that can't be read, so one typo
-    doesn't stop every owned-vs-needed check; a bad row in collection.csv
-    still raises ValueError, since the counts can't be trusted without it.
-    All of it comes from one inventory snapshot (decklab/lib/inventory:
-    inventory.current(), the request's or command's pinned one), whichever
-    backend holds it; the paths above are the names messages and labels use
-    ("Row 2 of order x's cards: ...", "1 on the way (order <file stem>)"),
-    worked out from what each piece is, so both backends say the same.
+Names resolve through the card index and quantities combine equivalent printings and
+finishes for play. Ordinary basics are omitted, as the household has plenty.
+For each card: available=max(owned-in_use_elsewhere,0); missing=max(need-available,0).
+The target/Planned list alone owns the persisted availability table; owned/Play-now
+comparisons are views. table_rows() refuses writing a table for the owned-only list.
 
-In use (a physical card can only be in one deck at a time)
-    - Deck files whose Status is built. A built deck with both lists holds
-      the one its "Built version" field names (target or owned-only). With no
-      such field, or a value that isn't either, it holds the owned-only list,
-      with a warning, since that's the list that can be put together from
-      owned cards. A deck with one list holds it. (No deck was built yet on
-      2026-09-29.)
-    - Products with status owned and intact yes: each of their decks holds
-      its cards (e.g. every Beginner Box half while the box is kept intact).
-    Every section counts, commander and sideboard included, since those cards
-    are kept with the deck. A deck never counts against itself: its own id,
-    and for a Beginner Box pairing both of its halves, are left out of "in use
-    elsewhere".
+Prices are optional cached paper-printing estimates in the configured currency,
+with the numeric FX rate, its date and Scryfall's price date. Missing verified prices
+remain unknown. The PriceStamp/table rules preserve compatible existing price cells
+without inventing a conversion. Prices are market estimates, never spending.
+Notes labels explain each incoming source and visible deck holding needed copies;
+row_labels() returns the same facts as structured data. Permission-filtered APIs
+redact hidden holder names and inventory-derived facts outside authorized spaces.
 
-Counting
-    By card name: every printing and finish plays the same, so copies are
-    summed across them. Names go through cards.resolve(), so a front face
-    alone or a missing accent still matches the full Scryfall name, and so
-    does a decklist name that kept a lowercase set ("Llanowar Elves (fdn)",
-    which the decklist parser can't tell from a name like "Hazmat Suit
-    (Used)"). A name that doesn't resolve is counted as written and reported.
-    Basic lands are left out everywhere: the user has plenty, and the tables
-    don't list them.
-
-    For each card the deck needs:
-        available = max(owned - in use elsewhere, 0)
-        missing   = max(need - available, 0)
-
-Prices are cards.price_aud() estimates (the cheapest non-foil paper
-printing's USD price times the ECB rate). The result carries the rate, its
-date and Scryfall's price date once, so the page can show them with the
-table, as AGENTS.md requires; table_rows() hands them to decks.set_table()
-as a PriceStamp, which updates the rate line above the table. With no rate,
-or an index that doesn't say when its prices were pulled, there are no
-prices and price_error says why; a table rewritten then keeps only the old
-price cells that still match the old rate line (see decks.TableRow).
-
-The table's Notes cells get labels, as AGENTS.md asks: "1 on the way
-(order 2026-09-29-shop-a)" for the copies this deck counts on that haven't
-arrived, one per source, and "2 in use in Gruul Ramp", one per deck, for a
-card this deck is short of because other decks hold copies. row_labels(row)
-gives the same as data, for the page.
+For many decks reuse load_pool() and pass it to comparisons. table_changes(),
+stale_tables(), table_blockers() and printing_counts() all use that same snapshot;
+no reader performs an inventory mutation, source refresh or simulation.
 """
 import argparse
 import contextlib

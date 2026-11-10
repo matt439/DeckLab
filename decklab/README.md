@@ -1910,6 +1910,9 @@ The integration helper builds a template database for each checkout (`decklab_tm
 
 CI runs them on every code change (`tests.yml`'s `database` job, 2 jobs on Linux) against a throwaway PostgreSQL 18 service container in the job's own VM, after `python -m decklab.db setup` makes the roles and database there, so the PC needs to run them only when Matt asks. A new migration needs its entry in `tests/db_support.py`'s `UNDO_MIGRATION`, or CI's rollback tests fail.
 
+`test_inventory_backend_coverage.py` guards registered inventory operations against named database suites and a shrinking explicit gap list. `inventory_backend_coverage.py` names the owners; `DbTestCase` observes changed committed writes during passing test methods. At the end of each `test_db.py` shard, a claimed operation without that runtime evidence fails the job. Seeds, previews, noops, refusals and skipped tests do not establish coverage. Dice operations share their core cases across the file fixture and PostgreSQL; all actual database execution remains in this separately authorized workflow.
+
+
 They are every `decklab/tests/test_*.py` module that imports `tests/db_support.py`. When authorized, run them all from the repo root with the system python (the test package finds the `.venv`'s psycopg itself), on Windows or Linux:
 
 ```

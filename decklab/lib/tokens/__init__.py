@@ -1,59 +1,34 @@
-"""The token inventory (magic/tokens.csv) and the tokens each deck uses.
+"""Physical token cards and deck token needs from Deck Lab's PostgreSQL inventory.
 
-Data only: reading and checking the token cards, parsing what a row's
-details say, matching owned token cards against the tokens a deck's cards
-make (from the card index's links between cards and tokens) and the words
-for each need. The rows come from the inventory snapshot
-(decklab.lib.inventory.current(): the files under magic/ or the database,
-whichever backend is in use), never from a file read here. The Tokens
-page's writes are inventory operations (ops.py: tokens.add, tokens.edit,
-tokens.remove), applied by lib/api/tokens.py and python -m decklab.db
-tokens; receipts write the rest.
+All reads use inventory.current(): the request/command's consistent snapshot. Home
+and each member have separate token rows, and matching always uses the deck's own
+space. Pending token orders are home's only. The files backend and CSV serializers
+are test/export adapters, not live token files.
 
-Spaces (lib/spaces.py): home's inventory is magic/tokens.csv, and each
-person's is magic/people/<id>/tokens.csv, in the same columns (the names
-messages use for them, whichever backend holds the rows). A deck is matched
-against its own space's inventory; token orders are home's only, so a
-person's decks never have tokens on the way.
+The token_card columns follow FIELDS (inventory.rules.TOKEN_FIELDS): one row per
+physical card, quantity counting cards rather than faces. A numbered two-face card
+is held once. Details determine rules matching; notes never improve a match.
+Malformed rows remain explicit problems. Scryfall links only approximate the tokens
+a deck can make; saved Forge peaks are labelled estimates, not guaranteed counts.
 
-The CSV has the columns FIELDS (inventory.rules.TOKEN_FIELDS), one row per
-kind of physical card; quantity counts cards, not faces. Its rules (front
-required, positive quantity, set and finish shapes) are
-rules.validate_token_row's, so the page and receipts agree; this module adds
-the page's own limits (lengths, one-line details and notes). Rows are kept
-in rules.token_sort_key order.
+Writes are inventory operations tokens.add, tokens.add_many, tokens.edit and
+tokens.remove, used by the Tokens API/CLI and committed with audit/revision checks.
+Receipts use the same inventory transaction. This module does not mutate records.
 
-A row's details are free text such as "1/1; green; flying, deathtouch",
-"no lifelink" or "colour unconfirmed" (see parse_details). Only details count
-when matching a token: notes never lower or raise a match. Deck Lab never
-claims how many tokens a game needs (see NOTE).
+Parts: rows.py defines row/CSV rules, names.py card/face names, details.py parses
+confirmed traits, matching.py checks physical cards, needs.py builds deck needs,
+sides.py distinguishes the making player's/opponent's tokens, counters.py describes
+counter/dice kinds, peaks.py annotates saved simulation observations and ops.py
+contains writes. Public read/cache bindings remain here; _faces_at is owned by
+names.py so tests patch that binding there.
 
-Parts: rows.py (a CSV row's rules and the file's bytes), names.py (the card
-index and Scryfall face names), details.py (parse_details), matching.py (an
-owned row against one need, and the describing words), needs.py (building
-and wording a need), sides.py (whose side of the table a need lands on,
-from the making cards' text), counters.py (the counters and dice a list's
-cards call for), peaks.py (suggested counts from saved Forge games, E7-S08)
-and ops.py (the writes). This file keeps reading the
-inventory and pending orders, deck_tokens, holders and the cache, check and
-the CLI: everything a test patches (read, incoming, deck_tokens,
-cached_deck_tokens, row_uses) has its one binding here, beside its readers,
-and no part reads them. The one exception is _faces_at, which lives only in
-names.py; tests patch it there.
+    tokens.read(space="user2")            # lenient snapshot rows plus problems
+    tokens.read(strict=True)              # refuse malformed rows before writing
+    tokens.for_space(space)               # owned, incoming, problems
+    tokens.deck_tokens(decks.load_deck("casual/x"), owned, incoming)
 
-Usage:
-
-    from decklab.lib import tokens
-
-    inv = tokens.read()                       # lenient: bad rows go to inv.problems
-    inv = tokens.read(space="user2")        # a person's tokens.csv (lib/spaces.py)
-    inv, inc, problems = tokens.for_space(space)   # what a deck in that space is matched against
-    inv = tokens.read(strict=True)            # TokensError on any bad row (for writes)
-    inc, problems = tokens.incoming()         # pending token payloads named by order records
-    tokens.deck_tokens(decks.load_deck("casual/x"), inv, inc)   # needs, words, counts
-    python -m decklab.lib.tokens --check      # the file's rules, after hand edits (warnings don't fail it)
-    python -m decklab.lib.tokens --check --space user2   # a person's tokens.csv
-    python -m decklab.lib.tokens commander/gandalf-and-the-valley [--owned]
+    python -m decklab.lib.tokens --check [--space user2]
+    python -m decklab.lib.tokens commander/example [--owned]
 """
 import argparse
 import collections

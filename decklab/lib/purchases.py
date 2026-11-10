@@ -1,18 +1,19 @@
-"""Current shopping state, read from the queue and per-order records.
+"""Current shopping state from PostgreSQL queue, order and product records.
 
-No card cache, network request, inventory mutation or price refresh is needed.
-Personal wishlists and dated buying research are deliberately not purchase orders.
-Run ``python -m decklab.lib.purchases --check`` to validate the records and queue.
+One inventory.current() snapshot supplies every row and relation. No card cache,
+network request, mutation or price refresh is needed. Personal wishlists and dated
+buying research are separate from purchase orders. Run
+``python -m decklab.lib.purchases --check`` to validate the records and queue.
 
-Everything comes from one inventory snapshot (decklab/lib/inventory: inventory.current()),
-whichever backend holds it. The paths in records (a component's "path") are where each piece
-is as a file, worked out from what it is, so both backends say the same; messages name each piece
-in the database's words instead (E11-S12: "Row 3 of the purchase queue: wrong number of columns",
-"Order x's cards: missing order record", "Product x: missing product status", never an old file:
-paths.describe). The buylist files a record or the watchlist names as
-its source are still checked on disk; a deck file's path there is checked against the
-snapshot's decks, or a retired deck's durable saved history (source_exists: the phase 4
-design's R9). Retirement never discards recorded purchasing intent.
+Components retain path-shaped keys for compatibility with the fixture/export
+formats. These are logical identifiers, not locations of live inventory files.
+Human-facing messages use paths.describe()'s database record words (purchase queue
+row, order component or product). The file backend exists only for isolated tests.
+
+Dated buylist/report sources are still real research files and may be checked on
+disk. A deck source is checked against saved database text or its durable retired
+history: retiring a deck never discards recorded purchasing intent. Changing these
+compatibility keys to new id types is outside these reader/coverage changes.
 """
 import argparse
 import contextlib

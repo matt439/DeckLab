@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 22 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 55 | 14 | 6 | 4 |
-| **Total** | **376** | **316** | **23** | **21** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 56 | 14 | 5 | 4 |
+| **Total** | **376** | **317** | **23** | **20** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6407,7 +6407,7 @@ Evidence: actual disposable socket tests for silent/partial-header/stalled-body 
 
 Awaiting: decision
 
-**E11-S76** · Matt · could · M · missing
+**E11-S76** · Matt · could · M · built
 
 As Matt, trusting tests that mostly run on a files backend only the tests use, I want every inventory operation shown to have a test on the real database, and the code's own descriptions to stop talking about files, so that a newer feature can't work in the fixtures and fail on PostgreSQL.
 
@@ -6418,6 +6418,8 @@ As Matt, trusting tests that mostly run on a files backend only the tests use, I
 Gap: no test checks that each operation has database coverage, and operations added since the move (dice and counters, storage locations and product packed tokens among them) may be tested on files only. The contract itself is built and required in CI: `test_inventory_contract.py`, `test_inventory_pg_contract.py` and the twice-run operation suites. From the product review of 2026-11-10. Needs Matt's decision: whether to replace the path-shaped order and product keys in `purchases.py` and `inventory/paths.py` with typed ids.
 
 First slice: add `decklab/tests/test_inventory_backend_coverage.py` with its list of current gaps, give one files-only suite (dice, or bulk locations) a database subclass, and rewrite the stale docstrings.
+
+Built (2026-11-11): the fixture coverage guard loads production operation definitions without a backend read and requires every registered kind to name a real DbTestCase suite or one of five explicit baseline gaps. The initial allowance is frozen and can only shrink; dice.add/edit/remove have left it. A shared dice-operation mixin now runs on files and disposable PostgreSQL, checking sorted rows, conflicts, space isolation and actual insert/update/delete audit rows. Database CI independently records only changed, committed PgInventory.apply operations inside passing claimed DbTestCase methods, excluding seed setup, previews, noops, refusals and skipped/failed methods, and fails a shard for an unfulfilled claim. The five reader module docstrings are database-first, keeping path-shaped compatibility identifiers without presenting live inventory files. Existing identifier values stay compatible; a separate typed-id API redesign is not required for coverage.21 focused fixture checks pass (one guarded PostgreSQL class skip); actual PostgreSQL execution remains CI's separate qualification. Known direct-suite gaps remain collection.locations, deck.token_cards, tokens.add_many, watchlist.add_many and watchlist.target_edit, explicitly allowed by this story's acceptance; indirect related coverage is not claimed as direct operation proof. No actual database or household data was accessed.
 
 **E11-S77** · Matt · could · L · built
 

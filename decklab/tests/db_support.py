@@ -328,6 +328,11 @@ class DbTestCase(unittest.TestCase):
     DECKLAB_DB_NAME while the class runs."""
     dbname = None
 
+    def _callTestMethod(self, method):
+        from decklab.tests.inventory_backend_coverage import observe
+        with observe(type(self).__module__, self.dbname):
+            return super()._callTestMethod(method)
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

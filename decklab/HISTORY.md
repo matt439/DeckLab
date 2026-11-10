@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Inventory database coverage guard and current storage docs (2026-11-11; E11-S76)
+
+- Every registered production inventory operation must have a real DbTestCase suite owner or an explicit known gap. The initial gap allowance is frozen; dice add/edit/remove now share their operation cases across files and disposable PostgreSQL, with fresh persisted rows and insert/update/delete audit assertions.
+- Database CI checks actual changed PgInventory.apply writes from passing claimed methods. Setup imports, previews, noops, refusals, failed/skipped methods and declarations alone do not satisfy it. Evidence is scoped by module and shard, without changing production readers/writers or CI requirements.
+- Decks, tokens, accessories, pool and purchases now describe PostgreSQL snapshots and identify legacy path-shaped keys as compatibility values. Authored text/field rules remain documented; no live inventory folders are recreated and identifier values remain compatible.
+- Validation:21 focused fixture checks pass (one guarded PostgreSQL class skip), including registry/new-kind failure, real DbTestCase ownership, shrinking allowance, shard evidence, noop/failure exclusion and docs. Actual PostgreSQL execution awaits CI. The five explicit direct-suite gaps are collection.locations, deck.token_cards, tokens.add_many, watchlist.add_many and watchlist.target_edit; no indirect coverage is relabelled as direct proof. No actual database or household records were read.
+
 ## Recording an order from a basket or plan (2026-11-11; E6-S28)
 
 - Current baskets and recommended plan shops open the existing order sheet with seller, today's date, counted snapshot printings and matched queue reductions. Cheapest-first stock prefixes conserve every counted copy; identical physical printings merge without guessing condition/language or carrying prices, targets or queue notes. Add-ons remain excluded initially.

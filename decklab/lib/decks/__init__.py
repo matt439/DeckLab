@@ -1,17 +1,20 @@
-"""Read and write deck files, and load the product decks.
+"""Deck lists, saved Markdown text and product decks from Deck Lab's database snapshot.
 
-Deck files live in magic/decks/casual/ and magic/decks/commander/, and a
-person's in magic/people/<id>/decks/<kind>/ (lib/spaces.py: their ids are
-"<id>/<kind>/<slug>", home's stay "<kind>/<slug>"). They are written by hand and by Claude as well as by Deck Lab, so the page only
-rewrites the parts it owns (PLAN.md part 2):
+Home deck ids are <kind>/<slug>; a member's are <space>/<kind>/<slug>.
+Deck text, history and the derived deck_line projection live in PostgreSQL. Readers
+use inventory.current() so one pinned request/command sees consistent decks, cards,
+products and accessories. The files backend exists for isolated tests only.
+
+The Markdown format remains an authored record. The editor rewrites only the parts
+it owns (PLAN.md part 2), preserving all other prose and unchanged bytes:
 
 - the header fields Format, Archetype, Played by, Status, Built version,
   Target bracket, Sleeves and Deck box ("Built version: target" or
   "owned-only" says which list a built deck holds, when the file has both;
   Sleeves and Deck box are a building or built deck's accessories (HOLDER_STATUSES), each an id from
-  magic/accessories.csv or older free text such as a colour);
+  the database accessories list or older free text such as a colour);
 - the fenced decklist blocks (the target list under a "## Decklist" heading
-  and the list under "### Owned-only version"). A file with no "## Decklist"
+  and the list under "### Owned-only version"). Stored text with no "## Decklist"
   block has no target list Deck Lab can read: list_decks() reports it with an
   error and load_deck() refuses it, rather than treating it as empty;
 - the rows and total row of the owned-vs-needed table, which always describe
@@ -41,66 +44,34 @@ the formatters.
 
 Usage:
 
-    from decklab.lib import decks, pool
-
-    deck = decks.read_deck_file("magic/decks/casual/gruul-ramp.md")
-    deck.target["Deck"][0].quantity = 3
+    from decklab.lib import decks, inventory, pool
+    path = decks.find_deck_file("casual", "gruul-ramp")   # a logical compatibility key
+    deck = decks.read_deck_file(path)                     # parses the snapshot's stored text
     decks.set_status(deck, "building")
-    decks.set_table(deck, *pool.deck_table(deck))     # worked out from deck.target as edited
-    decks.mark_decklist_changed(deck, "2026-10-05")
+    decks.set_table(deck, *pool.deck_table(deck))
     text = decks.render_deck_file(deck)
     inventory.apply(inventory.Op("deck.save", {"deck_id": deck.deck_id, "text": text,
                                                "base_sha256": deck.sha256}), actor, message)
-
-    decks.list_decks()                        # deck files + product decks
-    decks.beginner_box_pairings()             # the 45 two-half Beginner Box decks
-    decks.load_deck("casual/gruul-ramp", "owned")
-    decks.load_deck("user2/casual/elves")   # a deck in User2's space
+    decks.load_deck("user2/casual/elves", "owned")
     decks.load_deck("product/fdn-beginner-box/cats")
-    decks.load_deck("pairing/cats+vampires")
-    decks.find_summary("pairing/vampires+cats")   # a library summary by id, or None
-    decks.engine_kind(summary)                # "commander" or "constructed"
+    decks.beginner_box_pairings()
 
-The editor's saves (api.save_deck) go through apply_edit(), which applies
-the lists and header fields the page sends and marks a decklist change;
-table_changes() says how a file's table differs from rows pool.py worked
-out, which is how "this table is out of date" is found.
+DeckFile, read_deck_file and find_deck_file keep their historical names. Their
+space-shaped Paths address database records, not on-disk inventory. An explicitly
+supplied path outside the managed space keys can still read a scratch draft or test
+fixture. No reader recreates live deck folders. Saves use inventory operations and
+keep deck revisions, categories and any table changes in the existing transaction.
 
-This module never computes quantities or prices for the table: pool.py works
-those out and hands over finished TableRow objects.
+Parts: decklist.py parses card blocks; deckfile.py parses stored Markdown; edit.py
+owns permitted fields and table labels; render.py preserves/rebuilds the text;
+tokencards.py and printings.py describe packed tokens and physical printings;
+considering.py keeps optional ideas outside playable lists; cover.py owns cover
+metadata. This module retains the public library/read bindings and the logical
+path/slug compatibility adapters. Tests patch these bindings here.
 
-Where things are (every name in the submodules is also decks.<name>):
-
-- decklist.py: decklist lines and blocks in the Arena/MTGO format;
-- deckfile.py: the DeckFile model and parse_deck()/read_deck_file();
-- edit.py: header fields, apply_edit(), Notes labels and set_table();
-- render.py: render_deck_file(), other_rate() and new_deck_text();
-- tokencards.py: a built deck's optional "Token cards" header line, the token cards it packs
-  (parse_token_cards, set_token_cards), which other decks then count as in use;
-- printings.py: a built deck's optional "Printings in box" header line, which physical printing
-  of its cards is in the box (parse_printings, set_printings), a record that reserves nothing;
-- considering.py: the "## Considering" block, cards that might go in (DeckFile.considering),
-  outside both lists, so nothing that reads the lists counts them;
-- cover.py: the optional "Cover card" header line (parse_cover, set_cover) and the automatic
-  cover (auto_cover_line), the card whose art stands for the deck in the library;
-- this file: everything that uses the folders (DECKS_DIR, and each person
-  space's decks folder from lib/spaces.py): slugs and paths, the product
-  decks (from the inventory's products: decklab/lib/inventory,
-  inventory.current()) and the library.
-  Tests patch DECKS_DIR, REPLACE_WAITS and the library functions on decks,
-  so they and everything that reads them stay here.
-
-Where deck files are read from (decklab/PLAN.md phase 4; the phase 4 design's R1): the
-inventory's snapshot (inventory.current().decks: the deck files as the files backend reads them
-under its root, or the database's texts), never the folders themselves. deck_files(),
-_space_files(), find_deck_file(), existing_deck_id(), list_decks() and load_deck() list and
-find the snapshot's decks, still as Paths in the space folders (deck_dir()), so every caller
-keeps its paths; read_deck_file(path) parses the snapshot's text of the deck at that path, and
-reads the file itself only for a path outside every space's deck folders (a fixture, a draft).
-So one pinned snapshot gives the pool, the tokens, the accessories and the deck pages the same
-decks as the inventory. Deck Lab saves decks only through the inventory's deck operations
-(inventory/ops_decks.py); the tests write a file in the files backend's tree directly with
-decklab/tests/deck_files.py.
+This module never computes table quantities or prices: pool.py supplies TableRows.
+The editor's apply_edit() handles reviewed list/header changes; table_changes()
+compares a saved table with the same snapshot's current pool.
 """
 import errno
 import hashlib
