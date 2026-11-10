@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 44 | 11 | 20 | 4 |
-| **Total** | **376** | **278** | **19** | **63** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 44 | 12 | 19 | 4 |
+| **Total** | **376** | **278** | **20** | **62** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6480,7 +6480,7 @@ Gap: `decklab/web/editor.js` always offers user, wife and either; the Status and
 
 First slice: Played by offering only the players the profiles have, never a raw key, in `decklab/web/editor.js` and `decklab/web/app.js`, with one-line hints under Status and beside the Planned/Play-now switch.
 
-**E11-S84** · Self-hoster · should · S · missing
+**E11-S84** · Self-hoster · should · S · partial
 
 As a self-hoster keeping Deck Lab up to date, I want updates and release installs to leave my settings alone and to tell me when there's something to update to, so that a copy of my config isn't left where git can pick it up and a release install isn't refused a restart.
 
@@ -6490,6 +6490,8 @@ As a self-hoster keeping Deck Lab up to date, I want updates and release install
 - Given `decklab/simulation.json`, then an example ships and a local file is gitignored (or a local overlay), so editing it never blocks `update`.
 - Given a git checkout, then self-hosters get a stable channel (tagged releases or a branch `update` follows), a short changelog, and a "N updates available" line (needs Matt's decision on the channel).
 
-Gap: `decklab/update.py` writes `decklab/config.json.before-forge-update`, which `.gitignore` doesn't cover; `decklab/lib/build.py` fingerprints config.json as runtime but `scripts/make_release.py`'s manifest doesn't, so a release reads as changed; no release is published yet (E11-S49), and updates follow main. E11-S51 is the release updater. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (ongoing-use-burden 0 to 2, 7, 9, 10).
+Built 2026-11-10: update's `config.json.before-forge-update` copy is gitignored. A release's local config is excluded only from the shipped-file comparison: adding or editing it leaves the release clean, while changes and removal still require restarting the running server. The updater recognizes a release before checking Python or running git and points to SELF-HOSTING.md's release update instructions. Tests unpack a release and configure it, retain code-change detection and exercise config edits/removal and the early update refusal (`test_release`, `test_build`, `test_update`).
 
-First slice: gitignore the config copy (or move it under `decklab/data/`), and leave `decklab/config.json` out of the release fingerprint comparison in `decklab/lib/build.py`, with the unzip-and-configure test.
+Left: an example/local overlay for simulation settings, and Matt's decision on a stable update channel, changelog and updates-available line. No release is published yet (E11-S49); E11-S51 owns the release updater. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (ongoing-use-burden 0 to 2, 7, 9, 10).
+
+Next slice: separate the shipped simulation defaults from a gitignored local override, preserving existing pilot and field-policy behavior with fixture tests; do not pick a stable channel without Matt's decision.

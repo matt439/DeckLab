@@ -339,6 +339,10 @@ def interpreter_problem(executable=None, activate=None, venv=None, units=None, p
 
 def before_pull(args):
     """Steps 1-2, in the code as it was. Returns the exit code of the rest (or 0 for a dry run)."""
+    from decklab.lib import build
+    if build.is_release(ROOT):
+        raise Failed("This is a release install, so git update cannot update it. Follow SELF-HOSTING.md's "
+                     "release update steps; keep your config.json and database settings.")
     problem = interpreter_problem()
     if problem:
         raise Failed(problem)

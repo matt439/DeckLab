@@ -17,6 +17,16 @@ from decklab.db import move
 
 
 class ForgeConfigTests(unittest.TestCase):
+    def test_release_update_explains_the_supported_route_before_any_git_or_service_work(self):
+        from decklab.lib import build
+        with mock.patch.object(build, "is_release", return_value=True), \
+                mock.patch.object(update, "git") as git, \
+                mock.patch.object(update, "interpreter_problem") as interpreter:
+            with self.assertRaisesRegex(update.Failed, "release install.*SELF-HOSTING"):
+                update.before_pull(types.SimpleNamespace(dry_run=False))
+        git.assert_not_called()
+        interpreter.assert_not_called()
+
     def test_expected_release(self):
         text = 'import x\n\nV = "2.0.15-decklab-52387e83f"\nRELEASE = V\n'
         self.assertEqual(update.expected_release(text), "2.0.15-decklab-52387e83f")

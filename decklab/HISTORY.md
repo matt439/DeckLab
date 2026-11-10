@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Config safety for updates and release installs (2026-11-10; E11-S84 first slice)
+
+- Update's `decklab/config.json.before-forge-update` backup is now gitignored, keeping copied profiles and tunnel settings out of an ordinary `git add .`.
+- An unpacked release stays clean after configuring it. The shipped-file comparison excludes local config, while runtime fingerprints still detect its edits or removal and ask for a restart. Changed application files still count as modified.
+- Running the git updater in a release install stops before Python checks, git or service work and names the release update instructions in SELF-HOSTING.md.
+- Validation: guarded build, release and updater fixtures, including unpack-and-configure and settings-change tests. Simulation defaults/local overrides and the stable-channel decision remain open; nothing was published or installed.
+
 ## A sealed product's bonus card on its list (2026-11-10; E6-S29)
 
 **2026-11-10: A sealed product's bonus card on its list (E6-S29).** Matt's Stardew Valley Secret Lair drops were recorded with lists of only their published cards, so Krobus and Junimo Farmhands, the drops' bonus cards, showed as missing and were bought again as eBay singles while the drops were on their way. MTGJSON records a product's fixed extras only in its set file, never in a deck file: new `lib/sealed.py` reads `data.sealedProduct[].contents` (`card` fixed; `pack`, `sealed`, `variable` random; `other` not a card), joined to a deck file through `sealedProductUuids` (else by deck name), fixed cards being those every one of a deck's products holds. A set file (SLD's 2.4 MB compressed) is fetched only while a list is filled or an order previewed, never by a save or page load, and a small extract (SLD's 384 KB) is kept a week in `decklab/data/mtgjson/sealed/`; an older one is used when MTGJSON can't be reached (Matt's decisions of 2026-11-10).

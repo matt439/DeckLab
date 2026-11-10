@@ -114,10 +114,15 @@ def _files(root, kind=None):
     return sorted(paths)
 
 
-def _fingerprints(root, kind=None, stats=None):
+def _fingerprints(root, kind=None, stats=None, *, include_config=True):
     """The runtime and web digests and the names hashed; stats, when given, is filled with
-    each hashed file's {name: (st_mtime_ns, st_size)}."""
-    paths = _files(root, kind)
+    each hashed file's {name: (st_mtime_ns, st_size)}. A release's shipped-file
+    comparison excludes its user-created config; runtime restart checks include it."""
+    def files():
+        return [path for path in _files(root, kind)
+                if include_config or path.relative_to(root).as_posix() != "decklab/config.json"]
+
+    paths = files()
     digests = {name: hashlib.sha256() for name in ("runtime", "web")}
     names = set()
     for path in paths:
@@ -135,7 +140,7 @@ def _fingerprints(root, kind=None, stats=None):
         names.add(name)
         if stats is not None:
             stats[name] = (before.st_mtime_ns, before.st_size)
-    if paths != _files(root, kind):
+    if paths != files():
         raise _Unavailable("Application files changed while checking their version; try again.")
     return {name: digest.hexdigest() for name, digest in digests.items()}, names
 
@@ -191,7 +196,8 @@ def _release_snapshot(root):
     try:
         manifest = read_manifest(root)
         fingerprints, _ = _fingerprints(root)
-        dirty = fingerprints != {"runtime": manifest["runtime"], "web": manifest["web"]}
+        shipped, _ = _fingerprints(root, include_config=False)
+        dirty = shipped != {"runtime": manifest["runtime"], "web": manifest["web"]}
         return _Snapshot(manifest["commit"], dirty, fingerprints["runtime"], fingerprints["web"],
                          version=manifest["version"])
     except (_Unavailable, OSError, UnicodeError) as error:
