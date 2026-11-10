@@ -142,7 +142,8 @@ def http_get(port, path, timeout=10, headers=None):
 
 
 def get_json(port, path, timeout=10):
-    status, _, body = http_get(port, path, timeout, SCRIPT_HEADERS)
+    from decklab.lib.script_secret import local_headers
+    status, _, body = http_get(port, path, timeout, local_headers(SCRIPT_HEADERS))
     try:
         data = json.loads(body.decode("utf-8")) if body else None
     except ValueError:

@@ -267,7 +267,8 @@ class Local:
             settings = _json(raw.removeprefix(b"\xef\xbb\xbf"))
             if not isinstance(settings, dict):
                 return "config_invalid"
-            from decklab.lib import access, config, profiles
+            from decklab.lib import access, config, profiles, script_secret
+            script_secret.validate(settings.get("script_secret"))
             try:
                 listed = profiles.read_checked(settings)
             except profiles.InvalidProfiles:

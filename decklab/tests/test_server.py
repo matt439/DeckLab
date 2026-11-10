@@ -341,7 +341,8 @@ class ApiEndpointTests(ServerTestCase):
                                     "last_backup": None, "backup_stale": None, "stale_hours": 36, "checks_warning": None,
                                     "venv": None,
                                     "inventory": {"imported": None, "imported_at": None,
-                                                  "not_imported": False, "revision": None, "stale": True}})
+                                                  "not_imported": False, "revision": None,
+                                                  "stale": False, "unavailable": True}})
 
     def test_a_member_gets_only_whether_the_database_can_be_used(self):
         # The Sandbox's config has no roles (everyone an admin): give it some for this test.

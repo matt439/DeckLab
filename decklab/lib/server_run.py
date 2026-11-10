@@ -421,7 +421,8 @@ def _serve(host, port, no_update, settings, log_path, background):
     home_hosts = [h for h in settings.get("allowed_hosts") or [] if str(h).strip().lower().rstrip(".") not in hosts]
     try:
         server = server_http.make_server(host, port, allowed_hosts=home_hosts, tunnel_hosts=hosts,
-                                         home_networks=home_scope.networks(settings, server_http.log))
+                                         home_networks=home_scope.networks(settings, server_http.log),
+                                         script_secret=settings.get("script_secret"))
     except (OSError, OverflowError) as e:       # port in use, bad address, port over 65535
         server_http.log(_cant_listen(host, port, e, default_port))
         return 1

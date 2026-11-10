@@ -385,7 +385,8 @@ VIEWER_HEADER = "X-Deck-Lab-Viewer"
 # The header a script on the PC sends ("1") to be answered as a script: everything, as the
 # command line reads it. It counts only on the home listener, from loopback (127.0.0.1 or ::1),
 # with no viewer named (server_http decides; script() says what it decided). The tunnel's
-# listener is on 127.0.0.1 too, so it never counts there.
+# listener is on 127.0.0.1 too, so it never counts there. Off Linux a configured script_secret
+# additionally needs the secret header owned by lib/script_secret.py.
 SCRIPT_HEADER = "X-Deck-Lab-Script"
 # What a home-listener request naming a profile from outside the home gets, on every route: the
 # home's chooser offers only home profiles, and everyone else comes in through the tunnel's login.

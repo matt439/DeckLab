@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Wake-gate connection bounds and optional local-script proof (2026-11-11; E11-S75 source)
+
+- The gate admits at most 32 HTTP connections before starting threads and gives each socket a 10-second idle timeout; capacity is released on close, failure or timeout. Disposable tests exercise stalled connections, overload rejection and recovery without a real wake packet.
+- The compose wakegate service uses non-root UID/GID 65534, a read-only root, no capabilities/no-new-privileges and disabled bytecode writes. The README covers source-file readability without widening secret-file permissions. Actual updated NAS/WOL acceptance remains pending, not inferred from these tests.
+- An optional script_secret adds exact-key proof off Linux when configured. It preserves existing defaults and every loopback/listener/flag/no-viewer check; Linux still requires the server user's peer UID. Supported loopback clients propagate the key, doctor rejects invalid settings and the public leak audit recognizes configured values. No key, config or deployment was changed by the task.
+- Validation: 107 focused and 55 follow-up fixtures pass (overlap, one existing platform skip); server/access/lifecycle regression found only the corrected old E11-S78 stale-snapshot assertion. Source/whitespace guards pass. E11-S75 stays partial/DECISION for external acceptance; optional activation is an operator choice.
+
 ## Pending bonus-printing purchase advisories (2026-11-11; E5-S36)
 
 - Queue/order previews now warn when an exact printing and finish is a pending product's recorded bonus extra, including a product and single in the same order. Display commanders, mismatched/cancelled/received sources and any-printing intent do not falsely claim a duplicate. Shopping and saved-variant reviews show the same advisory before an explicit add.
@@ -13,8 +20,8 @@ What each milestone and feature built, the decisions made along the way, and the
 
 - One closeAllSheets() preserves existing global sheet cleanup order for profile/chooser/route changes. The fixture suite inventories closer definitions and fails if the shared entry point omits a family.
 - Pinned Acorn/eslint-scope tools parse classic scripts with real lexical scopes, checking unresolved bare calls while recognizing local bindings, cross-file globals and protected typeof paths. Fixture CI installs the exact locked dev dependencies with lifecycle scripts disabled; production still has no npm/build requirement.
-- A separate, non-required Linux Chrome workflow runs disposable capture smoke with strict page/console error handling and retained evidence. Synthetic visit telemetry is suppressed with a local204 reply, avoiding a harness-created abort error without contacting the app/database. Other unapproved/external writes remain blocked; existing required CI gates are unchanged.
-- Validation: 65 targeted fixture checks pass (one platform skip), and the CI-equivalent12-case strict-console browser run passed with clean cleanup (`data/ui-review/20261110T160223Z-a8403650/`). Hosted CI is followed on the final PR; no workflow or branch protection setting was changed remotely.
+- A separate, non-required Linux Chrome workflow runs disposable capture smoke with strict page/console error handling and retained evidence. Synthetic visit telemetry is suppressed with a local 204 reply, avoiding a harness-created abort error without contacting the app/database. Other unapproved/external writes remain blocked; existing required CI gates are unchanged.
+- Validation: 65 targeted fixture checks pass (one platform skip), and the CI-equivalent 12-case strict-console browser run passed with clean cleanup (`data/ui-review/20261110T160223Z-a8403650/`). Hosted CI is followed on the final PR; no workflow or branch protection setting was changed remotely.
 
 ## Life-counter wake, Undo and rules-derived markers (2026-11-11; E4-S32)
 

@@ -250,6 +250,9 @@ def config_terms(config_file=None):
         aud = str(access.get("aud") or "").strip().lower()
         if len(aud) >= 16 and len(set(aud)) > 2:
             add("the configured Cloudflare Access AUD tag", aud)
+    secret = config.get("script_secret")
+    if isinstance(secret, str) and len(secret) >= 32:
+        add("the configured loopback script secret", secret)
     return terms
 
 

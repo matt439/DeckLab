@@ -404,6 +404,8 @@ If a member update is interrupted, a private pending journal prevents profile/au
 - **Tokens of a person's space** are edited on the Tokens page with `"space"` (`GET /api/tokens?space=user2`): their own token cards, each change a change set such as `add token Fish (User2's tokens)` by User2.
 - **A person's wishlist** (in the database, see "Wishlists") counts the copies in their own collection.
 
+- **Optional local-script proof** (E11-S75): the existing loopback script rule is unchanged by default. An operator on Windows/macOS may set `script_secret` in private config.json to a locally generated 32–256-character URL-safe key and restart Deck Lab. Trusted clients then send one `X-Deck-Lab-Script-Secret` header alongside `X-Deck-Lab-Script: 1`, from loopback with no named viewer; the tunnel never grants either header script rights. `decklab.lib.script_secret.local_headers()` prepares headers for this server's own loopback requests; the smoke/member-maintenance clients already use it. Never put the key in a URL, browser storage, public config example or log. Linux retains the existing same-user socket check. `null` leaves the optional proof disabled; no key or setting is changed automatically.
+
 ## Wishlists
 
 Choose **Wishlist** (the top bar's More) to see your own cards, as card tiles. Everyone has a separate list,

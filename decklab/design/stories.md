@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 46 | 13 | 16 | 4 |
-| **Total** | **376** | **285** | **21** | **54** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 46 | 14 | 15 | 4 |
+| **Total** | **376** | **285** | **22** | **53** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6350,11 +6350,11 @@ As Matt, changing a page built from many scripts sharing one global scope, I wan
 - Given a page script calling a bare name that no script defines and that isn't a browser global, a local or a `typeof`-guarded name, when the fixture suite runs, then a test names the file and the name.
 - Given a pull request, when CI runs, then a Linux job runs `python scripts/ui_review.py --smoke` in the runner's Chrome and fails on any page error or console error; it stays outside the required `tests` check until it has proved stable.
 
-Built 2026-11-11: choose-profile, chooser and route transitions use one `closeAllSheets()` in the original close order. A lexical Acorn/eslint-scope audit checks every classic page script for unresolved bare calls and inventories global sheet closers; tests cover scopes, cross-file definitions and protected `typeof` paths without executing the source. Exact parser dependencies are pinned/locked and installed with scripts disabled before fixture CI. A separate Linux Chrome workflow runs the isolated capture smoke with strict page/console errors, retaining synthetic receipts and cleanup evidence; required tests/ruff gates and rules remain unchanged. Suppressed synthetic visit telemetry is fulfilled locally with204 rather than making its intentional abort a console error; other unauthorized/external writes still abort.
+Built 2026-11-11: choose-profile, chooser and route transitions use one `closeAllSheets()` in the original close order. A lexical Acorn/eslint-scope audit checks every classic page script for unresolved bare calls and inventories global sheet closers; tests cover scopes, cross-file definitions and protected `typeof` paths without executing the source. Exact parser dependencies are pinned/locked and installed with scripts disabled before fixture CI. A separate Linux Chrome workflow runs the isolated capture smoke with strict page/console errors, retaining synthetic receipts and cleanup evidence; required tests/ruff gates and rules remain unchanged. Suppressed synthetic visit telemetry is fulfilled locally with 204 rather than making its intentional abort a console error; other unauthorized/external writes still abort.
 
-Evidence: 65 targeted lexical/web/supply-chain/harness fixtures pass (one existing platform skip). The local CI-equivalent strict-console capture passed12/12 cases, without page/console errors or unexpected requests and with complete cleanup (`data/ui-review/20261110T160223Z-a8403650/`). Hosted Linux CI remains to be observed on the final PR. Production has no npm dependency/build step; developer setup is documented in ui_review/README. From the product review of 2026-11-10.
+Evidence: 65 targeted lexical/web/supply-chain/harness fixtures pass (one existing platform skip). The local CI-equivalent strict-console capture passed 12/12 cases, without page/console errors or unexpected requests and with complete cleanup (`data/ui-review/20261110T160223Z-a8403650/`). Hosted Linux CI remains to be observed on the final PR. Production has no npm dependency/build step; developer setup is documented in ui_review/README. From the product review of 2026-11-10.
 
-**E11-S75** · Matt · could · M · missing
+**E11-S75** · Matt · could · M · partial
 
 As Matt, leaving the wake gate running on the NAS, I want it to drop stalled connections, cap its threads and run in a locked-down container, so that a slow or careless client on the home network can't tie up the one thing that wakes the server PC.
 
@@ -6363,9 +6363,11 @@ As Matt, leaving the wake gate running on the NAS, I want it to drop stalled con
 - Given `decklab/wakegate/compose.yaml`, when the container starts, then it runs as a non-root user with a read-only filesystem, every capability dropped and no new privileges, and still sends the magic packet.
 - Given Deck Lab on Windows or macOS, when a loopback request sends the script header without the install's secret, then it isn't treated as a script; Linux keeps its same-user check.
 
-Gap: the gate's handler has no timeout or connection cap and its container runs as root. E11-S59 built the gate, but its real setup on the NAS hasn't happened, so the non-root container must be confirmed there. The script secret is optional and later: E11-S58 already closes that gap on the live Linux server. From the product review of 2026-11-10, compared with Deck Lotus's named API keys.
+Code built 2026-11-11: the gate bounds accepted connections before creating handlers (32 by default), sets a 10-second idle socket timeout and releases capacity after timeout/error/close. Its compose service uses a non-root UID/GID, read-only root, no capabilities/no-new-privileges and disabled bytecode writes. The optional off-Linux script_secret mechanism requires one exact key header when configured, alongside every original loopback/listener/flag/no-viewer check; default compatibility and Linux's same-user rule remain unchanged. Supported smoke/member-maintenance clients propagate a configured key only to loopback; doctor validates it and the public leak guard recognizes it. No secret or live setting was generated or changed.
 
-First slice: a handler timeout and a bounded-connection server in `decklab/wakegate/wakegate.py` with tests in `decklab/tests/test_wakegate.py`, and the four container settings in `compose.yaml`.
+Evidence: actual disposable socket tests for silent/partial-header/stalled-body expiry, overload rejection and recovery use fake WOL. Focused groups 107 and 55 pass (overlapping, one platform skip); broader 114 server/access/lifecycle checks had one obsolete E11-S78 status expectation, corrected and rechecked. Source-length and whitespace guards pass. Actual updated non-root NAS/WOL acceptance remains pending with E11-S59; optional-secret activation is an operator choice. From the product review of 2026-11-10, compared with Deck Lotus's named API keys.
+
+Awaiting: decision
 
 **E11-S76** · Matt · could · M · missing
 
