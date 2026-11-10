@@ -37,7 +37,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 18 | 0 | 2 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 19 | 2 | 4 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 2 | 8 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 3 | 7 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 20 | 1 | 7 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 33 | 27 | 0 | 4 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 24 | 21 | 0 | 1 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 72 | 44 | 11 | 13 | 4 |
-| **Total** | **365** | **276** | **18** | **55** | **16** |
+| **Total** | **365** | **276** | **19** | **54** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1379,7 +1379,7 @@ Gap: free cards by role and the role targets are Commander only (E9-S26); 60-car
 
 First slice: casual decks only: a legality-free fit in `decklab/lib/decks/role_pool.py`, a casual branch in `decklab/lib/api/role_cards.py` replacing its 400, shown in `decklab/web/stats.js`.
 
-**E3-S43** · Matt · could · S · missing
+**E3-S43** · Matt · could · S · partial
 
 As the person who runs the gauntlet, I want to see when the popular decks list was built and what a rebuild would change, so that a rebuild never orphans results by surprise.
 
@@ -1388,7 +1388,13 @@ As the person who runs the gauntlet, I want to see when the popular decks list w
 - Given a saved catalogue, when I run `python -m decklab.lib.forge gauntlet build`, then before saving it prints how many opponents' lists changed and whether the standard sample would change.
 - Given `gauntlet export FILE` on one PC and `gauntlet import FILE` on another, then the catalogues and saved samples arrive with a verified sha, playable decks are screened again, and no house deck's results are included.
 
-Gap: the catalogue already records its build date and sha (E3-S28), and E3-S34 explains results a rebuild set aside; no page shows the date, a build prints no difference, and there is no export or import. From the product review of 2026-11-10. Needs Matt's decision: whether `FG#4` copies the development PC's catalogue to the server or builds its own as planned.
+Status: partial. Now: the first slice is built (2026-11-10; [HISTORY.md](../HISTORY.md#when-the-popular-decks-list-was-built-and-what-a-rebuild-would-change-2026-11-10-e3-s43-first-slice)): the muted "Popular decks list built <date> (<short sha>)" line on the Popular decks board and a deck's Against popular decks, with its age from 90 days old and never a request to rebuild (`gauntlet_page.catalogue_stamp`, `gtBuiltLine`), and `gauntlet build`'s printed difference before saving and on a dry run (opponents' lists changed, joined, left; whether the standard sample would change: `lib/gauntlet/catalogue.difference`). Left: `gauntlet export FILE` / `gauntlet import FILE` (catalogues and saved samples with a verified sha, playable decks screened again, no house results), which waits for Matt's decision on `FG#4` (copy the development PC's catalogue to the server, or build its own).
+
+Awaiting: decision
+
+Remaining: Criterion 4 is unbuilt: `gauntlet export FILE` / `gauntlet import FILE` (catalogues and saved samples with a verified sha, playable decks screened again, no house deck's results). It waits for Matt's decision on FG#4: copy the development PC's catalogue to the server, or build its own there. Criteria 1-3 (the built line on the board and Testing tab, the age note from 90 days, and gauntlet build's printed difference) are done.
+
+Gap: the catalogue already records its build date and sha (E3-S28), and E3-S34 explains results a rebuild set aside; there is no export or import yet. From the product review of 2026-11-10. Needs Matt's decision: whether `FG#4` copies the development PC's catalogue to the server or builds its own as planned.
 
 First slice: the date line and the build difference only: the catalogue's `built` date and short sha in `decklab/lib/api/gauntlet_board.py`, drawn in `decklab/web/gauntlet-board.js` and `gauntlet.js`, and the printed difference in `decklab/lib/forge/cli_gauntlet.py`.
 
