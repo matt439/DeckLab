@@ -2,6 +2,10 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Safer schema changes in the updater (2026-11-10; E11-S70)
+
+**2026-11-10: Safer schema changes in the updater (E11-S70).** `python -m decklab.update` now stops a running server before the pre-migration backup whenever migrations are pending, on Linux as on Windows, so nothing is written after the dump and restoring it loses no write; the restart step starts it again (a server stopped for a migration is started even with `--no-restart`), and with none pending it isn't stopped early. When the backup or the migration fails, the way-back text says Deck Lab is stopped and how to start it, and that going back to the code alone is fine when the applied migrations only added things. A database holding migrations later than every migration file is `migrate.DatabaseNewer` (a `MigrationError`, so `migrate`, `status` and restore still refuse): `lib/dbstatus.py` reports it as its own state, `"database newer"`, and the admin banner says "Deck Lab's database is newer than this code" with nothing to migrate and nothing refused; a file missing among the others, or a changed one, is refused as before. `decklab/db/migrate.py`, the README's "Database" part and SELF-HOSTING.md's "Updating" state the rule: add in one release, remove in a later one. No migration. Tests: `test_update.py` (StopBeforeBackupTests), `test_linux_ops.py`, `test_db_core.py`, `test_db_runtime.py`, `test_version_ui.py`.
+
 ## Supply-chain upkeep (2026-11-10; E11-S67)
 
 **2026-11-10: supply-chain upkeep (E11-S67).**
