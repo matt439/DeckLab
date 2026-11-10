@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## One-file text play sheets (2026-11-11; E4-S30)
+
+- Download play sheet and Print play sheet use one builder for the list, stand-ins, Commander pregame facts and every guide/review warning. The download adds a saved date and stale-copy note; it makes no request or stored offline cache.
+- A text-structure whitelist escapes source text and drops active attributes, pictures/scripts and links. Symbol words remain readable; kit, availability and other inventory extras are never added. The menu action remains bound to its original page/profile.
+- Validation:43 focused print/stand-in/web checks pass, including unchanged Commander facts, malicious text, private extras, no requests/writes and stale callbacks. Local-file opening on iOS Safari remains unverified; no household deck was downloaded.
+
 ## Contract verification follow-ups (2026-11-11; E1-S30, E4-S31)
 
 - Legacy inventory goldens normalize only the exact additive six-colour zero-land-source map when the list has no land/fetch/special/MDFC sources. Nonzero, malformed and unrelated stats still compare, with direct guard cases and the existing real-count stats tests.

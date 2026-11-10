@@ -11,6 +11,11 @@ from decklab.tests.test_workspace_ui import NODE, RUNNER, WEB
 
 
 SETUP = READINESS + """
+  Object.defineProperties(Node.prototype, {
+    nodeType:{get(){return this.tag==='#text'?3:1;}},
+    tagName:{get(){return this.tag.toUpperCase();}},
+    childNodes:{get(){return this.children;}}
+  });
   let printed = 0; window.print = () => { printed += 1; };
   let fetched = 0; api = async () => { fetched += 1; return {}; };
   const printSheet = (data) => {
@@ -142,6 +147,48 @@ class CommanderPrintUiTests(unittest.TestCase):
           assert(!sheet.textContent.includes('Bracket'));
           const plain = makePage();
           assert(!printSheet(plain).textContent.includes('At the table'));
+        """)
+
+    def test_saved_sheet_uses_print_content_with_no_private_extras_or_active_markup(self):
+        self.run_js("""
+          const data=listed(3,[combo(['Elf','Bolt'])]);
+          data.guide={changed_on:'2026-11-10',sections:[{title:'First plan',markdown:'Keep mana for **Bolt**.'},
+            {title:'Second plan',markdown:'## More advice\\n\\n[Read this](https://example.com/)'}]};
+          data.owned={rows:[{name:'PRIVATE_POOL',owned:99}]};data.summary.sleeves='PRIVATE_KIT';
+          data.commander_night={night:{venue:'PRIVATE_VENUE'}};
+          const before=JSON.stringify(data), count=document.body.children.length;
+          const html=savedPlaySheet(data,new Date('2026-11-11T01:02:03Z'));
+          assert(html.startsWith('<!doctype html>'));assert(html.includes('Saved 2026-11-11T01:02:03.000Z'));
+          assert(html.includes('may be out of date'));assert(html.includes(playSheetMarkup(playSheet(data))));
+          for(const text of ['At the table','Guide needs review','First plan','Second plan','Keep mana','More advice','Read this'])assert(html.includes(text));
+          assert(!/<(?:script|img|svg|iframe|link|a|button)\\b/i.test(html));
+          assert(!/\\b(?:src|href|on[a-z]+)\\s*=/i.test(html));assert(!html.includes('https://'));
+          for(const hidden of ['PRIVATE_POOL','PRIVATE_KIT','PRIVATE_VENUE'])assert(!html.includes(hidden));
+          assert.equal(document.body.children.length,count);assert.equal(JSON.stringify(data),before);
+          assert.equal(printed,0);assert.equal(fetched,0);
+        """)
+
+    def test_saved_sheet_escapes_text_and_discards_attributes_and_unexpected_active_nodes(self):
+        self.run_js("""
+          const data=makePage();data.summary.title='<img src=x onerror=bad()> & \\"quoted\\"';
+          data.sections={Deck:[{qty:1,name:'</pre><script>bad()</script>'}]};
+          const html=savedPlaySheet(data);
+          assert(html.includes('&lt;img src=x onerror=bad()&gt; &amp;'));
+          assert(html.includes('&lt;/pre&gt;&lt;script&gt;bad()&lt;/script&gt;'));
+          const node=el('p',{onclick:()=>{},style:'background:url(secret)'},el('script',{text:'private code'}),
+            el('a',{href:'https://example.com',text:'read me'}),el('img',{src:'secret',alt:'green mana'}));
+          assert.equal(playSheetMarkup(node),'<p>read megreen mana</p>');
+          assert.equal(fetched,0);
+        """)
+
+    def test_saved_sheet_menu_action_stays_with_its_page_and_profile(self):
+        self.run_js("""
+          const data=makePage();let downloaded=0;downloadPlaySheet=()=>downloaded++;
+          const item=deckMoreItems(data).find(item=>item?.label==='Download play sheet');
+          assert(item);item.onclick();assert.equal(downloaded,1);
+          routeToken++;item.onclick();assert.equal(downloaded,1);
+          const newer=deckMoreItems(data).find(item=>item?.label==='Download play sheet');
+          state.profile={id:'user2',space:'user2'};newer.onclick();assert.equal(downloaded,1);
         """)
 
     def test_another_viewer_prints_no_inventory_or_household_night(self):

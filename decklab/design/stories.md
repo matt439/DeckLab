@@ -38,7 +38,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 19 | 0 | 1 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 20 | 2 | 3 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 3 | 7 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 24 | 1 | 3 | 2 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 29 | 0 | 3 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 34 | 1 | 1 | 0 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 32 | 1 | 2 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 53 | 14 | 8 | 4 |
-| **Total** | **376** | **301** | **22** | **37** | **16** |
+| **Total** | **376** | **302** | **22** | **36** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1891,7 +1891,7 @@ Also built 2026-11-10: a whole-plan take-along checklist appears for ordinary ho
 
 Evidence: `assembly_takealong.py`, `assembly-takealong.js`, their backend/UI fixtures and the narrow packing-golden adapter. Focused checks cover own/shared-only playmats, hidden-row response invariance, physical-list mismatch, unchanged reads, stale print actions, optional tick failures and required-progress independence. The expanded `assembly-counters` synthetic suite covers 30 reminder/take-along cases with a stubbed system print call; native printing and household device acceptance are not claimed. E7-S24 supplies the existing needs/cover model, E4-S28 the optional Tokens step and E1-S28 pairs. From the product review of 2026-11-10, compared with Magic Life Counter; implemented under Matt's overnight four-item goal.
 
-**E4-S30** · Matt · could · S · missing
+**E4-S30** · Matt · could · S · built
 
 As Matt, heading to a Commander night, I want to download a deck's play sheet as one file, so that I can keep it on my phone without going through the print dialog.
 
@@ -1902,6 +1902,8 @@ As Matt, heading to a Commander night, I want to download a deck's play sheet as
 Gap: only the plain decklist downloads (`downloadDeck` in `web/deck-tools.js`); the play sheet goes only to the print dialog. E9-S27 built the sheet's At the table part; E11-S02 and E11-S59 cover Deck Lab being off or asleep. From the product review of 2026-11-10, compared with ManaBox's offline use. Needs Matt's decision: he declined cached offline lists (E11-S27), and a phone's print dialog can probably save the sheet as a PDF, so this is a small convenience, not an offline feature. Opening a saved file on iOS Safari is unverified.
 
 First slice: split `printDeck` in `web/deck-tools.js` into a `playSheet(data)` builder and a print wrapper, add `downloadPlaySheet(data)` on `downloadDeck`'s Blob pattern, wire it beside Print play sheet in `web/deck.js`, tested like `tests/test_commander_print_ui.py`.
+
+Built (2026-11-11): Download play sheet saves a deck-named HTML file from the exact shared print builder, including list, stand-ins, Commander facts and all guide sections/review warnings, plus a UTC saved date and stale-copy note. Its whitelist serialization retains text structure and symbol words without pictures, scripts, active attributes, links, kit or inventory extras. No further request or record/cache is made. The More callback belongs to the original page/profile.43 focused print/stand-in/web checks pass, including malicious text, no extra data, no writes and unchanged printed facts. Opening a local saved file on iOS remains an unverified platform behavior, not a claimed device receipt.
 
 **E4-S31** · Matt · could · M · built
 
