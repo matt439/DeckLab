@@ -1,5 +1,11 @@
 {
-  "database": {"backup_dir": "\\\\NAS\\Backups\\DeckLab"},
+  "database": {
+    "backup_dir": "\\\\NAS\\Backups\\DeckLab",
+    "backup_recipient": null,
+    "backup_identity": null,
+    "age_bin": null,
+    "export_remote_scope": null
+  },
   "records_repo": "C:\\Projects\\MyCardRecords",
   "timezone": "Australia/Sydney",
   "script_secret": null,

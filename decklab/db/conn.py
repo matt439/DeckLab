@@ -34,11 +34,15 @@ DEFAULTS = {
     # Where backup copies each dump (the household's NAS share, set in its config.json). None
     # (the default, E11-S48): no copy, the dumps stay in staging_dir only.
     "backup_dir": None,
+    "backup_recipient": None,     # opt-in native age public key; only the remote copy is encrypted
+    "backup_identity": None,      # local unencrypted age identity file, used only by restores
+    "age_bin": None,              # optional absolute CLI path; None looks on PATH, never installs it
     # Off Windows a backup_dir on the staging folder's own disk is refused, since an unmounted
     # NAS share is an empty local folder (backup.same_device_problem); true allows it.
     "backup_same_device_ok": False,
     "staging_dir": str(config.DATA / "backups"),
     "export_repo": str(config.REPO.parent / "DeckLabData"),
+    "export_remote_scope": None,  # None: legacy full export; home: a fresh, home-only readable repo
     "keep_daily": 14,
     "keep_weekly": 8,
     "restore_check_days": 28,

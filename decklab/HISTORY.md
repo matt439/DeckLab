@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Optional outbound backup privacy (2026-11-11; E11-S69)
+
+- Defaults retain full readable export and existing dump-copy behavior. An opt-in home scope uses explicit table/file projections, excludes all wishlists/emails/member/mixed/audit/global preference data and rejects unreviewed future tables. Fresh scope-marked history and verified remote refs are required; existing archives are never rewritten or deleted.
+- Optional age public-key encryption writes off-PC ciphertext atomically without plaintext fallback, keeping the local dump. Restore/check paths decrypt through bounded native identity input to private temporary files, preserve existing restore guards and row/digest proof, and clean up on failure. Passive status checks warn without opening keys or running age.
+- The feature design documents operator installation/key placement, a fresh private remote, old plaintext/history retention and an authorized matching-key round trip as activation/acceptance work. No settings, keys, dependencies or remote are installed/changed automatically.
+- Validation:157 targeted tests pass with16 guarded DB skips; fake CLI and synthetic dump protocols cover defaults, scope invariance, refusal, encryption/restore cleanup and proof. Primary age docs confirm overwrite behavior for the precreated0600 output. No actual encryption, key, export/push, NAS, live database or service was exercised.
+
 ## Audited loose-card loans (2026-11-11; E7-S37)
 
 - Collection More → Loans and collection lend/return/loans record dated exact-printing batches and whole returns. Borrower/notes remain private to the actual space; ownership stays in the same collection. Migration0024 adds audited rows and guarded old-schema behavior without any live application.

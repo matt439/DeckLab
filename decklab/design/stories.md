@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 53 | 14 | 8 | 4 |
-| **Total** | **376** | **304** | **22** | **34** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 54 | 14 | 7 | 4 |
+| **Total** | **376** | **305** | **22** | **33** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6286,7 +6286,7 @@ First slice: rotation in `log()` of `decklab/db/conn.py`, per-shop failed nights
 
 Built (2026-11-11): bounded DB-log rotation, distinct calendar-night shop-health receipts and named home-admin warnings, safe enum-only browser/server error references and a lazy home-admin Settings reader are implemented. Unexpected page errors no longer relay raw exception messages/filenames; known API refusals keep their fixed actionable messages. Optional alerts remain null/off, posting only fixed step/binary outcomes after nightly completion or the watchdog's first give-up transition. Rate, storage, client and socket bounds make monitoring advisory; local-only references are identified. Focused HTTP/UI/DB/nightly/watchdog fixtures pass with disposable-DB qualifications skipped locally. No actual endpoint, shops, private records, monitor setting or live service was exercised.
 
-**E11-S69** · Matt · should · M · missing
+**E11-S69** · Matt · should · M · built
 
 As Matt, keeping every space private, I want what leaves the server PC each night to hold no more than it must, so that a member's cards, decks, wishlist and email don't sit readable on a git host or a NAS share.
 
@@ -6297,6 +6297,8 @@ As Matt, keeping every space private, I want what leaves the server PC each nigh
 Gap: neither part is built. E11-S03's nightly writes the dump as it is and the export pushes every space's data as plain CSV; the only protections are access controls (a private repo, a dedicated NAS share). E10-S40 removes a departed member's data from the database, yet earlier export commits still hold it. From the product review of 2026-11-10. Needs Matt's decision: whether those access controls are enough; if not, whether to recreate the export repo, and where the private key is kept off the server.
 
 First slice: a per-table scope in `decklab/db/export.py` from a new `database.export_remote_scope` setting in `decklab/db/conn.py`, with fixture tests. Encrypting the `backup_dir` copy in `decklab/db/backup.py` is the second slice.
+
+Built offline (2026-11-11): optional home-only outbound export and age-encrypted off-PC dump copies, with decrypt/restore-check/status paths. Defaults remain unchanged. Home scope uses explicit table/file projections and excludes emails, all wishlists, member/mixed/audit/global preferences; scope markers/history/remote-ref checks require a fresh dedicated repository and never rewrite/delete old history. Native public-key encryption is an optional operator-installed CLI, with no plaintext NAS fallback after opt-in; private identities travel via stdin to a bounded native command, and decrypted temp files are private/cleaned. Existing restore/replace/force guards and row/digest proofs remain.157 targeted source/protocol checks pass with16 guarded DB skips, including unchanged-default behavior, no-key encryption, failure cleanup, scope/remote refusal and scoped participants. No actual key, crypto, export, remote, NAS, database or service was used. Activation, key placement and old archive retention remain explicit operator choices documented in backup-privacy.md.
 
 **E11-S70** · Matt · could · S · built
 

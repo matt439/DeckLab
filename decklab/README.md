@@ -1596,6 +1596,8 @@ member was exported or removed while developing this feature.
 
 ## Database
 
+Optional outbound scope and public-key encryption are described in [Optional outbound backup privacy](design/backup-privacy.md). Both remain off/default-compatible until an operator explicitly configures them.
+
 Deck Lab uses PostgreSQL with three local login roles: `decklab_owner` for migrations/backups, `decklab_app` for the running server and `decklab_ro` for read-only commands. `python -m decklab.db setup` creates them and stores their generated passwords in the current account's pgpass file (`%APPDATA%\postgresql\pgpass.conf` on Windows, `~/.pgpass` elsewhere). The server and maintenance jobs must use that account's credentials. Do not put passwords in config.json or command arguments.
 
 Start with [SELF-HOSTING step 5](../SELF-HOSTING.md#5-set-up-the-database), or the commands and backup/restore sections below.

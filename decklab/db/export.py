@@ -142,7 +142,7 @@ IDENTITY = ("Deck Lab", "decklab@localhost")    # the export's committer when gi
 _SPAWN = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
 
 
-def table_csv(c, name, order_by):
+def table_csv(c, name, order_by, scope=None):
     """One table as CSV bytes (see the module docstring). c: a connection whose time zone is UTC."""
     from psycopg import sql
     schema, table = name.split(".", 1)
@@ -151,14 +151,23 @@ def table_csv(c, name, order_by):
         "order by ordinal_position", (schema, table)).fetchall()]
     if not columns:
         raise ValueError(f"the export lists {name}, but the database has no such table")
-    query = sql.SQL("select {} from {}.{} order by {}").format(
+    where, params = "", ()
+    if scope == "home":
+        from decklab.db.export_scope import FILTERS
+        where, params = FILTERS[name]
+    query = sql.SQL("select {} from {}.{}{} order by {}").format(
         sql.SQL(", ").join(sql.SQL("{}::text").format(sql.Identifier(col)) for col in columns),
         sql.Identifier(schema), sql.Identifier(table),
+        sql.SQL(" where " + where if where else ""),
         sql.SQL(", ").join(sql.Identifier(col) for col in order_by))
     out = io.StringIO()
     writer = csv.writer(out, lineterminator="\n")
     writer.writerow(columns)
-    for row in c.execute(query):
+    for row in c.execute(query, params) if params else c.execute(query):
+        if scope == "home":
+            from decklab.db.export_scope import keep_row
+            if not keep_row(name, columns, row):
+                continue
         writer.writerow("" if v is None else v for v in row)
     return out.getvalue().encode("utf-8")
 
@@ -238,7 +247,7 @@ def write_inventory(folder, files):
             path.rmdir()
 
 
-def write_tables(repo, dbname=None):
+def write_tables(repo, dbname=None, scope=None):
     """Write every table in TABLES into repo/tables, each wishlist into repo/wishlists and the
     inventory's files into repo/magic (only files whose bytes changed), delete the files there
     for tables no longer listed, wishlists no longer holding any card and inventory files the
@@ -246,6 +255,11 @@ def write_tables(repo, dbname=None):
     Returns the CSVs' total size in bytes. A table in UNTIL_MIGRATED that the database doesn't
     have yet is skipped (its file, if any, kept)."""
     repo = Path(repo)
+    from decklab.db import export_scope
+    export_scope.setting({"export_remote_scope": scope})
+    if scope == "home":
+        repo.mkdir(parents=True, exist_ok=True)
+        export_scope.check_tree(repo)
     folder = repo / "tables"
     folder.mkdir(parents=True, exist_ok=True)
     from psycopg import IsolationLevel
@@ -258,25 +272,37 @@ def write_tables(repo, dbname=None):
         c.execute("set local timezone = 'UTC'")
         missing = {name for name in UNTIL_MIGRATED
                    if c.execute("select to_regclass(%s) is null", (name,)).fetchone()[0]}
+        if scope == "home" and missing & (INVENTORY_TABLES | DECK_TABLES) - LATER_INVENTORY_TABLES:
+            raise ValueError("Home-only exports need the inventory/deck migrations before anything can be published")
         for name, order_by in TABLES:
+            if scope == "home" and not export_scope.included(name):
+                continue
             if name in missing:
                 old = folder / f"{name}.csv"
-                if old.is_file():
+                if scope is None and old.is_file():
                     outputs[old.name] = old.read_bytes()
                 continue
-            outputs[f"{name}.csv"] = table_csv(c, name, order_by)
-        wishlists = None
-        if "public.wishlist_entry" not in missing:
+            outputs[f"{name}.csv"] = table_csv(c, name, order_by, scope=scope) if scope else table_csv(c, name, order_by)
+        wishlists = {} if scope == "home" else None
+        if scope is None and "public.wishlist_entry" not in missing:
             wishlists = {f"{pid}.json": data for pid, data in wishlist_files(c).items()}
         magic = None if missing & (INVENTORY_TABLES - LATER_INVENTORY_TABLES) else inventory_files(c)
+        if scope == "home":
+            if magic is None:
+                raise ValueError("Home-only exports need an imported inventory; nothing was published")
+            magic = export_scope.files_home(magic, export_scope.home_owners(c))
         c.rollback()
     total = sum(len(data) for data in outputs.values())
     _write_folder(folder, outputs, "*.csv")
     if wishlists is not None:
         _write_folder(repo / "wishlists", wishlists, "*.json")
+        if scope == "home":
+            (repo / "wishlists").rmdir()
     if magic is not None:
         write_inventory(repo / MAGIC, magic)
-    _write_changed(repo / "README.md", README.encode("utf-8"))
+    _write_changed(repo / "README.md", (export_scope.README if scope == "home" else README).encode("utf-8"))
+    if scope == "home":
+        _write_changed(repo / export_scope.MARKER, export_scope.MARKER_TEXT.encode("utf-8"))
     _write_once(repo / ".gitattributes", GITATTRIBUTES)
     return total
 
@@ -411,10 +437,11 @@ def run_export(repo=None, push=True, say=backup.say):
     (conn.path_setting); recorded in ops.backup_run either way."""
     started = datetime.now()
     size, made = None, None
+    s = db.settings()
+    from decklab.db import export_scope
     if repo:
         repo = Path(os.path.expanduser(str(repo)))
     else:
-        s = db.settings()
         try:
             repo = Path(db.path_setting("export_repo", s) or db.DEFAULTS["export_repo"])
         except ValueError as e:              # off Windows, a relative or Windows-looking export_repo
@@ -422,11 +449,15 @@ def run_export(repo=None, push=True, say=backup.say):
             say(f"Export failed: {e}")
             return 1
     try:
+        scope = export_scope.setting(s)
         made = ensure_repo(repo)
-        size = write_tables(repo)
+        export_scope.check_history(repo, scope, git)
+        size = write_tables(repo, scope=scope) if scope else write_tables(repo)
         sha = commit(repo, started)
         pushed = None
         if push and has_origin(repo):
+            if scope == "home":
+                export_scope.check_remote(repo, git)
             _git_ok(repo, "push", "-q", "origin", "HEAD")
             pushed = True
     except (OSError, RuntimeError, ValueError, *_psycopg_errors()) as e:
