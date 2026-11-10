@@ -253,6 +253,9 @@ def config_terms(config_file=None):
     secret = config.get("script_secret")
     if isinstance(secret, str) and len(secret) >= 32:
         add("the configured loopback script secret", secret)
+    alerts = config.get("alerts")
+    if isinstance(alerts, str) and alerts.strip():
+        add("the configured operator heartbeat address", alerts)
     return terms
 
 

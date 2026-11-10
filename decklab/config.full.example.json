@@ -3,6 +3,7 @@
   "records_repo": "C:\\Projects\\MyCardRecords",
   "timezone": "Australia/Sydney",
   "script_secret": null,
+  "alerts": null,
   "allowed_hosts":["decklab.example.com", "www.decklab.example.com"],
   "tunnel": {"config": "~/.cloudflared/config.yml", "hostname": "decklab.example.com"},
   "access": {

@@ -53,6 +53,7 @@ os.environ["DECKLAB_STATE_EXPLICIT"] = "1"
 # MTGMate's snapshot (lib/shops/) is a file of the run's own that doesn't exist, so no test reads
 # the PC's real decklab/data/shops/mtgmate.json and Shopping's answers stay as they'd be without one.
 os.environ["DECKLAB_SHOP_SNAPSHOT"] = str(Path(_LOGS) / "shops" / "mtgmate.json")
+os.environ["DECKLAB_ERROR_REFERENCES"] = str(Path(_LOGS) / "diagnostics" / "error-references.json")
 
 os.environ["DECKLAB_FORGE_SLOTS"] = _SLOTS = tempfile.mkdtemp(prefix="decklab-test-slots-")
 atexit.register(shutil.rmtree, _SLOTS, ignore_errors=True)

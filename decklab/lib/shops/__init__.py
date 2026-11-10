@@ -678,7 +678,7 @@ def _not_due(previous, say, shop=SHOP):
         "hours old; nothing fetched (--force to fetch anyway).")
 
 
-def refresh_shops(adapters=None, *, say_for, on_error=None, sessions=None, **options):
+def refresh_shops(adapters=None, *, say_for, on_error=None, on_result=None, sessions=None, **options):
     """refresh() at each shop (enabled_adapters() by default) side by side: one thread a shop when
     there are several, so the time they take together is the slowest shop's, not their sum, and
     each keeps its own robots.txt pace, lock and file. A shop's failure or exception is its own:
@@ -692,10 +692,18 @@ def refresh_shops(adapters=None, *, say_for, on_error=None, sessions=None, **opt
     codes = {}
 
     def run(adapter):
+        previous = None
+        if on_result is not None:
+            try:
+                previous = load(adapter=adapter)
+            except Exception:
+                say_for(adapter)("The previous shop-health snapshot could not be read.")
+        raised = False
         try:
             codes[adapter.key] = refresh(adapter=adapter, session=sessions.get(adapter.key),
                                          say=say_for(adapter), **options)
         except Exception as error:      # one shop's broken page never stops another's run
+            raised = True
             if on_error is None and len(adapters) == 1:
                 raise
             codes[adapter.key] = 1
@@ -703,6 +711,12 @@ def refresh_shops(adapters=None, *, say_for, on_error=None, sessions=None, **opt
                 on_error(adapter, error)
             else:
                 say_for(adapter)(f"failed: {type(error).__name__}: {error}")
+        finally:
+            if on_result is not None:
+                try:
+                    on_result(adapter, codes.get(adapter.key, 1), previous, load(adapter=adapter), raised)
+                except Exception:
+                    say_for(adapter)("The shop-health receipt could not be recorded.")
 
     if len(adapters) == 1:
         run(adapters[0])
@@ -731,9 +745,12 @@ def nightly(log, *, sessions=None):
 
     def failed(adapter, error):     # a broken shop page must not mark the backup night failed
         log(f"Nightly: {adapter.name} prices failed: {type(error).__name__}: {error}")
+    from . import health
+    night = _now().date()
     try:
         refresh_shops(adapters, say_for=say_for, on_error=failed, sessions=sessions, progress=False,
-                      budget=NIGHTLY_BUDGET, include_missing=True)
+                      budget=NIGHTLY_BUDGET, include_missing=True,
+                      on_result=lambda adapter, code, before, after, raised: health.observe(adapter, code, before, after, raised, night))
     except Exception as error:
         log(f"Nightly: shop prices failed: {type(error).__name__}: {error}")
     return 0

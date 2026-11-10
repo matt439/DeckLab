@@ -319,10 +319,15 @@ def view(viewer, *, script=False):
         return {"ok": None, "checking": True}
     if not _is_admin(viewer, script):
         return {"ok": snapshot["usable"]}
+    warning = snapshot.get("checks_warning")
+    from decklab.lib import permissions
+    if permissions.sees_home_records(viewer, script=script):
+        from decklab.lib.shops import health
+        warning = " ".join(filter(None, (warning, health.warning()))) or None
     return {"ok": snapshot["ok"], "usable": snapshot["usable"], "error": snapshot["error"],
             "pending_migrations": snapshot["pending_migrations"],
             "last_backup": snapshot["last_backup"], "backup_stale": snapshot["backup_stale"],
-            "stale_hours": snapshot["stale_hours"], "checks_warning": snapshot.get("checks_warning"),
+            "stale_hours": snapshot["stale_hours"], "checks_warning": warning,
             "venv": _venv_reason(),
             "inventory": inventory_view(snapshot)}
 

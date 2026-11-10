@@ -112,6 +112,7 @@ class RuleTests(unittest.TestCase):
                 "allowed_hosts": ["www." + REAL_HOST, REAL_HOST, "decklab.example.com", "localhost", "192.168.0.2"],
                 "access": {"team": "lantern", "aud": "ab12" * 16, "port": 8644},
                 "script_secret": "SyntheticLoopbackSecret0123456789abcdef",
+                "alerts": "https://monitor.example.com/operator-token",
             }), encoding="utf-8")
             terms = audit.config_terms(path)
             self.assertEqual(audit.config_terms(Path(tmp) / "absent.json"), {})
@@ -122,6 +123,7 @@ class RuleTests(unittest.TestCase):
         self.assertEqual(terms["the configured Cloudflare Access team"], {"lantern.cloudflareaccess.com"})
         self.assertEqual(terms["the configured Cloudflare Access AUD tag"], {"ab12" * 16})
         self.assertEqual(terms["the configured loopback script secret"], {"syntheticloopbacksecret0123456789abcdef"})
+        self.assertEqual(terms["the configured operator heartbeat address"], {"https://monitor.example.com/operator-token"})
 
     def test_term_findings_never_print_the_value(self):
         data = ("one\nsee https://WWW." + REAL_HOST.upper() + "/x\n\x00\xff " + REAL_HOST + "\n").encode("latin-1")

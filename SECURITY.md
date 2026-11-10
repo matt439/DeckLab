@@ -59,6 +59,27 @@ This GET may populate the public Scryfall image cache. It reads no inventory and
 not a publication mechanism for accessory pictures. Requiring a viewer for this
 cache route remains a separate policy decision.
 
+`POST /api/errors/report` is a separate, narrowly bounded operational-metadata
+exception to named write authority. It retains the same-origin JSON/header checks,
+accepts at most 2 KiB and only a 32-hex reference, an enumerated page category and
+an enumerated error type. The server supplies the time. It stores no actor, profile,
+IP address, message, file name or deck identifier; browser reports never send those
+fields. The process accepts at most 30 reports per minute, and the local diagnostic
+cache keeps at most 200 events in 128 KiB. This endpoint grants no inventory, state
+or account permission. `GET /api/settings/errors` requires a named home admin;
+anonymous scripts do not bypass this rule. Offline, rate-limited or unreadable storage
+can leave a browser reference only on that device. Reports are advisory and are not
+trusted audit evidence. Unexpected server errors receive the same safe references;
+full tracebacks stay only in the operator's local server log.
+
+Optional `alerts` is disabled unless the operator supplies an HTTP(S) address. A
+nightly completion or the watchdog's first give-up transition sends only fixed step
+names and `ok`/`failed`, with a five-second socket timeout, no redirect following and
+no environment proxy. No profile, inventory, message or error text is sent. The
+configured address can itself contain a private monitor token: keep it in local
+configuration, never source or a public log. Enabling a monitor and exercising a
+real endpoint remain explicit operator actions.
+
 ## Route review and checks
 
 [`feature_routes.ACCESS`](decklab/lib/feature_routes.py) declares an access class for

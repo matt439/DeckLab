@@ -883,13 +883,20 @@ function sheetLinkClick(event, entry, close) {
 
 // ------------------------------------------------------------ errors, toast
 
-function showPageError(message) {
+function showPageError(error) {
+  const failure = pageFailure(error);
+  const detail = el("p", { text: failure.message });
   const box = el("div", { class: "box box-crit" },
     el("h2", { text: "Something went wrong on this page" }),
-    el("p", { text: message }),
+    detail,
     el("div", { class: "actions" }, el("button", { type: "button", class: "btn", text: "Reload the page",
       onclick: () => location.reload() })));
-  $("#page-errors").append(box);
+  const errors = $("#page-errors");
+  while (errors.children.length >= 3) errors.children[0].remove();
+  errors.append(box);
+  if (failure.reference) failure.sent.then(sent => {
+    if (!sent && detail.isConnected) detail.textContent += " This reference is only on this device; keep it for the admin.";
+  });
 }
 
 /** A masked browser/cross-origin report has no information linking it to our page code.
@@ -904,12 +911,10 @@ window.addEventListener("error", (event) => {
     console.warn("Browser reported an opaque script error; no page source was supplied.", event);
     return;
   }
-  const where = event.filename ? ` (${event.filename.split("/").pop()}:${event.lineno})` : "";
-  showPageError(`${event.message || "Unknown error"}${where}`);
+  showPageError(event.error);
 });
 window.addEventListener("unhandledrejection", (event) => {
-  const reason = event.reason;
-  showPageError(reason && reason.message ? reason.message : String(reason));
+  showPageError(event.reason);
 });
 
 let toastTimer = 0;
@@ -999,7 +1004,8 @@ function noneSelected(line) {
 /** A part of a page (not the page itself) that couldn't be loaded: one line saying what, the server's
  * reason, and Try again when retry is given. Announced. */
 function loadFailed(what, error, retry = null) {
-  const reason = error && error.message ? ` ${error.message}${error.status ? ` (error ${error.status})` : ""}` : "";
+  const failure = error ? pageFailure(error) : null;
+  const reason = failure ? ` ${failure.message}${error.status ? ` (error ${error.status})` : ""}` : "";
   return el("div", { class: "note note-crit load-failed", role: "alert" },
     el("p", { text: `${what} couldn't be loaded.${reason}` }),
     retry ? el("button", { type: "button", class: "btn", text: "Try again", onclick: () => retry() }) : null);
@@ -1051,7 +1057,7 @@ function errorBox(title, error, retry = route, back = retry === null ? null : ["
   const way = back ? el("a", { class: again ? "btn" : "btn btn-primary", href: back[0], text: back[1] }) : null;
   return el("div", { class: "box box-crit", role: "alert" },
     el("h2", { class: "box-head", text: title }),
-    el("p", { text: error.message + code }),
+    el("p", { text: pageFailure(error).message + code }),
     again || way ? el("div", { class: "actions" },
       again ? el("button", { type: "button", class: "btn btn-primary", text: "Try again", onclick: () => retry() }) : null,
       way) : null);

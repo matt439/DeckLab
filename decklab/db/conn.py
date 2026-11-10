@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import sys
+import threading
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -53,6 +54,10 @@ VIAS = ("home", "tunnel")
 
 LOG_ENV = "DECKLAB_DB_LOG"        # replaces LOG_FILE (the tests' own log, so no test writes the real one)
 LOG_FILE = Path(os.environ[LOG_ENV]) if os.environ.get(LOG_ENV) else config.DATA / "logs" / "db.log"
+LOG_MAX_BYTES = 2_000_000
+LOG_BACKUPS = 3
+LOG_ENTRY_BYTES = 64 * 1024
+_log_lock = threading.RLock()
 CONNECT_TIMEOUT = 10              # seconds
 LOCALHOST_ADDR = "127.0.0.1"      # the one address connect() uses for host localhost
 
@@ -296,9 +301,15 @@ def log(text):
     when that's set), and show it on stderr when that is a terminal (the nightly task runs under
     pythonw, which has none)."""
     line = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {str(text).rstrip()}"
-    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(LOG_FILE, "a", encoding="utf-8", newline="\n") as f:
-        f.write(line + "\n")
+    from decklab.lib import control
+    cap = min(LOG_ENTRY_BYTES, max(1, LOG_MAX_BYTES - 1))
+    encoded = line.encode("utf-8", "backslashreplace")
+    if len(encoded) > cap:
+        suffix = b" [log entry truncated]"
+        encoded = encoded[:max(0, cap - len(suffix))] + suffix[:cap]
+        line = encoded.decode("utf-8", "ignore")
+    with _log_lock, control.open_log(LOG_FILE, max_bytes=LOG_MAX_BYTES, backups=LOG_BACKUPS) as stream:
+        stream.write(line + "\n")
     stream = sys.stderr
     if stream is not None and getattr(stream, "isatty", lambda: False)():
         stream.write(line + "\n")

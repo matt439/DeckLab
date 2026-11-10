@@ -284,7 +284,9 @@ class EnsureTests(Guarded):
 
     def test_gives_up_after_three_starts_that_dont_answer(self):
         self.start.return_value = 1
-        self.ensure(times=5)
+        with mock.patch("decklab.lib.operator_alerts.notify", return_value=False) as alert:
+            self.ensure(times=5)
+        alert.assert_called_once_with({"watchdog": False}, log=mock.ANY)
         self.assertEqual(self.start.call_count, homenet.WATCHDOG_GIVE_UP)
         record = self.record()
         self.assertTrue(record["gave_up_at"])

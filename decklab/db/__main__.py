@@ -92,6 +92,10 @@ def _status(args):
     result = backup.status(dbname=name)
     for line in result.splitlines() if isinstance(result, str) else result:
         print(line)
+    from decklab.lib.shops.health import warning
+    shop_warning = warning()
+    if shop_warning:
+        print("WARNING: " + shop_warning)
     return 0
 
 

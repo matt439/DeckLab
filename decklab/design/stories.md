@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 32 | 1 | 2 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 51 | 14 | 10 | 4 |
-| **Total** | **376** | **299** | **22** | **39** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 52 | 14 | 9 | 4 |
+| **Total** | **376** | **300** | **22** | **38** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6265,7 +6265,7 @@ First slice: `.github/dependabot.yml` for `github-actions` and `pip`, SHAs in `r
 
 Now: built 2026-11-10 ([HISTORY.md](../HISTORY.md#supply-chain-upkeep-2026-11-10-e11-s67)). Built 2026-11-10 (all four criteria): `.github/dependabot.yml` (one monthly multi-ecosystem group over github-actions, pip in /decklab, npm in /decklab/safari and /decklab/ui_review, docker-compose in /decklab/wakegate); every `actions/*` use in the three workflows pinned to a commit SHA with its version comment; `decklab/wakegate/compose.yaml` on `cloudflare/cloudflared:2026.10.7` and `python:3.13.18-alpine`; `release.yml` attests the zip's build provenance and SELF-HOSTING.md gives `gh attestation verify` as an optional check. Tests: `decklab/tests/test_supply_chain.py`. Left: Matt checks secret scanning is on in the repo's settings (not code); the Dependabot file and the attestation step are unproven until GitHub runs them (first monthly pull request, first tagged release); the `postgres:18` CI service image stays a major tag (outside the story's criteria); checking an attestation inside Deck Lab waits for E11-S51.
 
-**E11-S68** · Matt · could · M · missing
+**E11-S68** · Matt · could · M · built
 
 As Matt, running Deck Lab on a headless server PC, I want its quiet failures to reach me, so that a shop unreadable for a week or an unbounded log doesn't wait until someone notices.
 
@@ -6277,6 +6277,8 @@ As Matt, running Deck Lab on a headless server PC, I want its quiet failures to 
 Gap: none of the four is built. E11-S05's footer warnings and `db status` must be opened; E11-S26's watchdog gives up silently; E5-S08 shows "price unknown" per shop, yet the nightly shop step always succeeds; `core.js` shows raw error text. From the product review of 2026-11-10, compared with OpenMTG's webhooks and Uptime Kuma. Needs Matt's decision: the ping is the operator's own monitor, but close to what E11-S54 declined.
 
 First slice: rotation in `log()` of `decklab/db/conn.py`, per-shop failed nights in `decklab/lib/shops/__init__.py`, and the shop line in `checks_warning` of `decklab/lib/dbstatus.py`.
+
+Built (2026-11-11): bounded DB-log rotation, distinct calendar-night shop-health receipts and named home-admin warnings, safe enum-only browser/server error references and a lazy home-admin Settings reader are implemented. Unexpected page errors no longer relay raw exception messages/filenames; known API refusals keep their fixed actionable messages. Optional alerts remain null/off, posting only fixed step/binary outcomes after nightly completion or the watchdog's first give-up transition. Rate, storage, client and socket bounds make monitoring advisory; local-only references are identified. Focused HTTP/UI/DB/nightly/watchdog fixtures pass with disposable-DB qualifications skipped locally. No actual endpoint, shops, private records, monitor setting or live service was exercised.
 
 **E11-S69** · Matt · should · M · missing
 

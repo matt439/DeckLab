@@ -481,11 +481,14 @@ class Handler(BaseHTTPRequestHandler):
             self._fail(api.ApiError(409, str(e)))
         except (ConnectionError, TimeoutError):
             self.close_connection = True        # the phone went away mid-answer
-        except Exception:
-            log(f"Error answering {self._printable(self.command, 40)} {self.path[:300]!r}:\n"
+        except Exception as error:
+            from decklab.lib import error_references
+            reference = error_references.unexpected(error, self.path)
+            log(f"Error reference {reference} answering {self._printable(self.command, 40)} {self.path[:300]!r}:\n"
                 f"{traceback.format_exc()}")
             if self._status is None:            # nothing sent yet
-                self._fail(api.ApiError(500, "Internal server error (the server log has the details)"))
+                self._fail(api.ApiError(500, f"Something went wrong. Reference {reference}; the server log has the details.",
+                                        reference=reference))
             else:
                 self.close_connection = True
 

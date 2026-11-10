@@ -510,7 +510,11 @@ class ApiEndpointTests(ServerTestCase):
 
     def test_a_crash_is_a_plain_500_and_the_traceback_is_logged(self):
         with mock.patch.object(api, "decks_index", side_effect=RuntimeError("secret detail")):
-            message = self.assertError("/api/decks", 500)
+            data = self.get_json("/api/decks", 500)
+            self.assertEqual(set(data), {"error", "reference"})
+            self.assertRegex(data["reference"], r"^[0-9a-f]{32}$")
+            message = data["error"]
+            self.assertIn(data["reference"], message)
         self.assertNotIn("secret detail", message)
         self.assertTrue(any("secret detail" in line and "Traceback" in line for line in self.log))
 

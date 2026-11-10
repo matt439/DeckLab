@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Bounded operator diagnostics and optional heartbeat hooks (2026-11-11; E11-S68)
+
+- DB logs rotate at2MB with three backups and a64KiB entry cap. Shop-health receipts retain only public shop keys, dates and outcomes; three distinct consecutive unreadable nights warn a named home admin, with retry/success/gap/disabled-shop handling and the last readable date.
+- Unexpected browser/server exceptions use safe references instead of relaying raw messages, filenames or IDs. A same-origin bounded enum-only report endpoint keeps200 events/128KiB at30 per minute; a named home admin explicitly opens the Settings reader. Known API refusals retain their actionable messages; offline/limited reports can remain honestly device-local.
+- Optional alerts remain null/off. Completion and the watchdog's first give-up transition can send only fixed step names and ok/failed, with a five-second socket timeout, no redirects/proxy and no target/error values in failure logs. Existing nightly step exits and whole-run receipts are preserved.
+- Validation:107 DB/nightly/watchdog and108 UI/fixture groups pass (overlap;five guarded DB skips), with additional HTTP, sanitized-error and route probes passing after a narrow old500-shape assertion update. No live monitor, shop, database, private data or service was exercised.
+
 ## Declared route boundaries and cross-space probes (2026-11-11; E11-S65)
 
 - Feature routes now declare an access class for each concrete method/path and fail closed without one. A reviewed legacy inventory preserves the older routing aliases/lazy loading. Metadata documents policy; existing handlers remain the permission engine.

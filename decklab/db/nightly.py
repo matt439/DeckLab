@@ -122,6 +122,8 @@ def run():
             result = _run()
         except Exception:
             _receipt(started, False)
+            from decklab.lib.operator_alerts import notify
+            notify({"nightly": False}, log=db.log)
             raise
         _receipt(started, result == 0)
         return result
@@ -141,9 +143,17 @@ def _run():
     steps = [("backup", backup.run_backup), ("prune", backup.run_prune), ("visits", visits.run_prune),
              ("export", export.run_export),
              ("check", check.run), ("restore check", _restore_check_if_due), ("shop prices", _shop_prices)]
-    failed = [label for label, func in steps if not _step(label, func)]
+    outcomes = {label: _step(label, func) for label, func in steps}
+    failed = [label for label, ok in outcomes.items() if not ok]
     if failed:
         db.log(f"Nightly: finished; failed: {', '.join(failed)}.")
-        return 1
-    db.log("Nightly: finished; every step worked.")
-    return 0
+    else:
+        db.log("Nightly: finished; every step worked.")
+    from decklab.lib.operator_alerts import notify
+    from decklab.lib.shops.health import heartbeat_steps
+    try:
+        outcomes.update(heartbeat_steps(datetime.now().astimezone().date()))
+    except Exception:
+        outcomes["shop health"] = False
+    notify({**outcomes, "nightly": not failed}, log=db.log)
+    return 1 if failed else 0

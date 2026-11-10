@@ -17,6 +17,9 @@ wait or play, as the field's do.
 from types import MappingProxyType
 
 ACCESS = MappingProxyType({
+    # Enum-only operational reports are an anonymous same-origin exception, never inventory authority.
+    ('POST', 'errors/report'): 'open',
+    ('GET', 'settings/errors'): 'home-admin',
     ('GET', 'settings/maintenance'): 'admin',
     ('GET', 'settings/reference-facts'): 'admin',
     ('GET', 'server/restart'): 'home-admin',
@@ -389,8 +392,10 @@ def route_tables():
     from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, commander_candidates, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, comparison_lists, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, dice, edhrec, editor, history,
                                  library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, reference_facts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_combined, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_ideas, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
+    from decklab.lib.api import error_reports
 
     gets = {
+        ("settings", "errors"): (error_reports.view, ()),
         ("settings", "maintenance"): (maintenance.maintenance_view, ()),
         ("settings", "reference-facts"): (reference_facts.reference_facts_view, ()),
         ("server", "restart"): (server_restart.view, ()),
@@ -531,6 +536,7 @@ def route_tables():
         ("field", "group", "stop"): (_group_stop, MAX_BODY),  # run.stop, as the field's
         ("crosscheck", "run"): (_crosscheck_run, MAX_BODY),
         ("crosscheck", "stop"): (_crosscheck_stop, MAX_BODY),
+        ("errors", "report"): (error_reports.report, error_reports.MAX_BODY),  # bounded operational metadata only
         ("visit",): (visits.beacon, MAX_BODY),      # not a data write: no guard rule, the requester's own visit
     }
     return gets, posts

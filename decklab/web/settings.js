@@ -54,6 +54,7 @@ function showSettings(params, token) {
       typeof settingsPricingPanel === "function" ? settingsPricingPanel() : null,
       settingsMembersPanel(),
       settingsMaintenancePanel(token),
+      settingsErrorReferences(),
       el("section", { class: "panel settings-part", id: "settings-visits", "aria-labelledby": "settings-visits-title" },
         el("h2", { id: "settings-visits-title", text: "Visits" }),
         el("p", { class: "sub", text: `Who has opened Deck Lab, and which pages. The last ${VISIT_DAYS} days unless it says otherwise.` }),
