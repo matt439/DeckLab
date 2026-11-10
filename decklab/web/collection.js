@@ -854,7 +854,7 @@ function openImportSheet(cv) {
     previewImport(ctx, file.name, text);
   });
   sheet.body.append(
-    el("p", { text: "A CSV export from ManaBox, Moxfield, Deckbox or the like. Nothing is added until you say so." }),
+    el("p", { text: "Choose a ManaBox, Moxfield, Deckbox, Archidekt, Dragon Shield or TCGplayer CSV, a supported Delver Lens CSV preset, or a text list with quantity, name, set and number. Nothing is added until you say so. Unknown condition and language stay blank; spending and location columns aren't imported." }),
     el("label", { class: "field col-file-field", for: input.id }, el("span", { text: "File (.csv or .txt)" }), input),
     ctx.message, ctx.area);
   sheetActions(sheet, [{ text: "Cancel", value: "cancel", onclick: () => sheet.close() }]);

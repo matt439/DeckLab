@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Lossless deck text and more offline collection layouts (2026-11-11; E2-S32)
+
+- Deck copy/download retains foil/etched and bare-set details; Copy with categories round-trips inline tags. Copy callbacks remain bound to their original profile, route and frame.
+- Offline collection import accepts recognized Archidekt/Dragon Shield/Delver preset/TCGplayer layouts and headerless card lists, with comma/tab/semicolon/preamble support. Original bytes, source groups and line numbers reach the usual reviewed one-change apply. ID-only or conflicting finish rows become explicit review problems; no external identifier/URL lookup is attempted.
+- Spending/location/folder fields are not inventory inputs and are never interpreted or totaled; private raw provenance stays intact. Public firsthand/developer format evidence is linked in the adapter source without copying personal collection rows.
+- Validation:235 broad and33 latest focused checks pass (overlap, one DB skip). Separate disposable-PG cases assert raw/audit/no-deck/problem-selection boundaries for CI. Source/Ruff/Node checks pass; no actual collection/import or new migration ran.
+
 ## A conservative Spare list and price-free copy (2026-11-11; E7-S36)
 
 - Collection now shows spare copies with reasons after protecting physical built/intact holds, all non-trial unbuilt Planned lists and Considering, and the signed-in viewer's own wishlist. Incoming copies/basics aren't offered, and stale or incomplete sources withhold the claim.

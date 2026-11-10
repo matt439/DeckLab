@@ -36,7 +36,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 18 | 0 | 2 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 19 | 2 | 4 | 1 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 20 | 2 | 3 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 3 | 7 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 24 | 1 | 3 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 29 | 0 | 3 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 32 | 1 | 2 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 49 | 14 | 12 | 4 |
-| **Total** | **376** | **294** | **22** | **44** | **16** |
+| **Total** | **376** | **295** | **22** | **43** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -799,7 +799,7 @@ Gap: an existing deck can't pull cards from another deck (Start from another dec
 
 First slice: no new storage: "Add cards from another deck…" in `decklab/web/editor-import.js`, reusing the marks and identity test of `decklab/web/editor-edhrec.js` and `decklab/lib/api/editor.py`; tests in `decklab/tests/test_editor_ui.py`.
 
-**E2-S32** · Matt · could · M · missing
+**E2-S32** · Matt · could · M · built
 
 As a deck builder moving lists between Deck Lab and other tools, I want exports that keep everything Deck Lab's paste reads and imports that accept more formats, so that nothing is lost or retyped.
 
@@ -807,9 +807,9 @@ As a deck builder moving lists between Deck Lab and other tools, I want exports 
 - Given an Archidekt, Dragon Shield, Delver Lens or TCGplayer collection CSV, or a header-less text list of `qty name (SET) number` lines, when it is chosen on the Collection page's import, then it reaches the existing preview with unknown conditions and languages left blank.
 - Given a file in none of the known layouts, when it is chosen, then the refusal names every layout accepted.
 
-Gap: the deck export (`exportedDeck`) drops each line's category (E2-S24) and finish; the collection import (E7-S02, E7-S03) detects only ManaBox, Moxfield, Deckbox and Deck Lab's columns; the download (E7-S30) has no Scryfall id or storage location (E8-S22). From the product review of 2026-11-10, compared with Moxfield's import from a link. Needs Matt's decision: deck import from a link (a page-started outbound fetch needing a host allow-list, which `decklab/lib/accessory_fetch.py` lacks), and a location column read back on import, close to PLAN.md's decision against an edit-an-exported-file-then-apply flow.
+Built 2026-11-11 for offline files: deck exports retain foil/etched and bare-set printing details, with an explicit scoped Copy with categories action that round-trips tags. Collection import recognizes Archidekt, Dragon Shield, supported Delver presets, TCGplayer layouts and headerless quantity/name/set/number lists through the existing guarded preview/one-change apply. Comma/tab/semicolon and separator preambles preserve original line numbers, source groups and raw text. Unknown conditions/languages stay blank, contradictory finishes and ID-only layouts require review, and unknown layouts list every accepted format. Paid-price/folder/location values are never interpreted, summed or put in inventory fields; raw provenance remains private.
 
-First slice: offline only: an export option with finishes and categories in `decklab/web/deck-tools.js`, and new header mappings plus a header-less text path in `decklab/lib/api/collection_import.py`; tests in `decklab/tests/test_deck_categories.py` and `decklab/tests/test_collection_edit.py`.
+Evidence:235 broad export/import/group/scan/filing/deck-page checks and33 latest focused checks pass (overlap, one guarded DB skip). Disposable-PostgreSQL cases cover original raw bytes, one audit per import, no deck rows and explicit problem selection/refusal; real DB qualification awaits CI. Source links in collection_import_formats.py identify published/firsthand headers and developer presets, never personal rows. URL imports, external-ID lookup and storage-location import policy remain excluded; no outbound import, new schema or actual inventory write occurs. From the product review of 2026-11-10.
 
 ---
 

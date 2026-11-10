@@ -9,13 +9,24 @@ import csv
 import io
 import re
 
+from decklab.lib import decks
 from decklab.lib.inventory import rules
 
 from .common import ApiError, _public
+from . import collection_import_formats as vendors
+
+ACCEPTED = ("ManaBox, Moxfield, Deckbox, Deck Lab collection columns, Archidekt, Dragon Shield, "
+            "Delver Lens's supported CSV presets, TCGplayer CSV, or a plain text list of qty Name (SET) number lines")
+_HEADER_ALIASES = {"setcode": "set code", "setname": "set name", "cardname": "card name", "cardnumber": "card number",
+                   "collectornumber": "collector number", "editioncode": "edition code", "editionname": "edition name",
+                   "productname": "product name", "productid": "product id", "productline": "product line",
+                   "simplename": "simple name", "totalquantity": "total quantity", "foldername": "folder name",
+                   "tradequantity": "trade quantity"}
 
 
 def _norm(header):
-    return " ".join(str(header or "").replace("﻿", "").strip().lower().replace("_", " ").split())
+    text = " ".join(str(header or "").replace("﻿", "").strip().lower().replace("_", " ").split())
+    return _HEADER_ALIASES.get(text, text)
 
 
 def detect(headers):
@@ -29,7 +40,7 @@ def detect(headers):
         return "deckbox"
     if {"count", "name", "edition", "collector number"} <= names:
         return "moxfield"
-    return None
+    return vendors.detect(names)
 
 
 def _condition(value, fmt):
@@ -49,7 +60,7 @@ def _language(value):
 def _finish(value, fmt):
     word = str(value or "").strip().lower()
     if fmt == "collection":
-        return word
+        return {"normal": "nonfoil", "non-foil": "nonfoil", "foil etched": "etched", "foil_etched": "etched"}.get(word, word)
     if word in ("", "normal", "nonfoil", "non-foil", "false", "no", "0"):
         return "nonfoil"
     if word in ("etched", "etched foil", "foil etched"):
@@ -64,19 +75,42 @@ def _too_many_rows():
                          f"{owner.MAX_IMPORT_ROWS:,}: split it into smaller files and import each one.")
 
 
-def _source_rows(text, fmt, reader):
+def _checked(row, set_name, problem=None):
+    if problem is not None:
+        pass
+    elif not re.fullmatch(r"\d{1,4}", row["quantity"]) or not 1 <= int(row["quantity"]) <= owner.MAX_QUANTITY:
+        problem = f"quantity {row['quantity']!r} isn't a whole number from 1 to {owner.MAX_QUANTITY}"
+    elif row["finish"] not in owner.FINISHES:
+        problem = f"unknown finish {row['finish']!r}"
+    elif row["set"] and not owner.SET_RE.fullmatch(row["set"]):
+        problem = f"unknown set code {row['set']!r}"
+    elif row["collector_number"] and not owner.NUMBER_RE.fullmatch(row["collector_number"]):
+        problem = f"unknown collector number {row['collector_number']!r}"
+    elif len(row["name"]) > owner.MAX_NAME or any(owner._CONTROL_RE.search(v) for v in (*row.values(), set_name or "")):
+        problem = "a field has a control character (a tab or line break inside a cell, say), or the name is too long"
+    elif row["notes"].startswith(owner.FORMULA_STARTS):
+        problem = "the notes start with = + - or @, which a spreadsheet would run as a formula"
+    else:
+        row["quantity"] = str(int(row["quantity"]))
+    for key in ("condition", "language", "notes"):
+        row[key] = row[key][:owner.MAX_TEXT[key]]
+    return row, problem
+
+
+def _source_rows(text, fmt, reader, line_offset=0):
     """[(line, row, set_name, problem)] of an upload in fmt: collection.csv's
     columns as text, before Scryfall matching. ApiError 400 for more than
     MAX_IMPORT_ROWS rows (reading stops at the first one over)."""
     out = []
     for raw in reader:
-        line = reader.line_num
+        line = reader.line_num + line_offset
         values = {_norm(k): (v or "").strip() for k, v in raw.items() if k is not None}
         if not any(values.values()):
             continue
         if len(out) >= owner.MAX_IMPORT_ROWS:
             raise _too_many_rows()
         get = values.get
+        problem = None
         if fmt == "collection":
             row = {"name": get("name", ""), "set": get("set", "").lower(),
                    "collector_number": get("collector number", ""), "finish": _finish(get("finish"), fmt),
@@ -89,6 +123,8 @@ def _source_rows(text, fmt, reader):
                    "quantity": get("quantity", ""), "condition": _condition(get("condition"), fmt),
                    "language": _language(get("language")), "notes": ""}
             set_name = get("set name")
+        elif fmt in vendors.FORMATS:
+            row, set_name, problem = vendors.convert(values, fmt, finish=_finish, condition=_condition, language=_language)
         else:
             code = get("edition code", "") if fmt == "deckbox" else get("edition", "")
             row = {"name": get("name", ""), "set": code.lower(),
@@ -97,39 +133,61 @@ def _source_rows(text, fmt, reader):
                    "condition": _condition(get("condition"), fmt), "language": _language(get("language")),
                    "notes": ""}
             set_name = get("edition") if fmt == "deckbox" else None
-        problem = None
-        if not re.fullmatch(r"\d{1,4}", row["quantity"]) or not 1 <= int(row["quantity"]) <= owner.MAX_QUANTITY:
-            problem = f"quantity {row['quantity']!r} isn't a whole number from 1 to {owner.MAX_QUANTITY}"
-        elif row["finish"] not in owner.FINISHES:
-            problem = f"unknown finish {row['finish']!r}"
-        elif row["set"] and not owner.SET_RE.fullmatch(row["set"]):
-            problem = f"unknown set code {row['set']!r}"
-        elif row["collector_number"] and not owner.NUMBER_RE.fullmatch(row["collector_number"]):
-            problem = f"unknown collector number {row['collector_number']!r}"
-        elif len(row["name"]) > owner.MAX_NAME or any(owner._CONTROL_RE.search(v) for v in (*row.values(), set_name or "")):
-            problem = ("a field has a control character (a tab or line break inside a cell, say), "
-                       "or the name is too long")
-        elif row["notes"].startswith(owner.FORMULA_STARTS):
-            problem = "the notes start with = + - or @, which a spreadsheet would run as a formula"
-        else:
-            row["quantity"] = str(int(row["quantity"]))
-        for key in ("condition", "language", "notes"):
-            row[key] = row[key][:owner.MAX_TEXT[key]]
+        row, problem = _checked(row, set_name, problem)
         out.append((line, row, set_name, problem))
     return out
+
+
+def _text_rows(text):
+    out = []
+    for number, text_line in enumerate(text.splitlines(), 1):
+        line = text_line.strip()
+        if not line or line.startswith("#") or line in decks.SECTIONS:
+            continue
+        if len(out) >= owner.MAX_IMPORT_ROWS:
+            raise _too_many_rows()
+        problem = None
+        try:
+            parsed = decks.parse_line(re.sub(r"^(\d+x?)\t+", r"\1 ", line))
+            row = {"name": parsed.name, "set": parsed.set or "", "collector_number": parsed.number or "",
+                   "finish": parsed.finish, "quantity": str(parsed.quantity), "condition": "", "language": "", "notes": ""}
+        except (decks.DecklistError, ValueError):
+            row = {**dict.fromkeys(owner.FIELDS, ""), "name": line[:owner.MAX_NAME], "finish": "nonfoil"}
+            problem = "This isn't a qty Name (SET) number card line. Check it before importing."
+        row, problem = _checked(row, None, problem)
+        out.append((number, row, None, problem))
+    return out
+
+
+def _looks_text(text):
+    first = next((line.strip() for line in text.splitlines() if line.strip() and not line.lstrip().startswith("#")
+                  and line.strip() not in decks.SECTIONS), "")
+    return re.match(r"\d+x?[ \t]+\S", first) is not None
 
 
 def _read_source(text):
     """The detected format and converted source rows, before matching or merging."""
     text = text.lstrip("﻿")
     try:
-        reader = csv.DictReader(io.StringIO(text, newline=""), strict=True)
-        headers = reader.fieldnames or []
-        fmt = detect(headers)
+        lines = text.splitlines(keepends=True)
+        directive = lines[0].rstrip("\r\n").strip('"').lower() if lines else ""
+        offset = int(directive in ("sep=,", "sep=;", "sep=\t"))
+        csv_text = "".join(lines[offset:])
+        choices = [directive[4:]] if offset else [",", "\t", ";"]
+        fmt = None
+        for separator in choices:
+            reader = csv.DictReader(io.StringIO(csv_text, newline=""), delimiter=separator, strict=True)
+            headers = reader.fieldnames or []
+            fmt = detect(headers)
+            if fmt is not None:
+                break
         if fmt is None:
-            raise ApiError(400, "That file isn't a ManaBox, Moxfield, Deckbox or collection-columns export: its first "
-                                "line should name the columns (Name, Set code, Collector number, Quantity, ...)")
-        source = _source_rows(text, fmt, reader)
+            if _looks_text(text):
+                return "text", _text_rows(text)
+            raise ApiError(400, "That file isn't a known layout. Accepted: " + ACCEPTED + ".")
+        if fmt in vendors.FORMATS and len({_norm(header) for header in headers}) != len(headers):
+            raise ApiError(400, "The CSV needs unique column names. Accepted: " + ACCEPTED + ".")
+        source = _source_rows(text, fmt, reader, line_offset=offset)
     except csv.Error as e:
         raise ApiError(400, f"That file can't be read as CSV: {_public(e)}") from None
     return fmt, source

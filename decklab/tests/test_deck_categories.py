@@ -13,6 +13,7 @@ import unittest
 from decklab.lib import api, decks
 from decklab.lib.decks import assembled
 from decklab.tests.test_editor import TODAY, EditorTestCase
+from decklab.tests.test_deck_considering import CONSIDERING_DECK
 from decklab.tests.test_workspace_ui import NODE, RUNNER, WEB
 
 
@@ -159,7 +160,6 @@ class ConsideringTests(EditorTestCase):
     def setUp(self):
         super().setUp()
         from decklab.tests.test_api import _write
-        from decklab.tests.test_deck_considering import CONSIDERING_DECK
         deck = CONSIDERING_DECK.replace("1 Black Lotus (LEA) 232\n2 Elvish", "1 Black Lotus (LEA) 232 #Power\n2 Elvish")
         deck = deck.replace("4 Llanowar Elves (FDN) 227\n", "4 Llanowar Elves (FDN) 227 #Ramp\n", 1)
         _write(self.box.magic / "decks" / "casual" / "table-test.md", deck)

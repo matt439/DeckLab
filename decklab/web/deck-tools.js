@@ -22,9 +22,11 @@ function matchesReadiness(deck, filter) {
     : filter === "waiting" ? missing === 0 && waiting > 0 : missing > 0);
 }
 
-function exportedDeck(data) {
+function exportedDeck(data, {categories = false} = {}) {
   return Object.entries(data.sections).filter(([, lines]) => lines.length).map(([section, lines]) =>
-    [section, ...lines.map(l => `${l.qty} ${l.name}${l.set && l.number ? ` (${l.set.toUpperCase()}) ${l.number}` : ""}`)].join("\n")).join("\n\n") + "\n";
+    [section, ...lines.map(l => `${l.qty} ${l.name}${l.set ? ` (${l.set.toUpperCase()})${l.number ? ` ${l.number}` : ""}` : ""}`
+      + (l.finish === "foil" ? " *F*" : l.finish === "etched" ? " *E*" : "")
+      + (categories && l.category ? ` #${l.category}` : ""))].join("\n")).join("\n\n") + "\n";
 }
 
 function downloadDeck(data) {
@@ -35,15 +37,21 @@ function downloadDeck(data) {
 }
 
 /** Copy the list shown to the clipboard; where that isn't allowed, a sheet with the list selected to copy. */
-async function copyDeck(data) {
-  const text = exportedDeck(data);
+async function copyDeck(data, options = {}) {
+  const text = exportedDeck(data, options), profile = state.profile?.id, token = routeToken, hash = location.hash;
+  const main = document.getElementById("main");
+  const current = () => profile === state.profile?.id && token === routeToken && hash === location.hash
+    && main?.isConnected && document.getElementById("main") === main && exportedDeck(data, options) === text;
+  if (!current()) return;
   try {
     await navigator.clipboard.writeText(text);
-    toast("Decklist copied.");
+    if (current()) toast(options.categories ? "Decklist with categories copied." : "Decklist copied.");
   } catch (_) {
+    if (!current()) return;
     const area = el("textarea", {"aria-label": "Decklist to copy", readonly: true, rows: 14, class: "export-copy"});
     area.value = text;
-    const sheet = openSheet({title: "Copy the decklist", body: [el("p", {class: "sub", text: "Select it and copy, or use Download decklist."}), area]});
+    const sheet = openSheet({title: options.categories ? "Copy the decklist with categories" : "Copy the decklist",
+      body: [el("p", {class: "sub", text: "Select and copy this list. Finish marks are kept."}), area]});
     sheetActions(sheet, [{text: "Done", kind: "primary", onclick: () => sheet.close()}]);
     area.focus(); area.select();
   }

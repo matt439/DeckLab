@@ -637,7 +637,9 @@ class ImportTests(CollectionEditTestCase):
         self.assertTrue(self.apply(preview, "user2", sha256=preview["sha256"])["ok"])
 
     def test_an_unknown_file_is_400(self):
-        self.assertApiError(400, self.preview, "a,b,c\n1,2,3\n", contains="isn't a ManaBox")
+        error = self.assertApiError(400, self.preview, "a,b,c\n1,2,3\n", contains="Accepted:")
+        for layout in ("ManaBox", "Moxfield", "Deckbox", "Deck Lab", "Archidekt", "Dragon Shield", "Delver Lens", "TCGplayer", "plain text"):
+            self.assertIn(layout, error.message)
 
     def test_too_big(self):
         with mock.patch.object(ce, "MAX_IMPORT", 100):

@@ -146,7 +146,7 @@ MAX_TEXT = {"condition": 40, "language": 20, "notes": 500}
 MAX_REASON = 200
 IMPORT_TTL = 60 * 60                # seconds a preview can be applied for
 EMPTY_SHA = hashlib.sha256(b"").hexdigest()
-FORMATS = ("manabox", "deckbox", "moxfield", "collection")
+FORMATS = ("manabox", "deckbox", "moxfield", "collection", "archidekt", "dragonshield", "delver", "tcgplayer", "text")
 # What a spreadsheet would run as a formula at the start of a cell.
 FORMULA_STARTS = ("=", "+", "-", "@")
 # One import preview read at a time (the module docstring).

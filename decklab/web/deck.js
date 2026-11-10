@@ -387,8 +387,9 @@ function deckMoreItems(data) {
       if (token === routeToken && profile === state.profile?.id) openCompareChooser(data);
     } } : null,
     "sep",
-    { label: "Copy decklist", onclick: () => copyDeck(data) },
-    { label: "Download decklist", onclick: () => downloadDeck(data) },
+    { label: "Copy decklist", onclick: () => { if (token === routeToken && profile === state.profile?.id) copyDeck(data); } },
+    { label: "Copy with categories", onclick: () => { if (token === routeToken && profile === state.profile?.id) copyDeck(data, {categories: true}); } },
+    { label: "Download decklist", onclick: () => { if (token === routeToken && profile === state.profile?.id) downloadDeck(data); } },
     { label: "Print play sheet", onclick: () => printDeck(data) },
     typeof offersProxies === "function" && offersProxies(data)
       ? { label: "Print proxies", onclick: () => printProxies(data) } : null,
