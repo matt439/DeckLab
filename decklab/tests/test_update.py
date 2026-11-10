@@ -43,6 +43,38 @@ class ForgeConfigTests(unittest.TestCase):
         out = update.set_forge_dir('{"profiles": []}', "/srv/forge-new")
         self.assertEqual(json.loads(out), {"forge_dir": "/srv/forge-new", "profiles": []})
 
+    def test_set_forge_dir_accepts_and_preserves_a_utf8_bom(self):
+        for text in ('{"forge_dir": "/old", "profiles": []}', '{"profiles": []}'):
+            with self.subTest(text=text):
+                out = update.set_forge_dir("\ufeff" + text, "/srv/forge-new")
+                self.assertTrue(out.startswith("\ufeff"))
+                self.assertEqual(json.loads(out.encode("utf-8")), {"forge_dir": "/srv/forge-new", "profiles": []})
+
+    def test_forge_update_keeps_original_bom_and_crlf_backup_bytes(self):
+        from decklab.lib import config
+        from decklab.lib.forge import install, simjar
+        with tempfile.TemporaryDirectory(prefix="decklab-forge-config-bom-") as temporary:
+            root = Path(temporary)
+            current, updated = root / "forge-old", root / "forge-new"
+            current.mkdir()
+            updated.mkdir()
+            path = root / "config.json"
+            raw = ("\ufeff" + json.dumps({"forge_dir": str(current), "profiles": []}, indent=2)
+                   .replace("\n", "\r\n") + "\r\n").encode("utf-8")
+            path.write_bytes(raw)
+            with mock.patch.object(update, "CONFIG", path), \
+                    mock.patch.object(config, "load", return_value={"forge_dir": str(current)}), \
+                    mock.patch.object(install, "_find_jar", return_value=("forge.jar", None)), \
+                    mock.patch.object(simjar, "forge_build", side_effect=lambda jar: "old" if jar.parent == current else "new"), \
+                    mock.patch.object(update, "download") as download, mock.patch.object(update, "say"):
+                update.update_forge(release="new")
+            download.assert_not_called()
+            self.assertEqual(path.with_name("config.json.before-forge-update").read_bytes(), raw)
+            rewritten = path.read_bytes()
+            self.assertTrue(rewritten.startswith(b"\xef\xbb\xbf"))
+            self.assertEqual(json.loads(rewritten)["forge_dir"], str(updated))
+            self.assertEqual(rewritten.count(b"\r\n"), raw.count(b"\r\n"))
+
     def test_set_forge_dir_refuses_what_it_cant_place(self):
         with self.assertRaises(ValueError):
             update.set_forge_dir("[]", "/x")

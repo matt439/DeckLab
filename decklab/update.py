@@ -108,6 +108,8 @@ def set_forge_dir(text, folder):
     """config.json's text with "forge_dir" set to folder: the existing value replaced in place
     (keeping the file's layout), or the key added as the object's first. ValueError when the text
     isn't a JSON object, or the result wouldn't parse."""
+    prefix = "\ufeff" if text.startswith("\ufeff") else ""
+    text = text.removeprefix(prefix) if prefix else text
     data = json.loads(text)
     if not isinstance(data, dict):
         raise ValueError("config.json isn't a JSON object")
@@ -122,7 +124,7 @@ def set_forge_dir(text, folder):
         out = text[:brace + 1] + f'\n  "forge_dir": {value},' + text[brace + 1:]
     if json.loads(out).get("forge_dir") != str(folder):
         raise ValueError("config.json's forge_dir couldn't be set")
-    return out
+    return prefix + out
 
 
 def safe_extract(archive, target):
@@ -233,10 +235,11 @@ def _update_forge(dry_run, release):
                     raise Failed(f"The download doesn't hold Forge {release}: not installed")
                 os.replace(top, folder)
         say(f"Unzipped Forge {release} into {folder}.")
-    text = CONFIG.read_text(encoding="utf-8")
+    raw = CONFIG.read_bytes()
+    text = raw.decode("utf-8")
     backup = CONFIG.with_name("config.json.before-forge-update")
-    backup.write_text(text, encoding="utf-8")
-    CONFIG.write_text(set_forge_dir(text, folder), encoding="utf-8")
+    backup.write_bytes(raw)
+    CONFIG.write_bytes(set_forge_dir(text, folder).encode("utf-8"))
     say(f"config.json's forge_dir is now {folder} (the old file is {backup.name}; the old Forge, {current}, "
         "is left in place: delete it once the smoke test passes).")
 

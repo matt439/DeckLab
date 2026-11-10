@@ -125,7 +125,7 @@ def _object(pairs):
 
 def parse(raw):
     try:
-        value = json.loads(raw.decode("utf-8"), object_pairs_hook=_object,
+        value = json.loads(raw.decode("utf-8-sig"), object_pairs_hook=_object,
                            parse_constant=lambda _: (_ for _ in ()).throw(ValueError("invalid number")))
         if not isinstance(value, dict):
             raise ValueError

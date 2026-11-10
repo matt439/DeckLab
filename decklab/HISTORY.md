@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## BOM configs across updates and member edits (2026-11-10; E11-S79 compatibility)
+
+- The Forge updater and strict member-config editor now accept the same BOM-encoded JSON as the main loader and doctor. Update's config backup keeps the original bytes, including BOM and CRLF, and its rewrite avoids newline normalization.
+- Profile-edit snapshots and recovery journals still hash the exact original bytes; accepting a BOM never weakens digest checks. A digest that omits those bytes is refused.
+- Validation: 35 guarded updater/profile-edit/create/admission/config-diagnostic fixtures pass. Only synthetic files and stubbed updater dependencies were used; no Forge download, config update or profile edit ran against this install.
+
 ## Missing config guidance and local role warnings (2026-11-10; E11-S79)
 
 - Startup names a missing `decklab/config.json` and the example/setup instructions while retaining existing defaults. Status reports fixed ready/missing/unreadable source state only; no config contents or role/profile diagnostics go to the page.
