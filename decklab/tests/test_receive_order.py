@@ -555,7 +555,8 @@ class ReceiptDatabaseTests(db_support.DbTestCase):
         operation = receive.op("test", [{"id": "cards", "verified": True}], "2026-10-08")
         with inventory.use(self.db):
             seen = inventory.current().revision
-            inventory.apply(receive.op("test", [{"id": "kit", "verified": False, "intact": "yes"}], "2026-10-08"),
+            # kit has no deck lists, so only broken up (a receipt refuses to keep such a product intact).
+            inventory.apply(receive.op("test", [{"id": "kit", "verified": False, "intact": "no"}], "2026-10-08"),
                             TESTER, "receive the kit")
             with self.assertRaisesRegex(Conflict, "changed since this was previewed"):
                 inventory.apply(operation, TESTER, "receive test", expected_revision=seen)
