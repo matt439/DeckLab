@@ -35,20 +35,20 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 18 | 18 | 0 | 0 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 21 | 18 | 2 | 0 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 31 | 29 | 2 | 0 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 24 | 20 | 1 | 1 | 2 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 29 | 26 | 0 | 1 | 2 |
-| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 23 | 21 | 0 | 0 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 29 | 28 | 1 | 0 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 18 | 0 | 2 | 0 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 18 | 2 | 5 | 1 |
+| [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 2 | 8 | 0 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 20 | 1 | 7 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 33 | 26 | 0 | 5 | 2 |
+| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 24 | 21 | 0 | 1 | 2 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 34 | 28 | 1 | 5 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 24 | 20 | 0 | 3 | 1 |
-| [E10: Members, access and privacy](#e10-members-access-and-privacy) | 35 | 31 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 56 | 39 | 8 | 5 | 4 |
-| **Total** | **312** | **268** | **15** | **13** | **16** |
+| [E9: Commander nights](#e9-commander-nights) | 28 | 20 | 0 | 7 | 1 |
+| [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 72 | 39 | 8 | 21 | 4 |
+| **Total** | **365** | **268** | **15** | **66** | **16** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48 was built the same day, in three slices. Matt's expansion review of 2026-10-31 added twelve missing stories for work no story covered: E1-S29, E4-S27, E5-S27 to E5-S30, E9-S28, E9-S29 and E11-S54 to E11-S57. Matt's request of 2026-11-01 to run the live server on Linux added E11-S58, built the same day. Matt's deck-page question of 2026-11-02 added E5-S31, built the same day. Recounted 2026-11-02: E7-S33 (built 2026-11-02) was missing from the E7 row. The gauntlet design of 2026-11-02 added E3-S28 to E3-S31; E3-S28 and E3-S29 were built the same day, and E3-S30 and E3-S31 are missing. Later on 2026-11-02 the first slices of E5-S27 (Shopping's Baskets), E5-S28 (Build decks together) and E9-S29 (tutors on the Stats tab) made them partial, as the first slices of E1-S29 (the card viewer's decks line) and E5-S30 (the Wishlist page's short decks) made them, and E11-S56 (an empty space's start) was built. Matt's report of 2026-11-02 that the Against popular decks box is too wide added E3-S32, missing. On 2026-11-03 Matt decided E5-S29 is wanted (it stays missing, now ready) and E11-S54 and E4-S27 aren't (not wanted). Later on 2026-11-03 E3-S32 was built, E5-S29's first slice (the 90-day history and `shops history`) made it partial, and E1-S29 gained global search's short form (still partial). Matt's gauntlet decisions of 2026-11-03 (it's the lead feature; a standard sample of 20 core and upgraded Commander opponents; runs up to every playable deck, overnight; Matchups to be renamed Testing) added E3-S33 to E3-S38: E3-S33 and E3-S38 were built the same day, and E3-S34 to E3-S37 are missing. Later on 2026-11-03 E3-S34 was built, then E3-S35 (Matchups renamed Testing, next to Decks, with the Popular decks board), then E3-S36 (the popular-decks figure in the library) and E3-S37 (an editor choice to test against popular decks after saving). Matt's request of 2026-11-03 to try a precon before buying it added E3-S39, built the same day. Later on 2026-11-03 E8-S24 was built (kit on a deck being built). The persona and story review of 2026-11-04 added E11-S59 (wake-on-request, partial: built in code, not yet set up for real) and E11-S60 (the server PC's updater, smoke test and database move, built) for work no story covered, moved the self-hosting stories E11-S50 to E11-S53, E11-S56 and E11-S57 to the new Self-hoster persona, and cut stale Gap lines from twelve stories. Later on 2026-11-04 E11-S53's first slice (the price-check shops as a setting) made it partial. On 2026-11-04 E1-S29 (the viewer's decks line from every page), E5-S29 (price history on Shopping's row) and E5-S30 (the editor's My wishlist tick) were built. Later on 2026-11-04 E9-S28's first slice (Commanders we could build, the ranked list) made it partial. Later on 2026-11-04 E11-S49's first slice (release zips and installs without git) made it partial. E11-S55's phone audit and its fixes (2026-11-04) made it partial; its second slice (the other pages and the lab, 2026-11-04) leaves only a real screen reader. E5-S28's Queue these and each card's queue rows (2026-11-04) finished it. E5-S27's shop postage, free-postage add-ons and fewest-shops plan (2026-11-04) finished it too. Matt's requests of 2026-11-04 added E8-S25 (a setting for how a space's storage works) and E11-S61 (whether the More menus help), both missing. His report of 2026-11-04 from building a deck on an iPad added E4-S28, built the same day. On 2026-11-05 E9-S28's third slice (pairs counted together, held commanders' rows) finished it; E11-S49 gained Settings' newer-release line (still partial), and E8-S25's and E11-S61's reviews were written (both still missing, waiting for Matt). Later on 2026-11-05 E11-S53's second slice (the currency) left it partial; E3-S31 was built (a group run of chosen decks), which also finished E3-S19; E3-S30's command-line slice (`forge variant --gauntlet`) made it partial; E9-S29 was built (the official text on tutors); and E11-S08 gained the wishlist addition that moved other entries (still partial). Later on 2026-11-05 E11-S53's third slice (every currency label and Settings' Prices) finished it, and E11-S08 gained a wishlist removal put back after later changes (still partial). Matt's request of 2026-11-08 for members' own sleeves, deck boxes and playmats added E8-S26, built the same day.
+Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48 was built the same day, in three slices. Matt's expansion review of 2026-10-31 added twelve missing stories for work no story covered: E1-S29, E4-S27, E5-S27 to E5-S30, E9-S28, E9-S29 and E11-S54 to E11-S57. Matt's request of 2026-11-01 to run the live server on Linux added E11-S58, built the same day. Matt's deck-page question of 2026-11-02 added E5-S31, built the same day. Recounted 2026-11-02: E7-S33 (built 2026-11-02) was missing from the E7 row. The gauntlet design of 2026-11-02 added E3-S28 to E3-S31; E3-S28 and E3-S29 were built the same day, and E3-S30 and E3-S31 are missing. Later on 2026-11-02 the first slices of E5-S27 (Shopping's Baskets), E5-S28 (Build decks together) and E9-S29 (tutors on the Stats tab) made them partial, as the first slices of E1-S29 (the card viewer's decks line) and E5-S30 (the Wishlist page's short decks) made them, and E11-S56 (an empty space's start) was built. Matt's report of 2026-11-02 that the Against popular decks box is too wide added E3-S32, missing. On 2026-11-03 Matt decided E5-S29 is wanted (it stays missing, now ready) and E11-S54 and E4-S27 aren't (not wanted). Later on 2026-11-03 E3-S32 was built, E5-S29's first slice (the 90-day history and `shops history`) made it partial, and E1-S29 gained global search's short form (still partial). Matt's gauntlet decisions of 2026-11-03 (it's the lead feature; a standard sample of 20 core and upgraded Commander opponents; runs up to every playable deck, overnight; Matchups to be renamed Testing) added E3-S33 to E3-S38: E3-S33 and E3-S38 were built the same day, and E3-S34 to E3-S37 are missing. Later on 2026-11-03 E3-S34 was built, then E3-S35 (Matchups renamed Testing, next to Decks, with the Popular decks board), then E3-S36 (the popular-decks figure in the library) and E3-S37 (an editor choice to test against popular decks after saving). Matt's request of 2026-11-03 to try a precon before buying it added E3-S39, built the same day. Later on 2026-11-03 E8-S24 was built (kit on a deck being built). The persona and story review of 2026-11-04 added E11-S59 (wake-on-request, partial: built in code, not yet set up for real) and E11-S60 (the server PC's updater, smoke test and database move, built) for work no story covered, moved the self-hosting stories E11-S50 to E11-S53, E11-S56 and E11-S57 to the new Self-hoster persona, and cut stale Gap lines from twelve stories. Later on 2026-11-04 E11-S53's first slice (the price-check shops as a setting) made it partial. On 2026-11-04 E1-S29 (the viewer's decks line from every page), E5-S29 (price history on Shopping's row) and E5-S30 (the editor's My wishlist tick) were built. Later on 2026-11-04 E9-S28's first slice (Commanders we could build, the ranked list) made it partial. Later on 2026-11-04 E11-S49's first slice (release zips and installs without git) made it partial. E11-S55's phone audit and its fixes (2026-11-04) made it partial; its second slice (the other pages and the lab, 2026-11-04) leaves only a real screen reader. E5-S28's Queue these and each card's queue rows (2026-11-04) finished it. E5-S27's shop postage, free-postage add-ons and fewest-shops plan (2026-11-04) finished it too. Matt's requests of 2026-11-04 added E8-S25 (a setting for how a space's storage works) and E11-S61 (whether the More menus help), both missing. His report of 2026-11-04 from building a deck on an iPad added E4-S28, built the same day. On 2026-11-05 E9-S28's third slice (pairs counted together, held commanders' rows) finished it; E11-S49 gained Settings' newer-release line (still partial), and E8-S25's and E11-S61's reviews were written (both still missing, waiting for Matt). Later on 2026-11-05 E11-S53's second slice (the currency) left it partial; E3-S31 was built (a group run of chosen decks), which also finished E3-S19; E3-S30's command-line slice (`forge variant --gauntlet`) made it partial; E9-S29 was built (the official text on tutors); and E11-S08 gained the wishlist addition that moved other entries (still partial). Later on 2026-11-05 E11-S53's third slice (every currency label and Settings' Prices) finished it, and E11-S08 gained a wishlist removal put back after later changes (still partial). Matt's request of 2026-11-08 for members' own sleeves, deck boxes and playmats added E8-S26, built the same day. The product review of 2026-11-10 (a comparison with similar deck, collection, Commander, play, simulation and buying tools, each proposal then checked against the code and the backlog) added 53 missing stories, each for the part no story covered: E1-S30 and E1-S31, E2-S28 to E2-S32, E3-S41 to E3-S48, E4-S29 to E4-S34, E5-S32 to E5-S35, E6-S28, E7-S34 to E7-S38, E9-S30 to E9-S33, E10-S44, E10-S45 and E11-S62 to E11-S77; Matt has decided none of them yet.
 
 ---
 
@@ -350,6 +350,32 @@ Built (2026-11-02): the first slice. GET `/api/cards/decks` (`lib/api/card_decks
 Built (2026-11-03): global search's short form. To a viewer who may see the space's inventory, each card result under In your collection and Other cards says how many of the space's decks they may see hold or want it and its free copies ("in 2 decks · 1 free"); a basic land says its deck use isn't tracked; anyone else gets no new fields. `card_decks.deck_use` is the viewer's calculation for many names, worked out only for the results shown. Tests: `test_global_search_use.py`, `test_global_search_ui.py`. See [HISTORY.md](../HISTORY.md#global-search-a-cards-deck-use-2026-11-03-e1-s29).
 
 Built (2026-11-04): the viewer's line from every page. `card-viewer.js` `viewerUseSpace` now names a space wherever the viewer opens: the deck page's or editor's deck's, the Collection page's, else the page's own `space` parameter or the viewer's own space, still only when the viewer may see that space's inventory (nothing is asked otherwise, and the server's 403 shows nothing). Tests: `test_card_viewer_use_ui.py`. See [HISTORY.md](../HISTORY.md#the-card-viewers-decks-line-on-every-page-2026-11-04-e1-s29).
+
+**E1-S30** · Matt · could · M · missing
+
+As a deck builder about to re-test, I want Compare to take one of its History revisions, or the published precon it began as, as a side, so that I see what my changes did to its curve, colour sources, roles and bracket without making a second deck.
+
+- Given a deck I may see, when Compare opens with its revision as a side, then that side is labelled "Revision N, <date>" and card differences and stat rows show against the deck now.
+- Given a revision side, when the page shows, then Cards both use and Head to head are hidden, its bracket is labelled as judged by today's lists, with no kit, owned or missing counts.
+- Given a revision naming a card the index doesn't know, when its stats are worked out, then they say unknown; a deck I can't see answers as missing.
+- Given a precon picked from the precon search, when it is a side, then its MTGJSON list is compared, saving no deck.
+
+Gap: Compare takes only saved decks' lists (E1-S13, E1-S26); History lists a revision's cards against the deck now, without stats; E3-S39 offers a precon only as a trial deck. From the product review of 2026-11-10, compared with Archidekt's Compare Decks and EDHPowerLevel's Scan a Precon. Needs Matt's decision: whether Add a precon records its precon in a header line, or the precon is always picked.
+
+First slice: a same-deck revision side in `decklab/web/compare.js` reading GET /api/deck/revision, opt-in stats on that read in `decklab/lib/api/history.py`, and a link from `decklab/web/history.js`.
+
+**E1-S31** · Matt · could · M · missing
+
+As a deck builder looking a card up, often at the shop, I want the card viewer to link to the card's Scryfall page and list our own copies by printing and storage location, so that one place answers what the card is, whether we have it and where it is.
+
+- Given a card in the viewer, when I tap "Open on Scryfall", then the shown printing's page, or an exact-name search when no printing is known, opens in a new tab with `rel="noopener noreferrer"`, and Deck Lab makes no request.
+- Given a card opened in a Commander context, when the viewer shows, then an "Open on EDHREC" link is there on the same terms.
+- Given a viewer who may see the space's inventory, when "Your copies" is unfolded, then each owned printing shows its finish, quantity and storage location; anyone else sees no such part, and another space's copies get the Collection page's 403.
+- Given an address such as `#/card?name=`, when it is opened, then the viewer opens over the current page, showing nothing private before a profile is picked.
+
+Gap: `decklab/web/card-viewer.js` has no outbound link, list of own copies by printing or bookmarkable address. Lookup (E11-S31), rulings (E1-S25), deck use (E1-S29) and storage locations (E8-S22) exist. Shop lines and write actions are left out. From the product review of 2026-11-10, compared with Archidekt's card overlay and ManaBox's card pages.
+
+First slice: the Scryfall link in `decklab/web/card-viewer.js`, with a server-built `scryfall_url` from `decklab/lib/api/card_lookup.py` for a card without a printing.
 
 ---
 
@@ -718,6 +744,70 @@ As a beginner who learns a deck from its How to play guide, I want the guide to 
 - Given a card name that is a common word but was never in the deck, then it is never flagged.
 
 Now: built 2026-10-29 ([HISTORY.md](../HISTORY.md#departed-cards-in-how-to-play-2026-10-29-e2-s27)). GET /api/deck's `guide.departed` (`lib/api/guide.py` `departed_cards`) names the cards the guide's topics mention as whole words, case and all (a double-faced card by its front face too; longest name first, as the page's card links, so a departed "Forest" inside a current "Snow-Covered Forest" isn't flagged), that any of the deck's own latest 100 saved revisions held in its Planned or Play-now list and neither of today's lists holds: `{names, count}` in the order the guide first names them, at most 30 names. It is None outside the deck's own space (a public deck's readers included) and when the revisions can't be read. How to play shows "The guide mentions N cards no longer in the deck: A, B". Known limits: no browser or device check; a card renamed by Scryfall or written in another case in the guide isn't matched.
+
+**E2-S28** · Matt · could · M · missing
+
+As a Commander deck builder trimming to 100, I want one view of my deck's cards with the countable reasons each might be cut, so that I choose cuts from evidence.
+
+- Given a Commander deck, when See EDHREC ideas is set to Cuts, then the Planned list's non-land, non-commander cards show by ascending EDHREC inclusion, with cards absent from the cached page grouped as "Not on EDHREC's page for this commander", never as 0%.
+- Given a card in a role above the Command Zone target, or one Forge marks stuck or never cast at E3-S15's game thresholds, when its row shows, then it names that reason as evidence, and no single worst card is named.
+- Given a viewer who may change the deck, when a row is opened, then it offers Move to Considering and Test this swap; nothing is cut automatically.
+- Given a Commander draft over 100 cards, when the editor shows it, then it says "N over 100" and links to the view.
+
+Gap: no cut ranking exists. EDHREC ideas (E9-S07) only adds, role targets (E9-S26) only count on the Stats tab, and only never-cast cards have a next step (E3-S15, E3-S25); Considering is E2-S23 and E2-S26. A precon upgrade view is also unbuilt. From the product review of 2026-11-10, compared with Archidekt's EDHREC cuts and DeckCheck's DeckTrim.
+
+First slice: a read-only Cuts filter: `cuts()` in `decklab/lib/edhrec.py`, returned by GET `/api/deck/edhrec` with role chips from `decklab/lib/stats/role_targets.py`, shown in `decklab/web/deck-edhrec.js`; tests in `decklab/tests/test_edhrec.py`.
+
+**E2-S29** · Matt · could · M · missing
+
+As a deck builder who tags cards with my own categories, I want Deck Lab to suggest categories for untagged cards, so that I don't tag every Sol Ring by hand.
+
+- Given an editor draft with uncategorised lines, when Suggest categories is chosen, then a review list proposes one category per line from the roles Deck Lab derives (ramp, draw, removal, counterspell, board wipe), each line untickable, a multi-role card given one by a fixed priority.
+- Given the review is applied, when the deck is saved, then only uncategorised lines have changed, as one Undo step, and the save is categories-only: no "Decklist changed" line and no table rewrite.
+- Given a card the space's other decks tag, when its Category sheet opens, then that category is offered, from the viewer's own space only.
+- Given saved decks with categories, when `python -m decklab.db sql` reads `deck_line`, then a category column says which lines are tagged Ramp.
+
+Gap: categories are set by hand, one per line (E2-S24, whose Gap records the missing `deck_line` column). Role counts (E9-S26) are never written into categories, and nothing remembers a card's category across decks. Several categories per card stays out: it changes the deck text format. From the product review of 2026-11-10, compared with Moxfield's global tags and Archidekt's automatic categories.
+
+First slice: Suggest categories, with no schema or text-format change: a role-to-category mapping in a new `decklab/lib/stats/category_suggest.py`, exposed through `decklab/lib/api/card_lookup.py`, and a review sheet in `decklab/web/deck-categories.js`; tests in `decklab/tests/test_deck_categories.py`.
+
+**E2-S30** · Matt · could · S · missing
+
+As a deck builder whose Planned list names particular printings, I want the deck page to say when I own a card only in another printing, so that I know which listed printings I don't have.
+
+- Given a Planned-list card whose every line names one printing and finish, and whose copies are owned or on the way, when the Cards tab or price table shows it, then a quiet note says whether the space has that printing or only another, such as "Own another printing (FDN 227)".
+- Given such a note, when the deck is read, then it is no warning, banner or status, and no count, reservation, table or saved text has changed.
+- Given a viewer who may not see the deck's space's inventory, when the deck is read, then the answer carries no such fields.
+- Given a built deck with a Printings in box record, when a card that record names is shown, then it has no note, and no note says a copy is free.
+
+Gap: no deck-page mark compares a line's named printing with the collection. E5-S31 (built) shows as-listed prices for missing copies only. A per-deck printing preference and an exact-printing queue action are left out. From the product review of 2026-11-10, compared with Moxfield's collection check and ManaBox's missing-card matching.
+
+First slice: extend E5-S31's annotation to owned rows in `decklab/lib/listed_prices.py`, using `printing_counts` in `decklab/lib/pool.py` for live rows only, and render the note in `decklab/web/deck-prices.js` and `decklab/web/deck-availability.js`; tests beside `decklab/tests/test_listed_prices.py`.
+
+**E2-S31** · Matt · could · M · missing
+
+As a deck builder who reuses groups of cards, I want to add chosen cards from another deck with a preview checked against the pool, so that I see which copies are free first.
+
+- Given the editor of an existing deck, when Add cards from another deck is chosen, then a deck of the same space is picked and its lines show as a tickable list.
+- Given that preview, or Paste a list's, when a viewer who may see the space's inventory opens it, then each card is marked free, in use, on the way or to buy, naming a hidden deck only as "one of the home decks".
+- Given a Commander draft, when the preview opens, then cards outside the commander's colour identity or already in the list start unticked.
+- Given ticked cards, when they are applied, then they join the draft as one Undo step, saved only by the normal Save.
+
+Gap: an existing deck can't pull cards from another deck (Start from another deck needs an empty new deck), and Paste a list's preview has no pool marks or identity filter, though EDHREC ideas (E9-S07) and the finder (E2-S25) have both. No saved, named card bundle exists. From the product review of 2026-11-10, compared with Moxfield's Packages. Needs Matt's decision: whether stored, space-private bundles are wanted at all.
+
+First slice: no new storage: "Add cards from another deck…" in `decklab/web/editor-import.js`, reusing the marks and identity test of `decklab/web/editor-edhrec.js` and `decklab/lib/api/editor.py`; tests in `decklab/tests/test_editor_ui.py`.
+
+**E2-S32** · Matt · could · M · missing
+
+As a deck builder moving lists between Deck Lab and other tools, I want exports that keep everything Deck Lab's paste reads and imports that accept more formats, so that nothing is lost or retyped.
+
+- Given a deck with categories or foil and etched lines, when Copy with categories is chosen, then each line carries its finish mark and `#Category`, and pasting that text back gives the same lines.
+- Given an Archidekt, Dragon Shield, Delver Lens or TCGplayer collection CSV, or a header-less text list of `qty name (SET) number` lines, when it is chosen on the Collection page's import, then it reaches the existing preview with unknown conditions and languages left blank.
+- Given a file in none of the known layouts, when it is chosen, then the refusal names every layout accepted.
+
+Gap: the deck export (`exportedDeck`) drops each line's category (E2-S24) and finish; the collection import (E7-S02, E7-S03) detects only ManaBox, Moxfield, Deckbox and Deck Lab's columns; the download (E7-S30) has no Scryfall id or storage location (E8-S22). From the product review of 2026-11-10, compared with Moxfield's import from a link. Needs Matt's decision: deck import from a link (a page-started outbound fetch needing a host allow-list, which `decklab/lib/accessory_fetch.py` lacks), and a location column read back on import, close to PLAN.md's decision against an edit-an-exported-file-then-apply flow.
+
+First slice: offline only: an export option with finishes and categories in `decklab/web/deck-tools.js`, and new header mappings plus a header-less text path in `decklab/lib/api/collection_import.py`; tests in `decklab/tests/test_deck_categories.py` and `decklab/tests/test_collection_edit.py`.
 
 ---
 
@@ -1262,6 +1352,108 @@ Decided (Matt, 2026-11-09): implement as much as possible overnight and open a p
 
 Built (2026-11-09): the Testing tab's deliberate saved-list matchup check, command-line card-swap checks, separate immutable engine results and native XMage bridge. Guarded fixtures, disposable native casual/Commander games and headless Chromium checks passed. The [owner](cross-simulator.md) records exact qualification and limits; optional installation on the live server and household-device acceptance remain separate.
 
+**E3-S41** · Matt · could · M · missing
+
+As a deck builder tuning a mana base, I want the practice games to name the spells my mana fails and to try one-land swaps, so that I know which plain-basic change helps most.
+
+- Given a deck's Practice tab, when the practice games have run, then the colour panel lists the worst few spells by the share of turns each sat in hand with enough mana but unpayable colours, with the average turns waited, labelled a simulation estimate.
+- Given the same list and seed, then the per-spell figures are identical for one worker and for many.
+- Given the Practice tab, when I ask for a what-if, then the list is replayed on the same seed with one basic of each of the deck's colours replacing a named cut, and with one always-tapped land replaced by a basic; the changes in stuck, colour screw, flood and mana used are shown.
+- Given no change beats a stated threshold, then no best change is named.
+
+Gap: the practice games report colour screw and stuck only as deck totals, and have no what-if runs. E3-S04 covers the deck-level figures, E3-S01 the land verdict and colour-source check, and E3-S25 free dual lands. From the product review of 2026-11-10, compared with Salubrious Snail's Color Analyzer and Tap Analyzer.
+
+First slice: per-spell castability only: per-card counters in `decklab/lib/goldfish/engine.py`, a `cards.castability` list in `results.py`, a `GOLDFISH_VERSION` bump in `runs.py` and a "Spells the mana fails most" disclosure in `decklab/web/practice.js`.
+
+**E3-S42** · Matt · could · M · missing
+
+As a deck builder balancing a deck's roles, I want free owned cards by role for 60-card decks and, for Commander, the range comparable decks run beside each target, so that I fill a thin role from what we own.
+
+- Given a casual 60-card deck whose space's inventory I may see, when I open a role on its Stats tab, then free pool cards are listed, in the colours of the list's non-land cards, with no Commander-legality filter and no target claimed; anyone else gets a Commander deck's 403 or 404.
+- Given a Commander deck and a gauntlet catalogue, when I open its Stats tab, then each role shows a low, typical and high count from same-tier catalogue decks, with the catalogue's build date, deck count and "a range, not a recipe"; the cited target stays first.
+- Given no catalogue or too few comparable decks, then the page says so and shows no band.
+
+Gap: free cards by role and the role targets are Commander only (E9-S26); 60-card decks already show the role bars, and E2-S21 rules out legality checks there. From the product review of 2026-11-10, compared with Playgroup.gg's Deck Template checker. Needs Matt's decision: E9-S26's decision allows the commander's own EDHREC average beside the targets; whether a range from the gauntlet's same-tier decks, sparring partners and not advice, may sit there too.
+
+First slice: casual decks only: a legality-free fit in `decklab/lib/decks/role_pool.py`, a casual branch in `decklab/lib/api/role_cards.py` replacing its 400, shown in `decklab/web/stats.js`.
+
+**E3-S43** · Matt · could · S · missing
+
+As the person who runs the gauntlet, I want to see when the popular decks list was built and what a rebuild would change, so that a rebuild never orphans results by surprise.
+
+- Given a built catalogue, when I open Testing's Popular decks board or a deck's Against popular decks, then one muted line reads "Popular decks list built <date>", with its short sha.
+- Given a catalogue older than a stated age, then the line adds a plain note of its age; it never asks for a rebuild.
+- Given a saved catalogue, when I run `python -m decklab.lib.forge gauntlet build`, then before saving it prints how many opponents' lists changed and whether the standard sample would change.
+- Given `gauntlet export FILE` on one PC and `gauntlet import FILE` on another, then the catalogues and saved samples arrive with a verified sha, playable decks are screened again, and no house deck's results are included.
+
+Gap: the catalogue already records its build date and sha (E3-S28), and E3-S34 explains results a rebuild set aside; no page shows the date, a build prints no difference, and there is no export or import. From the product review of 2026-11-10. Needs Matt's decision: whether `FG#4` copies the development PC's catalogue to the server or builds its own as planned.
+
+First slice: the date line and the build difference only: the catalogue's `built` date and short sha in `decklab/lib/api/gauntlet_board.py`, drawn in `decklab/web/gauntlet-board.js` and `gauntlet.js`, and the printed difference in `decklab/lib/forge/cli_gauntlet.py`.
+
+**E3-S44** · Matt · could · M · missing
+
+As a deck builder doubting a simulated result, I want to read one saved Forge game turn by turn, so that I can tell a deck problem from an AI misplay before cutting or buying cards on it.
+
+- Given a saved matchup, when I run `python -m decklab.lib.forge game <deck-id> <deck-id> --game N` (or `--pick loss|longest|timeout`), then that game is replayed from its saved seed, lists and pilots and printed turn by turn: land drops, casts and failed casts, combat, life changes and each hand at the end; `--json` gives the same as data.
+- Given the replay, then it never joins the matchup's results, the field, Rankings or per-card statistics.
+- Given a Commander game, then the output says it matches the saved game by outcome only, and says when winner or turns differ from the record.
+- Given a result from another engine or override set, then it is refused with the reason.
+
+Gap: saved batches keep each game's number, winner, turns and loss reason, and games replay from their seeds, but only the operator's soak probe replays one and nothing renders it. E3-S15 covers stuck and never-cast cards across games and E3-S20 the operator's whole-matchup replay. A page sheet, under the simulations setting and deck privacy, comes later. From the product review of 2026-11-10, compared with Archidekt's playtester logs.
+
+First slice: command line only: a new `decklab/lib/forge/transcript.py` (pick and render), the one-game replay lifted from `decklab/lib/forge/cli_soak.py` into a shared helper, and the subcommand in `cli_commands.py`.
+
+**E3-S45** · Matt · could · M · missing
+
+As a deck builder reading Forge results, I want to see how a deck develops round by round in its simulated games, and a command-line check that two identical lists test as equal, so that I can tell why a deck loses and trust a tested swap's range.
+
+- Given games played after this is built, when I open a deck's Testing tab, then it shows the median and spread of lands in play and cards drawn for rounds 1 to 10, labelled as simulated Forge games; a matchup with a side I may not see is left out, as for token peaks.
+- Given a list whose saved matchups carry no tally, when the part is shown, then it says there are no tallied games yet.
+- Given `forge variant` with a placebo option, when the unchanged list plays through the paired pipeline, then the result goes only to the experiments area, and a same-seed run is reported against the pair's engine-check noise floor, not as an exact zero.
+
+Gap: the card log keeps no per-round tally, and an unchanged list is refused. E3-S04 covers goldfish land drops, E3-S15 per-card figures, E3-S11 the paired verdict, E7-S08 the token-peak tally this copies and E11-S15 the upgrade checks. From the product review of 2026-11-10, compared with Playgroup.gg and Archidekt.
+
+First slice: an optional `development` tally per side and round in `decklab/lib/forge/cardlog.py`, pooled in a new `decklab/lib/forge/development.py` and shown as a small table from `decklab/web/matchups-cards.js`. The placebo option is a separate slice.
+
+**E3-S46** · Matt · could · M · missing
+
+As a deck builder without statistics training, I want a result to warn me when many of its games stalled or its sample is thin, so that I don't act on a figure that rests on too little.
+
+- Given a matchup where games ending in a time limit, a draw or an error exceed a stated share, when I read it on the page or the command line, then one caution line says so with the split by who went first; its field and gauntlet rows show it too.
+- Given a popular-decks group row below a stated minimum of opponents or games, when shown, then it is muted and says it has too few.
+- Given a token suggestion resting on few games that made the token, when shown, then it says so.
+- Given the popular-decks part, when shown, then it says how many catalogue decks of each colour and style the AI screen left out, and calls its hardest opponents "lowest observed" unless their range clears 50%.
+
+Gap: nothing reacts to a high share of stalled games, only a one-opponent gauntlet group gets a note, and token suggestions have no floor. E3-S07, E3-S09, E3-S10 and E3-S15 cover plain words, ranges, flags and per-card floors; E3-S28, E3-S29 and E7-S08 the gauntlet groups and token peaks. From the product review of 2026-11-10, compared with 17Lands and Playgroup.gg. Pick the threshold from saved results first.
+
+First slice: a `STALL_SHARE` constant and stalled object in `decklab/lib/forge/views.py`, one caution line in `decklab/web/matchups-results.js` and `decklab/lib/forge/cli_output.py`, and a fixture test in `decklab/tests/test_forge.py`.
+
+**E3-S47** · Matt · could · M · missing
+
+As Matt, the household admin, I want a run that a restart cut short to be offered back to whoever started it, so that a long run isn't quietly left half played.
+
+- Given runs playing or queued, when `python -m decklab.update` reaches its restart, then it stops with a plain message naming what is busy unless `--force`.
+- Given a field, gauntlet or variant run stopped by a restart or a crash, when its starter next opens Deck Lab, then the run activity icon's details offer "Unfinished run: Play the rest" and Dismiss, only to that starter and only for decks they may still see.
+- Given Play the rest, when pressed, then the original request passes the usual permission and simulations-setting checks and is planned again from the saved games, so nothing is played twice.
+- Given a run that finished or that a person stopped, when its starter returns, then no offer is shown; nothing ever starts by itself.
+
+Gap: the job queue is in memory only, so queued jobs and a run's unplayed remainder are dropped, and the update command restarts without looking. E3-S06 keeps checkpointed games, E11-S47 lists what a Settings restart would stop and E11-S60 is the update command. From the product review of 2026-11-10. Automatic resume and timed starts are left out; either would need Matt's decision. Check first that a gauntlet run tops up as a field run does.
+
+First slice: give `decklab/update.py` the busy check from `decklab/lib/api/server_restart.py`, tested in `decklab/tests/test_update.py`. A new `decklab/lib/forge/run_journal.py` and the offer in `decklab/web/runs-pill.js` follow.
+
+**E3-S48** · Matt · could · L · missing
+
+As a deck builder wondering about one more land or a cut with no replacement, I want to test a change that alters the deck's card count, so that I needn't compare two saved decks' results by eye.
+
+- Given a main-deck change that alters the card count, when I run `forge variant` with a size-change option, then the changed list plays the base result's opponents, game count and engine, and the difference prints with its range and the words "not paired".
+- Given such a test, when judged, then it is treated as two independent samples with its own margin, and says plainly that the range is wide and many more games are needed.
+- Given its games, when saved, then they go under their own result kind and never enter paired results, the field, Rankings, ratings or per-card figures.
+- Given a same-size change, when I test it, then it stays on the paired path as now; a list size Forge won't play is refused with the reason.
+
+Gap: `decklab/lib/forge/variants.py` and `decklab/web/variant.js` refuse any size change, an accepted criterion of E3-S11 (built), which changes with this story. E3-S01 and E3-S04 already judge land counts without opponents, for far less Forge time. From the product review of 2026-11-10, compared with Salubrious Snail's one-extra-land idea. Needs Matt's decision: whether an answer that will usually read "Not settled yet" after hours of games is worth building.
+
+First slice: command line only with a fixed game count: `run_unpaired` in `decklab/lib/forge/variants.py` and `unpaired_diff` in `decklab/lib/forge/seqstats.py`, tested in `decklab/tests/test_forge_seqstats.py`.
+
 ---
 
 ## E4: Get ready, play and learn
@@ -1671,6 +1863,83 @@ Evidence:
 - `decklab/web/deck.js`: deckBuildLink; `assembly.js`: packTile, PACK_TILE_SIZES; `assembly-switcher.js`: packViewerPanel, packViewerSync, packViewerTask, packOpenCard; `printings-in-box.js`: packPrintingRoom, packPrintingPicks, packPrintingMake; `assembly-tokens.js`; `assembly-progress.js`: wirePackTicks; `cards-ui.js`: tokenTile, tokNormal
 - `decklab/lib/api/assembly_printings.py`: annotate's set_name; `decklab/lib/api/assembly_tokens.py`
 - `decklab/tests/test_assembly_big_view_ui.py`, `test_assembly_tokens_ui.py`, `test_assembly_tokens.py`, `test_deck_page_ui.py`
+
+**E4-S29** · Matt · could · M · missing
+
+As Matt, packing for a Commander night, I want the counters and dice my chosen decks use shown in Build decks, and one take-along list for built decks, so that I leave home with everything the pod needs.
+
+- Given decks chosen in Build decks, when the Tokens (optional) step shows, then it lists the counter kinds and dice those decks use, merged, each naming its decks and marked covered, covered by an any-kind item, or not covered. Kinds only, never a count, labelled an estimate.
+- Given the counters can't be worked out, then the plan, its ticks and Mark as built carry on without them, as for tokens.
+- Given a viewer who may not see home's inventory, then no counter or dice line shows, and kit names show only to their owners.
+- Given every chosen home deck is already built, then one tickable, printable list gives each deck's box and sleeves, its Token cards line and the merged counter and dice kinds, with the viewer's own and shared playmats as a reminder line.
+
+Gap: `lib/api/assembly_ticks.py` drops each deck's counters from the plan, and there is no take-along list. E7-S24 shows the needs and cover on the deck page; E4-S28 built the optional Tokens step; E1-S28 suggests pairs only. From the product review of 2026-11-10, compared with Magic Life Counter.
+
+First slice: stop popping `counters` in `lib/api/assembly_ticks.py`, apply `lib/tokens/dice_cover.py` in `lib/api/assembly.py`'s `_token_sources`, and render a read-only, unticked "Counters and dice (optional)" block in `web/assembly.js`, with tests in `tests/test_assembly_token_keys.py`.
+
+**E4-S30** · Matt · could · S · missing
+
+As Matt, heading to a Commander night, I want to download a deck's play sheet as one file, so that I can keep it on my phone without going through the print dialog.
+
+- Given a deck page, when Download play sheet is chosen from More, then one HTML file named for the deck is saved, holding what Print play sheet builds: the list, stand-ins, a Commander deck's At the table part, the guide-needs-review warning and every guide section.
+- Given the saved file, then it has no pictures or scripts, opens with Deck Lab off, and says when it was saved and that it may be out of date.
+- Given the printed sheet, then the file holds nothing more: no owned, missing or on-the-way counts and no kit.
+
+Gap: only the plain decklist downloads (`downloadDeck` in `web/deck-tools.js`); the play sheet goes only to the print dialog. E9-S27 built the sheet's At the table part; E11-S02 and E11-S59 cover Deck Lab being off or asleep. From the product review of 2026-11-10, compared with ManaBox's offline use. Needs Matt's decision: he declined cached offline lists (E11-S27), and a phone's print dialog can probably save the sheet as a PDF, so this is a small convenience, not an offline feature. Opening a saved file on iOS Safari is unverified.
+
+First slice: split `printDeck` in `web/deck-tools.js` into a `playSheet(data)` builder and a print wrapper, add `downloadPlaySheet(data)` on `downloadDeck`'s Blob pattern, wire it beside Print play sheet in `web/deck.js`, tested like `tests/test_commander_print_ui.py`.
+
+**E4-S31** · Matt · could · M · missing
+
+As Matt, who records a game from the life counter now and then, I want to delete a game saved by mistake and the result form to keep what the counter knew, so that the Game log holds only real games.
+
+- Given a saved 1v1 or pod game of my space, when I choose Delete this game, give a reason and confirm, then it leaves the Game log as one audited change. A game changed since I opened it is refused.
+- Given a game another space recorded, then no delete is offered and the request is refused; one I can't see answers as a missing game.
+- Given the deletion on Activity, then its row quotes neither notes nor reason outside the recording space.
+- Given a counter game ends, when the result form opens, then game length, each seat's reason and order out, and final life totals are filled in as optional fields.
+
+Gap: play records have only get, list and put in the state store, and the pod counter hands the form only date, notes, result and seats. E4-S11 and E4-S18 built the records, E4-S26 the counters. Hand-entered extras (who went first, a best-of-three link) are a later slice. From the product review of 2026-11-10, compared with Playgroup.gg and MTG Compendium. Needs Matt's decision: he said recording games isn't necessary (E4-S27), so only the delete has evidence of need.
+
+First slice: delete only: `play_delete` in `lib/state/pg.py` and `lib/state/memory.py`, `delete_game` in `lib/api/play_records.py`, a private summary in `lib/api/activity_summaries.py`, and the action in `web/play.js` and `web/play-pods.js`.
+
+**E4-S32** · Matt · could · M · missing
+
+As Matt, keeping score for a Commander pod on my phone, I want the pod counter to keep the screen on and both counters to say when they can't, so that the phone doesn't dim mid-game without my knowing why.
+
+- Given a pod counter where the browser supports a screen wake lock, then the screen is held on while it's open, asked for again when the page comes back into view, and released on close.
+- Given either counter where the wake lock isn't available (the plain home address), then one line says "Screen may sleep on this address; your count is saved".
+- Given several mis-taps, when Undo is repeated, then each goes back through a short bounded history, and Undo never brings back an ended or recorded game.
+- Given chosen decks whose cards use poison, energy or experience counters, or make the Monarch or Initiative reminder cards, then those markers start on and can be switched off.
+
+Gap: `web/pod-life-counter.js` never asks for a wake lock, though the two-player counter does, and `web/life-counter.js` says nothing when the API is missing. Undo is one step deep and absent from the legacy counter, and nothing from `lib/tokens/counters.py` reaches the counters. E4-S26 already keeps a locked phone's count and offers Resume. From the product review of 2026-11-10, compared with Lifetap, Playgroup.gg and Magic Life Counter.
+
+First slice: add a guarded wake request and release to `web/pod-life-counter.js` like `web/life-counter.js`, show the note in both counters, and extend `tests/test_life_source_counter_ui.py` and `tests/test_pod_life_counter_ui.py` with a fake wake lock.
+
+**E4-S33** · Matt · could · L · missing
+
+As Matt, learning a new deck before taking it to the table, I want to play a kept practice hand out by hand, so that I can see how its first turns go without a Forge game.
+
+- Given a hand kept on the Practice tab, when Play it out is chosen, then I can play a card from hand to a battlefield, tap and untap it, and move it to a graveyard, with no rules enforced, and Undo takes back one step at a time.
+- Given Next turn, then everything untaps, a card is drawn and the turn count rises, and a status line gives the turn, lands in play and library size.
+- Given a Commander deck, then its commander sits in a command zone with a count of times cast.
+- Given the board is closed, then nothing was saved: no deck, inventory, game record or note changes.
+
+Gap: Deal a hand (E4-S08) stops after the draw: `web/hands.js` has only hand and library. E4-S09 (keep-or-mulligan feedback) and the automated goldfish are separate. Token tiles and counters are a later slice; a saved note and a life counter are left out. From the product review of 2026-11-10, compared with Moxfield's and Archidekt's playtesters and ManaStack. Needs Matt's decision: whether a solo board with no rules engine is practice for the physical deck, or the digital play Deck Lab doesn't do.
+
+First slice: a board class beside `OpeningHand` in `web/hands.js` with play, tap, graveyard, next turn and a snapshot Undo, with model tests in `tests/test_play_ui.py`.
+
+**E4-S34** · Matt · could · M · missing
+
+As Matt, who plays mostly Commander pods, I want each deck's recorded pod games rolled up into one line, so that I can see how it has done at the table without counting records myself.
+
+- Given a deck with at least the minimum number of recorded pod games I may see, when its Game log opens, then one line above the pod records gives pods won of pods played, the fair share for those seat counts and a Wilson range, draws counted apart.
+- Given fewer games than the minimum, then the line says only that there aren't enough pod games yet.
+- Given the pods that deck lost, then the outside commander labels that most often won are named, only to the space that recorded them.
+- Given records the viewer can't see, then they add nothing to any count; a renamed deck's games still count.
+
+Gap: pod records are only listed, with no per-deck tally in `lib/api/play_pods.py` or `web/play-pods.js`. E4-S18 and E9-S16 built the records; E4-S13 compares real 1v1 games with Forge for one pair; E9-S21 is win shares for Forge pod runs. Seat splits, winning turn and a real-game rating are left out. From the product review of 2026-11-10, compared with Playgroup.gg, MTG Compendium and TopDeck.gg. Needs Matt's decision: he said recording games isn't necessary (E4-S27), so the line may mostly read "not enough games yet".
+
+First slice: a pure roll-up over one deck's visible pod records, returned by `lib/api/play_pods.py` and drawn as one line in `web/play-pods.js`, reusing the minimum from `lib/api/play_comparison.py`.
 
 ---
 
@@ -2151,6 +2420,56 @@ As a buyer reading a deck's missing cost, I want to know it's for the cheapest p
 
 Built 2026-11-02: `cards.printing_usd` / `cards.price_aud_printing` (the Collection's own-printing prices use it too), `lib/listed_prices.py` (pool.compare's live rows for a Planned list only, the deck page's and the editor's; never the Play-now list, swaps or precons: `listed_printing`, `listed_finish`, `listed_aud_each`, `listed_aud_missing`, `listed_material`, and `totals.as_listed` / `aud_missing_as_listed` only when material), `web/deck-availability.js`, `web/deck-prices.js`, `web/editor-save.js`. The saved deck text and its table keep the cheapest printing. A card listed in several printings, or with a line naming none, keeps only the cheapest price.
 
+**E5-S32** · Matt · could · S · missing
+
+As Matt, whose Deck Lab runs on a server PC, I want Shopping to carry on when an order's or queue row's research file isn't on that PC's disk, so that one buylist not yet pulled there doesn't hide the queue, the deliveries and the follow-ups.
+
+- Given a queue row or order record whose `source` names a buylist or report missing from the records checkout, when I open Shopping, then every row and order is listed, a "needs attention" box names each one with its missing path, and the top bar's delivery notice still works.
+- Given a structurally unreadable record (bad JSON, a missing payload, an invalid kind or status) or a coverage problem, when I open Shopping, then it still refuses as now.
+- Given a missing source, when `python -m decklab.lib.purchases --check`, the nightly `db check`, the tokens check or an order or watchlist write runs, then it is still an error.
+
+Gap: `purchases.overview()` raises on the first missing source, so `GET /api/shopping` answers 500 for the whole page (the queue, the deliveries and E6-S18's follow-ups), and its `warnings` list is always empty. Write-time checks in `decklab/lib/inventory/orders.py` already stop bad rows being saved, so what is left is drift on disk afterwards. From the product review of 2026-11-10.
+
+First slice: give `overview()` in `decklab/lib/purchases.py` a `strict` keyword (default strict) that turns a missing non-deck source into a warning, call it non-strict from `decklab/lib/api/shopping.py`, and draw `data.warnings` in a warn box in `decklab/web/shopping.js`; reword `decklab/smoke.py`'s `records_repo` warning.
+
+**E5-S33** · Matt · should · M · missing
+
+As Matt, reading the shops' snapshot before ordering, I want a wrong or cut-short match to say so, so that I don't trust "not listed" or a price trend when the shop was only partly read or my printing wasn't the one compared.
+
+- Given a queue row whose `printing` is `exact`, or whose finish is foil or etched, when I open its Price history, then each day's reading and the lowest in-stock day are for that row's own printing and finish.
+- Given a Games Portal search whose first page was full, when its result shows on Shopping or in Baskets, then the line says "first page only, more results not read".
+- Given an exact row where the shop lists the card but in no matching set, when its shop line shows, then it says "listed, but not matched to your printing" and names the shop's sets.
+- Given a queue row for a token card, when its shop line shows, then it says token cards aren't checked at this shop.
+
+Gap: the snapshot, both adapters and the 90-day history are built (E5-S08, E5-S19, E5-S29), but `history.day_summary` always picks as an any-printing row, `gamesportal.py` reads one page with no flag for more, `pick()` compares set codes with no tolerance, and `queue_names()` has no token test. From the product review of 2026-11-10, compared with Cardmarket's Shopping Wizard and TCGplayer's optimiser.
+
+First slice: `day_summary` and `report` in `decklab/lib/shops/history.py` take the queue row, `decklab/lib/api/shop_history.py` accepts a row selector and `decklab/web/shopping-history.js` sends it.
+
+**E5-S34** · Matt · should · M · missing
+
+As Matt, comparing shops for cards to play with, I want each shop line to say the condition and language of the listing it chose, and to follow one household preference, so that the cheapest price isn't a damaged or non-English copy.
+
+- Given a snapshot listing that isn't near mint or isn't English, when its shop line shows on Shopping or a deck's Prices, then the line names the condition and language ("Lightly Played, Japanese"); an unknown one reads as unknown, never as near mint or English.
+- Given Games Portal's listings, when the snapshot is taken, then language is its own field, and older entries in the "Lightly Played, JA" form still read correctly.
+- Given a home admin's setting for a minimum condition and for English only or any language, when listings are matched, then shop lines, Baskets, the Fewest shops plan and price history's lowest day follow it, and a line says when a cheaper copy was skipped.
+- Given no setting chosen, when listings are matched, then every listing counts as now.
+
+Gap: `pick()` and `_cheapest()` in `decklab/lib/shops/__init__.py` never read condition, `match()` returns none, and `gamesportal.py` folds language into the condition text, so every consumer (E5-S08, E5-S19, E5-S27, E5-S29) inherits the choice unseen. From the product review of 2026-11-10, compared with TCGplayer's optimiser, Mana Pool and Cardsphere.
+
+First slice: display only: add `language` to `LISTING_FIELDS` in `decklab/lib/shops/base.py`, emit it from `gamesportal.py`, return condition and language from `match()`, and show them in `decklab/web/shopping-snapshot.js`.
+
+**E5-S35** · Matt · could · M · missing
+
+As Matt, keeping the purchase queue's reference prices, I want to record a shop's snapshot reading as a row's reference from Shopping, so that the references and the snapshot stop being two price worlds I reconcile on the PC.
+
+- Given a queue row with a shop's snapshot line that was really read, when a home admin chooses "Use this as the reference", then a preview shows the old and new `listed_aud`, `listed_at`, `in_stock` and `checked`, and confirming saves them as one audited watchlist change.
+- Given a queue changed since the page loaded, a carried or unread shop, or an unconfirmed printing, when it is confirmed, then nothing is saved; User1 and members are never offered it.
+- Given a row whose price today is its lowest in-stock price in the kept 90 days, when Shopping shows it, then its snapshot line says so.
+
+Gap: Back in stock and the price history sheet are built (E5-S19, E5-S29), but `decklab/lib/api/shopping_queue.py` deliberately keeps the four reference fields out of the page's edits. A reviewed bulk version follows the single row; an optional buy-under target per row (never a price paid) needs a column and a migration and comes last. From the product review of 2026-11-10, compared with MTGGoldfish's and Deck Lotus's price alerts. Needs Matt's decision: letting the page overwrite recorded retailer observations, and what `listed_aud` then means.
+
+First slice: a previewed `reference` action in `decklab/lib/api/shopping_queue.py` that re-reads the shop's saved snapshot on the server, with its button in `decklab/web/shopping-snapshot.js`.
+
 ---
 
 ## E6: Record orders and receive cards
@@ -2519,6 +2838,18 @@ As Matt recording a delivery that has both playable cards and token cards, I wan
 Evidence of the gap (Matt, 2026-10-29): `decklab/web/receipt-workflow.js` rcptClientBlockers lists a blocker for each unselected part, each part with no ticked card, each ticked token row whose back is open, and each unticked check. `decklab/web/receipts.js` rcptBackOpen treats every blank back without a `single-sided verified` note as open, so every ordinary single-sided token blocks; Tick all works one part at a time, each with its own confirmation (rcptTickAll).
 
 Built (2026-10-29): `web/receipt-bulk.js` adds **Everything arrived as ordered**, a token part's **Backs as recorded or blank** (writing `single-sided verified` only on the rows left ticked; unconfirmed pairings still ask one by one) and **All checks done** for a part with two or more checks, each behind one confirmation; blockers are grouped per part. The mixed fixture delivery reaches Preview in 3 actions instead of 13, with the same request body as by hand; the server is unchanged. Tests: `decklab/tests/test_receipt_bulk_ui.py`. See [HISTORY.md](../HISTORY.md#fewer-steps-for-a-delivery-that-came-as-ordered-2026-10-29-e6-s27).
+
+**E6-S28** · Matt · could · S · missing
+
+As Matt, having just bought a shop's basket, I want to open Record an order already filled in from it, so that I don't retype the cards, pick each printing and tick each queue row again.
+
+- Given a basket or a plan shop on Shopping, when a home admin with order rights chooses "Record this order…", then the Record an order sheet opens with the shop as seller, today's date, and the basket's ready rows as cards at the copies it counts, each with the snapshot listing's set, number and finish; no price is carried.
+- Given the seeded sheet, when it opens, then the matching queue rows are ticked as fulfilled at no more than the basket's copies, add-ons start out of the order, and it says the printings came from the snapshot and need checking; its preview and audited save are unchanged.
+- Given User1, a member, or baskets older than the current queue, when Baskets shows, then the button doesn't.
+
+Gap: Baskets and the plan (E5-S27) offer only Copy this shop's list (E5-S24), and the order sheet (E6-S02) opens empty; nothing passes a basket to it. From the product review of 2026-11-10, compared with TCGplayer's Cart Optimizer and Deck Lotus's cart hand-off. Needs Matt's decision: E5-S27 says nothing in Baskets records an order, so he must agree to a hand-off to the reviewed sheet.
+
+First slice: client only: an optional seed for `shopOrderSheet` in `decklab/web/shopping-orders.js`, and a seed builder with the button in `decklab/web/shopping-baskets.js` and `decklab/web/shopping-plan.js`.
 
 ---
 
@@ -3085,6 +3416,70 @@ Evidence:
 - `decklab/tests/test_feature_ui_tokens.py` (no ready chip or summary, the compact row, the body's words, the groups, the packed line's folded sleeving words, the short estimate, a merged card's packed count, the summary for a token packed elsewhere), `test_product_tokens_ui.py` (a product's rows: card counts, no "Packed N", its record drawn once), `test_dice_counters_ui.py`, `test_token_peaks.py`, `test_deck_page_ui.py`, `test_web_pages.py`
 
 Now (2026-11-02): built ([HISTORY.md](../HISTORY.md#a-shorter-tokens-part-on-the-cards-tab-2026-11-02-e7-s33)). No API change; the Packing plan, Build decks and the Tokens page keep their words.
+
+**E7-S34** · Matt · could · M · missing
+
+As Matt, building from what the household owns, I want the card searches to take mana value ranges and the same typed terms everywhere, so that "mana value 2 or less" is one query in either.
+
+- Given the editor's finder or the Collection page's Find cards, when I type `mv<=2`, `mv>=5` or `mv=3`, then only cards in that mana value range are listed.
+- Given the Collection page's Find cards search, when I type `o:` or `t:` terms, then they filter by rules text and type line as in the editor's finder, and the other words still match name and rules text.
+- Given `-o:` or `-t:` in either search, when it runs, then cards matching that term are left out.
+- Given a term neither search knows, when it runs, then both give the same sentence listing the known terms.
+
+Gap: both searches take one mana value only (0 to 6, or 7 and over), and the Collection page's search reads `o:` and `t:` as literal text. E2-S25 built the finder's terms, E7-S13 Free now, E7-S28 In storage only and E8-S23 the location filter, so `is:free` and `loc:` aren't needed. Keyword, power, rarity and set terms, OR and filter chips are left out. From the product review of 2026-11-10, compared with Archidekt, Scryfall and Moxfield search.
+
+First slice: move the term parser from `decklab/lib/api/editor.py` into a new `decklab/lib/api/card_terms.py` with `mv` comparisons and negation, use it in `decklab/lib/api/collection.py`, and change only the hint and unknown-term message in `decklab/web/collection.js`.
+
+**E7-S35** · Matt · could · M · missing
+
+As Matt, scanning a stack of new cards, I want to set a condition, language and finish once for the cards that follow and to park unsure scans, so that no card is dropped or guessed.
+
+- Given the Scan cards sheet, when I set Keep for the next cards (condition, language, finish), then each card added afterwards starts with those values, a language read off the card wins over the kept one, and a kept finish applies only to a printing that has it.
+- Given no kept values, or the sheet reopened, when a card is scanned, then its condition is blank and its language only what the card showed, as now.
+- Given a scan Deck Lab isn't sure of, when I take the next photo, then the unsure one stays in a Check these list with its proposals.
+- Given the Check these list isn't empty, when I choose Review, then it's refused or warns, and no unresolved card reaches the import preview.
+
+Gap: E7-S32 built the sheet, each pending card's printing, finish, condition and language, and adding a copy when a card is scanned again; nothing carries a choice to the next card, and an unpicked proposal is lost at the next photo. From the product review of 2026-11-10, compared with Archidekt, TCGplayer's scanner, CardCastle and ManaArchive.
+
+First slice: in `decklab/web/collection-scan.js`, session defaults applied in `addScanCard` and an unsure list fed by `drawScanResult` that blocks Review, tested in `decklab/tests/test_collection_scan_ui.py`; no server change.
+
+**E7-S36** · Matt · could · M · missing
+
+As Matt, before a trade at shop night, I want a Spares list of the copies no deck in our space holds or still wants, so that I don't trade away a card a planned deck needs.
+
+- Given the Collection page, when I choose Spare, then each card shows its copies left after those built decks and intact products hold and those the space's building and idea decks' Planned lists still want (trial decks left out), with a reason such as "4 owned, 1 in a built deck, 1 wanted by an idea deck: 2 spare".
+- Given the Spare list, when I choose Copy list, then I get `N Name (SET) number` lines with no prices, values or totals.
+- Given a viewer who may not see the space's inventory, when they ask for it, then the answer is "That collection isn't public.", and a reason names no deck the viewer can't see.
+
+Gap: E7-S13's Free now subtracts only built decks and intact products, so it overstates what's safe to trade, and no collection list can be copied. Considering cards and the viewer's own wishlist are a second slice. Needs Matt's decision: whether members may offer cards to each other and see mutual matches, which would reveal other spaces' deck shortfalls. From the product review of 2026-11-10, compared with Deckbox, Dex and ManaArchive.
+
+First slice: `availability=spare` in `decklab/lib/api/collection.py` from the pool's holders and the unbuilt decks' Planned lists, then a Spare choice, reason line and Copy list in `decklab/web/collection.js`.
+
+**E7-S37** · Matt · could · L · missing
+
+As Matt, lending cards to family and friends, I want Deck Lab to record copies lent out and their return, so that a lent card doesn't look free.
+
+- Given free copies of a card, when I lend some to a named borrower (free text) with a date, then it's one audited change, and lending more than the free copies is refused.
+- Given an open loan, when a deck's owned-vs-needed table or the pool is worked out, then the lent copies aren't free, and the table's Notes say "1 lent out".
+- Given an open loan, when I record its return, then it's one audited change, the copies are free again, and the decks whose tables are now out of date are named.
+- Given anyone who can't see the space's inventory, when they read any page, warning or refusal, then no loan or borrower appears, and a loan never adds cards to another space.
+
+Gap: nothing records a loan, so `decklab/lib/pool.py` counts lent loose copies as free; a storage location (E8-S22) doesn't reduce them, and a trade (E7-S22) removes ownership. A lent built deck's mark is a later slice. No due dates or reminders. Needs Matt's decision: whether the household lends cards often enough to keep such records. From the product review of 2026-11-10, compared with OpenMTG.
+
+First slice: a `card_loan` migration with its `UNDO_MIGRATION` entry, a new `decklab/lib/inventory/ops_loans.py`, `python -m decklab.db collection lend|return|loans`, and open loans as one more holder in `decklab/lib/pool.py` with the table's "lent out" label.
+
+**E7-S38** · Matt · could · L · missing
+
+As Matt, importing or receiving copies of one printing that differ, I want the row's note to say how the copies differ, so that what a receipt's checks or an export recorded isn't lost.
+
+- Given copies of one printing with different or partly unknown conditions or languages, when they're merged by an import, `collection merge` or a receipt, then the field stays blank and the row's note gives the counts, such as "Copies: 2 NM, 1 not recorded".
+- Given a ManaBox export marking copies Misprint or Altered, or a Deckbox export marking them Signed, when it's imported, then the row's note says so ("1 signed").
+- Given rows carrying the older general note, when the Set condition & language sheet counts merged rows, then old and new notes both count.
+- Given these merges, when the row is saved, then the identity key, the eight CSV columns and what decks reserve are unchanged.
+
+Gap: `merge_rows` in `decklab/lib/inventory/rules.py` and the import preview in `decklab/lib/api/collection_import.py` write only a general note, and the importers map only condition and language. E7-S02 built the imports, E7-S29 the bulk sheet. Needs Matt's decision: real per-copy sub-rows are the L-sized part, and AGENTS.md says the identity key doesn't separate copies; only the notes slice is proposed. From the product review of 2026-11-10, compared with ManaArchive, Moxfield, CardCastle and Archidekt.
+
+First slice: a counted breakdown replacing the general note in both places, the Misprint, Altered and Signed columns in the importers, and both note prefixes in `decklab/web/collection-bulk.js`.
 
 ---
 
@@ -3896,6 +4291,55 @@ Built (2026-11-04): the second slice. The Overview's At the Commander table name
 
 Built (2026-11-05): the official text. `constants.BRACKET_TUTORS` keeps Wizards' wording on tutors, read 2026-11-05 from the Commander Brackets Beta Update of 2025-10-21, which removed the tutor restrictions from every bracket ("rely on Game Changers to catch the most efficient tutors"); only Bracket 4's "Players expect" list names tutors, and the 2026-02-09 update doesn't mention them. `stats.tutors.tutor_rules` adds `bracket["tutor_rules"]`, "not known" while Wizards' latest Commander announcement (E9-S24) is newer than the wording's `reviewed_through` or its date is unknown. The Stats tab's Minimum bracket, the Overview's What opponents will face and the printout quote it at the target bracket. The text sets no number, so there is no Checks warning and nothing is blocked. Upkeep: re-read `BRACKET_TUTORS` after a new Commander announcement. Tests: `test_commander_readiness.py`, `test_commander_readiness_ui.py`, `test_commander_print_ui.py`, `test_stats_tutors_ui.py`. See [HISTORY.md](../HISTORY.md#the-official-bracket-text-on-tutors-2026-11-05-e9-s29).
 
+**E9-S30** · Matt · could · S · missing
+
+As Matt, building a Commander deck towards a target bracket, I want a Game Changer mark on a card before I add it, so that I see its bracket cost while choosing, not a moment later in the Checks panel.
+
+- Given a Commander deck's editor, when the finder, EDHREC ideas, My wishlist ideas or Considering rows list a card Scryfall flags as a Game Changer, then the row carries a Game Changer chip that doesn't move the quantity stepper.
+- Given the draft's last check holds its bracket, when adding the card would take the Game Changer count past a bracket's limit and above the Target bracket, then the chip says it would put the deck at Bracket N, above its target; the live check stays the authority.
+- Given a casual 60-card deck, then no chip shows anywhere (E2-S21).
+
+Gap: the shared card JSON has no game_changer field, though the card index stores it, so no picker can mark a card before it's added. E9-S03's live check names the Game Changers seconds after adding, E9-S25 covers combo pieces one card away, and the finder's stepper and the EDHREC and wishlist ideas already handle cards in the draft. From the product review of 2026-11-10, compared with Table Commander, Moxfield and Archidekt.
+
+First slice: add game_changer to `_card_json` in `decklab/lib/api/card_lookup.py`, draw the chip in `decklab/web/editor-cards.js` from the bracket `editor-save.js` holds, and reuse it in `editor-edhrec.js`, `editor-wishlist.js` and `editor-considering.js`, with an API test and a UI test.
+
+**E9-S31** · Matt · could · M · missing
+
+As Matt, taking a deck to a social Commander night, I want the page to say which cuts would bring the counted minimum bracket down to the deck's Target bracket, so that fixing a deck that reads too high is a quick swap I can test.
+
+- Given a Commander deck whose minimum bracket is above its Target bracket, when I open its Stats tab or Overview, then a To fit Bracket N list gives the fewest cuts from the counts the minimum uses, such as any 1 of these 4 Game Changers, and says the counted minimum would then be N, never that the deck is Bracket N.
+- Given the tag or combo data can't be read, then it says it can't work this out, never an all-clear.
+- Given a viewer who sees the space's inventory and may edit the deck, then each card to cut offers E3-S25's free replacements and Test this swap, leaving out or marking any that would raise the minimum again.
+
+Gap: nothing works out the cuts. The cards and combos behind the minimum are already named (E9-S03, E9-S05, E9-S06, E9-S23), and E3-S25 and E9-S26 supply replacements. A fast-mana line is left out, being close to the early-game hint declined on 2026-10-21 (E9-S23). From the product review of 2026-11-10, compared with ScrollVault, Table Commander and DeckCheck.
+
+First slice: a pure `bracket_fixes` beside `min_bracket` in `decklab/lib/stats/commander.py`, then the list in `decklab/web/stats.js` and `decklab/web/commander-readiness.js`, reusing `decklab/web/deck-swaps.js` for replacements.
+
+**E9-S32** · Matt · could · M · missing
+
+As Matt, practising a Commander deck, I want the goldfish to report when the commander is cast and to count the mana sources it still skips, so that I know how often the commander is out on time and artifact-ramp decks stop reading as short of mana.
+
+- Given a Commander deck's practice result, then each setup shows commander cast by turn N (by turn, the average turn, and never), per commander for a pair, worded as the earliest affordable turn, not advice.
+- Given one-shot sacrifice mana, charge-counter rocks, abilities that tap another creature, or rocks that don't untap, when a class is modelled, then its cards move from What isn't counted to the cards read in a special way, each class behind its own fixture.
+- Given a deck with E2-S24 categories, when I pick a category, a count and a turn, then the result gives the rate of games with at least that many of its cards cast by that turn.
+
+Gap: the engine already casts the commander and the page names the cards it doesn't model (E3-S04), but the cast turn shows only through the first big spell, the named source classes aren't counted, and the goldfish doesn't read categories (E3-S24 gives a draw chance only). From the product review of 2026-11-10, compared with Salubrious Snail and Playgroup.gg.
+
+First slice: the cast turn only. Record it in `decklab/lib/goldfish/engine.py`, report it from `decklab/lib/goldfish/results.py` with a new cache version, and a panel in `decklab/web/practice.js`.
+
+**E9-S33** · Matt · could · M · missing
+
+As Matt, bringing a deck to the shop's Commander pods, I want the three-card combos my deck fully holds listed beside its two-card ones, so that I know about them before an opponent points one out.
+
+- Given a Commander deck holding all three named cards of a Commander Spellbook combo with no unnamed pieces, when I open What opponents will face, the Stats tab or the printed play sheet, then it is listed under a Three-card combos heading, capped with a total, and a commander plus two cards counts as a commander plus one does now.
+- Given a three-card combo, then it never raises the minimum bracket, and the page says so; the note on what isn't checked now says four or more cards.
+- Given a three-card match that is a two-card combo plus a spare piece, then it isn't listed twice.
+- Given the combo data can't be read, then it says three-card combos weren't checked.
+
+Gap: the local reduction keeps only two-card combos (E9-S23), and One card away (E9-S25) stays two-card. No early-combo flag is part of this: Matt decided on 2026-10-21 (E9-S23) to show no early-game hint, so reviving one needs Matt's decision. From the product review of 2026-11-10, compared with Commander Spellbook's Find My Combos and Table Commander.
+
+First slice: let `decklab/lib/combos.py` reduce and match three pieces into a separate lazily loaded file, add `three_card_combos` in `decklab/lib/stats/commander.py` outside `min_bracket`, and add the heading in `decklab/web/commander-readiness.js` and `decklab/web/stats.js`.
+
 ---
 
 ## E10: Members, access and privacy
@@ -4540,6 +4984,32 @@ Evidence:
 - `decklab/lib/permissions.py`: SPACE_ACTIONS, ADMIN_ACTIONS
 - `decklab/lib/api/collection_edit.py`, `decklab/lib/api/tokens.py`, `decklab/lib/api/precons.py`
 - `decklab/tests/test_inventory_privacy.py`: HomeMemberTests
+
+**E10-S44** · User5 · could · M · missing
+
+As User5, a member with my own space, I want one download of my whole space and one list of the cards my decks still need, so that I keep a safety copy and a shopping list without anyone else handling my data.
+
+- Given User5 on his Collection page, when he picks Download my space (zip) in More, then he gets one zip from a single snapshot: his collection, token cards, dice, storage locations, raw imports and each deck's Markdown text, marked as a personal copy, never a departure export.
+- Given anyone else, an admin included, when they ask for that download, then the answer is the same 403 as for a collection that isn't public.
+- Given User5 on his Decks page, when he opens Cards to get, then it lists the missing cards across his own decks, each with the decks wanting it, and Copy list gives quantity and name.
+- Given either view, then nothing is stored: no queue, orders or shop prices (E6-S22 stands).
+
+Gap: the whole-space export is a command on the PC only (E10-S40), and the missing-cards view across decks is home's Shopping only; a member has the collection CSV (E7-S30) and per-deck decklists. Needs Matt's decision: whether Cards to get is wanted beside E6-S22, and whether home gets the download. From the product review of 2026-11-10, compared with ManaBox and Deckbox.
+
+First slice: a new `decklab/lib/api/space_download.py` streams the files `snapshot` in `decklab/db/space_export.py` builds, with a More item in `decklab/web/collection.js`.
+
+**E10-S45** · Matt · could · M · missing
+
+As Matt, the admin, I want the picture fetch pinned to the address it checked and the routes an outside member can reach bounded, so that a signed-in member's link can't be aimed at home-network addresses or fill the PC's memory and disk.
+
+- Given Find picture with a link whose host answers a public address when checked and a home-network one a moment later, when the fetch connects, on the first request and every redirect, then it dials only an address it checked, with the certificate still checked against the original name.
+- Given several picture fetches at once, then the extra ones are refused with a 429.
+- Given staged pictures beyond a set count or size, then the oldest are pruned.
+- Given a scan photo over about 4,000 pixels a side, then it is refused before any reading, and on Linux Tesseract runs under a memory limit.
+
+Gap: the fetch checks the host, then connects by name, so it resolves twice; staging is pruned by age only; and scans accept 10,000 pixels a side. Find picture's other checks (E8-S01) and one scan at a time (E7-S32) are built. A general rate limiter isn't wanted for a hand-invited audience. Needs Matt's decision: the second lookup was an accepted risk (`decklab/PLAN.md`) before E8-S26 gave tunnel members the fetch. From the product review of 2026-11-10.
+
+First slice: `check_host` in `decklab/lib/accessory_fetch.py` returns the checked addresses and the connection dials one, with a changing-resolver test in `decklab/tests/test_accessory_fetch.py`.
 
 ---
 
@@ -5612,3 +6082,206 @@ As Matt, finding things on Deck Lab, I want to know whether the More menus help 
 Decided (Matt, 2026-11-04): he couldn't find Build decks on the iPad, though he had used it before, because it was in the deck page's More; investigate the More dropdown and whether it's beneficial.
 
 Gap: Matt's decision on the review in [more-menus-review.md](more-menus-review.md) (2026-11-05): make Build decks a top-bar pill in the lab from 1000 px only (a CSS rule as well as `nav: "main"`, since a phone on its side gets the lab's bar from 600 px), staying in the phone's and upright iPad's More sheet and in a phone on its side's More ▾; add a Game log link to the deck Overview's Played at home panel; then take Build decks out of the Collection page's More; keep every other item. Then make the moves he agrees and record their reasons here. The page counts weren't available off the server PC: the review gives the read-only query to weigh Tokens, Sleeves & boxes, Wishlist and Activity with.
+
+**E11-S62** · Matt · should · S · missing
+
+As Matt, publishing Deck Lab's code in a public repo, I want the Worker's config to name no real zone and CI to stop the next such leak, so that the public-repo rule is checked, not only written down.
+
+- Given `decklab/cloudflare/wrangler.toml`, when it's read, then its routes name only decklab.example.com placeholders, and README's "From outside the home" says how the real routes come from a gitignored local file or the deploy command.
+- Given a tracked text file, when it holds an email address outside example.com and a small allow-list of test and tool addresses, then the lint check fails, naming the file.
+- Given a tracked Cloudflare or wake gate config file, when a route, `zone_name`, `account_id` or `zone_id` isn't an example placeholder, then the check fails.
+- Given the PC, where `config.json` exists, when the fixture suite runs, then the configured domain and emails are searched for in every tracked file.
+
+Gap: none of this is built. E10-S39's `test_web_no_personal_data.py` reads only the served files and needs a local `config.json`, so CI has nothing to match; E11-S02 lists `wrangler.toml` but says nothing of its routes. The check must never hold the real domain itself (a SHA-256 at most). From the product review of 2026-11-10. Needs Matt's decision: whether to rewrite history, which has held the name since the first public commit; Protect main forbids the force push.
+
+First slice: placeholders in `decklab/cloudflare/wrangler.toml`, a gitignored `wrangler.local.toml` and the step in `decklab/README.md`; then `scripts/audit_public_repo.py --check` with `decklab/tests/test_public_repo_audit.py`, run in `.github/workflows/lint.yml`.
+
+**E11-S63** · Matt · could · S · missing
+
+As Matt, the household admin, I want Deck Lab's pages and API answers to refuse being framed and to carry a strict content policy, so that another site can't put the real page in a frame and borrow a signed-in person's clicks.
+
+- Given any answer from the server, when its headers are read, then it has `X-Frame-Options: DENY` and a `Content-Security-Policy` with `frame-ancestors 'none'`; the `/sym` answer keeps its own stricter policy.
+- Given an HTML answer, when its policy is read, then scripts, styles, fonts and connections come only from Deck Lab itself and images also from `data:` and `blob:`; a JSON answer has `default-src 'none'`.
+- Given `index.html`, when a test reads it, then it has no inline script body and no `style=` attribute.
+- Given an answer on the tunnel's listener, when its headers are read, then it has `Strict-Transport-Security`, which the home listener never sends, and a `Permissions-Policy` that leaves the camera to card scanning.
+
+Gap: none of it is built. `_send` in `decklab/lib/server_http.py` adds only nosniff and Referrer-Policy; only the `/sym` SVGs, the Worker's off page (E11-S02) and the wake gate (E11-S59) carry a policy. The server's cross-site write check can't see a framed copy of the real page. Check real browsers and scanning (E7-S32) before shipping. From the product review of 2026-11-10.
+
+First slice: the anti-framing headers and default policies in `_send`, the theme script moved from `decklab/web/index.html` into a new `decklab/web/theme-boot.js`, and header cases in `decklab/tests/test_server.py`. HSTS and Permissions-Policy are a second slice.
+
+**E11-S64** · Matt · could · S · missing
+
+As Matt, opening Deck Lab on a phone and the iPad, I want the page's scripts and stylesheets kept by the browser and sent compressed, so that a page load doesn't ask the server PC about some 190 files, each read and hashed again.
+
+- Given a script or stylesheet request whose `v` equals the current web revision, when it's answered, then it carries `Cache-Control: private, max-age=31536000, immutable`; `index.html`, fonts, an unstamped request and a stale `v` keep today's `no-cache` and ETag.
+- Given a text file (HTML, JS, CSS, JSON, SVG), when a client that accepts gzip asks for it, then the answer is gzipped with `Vary: Accept-Encoding` and an ETag of its own; fonts and pictures never are.
+- Given a file edited or replaced by a `git pull`, when it's next asked for, then the new bytes are served without a restart.
+
+Gap: the long caching, the compression and the in-memory copy aren't built. E11-S05's `?v=` stamp exists, but only to bust caches: `_static` in `decklab/lib/server_http.py` still reads and hashes each file per request and answers `no-cache`. Accessory pictures, card images and API answers keep their caching. Time a phone's load before and after, as the gain is unmeasured. `private`, never `public`, so Cloudflare keeps nothing outside the login. From the product review of 2026-11-10.
+
+First slice: in `_static`, a per-file cache keyed on size and modified time with gzip negotiation, then the immutable header only when `v` matches a cheaply cached revision from `decklab/lib/build.py`; cases in `decklab/tests/test_server.py`.
+
+**E11-S65** · Matt · could · M · missing
+
+As Matt, keeping every space private as routes are added, I want each route to declare who may use it and one test to probe them all, so that a new route without a guard fails CI before it reaches a member.
+
+- Given the route tables in `decklab/lib/feature_routes.py`, when a row has no declared access class (such as `open`, `deck`, `home-records`, `admin`), then a fixture test fails.
+- Given every row not marked `open`, when it's asked by nobody, by a member through the tunnel and by the other home profile, then a write is refused and another space's data answers 403, 404 or empty.
+- Given `SECURITY.md`, when it's read, then it gives the two listeners, the script rule, the home chooser as an accepted risk and a new-route checklist.
+
+Gap: the tables hold path, handler, query keys and body cap, and the rules of E10-S29, E10-S30, E10-S35 and E10-S38 are tested per area, but no row declares its permission and no test walks them. Docstrings in `server.py` and `permissions.py` still say an admin reads a member's collection and sees everything on Activity, and AGENTS.md says dice both are and aren't recorded. From the product review of 2026-11-10. Needs Matt's decision: whether `/img`, a GET that writes the image cache, should need a named viewer.
+
+First slice: an `ACCESS` entry per row in `decklab/lib/feature_routes.py`, a new `decklab/tests/test_route_access.py` (the older routes of `server_http.py` by a hand list), and the stale statements fixed in `decklab/server.py`, `decklab/lib/permissions.py` and `AGENTS.md`. `SECURITY.md` and a check that the docs list every migration follow.
+
+**E11-S66** · Matt · could · S · missing
+
+As Matt, relying on a hand-written sign-in verifier and picture readers because Deck Lab uses only the standard library, I want them checked against independent vectors and damaged input, so that a later edit can't weaken the door members come through.
+
+- Given a trimmed fixture of Project Wycheproof's RSA PKCS#1 v1.5 SHA-256 vectors (its Apache-2.0 notice kept), when each is run against `access.rsa_sha256_valid`, then valid ones pass and invalid and "acceptable" ones are refused.
+- Given valid PNG, JPEG and WebP pictures changed by a seeded run of bit flips, truncation, length edits and repeated chunks, when they're decoded or checked, then each is accepted or refused with the usual refusal, never an unexpected exception.
+- Given valid sign-in tokens changed the same way, when they're identified, then none is accepted unless it's byte-equal to the original.
+- Given CI's shards, when the new tests run, then they're seeded, bounded by count and pass on Windows and Linux.
+
+Gap: no outside vectors and no randomised test exist. The hand-written negative cases are built and stay: `decklab/tests/test_access.py` for the tokens (the sign-in of E10-S05 and E10-S06), `test_accessory_fetch.py` (E8-S01) and `test_api_accessory_upload.py` (E8-S02) for pictures. Two token cases are worth adding: a signature with an extra leading zero byte, and a header that is a JSON array. From the product review of 2026-11-10, compared with Project Wycheproof.
+
+First slice: a new `decklab/tests/test_hostile_input.py` reusing the existing tests' picture and token builders with `random.Random(0)`, then the trimmed vector fixture under `decklab/tests/fixtures/`, looped in `decklab/tests/test_access.py`.
+
+**E11-S67** · Matt · could · S · missing
+
+As Matt, the only maintainer of a public repo that publishes release zips, I want its actions, images and dependencies pinned and their updates proposed to me, so that a changed upstream tag can't alter a release.
+
+- Given `.github/dependabot.yml`, when a GitHub Action, psycopg, an npm package of the Safari or UI-review tools or a wake gate image has a newer version, then one grouped pull request a month proposes it.
+- Given the three workflows, when they're read, then each `actions/*` use is pinned to a commit SHA with its version in a comment.
+- Given `decklab/wakegate/compose.yaml`, when it's read, then cloudflared has a dated version tag, not `latest`, and Python a patch tag.
+- Given a version tag, when `release.yml` makes the zip, then it also records a build-provenance attestation, and SELF-HOSTING.md gives `gh attestation verify` as an optional check beside the `.sha256`.
+
+Gap: none of the four is built: `.github/` holds only the workflows, whose actions are pinned by major tag. Already in place: Dependabot's alerts, E11-S49's release only of a commit whose checks passed, and the Forge download's SHA-256 check. Checking an attestation inside Deck Lab waits for E11-S51's updater. From the product review of 2026-11-10, compared with OpenMTG's and Deck Lotus's pinned images. Not code: Matt checks in the repo's settings that secret scanning is on.
+
+First slice: `.github/dependabot.yml` for `github-actions` and `pip`, SHAs in `release.yml`, `tests.yml` and `lint.yml`, and a dated cloudflared tag in `decklab/wakegate/compose.yaml`. The attestation follows before the first release is tagged.
+
+**E11-S68** · Matt · could · M · missing
+
+As Matt, running Deck Lab on a headless server PC, I want its quiet failures to reach me, so that a shop unreadable for a week or an unbounded log doesn't wait until someone notices.
+
+- Given `db.log`, when it passes a size cap, then it rotates as `server.log` does.
+- Given a shop the nightly couldn't read for 3 nights running, when an admin opens any page or runs `db status`, then the warning says so with the date of the prices shown.
+- Given a script error on a page, when it happens, then the person sees a reference in place of the raw message and file, and a home admin finds it in Settings with the page, error type and time, and no deck id, name or message text.
+- Given an optional `"alerts"` address in `config.json`, when the nightly ends or the watchdog gives up, then the address is pinged, with step names and ok or failed only.
+
+Gap: none of the four is built. E11-S05's footer warnings and `db status` must be opened; E11-S26's watchdog gives up silently; E5-S08 shows "price unknown" per shop, yet the nightly shop step always succeeds; `core.js` shows raw error text. From the product review of 2026-11-10, compared with OpenMTG's webhooks and Uptime Kuma. Needs Matt's decision: the ping is the operator's own monitor, but close to what E11-S54 declined.
+
+First slice: rotation in `log()` of `decklab/db/conn.py`, per-shop failed nights in `decklab/lib/shops/__init__.py`, and the shop line in `checks_warning` of `decklab/lib/dbstatus.py`.
+
+**E11-S69** · Matt · should · M · missing
+
+As Matt, keeping every space private, I want what leaves the server PC each night to hold no more than it must, so that a member's cards, decks, wishlist and email don't sit readable on a git host or a NAS share.
+
+- Given `database.export_remote_scope` set to `home`, when the nightly export runs, then the pushed repo holds only home's tables and files: no `profile_email`, `wishlists/` or `magic/people/`, and no other space's rows; unset, the export is as today.
+- Given an optional `database.backup_recipient` (a public key), when the nightly copies a dump to `backup_dir`, then the copy is encrypted and the nightly needs no secret or passphrase.
+- Given encrypted copies, when restore-check or `db restore` runs, then it decrypts with a key file named in the config, and `db status` warns when the key is missing.
+
+Gap: neither part is built. E11-S03's nightly writes the dump as it is and the export pushes every space's data as plain CSV; the only protections are access controls (a private repo, a dedicated NAS share). E10-S40 removes a departed member's data from the database, yet earlier export commits still hold it. From the product review of 2026-11-10. Needs Matt's decision: whether those access controls are enough; if not, whether to recreate the export repo, and where the private key is kept off the server.
+
+First slice: a per-table scope in `decklab/db/export.py` from a new `database.export_remote_scope` setting in `decklab/db/conn.py`, with fixture tests. Encrypting the `backup_dir` copy in `decklab/db/backup.py` is the second slice.
+
+**E11-S70** · Matt · could · S · missing
+
+As Matt, updating the server PC with `python -m decklab.update`, I want the old server stopped before the backup whenever migrations are pending, and a database newer than the code named as such, so that restoring the pre-migration backup loses no write and a rolled-back checkout explains itself.
+
+- Given pending migrations and a running server, when I run the update, then the server is stopped before the backup and started again afterwards, on Linux as on Windows; with none pending it isn't stopped early.
+- Given the backup or the migration fails, then the way-back text says the server is stopped and how to start it, and that a code-only rollback is fine when the applied migrations only added things.
+- Given a database holding a migration this code doesn't have, when an admin opens Deck Lab, then the banner says the database is newer than this code, not that migrations need attention; nothing else is refused.
+- Given `decklab/db/migrate.py` and the "Database" part of `decklab/README.md`, then both state the rule: add in one release, remove in a later one.
+
+Gap: none of this is built. E11-S60's updater backs up and migrates while the old server still serves, and E11-S05's banner folds a newer database into its pending-migrations state. From the product review of 2026-11-10, compared with OpenMTG's start-up migrations.
+
+First slice: in `decklab/update.py`, stop the server before the backup step when migrations are pending, with cases in `decklab/tests/test_update.py` and the wording in SELF-HOSTING.md's "Updating".
+
+**E11-S71** · Matt · could · S · missing
+
+As Matt, relying on figures Deck Lab's authors looked up by hand, I want one list of those reference facts with the date each was last reviewed, and a line on Settings when one is overdue, so that land counts, role targets and EDHREC's page layout don't go stale unnoticed.
+
+- Given the hand-maintained fact groups (bracket rules, tutor wording, Karsten's land and source figures, the Command Zone role targets, the EDHREC page shape and the gauntlet's average-deck shape), then one index in the code names each with its source, reviewed date and review interval, pointing at the existing constants.
+- Given a group whose review is overdue, when an admin opens Settings, then one "Reference facts to review" line names it.
+- Given Deck Lab's bracket rules are older than Wizards' newest Commander announcement, then the same line says so, without a Commander deck being opened.
+- Given the EDHREC shape check, then its date is a constant in `decklab/lib/edhrec.py`, not a sentence in a docstring.
+
+Gap: no index, time-based review signal or Settings line exists. E9-S24 and E9-S29 already date the bracket rules and tutor wording and warn on a deck's Commander readiness panel when an announcement is newer; E9-S26's role targets carry their checked date. From the product review of 2026-11-10, compared with EDHREC's changing figures and Playgroup.gg's weekly rebuilt bands.
+
+First slice: add `decklab/lib/stats/reviewed.py` (the records and `due(today)`), show its overdue groups on the admin Settings page, and test it in `decklab/tests/test_reviewed.py`.
+
+**E11-S72** · Matt · could · S · missing
+
+As Matt, keeping Deck Lab's design model honest, I want the story counts worked out from the story headers by a script and checked in CI, so that the summary tables can't drift from the stories and nobody recounts them by hand.
+
+- Given `decklab/design/stories.md`, when I run `python scripts/audit_stories.py --check`, then it counts built, partial, missing and not wanted stories per epic from the header lines and exits 1 when the summary table in stories.md or the epic table and totals in `decklab/design/README.md` disagree; `--write` rewrites those blocks.
+- Given a pull request that flips a story's status without updating the tables, then the lint workflow fails, documentation-only changes included.
+- Given the script exists, then the long hand recount paragraph under stories.md's summary is replaced by one line naming the script.
+- Given a partial story with an optional `Awaiting:` line (such as `iphone, ipad` or `decision`), when I run `--sessions`, then the waiting checks are listed by device and compared with TODO.md's rows.
+
+Gap: nothing parses stories.md; the counts are kept by hand and the design README's totals have already drifted from the headers. E11-S41 and E11-S42 (the comment and command-document audits) are the built neighbours. From the product review of 2026-11-10, compared with Playgroup.gg publishing data-quality figures beside results.
+
+First slice: add `scripts/audit_stories.py` (standard library) with `--check` and `--write`, a fixture test in `decklab/tests/test_audit_stories.py` and a step in `.github/workflows/lint.yml`, correcting the design README's totals in the same change.
+
+**E11-S73** · Self-hoster · could · S · missing
+
+As a self-hoster running my own Deck Lab, I want the Beginner Box product code and the date and number locale each defined in exactly one place, so that what one household happens to own or where it lives isn't scattered through shared code.
+
+- Given the code, when it's searched for the Beginner Box stem, then it's defined once in `decklab/lib/decks/__init__.py` and once as the page's prefix in `decklab/web/core.js`; `decklab/db/space_forge.py` and `decklab/lib/goldfish/cli.py` use the Python constant.
+- Given the page scripts, when a date or number is formatted, then they use one locale constant or helper in `core.js`; no other script names `en-AU`.
+- Given a new product-stem literal or raw locale string elsewhere in the code, then a fixture test fails, naming the file; docstrings and fixtures are left alone.
+- Given the current household's install, then nothing it sees changes.
+
+Gap: the stem is repeated as a literal in three places beside its constant, and `en-AU` is written out across the page's scripts. E10-S39's test covers only names and titles in the page code; E11-S53 and E11-S48 are built, the storage box is E8-S25's and first-run choices E11-S52's, so no "house profile" config block is wanted. From the product review of 2026-11-10, compared with OpenMTG's admin-set choices. Needs Matt's decision: whether the locale stays en-AU or follows the browser for other installs.
+
+First slice: use `decks.BEGINNER_BOX` in `space_forge.py` and `goldfish/cli.py`, add a `LOCALE` constant and helpers to `decklab/web/core.js`, and add `decklab/tests/test_no_household_literals.py`.
+
+**E11-S74** · Matt · could · M · missing
+
+As Matt, changing a page built from many scripts sharing one global scope, I want CI to catch a call to a function that no longer exists and a page that throws in a real browser, and the router to close every sheet through one function, so that a renamed helper or a new sheet family can't break a page unnoticed.
+
+- Given `decklab/web/app.js`, when the profile changes, the "Who are you?" screen draws or the route changes, then one `closeAllSheets()` closes every sheet family in today's order; a test fails when a top-level sheet-closing function in the page scripts isn't called by it.
+- Given a page script calling a bare name that no script defines and that isn't a browser global, a local or a `typeof`-guarded name, when the fixture suite runs, then a test names the file and the name.
+- Given a pull request, when CI runs, then a Linux job runs `python scripts/ui_review.py --smoke` in the runner's Chrome and fails on any page error or console error; it stays outside the required `tests` check until it has proved stable.
+
+Gap: none of the three exists. The fixture suite already runs every script in page order under Node, and `decklab/tests/test_web.py` has `test_scripts_load_in_order` and `test_no_name_is_defined_twice`, so syntax and load-time errors are caught; the browser smoke exists but no workflow runs it. From the product review of 2026-11-10.
+
+First slice: extract `closeAllSheets()` in `decklab/web/app.js` from its three repeated blocks and add the every-closer-is-called test to `decklab/tests/test_web.py`.
+
+**E11-S75** · Matt · could · M · missing
+
+As Matt, leaving the wake gate running on the NAS, I want it to drop stalled connections, cap its threads and run in a locked-down container, so that a slow or careless client on the home network can't tie up the one thing that wakes the server PC.
+
+- Given a client that connects to the gate and sends nothing, when about 10 seconds pass, then the gate closes the connection.
+- Given more open connections than the gate's cap (about 32), when another arrives, then it's closed at once and the gate keeps answering.
+- Given `decklab/wakegate/compose.yaml`, when the container starts, then it runs as a non-root user with a read-only filesystem, every capability dropped and no new privileges, and still sends the magic packet.
+- Given Deck Lab on Windows or macOS, when a loopback request sends the script header without the install's secret, then it isn't treated as a script; Linux keeps its same-user check.
+
+Gap: the gate's handler has no timeout or connection cap and its container runs as root. E11-S59 built the gate, but its real setup on the NAS hasn't happened, so the non-root container must be confirmed there. The script secret is optional and later: E11-S58 already closes that gap on the live Linux server. From the product review of 2026-11-10, compared with Deck Lotus's named API keys.
+
+First slice: a handler timeout and a bounded-connection server in `decklab/wakegate/wakegate.py` with tests in `decklab/tests/test_wakegate.py`, and the four container settings in `compose.yaml`.
+
+**E11-S76** · Matt · could · M · missing
+
+As Matt, trusting tests that mostly run on a files backend only the tests use, I want every inventory operation shown to have a test on the real database, and the code's own descriptions to stop talking about files, so that a newer feature can't work in the fixtures and fail on PostgreSQL.
+
+- Given the operation kinds registered with `decklab.lib.inventory`, when the fixture suite runs, then a test fails for any kind that no database-backed test module (one using `db_support.DbTestCase`) exercises, apart from a listed set of known gaps.
+- Given that list, when a gap is closed, then its operation suite also runs on the database in the existing shared-mixin style, and its name leaves the list; the list only shrinks.
+- Given the module docstrings of `decklab/lib/decks/__init__.py`, `decklab/lib/tokens/__init__.py`, `decklab/lib/accessories.py`, `decklab/lib/pool.py` and `decklab/lib/purchases.py`, then they describe the database, not deck or inventory files under `magic/`.
+
+Gap: no test checks that each operation has database coverage, and operations added since the move (dice and counters, storage locations and product packed tokens among them) may be tested on files only. The contract itself is built and required in CI: `test_inventory_contract.py`, `test_inventory_pg_contract.py` and the twice-run operation suites. From the product review of 2026-11-10. Needs Matt's decision: whether to replace the path-shaped order and product keys in `purchases.py` and `inventory/paths.py` with typed ids.
+
+First slice: add `decklab/tests/test_inventory_backend_coverage.py` with its list of current gaps, give one files-only suite (dice, or bulk locations) a database subclass, and rewrite the stale docstrings.
+
+**E11-S77** · Matt · could · L · missing
+
+As Matt, with Deck Lab open on a phone while User1 edits on the iPad, I want an open page to notice that something in my space was saved elsewhere, so that I reload before working on an old copy instead of finding out at Save.
+
+- Given a deck page, the editor or the Collection page open, when the deck or my space's inventory is saved from another device, then within a poll or two the page shows a quiet "Saved on another device" line with Reload; my unsaved draft is kept.
+- Given my space's deck or inventory counter moves, then the page's cached library is dropped in one place.
+- Given a member, when their page asks what changed, then the answer holds only their own space's counters, no ids and nothing about another space; a request naming nobody gets nothing.
+- Given a tab left open, then these checks are timer polls: they never hold the server PC awake or wake it.
+
+Gap: not built. Pages learn of another device's save only through a conflict at Save, which the built conflict flows (E2-S15 among them) handle without losing work. From the product review of 2026-11-10, compared with Archidekt's live collaborators and MTG Compendium's synced games. Needs Matt's decision: whether this is wanted at all, given he declined push notices (E11-S54).
+
+First slice: a guarded `GET /api/changes` in a new `decklab/lib/api/changes.py`, polled by the timer in `decklab/web/runs-pill.js`, with one `noteRevisions()` in `decklab/web/core.js`; no stream yet.
