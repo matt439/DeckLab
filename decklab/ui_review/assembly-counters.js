@@ -103,6 +103,12 @@ run('assembly-counters', async review => {
         await page.emulateMedia({media:'print'});
         const print=page.locator('.pack-takealong-print');
         await print.waitFor({state:'visible'});
+        result.printBackgrounds=await page.evaluate(()=>({
+          root:getComputedStyle(document.documentElement).backgroundColor,
+          body:getComputedStyle(document.body).backgroundColor,
+        }));
+        assert.deepEqual(result.printBackgrounds,{root:'rgb(255, 255, 255)',body:'rgb(255, 255, 255)'},
+          'Take-along printing must use white root and body backgrounds in both themes');
         assert((await print.innerText()).includes('[x] Woodland reminders'));
         assert.equal(await print.locator('input,img,button').count(),0);
         result.printPng=`takealong-print-${spec.state}-${spec.width}-${spec.theme}.png`;

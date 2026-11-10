@@ -2,6 +2,11 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Take-along print background in dark mode (2026-11-10; E4-S29)
+
+- Final screenshot inspection found the dark page background extending below the white take-along print sheet. Print media now sets the root/body backgrounds white only while that sheet is present; other print paths are unchanged.
+- The synthetic capture checks both computed backgrounds in every take-along print case. The 45 focused UI/web fixtures pass; the rendered matrix is repeated after this correction.
+
 ## A built-deck take-along list (2026-11-10; E4-S29)
 
 - Build decks offers one take-along checklist when every selected ordinary home deck's chosen list matches its saved physical build. It shows permitted sleeves/box details, the packed Token cards record, merged counter/dice kind reminders and only the viewer's own/shared playmats. Unknown/private details remain unavailable, and unrelated hidden accessory errors cannot change the visible answer.
