@@ -367,8 +367,18 @@ def _product_parts(inv, product, taken, check_cards):
                    product.get("name"), product.get("format"))
     _deck_lines(made)
     row = {"file": file, "status": status, "intact": "", "sleeves": "", "deck_box": "", "notes": notes}
-    component = Component.build(cid, "product", file, checks=_checks(product.get("checks"), f"{cid}: checks"))
+    checks = _checks(product.get("checks"), f"{cid}: checks")
+    checks += [check for check in _extras_checks(rows) if check not in checks]
+    component = Component.build(cid, "product", file, checks=checks)
     return made, row, component, warnings
+
+
+def _extras_checks(rows):
+    """The arrival check of each extras row (a bonus card, E6-S29): "Confirm <card> was in the box"."""
+    from decklab.lib import sealed
+    return [sealed.check_text({"name": r.get("name", ""), "set": (r.get("set") or "").lower(),
+                               "number": r.get("collector_number", ""), "finish": r.get("finish") or "nonfoil"})
+            for r in rows if rules.extras_row(r)]
 
 
 def _deck_lines(product):

@@ -67,6 +67,9 @@ TYPES = frozenset((
     "Guild Kit", "Clash Pack", "Advanced Pack", "Demo Deck", "Archenemy Deck",
     "Pioneer Challenger Deck", "Halfdeck", "Spellslinger Starter Kit", "Premium Deck", "Modern Event Deck",
 ))
+# Types listed only when a sealed product's list is filled from MTGJSON (lib/sealed.py, E6-S29):
+# a Secret Lair drop isn't a deck, but its cards (and its bonus card) are a product's list.
+PRODUCT_TYPES = frozenset(("Secret Lair Drop",))
 # The parts of a deck file whose cards go into the collection, and the deck
 # section each one becomes. DISPLAY is the card in the box's window, not
 # part of the deck: from 2022 to mid-2024 a foil-etched copy of the commander,
@@ -198,7 +201,7 @@ def _read_deck_list(raw):
     """deck_list() from DeckList.json's JSON, without the set names."""
     decks = []
     for item in raw.get("data") if isinstance(raw.get("data"), list) else []:
-        if not isinstance(item, dict) or item.get("type") not in TYPES:
+        if not isinstance(item, dict) or item.get("type") not in TYPES | PRODUCT_TYPES:
             continue
         file, name, code = _text(item.get("fileName")), _text(item.get("name")), _text(item.get("code"), 8)
         if not (file and FILE_RE.fullmatch(file) and name and code and SET_RE.fullmatch(code)):
@@ -214,17 +217,19 @@ def _read_deck_list(raw):
     return {"date": meta.get("date") if isinstance(meta.get("date"), str) else "", "decks": decks}
 
 
-def deck_list():
+def deck_list(products=False):
     """{"date": MTGJSON's build date, "decks": [entry]} of the paper decks
-    (TYPES), newest first. An entry is {"file", "name", "code" (the set code,
+    (TYPES), newest first; with products, Secret Lair drops too (PRODUCT_TYPES,
+    for a sealed product's list). An entry is {"file", "name", "code" (the set code,
     lower case), "set_name" (or ""), "type", "released" (YYYY-MM-DD or ""),
     "source" (where MTGJSON's list came from: usually Wizards' page, see
     from_wizards(); or "")}."""
     with _lock:
         listed = _load(_cache_dir() / "DeckList.json", LIST_URL, TTL, MAX_LIST_BYTES, _read_deck_list)
     set_names = _set_names()
+    types = TYPES | PRODUCT_TYPES if products else TYPES
     return {"date": listed["date"],
-            "decks": [dict(d, set_name=set_names.get(d["code"], "")) for d in listed["decks"]]}
+            "decks": [dict(d, set_name=set_names.get(d["code"], "")) for d in listed["decks"] if d["type"] in types]}
 
 
 def from_wizards(source):
@@ -232,13 +237,13 @@ def from_wizards(source):
     return bool(source) and WIZARDS_RE.match(source) is not None
 
 
-def search(query, limit=40):
+def search(query, limit=40, products=False):
     """(decks, more, date): the paper decks whose name, set code, set name
     or type hold every word of query (ignoring case and accents), newest
     first; the newest when query is blank. more says whether limit cut the
-    list short; date is MTGJSON's build date (deck_list())."""
+    list short; date is MTGJSON's build date (deck_list(products))."""
     words = cards.fold(query or "").split()
-    listed = deck_list()
+    listed = deck_list(products)
     found = []
     for d in listed["decks"]:
         text = cards.fold(f"{d['name']} {d['code']} {d['set_name']} {d['type']}")
@@ -249,17 +254,17 @@ def search(query, limit=40):
     return found[:limit], len(found) > limit, listed["date"]
 
 
-def find(file):
-    """The paper deck with that file name, or None."""
+def find(file, products=False):
+    """The paper deck with that file name (with products, a Secret Lair drop too), or None."""
     if not isinstance(file, str) or not FILE_RE.fullmatch(file):
         return None
-    return next((d for d in deck_list()["decks"] if d["file"] == file), None)
+    return next((d for d in deck_list(products)["decks"] if d["file"] == file), None)
 
 
 def deck(file):
-    """A listed deck's data (MTGJSON's "data" object). PreconError when it
-    can't be fetched or isn't a deck; LookupError for a file not listed."""
-    if find(file) is None:
+    """A listed deck's data (MTGJSON's "data" object; a Secret Lair drop's too).
+    PreconError when it can't be fetched or isn't a deck; LookupError for a file not listed."""
+    if find(file, products=True) is None:
         raise LookupError(file)
     with _lock:
         raw = _load(_cache_dir() / "decks" / f"{file}.json", DECK_URL.format(file), TTL, MAX_DECK_BYTES)

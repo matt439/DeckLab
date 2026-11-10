@@ -4,6 +4,7 @@ space's collection and a built deck made from its list, in one go
 feature_routes.dispatch.
 
     GET  /api/precons?q=<words>                    precons_view(): paper decks MTGJSON lists, newest first
+    GET  /api/precons/product?file=<f>             product_list_view(): a sealed product's list, bonus card included
     GET  /api/precons/preview?file=<f>&space=<id>  precon_preview(): what adding it would do
     POST /api/precons/add                          add_precon(body): add its cards, then make its deck
 
@@ -89,18 +90,57 @@ def _entry(file):
     return entry
 
 
-def precons_view(q=None):
-    """GET /api/precons?q=<words>: {"date" (MTGJSON's build date), "decks"
+def precons_view(q=None, products=None):
+    """GET /api/precons?q=<words>[&products=1]: {"date" (MTGJSON's build date), "decks"
     [{"file", "name", "code", "set_name" (MTGJSON's, or ""), "type",
-    "released", "source"}], "more" (more match than are shown)}. 502 when
+    "released", "source"}], "more" (more match than are shown)}. products=1 lists
+    Secret Lair drops too, for a sealed product's list (product_list_view). 502 when
     MTGJSON can't be reached and nothing is cached."""
     if q is not None and (not isinstance(q, str) or len(q) > MAX_QUERY):
         raise ApiError(400, f"q must be at most {MAX_QUERY} characters")
+    if products not in (None, "", "0", "1"):
+        raise ApiError(400, "products must be 0 or 1")
     try:
-        found, more, built = precons.search(q, SEARCH_LIMIT)
+        found, more, built = precons.search(q, SEARCH_LIMIT, products=products == "1")
     except precons.PreconError as e:
         raise ApiError(502, _public(e)) from None
     return {"date": built, "decks": found, "more": more}
+
+
+def product_list_view(file=None, bonus=None):
+    """GET /api/precons/product?file=<f>[&bonus=0] (E6-S29): a sealed product's card list filled
+    from MTGJSON, for Shopping's Record an order: {"deck" (its /api/precons entry), "stem" (a
+    suggested product reference), "name", "format", "columns", "csv", "checks" (one arrival check
+    a bonus card), "bonus" [{"card", "words"}] (cards MTGJSON says every box holds, in the list's
+    extras section unless bonus=0), "varies", "random", "other", "left_out" (words: what isn't
+    added)}. It fetches the set file (lib/sealed.py) only here, never while an order is saved.
+    For a home admin who records orders (orders.edit, home records); 502 when MTGJSON can't be read."""
+    from decklab.lib import sealed
+    profile = guard.viewer()
+    guard.require(profile, "orders.edit")
+    guard.require_sees_home_records(profile)
+    if bonus not in (None, "", "0", "1"):
+        raise ApiError(400, "bonus must be 0 or 1")
+    if not isinstance(file, str) or not precons.FILE_RE.fullmatch(file):
+        raise ApiError(400, "file must be a deck's file name from /api/precons")
+    try:
+        entry = precons.find(file, products=True)
+        if entry is None:
+            raise ApiError(404, f"MTGJSON lists no deck or Secret Lair drop called {file}")
+        data = precons.deck(file)
+        found = sealed.contents(entry, data, fetch=True)
+    except precons.PreconError as e:
+        raise ApiError(502, _public(e)) from None
+    except LookupError:
+        raise ApiError(404, f"MTGJSON lists no deck or Secret Lair drop called {file}") from None
+    _require_cards()
+    made = sealed.product_list(entry, data, found, include_bonus=bonus != "0",
+                               pickable=lambda line: bool(_pickable(cards.printing(line["set"], line["number"]))))
+    stem = decks._slugify(f"{entry['code']}-{entry['name']}")[:80].strip("-")
+    return {"deck": entry, "stem": stem, "name": made["name"], "format": made["format"],
+            "columns": made["columns"], "csv": rules.csv_bytes(made["rows"], made["columns"]).decode("utf-8"),
+            "checks": made["checks"], "bonus": made["bonus"], "varies": made["varies"], "random": made["random"],
+            "other": made["other"], "left_out": made["left_out"]}
 
 
 def _short(name):

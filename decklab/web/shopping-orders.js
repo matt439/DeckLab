@@ -173,6 +173,71 @@ function shopOrderSheet(view) {
   form.append(tokens);
 
   const product = el("details", {class: "shop-order-section"}, el("summary", {text: "A sealed product"}));
+  // E6-S29: fill the product's list from MTGJSON (GET /api/precons/product), its expected bonus card
+  // in the extras section with an arrival check, so decks count it as on the way.
+  const published = el("div", {class: "shop-order-find"});
+  const publishedQuery = field(published, "product_find", "Fill from a published list (optional)", "input",
+    {type: "search", maxlength: 100, autocomplete: "off", placeholder: "A product or set name"});
+  const publishedResults = el("div", {class: "shop-order-published", hidden: true});
+  const publishedNote = el("div", {class: "shop-order-published-note", "aria-live": "polite"});
+  let filled = null, publishedSeq = 0;
+  published.append(el("button", {type: "button", class: "btn", text: "Find", onclick: () => findPublished()}));
+  publishedQuery.addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); findPublished(); } });
+  product.append(published, publishedResults, publishedNote,
+    el("p", {class: "field-hint", text: "Fills the card list from MTGJSON, with any bonus card the box is expected to hold, so decks count it as on the way."}));
+  async function findPublished() {
+    if (!alive() || busyNow) return;
+    const q = publishedQuery.value.trim(), seq = ++publishedSeq;
+    if (!q) return problem("Enter words from the product's name.", publishedQuery);
+    error.hidden = true; clear(publishedResults).append(el("p", {class: "field-hint", text: "Looking…"})); publishedResults.hidden = false;
+    try {
+      const answer = await api(`/api/precons?${new URLSearchParams({q, products: "1"})}`);
+      if (!alive() || seq !== publishedSeq) return;
+      clear(publishedResults);
+      if (!(answer.decks || []).length) publishedResults.append(el("p", {class: "field-hint", text: "MTGJSON lists nothing matching that."}));
+      for (const deck of answer.decks || []) publishedResults.append(el("button", {type: "button", class: "btn btn-quiet",
+        "data-order-published": deck.file, text: [deck.name, deck.set_name || deck.code.toUpperCase(), deck.type, deck.released].filter(Boolean).join(" · "),
+        onclick: () => fillPublished(deck, true)}));
+      if (answer.more) publishedResults.append(el("p", {class: "field-hint", text: "More match: add words to narrow it."}));
+    } catch (failure) {
+      if (alive() && seq === publishedSeq) { publishedResults.hidden = true; problem(`MTGJSON's lists couldn't be read: ${failure.message}`); }
+    }
+  }
+  async function fillPublished(deck, bonus) {
+    if (!alive() || busyNow) return;
+    const seq = ++publishedSeq; error.hidden = true;
+    clear(publishedNote).append(el("p", {class: "field-hint", text: `Reading ${deck.name}…`}));
+    try {
+      const answer = await api(`/api/precons/product?${new URLSearchParams(bonus ? {file: deck.file} : {file: deck.file, bonus: "0"})}`);
+      if (!alive() || seq !== publishedSeq) return;
+      const previous = filled || {};
+      const replace = (key, value, before) => { if (!inputs[key].value.trim() || inputs[key].value.trim() === before) inputs[key].value = value; };
+      replace("product_stem", answer.stem, previous.stem);
+      replace("product_name", answer.name, previous.name);
+      replace("product_format", answer.format, previous.format);
+      inputs.product_csv.value = answer.csv;
+      const checks = inputs.product_checks.value.split(/\r?\n/).map(line => line.trim())
+        .filter(line => line && !(previous.checks || []).includes(line));
+      inputs.product_checks.value = [...checks, ...answer.checks].join("\n");
+      // Left out by choice (the tick off): the preview then doesn't offer the bonus card back, while the list is unchanged.
+      filled = {stem: answer.stem, name: answer.name, format: answer.format, checks: answer.checks,
+        withoutBonus: !bonus && (answer.bonus || []).length ? answer.csv : null};
+      publishedResults.hidden = true; invalidate();
+      clear(publishedNote).append(el("p", {text: `Filled from MTGJSON's ${answer.deck.name}.`}));
+      if ((answer.bonus || []).length) {
+        const tick = el("input", {type: "checkbox", checked: bonus || null, "data-order-bonus": deck.file,
+          onchange: () => fillPublished(deck, tick.checked)});
+        publishedNote.append(el("label", {class: "shop-order-bonus"}, tick, el("span", {text:
+          `Include its bonus card: ${answer.bonus.map(item => `${item.card.count} ${item.words}`).join(", ")}. MTGJSON lists it in every box; confirm it on arrival.`})));
+      }
+      const notes = [...(answer.varies || []).map(words => `Only in some editions, not added: ${words}`),
+        ...(answer.random || []).map(words => `Random, not added: ${words}`),
+        ...(answer.other || []).map(words => `Not a card: ${words}`), ...(answer.left_out || []).map(words => `Not listed: ${words}`)];
+      if (notes.length) publishedNote.append(el("ul", {class: "field-hint"}, notes.map(words => el("li", {text: words}))));
+    } catch (failure) {
+      if (alive() && seq === publishedSeq) { clear(publishedNote); problem(`That list couldn't be filled: ${failure.message}`); }
+    }
+  }
   const productGrid = el("div", {class: "shop-order-grid"});
   field(productGrid, "product_stem", "Product reference", "input", {type: "text", maxlength: 100, placeholder: "fdc-goblin-horde"});
   field(productGrid, "product_name", "Product name", "input", {type: "text", maxlength: 200});
@@ -182,7 +247,7 @@ function shopOrderSheet(view) {
   productStatus.value = "ordered"; product.append(productGrid);
   field(product, "product_csv", "Product's card list (CSV)", "textarea", {rows: 4, maxlength: 1000000,
     placeholder: "name,set,collector_number,finish,quantity,section,deck"});
-  product.append(el("p", {class: "field-hint", text: "Include every playable card and basic land. The optional section and deck columns identify its decks. Product token cards are recorded after inspection on arrival."}));
+  product.append(el("p", {class: "field-hint", text: "Include every playable card and basic land. The optional section and deck columns identify its decks; a card the box holds beyond them (a bonus card) has section extras. Product token cards are recorded after inspection on arrival."}));
   field(product, "product_checks", "Check this product on arrival (one per line)", "textarea", {rows: 2, maxlength: 4000});
   const extraProduct = field(product, "product_extra", "This product contains additional copies of printings already owned", "input", {type: "checkbox"});
   form.append(product);
@@ -223,6 +288,7 @@ function shopOrderSheet(view) {
         csv: inputs.product_csv.value, checks: lines("product_checks")};
       if (inputs.product_name.value.trim()) body.product.name = inputs.product_name.value.trim();
       if (inputs.product_format.value.trim()) body.product.format = inputs.product_format.value.trim();
+      if (filled && filled.withoutBonus && filled.withoutBonus === inputs.product_csv.value) body.product.skip_bonus = true;
     }
     if (!body.cards && !body.tokens && !body.product) throw new Error("Add cards, token singles or a product to this order.");
     if (extraCards.checked && body.cards) body.extra_copies.push("cards");
@@ -252,7 +318,7 @@ function shopOrderSheet(view) {
       const answer = await apiWrite("/api/shopping/order/preview", body);
       if (!alive() || seq !== sequence || original !== JSON.stringify(payload())) return;
       preview = answer.preview; previewBody = original;
-      clear(previewBox).append(shopOrderPreview(answer, body)); previewBox.hidden = false; form.hidden = true;
+      add(clear(previewBox), [bonusOffer(answer), shopOrderPreview(answer, body)]); previewBox.hidden = false; form.hidden = true;
       previewBox.scrollIntoView({block: "start"});
     } catch (failure) {
       if (alive()) {
@@ -260,6 +326,21 @@ function shopOrderSheet(view) {
         problem(`The order couldn't be previewed: ${failure.message}`); conflictRefresh();
       }
     } finally {if (alive()) setBusy(false); else shopQueueBusy(view, false);}
+  }
+  /** E6-S29: a product list holding a published deck without its expected bonus card. The server
+   * gives the list with it added (extras section) and its arrival check; Add it puts them in the form. */
+  function bonusOffer(answer) {
+    const missing = answer.bonus_missing;
+    if (!missing || !(missing.cards || []).length || typeof missing.csv !== "string") return null;
+    return el("div", {class: "note note-warn shop-order-bonus-missing", "data-order-bonus-missing": ""},
+      el("p", {text: `This product is expected to come with ${missing.cards.length === 1 ? "a bonus card" : "bonus cards"} its list doesn't have: ${missing.cards.join("; ")}. Without it, decks count it as missing and it isn't added when the product arrives.`}),
+      el("button", {type: "button", class: "btn", text: missing.cards.length === 1 ? "Add it to the list" : "Add them to the list", onclick: () => {
+        if (!alive() || busyNow) return;
+        inputs.product_csv.value = missing.csv;
+        const checks = inputs.product_checks.value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+        inputs.product_checks.value = [...checks, ...(missing.checks || []).filter(check => !checks.includes(check))].join("\n");
+        invalidate(); error.hidden = true; product.open = true; inputs.product_csv.focus();
+      }}));
   }
   function conflictRefresh() {
     if (view.stale) error.append(el("button", {type: "button", class: "btn btn-quiet", text: "Refresh Shopping",

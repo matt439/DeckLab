@@ -1069,7 +1069,9 @@ function rcptRowChanged(view, comp, row) {
 
 /** The two choice cards for a product: keep it as its own deck(s), or break it up into storage. */
 function rcptIntactChoice(view, comp) {
-  const decks = comp.rows.some((row) => row.values.section || row.values.deck);
+  // A deck or a section, but not the extras section alone (a bonus card, E6-S29: rules.product_reads_as_decks).
+  const extras = (row) => String(row.values.section || "").trim().toLowerCase() === "extras";
+  const decks = comp.rows.some((row) => row.values.deck || (row.values.section && !extras(row)));
   const card = (value, title, words, disabled) => el("button", { type: "button", class: "rcpt-choice-card",
     "aria-pressed": String(comp.intact === value), disabled: disabled || null, "data-intact": value,
     onclick: () => { if (!receiptEditable(view)) return; comp.intact = value; comp.choice.querySelectorAll("button").forEach((b) =>

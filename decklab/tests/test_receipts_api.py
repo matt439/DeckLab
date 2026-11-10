@@ -677,7 +677,8 @@ class DatabaseReceiptTests(db_support.DbTestCase):
     def test_a_stale_snapshot_refuses_the_preview_and_the_apply(self):
         data = self.web.request_data()
         preview = self.web.prepare()
-        inventory.apply(receive.op("test", [{"id": "kit", "verified": False, "intact": "yes"}], "2026-10-08"),
+        # kit has no deck lists, so only broken up (a receipt refuses to keep such a product intact).
+        inventory.apply(receive.op("test", [{"id": "kit", "verified": False, "intact": "no"}], "2026-10-08"),
                         inventory.Actor("matt", "Matt", "home", "receipt"), "receive the kit")
         for attempt in (lambda: self.web.prepare(data), lambda: self.web.record_web(preview)):
             with self.subTest(attempt=attempt), self.assertRaises(ApiError) as caught:

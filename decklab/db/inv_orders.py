@@ -7,8 +7,8 @@ has the operations and their rules):
   python -m decklab.db order add [--record RECORD.json] [--id ID] [--seller S] [--ordered-on D]
                        [--source PATH]... [--notes T] [--check COMPONENT=TEXT]...
                        [--cards CARDS.csv] [--tokens TOKENS.csv]
-                       [--product STEM --product-csv FILE [--name N] [--format F]
-                        [--product-status ordered|preordered] [--product-notes T]]
+                       [--product STEM (--product-csv FILE | --from-mtgjson FILE [--no-bonus-cards])
+                        [--name N] [--format F] [--product-status ordered|preordered] [--product-notes T]]
                        [--fulfils 'NAME[@FOR][=QTY]' | '#N[=QTY]']... [--extra-copies COMPONENT]...
                        -m MSG
   python -m decklab.db order edit ID COMPONENT --csv FILE -m MSG
@@ -22,8 +22,8 @@ has the operations and their rules):
   python -m decklab.db order remove ID -m MSG --reason R
   python -m decklab.db order merge ID OTHER... [--rename OTHER:COMPONENT=NEW]... [--notes T] -m MSG
   python -m decklab.db order extra-copies ID COMPONENT [--undo] -m MSG
-  python -m decklab.db product add STEM --order ID --csv FILE [--name N] [--format F]
-                       [--status ordered|preordered] [--notes T] -m MSG
+  python -m decklab.db product add STEM --order ID (--csv FILE | --from-mtgjson FILE [--no-bonus-cards])
+                       [--name N] [--format F] [--status ordered|preordered] [--notes T] -m MSG
   python -m decklab.db product set-intact STEM yes|no -m MSG
   python -m decklab.db product kit STEM [--json]
   python -m decklab.db product set-kit STEM --expect SHA [--sleeves ID|none] [--deck-box ID|none]
@@ -53,6 +53,15 @@ pending component's checks can't be resolved or cleared before it arrives (the r
 they're verified); `order checks --withdraw N` drops one added by mistake. Once a component has
 arrived, `--resolve N` / `--clear` resolve checks left open (a product's token inspection),
 kept in its verified_checks.
+
+A product's list can be filled from MTGJSON instead of a CSV (--from-mtgjson FILE, a deck or
+Secret Lair drop's file name as `collection precons --products` lists them; lib/sealed.py,
+E6-S29): its cards (a drop's with no section, so it's cards only; a deck's in its sections) and the
+bonus card its box is expected to hold, in the extras section with the arrival check "Confirm ...
+was in the box" (--no-bonus-cards leaves it out). Random contents (a bonus sheet's card, a sample
+pack) are named, never added; --name and --format default to MTGJSON's. A hand-written list
+(--product-csv, --csv) that holds a published deck but not its bonus card gets a note saying
+what to add (the set file is fetched for a --dry-run; a save reads what's kept).
 
 `order split` copies each check to both parts unless --move-check N (only the new part) or
 --keep-check N (only the original) says otherwise, and the new part keeps the original's
@@ -149,6 +158,11 @@ def register(sub):
     sp.add_argument("--tokens", metavar="TOKENS.csv", help="the token cards, a CSV in the token cards' columns")
     sp.add_argument("--product", metavar="STEM", help="a sealed product's id (its stem, such as fdc-wretched-ranks)")
     sp.add_argument("--product-csv", metavar="FILE", help="the product's card list")
+    sp.add_argument("--from-mtgjson", metavar="FILE",
+                    help="fill the product's list from MTGJSON's deck or Secret Lair drop FILE (collection precons "
+                         "--products lists them), its bonus card included")
+    sp.add_argument("--no-bonus-cards", action="store_true",
+                    help="with --from-mtgjson, leave out the bonus cards MTGJSON says the box holds")
     sp.add_argument("--name", help="the product's display name")
     sp.add_argument("--format", help="the product's deck format")
     sp.add_argument("--product-status", choices=("ordered", "preordered"), default="ordered")
@@ -233,7 +247,12 @@ def register(sub):
                 product_add, refreshes=True)
     sp.add_argument("stem", help="the product's id (its stem, such as fdc-wretched-ranks)")
     sp.add_argument("--order", required=True, help="the order it belongs to")
-    sp.add_argument("--csv", required=True, metavar="FILE", help="the product's card list")
+    sp.add_argument("--csv", metavar="FILE", help="the product's card list")
+    sp.add_argument("--from-mtgjson", metavar="FILE",
+                    help="instead of --csv, fill its list from MTGJSON's deck or Secret Lair drop FILE, "
+                         "its bonus card included")
+    sp.add_argument("--no-bonus-cards", action="store_true",
+                    help="with --from-mtgjson, leave out the bonus cards MTGJSON says the box holds")
     sp.add_argument("--name", help="the product's display name")
     sp.add_argument("--format", help="the product's deck format")
     sp.add_argument("--status", choices=("ordered", "preordered"), default="ordered")
@@ -693,10 +712,14 @@ def order_add(args):
     for item in settings:
         if not given.get(item["kind"]):
             raise ValueError(f"The record names a {item['kind']} component, but no file for it was given")
-    if args.product and not args.product_csv:
-        raise ValueError("--product needs --product-csv (the product's card list)")
-    if args.product_csv and not args.product:
-        raise ValueError("--product-csv needs --product STEM")
+    if args.product and not (args.product_csv or args.from_mtgjson):
+        raise ValueError("--product needs --product-csv (the product's card list) or --from-mtgjson FILE")
+    if args.product_csv and args.from_mtgjson:
+        raise ValueError("Give --product-csv or --from-mtgjson, not both")
+    if (args.product_csv or args.from_mtgjson) and not args.product:
+        raise ValueError(f"{'--product-csv' if args.product_csv else '--from-mtgjson'} needs --product STEM")
+    if args.no_bonus_cards and not args.from_mtgjson:
+        raise ValueError("--no-bonus-cards goes with --from-mtgjson")
     by_kind = {item["kind"]: item for item in settings}
     checks = {}
     for text in args.check:
@@ -725,11 +748,14 @@ def order_add(args):
     if args.tokens:
         params["tokens"] = part("tokens", {"rows": read_tokens(args.tokens)}, "tokens")
     if args.product:
-        columns, rows = read_product(args.product_csv)
-        params["product"] = part("product", {"stem": args.product, "columns": columns, "rows": rows,
-                                             "name": args.name, "format": args.format,
-                                             "status": args.product_status, "notes": args.product_notes},
-                                 args.product)
+        columns, rows, name, fmt, bonus_checks = _product_source(args, args.product_csv)
+        product = part("product", {"stem": args.product, "columns": columns, "rows": rows,
+                                   "name": args.name if args.name is not None else name,
+                                   "format": args.format if args.format is not None else fmt,
+                                   "status": args.product_status, "notes": args.product_notes},
+                       args.product)
+        product["checks"] += [check for check in bonus_checks if check not in product["checks"]]
+        params["product"] = product
     if checks:
         raise ValueError(f"--check names no component of this order: {', '.join(sorted(checks))}")
     return _run(args, _ops().Op("order.add", params), refresh=True)
@@ -845,10 +871,74 @@ def _cancel_notes(old, removed=False):
 
 # ------------------------------------------------------------------ product
 
+def _published_product(args, file):
+    """(columns, rows, name, format, checks) of a product list filled from MTGJSON (lib/sealed.py,
+    E6-S29), saying what it holds beyond its list. The set file is fetched only here, before any
+    change is planned, never inside one."""
+    from decklab.lib import cards, precons, sealed
+    from decklab.lib.api.card_lookup import _pickable
+    try:
+        entry = precons.find(file, products=True)
+        if entry is None:
+            raise ValueError(f"MTGJSON lists no deck or Secret Lair drop called {file}: python -m decklab.db "
+                             "collection precons --products WORDS lists their file names")
+        data = precons.deck(file)
+        found = sealed.contents(entry, data, fetch=True)
+    except precons.PreconError as e:
+        raise ValueError(f"MTGJSON can't be read: {e}") from None
+    except LookupError:
+        raise ValueError(f"MTGJSON lists no deck or Secret Lair drop called {file}") from None
+    def pickable(line):
+        try:
+            return bool(_pickable(cards.printing(line["set"], line["number"])))
+        except (OSError, ValueError, RuntimeError, KeyError):
+            return False                    # no card index: a display commander is only named, not listed
+
+    made = sealed.product_list(entry, data, found, include_bonus=not args.no_bonus_cards, pickable=pickable)
+    n = sum(int(row["quantity"]) for row in made["rows"])
+    print(f"Filled from MTGJSON's {entry['name']} ({entry['type']}): {n} cards in {len(made['rows'])} rows.")
+    for item in made["bonus"]:
+        verb = "Left out (--no-bonus-cards)" if args.no_bonus_cards else "Bonus card, in the extras section"
+        print(f"  {verb}: {item['card']['count']} {item['words']}")
+    for words in made["varies"]:
+        print(f"  Only in some editions, not added: {words}")
+    for words in made["random"]:
+        print(f"  Random, not added: {words}")
+    for words in made["other"]:
+        print(f"  Not a card: {words}")
+    for words in made["left_out"]:
+        print(f"  Not listed: {words}")
+    return made["columns"], made["rows"], made["name"], made["format"], made["checks"]
+
+
+def _product_source(args, csv_path):
+    """(columns, rows, default name, default format, checks) of a product's list: filled from
+    MTGJSON with --from-mtgjson, else read from csv_path and checked for a missing bonus card."""
+    if getattr(args, "from_mtgjson", None):
+        return _published_product(args, args.from_mtgjson)
+    columns, rows = read_product(csv_path)
+    _bonus_notes(rows, fetch=bool(args.dry_run))
+    return columns, rows, None, None, []
+
+
+def _bonus_notes(rows, fetch):
+    """Warn when a hand-written product list holds a published deck but not its expected bonus card
+    (lib/sealed.py). A set file is fetched only for a --dry-run; a save reads what's kept."""
+    from decklab.lib import sealed
+    for words in sealed.missing_bonus(rows, fetch=fetch):
+        _say(f"Note: {words}")
+
+
 def product_add(args):
-    columns, rows = read_product(args.csv)
-    product = {"stem": args.stem, "columns": columns, "rows": rows, "name": args.name, "format": args.format,
-               "status": args.status, "notes": args.notes}
+    if bool(args.csv) == bool(args.from_mtgjson):
+        raise ValueError("Give the product's list with --csv FILE or --from-mtgjson FILE (one of them)")
+    if args.no_bonus_cards and not args.from_mtgjson:
+        raise ValueError("--no-bonus-cards goes with --from-mtgjson")
+    columns, rows, name, fmt, checks = _product_source(args, args.csv)
+    product = {"stem": args.stem, "columns": columns, "rows": rows,
+               "name": args.name if args.name is not None else name,
+               "format": args.format if args.format is not None else fmt,
+               "status": args.status, "notes": args.notes, "checks": checks}
     return _run(args, _ops().Op("product.add", {"order": args.order, "product": product,
                                                 "check_cards": not args.no_check}),
                 refresh=True)
@@ -865,6 +955,7 @@ def product_edit(args):
                          if getattr(args, key) is not None}}
     if args.csv:
         params["columns"], params["rows"] = read_product(args.csv)
+        _bonus_notes(params["rows"], fetch=bool(args.dry_run))
     return _run(args, _ops().Op("product.edit", params), refresh=True)
 
 

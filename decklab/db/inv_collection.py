@@ -138,6 +138,8 @@ def register(sub):
     sp.set_defaults(func=_apply)
     sp = verbs.add_parser("precons", help="Find a published precon's CODE for add-precon (MTGJSON's paper decks).")
     sp.add_argument("query", nargs="*", help="words in its name, set or type (default: the newest)")
+    sp.add_argument("--products", action="store_true",
+                    help="list Secret Lair drops too, for order add --from-mtgjson (they can't be added as precons)")
     sp.set_defaults(func=_precons)
     sp = verbs.add_parser("add-precon", help="Add a published precon's cards to a space and make its built deck.",
                           description="Add a published precon (MTGJSON's list) to a space: its cards into the "
@@ -750,7 +752,8 @@ def _plural(n, word):
 def _precons(args):
     from decklab.lib import precons
     try:
-        found, more, built = precons.search(" ".join(args.query) or None, PRECON_LIMIT)
+        found, more, built = precons.search(" ".join(args.query) or None, PRECON_LIMIT,
+                                            products=bool(getattr(args, "products", False)))
     except precons.PreconError as e:
         raise ValueError(f"MTGJSON's deck list can't be read: {e}") from None
     for entry in found:

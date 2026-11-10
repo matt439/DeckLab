@@ -48,6 +48,32 @@ BASIC_LANDS |= {"Snow-Covered " + name for name in BASIC_LANDS}
 SPECIAL_BASIC = re.compile(r"\b(?:full[ -]art|special basic)\b", re.IGNORECASE)
 
 
+
+# A product list's rows in this section are cards the box always holds beyond its decks, such as a
+# Secret Lair drop's bonus card (E6-S29): the collection's only, counted as on the way and added at
+# receipt like every row, but never a line of the product's decks.
+EXTRAS_SECTION = "extras"
+
+
+def extras_row(row):
+    """Whether a product list's row (a dict or a model.ProductItem) is in the extras section."""
+    return (row.get("section") or "").strip().lower() == EXTRAS_SECTION
+
+
+def product_reads_as_decks(columns, rows):
+    """Whether a product list reads as decks: a deck column, or a section column (as before E6-S29),
+    except that a list whose only sections are extras (its other rows' blank) is cards only, so a
+    Secret Lair drop's bonus card doesn't make it a deck."""
+    columns = columns or ()
+    if "deck" in columns:
+        return True
+    if "section" not in columns:
+        return False
+    if not any(extras_row(row) for row in rows):
+        return True
+    return any((row.get("section") or "").strip() and not extras_row(row) for row in rows)
+
+
 class InvalidCards(ValueError):
     """Input or existing inventory cannot be safely merged."""
 
