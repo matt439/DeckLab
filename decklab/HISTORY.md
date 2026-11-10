@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Scan-session defaults and retained unsure proposals (2026-11-11; E7-S35)
+
+- Scan cards now has explicit Keep/Clear controls for defaults applied only to later additions. A language read from the card wins; finishes apply only when the selected printing supports them. Reopening resets defaults without rewriting resolved card facts.
+- Check these retains unsure proposals until the user chooses, finds by name or skips them. Review is blocked while any remain. At most 50 metadata-only entries are retained, without photos/raw OCR; stale or hidden controls cannot act after sheet/profile/route changes.
+- Validation: 27 current interaction and 95 broader scan/API/token/layout/web checks pass (overlap), plus Ruff/Node/source guards. Import still uses its existing reviewed one-change path. No actual camera, OCR, card or collection data was used; real-photo acceptance remains E7-S32.
+
 ## Audited game deletion and reviewed counter facts (2026-11-11; E4-S31)
 
 - Legacy/pod Game-log records can be deleted through one reasoned, confirmed audit change with a current revision receipt. The recording space owns deletion; hidden records remain404 and deletion reasons/notes remain private outside that space, including when deck lists are Public.

@@ -41,12 +41,12 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 23 | 1 | 4 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 29 | 0 | 3 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 31 | 1 | 4 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 32 | 1 | 3 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 47 | 14 | 14 | 4 |
-| **Total** | **376** | **288** | **22** | **50** | **16** |
+| **Total** | **376** | **289** | **22** | **49** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -3483,7 +3483,7 @@ Built 2026-11-11: editor and Collection share `api/card_terms.py` for rules/type
 
 Evidence: 11 new parser/endpoint/privacy/UI checks and95 isolated search checks pass. The broad356 run passed355 with only a concurrent play-delete script-inventory update outstanding in another feature; that integration is checked at the stable batch. Existing editor helper names remain compatibility aliases. Keyword/power/rarity/set terms, OR and new filter chips remain excluded as designed. From the product review of 2026-11-10, compared with Archidekt, Scryfall and Moxfield search.
 
-**E7-S35** · Matt · could · M · missing
+**E7-S35** · Matt · could · M · built
 
 As Matt, scanning a stack of new cards, I want to set a condition, language and finish once for the cards that follow and to park unsure scans, so that no card is dropped or guessed.
 
@@ -3492,9 +3492,9 @@ As Matt, scanning a stack of new cards, I want to set a condition, language and 
 - Given a scan Deck Lab isn't sure of, when I take the next photo, then the unsure one stays in a Check these list with its proposals.
 - Given the Check these list isn't empty, when I choose Review, then it's refused or warns, and no unresolved card reaches the import preview.
 
-Gap: E7-S32 built the sheet, each pending card's printing, finish, condition and language, and adding a copy when a card is scanned again; nothing carries a choice to the next card, and an unpicked proposal is lost at the next photo. From the product review of 2026-11-10, compared with Archidekt, TCGplayer's scanner, CardCastle and ManaArchive.
+Built 2026-11-11: Scan cards keeps condition/language/finish only after explicit Keep for the next cards, within that sheet. Existing pending cards stay unchanged, a read language wins and a kept finish needs printing support. Unsure proposals remain in Check these until chosen, found by name or explicitly skipped; Review refuses unresolved entries. The list is capped at 50 metadata-only entries and keeps no photo/raw OCR. Reopening (including Back from import) resets kept settings while preserving resolved facts. Old/hidden/detached/profile/route/overlay controls cannot apply defaults or add cards.
 
-First slice: in `decklab/web/collection-scan.js`, session defaults applied in `addScanCard` and an unsure list fed by `drawScanResult` that blocks Review, tested in `decklab/tests/test_collection_scan_ui.py`; no server change.
+Evidence: 27 current interaction checks and the broader 95 scan/API/token/layout/web checks pass (overlap); Ruff, Node syntax and source guards pass. The ordinary reviewed one-change import path and backend/token scan are unchanged. Actual card-photo acceptance remains with E7-S32. From the product review of 2026-11-10.
 
 **E7-S36** · Matt · could · M · missing
 
