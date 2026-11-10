@@ -479,11 +479,54 @@ function ownedBadge(c) {
   return null;
 }
 
+/** Whether the draft is a Commander deck: a saved one, or a new one being made as one. */
+function editorCommanderDraft(ed) {
+  if (!ed) return false;
+  if (ed.mode === "new") return Boolean(ed.fields && ed.fields.kind === "commander");
+  return ((ed.fields && ed.fields.kind) || ed.kind) === "commander";
+}
+
+/** A Commander draft's Game Changer chip for a card a picker lists (E9-S30; null for any other card and in a
+ * 60-card deck): Scryfall's flag, from the card's JSON. When the last check's bracket is the Planned list's,
+ * doesn't count the card yet and says one more Game Changer would pass a bracket's limit and its Target
+ * bracket, the chip says where that would put the deck. It's the last check's word: the Checks panel decides. */
+function gameChangerChip(card, ed = editor) {
+  if (!card || card.game_changer !== true || !editorCommanderDraft(ed)) return null;
+  const b = (ed.check && ed.check.bracket) || null;
+  const planned = (ed.mode === "new" ? "target" : ed.version) === "target";
+  const counted = Boolean(b && (b.game_changers || []).some((g) => g.name === card.name));
+  const would = b && planned && !counted ? b.with_game_changer : null;
+  if (Number.isInteger(would) && Number.isInteger(b.target) && would > b.minimum && would > b.target) {
+    return el("span", { class: "chip chip-warn chip-wrap chip-gc",
+      text: `Game Changer: would put the deck at Bracket ${would}, above its target`,
+      title: `From the last check: with one more Game Changer the list needs at least Bracket ${would}, and the target is Bracket ${b.target}. The Checks panel decides once it's added.` });
+  }
+  return el("span", { class: "chip chip-outline chip-wrap chip-gc", text: "Game Changer",
+    title: counted ? "A Commander Game Changer the last check already counts in this deck"
+      : "Scryfall flags this card as a Commander Game Changer" });
+}
+
+/** A check came back (or the draft's kind changed): the shown results' Game Changer chips, drawn again from
+ * its bracket, without touching anything else in a result. */
+function syncGameChangerChips(ed = editor) {
+  const ac = ed && ed.ac;
+  if (!ac || !ac.list || !ac.items || !editorSearchResultsCurrent(ac)) return;
+  ac.list.querySelectorAll(".ac-option").forEach((option) => {
+    const c = ac.items[Number(option.getAttribute("data-i"))];
+    const side = option.querySelector(".ac-side");
+    if (!c || !side) return;
+    side.querySelectorAll(".chip-gc").forEach((chip) => chip.remove());
+    const chip = gameChangerChip(c, ed);
+    if (chip) side.append(chip);
+  });
+}
+
 function searchResultSide(c, words = null) {
-  if (words) return [el("span", { class: "ac-added", text: words })];
-  if (c.edhrec) return editorEdhrecSide(c);
-  if (c.wish) return editorWishlistSide(c);
-  return [c.aud != null ? el("span", { class: "ac-price", text: moneyIn(c.aud, c.aud_currency || "AUD") }) : null, ownedBadge(c)];
+  const gameChanger = gameChangerChip(c);     // every scope's results: the search, My collection, EDHREC ideas, My wishlist
+  if (words) return [el("span", { class: "ac-added", text: words }), gameChanger];
+  if (c.edhrec) return [...editorEdhrecSide(c), gameChanger];
+  if (c.wish) return [...editorWishlistSide(c), gameChanger];
+  return [c.aud != null ? el("span", { class: "ac-price", text: moneyIn(c.aud, c.aud_currency || "AUD") }) : null, ownedBadge(c), gameChanger];
 }
 
 function drawOptions(ac) {

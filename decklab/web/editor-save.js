@@ -121,6 +121,7 @@ async function runCheck(ed = editor, info = {}) {
     drawCheck();
     drawBar();
     markRows();
+    syncGameChangerChips(ed);       // the pickers' chips follow the bracket this check brought (E9-S30)
     if (Boolean(answer.file_changed) !== Boolean(wasChanged) || wasGone) drawBanners();
     return answer;
   } catch (e) {

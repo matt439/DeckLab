@@ -240,6 +240,11 @@ function markEditorConsideringRows() {
   for (const row of root.querySelectorAll(".editor-considering-row")) {
     row.classList.remove("is-blocked");
     row.querySelectorAll(".edit-block").forEach(p => p.remove());
+    // A Commander deck's Game Changer chip (E9-S30, editor-cards.js), under the row so its stepper stays put.
+    row.querySelectorAll(".editor-considering-gc").forEach(p => p.remove());
+    const line = editorConsideringLine(ed, row.getAttribute("data-considering-uid"));
+    const chip = line ? gameChangerChip(line.card, ed) : null;
+    if (chip) row.append(el("p", { class: "editor-considering-gc" }, chip));
   }
   for (const block of ed.check?.blocks || []) {
     if (block.list !== "considering" || block.index == null) continue;

@@ -97,6 +97,8 @@ def image_url(set_code, number, size):
 
 
 def _card_json(card, p):
+    """A card for the page, pictured by printing p. "game_changer" is Scryfall's Commander Game
+    Changer flag (E9-S30: a Commander deck's pickers mark the card before it's added)."""
     def url(size):
         return image_url(p["set"], p["collector_number"], size) if p and p.get("image_" + size) else None
     out = {
@@ -104,7 +106,7 @@ def _card_json(card, p):
         "type_line": card["type_line"], "colors": list(card["colors"]),
         "color_identity": list(card["color_identity"]), "roles": list(card["roles"]),
         "img": url("normal"), "img_small": url("small"),
-        "oracle_text": card.get("oracle_text", ""),
+        "oracle_text": card.get("oracle_text", ""), "game_changer": bool(card.get("game_changer")),
         **{key: card.get(key) for key in ("power", "toughness", "loyalty", "defense")},
     }
     if card.get("faces"):
