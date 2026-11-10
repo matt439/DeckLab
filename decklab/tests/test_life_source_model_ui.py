@@ -23,6 +23,33 @@ const change=(game,id,field,delta,source=null)=>lifeSourceChange(game,id,field,d
 
 @unittest.skipUnless(NODE, "Node.js is not installed")
 class LifeSourceModelTests(unittest.TestCase):
+    def test_suggested_player_markers_are_bounded_exclusive_and_optional(self):
+        self.run_js("""
+          const choices=input();choices.choices[0].list.counter_markers=['poison','energy','experience','monarch','initiative'];
+          const game=lifeSourceNewGame(choices,NOW);valid(game);assert(game.poison);
+          assert.ok(LIFE_MARKER_KINDS.every(kind=>game.markers.enabled[kind]));
+          assert(lifeSourceChange(game,'a','energy',1200,null,NOW+10));assert.equal(game.markers.values[0].energy,999);
+          assert.equal(lifeSourceChange(game,'a','energy',1,null,NOW+20),false);
+          assert(lifeSourceChange(game,'a','experience',3,null,NOW+20));
+          assert(lifeSourceMarker(game,'monarch',null,'a',NOW+30));
+          assert(lifeSourceMarker(game,'monarch',null,'b',NOW+40));
+          const sameMarkers=game.markers.values.map(row=>row.monarch);assert.deepEqual(sameMarkers,[false,true]);
+          assert(lifeSourceMarker(game,'energy',false,null,NOW+50));
+          assert.equal(lifeSourceChange(game,'a','energy',-1,null,NOW+60),false);valid(game);
+          const next=lifeSourceAgain(game,'c'.repeat(32),NOW+70);valid(next);
+          assert.ok(next.markers.values.every(row=>row.energy===0&&row.experience===0&&!row.monarch&&!row.initiative));
+        """)
+
+    def test_old_packets_remain_valid_and_undo_removes_an_explicit_marker_extension(self):
+        self.run_js("""
+          const game=fresh();delete game.markers;valid(game);const before=copy(game);
+          assert(lifeSourceMarker(game,'energy',true,null,NOW+10));valid(game);
+          assert(lifeSourceUndo(game,before,NOW+20));assert.equal(Object.hasOwn(game,'markers'),false);valid(game);
+          const bad=copy(game);bad.markers=undefined;assert.equal(lifeSourceValid(bad,owner,NOW+30),false);
+          bad.markers=lifeMarkerNew(['a','b']);bad.markers.values[0].monarch=true;bad.markers.values[1].monarch=true;
+          assert.equal(lifeSourceValid(bad,owner,NOW+30),false);
+        """)
+
     def run_js(self, scenario):
         # Dependencies retain their production relative order; no runtime/DOM script is needed.
         sources = "\n".join((WEB / name).read_text(encoding="utf-8")
@@ -135,15 +162,16 @@ class LifeSourceModelTests(unittest.TestCase):
           assert.equal(lifeSourceConcede(game,'s1',NOW+10),false);
         """)
 
-    def test_undo_restores_an_ended_correction_and_binds_all_source_identities(self):
+    def test_undo_corrects_active_counts_but_cannot_reopen_an_ended_game(self):
         self.run_js("""
-          const game=fresh(),before=copy(game);change(game,'a','life',-40);
-          assert.ok(game.ended);assert.ok(lifeSourceUndo(game,before,NOW+20));
-          assert.equal(game.ended,null);assert.equal(player(game,'a').life,40);valid(game);
+          const game=fresh(),before=copy(game);change(game,'a','life',-1);
+          assert.ok(lifeSourceUndo(game,before,NOW+20));assert.equal(player(game,'a').life,40);valid(game);
           for(const edit of [p=>p.session_id='c'.repeat(32),p=>p.players[0].list.sha256='d'.repeat(64),
             p=>p.players[0].sources[0].label='Different',p=>p.players[0].name='Different']) {
             const changed=copy(before);edit(changed);assert.equal(lifeSourceUndo(game,changed,NOW+30),false);
           }
+          lifeSourceChange(game,'a','life',-40,null,NOW+30);assert.ok(game.ended);
+          assert.equal(lifeSourceUndo(game,before,NOW+40),false);assert.equal(player(game,'a').life,0);valid(game);
         """)
 
     def test_again_retains_original_selectors_and_sources_without_today_lookup(self):

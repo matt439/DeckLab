@@ -44,6 +44,57 @@ SETUP = """
 
 @unittest.skipUnless(NODE, "Node.js isn't installed")
 class LifeSourceCounterUiTests(unittest.TestCase):
+    def test_repeated_undo_is_bounded_and_leaves_no_history_after_game_end(self):
+        self.run_js("""
+          start();for(let i=0;i<25;i++)press('Matt: 1 more life (hold for 5)').click();
+          assert.equal(active().players[0].life,45);assert.equal(lifeV2Open.history.length,LIFE_UNDO_LIMIT);
+          for(let i=0;i<LIFE_UNDO_LIMIT;i++)named(counter(),'Undo last change').click();
+          assert.equal(active().players[0].life,25);assert(named(counter(),'Undo last change').disabled);
+          named(counter(),'End game').click();named(counter(),'Draw').click();
+          assert.equal(lifeV2Open.history.length,0);assert(named(counter(),'Undo last change').disabled);
+          assert.equal(active().ended.result,'draw');assert.equal(writes.length,0);
+        """)
+
+    def test_deck_marker_defaults_count_claim_switch_off_and_resume_without_current_deck_lookup(self):
+        self.run_js("""
+          lists[0].counter_markers=['poison','energy','experience','monarch','initiative'];start();
+          assert(active().poison);assert(active().markers.enabled.energy);
+          press('Matt: 1 more energy').click();press('User1: 1 more experience').click();
+          press('Matt: monarch').click();press('User1: monarch').click();press('Matt: initiative').click();
+          same(active().markers.values.map(row=>row.monarch),[false,true]);
+          assert.equal(active().markers.values[0].energy,1);assert.equal(active().markers.values[1].experience,1);
+          lifeV2Open.markerOptions.node.setAttribute('open','');
+          lifeV2Open.markerOptions.buttons.find(row=>row.kind==='energy').button.click();
+          assert(!active().markers.enabled.energy);const before=kept();closeLifeCounter();
+          lists[0].counter_markers=[];mount();named(main,'Resume life counter').click();
+          same(active().markers,before.markers);assert(!active().markers.enabled.energy);assert.equal(writes.length,0);
+        """)
+
+    def test_honest_screen_sleep_note_for_unavailable_denied_or_unsaved_counts(self):
+        self.run_js("""
+          delete navigator.wakeLock;start();assert.equal(counter().querySelector('.life-sleep-note').textContent,LIFE_SLEEP_NOTE);
+          closeLifeCounter();navigator.wakeLock={request:()=>Promise.reject(Error('Denied'))};
+          start();await settle();assert(!counter().querySelector('.life-sleep-note').hidden);
+          assert.equal(counter().querySelector('.life-sleep-note').textContent,LIFE_SLEEP_NOTE);closeLifeCounter();
+          delete navigator.wakeLock;store.clear();window.localStorage.setItem=()=>{throw Error('Blocked');};
+          start();assert(counter().querySelector('.life-sleep-note').textContent.includes('could not be saved'));
+          assert(!counter().querySelector('.life-sleep-note').textContent.includes('your count is saved'));
+          assert.equal(writes.length,0);
+        """)
+
+    def test_a_current_wake_lock_survives_counting_and_release_updates_fallback(self):
+        self.run_js("""
+          let resolve,releaseEvent,releases=0;const requests=[];
+          navigator.wakeLock={request:type=>{requests.push(type);return new Promise(done=>resolve=done);}};
+          start();press('Matt: 1 more life (hold for 5)').click();
+          resolve({release:()=>releases++,addEventListener:(type,fn)=>{assert.equal(type,'release');releaseEvent=fn;}});
+          await settle();assert(counter().querySelector('.life-sleep-note').hidden);
+          releaseEvent();assert(!counter().querySelector('.life-sleep-note').hidden);
+          document.visibilityState='hidden';document.fire('visibilitychange');
+          document.visibilityState='visible';document.fire('visibilitychange');assert.equal(requests.length,2);
+          closeLifeCounter();resolve({release:()=>releases++});await settle();assert.equal(releases,1);
+        """)
+
     def run_js(self, scenario):
         result = subprocess.run([NODE, str(RUNNER)], input=json.dumps([str(WEB), SETUP + scenario, True]),
                                 capture_output=True, text=True, encoding="utf-8", timeout=25, check=False)
@@ -103,13 +154,14 @@ class LifeSourceCounterUiTests(unittest.TestCase):
           assert.equal(active().players[0].sources.length,1);assert.equal(writes.length,0);
         """)
 
-    def test_poison_concede_undo_and_foreground_result_handoff(self):
+    def test_poison_end_keeps_foreground_handoff_and_cannot_be_undone(self):
         self.run_js("""
           start();named(counter(),'Poison').click();for(let i=0;i<9;i++)press('User1: 1 more poison').click();
           assert.equal(active().ended,null);press('User1: 1 more poison').click();assert.equal(records.length,1);
           assert.equal(records[0].packet.ended.result,'a');assert.equal(records[0].packet.ended.why,'poison');
-          named(counter(),'Undo last change').click();assert.equal(active().ended,null);assert.equal(active().players[1].poison,9);
-          assert.equal(records[0].context.isCurrent(),false);press('Matt: concede').click();assert.equal(records.length,2);
+          assert(named(counter(),'Undo last change').disabled);named(counter(),'Undo last change').click();
+          assert.equal(active().ended.result,'a');assert.equal(active().players[1].poison,10);
+          assert.equal(records[0].context.isCurrent(),true);closeLifeCounter();start();press('Matt: concede').click();assert.equal(records.length,2);
           assert.equal(records[1].packet.ended.result,'b');assert.equal(writes.length,0);
         """)
 
@@ -326,13 +378,13 @@ class LifeSourceCounterUiTests(unittest.TestCase):
 
     def test_terminal_hold_second_pointer_storage_and_generation_changes_cannot_handoff(self):
         self.run_js("""
-          for(const changed of ['wrong release','second press','storage','undo']){
+          for(const changed of ['wrong release','second press','storage','generation']){
             records.length=0;start();const minus=press('User1: 1 life less (hold for 5)');
             minus.fire('pointerdown',{pointerId:9});for(let i=0;i<4;i++)flushTimers();assert.equal(records.length,0);
             if(changed==='wrong release')minus.fire('pointerup',{pointerId:10});
             else if(changed==='second press')minus.fire('pointerdown',{pointerId:10});
             else if(changed==='storage'){const saved=kept();saved.players[0].life=19;store.set(packetKey(saved),JSON.stringify(saved));}
-            else named(counter(),'Undo last change').click();
+            else lifeV2Open.generation++;
             minus.fire('pointerup',{pointerId:9});assert.equal(records.length,0);assert.equal(writes.length,0);closeLifeCounter();
           }
         """)

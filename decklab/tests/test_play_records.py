@@ -84,6 +84,17 @@ class PlayRecordsTests(PlayFixture, ApiTestCase):
     def stored(self, kind="games"):
         return self.box.state.play_list(kind)
 
+    def test_counter_marker_defaults_are_presentation_only_and_do_not_change_snapshot_hashes(self):
+        before = play._snapshot("casual/gruul-test", "target")
+        with mock.patch("decklab.lib.api.play_markers.suggestions", return_value=["energy", "monarch"]):
+            overview = play.play_overview()
+        self.assertTrue(overview["lists"])
+        self.assertTrue(all(item["counter_markers"] == ["energy", "monarch"] for item in overview["lists"]))
+        self.assertEqual(play._snapshot("casual/gruul-test", "target"), before)
+        checked = play.save_game(encoded(self.game()))
+        self.assertTrue(all("counter_markers" not in side for side in checked["record"]["sides"]))
+        self.assertEqual(self.stored(), [])
+
     def test_preview_never_writes_and_confirmation_is_required(self):
         payload = self.game()
         preview = play.save_game(encoded(payload))

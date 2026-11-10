@@ -334,7 +334,8 @@ function podCounterInput(ctx) {
       ({ source_id: `c${index + 1}`, label })) };
   });
   return { input: { profile: ctx.profileId, space: ctx.space, session_id: podLifeSessionId(),
-    date: draft.date, notes: draft.notes, seats } };
+    date: draft.date, notes: draft.notes, seats,
+    counter_markers: [...new Set(ctx.controls.flatMap(control => lifeMarkerHints(podSelectedList(control)?.counter_markers)))] } };
 }
 
 function podCounterStart(ctx, owner) {

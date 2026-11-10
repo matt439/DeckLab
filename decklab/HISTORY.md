@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Life-counter wake, Undo and rules-derived markers (2026-11-11; E4-S32)
+
+- The duel/pod counters share guarded wake-lock handling, with visible-return reacquisition and stale-lock release. Unsupported/rejected locks say when the screen may sleep, distinguishing a saved count from storage failure.
+- Counters now keep a bounded 20-step in-memory Undo history while open. Ended or recorded games cannot be reopened through Undo; mid-pod elimination can still be corrected while the game continues. Optional bounded marker fields persist compatibly beside old packets, without rewriting resumed v1 data.
+- Visible chosen lists suggest poison, energy, experience, Monarch and Initiative controls from rules, not collection state. API hints are presentation-only and preserve snapshot hashes and record privacy; the controls can be switched off.
+- Validation: 222 targeted checks pass (one separate DB skip); an 8-case synthetic smoke passed with clean source/cleanup and scoped narrow-screen wrapping fixes. A 24-case `life-counters` matrix adds full rendering coverage; Wake Lock is simulated and no actual record/inventory is written. Physical wake/Safari checks remain separate.
+
 ## Actionable first-run diagnostics (2026-11-11; E11-S78)
 
 - Recognized no-answer, sign-in and missing-role/database failures now have distinct doctor/page/local-console guidance. SQLSTATE is preferred, known libpq phrases cover startup errors without it, and unknown failures remain unverified. Raw exception contents never enter doctor/page prose; local db.log retains the cause.

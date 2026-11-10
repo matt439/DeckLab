@@ -213,7 +213,10 @@ function lifeSeat(open, i) {
 
 /** A change from a button: kept, drawn, and when it ends the game, Record result opened. */
 function lifeStep(open, i, field, delta, button = null, foreground = true) {
-  if (!lifeLegacyHere(open, button) || !lifeChange(open.game, i, field, delta)) return false;
+  if (!lifeLegacyHere(open, button)) return false;
+  const previous = JSON.parse(JSON.stringify(open.game));
+  if (!lifeChange(open.game, i, field, delta)) return false;
+  lifeUndoRemember(open, previous, !!open.game.ended);
   open.generation++; lifeLegacyStore(open);
   lifeDraw(open);
   if (open.game.ended && foreground) lifeRecord(open);
@@ -240,6 +243,7 @@ function lifeDraw(open) {
   open.seats.forEach((seat) => seat.draw());
   open.poison.setAttribute("aria-pressed", game.poison ? "true" : "false");
   open.endButton.disabled = !!game.ended;
+  open.undoButton.disabled = !!game.ended || !open.previous;
   for (const button of open.end.querySelectorAll("button")) open.controls.delete(button);
   clear(open.end);
   open.end.hidden = !game.ended && !open.choosing;
@@ -256,7 +260,8 @@ function lifeDraw(open) {
           { source: open.originSource, isCurrent: open.originOwner }))) ]);
   } else if (open.choosing) {
     const pick = (result) => () => {
-      open.choosing = false; lifeEnd(game, result); open.generation++; lifeLegacyStore(open); lifeDraw(open); lifeRecord(open);
+      open.choosing = false; lifeEnd(game, result); lifeUndoRemember(open, null, true);
+      open.generation++; lifeLegacyStore(open); lifeDraw(open); lifeRecord(open);
     };
     add(open.end, [el("h2", { text: "Who won?" }),
       el("div", { class: "life-end-actions" },
@@ -280,51 +285,53 @@ function lifeTick(open) {
 /** Keeps the phone's screen on while the counter is open, where the browser allows it. A lock that arrives after
  * the counter closed (or another opened) is let go at once, so the screen never stays on behind the Game log. */
 async function lifeWake(open) {
-  try {
-    const generation = open.generation, request = ++open.wakeSeq;
-    const current = () => lifeLegacyHere(open) && open.generation === generation && open.wakeSeq === request;
-    if (!current() || !navigator.wakeLock) return;
-    const wake = await navigator.wakeLock.request("screen");
-    if (!current()) { wake.release(); return; }
-    if (open.wake && open.wake !== wake) open.wake.release();
-    open.wake = wake;
-  } catch (e) { /* not allowed here, or already released */ }
+  return lifeWakeRequest(open.wakeControl);
 }
 
 /** Shows the counter for game, full screen. onClose: called when it closes (the Game log's Resume). */
 function openLifeCounter(data, game, onClose = null, options = {}) {
   closeLifeCounter(true);
-  const open = { data, game, onClose, choosing: false, mayRecord: lifeMayRecord(data, game), timer: null, wake: null,
+  const open = { data, game, onClose, choosing: false, mayRecord: lifeMayRecord(data, game), timer: null,
     originProfile: state.profile, originToken: routeToken, originHash: location.hash,
     originProfileId: state.profile?.id, originSpace: state.profile?.space === undefined ? "home" : state.profile.space,
     originMain: document.getElementById("main"), originLists: data.lists, originDecks: data.decks,
     originalGame: game, originStarted: game.started, originSource: options.source || null,
     originSourceParent: options.source?.parentNode, originOwner: options.isCurrent || null,
-    controls: new Map(), holds: new Set(), generation: 0, wakeSeq: 0, blurred: false };
+    controls: new Map(), holds: new Set(), generation: 0, history: [], previous: null, blurred: false };
   open.seats = game.players.map((_, i) => lifeSeat(open, i));
   open.clock = el("span", { class: "life-clock", role: "timer", "aria-label": "Game time" });
   open.poison = lifeLegacyButton(open, "Poison", () => {
-    game.poison = !game.poison; open.generation++; lifeLegacyStore(open); lifeDraw(open);
-  }, { "aria-pressed": "false" });
+    const previous = JSON.parse(JSON.stringify(game));
+    game.poison = !game.poison; lifeUndoRemember(open, previous, !!game.ended);
+    open.generation++; lifeLegacyStore(open); lifeDraw(open);
+  }, { class: "filter-chip", "aria-pressed": "false" });
   open.endButton = lifeLegacyButton(open, "End game", () => { open.choosing = true; lifeDraw(open); }, { class: "btn" });
+  open.undoButton = lifeLegacyButton(open, "Undo last change", () => {
+    const previous = open.previous;
+    if (!previous || game.ended || previous.ended || previous.started !== game.started || previous.profile !== game.profile) return;
+    game.poison = previous.poison;
+    game.players.forEach((player, index) => Object.assign(player, JSON.parse(JSON.stringify(previous.players[index]))));
+    lifeUndoPop(open); open.generation++; open.choosing = false; lifeLegacyStore(open); lifeDraw(open);
+  });
+  open.wakeNote = el("p", { class: "sub life-sleep-note", role: "status" });
   open.end = el("div", { class: "life-end", role: "group", "aria-label": "The game's end", hidden: true });
   const close = lifeLegacyButton(open, "Close", () => closeLifeCounter());
   open.dialog = el("dialog", { class: "life-counter", "aria-label": "Life counter" },
     el("div", { class: "life-inner" }, open.seats[0].node,
-      el("div", { class: "life-bar" }, open.clock, open.poison, open.endButton, close), open.seats[1].node),
+      el("div", { class: "life-bar" }, open.clock, open.poison, open.endButton, open.undoButton, close, open.wakeNote), open.seats[1].node),
     open.end);
   open.dialog.addEventListener("close", () => { if (lifeOpen === open) closeLifeCounter(); });
   open.inner = open.dialog.children[0]; open.bar = open.clock.parentNode;
   open.onVisible = () => {
     for (const stop of open.holds) stop();
     if (document.visibilityState === "hidden") {
-      open.wakeSeq++; clearTimeout(open.timer); try { open.wake?.release(); } catch (_) { /* already released */ } open.wake = null;
+      clearTimeout(open.timer); lifeWakePause(open.wakeControl);
     } else { lifeTick(open); lifeWake(open); }
   };
   document.addEventListener("visibilitychange", open.onVisible);
   open.onBlur = () => {
-    open.blurred = true; open.wakeSeq++; clearTimeout(open.timer); for (const stop of open.holds) stop();
-    try { open.wake?.release(); } catch (_) { /* already released */ } open.wake = null;
+    open.blurred = true; clearTimeout(open.timer); for (const stop of open.holds) stop();
+    lifeWakePause(open.wakeControl);
   };
   open.onFocus = () => { open.blurred = false; lifeTick(open); lifeWake(open); };
   for (const type of ["blur", "pagehide"]) window.addEventListener(type, open.onBlur);
@@ -338,6 +345,9 @@ function openLifeCounter(data, game, onClose = null, options = {}) {
   if (typeof open.dialog.showModal === "function") open.dialog.showModal();
   else open.dialog.setAttribute("open", "");
   lifeLegacyRegister(open, open.dialog); lifeTick(open);
+  open.wakeControl = lifeWakeControl(() => lifeLegacyHere(open), () => {
+    try { return JSON.stringify(JSON.parse(local.get(LIFE_KEY))) === JSON.stringify(open.game); } catch (_) { return false; }
+  }, open.wakeNote);
   open.entry = typeof pushSheetEntry === "function" ? pushSheetEntry(() => closeLifeCounter()) : null;
   lifeWake(open);
   return open;
@@ -355,7 +365,7 @@ function closeLifeCounter(quiet = false) {
   document.removeEventListener("visibilitychange", open.onVisible);
   for (const type of ["blur", "pagehide"]) window.removeEventListener(type, open.onBlur);
   for (const type of ["focus", "pageshow"]) window.removeEventListener(type, open.onFocus);
-  try { if (open.wake) open.wake.release(); } catch (e) { /* already released */ }
+  lifeWakePause(open.wakeControl, true);
   if (open.dialog.open) open.dialog.close();
   open.dialog.remove();
   if (typeof releaseSheetEntry === "function") releaseSheetEntry(open.entry);
@@ -384,7 +394,7 @@ function lifeLegacyButton(open, text, action, attrs = {}) {
 function lifeLegacyRegister(open, root) {
   for (const button of root.querySelectorAll("button")) open.controls.set(button, button.parentNode);
 }
-function lifeLegacyStore(open) { lifeStore(open.game); open.raw = local.get(LIFE_KEY); }
+function lifeLegacyStore(open) { lifeStore(open.game); open.raw = local.get(LIFE_KEY); lifeWakeNote(open.wakeControl); }
 
 // New counters use the independently validated v2 model. Legacy helpers above
 // remain available, and no operation below writes or deletes LIFE_KEY.
@@ -531,12 +541,13 @@ function lifeV2Write(open) {
   if (pointer === open.session && raw === encoded && lifeV2Session(open.previousSession) && open.previousSession !== open.session) {
     local.remove(lifeV2Key(open.profile, open.previousSession)); open.previousSession = null;
   }
+  lifeWakeNote(open.wakeControl);
 }
 function lifeV2Action(open, button, change, foreground = true) {
   if (!lifeV2Control(open, button) || !lifeV2StorageCurrent(open)) return false;
   const previous = lifeV2Clone(open.game);
   if (!change()) return false;
-  open.previous = previous; open.generation++; open.choosing = false; lifeV2Write(open);
+  lifeUndoRemember(open, previous, !!open.game.ended); open.generation++; open.choosing = false; lifeV2Write(open);
   const record = foreground && open.game.ended && lifeV2Control(open, button, true);
   lifeV2Draw(open); if (record) lifeV2Record(open);
   return true;
@@ -599,6 +610,11 @@ function lifeV2Seat(open, player, index) {
     counters.push({ row, value, field, source }); return row;
   };
   const poison = counter("poison", "poison");
+  const playerCounters = [counter("energy", "energy"), counter("experience", "experience")];
+  const claims = ["monarch", "initiative"].map(kind => ({ kind, button: lifeV2Button(open,
+    kind === "monarch" ? "Monarch" : "Initiative", button => lifeV2Action(open, button,
+      () => lifeSourceMarker(open.game, kind, null, player.seat_id)), { class: "filter-chip", "aria-pressed": "false",
+      "aria-label": `${player.name}: ${kind}` }) }));
   const damage = el("details", { class: "life-source-damage" }, el("summary", { text: "Commander damage received" }));
   for (const other of open.game.players) for (const source of other.sources)
     damage.append(counter("commander", `${other.seat_id === player.seat_id ? "Own commander" : other.name}: ${source.label}`,
@@ -606,19 +622,25 @@ function lifeV2Seat(open, player, index) {
   damage.hidden = !open.game.commander;
   const status = el("p", { class: "sub", role: "status" });
   const extras = el("div", { class: "life-extras" }, ...[-5, 5].map(delta => lifeV2Button(open, delta < 0 ? "-5" : "+5",
-    button => change(button, "life", delta), { "aria-label": `${player.name}: ${delta < 0 ? "5 life less" : "5 more life"}` })), poison, damage,
+    button => change(button, "life", delta), { "aria-label": `${player.name}: ${delta < 0 ? "5 life less" : "5 more life"}` })), poison,
+  ...playerCounters, el("div", { class: "life-marker-claims" }, claims.map(row => row.button)), damage,
   lifeV2Button(open, "Concede", button => lifeV2Action(open, button, () => lifeSourceConcede(open.game, player.seat_id)),
     { "aria-label": `${player.name}: concede` }));
   const node = el("section", { class: `life-seat life-seat-${index}`, "data-life-source-seat": player.seat_id },
     el("p", { class: "life-name" }, el("strong", { text: player.name }), el("span", { class: "sub", text: player.list.title })),
     el("div", { class: "life-main" }, big(-1), total, big(1)), extras, status);
   return { node, draw() {
+    const markers = lifeMarkerState(open.game, open.game.players.map(row => row.seat_id));
+    const marker = markers.values.find(row => row.seat_id === player.seat_id);
     total.textContent = String(player.life); status.textContent = lifeSourceOutWhy(open.game, player.seat_id) || "Still playing";
     for (const item of counters) {
-      item.row.hidden = item.field === "poison" && !open.game.poison;
-      item.value.textContent = String(item.field === "poison" ? player.poison : player.damage.find(entry =>
+      item.row.hidden = item.field === "poison" ? !open.game.poison
+        : ["energy", "experience"].includes(item.field) ? !markers.enabled[item.field] : false;
+      item.value.textContent = String(["energy", "experience"].includes(item.field) ? marker[item.field]
+        : item.field === "poison" ? player.poison : player.damage.find(entry =>
         entry.seat_id === item.source.seat_id && entry.source_id === item.source.source_id)?.value || 0);
     }
+    for (const row of claims) { row.button.hidden = !markers.enabled[row.kind]; row.button.setAttribute("aria-pressed", String(marker[row.kind])); }
     for (const button of node.querySelectorAll("button")) button.disabled = !!open.game.ended || open.completed;
   } };
 }
@@ -633,7 +655,11 @@ function lifeV2Draw(open, rebuild = false) {
   }
   for (const row of open.rows) row.draw();
   open.poisonButton.setAttribute("aria-pressed", String(open.game.poison)); open.poisonButton.disabled = !!open.game.ended || open.completed;
-  open.endButton.disabled = !!open.game.ended || open.completed; open.undoButton.disabled = !open.previous || open.completed;
+  open.endButton.disabled = !!open.game.ended || open.completed; open.undoButton.disabled = !open.previous || !!open.game.ended || open.completed;
+  for (const row of open.markerOptions.buttons) {
+    row.button.setAttribute("aria-pressed", String(lifeMarkerState(open.game, open.game.players.map(row => row.seat_id)).enabled[row.kind]));
+    row.button.disabled = !!open.game.ended || open.completed;
+  }
   open.end.hidden = !open.choosing && !open.game.ended;
   open.endTitle.textContent = open.game.ended ? open.game.ended.result === "draw" ? "Draw" :
     `${open.game.players.find(player => player.seat_id === open.game.ended.result)?.name || "A player"} won` : "Who won?";
@@ -668,14 +694,7 @@ function lifeV2Tick(open) {
   open.timer = setTimeout(() => lifeV2Tick(open), 1000);
 }
 async function lifeV2Wake(open) {
-  if (!lifeV2Here(open, true) || !navigator.wakeLock || open.wakePending) return;
-  const generation = open.generation, request = ++open.wakeSeq; open.wakePending = true;
-  try {
-    const wake = await navigator.wakeLock.request("screen");
-    if (!lifeV2Here(open, true) || open.generation !== generation || open.wakeSeq !== request) { wake.release(); return; }
-    if (open.wake && open.wake !== wake) open.wake.release(); open.wake = wake;
-  } catch (_) { /* optional browser facility */ }
-  finally { if (open.wakeSeq === request) open.wakePending = false; }
+  return lifeWakeRequest(open.wakeControl);
 }
 function openLifeSourceCounter(data, game, options) {
   const profile = state.profile, scope = lifeV2Scope(profile), main = document.getElementById("main");
@@ -689,20 +708,26 @@ function openLifeSourceCounter(data, game, options) {
   const open = { data, lists: data.lists, decks: data.decks, game: lifeV2Clone(game), profile, scope, main,
     source: options.source, sourceParent: options.source.parentNode, options, owner: options.isCurrent, onClose: options.onClose,
     token: routeToken, hash: location.hash, session: game.session_id, pointerKey, packetKey, pointerObserved: pointer,
-    stored, previousSession: pointer, controls: new Map(), holds: new Set(), rows: [], generation: 0, previous: null,
-    choosing: false, completed: false, handoff: false, timer: null, wake: null, wakeSeq: 0, wakePending: false, blurred: false };
+    stored, previousSession: pointer, controls: new Map(), holds: new Set(), rows: [], generation: 0, previous: null, history: [],
+    choosing: false, completed: false, handoff: false, timer: null, blurred: false };
   open.originalGame = open.game;
   open.clock = el("span", { class: "life-clock", role: "timer", "aria-label": "Game time" });
   open.error = el("p", { class: "form-error life-source-error", role: "status" });
-  open.poisonButton = lifeV2Button(open, "Poison", button => lifeV2Action(open, button, () => lifeSourcePoison(open.game, !open.game.poison)));
+  open.poisonButton = lifeV2Button(open, "Poison", button => lifeV2Action(open, button, () => lifeSourcePoison(open.game, !open.game.poison)),
+    { class: "filter-chip" });
   open.endButton = lifeV2Button(open, "End game", () => { open.choosing = true; lifeV2Draw(open); });
   open.undoButton = lifeV2Button(open, "Undo last change", button => {
     if (open.previous && lifeV2Control(open, button) && lifeV2StorageCurrent(open) && lifeSourceUndo(open.game, open.previous)) {
-      open.previous = null; open.generation++; open.choosing = false; lifeV2Write(open); lifeV2Draw(open, true);
+      lifeUndoPop(open); open.generation++; open.choosing = false; lifeV2Write(open); lifeV2Draw(open, true);
     }
   });
   open.closeButton = lifeV2Button(open, "Close", () => closeLifeSourceCounter());
-  open.bar = el("div", { class: "life-bar" }, open.clock, open.poisonButton, open.endButton, open.undoButton, open.closeButton, open.error);
+  open.markerOptions = lifeMarkerOptions((...args) => lifeV2Button(open, ...args), (kind, button) =>
+    lifeV2Action(open, button, () => lifeSourceMarker(open.game, kind,
+      !lifeMarkerState(open.game, open.game.players.map(row => row.seat_id)).enabled[kind])));
+  open.wakeNote = el("p", { class: "sub life-sleep-note", role: "status" });
+  open.bar = el("div", { class: "life-bar" }, open.clock, open.poisonButton, open.markerOptions.node,
+    open.endButton, open.undoButton, open.closeButton, open.error, open.wakeNote);
   open.endTitle = el("h2");
   open.winnerButtons = [...game.players.map(player => lifeV2Button(open, `${player.name} won`, button =>
     lifeV2Action(open, button, () => lifeSourceEnd(open.game, player.seat_id)))),
@@ -716,16 +741,15 @@ function openLifeSourceCounter(data, game, options) {
   open.visible = () => {
     for (const stop of open.holds) stop();
     if (document.hidden === true || document.visibilityState && document.visibilityState !== "visible") {
-      open.wakeSeq++; open.wakePending = false;
-      clearTimeout(open.timer); try { open.wake?.release(); } catch (_) { /* already released */ } open.wake = null; return;
+      clearTimeout(open.timer); lifeWakePause(open.wakeControl); return;
     }
     lifeV2Tick(open); lifeV2Wake(open);
   };
   document.addEventListener("visibilitychange", open.visible);
   open.onBlur = () => {
-    open.blurred = true; open.wakeSeq++; open.wakePending = false; clearTimeout(open.timer);
+    open.blurred = true; clearTimeout(open.timer);
     for (const stop of open.holds) stop();
-    try { open.wake?.release(); } catch (_) { /* already released */ } open.wake = null;
+    lifeWakePause(open.wakeControl);
   };
   open.onFocus = () => { open.blurred = false; lifeV2Tick(open); lifeV2Wake(open); };
   for (const type of ["blur", "pagehide"]) window.addEventListener(type, open.onBlur);
@@ -742,6 +766,8 @@ function openLifeSourceCounter(data, game, options) {
     else if (lifeV2Session(pointer) && pointer !== game.session_id) { local.remove(lifeV2Key(profile, pointer)); open.previousSession = null; }
   }
   lifeV2Register(open, open.bar); lifeV2Register(open, open.end); lifeV2Draw(open, true); lifeV2Tick(open);
+  open.wakeControl = lifeWakeControl(() => lifeV2Here(open, true),
+    () => local.get(open.packetKey) === JSON.stringify(open.game) && local.get(open.pointerKey) === open.session, open.wakeNote);
   open.entry = typeof pushSheetEntry === "function" ? pushSheetEntry(() => { if (lifeV2Open === open) closeLifeSourceCounter(); }) : null;
   lifeV2Wake(open); return true;
 }
@@ -753,7 +779,7 @@ function closeLifeSourceCounter(quiet = false) {
   document.removeEventListener("visibilitychange", open.visible);
   for (const type of ["blur", "pagehide"]) window.removeEventListener(type, open.onBlur);
   for (const type of ["focus", "pageshow"]) window.removeEventListener(type, open.onFocus);
-  try { open.wake?.release(); } catch (_) { /* already released */ }
+  lifeWakePause(open.wakeControl, true);
   if (open.dialog.open && typeof open.dialog.close === "function") open.dialog.close(); open.dialog.remove();
   if (typeof releaseSheetEntry === "function") releaseSheetEntry(open.entry);
   if (notify && typeof open.onClose === "function") open.onClose();

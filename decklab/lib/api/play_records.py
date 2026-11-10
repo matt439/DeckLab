@@ -663,8 +663,10 @@ def play_overview(deck_id=None):
         for version in summary["versions"]:
             try:
                 captured = _snapshot(summary["id"], version)
-                snapshots.append(captured)
-                pod_choice = play_pods.choice(summary, captured, viewer)
+                from .play_markers import suggestions
+                choice = dict(captured, counter_markers=suggestions(captured))
+                snapshots.append(choice)
+                pod_choice = play_pods.choice(summary, choice, viewer)
                 if pod_choice is not None:
                     pod_lists.append(pod_choice)
             except ApiError as exc:

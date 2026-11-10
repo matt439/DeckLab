@@ -40,8 +40,61 @@ SETUP = """
 
 @unittest.skipUnless(NODE, "Node.js isn't installed")
 class PodLifeCounterUiTests(unittest.TestCase):
+    def test_deeper_undo_is_bounded_and_cannot_reopen_an_ended_pod(self):
+        self.run_js("""
+          open();for(let i=0;i<25;i++)press('A: 1 more life').click();
+          assert.equal(active().seats[0].life,65);assert.equal(podLifeCounterOpen.history.length,LIFE_UNDO_LIMIT);
+          for(let i=0;i<LIFE_UNDO_LIMIT;i++)named(counter(),'Undo last change').click();
+          assert.equal(active().seats[0].life,45);assert(named(counter(),'Undo last change').disabled);
+          named(counter(),'End game').click();named(counter(),'Draw').click();
+          assert.equal(podLifeCounterOpen.history.length,0);named(counter(),'Undo last change').click();
+          assert.equal(active().ended.result,'draw');assert.equal(writes.length,0);
+        """)
+
+    def test_marker_defaults_counts_and_exclusive_reminders_are_persisted_and_switchable(self):
+        self.run_js("""
+          const game=podLifeNew({...input(),counter_markers:['poison','energy','experience','monarch','initiative']});
+          assert(podLifeOpen(data,game,options()));assert(active().poison);
+          press('A: 1 more energy').click();press('C: 1 more experience').click();
+          press('A: monarch').click();press('C: monarch').click();press('B: initiative').click();
+          same(active().markers.values.map(row=>row.monarch),[false,false,true]);
+          assert.equal(active().markers.values[0].energy,1);assert.equal(active().markers.values[2].experience,1);
+          podLifeCounterOpen.markerOptions.node.setAttribute('open','');
+          podLifeCounterOpen.markerOptions.buttons.find(row=>row.kind==='initiative').button.click();
+          assert(!active().markers.enabled.initiative);const saved=kept();closePodLifeCounter();
+          assert(podLifeOpen(data,saved,options({replace:false})));same(active().markers,saved.markers);
+          assert.equal(writes.length,0);
+        """)
+
+    def test_pod_wake_is_reacquired_on_visibility_and_late_locks_release_without_writes(self):
+        self.run_js("""
+          const pending=[],released=[];navigator.wakeLock={request:type=>{
+            assert.equal(type,'screen');return new Promise(resolve=>pending.push(resolve));}};
+          const lock=name=>({release:()=>released.push(name)});open();const raw=store.get(point('1'.repeat(32)));
+          document.visibilityState='hidden';document.fire('visibilitychange');
+          document.visibilityState='visible';document.fire('visibilitychange');
+          pending.shift()(lock('hidden'));await Promise.resolve();await Promise.resolve();assert(released.includes('hidden'));
+          pending.shift()(lock('current'));await Promise.resolve();await Promise.resolve();
+          assert(counter().querySelector('.life-sleep-note').hidden);closePodLifeCounter();assert(released.includes('current'));
+          assert.equal(store.get(point('1'.repeat(32))),raw);
+          assert(podLifeOpen(data,kept(),options({replace:false})));const oldProfile=state.profile;state.profile={...oldProfile};
+          pending.shift()(lock('profile'));await Promise.resolve();await Promise.resolve();assert(released.includes('profile'));
+          state.profile=oldProfile;closePodLifeCounter();assert.equal(writes.length,0);assert.equal(handoffs.length,0);
+        """)
+
+    def test_unavailable_or_denied_pod_wake_reports_sleep_without_claiming_unsaved_counts_are_saved(self):
+        self.run_js("""
+          delete navigator.wakeLock;open();assert.equal(counter().querySelector('.life-sleep-note').textContent,LIFE_SLEEP_NOTE);
+          closePodLifeCounter();navigator.wakeLock={request:()=>Promise.reject(Error('Denied'))};
+          assert(podLifeOpen(data,kept(),options({replace:false})));await Promise.resolve();await Promise.resolve();
+          assert(!counter().querySelector('.life-sleep-note').hidden);closePodLifeCounter();
+          delete navigator.wakeLock;store.clear();window.localStorage.setItem=()=>{throw Error('Blocked');};open();
+          assert(counter().querySelector('.life-sleep-note').textContent.includes('could not be saved'));
+          assert(!counter().querySelector('.life-sleep-note').textContent.includes('your count is saved'));
+        """)
+
     def run_js(self, scenario):
-        scripts = ("hands.js", "play.js", "play-pods.js", "pod-life-model.js", "pod-life-counter.js")
+        scripts = ("hands.js", "play.js", "play-pods.js", "pod-life-model.js", "life-counter-tools.js", "pod-life-counter.js")
         sources = "\n".join((WEB / name).read_text(encoding="utf-8") for name in scripts)
         result = subprocess.run([NODE, str(RUNNER)], input=json.dumps([str(WEB), sources + SETUP + scenario]),
                                 capture_output=True, text=True, encoding="utf-8", timeout=25, check=False)
@@ -185,12 +238,13 @@ class PodLifeCounterUiTests(unittest.TestCase):
           assert.equal(podLifeOpen(data,old,options({replace:false})),false);assert.equal(kept().session_id,'2'.repeat(32));
         """)
 
-    def test_undo_invalidates_an_old_result_handoff_and_restores_only_this_game(self):
+    def test_mid_pod_elimination_can_be_undone_but_ended_pod_cannot_reopen(self):
         self.run_js("""
           open();press('B: concede').click();assert.equal(handoffs.length,0);named(counter(),'Undo last change').click();
           assert.equal(podLifeOut(active(),'s2'),'');named(counter(),'End game').click();named(counter(),'Draw').click();
-          const callback=handoffs[0].context;named(counter(),'Undo last change').click();assert.equal(active().ended,null);
-          assert.equal(callback.isCurrent(),false);assert.equal(callback.onSaved(),false);assert(kept());
+          const callback=handoffs[0].context;assert(named(counter(),'Undo last change').disabled);
+          named(counter(),'Undo last change').click();assert.equal(active().ended.result,'draw');
+          assert.equal(callback.isCurrent(),true);assert(kept());
         """)
 
     def test_partial_and_total_storage_failure_still_count_and_warn_then_recover(self):

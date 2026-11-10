@@ -38,7 +38,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 18 | 0 | 2 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 19 | 2 | 4 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 3 | 7 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 21 | 1 | 6 | 2 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 22 | 1 | 5 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 28 | 0 | 4 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 30 | 1 | 5 | 0 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 45 | 13 | 17 | 4 |
-| **Total** | **376** | **282** | **21** | **57** | **16** |
+| **Total** | **376** | **283** | **21** | **56** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1914,7 +1914,7 @@ Gap: play records have only get, list and put in the state store, and the pod co
 
 First slice: delete only: `play_delete` in `lib/state/pg.py` and `lib/state/memory.py`, `delete_game` in `lib/api/play_records.py`, a private summary in `lib/api/activity_summaries.py`, and the action in `web/play.js` and `web/play-pods.js`.
 
-**E4-S32** · Matt · could · M · missing
+**E4-S32** · Matt · could · M · built
 
 As Matt, keeping score for a Commander pod on my phone, I want the pod counter to keep the screen on and both counters to say when they can't, so that the phone doesn't dim mid-game without my knowing why.
 
@@ -1923,9 +1923,9 @@ As Matt, keeping score for a Commander pod on my phone, I want the pod counter t
 - Given several mis-taps, when Undo is repeated, then each goes back through a short bounded history, and Undo never brings back an ended or recorded game.
 - Given chosen decks whose cards use poison, energy or experience counters, or make the Monarch or Initiative reminder cards, then those markers start on and can be switched off.
 
-Gap: `web/pod-life-counter.js` never asks for a wake lock, though the two-player counter does, and `web/life-counter.js` says nothing when the API is missing. Undo is one step deep and absent from the legacy counter, and nothing from `lib/tokens/counters.py` reaches the counters. E4-S26 already keeps a locked phone's count and offers Resume. From the product review of 2026-11-10, compared with Lifetap, Playgroup.gg and Magic Life Counter.
+Built 2026-11-11: both modern counters use a shared guarded wake-lock helper, re-request on visible return and release stale/acquired locks on close. Unsupported/rejected locks have honest saved/unsaved fallback wording. All counters keep up to 20 frame-local Undo steps; ended/recorded games cannot be resurrected. Validated optional marker state supports poison, energy, experience, Monarch and Initiative, defaulted from the chosen visible lists' rules only. Marker controls use the existing filter-chip states. Older local packets remain readable and old v1 bytes survive resume; no historical snapshot or play record is rewritten by these presentation hints.
 
-First slice: add a guarded wake request and release to `web/pod-life-counter.js` like `web/life-counter.js`, show the note in both counters, and extend `tests/test_life_source_counter_ui.py` and `tests/test_pod_life_counter_ui.py` with a fake wake lock.
+Evidence: `play_markers.py`, `life-counter-tools.js`, life/pod models and controls, and scoped marker/Undo/wake/privacy fixtures. 222 targeted tests pass (one DB qualification skip); smoke rendering passed 8/8 cases with simulated Wake Lock and complete cleanup. The full `life-counters` matrix has 24 synthetic cases, including supported/unavailable wake, both themes and phone/tablet/desktop controls. Real device wake/Safari acceptance remains separate. From the product review of 2026-11-10, compared with Lifetap, Playgroup.gg and Magic Life Counter.
 
 **E4-S33** · Matt · could · L · missing
 

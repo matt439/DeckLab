@@ -70,7 +70,7 @@ function podLifeCounterHere(open, top = false) {
         open.packet !== open.originalPacket || open.packet.session_id !== open.session ||
         !podLifeValid(open.packet, open.scope)) return false;
     if (top) {
-      if (document.hidden === true || document.visibilityState && document.visibilityState !== "visible") return false;
+      if (open.blurred || document.hidden === true || document.visibilityState && document.visibilityState !== "visible") return false;
       const dialogs = Array.from(document.querySelectorAll("dialog")).filter(node =>
         (node.open || node.getAttribute("open") !== null) && !node.hidden);
       if (dialogs.at(-1) !== open.dialog) return false;
@@ -111,13 +111,14 @@ function podLifeWrite(open) {
   if (open.persisted && podLifeSession(open.previousSession) && open.previousSession !== open.session) {
     local.remove(podLifeKey(open.profile, open.previousSession)); open.previousSession = null;
   }
+  lifeWakeNote(open.wakeControl);
 }
 function podLifeAction(open, button, change, rebuild = false) {
   if (!podLifeControlHere(open, button) || !podLifeStorageCurrent(open)) return false;
   const previous = podLifeClone(open.packet), token = { button, generation: open.generation };
   open.action = token;
   if (!change()) { open.action = null; return false; }
-  open.previous = previous; open.generation++; open.choosing = false;
+  lifeUndoRemember(open, previous, !!podLifeEnded(open.packet)); open.generation++; open.choosing = false;
   podLifeWrite(open);
   // Prove the foreground action before rendering hides a chosen result or
   // disables the player who just went out. Record checks the current top frame again.
@@ -149,6 +150,11 @@ function podLifeSeat(open, seat) {
     return row;
   };
   const poison = counter("poison", "poison");
+  const playerCounters = [counter("energy", "energy"), counter("experience", "experience")];
+  const claims = ["monarch", "initiative"].map(kind => ({ kind, button: podLifeButton(open,
+    kind === "monarch" ? "Monarch" : "Initiative", button => podLifeAction(open, button,
+      () => podLifeMarker(open.packet, kind, null, seat.seat_id)), { class: "filter-chip", "aria-pressed": "false",
+      "aria-label": `${seat.player}: ${kind}` }) }));
   const sources = el("details", { class: "pod-life-sources" }, el("summary", { text: "Commander damage received" }));
   for (const other of open.packet.seats)
     for (const source of other.sources) sources.append(counter("commander", `${other.seat_id === seat.seat_id ? "Own commander" : other.player}: ${source.label}`,
@@ -158,7 +164,8 @@ function podLifeSeat(open, seat) {
     podLifeAction(open, button, () => podLifeConcede(open.packet, seat.seat_id)), { "aria-label": `${seat.player}: concede` });
   const label = seat.type === "deck" ? seat.title : seat.commander || "External opponent";
   const node = el("section", { class: "pod-life-seat", "data-pod-life-seat": seat.seat_id, "aria-label": seat.player },
-    el("h3", { text: seat.player }), el("p", { class: "sub", text: label }), mainRow, extras, poison, sources, out, concede);
+    el("h3", { text: seat.player }), el("p", { class: "sub", text: label }), mainRow, extras, poison,
+    ...playerCounters, el("div", { class: "life-marker-claims" }, claims.map(row => row.button)), sources, out, concede);
   if (seat.type === "external" && seat.sources.length === 1) {
     const sourceName = el("input", { type: "text", maxlength: 600, value: "", "aria-label": `${seat.player}: second commander label (optional)` });
     const addSource = podLifeButton(open, "Add second commander", button => {
@@ -169,19 +176,24 @@ function podLifeSeat(open, seat) {
     sources.append(el("p", { class: "sub", text: "An unknown commander uses a numbered source. Add a second source explicitly; names are never split." }), sourceField);
   }
   return { node, draw() {
+    const markers = lifeMarkerState(open.packet, open.packet.seats.map(row => row.seat_id));
+    const marker = markers.values.find(row => row.seat_id === seat.seat_id);
     total.textContent = String(seat.life); const reason = podLifeOut(open.packet, seat.seat_id);
     node.classList.toggle("pod-life-out", !!reason); out.textContent = reason ? `Out: ${reason === "conceded" ? "conceded" : reason}.` : "Still playing";
     for (const item of counters) {
-      item.row.hidden = item.field === "poison" && !open.packet.poison;
-      item.value.textContent = String(item.field === "poison" ? seat.poison : seat.damage.find(value =>
+      item.row.hidden = item.field === "poison" ? !open.packet.poison
+        : ["energy", "experience"].includes(item.field) ? !markers.enabled[item.field] : false;
+      item.value.textContent = String(["energy", "experience"].includes(item.field) ? marker[item.field]
+        : item.field === "poison" ? seat.poison : seat.damage.find(value =>
         value.seat_id === item.source.seat_id && value.source_id === item.source.source_id)?.value || 0);
     }
+    for (const row of claims) { row.button.hidden = !markers.enabled[row.kind]; row.button.setAttribute("aria-pressed", String(marker[row.kind])); }
     for (const button of node.querySelectorAll("button")) button.disabled = !!reason || !!podLifeEnded(open.packet) || open.completed;
   } };
 }
 function podLifeClock(open) {
   clearTimeout(open.timer);
-  if (!podLifeCounterHere(open) || document.hidden === true || document.visibilityState && document.visibilityState !== "visible") return;
+  if (!podLifeCounterHere(open) || open.blurred || document.hidden === true || document.visibilityState && document.visibilityState !== "visible") return;
   const seconds = Math.max(0, Math.floor((Date.now() - open.packet.started) / 1000));
   const hours = Math.floor(seconds / 3600), minutes = Math.floor(seconds / 60) % 60, remainder = seconds % 60;
   const two = value => String(value).padStart(2, "0");
@@ -197,7 +209,11 @@ function podLifeDraw(open, rebuild = false) {
   for (const row of open.seatRows) row.draw();
   const ended = podLifeEnded(open.packet);
   open.poisonButton.setAttribute("aria-pressed", String(open.packet.poison)); open.poisonButton.disabled = !!ended || open.completed;
-  open.endButton.disabled = !!ended || open.completed; open.undoButton.disabled = !open.previous || open.completed;
+  open.endButton.disabled = !!ended || open.completed; open.undoButton.disabled = !open.previous || !!ended || open.completed;
+  for (const row of open.markerOptions.buttons) {
+    row.button.setAttribute("aria-pressed", String(lifeMarkerState(open.packet, open.packet.seats.map(row => row.seat_id)).enabled[row.kind]));
+    row.button.disabled = !!ended || open.completed;
+  }
   open.end.hidden = !open.choosing && !ended;
   open.endTitle.textContent = ended ? ended.result === "draw" ? "Draw" :
     `${open.packet.seats.find(seat => seat.seat_id === ended.result)?.player || "A player"} won` : "Choose the pod's result";
@@ -245,23 +261,28 @@ function podLifeOpen(data, packet, options) {
   const open = { data, originalData: data, lists: data.pod_lists, pods: data.pods, packet: podLifeClone(packet),
     profile, scope, session, pointerKey, packetKey, options, source: options.source, sourceParent: options.source.parentNode,
     owner: options.isCurrent, onRecord: options.onRecord, onClose: options.onClose, routeToken, hash: location.hash, main: currentMain,
-    generation: 0, choosing: false, previous: null, timer: null, handoff: false, completed: false, controls: new Map(), stored,
+    generation: 0, choosing: false, previous: null, history: [], timer: null, handoff: false, completed: false, controls: new Map(), stored,
     pointerObserved: pointer, previousSession: pointer, persisted: false };
   open.originalPacket = open.packet;
   open.clock = el("span", { class: "life-clock", role: "timer", "aria-label": "Pod game time" });
   open.error = el("p", { class: "form-error pod-life-error", role: "status" });
   open.poisonButton = podLifeButton(open, "Poison", button => podLifeAction(open, button, () => podLifePoison(open.packet, !open.packet.poison)),
-    { "aria-pressed": String(packet.poison) });
+    { class: "filter-chip", "aria-pressed": String(packet.poison) });
   open.endButton = podLifeButton(open, "End game", () => { open.choosing = true; podLifeDraw(open); });
   open.undoButton = podLifeButton(open, "Undo last change", button => {
     if (!open.previous || !podLifeStorageCurrent(open)) return;
     const previous = open.previous;
     if (podLifeControlHere(open, button) && podLifeUndo(open.packet, previous)) {
-      open.previous = null; open.generation++; open.choosing = false; podLifeWrite(open); podLifeDraw(open, true);
+      lifeUndoPop(open); open.generation++; open.choosing = false; podLifeWrite(open); podLifeDraw(open, true);
     }
   });
   open.closeButton = podLifeButton(open, "Close", () => closePodLifeCounter());
-  open.bar = el("div", { class: "pod-life-bar" }, open.clock, open.poisonButton, open.endButton, open.undoButton, open.closeButton);
+  open.markerOptions = lifeMarkerOptions((...args) => podLifeButton(open, ...args), (kind, button) =>
+    podLifeAction(open, button, () => podLifeMarker(open.packet, kind,
+      !lifeMarkerState(open.packet, open.packet.seats.map(row => row.seat_id)).enabled[kind])));
+  open.wakeNote = el("p", { class: "sub life-sleep-note", role: "status" });
+  open.bar = el("div", { class: "pod-life-bar" }, open.clock, open.poisonButton, open.markerOptions.node,
+    open.endButton, open.undoButton, open.closeButton, open.wakeNote);
   open.grid = el("div", { class: "pod-life-grid" });
   open.endTitle = el("h3", { text: "Choose the pod's result" });
   open.winners = packet.seats.map(seat => ({ id: seat.seat_id, button: podLifeButton(open, `${seat.player} won`, button =>
@@ -274,7 +295,16 @@ function podLifeOpen(data, packet, options) {
   open.inner = el("div", { class: "pod-life-inner" }, open.grid, open.bar, open.end, open.error);
   open.dialog = el("dialog", { class: "pod-life-counter", "aria-label": "Pod life counter" }, open.inner);
   open.dialog.addEventListener("close", () => { if (podLifeCounterOpen === open) closePodLifeCounter(); });
-  open.visible = () => { if (podLifeCounterOpen === open) podLifeClock(open); };
+  open.visible = () => {
+    if (document.hidden === true || document.visibilityState && document.visibilityState !== "visible") {
+      clearTimeout(open.timer); lifeWakePause(open.wakeControl); return;
+    }
+    if (podLifeCounterOpen === open) { podLifeClock(open); lifeWakeRequest(open.wakeControl); }
+  };
+  open.onBlur = () => { open.blurred = true; clearTimeout(open.timer); lifeWakePause(open.wakeControl); };
+  open.onFocus = () => { open.blurred = false; podLifeClock(open); lifeWakeRequest(open.wakeControl); };
+  for (const type of ["blur", "pagehide"]) window.addEventListener(type, open.onBlur);
+  for (const type of ["focus", "pageshow"]) window.addEventListener(type, open.onFocus);
   document.addEventListener("visibilitychange", open.visible);
   document.body.append(open.dialog); open.dialogParent = open.dialog.parentNode; podLifeCounterOpen = open;
   if (typeof open.dialog.showModal === "function") open.dialog.showModal(); else open.dialog.setAttribute("open", "");
@@ -289,6 +319,9 @@ function podLifeOpen(data, packet, options) {
   } else { open.stored = stored; open.persisted = true; }
   if (!open.persisted) open.error.textContent = "The counter is open, but it could not be kept for Resume.";
   podLifeRegister(open, open.bar); podLifeRegister(open, open.end); podLifeDraw(open, true); podLifeClock(open);
+  open.wakeControl = lifeWakeControl(() => podLifeCounterHere(open, true),
+    () => local.get(open.packetKey) === JSON.stringify(open.packet) && local.get(open.pointerKey) === open.session, open.wakeNote);
+  lifeWakeRequest(open.wakeControl);
   open.entry = typeof pushSheetEntry === "function" ? pushSheetEntry(() => {
     if (podLifeCounterOpen === open) closePodLifeCounter();
   }) : null;
@@ -300,10 +333,13 @@ function closePodLifeCounter(quiet = false) {
   if (!open) return false;
   const notify = !quiet && podLifeCounterHere(open);
   podLifeCounterOpen = null; clearTimeout(open.timer);
+  lifeWakePause(open.wakeControl, true);
   if (open.dialog.open && typeof open.dialog.close === "function") open.dialog.close();
   open.dialog.remove();
   if (typeof releaseSheetEntry === "function") releaseSheetEntry(open.entry);
   document.removeEventListener("visibilitychange", open.visible);
+  for (const type of ["blur", "pagehide"]) window.removeEventListener(type, open.onBlur);
+  for (const type of ["focus", "pageshow"]) window.removeEventListener(type, open.onFocus);
   if (notify && typeof open.onClose === "function") open.onClose();
   return true;
 }
