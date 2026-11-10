@@ -713,4 +713,6 @@ def play_overview(deck_id=None):
                                              entry["record"].get("updated_on") or ""), reverse=True)
     answer["pods"].sort(key=lambda entry: (entry["record"]["date"], entry["record"].get("created_on") or "",
                                          entry["record"].get("updated_on") or ""), reverse=True)
+    if deck_id and reads(deck_id):
+        answer["pod_summary"] = play_pods.summary(answer["pods"], deck_id, snapshot, viewer)
     return answer

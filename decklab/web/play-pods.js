@@ -97,6 +97,8 @@ function playPodSection(data, deckId = "") {
     button.addEventListener("click", () => { if (podOwner(owner) && !button.disabled) podForm(owner); });
   }
   section.append(heading);
+  const summary = deckId ? podResultsPart(data.pod_summary) : null;
+  if (summary) section.append(summary);
   const resume = podCounterResumeAction(data, section);
   if (resume) section.append(resume);
   section.append(el("p", { class: "sub", text: "Three or four players. Pod results stay separate from 1v1 Head to head." }),
@@ -104,6 +106,29 @@ function playPodSection(data, deckId = "") {
       : emptyBox(deckId ? "No pod games with this deck yet." : "No pod games have been recorded yet."));
   if (entries.length) section.append(el("p", { class: "sub play-pod-count", text: `${plural(entries.length, "pod game")} recorded.` }));
   return section;
+}
+
+function podResultsPart(summary) {
+  if (!summary || !Number.isSafeInteger(summary.minimum_games) || summary.minimum_games < 1) return null;
+  if (summary.status === "insufficient") return el("p", { class: "sub play-pod-summary", text:
+    `Not enough pod games yet: at least ${summary.minimum_games} decided pods are needed.` });
+  if (summary.status === "unavailable") return el("p", { class: "sub play-pod-summary", text:
+    "Pod results couldn't be worked out. The records are still listed below." });
+  if (summary.status !== "ready" || !Number.isSafeInteger(summary.wins) || !Number.isSafeInteger(summary.decided)
+      || summary.decided < summary.minimum_games || summary.wins < 0 || summary.wins > summary.decided
+      || !Number.isSafeInteger(summary.draws) || summary.draws < 0
+      || ![summary.fair_share, summary.range?.low, summary.range?.high].every(value => Number.isFinite(value) && value >= 0 && value <= 1)
+      || summary.range.low > summary.range.high) return null;
+  const part = el("div", { class: "play-pod-summary" }, el("p", { text:
+    `Won ${summary.wins} of ${summary.decided} decided pods · ${plural(summary.draws, "draw")} counted separately. `
+    + `Fair share across those table sizes: ${pct(summary.fair_share)}. 95% Wilson range: ${pct(summary.range.low)}–${pct(summary.range.high)}.` }));
+  const winners = (Array.isArray(summary.outside_winners) ? summary.outside_winners : []).filter(row => row && typeof row.commander === "string" && row.commander.trim()
+    && Number.isSafeInteger(row.wins) && row.wins > 0).slice(0, 3);
+  if (winners.length) part.append(el("p", { class: "sub", text: "Most frequent outside winners against this deck: "
+    + winners.map(row => `${row.commander} (${plural(row.wins, "win")})`).join("; ") }));
+  if (Number.isSafeInteger(summary.excluded) && summary.excluded > 0) part.append(el("p", { class: "sub", text:
+    `${plural(summary.excluded, "ambiguous or incomplete pod")} left out.` }));
+  return part;
 }
 
 function podOwnerContext(data, button, host, entry = null, deckId = "") {

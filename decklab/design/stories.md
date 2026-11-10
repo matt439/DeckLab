@@ -38,7 +38,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 18 | 0 | 2 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 19 | 2 | 4 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 3 | 7 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 23 | 1 | 4 | 2 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 24 | 1 | 3 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 29 | 0 | 3 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 32 | 1 | 3 | 0 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 32 | 1 | 2 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 49 | 14 | 12 | 4 |
-| **Total** | **376** | **292** | **22** | **46** | **16** |
+| **Total** | **376** | **293** | **22** | **45** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1940,7 +1940,7 @@ Gap: Deal a hand (E4-S08) stops after the draw: `web/hands.js` has only hand and
 
 First slice: a board class beside `OpeningHand` in `web/hands.js` with play, tap, graveyard, next turn and a snapshot Undo, with model tests in `tests/test_play_ui.py`.
 
-**E4-S34** · Matt · could · M · missing
+**E4-S34** · Matt · could · M · built
 
 As Matt, who plays mostly Commander pods, I want each deck's recorded pod games rolled up into one line, so that I can see how it has done at the table without counting records myself.
 
@@ -1949,9 +1949,9 @@ As Matt, who plays mostly Commander pods, I want each deck's recorded pod games 
 - Given the pods that deck lost, then the outside commander labels that most often won are named, only to the space that recorded them.
 - Given records the viewer can't see, then they add nothing to any count; a renamed deck's games still count.
 
-Gap: pod records are only listed, with no per-deck tally in `lib/api/play_pods.py` or `web/play-pods.js`. E4-S18 and E9-S16 built the records; E4-S13 compares real 1v1 games with Forge for one pair; E9-S21 is win shares for Forge pod runs. Seat splits, winning turn and a real-game rating are left out. From the product review of 2026-11-10, compared with Playgroup.gg, MTG Compendium and TopDeck.gg. Needs Matt's decision: he said recording games isn't necessary (E4-S27), so the line may mostly read "not enough games yet".
+Built 2026-11-11 under the all-OPEN approval: a deck-filtered Game log rolls up only pod records already admitted to that viewer. It needs 10 decided pods; draws are separate and outside the win denominator. Fair share is the mean of1/table-size, with the existing95% Wilson range. Duplicate targets, unresolved/non-results are excluded, renamed decks use pinned aliases, and below the minimum only the insufficient-games line shows. Top-three external commander winners in losses are named only for the recording space, never public outsiders. No additional inventory/card/record read or write is made.
 
-First slice: a pure roll-up over one deck's visible pod records, returned by `lib/api/play_pods.py` and drawn as one line in `web/play-pods.js`, reusing the minimum from `lib/api/play_comparison.py`.
+Evidence:176 broad play/pod/bridge/web fixtures pass (one DB class skip), plus67 overlapping focused checks. Tests cover varying3/4-seat baselines, draws/minimum/Wilson, repeated/ambiguous targets, aliases/no-extra-read, hidden records/private labels, optional-failure preservation and no-write audit invariance. The ordinary read-only paragraph uses existing wrapping styles; native record or device acceptance is not inferred. Seat splits/winning turn/ratings remain excluded. From the product review of 2026-11-10.
 
 ---
 

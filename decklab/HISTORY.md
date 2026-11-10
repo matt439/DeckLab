@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Per-deck recorded pod summaries (2026-11-11; E4-S34)
+
+- Deck-filtered Game log summaries use only already-visible pod projections and pinned deck aliases. At least 10 decided games are needed; draws are separate, fair share averages1/table-size, and the existing95% Wilson helper supplies the interval. Invalid/ambiguous results are excluded and smaller samples show no premature rate.
+- The three most frequent external commander winners in losses are recorder-space-only details. Public outsiders receive no private winner ranking, and hidden records contribute no counts. No extra card/inventory/record query or state write is made.
+- Validation:176 broad and67 overlapping focused play/pod/bridge/web tests pass (one separate DB skip), including different table sizes, duplicate targets, renames, private labels, no-extra-read/no-write guards and optional-failure rendering. This is a summary of visible recorded games, not a deck rating.
+
 ## A new-install tunnel and Access walkthrough (2026-11-11; E11-S81)
 
 - SELF-HOSTING step10 now walks through domain/tool prerequisites, local tunnel login/create/DNS commands, a restricted Access application/policy, team/AUD lookup, origin-validated loopback8644 ingress and private config merging. It preserves existing profiles/space privacy, and the general reference links back to the how-to.

@@ -59,6 +59,16 @@ def rights(record, profile):
         profile, "play.record", play._writable_decks("games", record, profile))), "delete": may_delete(record, profile)}
 
 
+def summary(entries, deck_id, snapshot, profile):
+    """One deck's existing visible projection, without another store or inventory read."""
+    from . import pod_results
+    try:
+        return pod_results.summarise(entries, lambda candidate: inventory.same_deck_id(deck_id, candidate, snapshot),
+                                    permissions._space_of(profile) if profile else None)
+    except Exception:
+        return {"status": "unavailable", "minimum_games": pod_results.MINIMUM_GAMES}
+
+
 def choice(summary, snapshot, profile):
     """A positive own-space Commander choice, separately from ordinary 1v1 lists."""
     if not profile or decks.engine_kind(summary) != "commander":
