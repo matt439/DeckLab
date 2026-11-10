@@ -346,12 +346,19 @@ def fixture_world():
     """What every scenario dump runs with: the fixture card index, a config.json of the fixture
     profiles (so the goldens don't depend on this checkout's), no exchange-rate file (the gate
     fixes the rate)."""
+    from decklab.lib import sealed
+
+    def no_network(code):
+        raise OSError("MTGJSON's set files aren't fetched in the fixture tests")
+
     with tempfile.TemporaryDirectory(prefix="decklab-world-") as temp:
         temp = Path(temp)
         (temp / "config.json").write_text(json.dumps({"profiles": FIXTURE_PROFILES}), encoding="utf-8")
         with mock.patch.object(cards, "INDEX_FILE", _fixture_index()), mock.patch.object(cards, "_index", None), \
                 mock.patch.object(cards, "FX_FILE", temp / "fx.json"), \
                 mock.patch.object(config, "CONFIG_FILE", temp / "config.json"), \
+                mock.patch.object(sealed, "CACHE", temp / "sealed"), \
+                mock.patch.object(sealed, "_fetch_set", no_network), \
                 mock.patch.dict(os.environ, {config.EXTRA_ENV: ""}):
             yield
 

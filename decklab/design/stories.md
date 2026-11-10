@@ -40,13 +40,13 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 3 | 7 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 20 | 1 | 7 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 28 | 0 | 4 | 2 |
-| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 21 | 0 | 2 | 2 |
+| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 28 | 1 | 7 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 44 | 11 | 20 | 4 |
-| **Total** | **376** | **277** | **19** | **64** | **16** |
+| **Total** | **376** | **278** | **19** | **63** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -2876,7 +2876,7 @@ Gap: Baskets and the plan (E5-S27) offer only Copy this shop's list (E5-S24), an
 
 First slice: client only: an optional seed for `shopOrderSheet` in `decklab/web/shopping-orders.js`, and a seed builder with the button in `decklab/web/shopping-baskets.js` and `decklab/web/shopping-plan.js`.
 
-**E6-S29** · Matt · should · M · missing
+**E6-S29** · Matt · should · M · built
 
 As Matt recording an order with a sealed product, I want the product's always-included bonus card on its list, so that decks show it as on the way and I don't buy it again as a single.
 
@@ -2889,9 +2889,16 @@ As Matt recording an order with a sealed product, I want the product's always-in
 
 Decided (Matt, 2026-11-10): Deck Lab may fetch MTGJSON's set files and cache them (a week), but only while making a preview, never on a page load or a write; "Include its bonus card" starts ticked, the arrival check being the backstop, as no Wizards source says a bonus card is guaranteed; a drop MTGJSON lists with no bonus card gets no warning.
 
-Gap: product lists are hand-written CSVs and MTGJSON's deck files never hold the bonus card. Verified 2026-11-10: in `SLD.json.gz` (2.4 MB) each deck file's `sealedProductUuids` leads to its product, and each Stardew Valley drop (and its foil edition) has exactly one `contents.card`, SLD 7188, 7189 or 7190, its `cardCount` the deck's plus one; every `contents.card` of a Secret Lair product with a deck (277) is an `sldbonus` printing, while 526 of 798 have none. Already-received products aren't backfilled. From the bonus-card investigation of 2026-11-10 (the Stardew incident, [HISTORY.md](../HISTORY.md), "Extra copies of owned printings", 2026-10-13).
+Now: built 2026-11-10 ([HISTORY.md](../HISTORY.md#a-sealed-products-bonus-card-on-its-list-2026-11-10-e6-s29)). From the bonus-card investigation of 2026-11-10: in `SLD.json.gz` each Stardew Valley drop (and its foil edition) has exactly one `contents.card`, SLD 7188, 7189 or 7190; 526 of 798 Secret Lair products with a deck have none. Already-received products aren't backfilled.
 
-First slice: `precons.sealed_extras(file)` in `decklab/lib/precons.py` (the set file read once a preview, a small per-set extract cached in `decklab/data/mtgjson/sealed/`, returning fixed, random and other contents), and an `extras` section accepted by `_product_lines` in `decklab/lib/decks/__init__.py` as collection-only, with fixture tests.
+Evidence:
+- `decklab/lib/sealed.py`: extract, contents, product_list, missing_cards, missing_bonus, with_bonus, check_text
+- `decklab/lib/inventory/rules.py`: EXTRAS_SECTION, extras_row, product_reads_as_decks; `decklab/lib/decks/__init__.py`: _product_lines; `decklab/lib/inventory/model.py`: Product.is_deck
+- `decklab/lib/precons.py`: PRODUCT_TYPES, deck_list/search/find(products=)
+- `decklab/db/inv_orders.py`: order add and product add `--from-mtgjson`, `--no-bonus-cards`, _bonus_notes; `decklab/db/inv_collection.py`: `collection precons --products`
+- `decklab/lib/api/precons.py`: product_list_view (GET /api/precons/product); `decklab/lib/api/shopping_orders.py`: _bonus_fix
+- `decklab/web/shopping-orders.js`: Fill from a published list, the bonus tick, bonusOffer
+- `decklab/tests/test_sealed.py`
 
 ---
 
@@ -3527,7 +3534,7 @@ First slice: a counted breakdown replacing the general note in both places, the 
 
 As Matt adding a precon I opened, I want its fixed bonus card added too, so that the collection holds every card the box always has.
 
-- Given a precon whose sealed product MTGJSON lists with a fixed bonus card (E6-S29's `sealed_extras`), when Add a precon previews it (the page and `collection add-precon --dry-run`), then the bonus card shows under its own heading, ticked, unticked from the start when the space already has that printing.
+- Given a precon whose sealed product MTGJSON lists with a fixed bonus card (E6-S29's `sealed.contents`, `decklab/lib/sealed.py`), when Add a precon previews it (the page and `collection add-precon --dry-run`), then the bonus card shows under its own heading, ticked, unticked from the start when the space already has that printing.
 - Given it's ticked, when the precon is added, then it's added to the collection in the same change, as the display commander is: never a deck line, condition and language blank, its note "bonus card in <precon>".
 - Given the command line and a precon with a bonus card, when it's added without `--dry-run`, then it needs `--bonus-cards include` or `skip`, and refuses without one.
 - Given random contents in the box, when the preview shows, then its note names them ("plus a 2-card sample pack (random, not added)") in place of the general RANDOM_NOTE.
@@ -3548,9 +3555,9 @@ As Matt who bought Secret Lair drops, I want to add one from Add a precon as car
 
 Decided (Matt, 2026-11-10): wanted.
 
-Gap: `TYPES` in `decklab/lib/precons.py` leaves Secret Lair drops out because they aren't decks, and `plan_add` in `decklab/lib/api/precons.py` always makes a deck. Depends on E7-S39. From the bonus-card investigation of 2026-11-10.
+Gap: E6-S29 added `precons.PRODUCT_TYPES` (Secret Lair drops, for `collection precons --products` and a product list's fill), but Add a precon's lists still use `TYPES` alone, and `plan_add` in `decklab/lib/api/precons.py` always makes a deck. Depends on E7-S39. From the bonus-card investigation of 2026-11-10.
 
-First slice: a cards-only type set beside `TYPES` and a no-deck branch in `plan_add`, its preview wording in `decklab/web/precon-add.js` and `collection add-precon`.
+First slice: offer `PRODUCT_TYPES` entries in Add a precon and a no-deck branch in `plan_add`, its preview wording in `decklab/web/precon-add.js` and `collection add-precon`.
 
 ---
 

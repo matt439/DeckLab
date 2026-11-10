@@ -383,14 +383,14 @@ class Product:
 
     @property
     def is_deck(self):
-        """Whether the product reads as decks: a deck or section column (decks._product_lines'
-        rule). None when the file couldn't be read (error): today
+        """Whether the product reads as decks: a deck or section column, unless its only sections
+        are extras (rules.product_reads_as_decks, decks._product_lines' rule). None when the file
+        couldn't be read (error): today
         decks._product_decks still lists such a file, with its error, so a reader must look at
         error before it skips a product that isn't a deck."""
         if self.error is not None:
             return None
-        columns = self.columns or ()
-        return "deck" in columns or "section" in columns
+        return rules.product_reads_as_decks(self.columns, self.items)
 
     def label(self, style):
         """The product's name as each reader words it when there's no display name:

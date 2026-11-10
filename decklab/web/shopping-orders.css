@@ -10,6 +10,16 @@ details.shop-order-section:not([open]) > :not(summary) { display: none; }
 .shop-order-section textarea { width: 100%; }
 .shop-order-search { display: grid; grid-template-columns: minmax(0, 1fr) 90px; gap: var(--s-2) var(--s-3); align-items: end; }
 .shop-order-search > button { grid-column: 1 / -1; justify-self: start; }
+.shop-order-find { display: grid; gap: var(--s-2); }
+.shop-order-find > button { justify-self: start; }
+.shop-order-published { display: grid; gap: var(--s-1); }
+.shop-order-published[hidden] { display: none; }
+.shop-order-published > button { justify-content: flex-start; text-align: left; overflow-wrap: anywhere; }
+.shop-order-published-note { display: grid; gap: var(--s-2); min-width: 0; overflow-wrap: anywhere; }
+.shop-order-published-note > p, .shop-order-published-note > ul { margin: 0; }
+.shop-order-bonus-missing { display: grid; gap: var(--s-2); justify-items: start; margin-bottom: var(--s-3); }
+.shop-order-bonus-missing > p { margin: 0; }
+.shop-order-bonus { display: flex; gap: var(--s-2); align-items: flex-start; min-height: var(--tap); }
 .shop-order-cards { display: grid; gap: var(--s-2); }
 .shop-order-card { display: grid; grid-template-columns: minmax(0, 1fr) 76px auto auto; gap: var(--s-2); align-items: center; border-bottom: 1px solid var(--border); padding: var(--s-2) 0; }
 .shop-order-card > div, .shop-order-queue label > span { min-width: 0; overflow-wrap: anywhere; }

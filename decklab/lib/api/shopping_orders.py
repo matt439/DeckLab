@@ -3,7 +3,8 @@
 POST /api/shopping/order/preview takes profile, expect (Shopping's exact inventory
 revision), record, and optional cards/tokens/product/fulfils/extra_copies. Cards and
 tokens take rows or csv and checks; a product takes columns/rows or csv plus its
-metadata. Fulfilled queue rows are numbered {row, quantity}; omitted quantity means
+metadata, and skip_bonus (true: its bonus card was left out on purpose, so the preview
+doesn't offer it back as bonus_missing, E6-S29). Fulfilled queue rows are numbered {row, quantity}; omitted quantity means
 the whole row. No prices, unchecked imports or forced table failures are accepted.
 
 POST /api/shopping/order/apply takes profile and the opaque preview token. The
@@ -74,8 +75,11 @@ def _rows(value, columns, *, text=_text):
 def _component(value, kind):
     _object(value, f"The {kind} component")
     product = kind == "product"
-    _keys(value, (), ("rows", "csv", "checks", "id", "columns", "stem", "name", "format", "status", "notes")
+    _keys(value, (), ("rows", "csv", "checks", "id", "columns", "stem", "name", "format", "status", "notes",
+                      "skip_bonus")
           if product else ("rows", "csv", "checks", "id"))
+    if product and "skip_bonus" in value and not isinstance(value["skip_bonus"], bool):
+        raise ApiError(400, "skip_bonus must be true or false")
     if ("csv" in value) == ("rows" in value):
         raise ApiError(400, f"Give either rows or csv for the {kind} component")
     result = {key: _text(value[key], key, blank=False) for key in ("id", "stem", "name", "format", "status")
@@ -179,6 +183,26 @@ def _result(before, after, summary, operation):
             "tables": _tables(summary), "warnings": common._scrub((summary.extra or {}).get("warnings", []))}
 
 
+def _bonus_fix(product):
+    """{"bonus_missing": {"cards" [words], "csv" (the product list with them added in the extras
+    section), "checks" (an arrival check each)}} when a product list holds a published deck but not
+    the bonus card its box is expected to hold (lib/sealed.py, E6-S29), else {}. Only a preview
+    fetches MTGJSON's set file; a failure to read it says nothing, as for a product MTGJSON lists
+    with no bonus card. The page offers to put the csv in place; nothing is changed here."""
+    from decklab.lib import sealed
+    try:
+        missing = sealed.missing_cards(product["rows"], fetch=True)
+    except (OSError, ValueError, TypeError, KeyError, AttributeError):
+        return {}                           # advisory: an unreadable set file never stops a preview
+    if not missing:
+        return {}
+    columns, rows = sealed.with_bonus(product["columns"], product["rows"], missing)
+    return {"bonus_missing": {
+        "cards": [f"{item['deck']}: {item['card']['count']} {sealed.describe(item['card'])}" for item in missing],
+        "csv": rules.csv_bytes(rows, columns).decode("utf-8"),
+        "checks": [sealed.check_text(item["card"]) for item in missing]}}
+
+
 def _authorize(data):
     profile = _writer(data)
     guard.require(profile, "orders.edit")
@@ -201,6 +225,8 @@ def preview_order(body):
         with inventory.pinned(before):
             after, summary = _preview(before, operation)
         result = _result(before, after, summary, operation)
+        if "product" in operation.params and data["product"].get("skip_bonus") is not True:
+            result.update(_bonus_fix(operation.params["product"]))
     except ApiError:
         raise
     except inventory.Unavailable:

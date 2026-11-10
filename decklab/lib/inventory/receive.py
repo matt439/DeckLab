@@ -411,6 +411,11 @@ def receive(inv, *, order, components, received_on, wording="web"):
             matches = [row for row in statuses if row["file"] == component.file_name]
             if len(matches) != 1 or matches[0]["status"] not in INCOMING:
                 raise Invalid(f"{component.id}: product status must be ordered or preordered")
+            if by_id[component.id]["intact"] == "yes" and not product.is_deck:
+                # product.set_intact's refusal: kept intact, a list with no decks (a Secret Lair drop with
+                # only its bonus card in extras, say) would hold nothing and stop every table refresh.
+                raise Invalid(f"{component.id} has no deck lists, so keeping it intact would hold nothing; "
+                              "receive it with intact no")
             matches[0]["status"] = "owned"
             rules.set_intact(matches[0], by_id[component.id]["intact"])
             matches[0]["notes"] = "; ".join(filter(None, (matches[0]["notes"], f"Received {received_on}")))

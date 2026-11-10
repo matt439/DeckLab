@@ -305,16 +305,20 @@ def _slugify(text):
 def _product_lines(product):
     """[(deck name or None, section, DeckLine)] from one product's card list
     (an inventory Product, rows as read), or None if it isn't a deck list (no
-    'deck' or 'section' column)."""
+    'deck' or 'section' column, or only extras sections: rules.product_reads_as_decks).
+    Extras rows (a bonus card, E6-S29) are the collection's only, never a deck line."""
+    from decklab.lib.inventory import paths as inventory_paths
+    from decklab.lib.inventory import rules as inventory_rules
     columns = product.columns or ()
-    if "deck" not in columns and "section" not in columns:
+    if not inventory_rules.product_reads_as_decks(columns, product.items):
         return None
     for column in ("name", "quantity", "finish"):
         if column not in columns:
             raise DeckFileError(f"Product {product.stem}'s card list has no {column!r} column")
     out = []
-    from decklab.lib.inventory import paths as inventory_paths
     for n, row in enumerate(product.items, 1):
+        if inventory_rules.extras_row(row):
+            continue
         where = inventory_paths.row_of(product.path, n)       # "Row 2 of product x's card list" (E11-S12)
         section = _section_name(row.get("section") or "deck")
         if section is None:
