@@ -12,9 +12,11 @@ import json
 import threading
 import unittest
 from email.message import Message
+from pathlib import Path
 
 from decklab.lib import access
 
+WYCHEPROOF = Path(__file__).resolve().parent / "fixtures" / "wycheproof" / "rsa_pkcs1_sha256_trimmed.json"
 N = int(
     "e329d088aca4e710c37708b18ca5101857eab86c94ee9f0c7aff42d99450c5461e57e23a6ed6a15ec0e4a01ca1441773"
     "6c4ce5f4510ac92bcf987051136e1ee7428b6adc83d74f52f27aacc1d999b3025028a0209bfaff2de9bf90bb609c3689"
@@ -149,6 +151,30 @@ class VerifierTests(unittest.TestCase):
         self.refused(token(signature=b"\x00" * 256))
         self.refused(token(signature=N.to_bytes(256, "big")))          # s >= n
         self.refused(token(signature=b"\x01" * 255))                   # wrong length
+
+    def test_a_signature_written_another_way(self):
+        head, body, sig = token().split(".")
+        signed = f"{head}.{body}".encode("ascii")
+        self.refused(token(signature=b"\x00" + sign(signed)))          # an extra leading zero byte: 257 bytes
+        self.refused(token(signature=sign(signed)[1:]))                # and one byte short
+        # The last base64url character of 256 bytes carries two bits; its four spare bits must be zero.
+        letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        other = letters[letters.index(sig[-1]) ^ 1]
+        self.assertEqual(base64.urlsafe_b64decode(sig[:-1] + other + "=="), base64.urlsafe_b64decode(sig + "=="))
+        self.refused(f"{head}.{body}.{sig[:-1]}{other}")
+        self.refused(f"{head}.{body}.{sig}==")                         # padding isn't written in a token
+        self.verifier.identify(f"{head}.{body}.{sig}")
+
+    def test_a_header_or_claims_that_arent_an_object(self):
+        body = b64(json.dumps(claims()).encode())
+        for header in (["RS256", "k1"], [{"alg": "RS256", "kid": "k1"}], "RS256", 7, None, True):
+            head = b64(json.dumps(header).encode())
+            self.refused(f"{head}.{body}.{b64(sign(f'{head}.{body}'.encode('ascii')))}")
+        head = b64(json.dumps({"alg": "RS256", "kid": "k1"}).encode())
+        for payload in ([claims()], [], "x", 7, None):
+            body = b64(json.dumps(payload).encode())
+            self.refused(f"{head}.{body}.{b64(sign(f'{head}.{body}'.encode('ascii')))}")
+        self.assertEqual(self.fetch.calls, 0)           # refused before any key is fetched
 
     def test_alg_none_and_hs256_are_refused(self):
         for alg in ("none", "HS256", "RS512", None):
@@ -299,6 +325,67 @@ class VerifierTests(unittest.TestCase):
             return self.verifier.identify(text)["profile"]
         except access.AccessError as e:
             return e.message
+
+
+class WycheproofTests(unittest.TestCase):
+    """access.rsa_sha256_valid against Project Wycheproof's RSASSA-PKCS1-v1_5
+    SHA-256 vectors (E11-S66), which nobody here wrote: a trimmed copy, with
+    its source, changes and Apache-2.0 licence in fixtures/wycheproof/."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.data = json.loads(WYCHEPROOF.read_text(encoding="utf-8"))
+
+    def vectors(self):
+        for source in self.data["files"]:
+            for group in source["groups"]:
+                n, e = int(group["n"], 16), int(group["e"], 16)
+                for test in group["tests"]:
+                    yield source["file"], n, e, test
+
+    def test_valid_pass_and_invalid_and_acceptable_are_refused(self):
+        seen = {"valid": 0, "invalid": 0, "acceptable": 0}
+        for name, n, e, test in self.vectors():
+            with self.subTest(file=name, tcId=test["tcId"], comment=test["comment"], flags=test["flags"]):
+                seen[test["result"]] += 1
+                # Wycheproof's "acceptable" signatures are ones a lenient verifier of old
+                # took (a DigestInfo without its NULL): this one takes the one exact encoding.
+                self.assertIs(access.rsa_sha256_valid(bytes.fromhex(test["msg"]), bytes.fromhex(test["sig"]), n, e),
+                              test["result"] == "valid")
+        self.assertEqual(seen, {"valid": 24, "invalid": 269, "acceptable": 3})
+
+    def test_the_fixture_is_the_trim_its_readme_describes(self):
+        self.assertEqual((self.data["algorithm"], self.data["sha"]), ("RSASSA-PKCS1-v1_5", "SHA-256"))
+        self.assertRegex(self.data["commit"], r"\A[0-9a-f]{40}\Z")
+        first, *others = self.data["files"]
+        self.assertEqual(first["kept"], first["numberOfTests"])        # the 2048-bit file whole
+        flags = set()
+        for source in self.data["files"]:
+            kept = [test for group in source["groups"] for test in group["tests"]]
+            self.assertEqual(len(kept), source["kept"])
+            self.assertEqual(len({test["tcId"] for test in kept}), len(kept))
+            self.assertTrue(any(test["result"] == "valid" for test in kept))
+            for group in source["groups"]:
+                self.assertEqual(int(group["n"], 16).bit_length(), int(group["keySize"]))
+            flags.update(flag for test in kept for flag in test["flags"])
+        self.assertEqual([source["groups"][0]["keySize"] for source in others], [3072, 4096])
+        self.assertLessEqual({"MissingNull", "BerEncodedPadding", "InvalidAsnInPadding", "ModifiedPadding",
+                              "ShortPadding", "SignatureMalleability", "WrongHash", "WrongPrimitive",
+                              "SmallSignature", "EdgeCaseSignature"}, flags)
+        folder = WYCHEPROOF.parent
+        self.assertIn("Apache License", (folder / "LICENSE").read_text(encoding="utf-8"))
+        readme = (folder / "README.md").read_text(encoding="utf-8")
+        self.assertIn(self.data["commit"], readme)
+        self.assertIn("Apache", readme)
+
+    def test_a_vectors_key_reads_as_a_jwk(self):
+        """A key this repo didn't make through parse_keys, the way Cloudflare's arrive."""
+        name, n, e, test = next(v for v in self.vectors() if v[3]["result"] == "valid" and v[3]["msg"])
+        keys = access.parse_keys({"keys": [{"kid": "w", "kty": "RSA", "alg": "RS256",
+                                            "n": b64(n.to_bytes((n.bit_length() + 7) // 8, "big")),
+                                            "e": b64(e.to_bytes((e.bit_length() + 7) // 8, "big"))}]})
+        self.assertEqual(keys, {"w": (n, e)})
+        self.assertTrue(access.rsa_sha256_valid(bytes.fromhex(test["msg"]), bytes.fromhex(test["sig"]), *keys["w"]))
 
 
 class SettingsTests(unittest.TestCase):
