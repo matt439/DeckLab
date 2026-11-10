@@ -14,3 +14,8 @@
 .pack-token-problems > summary { cursor: pointer; }
 .pack-counters { display: grid; gap: var(--s-2); }
 .pack-counters > h4, .pack-counters > p { margin: 0; }
+.pack-takealong-detail { margin: var(--s-1) 0 0 var(--s-6); overflow-wrap: anywhere; }
+@media print {
+  .pack-takealong-print li { break-inside: avoid; margin-bottom: 10pt; }
+  .pack-takealong-print li p { margin: 3pt 0; }
+}

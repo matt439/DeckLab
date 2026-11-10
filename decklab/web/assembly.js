@@ -462,7 +462,7 @@ function packDeck(view, deck) {
   const kept = steps.filter(s => s.keep);
   const waiting = steps.filter(s => s.waiting || s.missing);
   const tokenParts = [...(assemblyTokenTasks(deck.tokens, view.data.tokens, view) || []),
-    assemblyCounterTasks(view.data.counters, deck.id)];
+    !deck.tokens?.error && !deck.tokens?.unavailable ? assemblyCounterTasks(view.data.counters, deck.id) : null];
   let n = 0;
   const step = (kind, title, ...content) => {
     const node = packStep(n + 1, title, ...content);
@@ -542,7 +542,7 @@ function renderAssemblyPlan(view, data) {
       data.totals.missing ? `${plural(data.totals.missing, "copy", "copies")} not available for this plan` : null]
       .filter(Boolean).join("; ") + ".";
   add(view.results, [el("p", { class: data.ready ? "box box-good" : "box box-warn", text: statusText }),
-    warningsBox(data.warnings, "Inventory needs attention"), packOverlapNotice(view),
+    warningsBox(data.warnings, "Inventory needs attention"), packOverlapNotice(view), assemblyTakeAlong(view, data),
     // Decks in the same sleeves (one design may sleeve several decks): a note, never a block.
     (data.sleeve_notes || []).length ? el("div", { class: "pack-sleeve-notes" },
       note(...data.sleeve_notes.map((n) => n.note))) : null]);

@@ -393,7 +393,10 @@ def _preview(selected, profile=False):
     from .assembly_locations import annotate as locate
     locate(answer, inventory.current())
     from .assembly_completion import decorate
-    return decorate(answer, selections, profile)
+    answer = decorate(answer, selections, profile)
+    from .assembly_takealong import project as take_along
+    answer["take_along"] = take_along(answer, inv, profile)
+    return answer
 
 
 def _plan_cards(answer, participants, pictured):

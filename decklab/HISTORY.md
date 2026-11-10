@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## A built-deck take-along list (2026-11-10; E4-S29)
+
+- Build decks offers one take-along checklist when every selected ordinary home deck's chosen list matches its saved physical build. It shows permitted sleeves/box details, the packed Token cards record, merged counter/dice kind reminders and only the viewer's own/shared playmats. Unknown/private details remain unavailable, and unrelated hidden accessory errors cannot change the visible answer.
+- The checks use the ordinary optional shared packing ticks, with contexts bound to the physical receipts. They never affect card-building progress or eligibility, reserve cards, or write inventory/decks; failed tick saves leave normal build behavior intact. Counter coverage remains unknown if any participant's estimate is unavailable.
+- Print take-along list prints the same permitted data and current checks through the existing print-sheet styling. Its control must still belong to the current page/profile/plan and connected section. A stubbed system print call qualifies DOM/CSS behavior only, not a native print dialog.
+- Validation: 63 focused backend/UI/web fixtures and the combined counter/take-along/inventory-contract suite pass. The expanded headless `assembly-counters` suite has 30 cases; final stable-source rendering and full-suite results are recorded separately. Household devices remain part of E11-S30's acceptance.
+
 ## BOM configs across updates and member edits (2026-11-10; E11-S79 compatibility)
 
 - The Forge updater and strict member-config editor now accept the same BOM-encoded JSON as the main loader and doctor. Update's config backup keeps the original bytes, including BOM and CRLF, and its rewrite avoids newline normalization.

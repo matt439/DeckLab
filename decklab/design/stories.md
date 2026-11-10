@@ -38,7 +38,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 18 | 0 | 2 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 19 | 2 | 4 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 3 | 7 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 20 | 2 | 6 | 2 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 21 | 1 | 6 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 28 | 0 | 4 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 29 | 1 | 6 | 0 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 44 | 13 | 18 | 4 |
-| **Total** | **376** | **279** | **22** | **59** | **16** |
+| **Total** | **376** | **280** | **21** | **59** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1872,7 +1872,7 @@ Evidence:
 - `decklab/lib/api/assembly_printings.py`: annotate's set_name; `decklab/lib/api/assembly_tokens.py`
 - `decklab/tests/test_assembly_big_view_ui.py`, `test_assembly_tokens_ui.py`, `test_assembly_tokens.py`, `test_deck_page_ui.py`
 
-**E4-S29** · Matt · could · M · partial
+**E4-S29** · Matt · could · M · built
 
 As Matt, packing for a Commander night, I want the counters and dice my chosen decks use shown in Build decks, and one take-along list for built decks, so that I leave home with everything the pod needs.
 
@@ -1885,7 +1885,9 @@ Built 2026-11-10: Build decks preserves counter estimates and merges each kind w
 
 Evidence: `lib/api/assembly_counters.py`, `assembly.py`, `assembly_ticks.py`, `web/assembly-tokens.js`, `assembly.js`; focused summary/key/UI/privacy fixtures and inventory contracts pass. The opt-in synthetic headless `assembly-counters` suite covers ready, failed and unmigrated states in both themes at phone/tablet/desktop widths; final provenance-qualified capture follows the completed source. Actual household device acceptance remains separate.
 
-Next slice: the tickable/printable take-along list for selected home decks whose chosen recipes match their saved physical builds. Reuse existing optional shared packing ticks and print-sheet styling; show only visible kit and the viewer's own/shared playmats. E7-S24 supplies the existing needs/cover model, E4-S28 the optional Tokens step and E1-S28 pairs. From the product review of 2026-11-10, compared with Magic Life Counter.
+Also built 2026-11-10: a whole-plan take-along checklist appears for ordinary home decks whose selected lists match the saved physical builds. Each deck's visible sleeves/box and packed Token cards record, merged counter/dice kinds and only the viewer's own/shared playmats are projected from the existing permitted readers. Hidden kit stays unavailable; unknown or partial counter estimates never claim coverage. The checklist uses existing optional shared packing ticks, with task contexts bound to physical receipts; it changes no card task, build eligibility, deck or inventory. Print take-along list uses the same permitted data/current checks and existing print-sheet styling, guarded against stale page/profile/plan/control state.
+
+Evidence: `assembly_takealong.py`, `assembly-takealong.js`, their backend/UI fixtures and the narrow packing-golden adapter. Focused checks cover own/shared-only playmats, hidden-row response invariance, physical-list mismatch, unchanged reads, stale print actions, optional tick failures and required-progress independence. The expanded `assembly-counters` synthetic suite covers 30 reminder/take-along cases with a stubbed system print call; native printing and household device acceptance are not claimed. E7-S24 supplies the existing needs/cover model, E4-S28 the optional Tokens step and E1-S28 pairs. From the product review of 2026-11-10, compared with Magic Life Counter; implemented under Matt's overnight four-item goal.
 
 **E4-S30** · Matt · could · S · missing
 

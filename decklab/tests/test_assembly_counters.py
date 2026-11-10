@@ -22,6 +22,19 @@ GENERIC = {"type": "counter", "kind": "", "quantity": "1", "design": "", "notes"
 
 
 class CounterPlanSummaryTests(unittest.TestCase):
+    def test_one_unknown_deck_suspends_coverage_of_all_known_kinds(self):
+        a = participant("casual/a", ("energy", "player"))
+        for result in ({"error": "Unavailable"}, {"unavailable": "Rebuilding"}, {"needs": []}):
+            with self.subTest(result=result):
+                b = {"id": "casual/b", "title": "B", "tokens": result}
+                found = counters.summary([a, b], counters.Sources((GENERIC,), True))
+                self.assertEqual(found["error"], counters.FAILED)
+                self.assertEqual(found["needs"][0]["key"], "energy")
+                self.assertNotIn("cover", found["needs"][0])
+                self.assertNotIn("owned", found)
+        empty = participant("casual/b")
+        self.assertNotIn("error", counters.summary([empty], counters.Sources((), True)))
+
     def test_historical_goldens_ignore_only_exact_empty_additive_defaults(self):
         from decklab.tests import golden_p4
         empty = counters.summary([], counters.Sources((), True))

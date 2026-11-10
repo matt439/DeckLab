@@ -42,8 +42,14 @@ def summary(participants, sources):
     """
     needs = {}
     try:
+        incomplete = False
         for item in participants:
-            for need in ((item.get("tokens") or {}).get("counters") or {}).get("needs", []):
+            token_result = item.get("tokens") or {}
+            estimate = token_result.get("counters")
+            if token_result.get("error") or token_result.get("unavailable") or not isinstance(estimate, dict):
+                incomplete = True
+                continue
+            for need in estimate.get("needs", []):
                 key = need["key"]
                 merged = needs.setdefault(key, {"key": key, "name": need["name"], "group": need["group"],
                                                 "decks": []})
@@ -53,7 +59,7 @@ def summary(participants, sources):
                          n["key"][:1] not in "+-", int(n["key"][1:]) if n["group"] == "die" else 0,
                          cards.fold(n["name"])))
         result = {"needs": ordered, "note": NOTE, "details": counters.NOTE}
-        if sources.failed:
+        if sources.failed or incomplete:
             return dict(result, error=FAILED)
         return dice_cover.cover(result, sources.rows, sources.ready)
     except Exception:

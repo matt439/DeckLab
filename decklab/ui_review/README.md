@@ -66,8 +66,10 @@ python scripts/ui_review.py --browser "C:/Program Files/Google/Chrome/Applicatio
 The opt-in `precon-bonus` suite exercises six synthetic bonus-card reviews across
 phone, tablet and desktop widths in both themes. Native checkbox clicks, exact
 request receipts and explicit recovery from a source conflict are intercepted
-without writing inventory. `assembly-counters` captures optional counter/dice
-reminders in ready, failed and unmigrated states across the same widths/themes.
+without writing inventory. `assembly-counters` has 30 counter/dice and take-along
+cases across the same widths/themes: ready/failed/unmigrated reminders and
+ready/failed take-along lists. Optional checks use intercepted in-memory replies;
+the guarded print action uses a stubbed system dialog and actual print CSS.
 
 `--check` does not start any application processes. `--smoke` captures a desktop
 board in light, a narrow coarse-pointer receipt in dark and the ten Wishlist/guide
