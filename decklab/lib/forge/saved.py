@@ -32,7 +32,7 @@ _read_lock = threading.Lock()
 GAME_KEYS = frozenset(("w", "r", "first", "rounds", "ms"))     # what view() reads of every game
 # Wave 3's kinds of result besides a matchup's (no "kind"; forge-trial/sim-wave3-contract.md
 # sections 8 and 14): a paired variant test's arm (in <results>/paired/) and an experiment's arm.
-RESULT_KINDS = ("paired", "experiment")
+RESULT_KINDS = ("paired", "experiment", "unpaired")
 KEY_RE = re.compile(r"[0-9a-f]{64}")
 
 
@@ -121,6 +121,10 @@ def _kind_ok(data, decklab):
                 and isinstance(block.get("variant"), dict))
     if kind == "experiment":
         return isinstance(data.get("experiment", {}), dict)
+    if kind == "unpaired":
+        block = data.get("unpaired")
+        return (decklab and isinstance(block, dict) and isinstance(block.get("test"), str)
+                and KEY_RE.fullmatch(block["test"]) is not None and block.get("arm") in ("base", "variant"))
     return False
 
 
@@ -163,7 +167,7 @@ def _stored(results_dir):
         paths = list(folder.glob("*.json"))
     except OSError:
         return []
-    out = [r for r in map(_read_result, paths) if r is not None and _counted(r)]
+    out = [r for r in map(_read_result, paths) if r is not None and r.get("kind") != "unpaired" and _counted(r)]
     return sorted(out, key=lambda r: r.get("updated") or "", reverse=True)
 
 

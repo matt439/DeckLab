@@ -307,6 +307,9 @@ def _variant_args(sub):
     variant.add_argument("--until", choices=("ahead",), help="play until the difference is clear (the default)")
     variant.add_argument("--games", type=shared._positive, help="play this many games a deck, with one look at the end")
     variant.add_argument("--quick", action="store_true", help="a quick look: 200 games a deck")
+    variant.add_argument("--placebo", action="store_true", help="unchanged-list paired control, saved only in experiments")
+    variant.add_argument("--noise-floor", metavar="FILE", help="a same-install engine-check JSON receipt for the placebo's exact pair and engine")
+    variant.add_argument("--size-change", action="store_true", help="allow a different Main count as an independent fixed-count comparison (not paired)")
     variant.add_argument("--more", metavar="TEST", help="play more of this test (its id): to the next look, then on")
     variant.add_argument("--json", action="store_true",
                          help="print the test's view (variants.view: the summary and each opponent's paired numbers)")
@@ -386,6 +389,9 @@ def _trial_ids(ref, base):
 
 def _cmd_variant(args):
     from . import deck_identity, variants, variants_gauntlet
+    if getattr(args, "placebo", False) or getattr(args, "size_change", False) or getattr(args, "noise_floor", None):
+        from .cli_controls import variant_control
+        return variant_control(args)
     sample = getattr(args, "gauntlet", None)
     if args.against and args.against.startswith(variants_gauntlet.PREFIX) and not sample:
         sample, args.against = args.against[len(variants_gauntlet.PREFIX):], None

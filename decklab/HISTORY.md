@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Isolated variant controls and saved development consumer (2026-11-11; E3-S48, E3-S45 source slices)
+
+- CLI size changes use explicit fixed-count independent arms, one verified engine and the same chosen opponents. Balanced MOVER95% differences retain starter denominators and missing strata, with a separate declared5-point margin, wide-range/more-games wording and no adaptive look. Same-size changes retain the ordinary paired path; invalid Forge sizes and bounded-work limits refuse before launch.
+- New `unpaired` results have an isolated experiments directory, validated test/arm blocks and exact engine/list/pilot identities. Checkpoint reuse avoids duplicate completed games. Normal enumeration and per-card consumers omit them. An unchanged-list placebo uses the actual paired coordinator under its own experiments area, with no ordinary result/test writes. Exact-pair same-install engine-check receipts disclose finite winner/outcome disagreements; missing evidence is unknown and zero observed noise never proves exact equality.
+- Optional versioned development records pool complete round observations from visible current-list/current-engine matchups, including warm cumulative deltas. Testing shows median and observed min/max lands/actual draws with coverage; legacy, malformed and early-ended data are never filled with zeros. Both-side visibility filtering happens before counting, and stale profile/route replies cannot redraw.
+- Validation:195 broad legacy/qualification/engine checks pass,12 control/CLI/math checks and two production-runner/disposable-fake-process checks pass; ten tally/API/renderer checks pass (overlap). The Java observer candidate compiles only; active Java and its qualified hash remain unchanged pending separately authorized real parity/warm/protocol qualification. No household result, live record or actual Forge game was used. E3-S45 remains partial until that gate passes.
+
 ## Reviewed shop references and optional market targets (2026-11-11; E5-S35)
 
 - Shopping's explicit one-row and selected-ready-row review shows the four old/new retailer observation fields and confirmed printing/source evidence before one audited save. A reference is a selected dated observation; higher replacements require the same review. Nothing maintains it automatically.

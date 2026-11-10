@@ -37,7 +37,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 21 | 2 | 2 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 39 | 32 | 3 | 4 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 39 | 33 | 4 | 2 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 31 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 22 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 55 | 14 | 6 | 4 |
-| **Total** | **376** | **314** | **22** | **24** | **16** |
+| **Total** | **376** | **315** | **23** | **22** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1421,7 +1421,7 @@ First slice: command line only: a new `decklab/lib/forge/transcript.py` (pick an
 
 Built (2026-11-11): forge game A B --game N (the saved zero-based number) or --pick loss/longest/timeout selects a saved matchup, with optional full-key/alternate-result-folder selection. It refuses unseeded/earlier/unverified engine or override sets before setup/run. The soak probe and command share one exact one-shot launch using stored dcks, seat order, pilots and seed. Human/JSON output retain turn-by-turn land/cast/failed-cast/combat/life lines, both end hands (explicitly not captured when unavailable), seat map and saved/replayed outcome/turn differences; Commander always says outcome-only comparison. Scratch files are cleaned, and no normal result/field/Rankings/per-card pipeline is called.85 focused transcript/CLI/engine/Forge checks pass (one native qualification skip), including committed native-log parsing, exact1-game arguments, refusal-before-launch and no-writer assertions. No actual replay or engine qualification ran in this source task.
 
-**E3-S45** · Matt · could · M · missing
+**E3-S45** · Matt · could · M · partial
 
 As a deck builder reading Forge results, I want to see how a deck develops round by round in its simulated games, and a command-line check that two identical lists test as equal, so that I can tell why a deck loses and trust a tested swap's range.
 
@@ -1432,6 +1432,8 @@ As a deck builder reading Forge results, I want to see how a deck develops round
 Gap: the card log keeps no per-round tally, and an unchanged list is refused. E3-S04 covers goldfish land drops, E3-S15 per-card figures, E3-S11 the paired verdict, E7-S08 the token-peak tally this copies and E11-S15 the upgrade checks. From the product review of 2026-11-10, compared with Playgroup.gg and Archidekt.
 
 First slice: an optional `development` tally per side and round in `decklab/lib/forge/cardlog.py`, pooled in a new `decklab/lib/forge/development.py` and shown as a small table from `decklab/web/matchups-cards.js`. The placebo option is a separate slice.
+
+Source slices (2026-11-11): versioned optional per-round histograms, strict protocol validation, merge/warm-delta handling, current-pilot/engine and both-side visibility filtering, and the Testing table are implemented. Legacy/invalid/early-ended observations remain unknown, with coverage and observed median/min/max, never synthetic zero fills. A round is two global turns; actual draws exclude opening hands, tutors and returns. The CLI unchanged-list control uses the ordinary paired coordinator in an isolated experiments area and compares finite ranges with exact-pair same-install engine-check disagreement receipts, withholding equality when that evidence is absent. Ten tally/API/renderer tests pass, including hidden refusal and stale-profile replies;12 control/CLI/math fixtures and195 broader checks pass (overlap). The Java observer candidate compiles against the installed SDK but is deliberately not activated or recorded qualified. Remaining: Matt's separately required idle-PC real `cardlog-check --require-development` approval and a passing parity/warm/protocol receipt before changing the active observer/source qualification hash. No real Forge game was run.
 
 **E3-S46** · Matt · could · M · built
 
@@ -1461,7 +1463,7 @@ Gap: the job queue is in memory only, so queued jobs and a run's unplayed remain
 
 First slice: give `decklab/update.py` the busy check from `decklab/lib/api/server_restart.py`, tested in `decklab/tests/test_update.py`. A new `decklab/lib/forge/run_journal.py` and the offer in `decklab/web/runs-pill.js` follow.
 
-**E3-S48** · Matt · could · L · missing
+**E3-S48** · Matt · could · L · built
 
 As a deck builder wondering about one more land or a cut with no replacement, I want to test a change that alters the deck's card count, so that I needn't compare two saved decks' results by eye.
 
@@ -1473,6 +1475,8 @@ As a deck builder wondering about one more land or a cut with no replacement, I 
 Gap: `decklab/lib/forge/variants.py` and `decklab/web/variant.js` refuse any size change, an accepted criterion of E3-S11 (built), which changes with this story. E3-S01 and E3-S04 already judge land counts without opponents, for far less Forge time. From the product review of 2026-11-10, compared with Salubrious Snail's one-extra-land idea. Needs Matt's decision: whether an answer that will usually read "Not settled yet" after hours of games is worth building.
 
 First slice: command line only with a fixed game count: `run_unpaired` in `decklab/lib/forge/variants.py` and `unpaired_diff` in `decklab/lib/forge/seqstats.py`, tested in `decklab/tests/test_forge_seqstats.py`.
+
+Built (2026-11-11; Matt approved OPEN feature defaults): explicit CLI `--size-change` with a fixed `--games N` or `--quick` plays both versions against the same opponents/count on one verified engine, with independent domain-separated seed streams. A same-size change stays paired. Constructed below60 and Commander other than100 are refused; the CLI also bounds work to1,000 cards and100,000 games per arm. The independent balanced MOVER95% difference has a separate default5-point equivalence margin, one fixed final look and explicit wide-range/more-games wording. Arms have their own validated `unpaired` result kind and isolated experiments directory; checkpoint reuse avoids duplicate completed games. Normal enumeration and per-card consumers reject this kind.12 control/CLI/math fixtures and two production-runner/disposable-fake-process checks pass, with195 broader legacy/qualification/engine checks passing before the final narrow guards. No actual game, saved household result or deck was touched.
 
 ---
 

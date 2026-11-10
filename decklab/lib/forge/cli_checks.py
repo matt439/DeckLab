@@ -520,7 +520,7 @@ def _staged_setup(forge_dir):
     return shared._setup(forge_dir=forge_dir, remember=False)
 
 
-def _cardlog_check(games, commander_games=CHECK_COMMANDER_GAMES, forge_dir=None):
+def _cardlog_check(games, commander_games=CHECK_COMMANDER_GAMES, forge_dir=None, *, require_development=False):
     """cardlog-check, for wave 2's engine (contract section 18). For each format (Constructed,
     Commander) the check decks play games 0 to n - 1 of their seed stream (base CHECK_SEED):
       1. Parity with plain Forge: one DeckLabSim process plays them (-dlgame) with its game
@@ -589,6 +589,11 @@ def _cardlog_check(games, commander_games=CHECK_COMMANDER_GAMES, forge_dir=None)
                           _leg_problem(version, fmt, n, nolog, on, on_reader, CARD_LOG_LEG)):
                 if found:
                     problems.append(found)
+            if require_development:
+                for reader in (off_reader, on_reader):
+                    problem = _development_problem(fmt, n, reader)
+                    if problem:
+                        problems.append(("failed", [problem]))
         requests = [(fmt, f"{runs[fmt, 'off'][1][0]}.dck", f"{runs[fmt, 'off'][1][1]}.dck", n, CHECK_SEED,
                      runs[fmt, "off"][5]) for fmt, _, n in legs]
         warm = shared.servecheck.warm_leg(dict(setup, card_log=log), folder, env, log, requests)
@@ -619,6 +624,19 @@ def _cardlog_check(games, commander_games=CHECK_COMMANDER_GAMES, forge_dir=None)
     return 0
 
 
+def _development_problem(fmt, games, reader):
+    """Qualification requires complete, valid, nonempty optional observations."""
+    from . import development_data
+    record = reader.cards or {}
+    tally = record.get("development")
+    if (not development_data.valid(tally, record.get("games", 0)) or tally["games"] != games or tally["bad"]
+            or not all(side.get("1", {}).get("n", 0) for side in tally["rounds"])
+            or not all(any(int(value) > 0 for value in side["1"]["lands"]) for side in tally["rounds"])
+            or not any(any(int(value) > 0 for value in row["drawn"]) for side in tally["rounds"] for row in side.values())):
+        return f"The {fmt} development protocol was incomplete, invalid or had no observed lands/draws."
+    return None
+
+
 def _check_games(text):
     """argparse's type for cardlog-check's games: a whole number from 1 to CHECK_MAX_GAMES (one
     seat block, so DeckLabSim plays them as one request)."""
@@ -634,10 +652,12 @@ def _cardlog_check_args(sub):
                        help=f"Constructed games each way (at most {CHECK_MAX_GAMES})")
     check.add_argument("--commander-games", type=_check_games, default=CHECK_COMMANDER_GAMES,
                        help=f"Commander games each way (at most {CHECK_MAX_GAMES})")
+    check.add_argument("--require-development", action="store_true", help="also qualify complete observed round resource packets")
 
 
 def _cmd_cardlog_check(args):
-    return _cardlog_check(args.games, args.commander_games, getattr(args, "forge_dir", None))
+    options = {"require_development": True} if args.require_development else {}
+    return _cardlog_check(args.games, args.commander_games, getattr(args, "forge_dir", None), **options)
 
 
 def _serve_check_args(sub):

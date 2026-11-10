@@ -463,6 +463,8 @@ def list_cards(sections, kind, results=None, results_dir=None, *, keep=None):
     wanted = engine.side_ids(sha, kind)[engine.KIND_DECKLAB] if results is None else None
     pooled, of, matchups, other = None, 0, 0, 0
     for result in _stored(results_dir) if results is None else results:
+        if result.get("kind") == "unpaired":
+            continue
         if keep is not None and not keep(result):
             continue
         before = pooled["batches"] if pooled else 0

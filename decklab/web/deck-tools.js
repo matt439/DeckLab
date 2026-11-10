@@ -254,7 +254,8 @@ function drawDeckMatchups(host, data, m, retry = null) {
     m.ai ? el("details", {class: "more deck-mu-ai", open: earlier ? true : null},
       el("summary", {text: "What Forge's AI can't play"}),
       aiLimitsParts(m.ai, s.title, {deckPage: true, otherSaid: !!otherLine, earlier})) : null,
-    deckCardStats(m, version, {otherSaid: !!otherLine, data})]);
+    deckCardStats(m, version, {otherSaid: !!otherLine, data}),
+    deckDevelopmentPart(data)]);
 }
 
 /** This deck's latest head-to-head result against an opponent (any list), from the deck on screen's

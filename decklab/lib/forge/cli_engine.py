@@ -199,6 +199,9 @@ def _engine_check(args):
             if not pairs:
                 raise _Refused("There's nothing to play: every list has 0 games.")
             done = _play(args, old, new, same_install, folder, pairs, switches, game_patches)
+            from .variants_controls import noise_receipts
+            report["noise_floors"] = noise_receipts(folder, pairs, done, new["eng"], same_install=same_install,
+                                                    seed=args.seed, switches=switches, game_patches=game_patches)
         finally:
             shared.shutil.rmtree(folder, ignore_errors=True)
             shared.runner._tidy_user_dir(old["setup"]["user_dir"])

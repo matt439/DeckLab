@@ -659,7 +659,7 @@ import types
 
 from . import (common, seeds, cores, simjar, install, lists, overrides, pilots, engine, processes, cardlog, logreader,
                saved, cardstats, runner, pool, servecheck, ai, views, seqstats, estimate, adaptive, field, variants,
-               experiment, cli, tokenpeaks)
+               experiment, cli, tokenpeaks, development)
 # Wave 3's parts (forge-trial/sim-wave3-contract.md) are reached through their modules
 # (forge.seqstats.look, forge.field.view, ...); none is re-exported here.
 # Every name the module had before Milestone 7 split it up, except those in _OWNED below.
