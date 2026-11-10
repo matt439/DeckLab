@@ -81,7 +81,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
 | `E7-S32` | OPEN | could | L | Scan cards sheet and `POST /api/collection/scan` built, with each pending card's printing picker and language, and Tokens' Scan token cards (`POST /api/tokens/scan`, one-change add) (fixture-tested); next real phone photos of cards and token cards on the household's phones. |
-| `E6-S28` | OPEN | could | S | Record this order from a basket or plan shop: opens the existing Record an order sheet prefilled with seller, cards, snapshot printings and fulfils ticks; first slice client only, a seed for shopOrderSheet and a Baskets and plan button. Needs Matt's decision. |
 
 ## Deck Lab: Commander nights
 

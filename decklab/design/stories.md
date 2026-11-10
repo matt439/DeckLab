@@ -40,13 +40,13 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 33 | 4 | 2 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 31 | 0 | 1 | 2 |
-| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
+| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 23 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 35 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 22 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 55 | 14 | 6 | 4 |
-| **Total** | **376** | **315** | **23** | **22** | **16** |
+| **Total** | **376** | **316** | **23** | **21** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -2890,7 +2890,7 @@ Evidence of the gap (Matt, 2026-10-29): `decklab/web/receipt-workflow.js` rcptCl
 
 Built (2026-10-29): `web/receipt-bulk.js` adds **Everything arrived as ordered**, a token part's **Backs as recorded or blank** (writing `single-sided verified` only on the rows left ticked; unconfirmed pairings still ask one by one) and **All checks done** for a part with two or more checks, each behind one confirmation; blockers are grouped per part. The mixed fixture delivery reaches Preview in 3 actions instead of 13, with the same request body as by hand; the server is unchanged. Tests: `decklab/tests/test_receipt_bulk_ui.py`. See [HISTORY.md](../HISTORY.md#fewer-steps-for-a-delivery-that-came-as-ordered-2026-10-29-e6-s27).
 
-**E6-S28** · Matt · could · S · missing
+**E6-S28** · Matt · could · S · built
 
 As Matt, having just bought a shop's basket, I want to open Record an order already filled in from it, so that I don't retype the cards, pick each printing and tick each queue row again.
 
@@ -2901,6 +2901,8 @@ As Matt, having just bought a shop's basket, I want to open Record an order alre
 Gap: Baskets and the plan (E5-S27) offer only Copy this shop's list (E5-S24), and the order sheet (E6-S02) opens empty; nothing passes a basket to it. From the product review of 2026-11-10, compared with TCGplayer's Cart Optimizer and Deck Lotus's cart hand-off. Needs Matt's decision: E5-S27 says nothing in Baskets records an order, so he must agree to a hand-off to the reviewed sheet.
 
 First slice: client only: an optional seed for `shopOrderSheet` in `decklab/web/shopping-orders.js`, and a seed builder with the button in `decklab/web/shopping-baskets.js` and `decklab/web/shopping-plan.js`.
+
+Built (2026-11-11; Matt approved OPEN feature defaults): current Baskets and recommended plan shops open Record this order with seller/today and exact counted snapshot printings, using each shop's cheapest-first stock prefix and merged physical printing counts. The sheet explicitly asks to check those printings against the actual order; condition/language/notes stay blank, no prices or market targets transfer, and add-ons start excluded. Matching queue fulfilment counts are ticked; normal printing edits, preview and token-bound save remain unchanged. Current source membership, person, route, connected control and original queue revision are rechecked; uncertain/private/stale handoffs refuse locally.157 broad checks pass (16 guarded DB skips), seven new interaction checks pass, and38 latest order/UI checks pass (16 skips; overlap). No actual order, purchase or vendor request was made.
 
 **E6-S29** · Matt · should · M · built
 

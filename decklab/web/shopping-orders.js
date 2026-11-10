@@ -51,9 +51,10 @@ function shopOrderToday() {
 }
 
 /** The existing sheet lifecycle closes this form and its pickers on profile or route changes. */
-function shopOrderSheet(view) {
+function shopOrderSheet(view, seed = null) {
   if (!isAdminProfile() || !mayDo("orders") || !seesHomeInventory(state.may)
       || !shopQueueActive(view) || view.busy || view.stale || !view.data.queue_revision) return null;
+  if (seed && seed.expect !== view.data.queue_revision) return null;
   const sheet = shopTrackQueueSheet(openSheet({title: "Record an order", wide: true}), view);
   const form = el("form", {class: "shop-order-form"}), inputs = {}, cards = [], selections = [];
   const cardList = el("div", {class: "shop-order-cards"});
@@ -144,6 +145,8 @@ function shopOrderSheet(view) {
   const extraCards = field(singles, "cards_extra", "These are additional copies of printings already owned", "input", {type: "checkbox"});
   singles.append(el("p", {class: "field-hint", text: "Only tick this when these are more physical copies, rather than cards already added to the collection."}));
   form.append(singles);
+  if (seed) singles.insertBefore(el("p", {class: "note note-warn shop-order-seed", text:
+    "These printings came from the saved shop snapshot and need checking against what you ordered. Condition and language are unconfirmed. Add-ons are not included."}), finder);
 
   function drawCards() {
     clear(cardList);
@@ -265,6 +268,15 @@ function shopOrderSheet(view) {
     }
     form.append(queue);
   }
+  if (seed) {
+    inputs.seller.value = seed.seller; inputs.ordered_on.value = seed.ordered_on; suggestReference();
+    cards.push(...seed.cards.map(card => ({...card})));
+    for (const selection of selections) {
+      const fulfilled = seed.fulfils.find(item => item.row === selection.card.queue_row);
+      if (fulfilled) { selection.checked.checked = true; selection.quantity.value = String(fulfilled.quantity); }
+    }
+    drawCards();
+  }
   sheet.body.append(form, previewBox, error);
   form.addEventListener("submit", event => {event.preventDefault(); review();});
   sheet.dialog.addEventListener("close", () => {clearTimeout(nameTimer); sequence++;});
@@ -279,7 +291,7 @@ function shopOrderSheet(view) {
         throw new Error(`Copies of ${card.name} must be a whole number from 1 to 9999.`);
     }
     const lines = key => inputs[key].value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-    const body = {expect: view.data.queue_revision, record: {id: inputs.id.value.trim(), seller: inputs.seller.value.trim(),
+    const body = {expect: seed ? seed.expect : view.data.queue_revision, record: {id: inputs.id.value.trim(), seller: inputs.seller.value.trim(),
       ordered_on: inputs.ordered_on.value, notes: inputs.notes.value.trim()}, fulfils: [], extra_copies: []};
     if (cards.length) body.cards = {rows: cards.map(card => ({...card, quantity: Number(card.quantity)})), checks: lines("cards_checks")};
     if (inputs.tokens_csv.value.trim()) body.tokens = {csv: inputs.tokens_csv.value, checks: lines("tokens_checks")};
@@ -311,6 +323,10 @@ function shopOrderSheet(view) {
   }
   async function review() {
     if (!alive() || busyNow || view.busy || view.stale || !isAdminProfile()) return;
+    if (seed && seed.expect !== view.data.queue_revision) {
+      view.stale = true; problem("The queue changed since this basket was worked out. Refresh Shopping and review its current basket.");
+      conflictRefresh(); actions(); return;
+    }
     let body;
     try {body = payload();} catch (failure) {problem(failure.message); return;}
     const seq = ++sequence, original = JSON.stringify(body); error.hidden = true; setBusy(true);

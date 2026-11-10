@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Recording an order from a basket or plan (2026-11-11; E6-S28)
+
+- Current baskets and recommended plan shops open the existing order sheet with seller, today's date, counted snapshot printings and matched queue reductions. Cheapest-first stock prefixes conserve every counted copy; identical physical printings merge without guessing condition/language or carrying prices, targets or queue notes. Add-ons remain excluded initially.
+- The sheet asks the buyer to check the snapshot printings against the actual order. Normal edits, preview and explicit token-bound save remain unchanged. Source membership, person/route/connected origin and original queue revision are checked again; stale or uncertain handoffs do not write.
+- Validation:157 broad checks pass (16 guarded DB skips), seven new interaction checks and38 latest order/UI checks pass (16 skips; overlap). No actual order, purchase, inventory change or vendor request was made.
+
 ## Isolated variant controls and saved development consumer (2026-11-11; E3-S48, E3-S45 source slices)
 
 - CLI size changes use explicit fixed-count independent arms, one verified engine and the same chosen opponents. Balanced MOVER95% differences retain starter denominators and missing strata, with a separate declared5-point margin, wide-range/more-games wording and no adaptive look. Same-size changes retain the ordinary paired path; invalid Forge sizes and bounded-work limits refuse before launch.

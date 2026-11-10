@@ -44,7 +44,7 @@ function shopPlanShop(view, shop, basket) {
     shopBasketPostage(shop.postage),
     addOns.length ? el("p", {class: "shop-basket-reach", "data-plan-reach": shop.key,
       text: `Free postage if you bring forward ${addOns.map(row => row.name).join(", ")} (${shopBasketAud(shop.postage.reach.total_aud)}).`}) : null,
-    copy);
+    copy, shopBasketOrderButton(view, shop, basket));
 }
 
 /** The plan part of Baskets, or null without a plan (no ready row in stock at a read shop). */
