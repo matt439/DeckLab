@@ -39,14 +39,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 19 | 2 | 4 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 3 | 7 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 20 | 1 | 7 | 2 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 33 | 28 | 0 | 3 | 2 |
-| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 24 | 21 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 34 | 28 | 1 | 5 | 0 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 28 | 0 | 4 | 2 |
+| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 21 | 0 | 2 | 2 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 28 | 1 | 7 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 44 | 11 | 20 | 4 |
-| **Total** | **372** | **277** | **19** | **60** | **16** |
+| **Total** | **376** | **277** | **19** | **64** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -2482,6 +2482,19 @@ Gap: Back in stock and the price history sheet are built (E5-S19, E5-S29), but `
 
 First slice: a previewed `reference` action in `decklab/lib/api/shopping_queue.py` that re-reads the shop's saved snapshot on the server, with its button in `decklab/web/shopping-snapshot.js`.
 
+**E5-S36** · Matt · could · S · missing
+
+As Matt, about to queue or order a single, I want to be told when that printing is the bonus card of a product already on its way, so that I don't buy a copy the box will bring.
+
+- Given a pending home product whose list has the printing as a bonus card (E6-S29), when a home admin adds it to the purchase queue (`watchlist set --add`, Shopping's queue adds, a variant's queue action) or orders it (`order add --cards` or `--fulfils`, Shopping's Record an order), then the preview warns "expected as the bonus card in <product>", and the save is never refused nor its exit code changed.
+- Given an order that holds both the product and a single of its bonus card, when it's previewed, then the same warning shows.
+- Given the pool's "every card in … is already in the collection" warning for a component whose printing came as a product's bonus card, when it shows, then it says so beside the `order extra-copies` hint; nothing is marked automatically.
+- Given User1 or a member, when they see these screens, then the warning shows only to viewers who may read home's records (`permissions.sees_home_records`).
+
+Gap: nothing links a single to a product's bonus card; the Stardew drops' Krobus and Junimo Farmhands were bought as eBay singles the evening the drops were ordered (2026-10-05, [HISTORY.md](../HISTORY.md), "Extra copies of owned printings", 2026-10-13). Depends on E6-S29's `extras` rows. From the bonus-card investigation of 2026-11-10.
+
+First slice: one helper over the pending products' `extras` rows, called from the order and watchlist previews in `decklab/lib/inventory/orders.py` and `decklab/lib/inventory/watchlist.py`, and the extra line in `decklab/lib/pool.py`'s guard.
+
 ---
 
 ## E6: Record orders and receive cards
@@ -2862,6 +2875,23 @@ As Matt, having just bought a shop's basket, I want to open Record an order alre
 Gap: Baskets and the plan (E5-S27) offer only Copy this shop's list (E5-S24), and the order sheet (E6-S02) opens empty; nothing passes a basket to it. From the product review of 2026-11-10, compared with TCGplayer's Cart Optimizer and Deck Lotus's cart hand-off. Needs Matt's decision: E5-S27 says nothing in Baskets records an order, so he must agree to a hand-off to the reviewed sheet.
 
 First slice: client only: an optional seed for `shopOrderSheet` in `decklab/web/shopping-orders.js`, and a seed builder with the button in `decklab/web/shopping-baskets.js` and `decklab/web/shopping-plan.js`.
+
+**E6-S29** · Matt · should · M · missing
+
+As Matt recording an order with a sealed product, I want the product's always-included bonus card on its list, so that decks show it as on the way and I don't buy it again as a single.
+
+- Given a product MTGJSON lists with a fixed bonus card (a set file's `sealedProduct[].contents.card` beside its `contents.deck`), when I fill its list from the published list (`order add --product … --from-mtgjson FILE`, `product add`, or Shopping's Record an order), then the deck's cards and the bonus card are filled in, the bonus card in an `extras` section at MTGJSON's stated finish, with "Include its bonus card" ticked by default.
+- Given an `extras` row, then it's the collection's only: it counts as on the way for decks needing that printing ("1 on the way (<product>)"), is added to the collection at receipt with condition and language blank, and is never a line of the product's deck pages.
+- Given an `extras` row, when the order is saved, then its component gets the arrival check "Confirm <card> was in the box"; a box that held another card is corrected with `product edit` before receipt.
+- Given a hand-written product list holding a published deck's printings but not its fixed bonus card, when it's previewed, then it warns and offers to add it; the save is never refused.
+- Given a product MTGJSON lists with no fixed bonus card, then nothing is said.
+- Given random contents (a `pack`, such as a `bonus-*` sheet or a Commander deck's Collector Booster sample pack, `sealed`, or `variable`), when the preview shows, then they're named as random and never added.
+
+Decided (Matt, 2026-11-10): Deck Lab may fetch MTGJSON's set files and cache them (a week), but only while making a preview, never on a page load or a write; "Include its bonus card" starts ticked, the arrival check being the backstop, as no Wizards source says a bonus card is guaranteed; a drop MTGJSON lists with no bonus card gets no warning.
+
+Gap: product lists are hand-written CSVs and MTGJSON's deck files never hold the bonus card. Verified 2026-11-10: in `SLD.json.gz` (2.4 MB) each deck file's `sealedProductUuids` leads to its product, and each Stardew Valley drop (and its foil edition) has exactly one `contents.card`, SLD 7188, 7189 or 7190, its `cardCount` the deck's plus one; every `contents.card` of a Secret Lair product with a deck (277) is an `sldbonus` printing, while 526 of 798 have none. Already-received products aren't backfilled. From the bonus-card investigation of 2026-11-10 (the Stardew incident, [HISTORY.md](../HISTORY.md), "Extra copies of owned printings", 2026-10-13).
+
+First slice: `precons.sealed_extras(file)` in `decklab/lib/precons.py` (the set file read once a preview, a small per-set extract cached in `decklab/data/mtgjson/sealed/`, returning fixed, random and other contents), and an `extras` section accepted by `_product_lines` in `decklab/lib/decks/__init__.py` as collection-only, with fixture tests.
 
 ---
 
@@ -3492,6 +3522,35 @@ As Matt, importing or receiving copies of one printing that differ, I want the r
 Gap: `merge_rows` in `decklab/lib/inventory/rules.py` and the import preview in `decklab/lib/api/collection_import.py` write only a general note, and the importers map only condition and language. E7-S02 built the imports, E7-S29 the bulk sheet. Needs Matt's decision: real per-copy sub-rows are the L-sized part, and AGENTS.md says the identity key doesn't separate copies; only the notes slice is proposed. From the product review of 2026-11-10, compared with ManaArchive, Moxfield, CardCastle and Archidekt.
 
 First slice: a counted breakdown replacing the general note in both places, the Misprint, Altered and Signed columns in the importers, and both note prefixes in `decklab/web/collection-bulk.js`.
+
+**E7-S39** · Matt · should · S · missing
+
+As Matt adding a precon I opened, I want its fixed bonus card added too, so that the collection holds every card the box always has.
+
+- Given a precon whose sealed product MTGJSON lists with a fixed bonus card (E6-S29's `sealed_extras`), when Add a precon previews it (the page and `collection add-precon --dry-run`), then the bonus card shows under its own heading, ticked, unticked from the start when the space already has that printing.
+- Given it's ticked, when the precon is added, then it's added to the collection in the same change, as the display commander is: never a deck line, condition and language blank, its note "bonus card in <precon>".
+- Given the command line and a precon with a bonus card, when it's added without `--dry-run`, then it needs `--bonus-cards include` or `skip`, and refuses without one.
+- Given random contents in the box, when the preview shows, then its note names them ("plus a 2-card sample pack (random, not added)") in place of the general RANDOM_NOTE.
+
+Decided (Matt, 2026-11-10): as E6-S29's.
+
+Gap: `_build` in `decklab/lib/api/precons.py` adds the deck file's boards and display commander only, so a Secret Lair Commander deck's bonus card is dropped without a word (verified 2026-11-10: Hatsune Miku's foil Tigereye Cameo SLD 7093, Everyone's Invited's foil Changeling Outcast SLD 894). Depends on E6-S29's reader. From the bonus-card investigation of 2026-11-10.
+
+First slice: the bonus rows in `_build` and `plan_add` in `decklab/lib/api/precons.py` beside the display commander, the heading and tick in `decklab/web/precon-add.js`, and the command line's flag.
+
+**E7-S40** · Matt · could · M · missing
+
+As Matt who bought Secret Lair drops, I want to add one from Add a precon as cards only, so that a drop's cards and its bonus card reach the collection without typing the list.
+
+- Given a Secret Lair drop in MTGJSON's deck list, when I search Add a precon, then it's offered, marked as cards only.
+- Given a drop, when it's previewed and added, then its cards and its fixed bonus card (E7-S39's tick) are added in one change with no deck made, condition and language blank, the raw import kept, and any trial or table notes as for other precons.
+- Given a drop's token cards, then they follow Add its token cards too as for other precons.
+
+Decided (Matt, 2026-11-10): wanted.
+
+Gap: `TYPES` in `decklab/lib/precons.py` leaves Secret Lair drops out because they aren't decks, and `plan_add` in `decklab/lib/api/precons.py` always makes a deck. Depends on E7-S39. From the bonus-card investigation of 2026-11-10.
+
+First slice: a cards-only type set beside `TYPES` and a no-deck branch in `plan_add`, its preview wording in `decklab/web/precon-add.js` and `collection add-precon`.
 
 ---
 
