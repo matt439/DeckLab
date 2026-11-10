@@ -148,7 +148,7 @@ function shopBasket(view, basket) {
     rows.length ? shopBasketPostage(basket.postage) : null,
     rows.length ? [shopBasketTotal(basket, "Total"), el("ul", {class: "shop-basket-rows"}, rows.map(row => shopBasketLine(row, basket)))]
       : el("p", {class: "sub", text: "No ready rows in stock here."}),
-    shopBasketGaps(basket), copy,
+    shopBasketGaps(basket), copy, shopReferenceBulkButton(view, basket),
     addOns.length ? el("div", {class: "shop-basket-addons"}, el("h4", {text: "Add-ons in stock here"}),
       el("p", {class: "sub", text: "Long-term and waiting rows this shop has, to add to the same order if you choose."}),
       shopBasketTotal(basket.add_ons_totals || {}, "Add-ons"), rows.length ? shopBasketReach(basket) : null,

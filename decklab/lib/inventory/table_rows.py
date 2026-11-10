@@ -32,7 +32,7 @@ Nothing here touches a database (or imports psycopg).
 import dataclasses
 import json
 
-from . import dice_rules, loan_rules, paths, rules
+from . import dice_rules, loan_rules, paths, rules, watchlist_targets
 from .model import QUEUE_FIELDS, Component, Order
 
 CARD_COLUMNS = ("name", "set_code", "collector_number", "finish", "quantity", "condition", "language", "notes")
@@ -41,7 +41,7 @@ TOKEN_COLUMNS = ("front", "back", "set_code", "front_collector_number", "back_co
 # dice_counter's (migration 0020, E7-S24), in dice.csv's column order.
 DICE_COLUMNS = ("item_type", "die_size", "counter_kind", "design", "quantity", "notes")
 WATCH_COLUMNS = ("name", "set_code", "collector_number", "finish", "quantity", "for_deck", "printing",
-                 "listed_aud", "listed_at", "in_stock", "checked", "notes", "state", "source")
+                 "listed_aud", "listed_at", "in_stock", "checked", "notes", "state", "source", "buy_under_aud")
 STATUS_COLUMNS = ("position", "status", "intact", "sleeves", "deck_box", "notes", "token_cards")
 ORDER_COLUMNS = ("seller", "ordered_on", "sources", "notes", "audit_notes")
 COMPONENT_COLUMNS = ("position", "kind", "file_name", "status", "received_on", "checks", "verified_checks",
@@ -81,6 +81,8 @@ def _cells(row, columns, where, bad):
     out = []
     for column in columns:
         value = row.get(column)
+        if value is None and column == watchlist_targets.FIELD and column not in row.columns():
+            value = ""     # legacy watchlists predate the optional target column
         if value is None:
             bad(f"{where}: the row has no {column} cell")
             return None
@@ -320,7 +322,7 @@ def _collect(inv, strict):
     else:
         if strict and not watch.exists:
             bad(f"{watch.path} is missing (the database always has a watchlist)")
-        if strict and watch.exists and watch.columns != QUEUE_FIELDS:
+        if strict and watch.exists and watch.columns not in (QUEUE_FIELDS, QUEUE_FIELDS[:-1]):
             bad(f"{watch.path}: its header isn't {','.join(QUEUE_FIELDS)}")
         for row in watch.rows:
             at = _where(watch.path, row)
@@ -331,6 +333,14 @@ def _collect(inv, strict):
             if qty is None:
                 continue
             cells[4] = qty
+            try:
+                target = watchlist_targets.normalize(cells[-1])
+                if target is not None and target != cells[-1]:
+                    raise ValueError("The buy-under target must be written as canonical AUD cents")
+                cells[-1] = target
+            except ValueError as error:
+                bad(f"{at}: {error}")
+                continue
             out["watchlist_item"].append((row.id, *cells))
     for product in inv.products:
         bad = reasons.about(product.path)

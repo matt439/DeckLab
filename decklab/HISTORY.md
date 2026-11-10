@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Reviewed shop references and optional market targets (2026-11-11; E5-S35)
+
+- Shopping's explicit one-row and selected-ready-row review shows the four old/new retailer observation fields and confirmed printing/source evidence before one audited save. A reference is a selected dated observation; higher replacements require the same review. Nothing maintains it automatically.
+- Optional AUD per-copy market targets use migration0026, preserving legacy blank reads and refusing nonblank writes before migration. Lowest-kept90-day marks use exact printing/finish, retained complete in-stock readings and the same frozen household preference. These are market observations, never paid prices or spending.
+- Expiring actor-bound reviews recheck queue revision and complete source/preference evidence atomically. Unknown save outcomes offer refresh without retry. Successful refresh preserves filters and expansion; web/CLI/export/check roundtrips retain queue intent.
+- Validation:353 broad checks pass (46 guarded DB/platform skips),17 latest API/UI and27 owned checks pass (overlap); four disposable-PG transaction/schema/fresh-policy cases are included for CI. No actual record, vendor fetch, migration activation, order or purchase was made.
+
 ## Minimum counted bracket cuts and checked replacements (2026-11-11; E9-S31)
 
 - Stats and Overview find the fewest named-card cuts from the existing counted minimum, including overlapping two-card combos and compact Game Changer choices. The bounded exact search has exhaustive small-graph coverage; incomplete inputs or exhausted search give no all-clear. It never names the deck's actual bracket.

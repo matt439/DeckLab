@@ -231,7 +231,7 @@ def person_spaces(t):
 def special_basics(t):
     t.cards_csv("collection.csv", ("Plains", "sld", "1513", "foil", 1), ("Forest", "fdn", "279", "nonfoil", 2))
     t.write("watchlist.csv", WATCH_HEADER + "Opt,dom,60,nonfoil,1,Gruul,any,0.50,MTGMate,no,2026-10-05,,"
-                                            "long_term,magic/decks/casual/gruul.md\n")
+                                            "long_term,magic/decks/casual/gruul.md,\n")
 
 
 def malformed_rows(t):

@@ -39,14 +39,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 21 | 2 | 2 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 32 | 3 | 4 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 30 | 0 | 2 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 31 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 35 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 22 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 55 | 14 | 6 | 4 |
-| **Total** | **376** | **313** | **22** | **25** | **16** |
+| **Total** | **376** | **314** | **22** | **24** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -2490,7 +2490,7 @@ First slice: display only: add `language` to `LISTING_FIELDS` in `decklab/lib/sh
 
 Built (2026-11-11): saved listings separate condition/language, including older Games Portal comma-language evidence; unknowns stay explicit. Home admins can choose minimum condition and/or English-only in Prices; neutral defaults preserve every existing pick. Revision-checked pricing v2 (migration0025) preserves v1/currency/shops and protects preferences from older clients. One frozen preference drives shop lines, deck/missing Prices, eligible exact-printing basket variants, Fewest shops totals and history lows; cheaper rejected/no-eligible choices are explained. Unknown facts fail only the named restriction. Last verified settings hold during outages; without them no qualifying price is claimed. Generic unit facts expose only an applied flag, not the private setting.291 broad checks pass (two guarded DB skips),80 latest focused and61 CLI/default-store review checks pass;33 strict version/rules checks cover explicitnull/bool/string rejection and unversioned compatibility. Guarded PG v2/readiness/rollback cases await CI. No actual setting, vendor request, purchase or migration was made.
 
-**E5-S35** · Matt · could · M · missing
+**E5-S35** · Matt · could · M · built
 
 As Matt, keeping the purchase queue's reference prices, I want to record a shop's snapshot reading as a row's reference from Shopping, so that the references and the snapshot stop being two price worlds I reconcile on the PC.
 
@@ -2514,6 +2514,8 @@ As Matt, about to queue or order a single, I want to be told when that printing 
 Built 2026-11-11: one snapshot-derived helper matches exact set/collector-number/finish against pending products' bonus extras, excluding display commanders and unusable status records. It advises on watchlist adds/bulk adds, order/fulfils previews (including a product and single in the same order), Shopping's printing choice and saved-variant reviews. The pool's already-owned warning explains recorded bonus provenance beside an explicit extra-copies command; nothing is marked automatically. Matching never changes quantities, refusals or exit codes; malformed optional annotation data produces no advisory instead of blocking a valid save. Home-only guards precede the catalog/source read and no notes or other-space records are published.
 
 Evidence: `inventory/bonus_warnings.py`, orders/queue and Shopping/variant adapters, pool guard; 53 focused and 358 broad pool/shopping/queue/variant/sealed checks pass (groups overlap, 61 expected DB/platform skips in the broad run). Coverage includes exact printing/finish, status consistency, same-order content, CLI preview/save, variant apply, optional-null UI and home/member privacy. From the bonus-card investigation of 2026-11-10; uses E6-S29's existing extras rows without fetching a source or modifying orders.
+
+Built (2026-11-11; Matt approved OPEN feature defaults): Shopping can explicitly preview and save one or selected ready-row retailer observations as one audited queue change, with all four old/new values and confirmed printing/source evidence. References are selected dated retailer observations, not automatically maintained historical minima; a higher overwrite needs the same review. Optional AUD per-copy market targets (migration0026) and lowest-kept90-day marks share exact printing/finish and the fresh household listing preference. Actor-bound expiring previews recheck queue/source/preference receipts within the existing atomic operation. Unknown saves offer refresh rather than retry; filters and group expansion survive successful refresh. Legacy CSV/schema reads stay blank, nonblank old-schema writes refuse, and CLI/export/check parity preserve price-free intent.353 broad checks pass (46 guarded DB/platform skips),17 latest API/UI and27 owned checks pass (overlap); four disposable-PG cases await CI. No real records, vendor request, schema activation, purchase or order was performed.
 
 ---
 

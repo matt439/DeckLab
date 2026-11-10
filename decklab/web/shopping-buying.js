@@ -86,15 +86,16 @@ function shopQueueGroups(rows, view) {
 /** Every recorded stock/date fact stays on its canonical queue row, even without an image or price. */
 function shopQueueResearch(row) {
   const price = shopReference(row), shop = shopQueueShop(row);
+  const target = shopMarketTargetLabel(row);
   // Nothing recorded at all: one line, not three "not recorded"s.
   if (!price && !shop && !String(row.checked || "").trim() && !["yes", "no"].includes(row.in_stock)) {
-    return el("span", {class: "shop-reference shop-queue-research", text: "Not checked at a shop yet"});
+    return el("span", {class: "shop-reference shop-queue-research"}, el("span", {text: "Not checked at a shop yet"}), target);
   }
   return el("span", {class: "shop-reference shop-queue-research"}, price,
     !price && shop ? el("span", {text: `Recorded at ${shop}`}) : null,
     !price ? [shopChecked(row.checked), el("small", {text: "Reference price not recorded."})] : null,
     row.in_stock === "no" ? status("warn", "Out of stock when checked")
-      : el("span", {text: row.in_stock === "yes" ? "In stock when checked" : "Stock not recorded"}));
+      : el("span", {text: row.in_stock === "yes" ? "In stock when checked" : "Stock not recorded"}), target);
 }
 
 function shopQueueShop(row) { return String(row.listed_at || "").trim(); }

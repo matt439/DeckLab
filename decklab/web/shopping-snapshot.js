@@ -98,28 +98,30 @@ function shopSnapshotList(card) {
 }
 
 /** One shop's snapshot line. */
-function shopSnapshotOne(snap) {
+function shopSnapshotOne(snap, card = null, view = null) {
   const [words, printing] = shopSnapshotWords(snap);
   const chip = snap.back_in_stock ? status("good", "Back in stock")
     : snap.newly_in_stock ? status("info", "Newly in stock") : null;
   return el("span", {class: `shop-snapshot shop-snapshot-${snap.status}`, "data-shop-snapshot": snap.status,
     "data-shop-snapshot-shop": snap.shop || "MTGMate", title: snap.status === "unknown" && snap.error ? snap.error : null},
     chip, el("span", {text: words}),
+    snap.lowest_kept ? status("good", "Lowest in kept 90 days") : null,
+    snap.target_comparison?.at_or_below === true ? status("good", `At or below ${listedAud(Number(snap.target_comparison.amount_aud))} target`) : null,
     printing ? el("small", {}, shopSnapshotLink(snap, printing)) : null,
     ["in_stock", "out_of_stock"].includes(snap.status) ? el("small", {class: "shop-snapshot-quality", text: shopSnapshotQuality(snap)}) : null,
     snap.skipped_cheaper ? el("small", {class: "shop-snapshot-skipped", text: "Cheaper copy skipped by household preference"}) : null,
     snap.status === "not_eligible" && shopSnapshotPreference(snap) ? el("small", {text: shopSnapshotPreference(snap)}) : null,
     snap.partial === true ? el("small", {class: "shop-snapshot-partial", "data-shop-snapshot-partial": "",
       text: SHOP_SNAPSHOT_PARTIAL}) : null,
-    shopSnapshotWhen(snap.fetched_at));
+    shopSnapshotWhen(snap.fetched_at), shopReferenceButton(card, snap, view));
 }
 
 /** The snapshot line under a queued card (one a shop, together when there are several), or null without one. */
-function shopSnapshotLine(card) {
+function shopSnapshotLine(card, view = null) {
   const list = shopSnapshotList(card);
   if (!list.length) return null;
-  if (list.length === 1) return shopSnapshotOne(list[0]);
-  return el("span", {class: "shop-snapshot-list", "data-shop-snapshots": String(list.length)}, list.map(shopSnapshotOne));
+  if (list.length === 1) return shopSnapshotOne(list[0], card, view);
+  return el("span", {class: "shop-snapshot-list", "data-shop-snapshots": String(list.length)}, list.map(snap => shopSnapshotOne(snap, card, view)));
 }
 
 const SHOP_SNAPSHOT_RANK = ["in_stock", "out_of_stock", "not_matched", "not_eligible", "not_listed", "unknown", "not_checked", "token"];
@@ -138,6 +140,7 @@ function shopSnapshotMarker(card) {
     const lead = snap.back_in_stock ? "Back in stock. " : snap.newly_in_stock ? "Newly in stock. " : "";
     const quality = ["in_stock", "out_of_stock"].includes(snap.status) ? `; ${shopSnapshotQuality(snap)}` : "";
     return `${lead}${words}${printing ? ` (${printing})` : ""}${quality}${snap.skipped_cheaper ? "; cheaper copy skipped by household preference" : ""}`
+      + (snap.lowest_kept ? "; lowest in kept 90 days" : "") + (snap.target_comparison?.at_or_below === true ? "; at or below AUD unit-price target" : "")
       + (snap.partial === true ? `, ${SHOP_SNAPSHOT_PARTIAL}` : "");
   }).join(list.length > 1 ? "; " : "");
   return el("span", {class: `shop-q-snap shop-q-snap-${best}${back ? " shop-q-snap-back" : ""}`,

@@ -90,7 +90,7 @@ INCOMING = ("preordered", "ordered")         # product statuses not in a collect
 PREVIEW = "~preview"                         # the end of a preview's revision (never saved)
 QUEUE_FIELDS = ("name", "set", "collector_number", "finish", "quantity", "for",
                 "printing", "listed_aud", "listed_at", "in_stock", "checked", "notes",
-                "state", "source")                # purchases.QUEUE_FIELDS
+                "state", "source", "buy_under_aud")                # purchases.QUEUE_FIELDS
 
 
 def name_order(name):
@@ -231,6 +231,7 @@ class WatchRow(Row):
     for_deck = property(lambda self: self.get("for"))
     printing = property(lambda self: self.get("printing"))
     listed_aud = property(lambda self: self.get("listed_aud"))
+    buy_under_aud = property(lambda self: self.get("buy_under_aud", ""))
     listed_at = property(lambda self: self.get("listed_at"))
     in_stock = property(lambda self: self.get("in_stock"))
     checked = property(lambda self: self.get("checked"))
@@ -643,6 +644,7 @@ class Inventory:
     dice_ready: bool = field(default=True, compare=False)
     loans: Mapping = field(default_factory=dict)
     loans_ready: bool = field(default=True, compare=False)
+    targets_ready: bool = field(default=True, compare=False)
 
     MAPPINGS = ("collections", "tokens", "locations", "imports", "payloads", "decks", "deck_aliases", "accessory_images",
                 "dice", "loans")

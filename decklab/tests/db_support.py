@@ -244,6 +244,7 @@ def reset(dbname, tables=STATE_TABLES):
 # What undoes each later migration, for tests that roll a throwaway database back to an older
 # schema and migrate it forward again (roll_back_schema). A new migration needs its entry here.
 UNDO_MIGRATION = {
+    26: ("alter table watchlist_item drop column buy_under_aud",),
     # Disposable schema rollback only: remove the new preference while retaining
     # the earlier currency/shops and revision. No production migration rewrites it.
     25: ("alter table pricing_setting disable trigger audit_row",

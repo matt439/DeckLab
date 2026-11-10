@@ -65,6 +65,7 @@ from decklab.lib.state import Invalid
 
 from . import Summary, paths, register, rules
 from .model import QUEUE_FIELDS, Component, Order, Product, ProductItem
+from . import watchlist_targets
 
 PAYLOAD_FIELDS = {"cards": list(rules.FIELDS), "tokens": list(rules.TOKEN_FIELDS)}
 INCOMING = ("ordered", "preordered")
@@ -410,9 +411,12 @@ def queue_row(row, repo, inv=None):
     words; the row with every value text. A source naming a deck file is looked for among inv's
     decks (purchases.source_exists; inventory.current() when inv is None)."""
     try:
-        if not isinstance(row, dict) or set(row) != set(QUEUE_FIELDS):
+        if not isinstance(row, dict) or set(row) not in (set(QUEUE_FIELDS), set(QUEUE_FIELDS) - {watchlist_targets.FIELD}):
             raise ValueError(f"watchlist: a row needs exactly the columns {','.join(QUEUE_FIELDS)}")
-        row = {k: "" if row[k] is None else str(row[k]) for k in QUEUE_FIELDS}
+        row = {k: "" if row.get(k) is None else str(row[k]) for k in QUEUE_FIELDS}
+        row[watchlist_targets.FIELD] = watchlist_targets.normalize(row[watchlist_targets.FIELD]) or ""
+        if row[watchlist_targets.FIELD] and inv is not None and not inv.targets_ready:
+            raise Invalid(watchlist_targets.MIGRATE)
         where = f"watchlist: {row['name']}"
         for value in row.values():
             purchases._text(value, where)
@@ -986,9 +990,13 @@ def replace_queue(inv, *, rows, repo="."):
     before = inv
     if not isinstance(rows, (list, tuple)):
         raise Invalid("Give the watchlist's rows")
+    old = _queue_dicts(inv)
+    previous = {queue_key(row): row for row in old}
+    # A pre-target CSV cannot silently erase a newer explicit market target.
+    rows = [{**row, watchlist_targets.FIELD: previous.get(queue_key(row), {}).get(watchlist_targets.FIELD, "")}
+            if isinstance(row, dict) and watchlist_targets.FIELD not in row else row for row in rows]
     made = [queue_row(row, repo, inv) for row in rows]
     _no_duplicates(made)
-    old = _queue_dicts(inv)
     if made == old:
         return inv, Summary("The watchlist is already like that")
     old_keys = {queue_key(r) for r in old}

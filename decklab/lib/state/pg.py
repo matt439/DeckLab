@@ -914,10 +914,10 @@ class PgStore:
 
     # ------------------------------------------------------------------ the price settings (E11-S53)
 
-    def pricing_setting(self):
+    def pricing_setting(self, *, fresh=False):
         """{revision, pricing: {v, currency, shops}} (pg_pricing.get; cached)."""
         from . import pg_pricing
-        return pg_pricing.get(self)
+        return pg_pricing.get(self, fresh=fresh)
 
     def pricing_setting_cached(self):
         """The last value read or written, or None; never connects (pg_pricing.cached)."""

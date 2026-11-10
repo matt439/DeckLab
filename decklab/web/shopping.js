@@ -353,7 +353,7 @@ function shopQueueRow(card, group, showFor = true, view = null, showLongTerm = f
   if (row.matches("button")) row.setAttribute("aria-label", `${card.name}, ${plural(card.quantity, "copy", "copies")}`);
   const move = view && mayDo("orders") && view.data.queue_revision && card.queue_row
     ? shopQueueMove(card, view) : null;
-  const reprints = reprintInfo(card), snapshot = shopSnapshotLine(card);
+  const reprints = reprintInfo(card), snapshot = shopSnapshotLine(card, view);
   const history = snapshot ? shopHistoryButton(card, view) : null;   // E5-S29, shopping-history.js
   if (history) snapshot.append(history);
   return view || deck || move || price || reprints || snapshot ? el("div", { class: `shop-queue-row${shopSnapshotBack(card) ? " shop-queue-back" : ""}`,
@@ -378,7 +378,7 @@ function shopQueueMove(card, view) {
     onclick: () => shopQueueSheet(view, card) });
   button.disabled = details.disabled = Boolean(view.busy || view.stale);
   button.setAttribute("class", `${button.getAttribute("class")} shop-queue-write`);
-  return el("div", { class: "shop-queue-actions" }, el("div", { class: "actions" }, menu, details), error);
+  return el("div", { class: "shop-queue-actions" }, el("div", { class: "actions" }, menu, details, shopMarketTargetButton(card, view)), error);
 }
 
 /** All queue writes share one revision and one pending request, including Move. */

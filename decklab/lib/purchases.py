@@ -31,7 +31,7 @@ STATES = ("ready", "waiting_for_stock", "waiting_for_reprint", "deferred", "long
 STATUSES = ("pending", "received", "cancelled")
 QUEUE_FIELDS = ("name", "set", "collector_number", "finish", "quantity", "for",
                 "printing", "listed_aud", "listed_at", "in_stock", "checked", "notes",
-                "state", "source")
+                "state", "source", "buy_under_aud")
 ID_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
 
 
@@ -172,11 +172,14 @@ def _csv(path, required, inv=None):
     if source.csv_error is not None:
         raise csv.Error(source.csv_error)
     fields = list(source.columns or ())
-    if len(fields) != len(set(fields)) or not set(required) <= set(fields):
+    needed = set(required) - ({"buy_under_aud"} if path == paths.WATCHLIST else set())
+    if len(fields) != len(set(fields)) or not needed <= set(fields):
         raise ValueError(f"{name}: missing or duplicate columns")
     rows = []
     for number, row in enumerate(source.items if isinstance(source, Product) else source.rows, 1):
         found = row.as_dict()
+        if path == paths.WATCHLIST and "buy_under_aud" not in fields:
+            found["buy_under_aud"] = ""
         if None in found or None in found.values():
             raise ValueError(f"{paths.row_of(path, number, owners)}: wrong number of columns")
         rows.append(found)
@@ -218,6 +221,11 @@ def read_queue(*, missing=None):
         if row["in_stock"] not in ("", "yes", "no"):
             raise ValueError(f"{where}: stock must be yes, no or blank")
         _date(row["checked"], where)
+        from decklab.lib.inventory import watchlist_targets
+        try:
+            row[watchlist_targets.FIELD] = watchlist_targets.normalize(row.get(watchlist_targets.FIELD)) or ""
+        except ValueError as error:
+            raise ValueError(f"{where}: {error}") from None
         if row["listed_aud"]:
             try:
                 price = Decimal(row["listed_aud"])
@@ -414,6 +422,9 @@ def overview(*, strict=True):
                                   for check in component["checks"])
         orders.sort(key=lambda order: (order["ordered_on"], order["id"]), reverse=True)
         to_buy = read_queue(**lenient)
+        for row in to_buy:
+            if not row.get("buy_under_aud"):
+                row.pop("buy_under_aud", None)   # optional default keeps the existing page/JSON shape
         return {"to_buy": to_buy, "orders": orders, "checks": checks, "warnings": missing or []}
 
 

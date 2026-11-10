@@ -89,6 +89,8 @@ def _overview():
     if cards_ready:
         _flag_tokens(answer)        # before the shops' lines: a token row's says tokens aren't checked (E5-S33)
     shop_prices.enrich(answer, data=shop_data)
+    from . import shop_reference_annotations
+    shop_reference_annotations.enrich(answer, shop_data)
     if cards_ready:
         _add_pictures(answer)
         # A trial deck (E3-S39) is a precon not bought: its cards aren't missing from anything.

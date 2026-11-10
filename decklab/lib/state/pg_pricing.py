@@ -23,9 +23,12 @@ def _read(cur):
             else {"revision": 0, "pricing": dict(rules_pricing.EMPTY)})
 
 
-def get(store):
+def get(store, *, fresh=False):
     """{revision, pricing: {v, currency, shops}}, revision 0 with both None before any save. Cached
     for CACHE_SECONDS; a write by this process replaces the cached value at once."""
+    if fresh:
+        with store._cache_lock:
+            store._fresh.pop(KEY, None)       # retain the last verified value through an outage
     return store._cached_read(KEY, lambda c: _read(c.cursor()))
 
 

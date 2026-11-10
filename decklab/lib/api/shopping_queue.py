@@ -104,6 +104,9 @@ def save_queue_state(body):
     """
     data = _parse_body(body)
     action = data.get("action", "state")
+    from . import shopping_references
+    if isinstance(action, str) and action in shopping_references.ACTIONS:
+        return shopping_references.handle(data)
     if not isinstance(action, str) or action not in ("state", "add", "add_many", "add_combined", "edit", "remove"):
         raise ApiError(400, "action must be add, add_many, add_combined, edit, remove or state")
     required = {"state": ("row", "state"), "add": ("values",), "add_many": ("deck", "state", "cards"),

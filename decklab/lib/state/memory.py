@@ -428,7 +428,7 @@ class MemoryStore:
 
     # ------------------------------------------------------------------ the price settings (E11-S53)
 
-    def pricing_setting(self):
+    def pricing_setting(self, *, fresh=False):
         from . import pricing as rules_pricing
         with self._lock:
             self._check()

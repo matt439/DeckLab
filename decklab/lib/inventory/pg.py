@@ -83,7 +83,7 @@ from decklab.lib.state import Actor, Conflict, Invalid, Unavailable
 from decklab.lib.state import pg as state_pg
 
 from . import (DECK_SAVES_PAUSED, Summary, changes, files, paths, pg_decks, pg_aliases, pg_check_links,
-               pg_dice, pg_loans, pg_locations)
+               pg_dice, pg_loans, pg_locations, pg_targets)
 from .model import ImageMeta
 # The snapshot-as-rows code is shared with the files backend (table_rows.py); these names stay
 # here for the callers and tests that use them as pg's.
@@ -219,6 +219,8 @@ def _write_all(cur, t):
     t, card_columns = pg_locations.compatible(t, located), pg_locations.values(located)
     t = pg_dice.compatible(t, pg_dice.ready(cur))
     t = pg_loans.compatible(t, pg_loans.ready(cur))
+    targets_ready = pg_targets.ready(cur)
+    t = pg_targets.compatible(t, targets_ready)
     for table in PARENTS_FIRST:
         keys, values, rows = _keyed_rows(table, t, status_columns, component_columns, card_columns)
         _insert(cur, table, keys + values, [(*_plain_key(k), *map(_db, v)) for k, v in rows.items()])
@@ -239,7 +241,7 @@ def _write_all(cur, t):
         numbered[row[1]] += 1
         dice.append((row[1], numbered[row[1]] * STEP, *row[2:]))
     _insert(cur, pg_dice.TABLE, ("space_id", "position", *DICE_COLUMNS), dice)
-    _insert(cur, "watchlist_item", ("position", *WATCH_COLUMNS),
+    _insert(cur, "watchlist_item", ("position", *pg_targets.columns(targets_ready)),
             [((n + 1) * STEP, *row[1:]) for n, row in enumerate(t["watchlist_item"])])
 
 
@@ -258,8 +260,10 @@ def _diff(cur, old, new):
     dice_ready = pg_dice.ready(cur)
     new, old = (pg_dice.compatible(t, dice_ready) for t in (new, old))
     new, old = (pg_loans.compatible(t, pg_loans.ready(cur)) for t in (new, old))
+    targets_ready = pg_targets.ready(cur)
+    new, old = (pg_targets.compatible(t, targets_ready) for t in (new, old))
     # Rows kept by id, positions STEP apart within a space where grouped (dice_counter: migration 0020).
-    by_id = (("token_card", TOKEN_COLUMNS, True), ("watchlist_item", WATCH_COLUMNS, False)) + \
+    by_id = (("token_card", TOKEN_COLUMNS, True), ("watchlist_item", pg_targets.columns(targets_ready), False)) + \
         (((pg_dice.TABLE, DICE_COLUMNS, True),) if dice_ready else ())
     count = 0
     pending = []
@@ -545,7 +549,8 @@ class PgInventory:
             raise NotImported(NOT_IMPORTED)
         # Whether migration 0016 is there counts too: once it's applied the locations can be read.
         # So does migration 0020's: once it's applied the dice and counters can be read.
-        return (self.dbname or db.settings()["name"], row[1], row[0], pg_locations.ready(c), pg_dice.ready(c), pg_loans.ready(c))
+        return (self.dbname or db.settings()["name"], row[1], row[0], pg_locations.ready(c), pg_dice.ready(c),
+                pg_loans.ready(c), pg_targets.ready(c))
 
     def _read(self, c, remember=True):
         """The snapshot the connection sees (the cached one while the revision hasn't moved)."""
