@@ -193,13 +193,22 @@ class GauntletBoardUiTests(unittest.TestCase):
 
     def test_a_failed_read_says_why_with_try_again_and_no_catalogue_shows_the_admins_command(self):
         self.run_js("""
-          let fail=true;api=async()=>{if(fail){const e=new Error('The PC is busy.');e.status=500;throw e;}
+          let fail=true;api=async()=>{if(fail)throw new ApiError(500,'The PC is busy.');
             return board('commander',[],{state:'no_catalogue',sample:null,build_command:'python -m decklab.lib.forge gauntlet build'});};
           open();await settle();
           assert(main.textContent.includes("Popular decks couldn't be loaded. The PC is busy."));
           fail=false;button(main,'Try again').click();await settle();
           assert(main.textContent.includes("Popular decks aren't set up on this PC yet."));
           assert.equal(main.querySelector('.gb-command').textContent,'python -m decklab.lib.forge gauntlet build');
+        """)
+
+    def test_unexpected_failure_keeps_a_safe_reference_without_private_error_text(self):
+        self.run_js("""
+          api=async()=>{throw new TypeError('PRIVATE_ERROR_CARD_FILENAME');};
+          open();await settle();
+          assert(main.textContent.includes("Popular decks couldn't be loaded. Reference "));
+          assert(!main.textContent.includes('PRIVATE_ERROR_CARD_FILENAME'));
+          assert(button(main,'Try again'));
         """)
 
     def test_older_counts_and_row_notes_show(self):

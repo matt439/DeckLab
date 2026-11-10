@@ -689,7 +689,8 @@ def run_gauntlet(body):
         if any(j.key != key for j in _active(entry)):
             raise ApiError(409, ALREADY_PLAYING)
         try:
-            forge_runs.COORD_JOBS.submit(key, run, rerun=True)
+            from . import run_recovery
+            run_recovery.submit(forge, "gauntlet", run, profile, data, key, rerun=True)
         except jobs.Busy as e:
             raise ApiError(503, forge_runs.MATCHUP_STOPPING if e.stopping else GAUNTLET_BUSY) from None
     return _answer(forge, g, entry, dict(choices, sample=chosen["id"]), seen, summary)

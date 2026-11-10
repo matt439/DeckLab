@@ -10,6 +10,7 @@ Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_gaunt
 """
 import contextlib
 import json
+import hashlib
 import tempfile
 import threading
 import types
@@ -87,14 +88,16 @@ class FakeGauntlet:
         return self.saved[sample_id]
 
     def entries(self, fmt, ids):
-        return [{"id": i, "version": "target", "title": i} for i in ids]
+        return [{"id": i, "version": "target", "title": i, "kind": "commander" if fmt == "commander" else "constructed",
+                 "card_sha": hashlib.sha256(("fixture:" + i).encode()).hexdigest()} for i in ids]
 
     def plan(self, entry, chosen, budget):
         per = int(budget.split(":")[1])
         opps = self.entries(chosen["format"], chosen["decks"])
         self.plans.append(budget)
         return {"per_opponent": per, "new_games": per * len(opps),
-                "pairs": [{"opponent": o, "have": self.have.get(o["id"], 0), "games": per} for o in opps]}
+                "pairs": [{"opponent": o, "key": self.forge.matchup_key(entry, o),
+                           "have": self.have.get(o["id"], 0), "games": per} for o in opps]}
 
     def view(self, entry, chosen, keep=None, cat=None):
         self.keeps.append(keep)

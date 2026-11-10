@@ -293,7 +293,8 @@ def run_field(body):
         if any(j.key.startswith(key + ":group:") for j in forge_runs.COORD_JOBS.active()):
             raise ApiError(409, GROUP_PLAYING)
         try:
-            forge_runs.COORD_JOBS.submit(key, run, rerun=True)
+            from . import run_recovery
+            run_recovery.submit(forge, "field", run, profile, data, key, rerun=True)
         except jobs.Busy as e:
             raise ApiError(503, forge_runs.MATCHUP_STOPPING if e.stopping else FIELD_BUSY) from None
     return _answer(forge, summary, entry, profile["id"], seen)

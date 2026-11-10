@@ -396,7 +396,7 @@ def before_pull(args):
         git("merge", "--ff-only", new)
     rest = [sys.executable, "-m", "decklab.update", "--after-pull", old]
     rest += [flag for flag, on in (("--no-forge", args.no_forge), ("--no-restart", args.no_restart),
-                                   ("--no-smoke", args.no_smoke)) if on]
+                                   ("--no-smoke", args.no_smoke), ("--force", getattr(args, "force", False))) if on]
     return subprocess.run(rest, cwd=ROOT, stdin=subprocess.DEVNULL).returncode
 
 
@@ -463,6 +463,7 @@ def _after_pull(args, old, done):
             raise Failed("There's no .venv to install psycopg into: SELF-HOSTING.md step 3")
         stop = running and PIP_NEEDS_STOP
         if stop:
+            require_idle(args)
             step([python, "-m", "decklab.lib.homenet", "stop"], "Stop Deck Lab to replace psycopg", timeout=120)
             done.add("server-stopped")
         try:
@@ -484,6 +485,7 @@ def _after_pull(args, old, done):
         # The old server is stopped before the backup, on every system (E11-S70): a write it took
         # after the dump would be lost by restoring that dump, and it shouldn't answer mid-migration.
         if running and "server-stopped" not in done:
+            require_idle(args)
             step([python, "-m", "decklab.lib.homenet", "stop"], "Stop Deck Lab before the backup", timeout=120)
             done.add("server-stopped")
         if "server-stopped" in done:
@@ -501,6 +503,8 @@ def _after_pull(args, old, done):
         say("Forge: skipped (--no-forge).")
     else:
         say("\n== Forge")
+        if running and "server-stopped" not in done:
+            require_idle(args)
         before = CONFIG.read_bytes() if CONFIG.exists() else None
         try:
             update_forge()
@@ -520,6 +524,8 @@ def _after_pull(args, old, done):
     elif (running or server_answers()) and not changed and not server_restart_required():
         say("\nNothing changed, so the background server keeps running (any Forge games it's playing go on).")
     elif running or server_answers() or "server-stopped" in done:
+        if "server-stopped" not in done:
+            require_idle(args)
         step([python, "-m", "decklab.lib.homenet", "restart"], "Restart the background server", timeout=300)
         done.discard("server-stopped")
     else:
@@ -529,6 +535,22 @@ def _after_pull(args, old, done):
     else:
         step([python, "-m", "decklab.smoke"], "Smoke test", timeout=1200)
     return warnings
+
+
+def busy_work():
+    from decklab.lib.update_busy import BusyUnverified, busy_work as read
+    try:
+        return read()
+    except BusyUnverified as error:
+        raise Failed(str(error)) from None
+
+
+def require_idle(args):
+    if getattr(args, "force", False):
+        return
+    busy = busy_work()
+    if busy:
+        raise Failed("Deck Lab is busy: " + "; ".join(busy) + ". Let these finish, or use --force to interrupt them; saved games are kept.")
 
 
 def psycopg_mismatch():
@@ -577,6 +599,7 @@ def main(argv=None):
     parser.add_argument("--no-forge", action="store_true", help="leave Forge as it is")
     parser.add_argument("--no-restart", action="store_true", help="don't restart the background server")
     parser.add_argument("--no-smoke", action="store_true", help="don't run the smoke test at the end")
+    parser.add_argument("--force", action="store_true", help="allow stopping/restarting while runs are busy or cannot be checked")
     parser.add_argument("--after-pull", metavar="COMMIT", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     if sys.platform == "darwin":

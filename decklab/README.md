@@ -1158,6 +1158,8 @@ Below Against the field, the Testing tab's **Against chosen decks** part (E3-S31
 
 Testing's **Simulated development** table pools visible current-list/current-engine saved matchups: observed median/min/max lands in play and actual cards drawn in rounds1–10, with per-round coverage. A round is two global turns, observed after that block completes. Opening hands, tutors and returns are not draws; games ending early and old/invalid records remain unknown. The optional observer is qualified on Deck Lab's recorded Forge build. Its source qualification can be checked with `cardlog-check --require-development --serial`; `--serial` keeps both cold and warm checks to one Forge process at a time without removing comparisons. Real games keep the separate authorization/idle-PC gate.
 
+Interrupted field/group/gauntlet/variant requests have starter-private **Unfinished runs** offers in the activity icon's details. **Play the rest** explicitly rechecks the original request and current permissions/settings/engine before using existing saved-game checkpoints; **Dismiss** keeps those games and removes only the offer. No work starts automatically. Changed or unverifiable inputs require a deliberate new run, and another live/unknown server lease cannot authorize resume. Metadata lives in the private ignored run journal, with bounded records and no admin/script override ([recovery design](design/run-recovery.md)). The updater refuses to stop/restart busy or unverified work unless `--force`, preserving its other guards.
+
 ### Testing a change to a deck
 
 The editor's **Test this change** (since wave 3) answers "does swapping these cards make the deck better?" without saving anything:

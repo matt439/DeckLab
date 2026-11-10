@@ -37,7 +37,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 22 | 2 | 1 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 39 | 34 | 3 | 2 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 39 | 35 | 3 | 1 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 31 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 23 | 0 | 0 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 22 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 56 | 14 | 5 | 4 |
-| **Total** | **376** | **319** | **22** | **19** | **16** |
+| **Total** | **376** | **320** | **22** | **18** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1452,7 +1452,7 @@ First slice: a `STALL_SHARE` constant and stalled object in `decklab/lib/forge/v
 
 Built (2026-11-11): a declared10% engineering caution threshold adds one stalled-game line for draws/time limits/errors, including perspective-correct going-first/second/unknown-starter denominators, on matchup page/CLI and field/gauntlet rows. Existing win-rate estimators remain unchanged. Groups below3 compared opponents or300 games are muted with their floor; tokens made in fewer than20 games keep observed peaks but suggest no extra copies. New catalogue entries record AI-screen provenance; public counts show exclusions by overlapping colour and style, while old/unclassified exclusions remain explicitly unknown rather than guessed. Lowest-observed wording replaces overconfident hardest labels unless the range clears50%.220 focused saved-result/field/gauntlet/source/token/UI tests pass (one qualification skip), including threshold boundary, all-denominator pooling, starter reversal, source flags and old-engine/privacy cases. This is source-tested caution policy, not a new empirical calibration from live household games; no actual simulations/catalogue rebuild or private results were read.
 
-**E3-S47** · Matt · could · M · missing
+**E3-S47** · Matt · could · M · built
 
 As Matt, the household admin, I want a run that a restart cut short to be offered back to whoever started it, so that a long run isn't quietly left half played.
 
@@ -1464,6 +1464,8 @@ As Matt, the household admin, I want a run that a restart cut short to be offere
 Gap: the job queue is in memory only, so queued jobs and a run's unplayed remainder are dropped, and the update command restarts without looking. E3-S06 keeps checkpointed games, E11-S47 lists what a Settings restart would stop and E11-S60 is the update command. From the product review of 2026-11-10. Automatic resume and timed starts are left out; either would need Matt's decision. Check first that a gauntlet run tops up as a field run does.
 
 First slice: give `decklab/update.py` the busy check from `decklab/lib/api/server_restart.py`, tested in `decklab/tests/test_update.py`. A new `decklab/lib/forge/run_journal.py` and the offer in `decklab/web/runs-pill.js` follow.
+
+Built (2026-11-11): updater reads the existing named-home-admin local busy preview and refuses busy or unverified work before stop/restart unless --force; other guards remain. Durable starter-partitioned requests offer explicit Play the rest/Dismiss after interruption, never automatic. Fresh visibility, ordinary permissions/simulations policy, exact saved lists/participants/sample, canonical side/pilot identities and AI profile hashes are rechecked before atomic claim/enqueue. Existing checkpoints plan only the remainder; completion/person Stop removes offers. Signature checks precede completion cleanup, so a changed engine/pilot/participant plan cannot silently discard an old receipt even if its new plan is complete. OS session leases avoid process enumeration; live or unknown ownership cannot authorize resume. Bounded poll/read and mounted page/profile/frame guards preserve drafts and do not wake the PC.156 focused checks pass,61 prior coordinator regressions pass and ten latest replay/privacy/AI/pilot/zero-remainder cases pass (overlap); no schema required. Real crash/power/disk-fault operational acceptance is not claimed, and no live restart, run, privacy setting or private record was changed.
 
 **E3-S48** · Matt · could · L · built
 

@@ -22,7 +22,8 @@ const RUNS_PILL_IDLE_MS = 45000;        // ... and while none does (to find runs
 const RUNS_PILL_FIRST_MS = 1500;        // a page's first ask waits this long, so the page's own reads go first
 const RUNS_LAB_QUERY = "(min-width: 1000px)";   // the details are a popover here, a sheet below it
 const runsPill = { timer: 0, request: null, running: [], listening: false, at: 0, profile: null,
-  button: null, details: null, stopping: false };
+  button: null, details: null, stopping: false, unfinished: [], recoveryAvailable: true, recoveryAt: null,
+  recoveryRequest: null, recoveryAction: null, recoveryMessage: null };
 
 /** Bring the activity up to date and keep it asking (shell.js, on every route; force: ask now, as after a Start).
  * Details left open on another page close. */
@@ -33,6 +34,7 @@ function syncRunsPill(force = false) {
     runsPill.listening = true;
   }
   if (runsPill.profile !== state.profile.id) {          // another person: what they may see starts afresh
+    if (typeof resetRunRecovery === "function") resetRunRecovery();
     clearTimeout(runsPill.timer);
     runsPill.timer = 0;
     if (runsPill.request && runsPill.request.abort) runsPill.request.abort();
@@ -55,6 +57,7 @@ function syncRunsPill(force = false) {
 
 /** Stop asking and hide the activity (the Who screen). */
 function stopRunsPill() {
+  if (typeof resetRunRecovery === "function") resetRunRecovery();
   if (typeof stopChangeSignals === "function") stopChangeSignals(true);
   clearTimeout(runsPill.timer);
   runsPill.timer = 0;
@@ -70,11 +73,13 @@ function stopRunsPill() {
 
 function runsPillVisibility() {
   if (document.visibilityState === "hidden") {
+    if (typeof resetRunRecovery === "function") resetRunRecovery(false);
     if (typeof stopChangeSignals === "function") stopChangeSignals();
     clearTimeout(runsPill.timer);
     runsPill.timer = 0;
     if (runsPill.request && runsPill.request.abort) runsPill.request.abort();
   } else if (state.profile) {
+    if (typeof pollRunRecovery === "function") pollRunRecovery(true);
     if (typeof pollChangeSignals === "function") pollChangeSignals(true);
     askRunsPill();
   }
@@ -93,6 +98,7 @@ async function askRunsPill() {
   runsPill.timer = 0;
   if (!state.profile || document.visibilityState === "hidden") return;
   if (typeof pollChangeSignals === "function") pollChangeSignals();
+  if (typeof pollRunRecovery === "function") pollRunRecovery();
   const profile = state.profile.id;
   if (runsPill.request && runsPill.request.abort) runsPill.request.abort();
   const controller = typeof AbortController === "function" ? new AbortController() : {};
@@ -113,6 +119,7 @@ async function askRunsPill() {
  * the activity and ask again in a while. */
 function noteRuns(running) {
   if (typeof pollChangeSignals === "function") pollChangeSignals();
+  if (typeof pollRunRecovery === "function") pollRunRecovery();
   runsPill.running = Array.isArray(running) ? running : [];
   runsPill.at = Date.now();
   drawRunsPill();
@@ -134,7 +141,8 @@ function drawRunsPill() {
   for (const link of tabbar ? tabbar.querySelectorAll("[data-route]") : []) {
     if (link.getAttribute("data-route") === "matchups") link.classList.toggle("has-run", runs.length > 0);
   }
-  if (!runs.length) {
+  const recovery = state.profile && ((runsPill.unfinished || []).length || runsPill.recoveryAvailable === false || runsPill.recoveryMessage);
+  if (!runs.length && !recovery) {
     closeRunDetails(false);
     host.replaceChildren();
     host.hidden = true;
@@ -151,7 +159,8 @@ function drawRunsPill() {
     runsPill.button = button;
     host.replaceChildren(button);
   }
-  const name = playing ? "Forge is playing: show progress" : "A Forge run is waiting: show progress";
+  const name = playing ? "Forge is playing: show progress" : runs.length ? "A Forge run is waiting: show progress"
+    : "Unfinished-run recovery: show details";
   button.setAttribute("aria-label", name);
   button.setAttribute("title", name);
   button.setAttribute("class", `run-activity${playing ? "" : " is-waiting"}`);
@@ -171,6 +180,7 @@ function runDetailsParts(runs) {
         el("span", { class: "run-waiting-name", text: runsPillName(run) }),
         el("span", { class: "run-waiting-ahead", text: run.ahead > 0 ? `${plural(run.ahead, "run")} ahead` : "next" }),
         runStop(run, named))))) : null,
+    typeof runRecoveryParts === "function" ? runRecoveryParts() : null,
     el("p", { class: "run-details-foot" }, el("a", { class: "btn btn-quiet btn-inline", href: "#/matchups",
       "data-focus": "matchups", text: "Every run on Testing", onclick: () => closeRunDetails(false) }))];
 }
@@ -273,14 +283,16 @@ function openRunDetails() {
  * it's gone, so a keyboard user isn't thrown out on every ask. */
 function fillRunDetails() {
   const details = runsPill.details;
-  if (!details || runsPill.stopping) return;
+  if (!details || runsPill.stopping || runsPill.recoveryAction?.details === details) return;
   const runs = state.profile ? runsPill.running : [];
   // The Matchups tab's 8 px dot (shell.css) while anything plays or waits; the icon's name says it in words.
   const tabbar = document.getElementById("tabbar");
   for (const link of tabbar ? tabbar.querySelectorAll("[data-route]") : []) {
     if (link.getAttribute("data-route") === "matchups") link.classList.toggle("has-run", runs.length > 0);
   }
-  if (!runs.length) { closeRunDetails(false); return; }
+  if (!runs.length && !(runsPill.unfinished || []).length && runsPill.recoveryAvailable !== false && !runsPill.recoveryMessage) {
+    closeRunDetails(false); return;
+  }
   const focused = document.activeElement;
   const held = focused && focused !== details.body && details.body.contains(focused)
     ? focused.getAttribute("data-focus") || "" : null;

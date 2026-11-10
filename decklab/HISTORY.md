@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Explicit starter-private unfinished-run recovery (2026-11-11; E3-S47)
+
+- Updater's existing local named-home-admin busy preview refuses busy/unverified work before stop/restart unless --force, preserving all other guards. Accepted field/group/gauntlet/variant requests persist bounded starter-private metadata before queue admission; no startup or timer resumes work.
+- Play the rest re-enters ordinary handlers with fresh visibility, permissions and simulations policy, exact lists/engine/participants, saved sample and More boundary, then atomically claims the receipt. Canonical side/pilot identities and AI hashes prevent adopting a changed pilot/engine; signatures are checked before completed-plan cleanup. Checkpoints allocate only remaining work. Person Stop/completion removes offers, while interruption retains them; unknown/live lease ownership never grants resume.
+- Explicit scoped UI controls offer resume or Dismiss only to the starter. Polls don't wake/hold the PC or reload drafts. Initial fsync/atomic persistence is required; later bookkeeping failures keep ordinary Stop/job behavior. Metadata is private cache, excluded from exports and public diagnostics.
+- Validation:156 focused fixtures,61 prior coordinator cases and ten latest replay/privacy/AI/pilot/zero-remainder cases pass (overlap). The narrow gauntlet-board error-object preservation also fixes actionable API errors while unexpected errors remain sanitized. No real restart/crash, disk fault, live run, setting or private record was exercised for this source feature.
+
 ## Reviewed category suggestions and SQL category projection (2026-11-11; E2-S29)
 
 - Editor role proposals apply only to untagged current-list lines after explicit review, with one Undo and normal categories-only Save. Fixed explained priority selects one label; existing labels remain. Other-deck choices are private to the actual own space, independent of Public switches, and return no source deck identities/counts. Callback ownership includes page/profile/route/sheet/frame/line.

@@ -147,7 +147,7 @@ class StopBeforeBackupTests(unittest.TestCase):
     PENDING = ({"name": "0021_x"},)
 
     def run_update(self, pending=PENDING, running=True, needs_stop=False, files=(), no_restart=False, fail=None,
-                   done=None):
+                   done=None, busy=(), force=False):
         """(the steps run, the done set, the Failed raised or None) of _after_pull with everything
         outside it stubbed; fail names the step that exits non-zero."""
         steps, done = [], set() if done is None else done
@@ -158,7 +158,7 @@ class StopBeforeBackupTests(unittest.TestCase):
             if what == fail:
                 raise update.Failed(f"{what} failed (exit 1)")
 
-        args = types.SimpleNamespace(no_forge=True, no_restart=no_restart, no_smoke=True)
+        args = types.SimpleNamespace(no_forge=True, no_restart=no_restart, no_smoke=True, force=force)
         raised = None
         with mock.patch.object(update, "PIP_NEEDS_STOP", needs_stop), \
                 mock.patch.object(update, "changed_files", return_value=list(files)), \
@@ -166,6 +166,8 @@ class StopBeforeBackupTests(unittest.TestCase):
                 mock.patch.object(update, "server_answers", return_value=running), \
                 mock.patch.object(update, "psycopg_mismatch", return_value=False), \
                 mock.patch.object(update, "server_restart_required", return_value=False), \
+                mock.patch.object(update, "busy_work", return_value=list(busy) if not isinstance(busy, Exception) else [],
+                                  side_effect=busy if isinstance(busy, Exception) else None), \
                 mock.patch.object(update, "venv_python", return_value=Path("/srv/.venv/bin/python")), \
                 mock.patch.object(update, "step", side_effect=step), \
                 mock.patch("decklab.lib.venv.activate", return_value=None), \
@@ -176,6 +178,27 @@ class StopBeforeBackupTests(unittest.TestCase):
             except update.Failed as e:
                 raised = e
         return steps, done, raised
+
+    def test_busy_refuses_before_migration_stop_or_restart_and_force_only_overrides_that_guard(self):
+        for options in ({}, {"pending": (), "done": {"pulled"}},
+                        {"needs_stop": True, "files": (update.REQUIREMENTS,)}):
+            with self.subTest(options=options):
+                steps, done, raised = self.run_update(busy=("1 field run or variant test",), **options)
+                self.assertEqual(steps, [])
+                self.assertIsInstance(raised, update.Failed)
+                self.assertIn("--force", str(raised))
+                self.assertNotIn("server-stopped", done)
+        steps, _, raised = self.run_update(force=True, busy=update.Failed("Busy status unknown"))
+        self.assertIsNone(raised)
+        self.assertEqual(steps, [self.STOP, self.BACKUP, self.MIGRATE, self.RESTART])
+
+    def test_unknown_busy_status_refuses_without_stop_and_no_restart_no_work_needs_no_busy_read(self):
+        steps, _, raised = self.run_update(busy=update.Failed("Busy status unknown"))
+        self.assertEqual(steps, [])
+        self.assertIsInstance(raised, update.Failed)
+        steps, _, raised = self.run_update(pending=(), no_restart=True, busy=update.Failed("Must not be asked"))
+        self.assertEqual(steps, [])
+        self.assertIsNone(raised)
 
     def test_the_server_is_stopped_before_the_backup_on_linux_as_on_windows(self):
         for needs_stop in (False, True):            # Linux and macOS, then Windows

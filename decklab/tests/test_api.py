@@ -27,6 +27,7 @@ import contextlib
 import copy
 import hashlib
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -42,6 +43,7 @@ from unittest import mock
 from decklab.lib import access, accessories, api, cards, config, decks, inventory, jobs, state, tokens
 from decklab.lib import goldfish as real_goldfish      # imported now, with the real stats module
 from decklab.lib import stats as real_stats
+from decklab.lib.forge import engine as real_engine, run_journal as real_run_journal  # qualified fake protocol, imported before the module swap
 from decklab.lib.stats import commander as real_stats_commander     # where TAG_FILE, COMBO_FILE and OFFICIAL_FILE are read
 from decklab.lib.inventory.files import FileInventory
 from decklab.lib.state.memory import MemoryStore
@@ -260,7 +262,10 @@ class FakeForge(types.ModuleType):
         self.waiting = None
         self.clock = 0
         self.held = 0                   # blocks in self.engine.held() entered
-        self.engine = types.SimpleNamespace(held=self._held, auto_profile_flag=self._auto_profile_flag)
+        self.engine = types.SimpleNamespace(held=self._held, auto_profile_flag=self._auto_profile_flag,
+            ENGINE_FIELDS=real_engine.ENGINE_FIELDS, today=self._journal_engine, read_only_today=self._journal_engine,
+            entry_side_id=real_engine.entry_side_id, played_pilot=real_engine.played_pilot)
+        self.run_journal = real_run_journal
         # The deck page's suggested token counts (E7-S08): no saved game counted any (test_token_peaks has them).
         self.tokenpeaks = types.SimpleNamespace(list_token_peaks=lambda sections, kind, keep=None: None)
 
@@ -268,6 +273,11 @@ class FakeForge(types.ModuleType):
     def _held(self):
         self.held += 1
         yield
+
+    def _journal_engine(self, *args, **kwargs):
+        return {"id_version": 1, "run_version": 2, "kind": "decklab", "forge": "fixture", "clock_s": 120,
+                "seeds": "per-game", "performance_mode": True, "game_patches": [], "overrides": "fixture",
+                "ai_sha": {"Default": "0" * 64}, "complete": True}
 
     @staticmethod
     def _auto_profile_flag(side):
@@ -496,6 +506,9 @@ class Sandbox:
         self.root = Path(tempfile.mkdtemp()).resolve()  # long form, as golden_dump.pointed() resolves it
         self.stack.callback(shutil.rmtree, self.root, True)
         self.magic, self.data, self.web = self.root / "magic", self.root / "data", self.root / "web"
+        journal_root = self.data / "forge/run-journal"
+        self.stack.enter_context(mock.patch.dict(os.environ, {real_run_journal.ROOT_ENV: str(journal_root)}))
+        self.stack.callback(real_run_journal.close_root, journal_root)
         _write(self.magic / "collection.csv", COLLECTION)
         (self.magic / "orders" / "received").mkdir(parents=True)
         _write(self.magic / "products" / "fdn-beginner-box.csv", BEGINNER_BOX)
@@ -553,6 +566,7 @@ class Sandbox:
         self.stack.callback(inventory.use(self.inventory))
         self.goldfish = FakeGoldfish()
         self.forge = FakeForge()
+        self.forge.common = types.SimpleNamespace(_results_dir=lambda: self.data / "forge/results")
         self._swap_module("decklab.lib.stats", stats_module)
         self._swap_module("decklab.lib.goldfish", self.goldfish)
         self._swap_module("decklab.lib.forge", self.forge)

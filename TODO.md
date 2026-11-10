@@ -104,7 +104,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `FG#3` | DEFERRED | could | M+pc | More experiment games (AI profiles, team-pump fix, override sets), decided with `FG#2`'s replay; the clean `fiery` test ran 2026-10-21 (C4 does what `fiery` does). |
 | `E3-S41` | OPEN | could | M | Practice games name the spells the mana fails and try same-seed one-land swaps. First the per-spell castability counters in `lib/goldfish/engine.py` and `results.py`, drawn in `web/practice.js`; the what-if runs follow. |
 | `E3-S43` | DECISION | could | S | Left: `gauntlet export FILE` / `gauntlet import FILE` (catalogues and saved samples with a verified sha, playable decks screened again, no house deck's results). Waits for Matt's decision on `FG#4`: copy the development PC's catalogue to the server, or build its own there. |
-| `E3-S47` | OPEN | could | M | Remember a field, gauntlet or variant run cut short by a restart and offer its starter Play the rest (never automatic); first slice: python -m decklab.update refuses to restart while runs are playing or queued unless --force. |
 
 ## Deck Lab: running it
 

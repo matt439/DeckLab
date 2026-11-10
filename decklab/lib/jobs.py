@@ -55,6 +55,8 @@ call it from any thread, and may itself use a process pool.
 A job's status goes "queued" -> "running" -> "done" or "error".
 """
 import collections
+from contextlib import nullcontext
+import inspect
 import sys
 import threading
 import time
@@ -170,6 +172,7 @@ class Runner:
             if len(self._queue) >= self.max_queued:
                 raise Busy(f"{len(self._queue)} jobs are already waiting")
             job = Job(key, fn, args, self._stopping)
+            self._journal("queued", job, required=True)    # opt-in durable intent before a worker can see it
             self._jobs[key] = job
             self._queue.append(job)
             if self._threads < self.max_running:
@@ -194,6 +197,7 @@ class Runner:
             for job in waiting:
                 job.error, job.status, job.finished = "Deck Lab is stopping", ERROR, _now()
         for job in waiting:
+            self._journal("interrupted", job)
             job._event.set()
 
     def cancel(self, key, by=None):
@@ -211,10 +215,12 @@ class Runner:
                 job.cancelled_by = by
             job._cancelled.set()
             if job.status == RUNNING:
+                self._journal("cancelled", job)
                 return True
             self._queue.remove(job)
             job.error, job.status, job.finished = STOPPED, ERROR, _now()
         job._event.set()
+        self._journal("cancelled", job)
         return True
 
     def join(self, timeout=None):
@@ -280,7 +286,11 @@ class Runner:
 
     def _run(self, job):
         try:
-            result = job.fn(*job.args, progress=job.report)
+            self._journal("running", job)
+            scope = (getattr(job.fn, "_journal_scope")
+                     if inspect.getattr_static(job.fn, "_journal_scope", None) is not None else None)
+            with scope() if scope is not None else nullcontext():
+                result = job.fn(*job.args, progress=job.report)
         except BaseException as e:      # a worker thread: nothing above it would handle this
             if job._cancelled.is_set() and isinstance(e, Stopped):
                 error = STOPPED         # Stop was pressed: nothing to log
@@ -293,10 +303,26 @@ class Runner:
                     error = type(e).__name__
             with self._lock:
                 job.error, job.status, job.finished = error, ERROR, _now()
+            event = "cancelled" if job._cancelled.is_set() else "interrupted" if self._stopping.is_set() else "failed"
         else:
             with self._lock:
                 job.result, job.status, job.finished = result, DONE, _now()
+            event = "done"
+        self._journal(event, job)
         job._event.set()
+
+    def _journal(self, event, job, *, required=False):
+        """Optional file-only callback. It must not call back into this runner's lock."""
+        callback = (getattr(job.fn, "_journal_event")
+                    if inspect.getattr_static(job.fn, "_journal_event", None) is not None else None)
+        if callback is None:
+            return
+        try:
+            callback(event, job)
+        except Exception:
+            if required:
+                raise
+            self._log("The unfinished-run journal could not record its state on the PC.")
 
     def _prune(self):
         """Forget finished jobs past keep_seconds, then the oldest past max_kept.

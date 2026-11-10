@@ -1006,13 +1006,14 @@ async function api(path, options = {}) {
  * api()'s poll and wakeHop. */
 function apiWrite(path, body, method = "POST", options = {}) {
   const data = method === "POST" ? { profile: state.profile && state.profile.id, ...body } : body;
-  const { poll, wakeHop } = options || {};
+  const { poll, wakeHop, signal } = options || {};
   return api(path, {
     method,
     headers: { Accept: "application/json", "Content-Type": "application/json", "X-Deck-Lab": "1" },
     body: JSON.stringify(data),
     ...(poll === undefined ? {} : { poll }),
     ...(wakeHop === undefined ? {} : { wakeHop }),
+    ...(signal === undefined ? {} : { signal }),
   });
 }
 
