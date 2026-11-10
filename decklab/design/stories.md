@@ -36,7 +36,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 18 | 0 | 2 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 18 | 2 | 5 | 1 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 19 | 2 | 4 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 2 | 8 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 20 | 1 | 7 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 33 | 26 | 0 | 5 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 72 | 44 | 11 | 13 | 4 |
-| **Total** | **365** | **274** | **18** | **57** | **16** |
+| **Total** | **365** | **275** | **18** | **56** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -771,7 +771,7 @@ Gap: categories are set by hand, one per line (E2-S24, whose Gap records the mis
 
 First slice: Suggest categories, with no schema or text-format change: a role-to-category mapping in a new `decklab/lib/stats/category_suggest.py`, exposed through `decklab/lib/api/card_lookup.py`, and a review sheet in `decklab/web/deck-categories.js`; tests in `decklab/tests/test_deck_categories.py`.
 
-**E2-S30** · Matt · could · S · missing
+**E2-S30** · Matt · could · S · built
 
 As a deck builder whose Planned list names particular printings, I want the deck page to say when I own a card only in another printing, so that I know which listed printings I don't have.
 
@@ -781,6 +781,8 @@ As a deck builder whose Planned list names particular printings, I want the deck
 - Given a built deck with a Printings in box record, when a card that record names is shown, then it has no note, and no note says a copy is free.
 
 Gap: no deck-page mark compares a line's named printing with the collection. E5-S31 (built) shows as-listed prices for missing copies only. A per-deck printing preference and an exact-printing queue action are left out. From the product review of 2026-11-10, compared with Moxfield's collection check and ManaBox's missing-card matching.
+
+Built 2026-11-10: `lib/listed_prices.py` `annotate_owned` (called by `pool.compare` for a Planned list only, with `pool.printing_counts` of the deck's space and the names in the deck's own effective Printings in box record left out) adds `own_printing` (`listed`/`other`), `own_printing_label`, `own_printing_more` and `own_printing_on_the_way` to live rows with copies owned or on the way whose every line names one printing and finish of that card. `web/deck-availability.js` `ownPrintingWords`; the Cards tab's card marks (`deck.js`) show a plain "Own another printing (M19 314)" chip, the card viewer and the price table (`deck-prices.js`) both states ("Own the listed printing (…)", "… on the way"). No count, total, banner, table or saved text changes; no wording about free copies; viewers without `sees_inventory` get no `owned` rows, so no fields. Choices made: the label on "other" names the other printing the space has most copies of (collection before incoming), with "and N more"; the list itself shows only the "another" case, to stay quiet; the editor's missing list isn't given the note. Left out as the story says: a per-deck printing preference and an exact-printing queue action. See [HISTORY.md](../HISTORY.md#the-printing-you-own-of-a-card-your-list-names-2026-11-10-e2-s30).
 
 First slice: extend E5-S31's annotation to owned rows in `decklab/lib/listed_prices.py`, using `printing_counts` in `decklab/lib/pool.py` for live rows only, and render the note in `decklab/web/deck-prices.js` and `decklab/web/deck-availability.js`; tests beside `decklab/tests/test_listed_prices.py`.
 
