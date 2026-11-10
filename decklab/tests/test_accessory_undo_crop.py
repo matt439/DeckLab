@@ -65,11 +65,8 @@ class AccessoryCropUndoTests(unittest.TestCase):
             self.review()
         self.assertEqual(self.store.photo_calls, [])
 
-    def test_crop_with_any_other_raw_cell_change_refuses_without_a_photo_read(self):
-        variants = {"id": "different-id", "kind": "playmat", "owner": "shared", "brand": "Earlier brand", "name": "Earlier name",
-                    "colour": "blue", "notes": "Earlier note", "link": "https://example.com/former", "image_source": "https://example.com/former.jpg",
-                    "quantity": "99", "capacity": "40", "image": "a-sleeves.png"}
-        self.assertEqual(set(variants), undo.RAW - {"crop"})
+    def test_crop_with_an_identity_or_image_name_change_still_refuses_without_a_photo_read(self):
+        variants = {"id": "different-id", "image": "a-sleeves.png"}
         for field, value in variants.items():
             crop.seed_crop(self.store, kind="deck_box" if field == "capacity" else "sleeves")
             self.source()["before"][field] = value

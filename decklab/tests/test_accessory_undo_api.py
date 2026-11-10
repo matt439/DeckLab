@@ -66,8 +66,9 @@ class AuditAccessories:
                               (confirm_photo, "accessory_crop_update")):
             if value is not ...:
                 source = kernel.source_record(self.undo_audit(change_id), owners)
+                actions = (action, "accessory_photo_record_update") if action in ("accessory_record_update", "accessory_crop_update") else (action,)
                 if source["op"] != "UPDATE" or value is not True \
-                        or kernel.update_action(source["before"], source["after"]) != action:
+                        or kernel.update_action(source["before"], source["after"]) not in actions:
                     raise inventory.Invalid("Only the reviewed accessory correction takes this confirmation.")
         before = self.snapshot
         operation = kernel.MetadataRestore(change_id, owners, expect, store=self, reason=reason, confirm_restore=confirm_restore,

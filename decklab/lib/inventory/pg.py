@@ -698,8 +698,9 @@ class PgInventory:
             for value, action in ((confirm_stock, "accessory_stock_update"), (confirm_owner, "accessory_owner_update"),
                                   (confirm_kind, "accessory_kind_update"), (confirm_record, "accessory_record_update"),
                                   (confirm_photo, "accessory_crop_update")):
+                actions = (action, "accessory_photo_record_update") if action in ("accessory_record_update", "accessory_crop_update") else (action,)
                 if value is not ... and (source["op"] != "UPDATE" or value is not True
-                        or update_action(source["before"], source["after"]) != action):
+                        or update_action(source["before"], source["after"]) not in actions):
                     raise Invalid("Confirm only the reviewed accessory correction.")
         _, summary = self.apply(MetadataRestore(change_id, owners, expect, store=self,
             reason=canonical if reason is not ... else ..., confirm_restore=confirm_restore, confirm_stock=confirm_stock,
@@ -912,7 +913,7 @@ class PgInventory:
                             receipt = op.verify(before, saved, actual)
                         finally:
                             self._applying.connection = previous_verify_connection
-                        if op.plan["action"] in ("accessory_remove", "accessory_add", "accessory_stock_update", "accessory_owner_update", "accessory_kind_update", "accessory_record_update", "accessory_crop_update"):
+                        if op.plan["action"] in ("accessory_remove", "accessory_add", "accessory_stock_update", "accessory_owner_update", "accessory_kind_update", "accessory_record_update", "accessory_crop_update", "accessory_photo_record_update"):
                             recorded_reason = cur.execute("select reason from audit.change_set where id=%s", (change_set,)).fetchone()
                             if recorded_reason is None or recorded_reason[0] != (op.reason if op.plan["action"] == "accessory_remove" else None):
                                 raise Conflict("The accessory Undo reason could not be confirmed.")

@@ -30,7 +30,8 @@ class AccessoryCropUndoUiTests(unittest.TestCase):
               body:options.noBody?null:{getReader:()=>({read:async()=>{photoMock.reads++;if(options.readError)throw Error('Broken photo stream');
                 return index<chunks.length?{done:false,value:chunks[index++]}:{done:true,value:undefined};},
                 cancel:async()=>{photoMock.cancels++;},releaseLock:()=>{}})}};};
-          fetch=(url,options)=>{const request={url,options,aborts:0};photoMock.fetches.push(request);
+          fetch=(url,options)=>{if(url==='/api/errors/report')return Promise.resolve({status:204,ok:true});
+            const request={url,options,aborts:0};photoMock.fetches.push(request);
             options.signal?.addEventListener('abort',()=>request.aborts++);const settings={...photoMock.options};
             if(settings.failure)return Promise.reject(settings.failure);
             const response=()=>photoResponse(photoMock.preview,settings);
@@ -73,7 +74,7 @@ class AccessoryCropUndoUiTests(unittest.TestCase):
             {photo:{...p.photo,size:0}},{photo:{...p.photo,size:4194305}},{photo:{...p.photo,sha256:'c'.repeat(63)}},
             {photo:{...p.photo,sha256:'c'.repeat(64)+'\n'}},{photo:{...p.photo,version:'e'.repeat(8)+'\n'}}];
           for(const extra of bad){const before=photoMock.fetches.length,{sheet}=await openCrop(cropPreview(extra));
-            assert(!save(sheet),JSON.stringify(extra));assert.equal(photoConsent(sheet),null);assert.equal(photoMock.fetches.length,before);}
+            assert(!save(sheet),JSON.stringify(extra));assert.equal(photoConsent(sheet),null);assert.equal(photoMock.fetches.length,before,JSON.stringify(extra));}
           for(const side of ['current','restored'])for(const crop of ['0,0,0.01,1','0,0,1.1,1','-0.1,0,1,1','0.2,0,0.9,1','0.00001,0,0.5,1','0, 0,1,1','00,0,1,1','0.0,0,1,1']){
             const q=cropPreview();q[side].crop=crop;q.fields=[{field:'crop',before:q.current.crop,after:q.restored.crop}];
             assert.equal(activityUndoEvidence(q,42,'home',state.profiles[0].id),null,side+crop);}

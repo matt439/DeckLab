@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Combined accessory record and current-photo crop recovery (2026-11-11; E11-S08 slice)
+
+- A distinct combined action restores recorded details, links, capacity, count, owner/kind and crop together with fullRAW13/current-photo proof. Ordinary Edit must reproduce the exact opposite audit row; photo bytes, id/image and all unrelated data stay unchanged. Owner/kind corrections retain unused proof, and current holders may keep text/capacity/count corrections.
+- Both current-photo crop views must decode, then separate initially unchecked photo and whole-record acknowledgements are required. Zero stock, per-side units, literal historical text/URLs, restored-owner visibility and current-versus-historical-photo limits remain explicit. Old standalone flags stay exclusive; no past photo bytes or new retention are invented.
+- Validation:362 broad accessory checks pass with ten expected skips;54 focused and seven latest UI cases pass (overlap). Five guarded PostgreSQL cases await CI, including exact no-reason audit proof; diagnostic8 strict native states passed with cleanup at data/ui-review/20261110T225152Z-d3df8437. Full24 committed-source states remain. No live record, service, archive or export scope changed.
+
 ## Whole collection identity and mixed recovery (2026-11-11; E11-S08 slice)
 
 - Complete1–50 own-space collection changes now restore printing identities, name corrections and actual mixed apply/upload-free merge shapes. Review shows every nullable current/restored row and requires one reason/physical confirmation where needed. Ordinary writers reproduce the source and inverse; full holder, Stand-in and aggregate capacity checks precede the whole write.

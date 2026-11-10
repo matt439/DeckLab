@@ -143,7 +143,7 @@ class AccessoryUndoPgTests(db_support.DbTestCase):
         self.assertEqual(self.persisted(), before)
         self.edit({"crop": "0,0,1,1", "notes": "Photo crop and text"})
         cid = self.sql("select max(id) from audit.change_set")[0][0]
-        self.assertIs(api.accessory_undo_view(cid)["available"], False)
+        self.assertEqual(api.accessory_undo_view(cid)["action"], "accessory_photo_record_update")
 
     def test_same_file_unaudited_image_replacement_is_preserved_by_text_only_inverse(self):
         from decklab.tests.test_accessory_fetch import jpeg

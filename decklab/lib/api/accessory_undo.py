@@ -59,7 +59,7 @@ def _project(plan, change_id, owners):
             or not isinstance(plan.get("expect"), str) or not undo.SHA.fullmatch(plan["expect"]):
         raise ApiError(503, UNCONFIRMED)
     action = plan["action"]
-    cropping = action == "accessory_crop_update"
+    cropping = action in undo.PHOTO_ACTIONS
     flags = ("reason_required", "confirmation_required", *undo.UPDATE_CONFIRMATIONS.values())
     try:
         source = undo.source_record([plan.get("source")], owners)
@@ -103,16 +103,17 @@ def _project(plan, change_id, owners):
     current, restored = (undo.raw_row(current), undo.raw_row(restored)) if cropping else (_meta(current, wide), _meta(restored, wide))
     editable = undo.UPDATE_FIELDS[action]
     flag = undo.UPDATE_CONFIRMATIONS.get(action)
+    expected_flags = {flag} | ({"photo_confirmation_required"} if cropping else set())
     fields = [{"field": field, "before": current[field], "after": restored[field]} for field in editable
               if current[field] != restored[field]]
     if not fields or any(current[field] != restored[field] for field in current if field not in editable) \
             or plan.get("current") != current or plan.get("restored") != restored or plan.get("fields") != fields \
-            or plan.get("label") != current["name"] or any(other in plan for other in flags if other != flag) \
-            or flag is not None and plan.get(flag) is not True:
+            or plan.get("label") != current["name"] or any(other in plan for other in flags if other not in expected_flags) \
+            or any(plan.get(required) is not True for required in expected_flags if required is not None):
         raise ApiError(503, UNCONFIRMED)
     return {"available": True, "id": change_id, "expect": plan["expect"], "kind": "accessory",
             "action": action, "label": current["name"], "current": current, "restored": restored,
-            "fields": fields, **({flag: True} if flag is not None else {}), **({"photo": photo} if cropping else {})}
+            "fields": fields, **({flag: True} if flag is not None else {}), **({"photo": photo, "photo_confirmation_required": True} if cropping else {})}
 
 
 def accessory_undo_view(id=None):
@@ -148,8 +149,8 @@ def apply_accessory_undo(body):
     stock = plan["action"] == "accessory_stock_update"
     ownership = plan["action"] == "accessory_owner_update"
     kind_change = plan["action"] == "accessory_kind_update"
-    record = plan["action"] == "accessory_record_update"
-    cropping = plan["action"] == "accessory_crop_update"
+    record = plan["action"] in ("accessory_record_update", "accessory_photo_record_update")
+    cropping = plan["action"] in undo.PHOTO_ACTIONS
     try:
         actual = undo.raw_row(result.get("restored")) if adding or cropping else None if removing else _meta(result.get("restored"), plan["action"] in undo.UPDATE_CONFIRMATIONS)
         photo = undo.photo_envelope(result.get("photo")) if cropping else None
@@ -173,4 +174,4 @@ def apply_accessory_undo(body):
             **({"added_id": result["added_id"]} if adding else {}),
             **({"photo": photo} if cropping else {}),
             "revision": result["revision"], "summary": f"Undo change #{change_id}: " + (
-                "restore a deleted accessory record" if adding else "remove an unused added accessory" if removing else "restore a crop on the current accessory photo" if cropping else "restore a combined accessory correction" if record else "restore the recorded accessory kind" if kind_change else "restore recorded accessory sharing" if ownership else "restore a recorded accessory count" if stock else "restore recorded accessory details")}
+                "restore a deleted accessory record" if adding else "remove an unused added accessory" if removing else "restore recorded accessory details and crop on the current photo" if cropping and record else "restore a crop on the current accessory photo" if cropping else "restore a combined accessory correction" if record else "restore the recorded accessory kind" if kind_change else "restore recorded accessory sharing" if ownership else "restore a recorded accessory count" if stock else "restore recorded accessory details")}

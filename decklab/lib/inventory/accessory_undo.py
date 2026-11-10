@@ -21,14 +21,17 @@ STOCK_META = (*META, "quantity")
 OWNER_FIELDS = ("owner", *FIELDS)
 KIND_FIELDS = ("kind", *FIELDS)
 RECORD_FIELDS = ("owner", "kind", "quantity", *FIELDS)
+PHOTO_ACTIONS = ("accessory_crop_update", "accessory_photo_record_update")
 UPDATE_FIELDS = {"accessory_update": FIELDS, "accessory_stock_update": STOCK_FIELDS,
                  "accessory_owner_update": OWNER_FIELDS, "accessory_kind_update": KIND_FIELDS,
-                 "accessory_record_update": RECORD_FIELDS, "accessory_crop_update": ("crop",)}
+                 "accessory_record_update": RECORD_FIELDS, "accessory_crop_update": ("crop",),
+                 "accessory_photo_record_update": (*RECORD_FIELDS, "crop")}
 UPDATE_CONFIRMATIONS = {"accessory_stock_update": "stock_confirmation_required",
                         "accessory_owner_update": "owner_confirmation_required",
                         "accessory_kind_update": "kind_confirmation_required",
                         "accessory_record_update": "record_confirmation_required",
-                        "accessory_crop_update": "photo_confirmation_required"}
+                        "accessory_crop_update": "photo_confirmation_required",
+                        "accessory_photo_record_update": "record_confirmation_required"}
 RAW = frozenset(rules.ACCESSORY_FIELDS)
 
 
@@ -160,6 +163,8 @@ def current_photo(snapshot, row, store=None):
 def update_action(old, new):
     """Whole-source category cardinality, shared by the inverse and its API proof."""
     categories = [field for field in ("owner", "kind", "quantity") if old.get(field) != new.get(field)]
+    if old.get("crop") != new.get("crop") and any(old.get(field) != new.get(field) for field in RECORD_FIELDS):
+        return "accessory_photo_record_update"
     if len(categories) >= 2:
         return "accessory_record_update"
     if not categories and old.get("crop") != new.get("crop"):
@@ -187,7 +192,7 @@ def _candidate(snapshot, source, owners):
     old, new = source["before"], source["after"]
     action = update_action(old, new)
     fields = UPDATE_FIELDS[action]
-    if action in ("accessory_owner_update", "accessory_kind_update", "accessory_record_update"):
+    if action in ("accessory_owner_update", "accessory_kind_update", "accessory_record_update") or action == "accessory_photo_record_update" and any(old[field] != new[field] for field in ("owner", "kind")):
         from . import accessory_undo_remove
         accessory_undo_remove.unused(snapshot, new["id"])
     current = accessories.from_sheet(snapshot.accessories, strict=True)
@@ -265,7 +270,7 @@ def review(change_id, owners, snapshot, store=None):
     found = [row for row in rows if row["id"] == identity["id"]]
     if found != ([] if adding else [new]):
         raise UndoConflict("The accessory changed after the selected change.")
-    photo = current_photo(snapshot, new, store) if action == "accessory_crop_update" else None
+    photo = current_photo(snapshot, new, store) if action in PHOTO_ACTIONS else None
     after, expected = (_add_candidate if adding else _remove_candidate if removing else _candidate)(snapshot, source, owners)
     scope = _scope(owners)
     project = dict if photo is not None else stock_meta if action in UPDATE_CONFIRMATIONS else meta
@@ -275,7 +280,7 @@ def review(change_id, owners, snapshot, store=None):
             **({"confirmation_required": True} if adding else {"reason_required": True} if removing else {"fields": [
                 {"field": field, "before": new[field], "after": old[field]} for field in fields if new[field] != old[field]]}),
             **({UPDATE_CONFIRMATIONS[action]: True} if action in UPDATE_CONFIRMATIONS else {}),
-            **({"photo": photo} if photo is not None else {}),
+            **({"photo": photo, "photo_confirmation_required": True} if photo is not None else {}),
             "expect": _sha([change_id, source, scope, list_sha(rows, owners), *([photo] if photo is not None else [])]),
             "sha256": list_sha(expected, owners), "source": source, "raw_after": expected,
             "owners": scope, "row_change_id": source["id"]}, after
@@ -297,7 +302,7 @@ def verify_saved(before, after, plan, actual_rows, *, store=None):
     digest = list_sha(raw_rows(after, allow_empty=removing), plan["owners"])
     if digest != plan["sha256"]:
         raise UndoConflict("The accessory inverse list could not be confirmed.")
-    cropping = plan["action"] == "accessory_crop_update"
+    cropping = plan["action"] in PHOTO_ACTIONS
     if cropping and current_photo(after, actual["after"], store) != plan.get("photo"):
         raise UndoConflict("The current accessory photo could not be confirmed.")
     return {"review": plan, "restored": actual["after"] if adding or cropping else None if removing else (stock_meta if plan["action"] in UPDATE_CONFIRMATIONS else meta)(actual["after"]), "sha256": digest,
@@ -334,8 +339,8 @@ class MetadataRestore:
         stock = plan["action"] == "accessory_stock_update"
         ownership = plan["action"] == "accessory_owner_update"
         kind_change = plan["action"] == "accessory_kind_update"
-        record = plan["action"] == "accessory_record_update"
-        cropping = plan["action"] == "accessory_crop_update"
+        record = plan["action"] in ("accessory_record_update", "accessory_photo_record_update")
+        cropping = plan["action"] in PHOTO_ACTIONS
         if cropping:
             if self.confirm_photo is not True:
                 raise Invalid("Confirm the crop on the current accessory photo before saving it.")
@@ -371,13 +376,13 @@ class MetadataRestore:
         elif self.reason is not ...:
             raise Invalid("Only removing an added accessory takes a removal reason.")
         return after, Summary(f"Undo change #{self.change_id}: " + ("restore a deleted accessory record" if adding else "remove an unused added accessory" if removing else
-                              "restore a crop on the current accessory photo" if cropping else "restore a combined accessory correction" if record else "restore the recorded accessory kind" if kind_change else "restore recorded accessory sharing" if ownership else "restore a recorded accessory count" if stock else "restore recorded accessory details"), {"undo": 1},
+                              "restore recorded accessory details and crop on the current photo" if cropping and record else "restore a crop on the current accessory photo" if cropping else "restore a combined accessory correction" if record else "restore the recorded accessory kind" if kind_change else "restore recorded accessory sharing" if ownership else "restore a recorded accessory count" if stock else "restore recorded accessory details"), {"undo": 1},
                               {paths.ACCESSORIES: ["added"] if adding else ["removed"] if removing else list(UPDATE_FIELDS[plan["action"]])},
                               {"undo_of": self.change_id, **({"undo_reason": self.reason} if removing else {})})
 
     def verify(self, before, after, actual_rows):
         if self.plan is None:
             raise Invalid("Review the accessory Undo before saving it.")
-        if self.plan["action"] == "accessory_crop_update":
+        if self.plan["action"] in PHOTO_ACTIONS:
             return verify_saved(before, after, self.plan, actual_rows, store=self.store)
         return verify_saved(before, after, self.plan, actual_rows)

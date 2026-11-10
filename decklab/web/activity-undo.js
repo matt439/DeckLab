@@ -157,6 +157,7 @@ function activityUndoAccessoryCropEvidence(data, space, profile) {
 }
 
 function activityUndoAccessoryEvidence(data, space, profile) {
+  if (data.action === "accessory_photo_record_update") return activityUndoAccessoryPhotoRecordEvidence(data, space, profile);
   if (data.action === "accessory_crop_update") return activityUndoAccessoryCropEvidence(data, space, profile);
   const removing = data.action === "accessory_remove", adding = data.action === "accessory_add";
   const counting = data.action === "accessory_stock_update";
@@ -274,6 +275,7 @@ function activityUndoTokenBatchRemoveEvidence(data) {
 }
 
 function activityUndoReceipt(answer, preview) {
+  if (preview.action === "accessory_photo_record_update") return activityUndoAccessoryPhotoRecordReceipt(answer, preview);
   if (preview.action === "collection_change_restore") return activityUndoCollectionReceipt(answer, preview);
   if (preview.action === "token_batch_update") return activityUndoTokenEditReceipt(answer, preview);
   if (preview.kind === "watchlist") return activityUndoWatchlistReceipt(answer, preview);
@@ -528,6 +530,7 @@ function openActivityUndo(view, id, endpoint = "/api/activity/undo") {
 }
 
 function activityUndoShow(ctx) {
+  if (ctx.preview.action === "accessory_photo_record_update") return activityUndoAccessoryPhotoRecordShow(ctx);
   if (ctx.preview.action === "collection_change_restore") return activityUndoCollectionShow(ctx);
   const { sheet, preview, view, endpoint } = ctx, signature = JSON.stringify(preview);
   const accessoryRemoving = preview.kind === "accessory" && preview.action === "accessory_remove";
