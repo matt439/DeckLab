@@ -10,10 +10,11 @@ Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_liste
 import copy
 import json
 import unittest
+from collections import Counter
 from unittest import mock
 
 from decklab.lib import access, api, decks, inventory, listed_prices, pool
-from decklab.lib.api import guard
+from decklab.lib.api import guard, inventory_views
 from decklab.tests import test_pool
 from decklab.tests.test_api import ApiTestCase, _write
 from decklab.tests.test_collection_edit import ROLES
@@ -132,6 +133,23 @@ class CompareTests(PoolTestCase):
         _, rows = self.check("casual/a")
         self.assertEqual(note(rows[ELVES])["own_printing"], "other")
 
+    def test_an_out_of_date_record_gives_no_note_at_all(self):
+        # The record names a printing the collection doesn't have: its ignored part's card isn't kept,
+        # so no card of the deck is noted while the record is out of date.
+        self.cards_csv("collection.csv", (ELVES, "m19", "314", "nonfoil", 1), ("Sol Ring", "ecc", "57", "nonfoil", 1))
+        text = deck_md("A", "built", "Deck\n1 Llanowar Elves (FDN) 227\n1 Sol Ring (FDN) 227\n")
+        self.write("decks/casual/a.md", text.replace(
+            "- **Status:** built\n", "- **Status:** built\n- **Printings in box:** 1 Llanowar Elves (FDN) 227\n"))
+        holder = next(d for d in pool.load_pool().in_use if d.id == "casual/a")
+        self.assertEqual((dict(holder.recorded), bool(holder.recorded_stale)), ({}, True))
+        _, rows = self.check("casual/a")
+        self.assertFalse(OWN_KEYS & set(rows[ELVES]))
+
+    def test_the_counts_are_read_only_when_a_line_names_a_printing(self):
+        with mock.patch.object(pool, "printing_counts", side_effect=AssertionError("counts read")):
+            _, rows = self.rows("Deck\n2 Llanowar Elves\n1 Sol Ring (FDN) 227\n", (ELVES, "m19", "314", "nonfoil", 2))
+        self.assertEqual(rows[ELVES]["owned"], 2)
+
     def test_a_failed_count_leaves_the_rows_and_no_field_says_free(self):
         with mock.patch.object(pool, "printing_counts", side_effect=RuntimeError("no counts")):
             result, rows = self.rows("Deck\n1 Llanowar Elves (FDN) 227\n", (ELVES, "m19", "314", "nonfoil", 1))
@@ -175,6 +193,22 @@ class DeckPageTests(ApiTestCase):
                 answer = self.view()
         self.assertNotIn("owned", answer)
         self.assertNotIn("own_printing", json.dumps(answer))
+
+    def test_a_public_reader_gets_no_note_drawn_from_homes_orders(self):
+        # The collection made public: its printings may be named, a pending order's never.
+        def rows():
+            fields = {"labels": {"on_the_way": [], "in_use": []}, "on_the_way": 0, "own_printing_more": 0}
+            return {"warnings": [], "rows": [
+                dict(fields, name=ELVES, own_printing="other", own_printing_label="M19 314", own_printing_on_the_way=False),
+                dict(fields, name="Sol Ring", own_printing="listed", own_printing_label="ECC 57", own_printing_on_the_way=True)]}
+        p = pool.Pool(Counter(), {}, [])
+        with access.viewing("user2"), access.using({"profile": "user2", "email": "", "remote": True}):
+            self.assertFalse(guard.sees_home_records())
+            elves, ring = inventory_views.owned(rows(), p)["rows"]
+        self.assertEqual(note(elves)["own_printing_label"], "M19 314")
+        self.assertFalse(OWN_KEYS & set(ring))
+        with access.viewing("matt"), access.using(None):
+            self.assertEqual(note(inventory_views.owned(rows(), p)["rows"][1])["own_printing_label"], "ECC 57")
 
 
 if __name__ == "__main__":

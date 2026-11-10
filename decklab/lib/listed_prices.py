@@ -80,6 +80,8 @@ def annotate_owned(rows, sections, canonical, counts, recorded=()):
         printing = listed.get(name)
         if printing is None or not row.get("owned") or name in recorded:
             continue
+        if callable(counts):            # a function giving the counts: read only once a row could have a note
+            counts = counts()
         set_code, number, finish = printing
         printed = cards.printing_card(set_code, number)
         if not printed or printed["name"] != name:
