@@ -235,7 +235,7 @@ class Review {
       const url = new URL(request.url());
       const method = request.method();
       const same = url.origin === this.origin;
-      const check = same && method === 'POST' && ['/api/deck/check', '/api/deck/cuts'].includes(url.pathname);
+      const check = same && method === 'POST' && ['/api/deck/check', '/api/deck/cuts', '/api/deck/bracket-replacements'].includes(url.pathname);
       if (!same || (!['GET', 'HEAD'].includes(method) && !check)) {
         const telemetry = same && method === 'POST' && ['/api/visit', '/api/errors/report'].includes(url.pathname);
         this.report.network.blocked.push({ method, url: this.safeUrl(url.href),
@@ -281,7 +281,7 @@ class Review {
     assert(typeof pathname === 'string' && pathname.startsWith('/') && !pathname.startsWith('//'), 'Expected a local API path');
     const url = new URL(pathname, this.origin);
     assert.equal(url.origin, this.origin);
-    assert(['/api/deck/edit', '/api/deck/draft', '/api/profiles/matt/wishlist', '/api/receipt'].includes(url.pathname),
+    assert(['/api/deck', '/api/cards/lookup', '/api/deck/edit', '/api/deck/draft', '/api/profiles/matt/wishlist', '/api/receipt'].includes(url.pathname),
       'Unapproved fixture proof read');
     this.checkCancelled();
     const response = await context.request.get(url.href, { timeout: 15000, maxRedirects: 0 });

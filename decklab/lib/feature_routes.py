@@ -155,6 +155,7 @@ ACCESS = MappingProxyType({
     ('POST', 'deck/new-draft'): 'draft',
     ('POST', 'deck/considering'): 'deck-edit',
     ('POST', 'deck/cuts'): 'deck',
+    ('POST', 'deck/bracket-replacements'): 'deck-edit',
     ('POST', 'deck/swaps'): 'deck',
     ('POST', 'deck/retire'): 'deck-edit',
     ('POST', 'deck/rename/preview'): 'deck-edit',
@@ -407,6 +408,7 @@ def route_tables():
     from decklab.lib.api import changes
     from decklab.lib.api import card_details
     from decklab.lib.api import deck_cuts
+    from decklab.lib.api import bracket_fixes
     from decklab.lib.api import error_reports
     from decklab.lib.api import collection_loans
 
@@ -550,6 +552,7 @@ def route_tables():
         ("deck", "new-draft"): (deck_drafts.save_new_draft, deck_drafts.MAX_BODY),     # the same, for a new deck
         ("deck", "considering"): considering.save_considering,
         ("deck", "cuts"): (deck_cuts.preview_cuts, deck_cuts.MAX_BODY),
+        ("deck", "bracket-replacements"): (bracket_fixes.replacements, bracket_fixes.MAX_BODY),
         ("deck", "swaps"): swaps.suggest_draft_swaps,      # a dry run: nothing is written
         ("deck", "retire"): retirement.retire_deck,
         ("deck", "rename", "preview"): rename.preview_rename,

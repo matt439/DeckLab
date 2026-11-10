@@ -91,7 +91,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E9-S11` | DEFERRED | could | L+pc | Four-player pod runs from the page (with `E9-S21` win shares and `E9-S22` why-not by Start); after `FG#2`. First `lib/forge/pods.py` from the prototype, fixtures only. |
-| `E9-S31` | OPEN | could | M | A To fit Bracket N list of the fewest cuts when a Commander deck's minimum bracket is above its target, with E3-S25's free replacements and Test this swap; first slice: a pure bracket_fixes in lib/stats/commander.py and the list in stats.js and commander-readiness.js. |
 | `E9-S32` | OPEN | could | M | Goldfish for Commander: commander cast by turn N, the skipped mana source classes one at a time, and a category milestone rate; first slice: record the cast turn in lib/goldfish/engine.py, report it from results.py with a new cache version, a panel in practice.js. |
 | `E9-S33` | OPEN | could | M | Three-card combos a Commander deck fully holds, under their own heading and never raising the bracket (no early flag, per the 2026-10-21 decision); first slice: lib/combos.py reduces three pieces into a separate file, three_card_combos in lib/stats/commander.py, the heading on the pages. |
 

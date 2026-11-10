@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Minimum counted bracket cuts and checked replacements (2026-11-11; E9-S31)
+
+- Stats and Overview find the fewest named-card cuts from the existing counted minimum, including overlapping two-card combos and compact Game Changer choices. The bounded exact search has exhaustive small-graph coverage; incomplete inputs or exhausted search give no all-clear. It never names the deck's actual bracket.
+- Permitted inventory editors choose an option and check free replacements against every selected cut. Unsafe or unknown candidates remain marked/disabled; commander and companion slots have explicit eligibility and full single-swap checks before Test. Public/read-only answers have no private text receipt. Changed receipts offer scoped reload, preserving drafts and normal Check/Save/Start.
+- Validation:201 focused tests pass (one existing platform qualification skip),66 replacement/privacy/legacy-swap/HTTP checks pass and ten strict Chromium smoke states complete with cleanup. No actual games, save, database, inventory or external fetch was run.
+
 ## Privacy-safe save signals and centralized library caches (2026-11-11; E11-S77)
 
 - GET changes and warm JSON headers return only opaque own-space inventory/deck and already-visible library tokens. Fresh visibility is required; stale/unreadable data is unverified, without IDs/counts/actors/global revisions or cached-Public fallback. Private kit/table changes, including unmapped old player slots, cannot move an unauthorized signal. The legacy visible-deck revision uses the same safe projection.

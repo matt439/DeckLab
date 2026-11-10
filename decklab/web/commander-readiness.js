@@ -199,6 +199,8 @@ function commanderReadiness(data) {
     return section;
   }
   const { k, br, groups, found, unknown, combos, target } = facts;
+  const fixes = bracketFixesPart(data);
+  if (fixes) section.append(fixes);
   section.append(commanderTableSentence(facts, (name) => cardLink({ name }, "commander-readiness", { inline: true })));
   if (!k.ok) section.append(el("p", { class: "sub", text: "Deck rules need attention before this list can be played; see Stats." }));
   if (unknown.length) section.append(el("p", { class: "sub", text: `Cards without data: ${unknown.join(", ")}. The checks are incomplete.` }));

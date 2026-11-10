@@ -14,6 +14,26 @@ from urllib.parse import urlsplit
 
 
 class ReviewRunnerTests(unittest.TestCase):
+    def test_card_and_deck_proof_reads_stay_on_the_owned_origin_and_exact_allowlist(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is needed for the fixture proof guard")
+        script = r'''
+const assert=require('node:assert/strict');const {Review}=require('./decklab/ui_review/common.js');
+(async()=>{
+  const calls=[],review={origin:'http://127.0.0.1:18643',checkCancelled:()=>{}};
+  const context={request:{get:async(url,options)=>{calls.push({url,options});return {ok:()=>true,status:()=>200,json:async()=>({synthetic:true})};}}};
+  for(const path of ['/api/deck?id=commander%2Ffixture','/api/cards/lookup?name=Fixture'])
+    assert.deepEqual(await Review.prototype.readFixture.call(review,context,path),{synthetic:true});
+  for(const path of ['/api/deck/save','/api/collection','//example.com/api/deck','https://example.com/api/deck'])
+    await assert.rejects(()=>Review.prototype.readFixture.call(review,context,path));
+  assert.equal(calls.length,2);assert(calls.every(call=>call.options.maxRedirects===0&&new URL(call.url).origin===review.origin));
+})().catch(error=>{console.error(error);process.exitCode=1;});
+'''
+        result = subprocess.run([node, "-e", script], cwd=Path(__file__).resolve().parents[2],
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_telemetry_is_answered_inside_the_browser_guard_without_permitting_writes(self):
         node = shutil.which("node")
         if not node:
@@ -42,7 +62,9 @@ const {Review} = require('./decklab/ui_review/common.js');
   assert.deepEqual(await request('POST',review.origin+'/api/deck/check'), [['continue']]);
   assert.deepEqual(await request('POST',review.origin+'/api/deck/cuts'), [['continue']]);
   assert.deepEqual(await request('POST',review.origin+'/api/deck/cuts/save'), [['abort','blockedbyclient']]);
-  assert.equal(review.report.network.dry_checks,2);
+  assert.deepEqual(await request('POST',review.origin+'/api/deck/bracket-replacements'), [['continue']]);
+  assert.deepEqual(await request('POST',review.origin+'/api/deck/bracket-replacements/save'), [['abort','blockedbyclient']]);
+  assert.equal(review.report.network.dry_checks,3);
   assert.equal(review.report.network.allowed_reads,1);
 })().catch(error => {console.error(error);process.exitCode=1;});
 '''

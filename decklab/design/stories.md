@@ -43,10 +43,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 35 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
+| [E9: Commander nights](#e9-commander-nights) | 28 | 22 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 55 | 14 | 6 | 4 |
-| **Total** | **376** | **312** | **22** | **26** | **16** |
+| **Total** | **376** | **313** | **22** | **25** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -4407,7 +4407,7 @@ Built (2026-11-10): the whole story. `_card_json` carries `game_changer`; a Comm
 
 First slice: add game_changer to `_card_json` in `decklab/lib/api/card_lookup.py`, draw the chip in `decklab/web/editor-cards.js` from the bracket `editor-save.js` holds, and reuse it in `editor-edhrec.js`, `editor-wishlist.js` and `editor-considering.js`, with an API test and a UI test.
 
-**E9-S31** · Matt · could · M · missing
+**E9-S31** · Matt · could · M · built
 
 As Matt, taking a deck to a social Commander night, I want the page to say which cuts would bring the counted minimum bracket down to the deck's Target bracket, so that fixing a deck that reads too high is a quick swap I can test.
 
@@ -4418,6 +4418,8 @@ As Matt, taking a deck to a social Commander night, I want the page to say which
 Gap: nothing works out the cuts. The cards and combos behind the minimum are already named (E9-S03, E9-S05, E9-S06, E9-S23), and E3-S25 and E9-S26 supply replacements. A fast-mana line is left out, being close to the early-game hint declined on 2026-10-21 (E9-S23). From the product review of 2026-11-10, compared with ScrollVault, Table Commander and DeckCheck.
 
 First slice: a pure `bracket_fixes` beside `min_bracket` in `decklab/lib/stats/commander.py`, then the list in `decklab/web/stats.js` and `decklab/web/commander-readiness.js`, reusing `decklab/web/deck-swaps.js` for replacements.
+
+Built (2026-11-11): Stats and Overview show an exact bounded minimum-cut plan for the counted floor, with overlapping combo pieces and compact any-K-of-N Game Changer choices. Unknown or malformed inputs and exhausted search remain unavailable. Permitted inventory editors select a concrete option, freshly check free replacements against all selected cuts and see unsafe/unknown candidates disabled. Commander/Companion replacements are explicit section changes; Test also requires the whole single swap to pass existing rules. Public/read-only views carry no raw text receipt. Scoped reload and fresh receipt checks preserve local drafts and ordinary Check/Save/Start gates.201 focused tests pass (one existing qualification skip), plus66 replacement/privacy/legacy-swap/HTTP checks; ten strict Chromium smoke states pass with clean completion/cleanup. These are fixtures, not real Commander games or device acceptance.
 
 **E9-S32** · Matt · could · M · missing
 

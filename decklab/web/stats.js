@@ -65,7 +65,7 @@ function statsSection(data) {
     curvePanel(st),
     landPanel(st),
     colourPanel(st, data),
-    st.commander ? commanderPanel(st, data.summary) : null,
+    st.commander ? commanderPanel(st, data.summary, data) : null,
     st.commander ? nearCombosPanel(data) : null,
     drawOddsPanel(data),
     compositionPanel(st, data),
@@ -887,7 +887,7 @@ function tutorFindings(br, target) {
       " The count informs only: it doesn't change the minimum bracket." }), rulesLine);
 }
 
-function commanderPanel(st, summary) {
+function commanderPanel(st, summary, data = null) {
   const k = st.commander;
   const br = k.bracket || {};
   const names = (list) => (list && list.length ? cardNames(list.map((x) => (typeof x === "string" ? { name: x } : x))) : null);
@@ -926,6 +926,8 @@ function commanderPanel(st, summary) {
       (br.reasons || []).map((r) => el("p", { class: "sub", text: r })),
       tutorFindings(br, target),
       target ? el("p", { class: "sub", text: `The deck aims for Bracket ${target}.` }) : null));
+  const fixes = bracketFixesPart(data || { summary, stats: st }, 4);
+  if (fixes) panel.append(fixes);
   panel.append(explain("What are the rules and brackets?", "A Commander deck has exactly 100 cards including the " +
     "commander, one copy of each card (basic lands excepted), and only cards within the commander's colours. Brackets " +
     "(1 to 5) describe how strong a deck is, so a table can match decks of similar power."));

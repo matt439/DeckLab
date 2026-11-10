@@ -16,6 +16,7 @@ from .constants import (
     PARTNER_TEXT_RE, PARTNER_WITH_RE, REMINDER_RE, UPGRADED_MAX_GAME_CHANGERS)
 from .cardtext import card_list, colour_label, colour_words, front_text, subtypes, type_words
 from .tutors import tutor_check, tutor_rules
+from .bracket_fixes import fixes as _bracket_fixes_impl
 
 # Read only by _commander_checks below. Tests patch it here, on
 # decklab.lib.stats.commander: the package doesn't re-export it, so a patch
@@ -98,6 +99,11 @@ def min_bracket(game_changers, mass_land_denial, extra_turns, two_card_combos=0)
     if game_changers > UPGRADED_MAX_GAME_CHANGERS or mass_land_denial:
         bracket = 4
     return bracket
+
+
+def bracket_fixes(bracket, target, **limits):
+    """A pure minimum-cut plan for the counted floor, never a statement of the deck's bracket."""
+    return _bracket_fixes_impl(bracket, target, **limits)
 
 
 def _copies_allowed(card):
