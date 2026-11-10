@@ -114,7 +114,8 @@ def status():
     cards.error says why the index can't be loaded (None when it can), and
     update_error why the last background update failed. fx is the cached USD rate in the configured
     currency, and pricing what Settings says about the prices (E11-S53), None while config.json
-    can't be read (the footer still answers, in the default currency)."""
+    can't be read (the footer still answers, in the default currency). config holds only the
+    source file's ready/missing/unreadable state and fixed guidance, never profile diagnostics."""
     info, error = _index_info()
     try:
         settings = pricing_setting.settings()     # config.json with Settings' saved choice over it
@@ -122,6 +123,7 @@ def status():
         settings = None
     code = currency.code(settings) if settings is not None else currency.DEFAULT
     return {
+        "config": config.source_status(),
         "cards": {
             "ready": info is not None,
             "built_at": info["built_at"] if info else None,

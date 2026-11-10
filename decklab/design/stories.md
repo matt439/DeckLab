@@ -6421,9 +6421,9 @@ As a newcomer editing `decklab/config.json` by hand, I want a mistake in it to b
 
 Built 2026-11-10: the config loader and doctor accept a UTF-8 BOM. Malformed JSON reports the same sanitized line and column through the server, database command line and doctor's text/JSON output; server startup prints no traceback for this error. Non-object JSON and invalid UTF-8 also get fixed configuration messages. The doctor's provider still returns fixed code strings; its separate location callback accepts only bounded integer coordinates and never arbitrary adapter text (`config_errors.py`, `test_config_diagnostics.py`).
 
-Left: unknown-role/no-admin warnings, explicit missing/unreadable-file status and the empty profile chooser's hint. The timezone default still needs Matt's decision. E11-S52's setup page would replace hand editing later. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (windows-walkthrough 1, errors-and-recovery 0, 7, database-and-config 2, 3, first-run-ui 0, linux-mac 9).
+Also built 2026-11-10: a missing config logs setup guidance without changing the existing default-settings behavior. `/api/status` reports only a fixed ready/missing/unreadable state and guidance, never profile diagnostics or config contents. An empty home chooser names the local setup file and instructions. Doctor text/JSON and local homenet status warn about unknown roles or no usable admin through fixed codes; warnings don't change config readiness, dependencies, legacy roles or permissions. Config/status, chooser, role/privacy and lifecycle fixtures pass; native background-process checks remain separate.
 
-Next slice: add fixed missing/unreadable configuration status and startup/empty-chooser guidance without exposing file contents or changing profile rights.
+Left: Matt's decision about the timezone default (PC's zone or an explicit example setting); the current fallback is unchanged. E11-S52's setup page would replace hand editing later. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (windows-walkthrough 1, errors-and-recovery 0, 7, database-and-config 2, 3, first-run-ui 0, linux-mac 9).
 
 **E11-S80** · Self-hoster · should · M · missing
 

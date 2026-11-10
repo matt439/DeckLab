@@ -131,8 +131,10 @@ class HomenetProfileDiagnosticsTests(Guarded):
     def test_legacy_role_check_matches_verifier_without_tightening_preflight(self):
         value = {"access": {}, "profiles": [home(emails="matt@example.com")]}
         lines = profile_config.check(value)
-        self.assertEqual(len(lines), 1)
+        self.assertEqual(len(lines), 2)
         self.assertIn("profiles [access_legacy_roles]", lines[0]["text"])
+        self.assertIn("[config_no_admin]", lines[1]["text"])
+        self.assertEqual(lines[1]["level"], "WARN")
         self.assertEqual(profiles.read_checked(value)[0]["role"], "member")
         # Even a rejected entry's role key disables legacy in the existing verifier.
         value["profiles"].append({"role": "member", "emails": ["matt@example.com"]})

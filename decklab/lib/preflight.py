@@ -22,6 +22,12 @@ CHECKS = (
     ("backups", "Backup folders", "optional", ("config",)),
 )
 SIMULATION_FILES = ("java", "forge")     # the optional checks optional_files_status sums up
+CONFIG_WARNINGS = MappingProxyType({
+    "config_unknown_role": ("One or more profiles have an unknown role and are treated as members.",
+                            "Use admin or member for each role in decklab/config.json."),
+    "config_no_admin": ("No usable admin profile is configured.",
+                        "Choose an intended admin locally in decklab/config.json before using admin settings."),
+})
 
 # Each outcome contains only public, fixed wording, apart from validated JSON
 # line/column integers. Submitted values, paths and exception messages never enter the report.
@@ -168,12 +174,13 @@ ALLOWED = MappingProxyType({
 })
 
 
-def report(probe, *, config_location=None):
+def report(probe, *, config_location=None, config_warnings=None):
     """Call eligible probes once in order; every output field comes from this catalog.
 
     A provider returns a code string. The optional config_location callback returns
-    only an already checked (line, column) tuple. Unknown values and ordinary exceptions fail
-    closed; cancellation is deliberately not caught or converted into readiness.
+    only an already checked (line, column) tuple; config_warnings returns fixed warning
+    codes without changing readiness or dependencies. Unknown values and ordinary exceptions
+    fail closed; cancellation is deliberately not caught or converted into readiness.
     """
     checks, by_id = [], {}
     for ident, label, scope, dependencies in CHECKS:
@@ -199,6 +206,15 @@ def report(probe, *, config_location=None):
                     pass
         row = {"id": ident, "label": label, "scope": scope, "status": status, "code": code,
                "message": message, "next_step": next_step, "blocked_by": blocked}
+        if ident == "config" and code == "config_ready" and config_warnings is not None:
+            try:
+                warnings = config_warnings()
+                if type(warnings) is tuple and len(warnings) <= len(CONFIG_WARNINGS) and all(
+                        type(value) is str and value in CONFIG_WARNINGS for value in warnings):
+                    row["warnings"] = [{"code": value, "message": CONFIG_WARNINGS[value][0],
+                                        "next_step": CONFIG_WARNINGS[value][1]} for value in dict.fromkeys(warnings)]
+            except Exception:               # noqa: BLE001 - optional diagnostics never publish adapter faults
+                pass
         checks.append(row)
         by_id[ident] = row
     core = [row for row in checks if row["scope"] == "core"]
@@ -221,6 +237,9 @@ def text(result):
         lines.append(f"{status_words[row['status']]} {row['label']}{optional}: {row['message']}")
         if row["next_step"]:
             lines.append("  Next: " + row["next_step"])
+        for warning in row.get("warnings", []):
+            lines.append(f"WARN {row['label']}: {warning['message']}")
+            lines.append("  Next: " + warning["next_step"])
     files = {"present": "present", "incomplete": "incomplete", "not_verified": "not verified"}[result["optional_files_status"]]
     lines.append(f"Optional simulation files: {files}. Simulation execution qualification: not performed.")
     lines.append("No installation, download, migration, schedule, service activation or game is performed by this preflight.")

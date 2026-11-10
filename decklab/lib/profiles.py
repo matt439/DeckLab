@@ -213,6 +213,20 @@ def read_checked(settings=None):
     return listed
 
 
+def role_warning_codes(settings, listed=None):
+    """Static local warning codes, without changing tolerant profile or permission parsing."""
+    listed = read(settings) if listed is None else listed
+    if not listed:
+        return ("config_no_admin",)
+    usable = {profile["id"] for profile in listed}
+    raw = settings.get("profiles")
+    unknown = isinstance(raw, list) and any(isinstance(entry, dict) and isinstance(entry.get("id"), str)
+              and entry["id"] in usable
+              and "role" in entry and entry["role"] not in ROLES for entry in raw)
+    return (("config_unknown_role",) if unknown else ()) + (
+        ("config_no_admin",) if not any(profile["role"] == "admin" for profile in listed) else ())
+
+
 def public(profile):
     """A profile as the page may see it: everything but its emails."""
     return {k: v for k, v in profile.items() if k != "emails"}

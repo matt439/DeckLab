@@ -614,6 +614,9 @@ def main(argv=None):
                 stream.close()
             log_path = os.path.abspath(args.log)
             stream = _log_to(log_path, announce=console)
+        if not config.CONFIG_FILE.exists():
+            server_http.log("decklab/config.json is missing. Copy decklab/config.example.json to "
+                            "decklab/config.json and follow SELF-HOSTING.md step 4.")
         host = settings.get("host", "0.0.0.0") if args.host is None else args.host
         return server_run._serve(host, port, args.no_update, settings, log_path, background=background)
     except config.InvalidConfig as error:

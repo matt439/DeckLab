@@ -161,6 +161,7 @@ class Local:
         self._loaded_driver = None
         self._results = {}
         self._config_location = None
+        self._config_warnings = ()
 
     @property
     def settings(self):
@@ -171,6 +172,11 @@ class Local:
     def config_location(self):
         """The already checked JSON line/column, with no source text or additional read."""
         return self._config_location
+
+    @property
+    def config_warnings(self):
+        """Already checked fixed role-warning codes; never profile values or another read."""
+        return self._config_warnings
 
     def probe(self, check_id):
         if check_id not in ("runtime", "config", "driver", "database", "cards", "ocr", "timezone", "backups"):
@@ -294,6 +300,7 @@ class Local:
         except Exception:
             return "config_invalid"
         self._settings = settings
+        self._config_warnings = profiles.role_warning_codes(settings, listed)
         return "config_ready"
 
     def _driver(self):

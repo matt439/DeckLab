@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Missing config guidance and local role warnings (2026-11-10; E11-S79)
+
+- Startup names a missing `decklab/config.json` and the example/setup instructions while retaining existing defaults. Status reports fixed ready/missing/unreadable source state only; no config contents or role/profile diagnostics go to the page.
+- An empty home profile chooser says where profiles are configured. Doctor and local homenet status warn about unknown roles or no usable admin through fixed wording, keeping parser roles, permissions, config readiness and dependent checks unchanged.
+- Validation: 336 guarded fixture tests passed across config, doctor, local status, chooser, roster/privacy, pricing and server lifecycle; four existing native checks skipped for separate qualification. Only E11-S79's timezone-default decision remains; no household config or timezone was changed.
+
 ## Counter and dice reminders in Build decks (2026-11-10; E4-S29 first slice)
 
 - Build decks now shows optional counter/dice kind estimates with each kind's selected deck sources, including sideboard-only notes. Coverage is calculated once across the plan, allocating generic cover deterministically across distinct kinds; repeated deck rows don't imply extra stock.

@@ -240,7 +240,8 @@ function drawWho() {
       el("span", {},
         el("span", { class: "who-name", text: p.name }),
         el("span", { class: "who-sub", text: p.id === last ? "Last time on this device" : "Tap to continue" }))))),
-    ordered.length ? null : emptyBox("No one has been added to Deck Lab yet.")));
+    ordered.length ? null : emptyBox("No one has been added to Deck Lab yet. Profiles come from "
+      + "decklab/config.json on the server PC; copy decklab/config.example.json and follow SELF-HOSTING.md step 4.")));
   afterRender();
 }
 

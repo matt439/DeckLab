@@ -141,6 +141,21 @@ def load():
     return settings
 
 
+def source_status():
+    """Only whether the local file is a readable JSON object; never its contents or an error."""
+    try:
+        value = json.loads(CONFIG_FILE.read_text(encoding="utf-8-sig"))
+        if not isinstance(value, dict):
+            raise ValueError
+    except FileNotFoundError:
+        return {"state": "missing", "message": "decklab/config.json is missing. Copy decklab/config.example.json "
+                "to decklab/config.json and follow SELF-HOSTING.md step 4."}
+    except (OSError, ValueError, RecursionError):
+        return {"state": "unreadable", "message": "decklab/config.json couldn't be read. Run python -m "
+                "decklab.doctor on the server PC and check SELF-HOSTING.md step 4."}
+    return {"state": "ready", "message": None}
+
+
 def records_dir(root=None):
     """Where the repo-relative research files that sources name (magic/buylists/..., magic/reports/...)
     are looked for: config.json's records_repo, the household's own private repo, when root is this

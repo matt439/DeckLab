@@ -587,7 +587,10 @@ class MainTests(unittest.TestCase):
             stream = sys.stderr
         stream.close()
         self.assertEqual(code, 1)
-        self.assertIn("JSONDecodeError", (self.dir / "logs" / "server.log").read_text(encoding="utf-8"))
+        text = (self.dir / "logs" / "server.log").read_text(encoding="utf-8")
+        self.assertIn("decklab/config.json isn't valid JSON: line 1, column 2", text)
+        self.assertNotIn("Traceback", text)
+        self.assertNotIn("nope", text)
 
     def test_the_stop_handler(self):
         fake = mock.Mock()

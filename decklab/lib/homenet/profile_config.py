@@ -13,6 +13,12 @@ ACCESS_ISSUES = {
     "access_duplicate_email": (PROBLEM, "An email alias is listed by another usable profile; that alias cannot identify one profile.",
                                "Give each sign-in alias to exactly one profile in decklab/config.json."),
 }
+ROLE_ISSUES = {
+    "config_unknown_role": ("One or more profiles have an unknown role and are treated as members.",
+                            "Use admin or member for each role in decklab/config.json."),
+    "config_no_admin": ("No usable admin profile is configured.",
+                        "Choose an intended admin locally in decklab/config.json before using admin settings."),
+}
 
 
 def _access_lines(settings, listed, issues):
@@ -62,4 +68,6 @@ def check(settings):
     """Status keeps checking the rest of the PC while reporting every rejected entry."""
     access = settings.get("access") is not None
     listed, issues = profiles.parse_with_diagnostics(settings.get("profiles", []), access=access)
-    return issue_lines(issues) + (_access_lines(settings, listed, issues) if access else [])
+    warnings = [] if issues else [line(WARN, "Profiles", f"[{code}]: {ROLE_ISSUES[code][0]}", ROLE_ISSUES[code][1])
+                                for code in profiles.role_warning_codes(settings, listed)]
+    return issue_lines(issues) + (_access_lines(settings, listed, issues) if access else []) + warnings

@@ -59,6 +59,16 @@ class AccountsUiTests(unittest.TestCase):
 
     # ------------------------------------------------------------------ start-up
 
+    def test_empty_home_chooser_explains_where_to_configure_profiles(self):
+        self.run_js("""
+          state.remote = false; state.profile = null; state.profiles = [];
+          drawWho();
+          assert(main.textContent.includes('decklab/config.json'));
+          assert(main.textContent.includes('decklab/config.example.json'));
+          assert(main.textContent.includes('SELF-HOSTING.md step 4'));
+          assert.equal(main.querySelectorAll('.who-button').length, 0);
+        """)
+
     def test_remote_start_skips_the_chooser_and_keeps_the_profile(self):
         self.run_js("""
           const asked = [];
