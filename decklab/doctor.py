@@ -44,6 +44,7 @@ def _provider():
     probe.config_location = lambda: local.config_location
     probe.config_warnings = lambda: local.config_warnings
     probe.runtime_version = lambda: local.version
+    probe.platform_name = lambda: local.platform
     return probe
 
 
@@ -67,7 +68,8 @@ def main(argv=None, *, provider_factory=None):
             probe = None
         result = preflight.report(probe, config_location=lambda: probe.config_location(),
                                   config_warnings=lambda: probe.config_warnings(),
-                                  runtime_version=lambda: probe.runtime_version())
+                                  runtime_version=lambda: probe.runtime_version(),
+                                  platform_name=lambda: probe.platform_name())
     except KeyboardInterrupt:
         _say_error("Preflight cancelled.")
         return 130

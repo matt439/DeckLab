@@ -239,6 +239,10 @@ _AUTH_METHOD = ("Ident authentication failed", "Peer authentication failed", "no
 def _method_hint(posix=None):
     """The next step when PostgreSQL won't take a password for the superuser on 127.0.0.1."""
     from decklab.lib import pathsetting
+    if posix is None and sys.platform == "darwin":
+        return ("Review the local PostgreSQL pg_hba.conf password method using your installation's psql. "
+                "For Homebrew use brew services restart postgresql@18 after restoring the intended settings; "
+                "see SELF-HOSTING.md's macOS setup instructions")
     posix = pathsetting.on_posix() if posix is None else posix
     if not posix:
         return ("PostgreSQL's pg_hba.conf doesn't allow a password login on 127.0.0.1: in the file (in PostgreSQL's "
@@ -254,6 +258,9 @@ def _method_hint(posix=None):
 def _password_hint(posix=None):
     """The next step when the superuser's password was refused."""
     from decklab.lib import pathsetting
+    if posix is None and sys.platform == "darwin":
+        return ("Use your Homebrew/Postgres.app local admin connection and psql's \\password postgres, then run "
+                "python -m decklab.db setup again; see SELF-HOSTING.md's macOS setup instructions")
     posix = pathsetting.on_posix() if posix is None else posix
     if not posix:
         return (f"Give the {db.SUPERUSER} password set when PostgreSQL was installed, then run "
@@ -270,6 +277,10 @@ def _superuser(say=print, ask=getpass.getpass, interactive=None):
     try:
         return db.connect("super", dbname="postgres", autocommit=True)
     except db.DbUnavailable as e:
+        if sys.platform == "darwin" and 'role "postgres" does not exist' in str(e):
+            raise db.DbUnavailable(f"{e}. Homebrew may use your macOS account as its initial admin: if the "
+                                   "postgres role is absent, run createuser -s postgres from that local admin "
+                                   "account, then set its password with psql (SELF-HOSTING.md).") from None
         if any(words in str(e) for words in _AUTH_METHOD):
             raise db.DbUnavailable(f"{e}. {_method_hint()}.") from None
         if not any(words in str(e) for words in _PASSWORD_REFUSED):

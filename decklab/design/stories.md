@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 32 | 1 | 2 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 49 | 14 | 12 | 4 |
-| **Total** | **376** | **295** | **22** | **43** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 50 | 14 | 11 | 4 |
+| **Total** | **376** | **296** | **22** | **42** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6460,7 +6460,7 @@ Built 2026-11-11: step10 is a numbered local-tunnel/Access walkthrough: prepare 
 
 Example validation exposed a small reader bug: nested audTag list items were treated as extra ingress rules. The reader now ignores nested lists and a regression preserves both real ingress rules. All32 tunnel fixtures pass; the guide's YAML/JSON parse through repository helpers, public/whitespace audits pass. No login, DNS, policy, credentials, tunnel or deployment was created by this documentation task. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (docs-readability 1).
 
-**E11-S82** · Self-hoster · could · M · missing
+**E11-S82** · Self-hoster · could · M · built
 
 As a self-hoster on a Mac, I want either working background running, stop, restart, update and backups, or docs that say plainly what macOS lacks, so that nothing tells me my backups run when they don't.
 
@@ -6473,6 +6473,8 @@ As a self-hoster on a Mac, I want either working background running, stop, resta
 Gap: on darwin `schedule status` exits 0, so the smoke test reports the nightly backup installed and working when nothing is scheduled; `homenet stop/start/restart` fail, so `update` fails; `decklab/db/conn.py` hard-codes `postgres` as the superuser; macOS gets one line each for launchd and cron. Needs Matt's decision: support macOS properly, or narrow the docs to terminal-only (the false backup PASS is fixed either way). From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (linux-mac 0 to 4, 7, 8).
 
 First slice: an unsupported result from `schedule status` off Windows and Linux in `decklab/db/schedule.py` and `decklab/db/__main__.py`, and a WARN in `decklab/smoke.py`'s schedule finding, with tests.
+
+Built (2026-11-11): foreground/manual macOS is the documented built-in mode. Unsupported service/update actions give macOS instructions before native commands or fetches; schedule status exits nonzero. Smoke uses only a recent successful whole-nightly receipt for retrospective evidence, and never claims a future timer was checked. Migration 0023 adds those whole-run receipts without changing existing step exits. Homebrew/Postgres.app hints, two editable operator-managed LaunchAgent examples and Apple Silicon/Intel/system JDK discovery are included. Fixture validation covers unsupported/no-native behavior, wrapper routing, receipt age/result and fake JDK layouts; plist examples parse. No actual Mac scheduling/install or live backup was performed.
 
 **E11-S83** · Self-hoster · could · M · missing
 

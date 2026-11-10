@@ -183,7 +183,7 @@ ALLOWED = MappingProxyType({
 })
 
 
-def report(probe, *, config_location=None, config_warnings=None, runtime_version=None):
+def report(probe, *, config_location=None, config_warnings=None, runtime_version=None, platform_name=None):
     """Call eligible probes once in order; every output field comes from this catalog.
 
     A provider returns a code string. The optional config_location callback returns
@@ -206,6 +206,13 @@ def report(probe, *, config_location=None, config_warnings=None, runtime_version
             if type(code) is not str or code not in ALLOWED[ident]:
                 code = "probe_unverified"
             status, message, next_step = OUTCOMES[code]
+            if code == "database_no_answer" and platform_name is not None:
+                try:
+                    if platform_name() == "darwin":
+                        next_step = ("For PostgreSQL on this Mac, check brew services list (or Postgres.app). "
+                                     "Then run python -m decklab.db status; see SELF-HOSTING.md step 5.")
+                except Exception:
+                    pass
             if ident == "runtime" and code == "runtime_unsupported" and runtime_version is not None:
                 try:
                     version = runtime_version()

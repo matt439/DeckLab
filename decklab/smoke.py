@@ -502,7 +502,8 @@ def step_live(r, ctx):
     try:
         code, status = get_json(port, "/api/status", timeout=5)
     except OSError:
-        r.note(WARN, f"Nothing answers on port {port}: start it (python -m decklab.lib.homenet start), "
+        start_command = "python decklab/server.py" if sys.platform == "darwin" else "python -m decklab.lib.homenet start"
+        r.note(WARN, f"Nothing answers on port {port}: start it ({start_command}), "
                      "or ignore this before homenet install")
         return
     if code != 200 or not isinstance(status, dict):
@@ -511,7 +512,8 @@ def step_live(r, ctx):
     r.note(PASS, f"Deck Lab answers on port {port}")
     build = status.get("build") or {}
     if build.get("restart_required"):
-        r.note(WARN, "It runs older code than this checkout: python -m decklab.lib.homenet restart")
+        r.note(WARN, "It runs older code than this checkout: " + ("restart the foreground server or your own LaunchAgent"
+               if sys.platform == "darwin" else "python -m decklab.lib.homenet restart"))
     if build.get("running_dirty"):
         r.note(WARN, "It started with uncommitted changes in the checkout")
     database = status.get("database") or {}
@@ -522,6 +524,8 @@ def step_live(r, ctx):
 
 
 def step_services(r, ctx):
+    if sys.platform == "darwin":
+        return _darwin_services(r, ctx)
     code, out = _run([sys.executable, "-m", "decklab.lib.homenet", "status"], 120)
     found = homenet_findings(out)
     if code is None:
@@ -538,18 +542,49 @@ def step_services(r, ctx):
                                                    "worked")
 
 
+def nightly_receipt_finding(found, now=None, hours=36):
+    """Recent whole-job evidence never implies an installed/working future scheduler."""
+    from datetime import datetime, timedelta
+    now = now or datetime.now().astimezone()
+    finished = found.get("finished_at") if isinstance(found, dict) else None
+    if (isinstance(found, dict) and found.get("ok") is True and isinstance(finished, datetime)
+            and timedelta(0) <= now - finished.astimezone() <= timedelta(hours=hours)):
+        return PASS, "A recent whole nightly completed. macOS scheduling remains operator-managed; no installed timer was verified."
+    return WARN, ("No recent successful whole nightly was verified. macOS has no built-in backup scheduler; "
+                  "add your own launchd/cron job for python -m decklab.db nightly (SELF-HOSTING.md).")
+
+
+def _darwin_services(r, ctx):
+    r.note(WARN, "macOS uses foreground or operator-managed launchd running; built-in background/network checks are unsupported.")
+    if ctx.get("doctor", {}).get("database") != "ready":
+        r.note(WARN, "The database isn't ready, so a recent manual nightly cannot be verified; no macOS scheduler is installed by Deck Lab.")
+        return
+    try:
+        from decklab.db import backup, conn
+        found = backup.latest(("nightly",)).get("nightly")
+        hours = float(conn.settings()["stale_backup_hours"])
+        if not 0 < hours <= 24 * 366:
+            raise ValueError
+        level, message = nightly_receipt_finding(found, hours=hours)
+    except Exception:
+        level, message = WARN, "Whole-nightly history couldn't be checked; configure and verify your own macOS launchd/cron job."
+    r.note(level, message)
+
+
 def _linux(platform=None):
     return (sys.platform if platform is None else platform).startswith("linux")
 
 
 def _start_words(platform=None):
     """How the background server starts by itself, as this system does it."""
-    return "its systemd service" if _linux(platform) else "its start at logon"
+    selected = sys.platform if platform is None else platform
+    return "operator-managed foreground/launchd running" if selected == "darwin" else "its systemd service" if _linux(selected) else "its start at logon"
 
 
 def _task_word(platform=None):
     """What runs the nightly maintenance here: a systemd timer on Linux, else a scheduled task."""
-    return "timer" if _linux(platform) else "task"
+    selected = sys.platform if platform is None else platform
+    return "operator-managed job" if selected == "darwin" else "timer" if _linux(selected) else "task"
 
 
 def homenet_findings(out):

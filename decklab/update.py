@@ -579,6 +579,10 @@ def main(argv=None):
     parser.add_argument("--no-smoke", action="store_true", help="don't run the smoke test at the end")
     parser.add_argument("--after-pull", metavar="COMMIT", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
+    if sys.platform == "darwin":
+        say("macOS uses a manual foreground update: stop the server (Ctrl+C, or boot out your own LaunchAgent), "
+            "then follow SELF-HOSTING.md's macOS update steps. Nothing was fetched, stopped or restarted.")
+        return 1
     if args.after_pull is not None:
         return after_pull(args)
     try:

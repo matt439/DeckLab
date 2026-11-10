@@ -19,17 +19,27 @@ here=$(dirname -- "$self")
 cd -- "$here/.." || exit 1
 python=${DECKLAB_PYTHON:-}
 if [ -z "$python" ] && [ -f .venv/pyvenv.cfg ]; then
-    home=$(sed -n 's/^home[[:space:]]*=[[:space:]]*//p' .venv/pyvenv.cfg | head -n 1)
+    venv_home=$(sed -n 's/^home[[:space:]]*=[[:space:]]*//p' .venv/pyvenv.cfg | head -n 1)
     version=$(sed -n 's/^version\(_info\)\{0,1\}[[:space:]]*=[[:space:]]*\([0-9][0-9]*\.[0-9][0-9]*\).*/\2/p' \
         .venv/pyvenv.cfg | head -n 1)
-    for candidate in "$home/python$version" "$home/python3" "$home/python"; do
-        if [ -n "$home" ] && [ -x "$candidate" ]; then
+    for candidate in "$venv_home/python$version" "$venv_home/python3" "$venv_home/python"; do
+        if [ -n "$venv_home" ] && [ -x "$candidate" ]; then
             python=$candidate
             break
         fi
     done
 fi
 python=${python:-python3}
+if [ "$(uname -s)" = "Darwin" ]; then
+    if [ "$#" -eq 0 ]; then
+        exec "$python" decklab/server.py
+    fi
+    case $1 in
+        start) shift; exec "$python" decklab/server.py "$@" ;;
+        -*) exec "$python" decklab/server.py "$@" ;;
+        *) exec "$python" -m decklab.lib.homenet "$@" ;;
+    esac
+fi
 if [ "$#" -eq 0 ]; then
     exec "$python" -m decklab.lib.homenet start
 fi

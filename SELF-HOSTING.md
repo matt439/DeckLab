@@ -310,7 +310,7 @@ On Linux and macOS:
   - `scripts/decklab` runs `homenet` from any folder, on the Python the `.venv` was made from (`DECKLAB_PYTHON` to choose another): `decklab` starts the server, and `decklab stop`, `decklab status` and so on pass through. Link it into your PATH (`ln -s "$PWD/scripts/decklab" ~/.local/bin/decklab`). On Windows it's `scripts\decklab.cmd`.
   - A server run by hand in a terminal stops cleanly when the terminal closes, unless it was started with `nohup`.
 - **Linux, at boot:** systemd runs your own services only while you're logged in. For Deck Lab to start at boot and keep running after you log out, turn on lingering once: `loginctl enable-linger` (on some systems, `sudo loginctl enable-linger $USER`). `install` and `status` remind you while it's off.
-- **macOS:** run `python decklab/server.py` under launchd, from the repo root.
+- **macOS:** use the [foreground/manual-job instructions](#macos-foreground-and-operator-managed-jobs) below. Built-in service/scheduler control is unsupported; no installed job is inferred.
 - **Backups:** `python -m decklab.db backup` writes a dump to `decklab/data/backups/` and copies it to `database.backup_dir` in `config.json`, a folder on another disk or a NAS:
   ```json
   "database": {"backup_dir": "D:\\Backups\\DeckLab"}
@@ -338,6 +338,103 @@ python -m decklab.db schedule preview-systemd --unit timer --python /usr/bin/pyt
 ```
 
 To check the Linux services on your computer from end to end, `scripts/linux_services_check.sh` installs the timer and the service on port 18642, restarts the server, kills it to see systemd start it again, stops it and removes both (`PYTHON=<your python> scripts/linux_services_check.sh`).
+
+### macOS foreground and operator-managed jobs
+
+The built-in macOS mode is **foreground**. Run `python decklab/server.py` (or `scripts/decklab`) and stop it with Ctrl+C in that terminal. `homenet status` explains the limits; install/start/stop/restart do not pretend to manage a background job. The git updater refuses before fetching and points to the manual sequence below. Linux/Windows service commands are not macOS instructions.
+
+For Homebrew PostgreSQL, `brew services start postgresql@18` starts the database. Its initial admin may be your macOS account rather than a role named postgres. If postgres is absent, use `createuser -s postgres` from that local admin account, then open `psql -d postgres` and enter `\password postgres`. Do not recreate an existing role. See the [Homebrew formula](https://formulae.brew.sh/formula/postgresql@18) for its installed paths. Postgres.app users should use that installation's admin/tools.
+
+Foreground manual update, after stopping the server:
+
+```sh
+python -m decklab.db backup
+git pull --ff-only
+.venv/bin/python -m pip install -r decklab/requirements.txt
+python -m decklab.db migrate
+python -m decklab.lib.forge status
+python decklab/server.py
+```
+
+The Forge check does not install or play anything. If it expects a different build, use step 8 before starting. In a second terminal run `python -m decklab.smoke`; its scheduler warning is honest unless a recent successful whole-nightly receipt is available. Migration 0023 adds those operational receipts; individual dump/check rows do not prove a whole nightly or future schedule. Keep this install's Python/venv consistent when upgrading.
+
+Optional DIY LaunchAgents are operator-managed. They run in the logged-in user's context; use the same account/private config/pgpass as the foreground app. Replace every path and label below, including Intel versus Apple Silicon Homebrew paths, and make the log directory first. Check [Apple's launchd guidance](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html) and your Mac's `man launchctl`/`man launchd.plist` before installing them. Deck Lab installs none of these jobs.
+
+Save the server example as `~/Library/LaunchAgents/com.example.decklab.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>WorkingDirectory</key>
+	<string>/Users/YOUR-ACCOUNT/DeckLab</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/opt/homebrew/opt/postgresql@18/bin:/usr/local/opt/postgresql@18/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+	</dict>
+	<key>Label</key>
+	<string>com.example.decklab</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/opt/homebrew/bin/python3.14</string>
+		<string>/Users/YOUR-ACCOUNT/DeckLab/decklab/server.py</string>
+		<string>--background</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>/Users/YOUR-ACCOUNT/DeckLab/decklab/data/logs/launchd-server.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/YOUR-ACCOUNT/DeckLab/decklab/data/logs/launchd-server.log</string>
+</dict>
+</plist>
+```
+
+Save the calendar example as `~/Library/LaunchAgents/com.example.decklab-nightly.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>WorkingDirectory</key>
+	<string>/Users/YOUR-ACCOUNT/DeckLab</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/opt/homebrew/opt/postgresql@18/bin:/usr/local/opt/postgresql@18/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+	</dict>
+	<key>Label</key>
+	<string>com.example.decklab-nightly</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/opt/homebrew/bin/python3.14</string>
+		<string>-m</string>
+		<string>decklab.db</string>
+		<string>nightly</string>
+	</array>
+	<key>StartCalendarInterval</key>
+	<dict>
+		<key>Hour</key>
+		<integer>3</integer>
+		<key>Minute</key>
+		<integer>30</integer>
+	</dict>
+	<key>StandardOutPath</key>
+	<string>/Users/YOUR-ACCOUNT/DeckLab/decklab/data/logs/launchd-nightly.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/YOUR-ACCOUNT/DeckLab/decklab/data/logs/launchd-nightly.log</string>
+</dict>
+</plist>
+```
+
+Validate edited files with `plutil -lint <file>`. Register each with `launchctl bootstrap "gui/$(id -u)" <file>`. For the loaded server, `launchctl kickstart -k "gui/$(id -u)/com.example.decklab"` restarts it; `launchctl bootout "gui/$(id -u)/com.example.decklab"` unloads/stops it. Boot out your own server job before the manual update, then bootstrap it again afterward; do not assume kickstart can restart an unloaded job. The calendar is Mac-local 03:30: align the system/config timezone, keep the Mac awake, and verify actual nightly receipts. A plist alone proves no backup or device acceptance.
+
+Java discovery includes `/Library/Java/JavaVirtualMachines/*/Contents/Home` and Apple Silicon/Intel Homebrew openjdk layouts, alongside JAVA_HOME/PATH. Choose a full JDK 21+; source tests emulate these paths, not an actual Mac install. Phone/Safari, OCR and native scheduling checks remain separate.
 
 ### Check the whole install: the smoke test
 

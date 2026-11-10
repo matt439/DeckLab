@@ -220,7 +220,7 @@ def _schedule(args):
     if isinstance(result, (list, tuple)):
         for line in result:
             print(line)
-        return 0
+        return 0 if schedule.supported() else 2
     return result
 
 

@@ -242,6 +242,10 @@ def reset(dbname, tables=STATE_TABLES):
 # What undoes each later migration, for tests that roll a throwaway database back to an older
 # schema and migrate it forward again (roll_back_schema). A new migration needs its entry here.
 UNDO_MIGRATION = {
+    23: ("delete from ops.backup_run where kind = 'nightly'",
+         "alter table ops.backup_run drop constraint backup_run_kind_check",
+         "alter table ops.backup_run add constraint backup_run_kind_check check "
+         "(kind in ('dump', 'export', 'restore_check', 'gate', 'check'))"),
     14: ("alter table product_status drop column token_cards",),
     15: ("alter table order_component drop column check_links",),
     16: ("alter table collection_card drop column location",),

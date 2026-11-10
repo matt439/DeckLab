@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Honest macOS foreground operation and nightly evidence (2026-11-11; E11-S82)
+
+- macOS uses the documented foreground/manual mode. Built-in background commands and updater give useful macOS guidance before running Windows/Linux commands or fetching; the wrapper starts the foreground server. Unsupported schedule status exits nonzero.
+- Smoke distinguishes a recent successful complete nightly from individual dump/check receipts and from proof of an installed future timer. Migration0023 admits whole-nightly operational receipts; inability to save the summary does not change existing step outcomes.
+- The guide includes manual updates, Homebrew/Postgres.app role hints and editable server/calendar LaunchAgents with PATH/logs and lifecycle instructions. Java discovery includes system and both Homebrew JDK layouts.
+- Validation:151 focused macOS/nightly/Linux/update/smoke/doctor/preflight/setup checks pass with two guarded/native skips. Both exact plist examples parse. No actual Mac, scheduling job, installation, live backup or migration was executed.
+
 ## Lossless deck text and more offline collection layouts (2026-11-11; E2-S32)
 
 - Deck copy/download retains foil/etched and bare-set details; Copy with categories round-trips inline tags. Copy callbacks remain bound to their original profile, route and frame.

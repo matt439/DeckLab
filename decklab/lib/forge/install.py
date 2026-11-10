@@ -42,7 +42,10 @@ def _posix_java_roots():
     packages, /opt, SDKMAN's and IntelliJ's downloads."""
     home = Path.home()
     return ((Path("/usr/lib/jvm"), "*"), (Path("/usr/lib64/jvm"), "*"), (Path("/opt/java"), "*"),
-            (Path("/opt"), "jdk*"), (home / ".sdkman" / "candidates" / "java", "*"), (home / ".jdks", "*"))
+            (Path("/opt"), "jdk*"), (home / ".sdkman" / "candidates" / "java", "*"), (home / ".jdks", "*"),
+            (Path("/Library/Java/JavaVirtualMachines"), "*/Contents/Home"),
+            (Path("/opt/homebrew/opt"), "openjdk*/libexec/openjdk.jdk/Contents/Home"),
+            (Path("/usr/local/opt"), "openjdk*/libexec/openjdk.jdk/Contents/Home"))
 
 
 RELEASE_MAX = 64 * 1024             # a JDK's release file is a few hundred bytes

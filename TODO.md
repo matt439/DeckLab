@@ -153,7 +153,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S77` | OPEN | could | L | A per-viewer change signal so open pages notice a save from another device and the library cache is dropped centrally; needs Matt's decision on appetite. First slice: guarded GET /api/changes polled by runs-pill.js, noteRevisions() in core.js, a Reload line; no stream. |
 | `E11-S84` | DECISION | should | S | Config backup safety, release cleanliness, release-update guidance and local simulation settings built. Left: Matt's stable-channel, changelog and updates-available decision. |
 | `E11-S79` | DECISION | should | S | BOM/JSON diagnostics, missing-file startup/status/chooser guidance and role/admin warnings built. Left: Matt's timezone-default decision. |
-| `E11-S82` | OPEN | could | M | macOS: the smoke test's false nightly-backup PASS, then stop/restart/update, Homebrew's superuser, a launchd plist, Java discovery, or docs narrowed to terminal-only (Matt's decision). First slice: schedule status unsupported off Windows and Linux, smoke WARN. |
 | `E11-S83` | OPEN | could | M | First use on the page: no raw "wife" or Played by for one player, hints for Status and Planned/Play-now, plain-text collection import, the start box on an empty Collection, Forge optional wording. First slice: Played by from the profiles, the two hints. |
 
 ## Areas with no open rows
