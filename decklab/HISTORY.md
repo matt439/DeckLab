@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Reviewed category suggestions and SQL category projection (2026-11-11; E2-S29)
+
+- Editor role proposals apply only to untagged current-list lines after explicit review, with one Undo and normal categories-only Save. Fixed explained priority selects one label; existing labels remain. Other-deck choices are private to the actual own space, independent of Public switches, and return no source deck identities/counts. Callback ownership includes page/profile/route/sheet/frame/line.
+- Migration0027 adds the optional derived category column. Canonical saved text and every existing line identity are validated before category-only backfill and one maintenance audit inside the migration transaction. Old schema readers/writers remain usable; mismatches and late failures roll back the column, projection, audit and migration receipt without text/history/table changes.
+- Validation:ten latest focused cases pass (one guarded PG class skip),56 category/route/web and74 existing category/core/inventory cases pass (overlap; nine skips in latter). Four disposable-PG save/backfill/check/export/rollback cases are included for CI. A broad sweep's intermediate file-inventory failure was an unregistered peer helper, not category behavior. No actual schema, records or metadata fetch changed.
+
 ## Qualified Forge development observer (2026-11-11; E3-S45)
 
 - The compiled Java observer now emits actual lands in play and accumulated actual draws after each two-global-turn block, through round10. Opening hands, tutors/returns and phased-out lands are excluded; missing/early-ended observations are never filled with zero. The existing optional consumer/table/placebo complete this story.

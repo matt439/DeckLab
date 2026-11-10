@@ -317,6 +317,17 @@ class RouteAccessTests(PermissionTestCase):
                         self.assertNotIn(PRIVATE, json.dumps(answer))
         self.assertEqual(self.persisted(), before)
 
+    def test_public_inventory_never_publishes_private_other_deck_category_choices(self):
+        before = self.persisted()
+        with mock.patch.object(guard, "public_spaces", return_value=frozenset({"user3"})):
+            for who in (None, "user2", "user1", "matt"):
+                with self.subTest(viewer=who):
+                    status, answer, _ = self.probe("GET", ("cards", "categories"), who, "inventory")
+                    self.assertEqual(status, 403)
+                    self.assertNotIn(PRIVATE, json.dumps(answer))
+                    self.assertNotIn("categories", answer)
+        self.assertEqual(self.persisted(), before)
+
     def test_legacy_private_routes_keep_their_existing_cross_space_boundaries(self):
         before = self.persisted()
         failures = []

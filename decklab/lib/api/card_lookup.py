@@ -14,6 +14,7 @@ from collections import Counter
 from datetime import date
 
 from decklab.lib import cards, currency, decks, edhrec, pool, spaces
+from decklab.lib.stats.category_suggest import suggest as _category_suggest
 
 from . import common
 from .carddata import _require_cards
@@ -120,6 +121,9 @@ def _card_json(card, p):
             out["faces"].append({**{key: face.get(key) for key in cards.FACE_FIELDS},
                                  "img": url("normal-back" if back else "normal"),
                                  "img_small": url("small-back" if back else "small")})
+    suggestion = _category_suggest(card)
+    if suggestion:
+        out["category_suggestion"] = suggestion
     return out
 
 

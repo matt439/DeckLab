@@ -36,7 +36,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 21 | 2 | 2 | 1 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 22 | 2 | 1 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 34 | 3 | 2 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 31 | 0 | 1 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 22 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 56 | 14 | 5 | 4 |
-| **Total** | **376** | **318** | **22** | **20** | **16** |
+| **Total** | **376** | **319** | **22** | **19** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -764,7 +764,7 @@ First slice: a read-only Cuts filter: `cuts()` in `decklab/lib/edhrec.py`, retur
 
 Built (2026-11-11): Commander EDHREC ideas has a cached-only Cuts view/direct entry for Planned nonlands outside the commander. Known inclusion sorts ascending; absent, listed-without-counts and missing/corrupt-cache groups remain distinct, never guessed0%. Rows show overlapping cited role surpluses and optional current-visible-list settled Forge evidence (800games, nevercast30drawngames, stuck20copies/20%). Over100 drafts review their actual Planned list through a bounded list-only preview. Editable saved rows move to Considering with printing/category preserved in one local Undo step, or choose a free replacement into the existing explicit Test-this-change flow; new drafts first need a saved identity for those actions. Public readers get intrinsic evidence, no actions/inventory/raw CAS receipt. Tracked sheets and callbacks stay in their page/profile/frame.193 focused tests pass (one DB qualification skip), plus54 latest privacy/route checks including whole-response private-kit/table invariance. Full30 strict native captures passed and were inspected at data/ui-review/20261110T194741Z-933e7e05; the final backend-only noneditable receipt fix has focused coverage. No new store/schema, fetch, actual save or Forge game was used.
 
-**E2-S29** · Matt · could · M · missing
+**E2-S29** · Matt · could · M · built
 
 As a deck builder who tags cards with my own categories, I want Deck Lab to suggest categories for untagged cards, so that I don't tag every Sol Ring by hand.
 
@@ -776,6 +776,8 @@ As a deck builder who tags cards with my own categories, I want Deck Lab to sugg
 Gap: categories are set by hand, one per line (E2-S24, whose Gap records the missing `deck_line` column). Role counts (E9-S26) are never written into categories, and nothing remembers a card's category across decks. Several categories per card stays out: it changes the deck text format. From the product review of 2026-11-10, compared with Moxfield's global tags and Archidekt's automatic categories.
 
 First slice: Suggest categories, with no schema or text-format change: a role-to-category mapping in a new `decklab/lib/stats/category_suggest.py`, exposed through `decklab/lib/api/card_lookup.py`, and a review sheet in `decklab/web/deck-categories.js`; tests in `decklab/tests/test_deck_categories.py`.
+
+Built (2026-11-11): Suggest categories explicitly reviews only untagged current-list lines, with untickable proposals and the explained Board wipe/Counterspell/Removal/Draw/Ramp priority. Applying is one local Undo; normal categories-only Save changes no decklist marker or availability table. Remembered choices load on demand from the viewer's actual own space's other decks, returning labels only with no deck identities/counts and no Public/admin override. Existing visible deck labels remain intrinsic list metadata. Page/person/route/sheet/frame/line checks reject stale or detached callbacks. Migration0027 adds nullable deck_line.category; a canonical-parser hook validates all legacy line identities before category-only projection and one maintenance audit in the schema transaction. Old-schema writers remain compatible, mismatches give check guidance, and failed backfills roll back schema/audit/receipt. Ten focused checks pass (one guarded PG class skip),56 category/route/web and74 existing category/core/inventory checks pass (overlap; nine skips in latter); four disposable-PG save/backfill/check/export/rollback cases are included for CI. No actual migration, database save or external metadata fetch was performed.
 
 **E2-S30** · Matt · could · S · built
 

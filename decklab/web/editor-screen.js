@@ -358,7 +358,8 @@ function mainTabs() {
     ed.tab === "notes" && notes ? null
       : el("h2", { class: ed.quick || notes ? "sr-only" : "edit-cards-title", text: ed.mode === "edit" ? listName(ed.version) : "Cards" }),
     lookOffered ? editorManaSortButton() : null,
-    lookOffered ? ed.dom.look : null);
+    lookOffered ? ed.dom.look : null,
+    typeof editorCategorySuggestButton === "function" ? editorCategorySuggestButton() : null);
 }
 
 /** A tablist's keys (the tabs pattern): Left and Right (wrapping), Home and End pick the tab and focus it. */
@@ -404,6 +405,7 @@ function drawMain() {
     t.setAttribute("tabindex", t.id === `edit-tab-${ed.tab}` ? "0" : "-1");
   });
   if (ed.dom.page) ed.dom.page.classList.toggle("is-notes", ed.tab === "notes");
+  if (typeof updateEditorCategorySuggest === "function") updateEditorCategorySuggest();
   clear(host).setAttribute("id", "edit-main-panel");
   if (document.getElementById(`edit-tab-${ed.tab}`)) {
     host.setAttribute("role", "tabpanel");

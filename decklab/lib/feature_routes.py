@@ -87,6 +87,7 @@ ACCESS = MappingProxyType({
     ('GET', 'cards/decks'): 'inventory',
     ('GET', 'cards/lookup'): 'open',
     ('GET', 'cards/copies'): 'inventory',
+    ('GET', 'cards/categories'): 'inventory',
     ('GET', 'gauntlet'): 'deck',
     ('GET', 'gauntlet/summary'): 'deck',
     ('GET', 'gauntlet/catalogue'): 'open',
@@ -409,6 +410,7 @@ def route_tables():
     from decklab.lib.api import changes
     from decklab.lib.api import development
     from decklab.lib.api import card_details
+    from decklab.lib.api import category_suggestions
     from decklab.lib.api import deck_cuts
     from decklab.lib.api import bracket_fixes
     from decklab.lib.api import error_reports
@@ -484,6 +486,7 @@ def route_tables():
         ("cards", "decks"): (_card_decks, ("name", "space")),
         ("cards", "lookup"): (card_details.card_view, ("name", "set", "number")),
         ("cards", "copies"): (card_details.copies_view, ("name", "space")),
+        ("cards", "categories"): (category_suggestions.choices_view, ("name", "space", "exclude")),
         ("gauntlet",): (_gauntlet_view, ("id", "version", "sample", "size", "colours", "styles", "tiers", "profile")),
         ("gauntlet", "summary"): (_gauntlet_summary, ("id", "version", "profile")),
         ("gauntlet", "catalogue"): (_gauntlet_catalogue, ("format",)),

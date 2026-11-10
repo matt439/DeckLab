@@ -243,15 +243,16 @@ def _texts(c):
 
 def _deck_lines(c):
     def work():
-        from decklab.lib.inventory import pg_decks
+        from decklab.lib.inventory import pg_decks, pg_categories
         stored = {}
+        categories = pg_categories.ready(c)
         for row in c.execute("select deck_id, version, section, position, quantity, name, set_code, "
-                             "collector_number, finish from deck_line"):
+                             f"collector_number, finish{', category' if categories else ''} from deck_line"):
             stored.setdefault(row[0], []).append(tuple(row))
         wrong = []
         texts = _texts(c)
         for deck_id, (_, _, _, text) in texts.items():
-            derived = sorted(pg_decks.lines(deck_id, pg_decks.parsed(deck_id, text)))
+            derived = sorted(pg_decks.lines(deck_id, pg_decks.parsed(deck_id, text), categories=categories))
             if derived != sorted(stored.get(deck_id, [])):
                 wrong.append(deck_id)
         wrong += sorted(set(stored) - set(texts))
