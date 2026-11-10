@@ -97,7 +97,7 @@ class DeckEdhrecUiTests(unittest.TestCase):
           assert(!/free|To buy|Owned/.test(text.replace("isn't yours to see", '')), text);
           assert(text.includes("nothing here says what's owned"), text);
           assert(!buttonText(sheet, 'Consider'));
-          same(sheet.querySelector('.segmented').querySelectorAll('button').map((b) => b.textContent), ['Not in the deck (3)', 'All (4)']);
+          same(sheet.querySelector('.segmented').querySelectorAll('button').map((b) => b.textContent), ['Not in the deck (3)', 'All (4)', 'Cuts']);
         """)
 
     def test_a_failure_is_said_plainly(self):

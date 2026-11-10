@@ -235,7 +235,7 @@ class Review {
       const url = new URL(request.url());
       const method = request.method();
       const same = url.origin === this.origin;
-      const check = same && method === 'POST' && url.pathname === '/api/deck/check';
+      const check = same && method === 'POST' && ['/api/deck/check', '/api/deck/cuts'].includes(url.pathname);
       if (!same || (!['GET', 'HEAD'].includes(method) && !check)) {
         const telemetry = same && method === 'POST' && ['/api/visit', '/api/errors/report'].includes(url.pathname);
         this.report.network.blocked.push({ method, url: this.safeUrl(url.href),

@@ -79,13 +79,25 @@ def _card(name):
     return _card_json(card, _shown_printing(card)) if card else None
 
 
-def edhrec_view(deck_id=None, commander=None, commander2=None, space=None, page=None):
+def edhrec_view(deck_id=None, commander=None, commander2=None, space=None, page=None, view=None):
     """GET /api/deck/edhrec?id=&commander=&commander2=&space=&page=: lib/edhrec.ideas' answer (with "card",
     the card's JSON for its picture, on each card), plus "space", "sha256" (the deck text's, for a
     Considering add; None for a deck not saved yet), "may_add", "marks" (whether the answer marks what's
     owned) and "warnings" (the pool's, as the deck page shows them). commander and commander2 are the
     editor's draft commander(s), space a new deck's space and page a narrowed EDHREC page (see the module's
     docstring)."""
+    if view == "cuts":
+        from .deck_cuts import cuts_view
+        if any(value not in (None, "") for value in (commander, commander2, space)):
+            from .deck_aliases import canonical_id
+            canonical_id(deck_id)
+            raise ApiError(400, "Cuts use the saved Planned list; use the editor to preview a draft.")
+        return cuts_view(deck_id, page)
+    if view not in (None, "", "ideas"):
+        if deck_id is not None:
+            from .deck_aliases import canonical_id
+            canonical_id(deck_id)
+        raise ApiError(400, "Choose ideas or cuts")
     if deck_id is None:
         if commander in (None, ""):
             raise ApiError(400, "id is required: the deck's id (or commander, for a deck not saved yet)")

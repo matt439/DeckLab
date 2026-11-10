@@ -474,5 +474,10 @@ table.data tfoot .total-cost { font-weight: var(--fw-semibold); text-align: left
 .edhrec-page .field { max-width: 24rem; margin-bottom: var(--s-2); }
 .edhrec-group h3 { margin-top: var(--s-4); }
 .edhrec-row > .btn { min-width: var(--tap); }
+.edhrec-cut { border-top: 1px solid var(--border); padding: var(--s-2) 0; }
+.edhrec-cut > summary { min-height: var(--tap); padding: var(--s-2) 0; cursor: pointer; overflow-wrap: anywhere; }
+.edhrec-cut .actions { flex-wrap: wrap; margin: var(--s-3) 0; }
+.cut-reasons p { margin-bottom: var(--s-1); }
+.cut-replacements .swap-list { padding-left: 0; }
 /* Whether owned dice and counters cover a need (E7-S24). */
 .token-counter .dice-cover { margin-left: var(--s-1); }

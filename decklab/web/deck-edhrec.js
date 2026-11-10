@@ -19,8 +19,13 @@
  * Consider button (no deck to add to). */
 "use strict";
 
-const EDHREC_FILTERS = [["new", "Not in the deck"], ["free", "Free"], ["to_buy", "To buy"], ["all", "All"]];
+const EDHREC_FILTERS = [["new", "Not in the deck"], ["free", "Free"], ["to_buy", "To buy"], ["all", "All"], ["cuts", "Cuts"]];
 const EDHREC_PAGE_GROUPS = [["budget", "Budget"], ["bracket", "Commander Brackets"], ["theme", "Themes"]];
+const edhrecSheets = new Set();
+
+function closeEdhrecSheets() {
+  for (const ctx of [...edhrecSheets]) { ctx.closingForRoute = true; ctx.afterClose = null; ctx.seq++; ctx.sheet.close(); }
+}
 
 /** The Cards tab's EDHREC part: a Commander deck only (never a product or pairing). */
 function deckEdhrecSection(data) {
@@ -29,7 +34,9 @@ function deckEdhrecSection(data) {
   return el("section", { class: "deck-section deck-edhrec", id: "sec-edhrec", "aria-labelledby": "h-edhrec" },
     el("h2", { id: "h-edhrec", text: "EDHREC ideas" }),
     el("p", { class: "sub", text: "What other decks with this commander commonly play, from EDHREC." }),
-    el("button", { type: "button", class: "btn", text: "See EDHREC ideas…", onclick: () => openEdhrecSheet(data) }));
+    el("div", { class: "actions" },
+      el("button", { type: "button", class: "btn", text: "See EDHREC ideas…", onclick: () => openEdhrecSheet(data) }),
+      el("button", { type: "button", class: "btn btn-quiet", text: "Review cuts…", onclick: () => openDeckCuts(data) })));
 }
 
 /** "In the deck", "Free in the pool", "2 free", "Owned, all in other decks", "To buy · ~A$1.20", with
@@ -51,10 +58,14 @@ function edhrecPasses(c, filter) {
   return !c.in_deck && c.status === filter;
 }
 
-function openEdhrecSheet(data, lead = null) {
-  const ctx = { data, id: data ? data.summary.id : null, lead, filter: lead ? "all" : "new", answer: null, changed: false,
+function openEdhrecSheet(data, lead = null, options = {}) {
+  const ctx = { data, id: data ? data.summary.id : null, lead, filter: options.cuts ? "cuts" : lead ? "all" : "new", answer: null, changed: false,
+    cutEditor: options.editor || null,
     seq: 0, page: "", pages: null };
   const sheet = openSheet("EDHREC ideas", { wide: true, onClose: () => {
+    edhrecSheets.delete(ctx);
+    if (ctx.closingForRoute) return;
+    if (ctx.afterClose) { ctx.afterClose(); return; }
     const here = parseHash();
     if (ctx.changed && here.path === "deck" && addressDeckId(here.params.get("id") || "") === ctx.id) {
       state.library = null;
@@ -62,6 +73,8 @@ function openEdhrecSheet(data, lead = null) {
     }
   } });
   ctx.sheet = sheet;
+  edhrecSheets.add(ctx);
+  edhrecCutsContext(ctx);
   ctx.picker = el("div", { class: "edhrec-page" });
   ctx.message = el("div", { role: "status", "aria-live": "polite" });
   ctx.area = el("div", { class: "edhrec-area" });
@@ -72,6 +85,7 @@ function openEdhrecSheet(data, lead = null) {
 }
 
 async function loadEdhrec(ctx) {
+  if (ctx.filter === "cuts") return loadEdhrecCuts(ctx);
   const seq = ++ctx.seq;
   clear(ctx.area);
   clear(ctx.message).append(loadingBox("Asking EDHREC…"));
@@ -79,7 +93,7 @@ async function loadEdhrec(ctx) {
     const address = ctx.lead ? `commander=${encodeURIComponent(ctx.lead.commander)}${ctx.lead.commander2 ? `&commander2=${encodeURIComponent(ctx.lead.commander2)}` : ""}&space=${encodeURIComponent(ctx.lead.space)}`
       : `id=${encodeURIComponent(ctx.id)}`;
     const answer = await api(`/api/deck/edhrec?${address}` + (ctx.page ? `&page=${encodeURIComponent(ctx.page)}` : ""));
-    if (seq !== ctx.seq || ctx.sheet.closed) return;
+    if (seq !== ctx.seq || !edhrecCutsHere(ctx)) return;
     ctx.answer = answer;
     ctx.sha = answer.sha256;
     ctx.pages = Array.isArray(answer.pages) ? answer.pages : null;
@@ -87,7 +101,7 @@ async function loadEdhrec(ctx) {
     drawEdhrecPicker(ctx);
     drawEdhrec(ctx);
   } catch (error) {
-    if (seq !== ctx.seq || ctx.sheet.closed) return;
+    if (seq !== ctx.seq || !edhrecCutsHere(ctx)) return;
     drawEdhrecPicker(ctx);                    // still there, so another page can be chosen
     const again = error && (error.status === 404 || error.status === 400) ? null : () => loadEdhrec(ctx);
     clear(ctx.message).append(loadFailed("EDHREC ideas", error, again));
@@ -128,16 +142,18 @@ function edhrecSourceLine(a) {
 }
 
 function drawEdhrec(ctx) {
+  if (ctx.answer?.cuts) return drawEdhrecCuts(ctx);
+  ctx.sheet.heading.textContent = "EDHREC ideas";
   const a = ctx.answer;
   const marks = Boolean(a.marks);
-  const filters = EDHREC_FILTERS.filter(([key]) => (marks || key === "new" || key === "all") && !(ctx.lead && key === "new"));
+  const filters = EDHREC_FILTERS.filter(([key]) => (marks || ["new", "all", "cuts"].includes(key)) && !(ctx.lead && ["new", "cuts"].includes(key)));
   if (!filters.some(([key]) => key === ctx.filter)) ctx.filter = filters[0][0];
   // A card EDHREC lists in two categories (its Top Cards and its type) is counted once.
   const all = [...new Map(a.groups.flatMap((g) => g.cards).map((c) => [c.name, c])).values()];
   const bar = el("div", { class: "segmented edhrec-filters", role: "group", "aria-label": "Show" },
     filters.map(([key, words]) => el("button", { type: "button", "aria-pressed": String(ctx.filter === key),
-      text: `${words} (${num(all.filter((c) => edhrecPasses(c, key)).length)})`,
-      onclick: () => { if (ctx.filter !== key) { ctx.filter = key; drawEdhrec(ctx); } } })));
+      text: key === "cuts" ? words : `${words} (${num(all.filter((c) => edhrecPasses(c, key)).length)})`,
+      onclick: () => { if (ctx.filter !== key) { ctx.filter = key; if (key === "cuts") loadEdhrecCuts(ctx); else drawEdhrec(ctx); } } })));
   const rate = marks && a.price_error ? `No prices: ${a.price_error}`
     : marks && a.rate != null ? estimateRateWords(a) : null;
   const groups = a.groups.map((g) => {

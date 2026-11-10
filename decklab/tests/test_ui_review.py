@@ -40,7 +40,9 @@ const {Review} = require('./decklab/ui_review/common.js');
   assert.deepEqual(await request('POST','https://example.com/api/visit'), [['abort','blockedbyclient']]);
   assert.deepEqual(await request('GET',review.origin+'/app.js'), [['continue']]);
   assert.deepEqual(await request('POST',review.origin+'/api/deck/check'), [['continue']]);
-  assert.equal(review.report.network.dry_checks,1);
+  assert.deepEqual(await request('POST',review.origin+'/api/deck/cuts'), [['continue']]);
+  assert.deepEqual(await request('POST',review.origin+'/api/deck/cuts/save'), [['abort','blockedbyclient']]);
+  assert.equal(review.report.network.dry_checks,2);
   assert.equal(review.report.network.allowed_reads,1);
 })().catch(error => {console.error(error);process.exitCode=1;});
 '''
@@ -427,6 +429,15 @@ class ReviewFixtureTests(unittest.TestCase):
                 checked = self.request(fixture, "/api/deck/check", method="POST", payload={
                     "profile": "matt", "id": HOME, "sha256": before["sha256"], "lists": before["lists"]})
                 self.assertIn("ok", checked)
+                commander = self.request(fixture, "/api/deck/edit?id=commander/woodland-council")
+                cut_sections = {key: [{name: row[name] for name in ("name", "qty", "set", "number", "finish", "category") if name in row}
+                                      for row in rows] for key, rows in commander["lists"]["target"].items() if key in {"Commander", "Deck", "Companion"}}
+                # An ordinary singleton Commander list exceeds the settings body's 4 KiB bound.
+                cut_sections["Deck"] += [dict(cut_sections["Deck"][0]) for _ in range(100)]
+                self.assertGreater(len(json.dumps(cut_sections)), 4096)
+                cuts = self.request(fixture, "/api/deck/cuts", method="POST", payload={"profile": "matt", "id": "commander/woodland-council", "sections": cut_sections})
+                self.assertTrue(cuts["cuts"] and cuts["source"]["available"])
+                self.assertEqual(self.request(fixture, "/api/deck/edit?id=commander/woodland-council"), commander)
                 for method, path in (("POST", "/api/deck/save"), ("PUT", "/api/deck/draft"),
                                      ("POST", "/api/matchup/run"), ("POST", "/api/variant/run"),
                                      ("DELETE", "/api/decks"), ("PATCH", "/api/profiles/matt/settings"),

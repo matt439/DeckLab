@@ -187,11 +187,11 @@ function drawReplacements(box, data, answer) {
  * unsaved changes to that list, as the test page's Save this change does) and its Test this change sheet
  * open (variant.js vtOpenTestFromRoute). Copies the list no longer plays aren't swapped. Nothing more is done
  * once the person has left the page or switched profile, and the button waits while it works. */
-async function testReplacementSwap(data, card, candidate, button) {
+async function testReplacementSwap(data, card, candidate, button, ownership = null) {
   if (button && button.disabled) return;
   const version = data.version === "owned" ? "owned" : "target";
   const token = routeToken, hash = location.hash, profile = state.profile && state.profile.id;
-  const here = () => token === routeToken && hash === location.hash && (state.profile && state.profile.id) === profile;
+  const here = () => token === routeToken && hash === location.hash && (state.profile && state.profile.id) === profile && (!ownership || ownership());
   if (button) button.disabled = true;
   try {
     let view;

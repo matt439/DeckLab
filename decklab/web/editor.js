@@ -595,7 +595,8 @@ function showEditor(params, token) {
     }
     openSavedDeckEditor(view, version);
     openSwapsFromRoute(params, view.id);      // editor-swaps.js: the deck page's swap= and tab=notes
-    vtOpenTestFromRoute(params, view.id);     // variant.js: the Matchups tab's Test this swap (test=change)
+    if (params.has("cut")) editorCutFromRoute(params);
+    else vtOpenTestFromRoute(params, view.id);     // variant.js: the Matchups tab's Test this swap (test=change)
   });
 }
 

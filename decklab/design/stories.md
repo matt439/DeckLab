@@ -36,7 +36,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 20 | 2 | 3 | 1 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 21 | 2 | 2 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 32 | 3 | 4 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 29 | 0 | 3 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 54 | 14 | 7 | 4 |
-| **Total** | **376** | **309** | **22** | **29** | **16** |
+| **Total** | **376** | **310** | **22** | **28** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -749,7 +749,7 @@ As a beginner who learns a deck from its How to play guide, I want the guide to 
 
 Now: built 2026-10-29 ([HISTORY.md](../HISTORY.md#departed-cards-in-how-to-play-2026-10-29-e2-s27)). GET /api/deck's `guide.departed` (`lib/api/guide.py` `departed_cards`) names the cards the guide's topics mention as whole words, case and all (a double-faced card by its front face too; longest name first, as the page's card links, so a departed "Forest" inside a current "Snow-Covered Forest" isn't flagged), that any of the deck's own latest 100 saved revisions held in its Planned or Play-now list and neither of today's lists holds: `{names, count}` in the order the guide first names them, at most 30 names. It is None outside the deck's own space (a public deck's readers included) and when the revisions can't be read. How to play shows "The guide mentions N cards no longer in the deck: A, B". Known limits: no browser or device check; a card renamed by Scryfall or written in another case in the guide isn't matched.
 
-**E2-S28** · Matt · could · M · missing
+**E2-S28** · Matt · could · M · built
 
 As a Commander deck builder trimming to 100, I want one view of my deck's cards with the countable reasons each might be cut, so that I choose cuts from evidence.
 
@@ -761,6 +761,8 @@ As a Commander deck builder trimming to 100, I want one view of my deck's cards 
 Gap: no cut ranking exists. EDHREC ideas (E9-S07) only adds, role targets (E9-S26) only count on the Stats tab, and only never-cast cards have a next step (E3-S15, E3-S25); Considering is E2-S23 and E2-S26. A precon upgrade view is also unbuilt. From the product review of 2026-11-10, compared with Archidekt's EDHREC cuts and DeckCheck's DeckTrim.
 
 First slice: a read-only Cuts filter: `cuts()` in `decklab/lib/edhrec.py`, returned by GET `/api/deck/edhrec` with role chips from `decklab/lib/stats/role_targets.py`, shown in `decklab/web/deck-edhrec.js`; tests in `decklab/tests/test_edhrec.py`.
+
+Built (2026-11-11): Commander EDHREC ideas has a cached-only Cuts view/direct entry for Planned nonlands outside the commander. Known inclusion sorts ascending; absent, listed-without-counts and missing/corrupt-cache groups remain distinct, never guessed0%. Rows show overlapping cited role surpluses and optional current-visible-list settled Forge evidence (800games, nevercast30drawngames, stuck20copies/20%). Over100 drafts review their actual Planned list through a bounded list-only preview. Editable saved rows move to Considering with printing/category preserved in one local Undo step, or choose a free replacement into the existing explicit Test-this-change flow; new drafts first need a saved identity for those actions. Public readers get intrinsic evidence, no actions/inventory/raw CAS receipt. Tracked sheets and callbacks stay in their page/profile/frame.193 focused tests pass (one DB qualification skip), plus54 latest privacy/route checks including whole-response private-kit/table invariance. Full30 strict native captures passed and were inspected at data/ui-review/20261110T194741Z-933e7e05; the final backend-only noneditable receipt fix has focused coverage. No new store/schema, fetch, actual save or Forge game was used.
 
 **E2-S29** · Matt · could · M · missing
 

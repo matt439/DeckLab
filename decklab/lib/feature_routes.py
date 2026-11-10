@@ -153,6 +153,7 @@ ACCESS = MappingProxyType({
     ('POST', 'deck/draft'): 'draft',
     ('POST', 'deck/new-draft'): 'draft',
     ('POST', 'deck/considering'): 'deck-edit',
+    ('POST', 'deck/cuts'): 'deck',
     ('POST', 'deck/swaps'): 'deck',
     ('POST', 'deck/retire'): 'deck-edit',
     ('POST', 'deck/rename/preview'): 'deck-edit',
@@ -403,6 +404,7 @@ def route_tables():
                                  library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, reference_facts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_combined, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_ideas, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
     from decklab.lib.api import card_details
+    from decklab.lib.api import deck_cuts
     from decklab.lib.api import error_reports
     from decklab.lib.api import collection_loans
 
@@ -449,7 +451,7 @@ def route_tables():
         ("deck", "opponents"): (opponents.opponents_view, ("id",)),
         ("deck", "draft"): (deck_drafts.draft_view, ("id", "version")),
         ("deck", "new-draft"): (deck_drafts.new_draft_view, ("space", "source")),
-        ("deck", "edhrec"): (edhrec.edhrec_view, ("id", "commander", "commander2", "space", "page")),
+        ("deck", "edhrec"): (edhrec.edhrec_view, ("id", "commander", "commander2", "space", "page", "view")),
         ("deck", "wishlist"): (wishlist_ideas.wishlist_ideas_view, ("id", "commander", "commander2", "space", "kind")),
         ("receipt",): (receipts.receipt_view, ("order",)),
         ("arrivals",): (arrivals.arrivals_view, ()),
@@ -544,6 +546,7 @@ def route_tables():
         ("deck", "draft"): (deck_drafts.save_draft, deck_drafts.MAX_BODY),     # the viewer's own; not audited
         ("deck", "new-draft"): (deck_drafts.save_new_draft, deck_drafts.MAX_BODY),     # the same, for a new deck
         ("deck", "considering"): considering.save_considering,
+        ("deck", "cuts"): (deck_cuts.preview_cuts, deck_cuts.MAX_BODY),
         ("deck", "swaps"): swaps.suggest_draft_swaps,      # a dry run: nothing is written
         ("deck", "retire"): retirement.retire_deck,
         ("deck", "rename", "preview"): rename.preview_rename,

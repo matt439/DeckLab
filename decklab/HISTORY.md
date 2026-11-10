@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Cached Commander cut evidence and reviewed draft moves (2026-11-11; E2-S28)
+
+- Commander EDHREC ideas and Review cuts show Planned nonlands, ordered by known cached inclusion. Absent cards, unquantified entries and unavailable cache remain separate from0%. Optional cited role surpluses and settled visible current-list Forge evidence add countable reasons without selecting a worst card or fetching/running anything.
+- Over100 drafts use their actual Planned lists in a bounded read-only preview. Saved editable rows move into Considering with printings/categories retained in one local Undo step, or choose a free replacement into the existing explicit Test-this-change workflow. Check, Save and Start remain separate; new drafts require a saved identity for those actions.
+- Public readers get intrinsic evidence with no inventory/actions/raw receipt. A review found and removed the readonly raw-SHA leak; whole-response invariance under private kit/table-only edits and positive editor CAS are covered. Tracked sheets close on route/profile changes and reject stale controls/replies.
+- Validation:193 focused tests pass (one guarded DB skip), plus54 latest privacy/route checks. Full30 strict native captures passed with cleanup at data/ui-review/20261110T194741Z-933e7e05; phone light/tablet dark images were inspected. That receipt covers current controls; the subsequent backend-only CAS projection fix has focused tests. No actual deck, database, external fetch or Forge game was changed/run.
+
 ## One saved game's debug transcript (2026-11-11; E3-S44)
 
 - forge game A B selects a saved zero-based game number or loss/longest/timeout example, optionally by full matchup key/results folder. It reuses the soak probe's exact one-shot protocol for saved lists, seed, seating and pilots, refusing incompatible/unverified engine or overrides first.

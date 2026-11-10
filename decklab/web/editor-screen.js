@@ -1068,7 +1068,7 @@ function drawBar() {
   const n = mainCount(ed.lists, kind);
   const side = sectionCount(ed.lists, ["Sideboard"]);
   const ok = kind === "commander" ? n === size : n >= size;
-  const state_ = ok ? "OK" : n < size ? `${size - n} short` : `${n - size} over`;
+  const state_ = ok ? "OK" : n < size ? `${size - n} short` : `${n - size} over${kind === "commander" ? " 100" : ""}`;
   const a = ed.check;
   const empty = n === 0;
   const blocks = (a ? a.blocks.length : 0) + (typedTitleProblem() ? 1 : 0);
@@ -1082,6 +1082,7 @@ function drawBar() {
     add(clear(p.count), [
       el("span", { class: "bar-n" }, el("b", { text: String(n) }), el("span", { class: "bar-of", text: ` / ${size}` })),
       empty ? null : el("span", { class: `bar-sub${ok ? "" : " bar-short"}` }, state_, side ? ` · +${side} sideboard` : "")]);
+    if (kind === "commander" && n > 100) p.count.append(editorCutsLink(ed, n));
     p.count.setAttribute("aria-label", `${n} of ${size} cards${kind === "commander" ? " with the commander" : ""}` +
       (empty ? "" : `, ${state_}`) + (side ? `, ${side} in the sideboard` : ""));
   }

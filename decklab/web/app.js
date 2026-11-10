@@ -126,6 +126,7 @@ function closeAllSheets() {
   closeAccessorySheets();
   closeReceiptSheets();
   closeWishlistSheets();
+  closeEdhrecSheets();
 }
 
 async function chooseProfile(profile) {
