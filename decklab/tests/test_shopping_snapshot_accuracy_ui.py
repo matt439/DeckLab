@@ -51,6 +51,7 @@ class SnapshotLineAccuracyTests(unittest.TestCase):
           assert(line.textContent.includes("MTGMate: token cards aren't checked at this shop"), line.textContent);
           assert(!line.textContent.includes("A$"));
           assert.equal(line.querySelector("time"), null);
+          assert.equal(queueRow("Treasure").querySelector(".shop-history-open"), null, "no history is kept for a token");
         """)
 
     def test_price_history_asks_for_the_row_and_says_whose_printing_it_read(self):

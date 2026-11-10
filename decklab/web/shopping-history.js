@@ -96,6 +96,7 @@ async function shopHistorySheet(card, view) {
 /** The row's "Price history" button, put beside its snapshot line; null without a view or a snapshot. */
 function shopHistoryButton(card, view) {
   if (!view || !shopSnapshotList(card).length) return null;
+  if (shopSnapshotList(card).every(snap => snap && snap.status === "token")) return null;   // never looked up: no history
   return el("button", {type: "button", class: "btn btn-quiet shop-history-open", text: "Price history",
     "aria-label": `Price history for ${card.name}`, onclick: () => shopHistorySheet(card, view)});
 }

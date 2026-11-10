@@ -470,8 +470,10 @@ def match(row, data):
     shown["partial"] = bool(entry.get("partial"))
     choice, stocked = pick(row, entry.get("listings"))
     if choice is None:
-        shown["shop_sets"] = _rows.shop_sets(entry.get("listings") or ()) if _rows.exact(row) else []
-        shown["status"] = "not_matched" if shown["shop_sets"] else "not_listed"
+        listed = [item for item in entry.get("listings") or () if isinstance(item, dict)]
+        elsewhere = bool(listed) and _rows.exact(row)       # listed, though under a set the shop left blank too
+        shown["shop_sets"] = _rows.shop_sets(listed) if elsewhere else []
+        shown["status"] = "not_matched" if elsewhere else "not_listed"
         return shown
     in_stock = choice.get("stock", 0) > 0
     shown.update(status="in_stock" if in_stock else "out_of_stock", price_aud=choice.get("price"),
@@ -560,7 +562,8 @@ def _describe(shown):
         return f"{price}, {stock} ({where}){flags}{when}{_partial_words(shown)}"
     if shown["status"] == "not_matched":
         sets = ", ".join(code.upper() for code in shown.get("shop_sets") or ())
-        return f"listed, but not matched to your printing (the shop's sets: {sets}){_partial_words(shown)}"
+        named = f" (the shop's sets: {sets})" if sets else ""
+        return f"listed, but not matched to your printing{named}{_partial_words(shown)}"
     if shown["status"] == "not_listed":
         return f"not listed{_partial_words(shown)}"
     return {"token": "token cards aren't checked at this shop", "not_checked": "not in the snapshot"}.get(

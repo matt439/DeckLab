@@ -65,6 +65,11 @@ class ToleranceTests(unittest.TestCase):
         self.assertEqual((foil["status"], foil["shop_sets"]), ("not_matched", ["c16", "cmm"]))
         unlisted = shops.match({"name": "Nothing", "printing": "exact", "set": "ltc", "collector_number": "284"}, data)
         self.assertEqual((unlisted["status"], unlisted["shop_sets"]), ("not_listed", []))
+        # A listing whose set the shop left blank is still the card listed: never "not listed".
+        blank = mtgmate_snapshot({"Sol Ring": entry(listing(set_code="", number=""))})
+        unnamed = shops.match({"name": "Sol Ring", "printing": "exact", "set": "ltc", "collector_number": "284"}, blank)
+        self.assertEqual((unnamed["status"], unnamed["shop_sets"]), ("not_matched", []))
+        self.assertEqual(shops._describe(unnamed), "listed, but not matched to your printing")
         # Any-printing rows are answered as before, with no sets named.
         self.assertEqual(shops.match({"name": "Sol Ring", "printing": "any"}, data)["status"], "in_stock")
         self.assertEqual(shops.match({"name": "Sol Ring", "printing": "any"}, data)["shop_sets"], [])
