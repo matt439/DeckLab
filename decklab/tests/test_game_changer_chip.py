@@ -79,5 +79,21 @@ class BracketWithOneMoreTests(EditorTestCase):
         self.assertIsNone(api.check_draft(self.body(kind="casual", lists=lists))["bracket"])
 
 
+class GoldenNormaliserTests(unittest.TestCase):
+    """The inventory goldens predate the flag: golden_p4 drops it from card JSON only."""
+
+    def test_only_a_card_jsons_boolean_flag_is_dropped(self):
+        from decklab.tests import golden_p4
+        card = {"name": "Rhystic Study", "type_line": "Enchantment", "img": None, "img_small": None}
+        dump = {"deck_view": {"a": {"lines": [{"card": {**card, "game_changer": True}},
+                                              {"card": {**card, "game_changer": "yes"}}]}},
+                "other": {"game_changer": False}}
+        golden_p4.game_changer_flags(dump)
+        self.assertEqual(dump, {"deck_view": {"a": {"lines": [{"card": card},
+                                                              {"card": {**card, "game_changer": "yes"}}]}},
+                                "other": {"game_changer": False}})
+        self.assertIn(golden_p4.game_changer_flags, [fn for _, fn in golden_p4.EXPECTED_P5])
+
+
 if __name__ == "__main__":
     unittest.main()
