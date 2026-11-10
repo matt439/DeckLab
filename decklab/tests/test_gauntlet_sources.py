@@ -302,5 +302,101 @@ class Catalogue(GauntletCase):
         self.assertEqual(tagged["style"]["themes"], ["Control"])
 
 
+class BuildDifference(GauntletCase):
+    """E3-S43: before saving, a build prints what it would change against the saved catalogue."""
+
+    def setUp(self):
+        super().setUp()
+        self.patch(catalogue, "FORGE_ROOT", QUEST)
+        self.patch(catalogue, "LIMITS", fake_limits())
+        self.log = []
+
+    @staticmethod
+    def deck(n, sha=None, tier="medium", playable=True):
+        colour = "WUBRG"[n % 5]
+        return {"id": f"gauntlet:forge/duels/d{n:02d}", "title": f"Duel {n}", "kind": "constructed",
+                "card_sha": sha or f"{n:064x}", "tier": tier, "identity": colour, "colours": colour,
+                "style": {"primary": "aggro"}, "playable": playable, "source": {"kind": "forge"}, "cards": {}}
+
+    def cat(self, decks, built="2026-08-01T10:00:00+00:00"):
+        return {"format": 1, "kind": "constructed", "built": built, "sha": catalogue.catalogue_sha(decks),
+                "decks": decks, "excluded": []}
+
+    def test_no_saved_catalogue(self):
+        lines = catalogue.difference(None, self.cat([self.deck(1)]), "constructed")
+        self.assertEqual(lines, ["There's no saved constructed catalogue yet, so no saved results depend on one."])
+
+    def test_the_same_catalogue_changes_nothing(self):
+        old = self.cat([self.deck(n) for n in range(3)])
+        new = self.cat([self.deck(n) for n in range(3)], built="2026-11-10T00:00:00+00:00")
+        self.assertEqual(catalogue.difference(old, new, "constructed"), [
+            f"Against the saved catalogue (built 2026-08-01, {old['sha'][:8]}): 0 opponents' lists changed, "
+            "0 joined and 0 left.",
+            "The standard sample would keep its 3 opponents and their lists, so its saved results still count."])
+
+    def test_changed_joined_and_left_are_counted_with_the_standard_sample(self):
+        old = self.cat([self.deck(n) for n in range(4)])
+        new = self.cat([self.deck(0), self.deck(1, sha="f" * 64), self.deck(2), self.deck(4), self.deck(5)])
+        lines = catalogue.difference(old, new, "constructed")
+        self.assertEqual(len(lines), 2)
+        self.assertTrue(lines[0].endswith("1 opponent's list changed, 2 joined and 1 left."), lines[0])
+        # Every playable medium deck fits the 24-deck standard sample here: 3 leaves, 4 and 5 join, 1 changed.
+        self.assertEqual(lines[1], "The standard sample would change: 1 of its 4 opponents would leave, 2 would "
+                         "join, and 1 that stay would have a changed list. Saved results against the 2 opponents "
+                         "that stay unchanged still count; the others are set aside until those opponents are "
+                         "played again.")
+
+    def test_a_change_outside_the_standard_sample_keeps_its_results(self):
+        # An easy deck is never in the 60-card standard sample (medium and hard only).
+        old = self.cat([self.deck(0), self.deck(1), self.deck(2, tier="easy")])
+        new = self.cat([self.deck(0), self.deck(1), self.deck(2, sha="e" * 64, tier="easy")])
+        lines = catalogue.difference(old, new, "constructed")
+        self.assertTrue(lines[0].endswith("1 opponent's list changed, 0 joined and 0 left."), lines[0])
+        self.assertEqual(lines[1], "The standard sample would keep its 2 opponents and their lists, so its saved "
+                         "results still count.")
+
+    def test_a_deck_no_longer_playable_leaves_the_standard_sample(self):
+        # The catalogue's sha (ids and lists) is the same: only the screen changed, as a new Forge's would.
+        old = self.cat([self.deck(0), self.deck(1)])
+        new = self.cat([self.deck(0), self.deck(1, playable=False)])
+        self.assertEqual(old["sha"], new["sha"])
+        lines = catalogue.difference(old, new, "constructed")
+        self.assertIn("1 of its 2 opponents would leave, 0 would join", lines[1])
+
+    def test_a_build_prints_it_before_saving_and_a_dry_run_too(self):
+        order = []
+        real_save = catalogue.save
+
+        def save(fmt, cat):
+            order.append("saved")
+            real_save(fmt, cat)
+        self.patch(catalogue, "save", save)
+        first = catalogue.build("constructed", log=order.append)
+        said = next(i for i, line in enumerate(order) if line.startswith("There's no saved constructed catalogue"))
+        self.assertLess(said, order.index("saved"))
+        del order[:]
+        catalogue.build("constructed", log=order.append)
+        said = next(i for i, line in enumerate(order) if "0 opponents' lists changed" in line)
+        self.assertIn(first["sha"][:8], order[said])
+        self.assertLess(said, order.index("saved"))
+        # A dry run compares too, and saves nothing.
+        changed = dict(first, decks=first["decks"][1:])
+        changed["sha"] = catalogue.catalogue_sha(changed["decks"])
+        real_save("constructed", changed)
+        del order[:]
+        catalogue.build("constructed", dry_run=True, log=order.append)
+        self.assertTrue(any("lists changed, 1 joined and 0 left." in line for line in order), order)
+        self.assertNotIn("saved", order)
+        self.assertEqual(catalogue.load("constructed")["sha"], changed["sha"])
+
+    def test_a_failed_build_prints_no_difference(self):
+        catalogue.build("constructed", log=self.log.append)
+        del self.log[:]
+        self.patch(forge_source, "constructed_decks", lambda *a: ([], [("gauntlet:forge", "unreadable")]))
+        with self.assertRaises(catalogue.GauntletError):
+            catalogue.build("constructed", log=self.log.append)
+        self.assertFalse(any("saved catalogue" in line for line in self.log), self.log)
+
+
 if __name__ == "__main__":
     unittest.main()

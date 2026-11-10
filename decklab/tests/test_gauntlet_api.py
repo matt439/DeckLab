@@ -482,3 +482,33 @@ class GauntletRouteTests(GauntletApiTestCase):
         with mock.patch.object(gauntlet_page, "catalogue_view", return_value={"status": "running"}):
             feature_routes.dispatch(handler, ["gauntlet", "catalogue"], {})
         handler._send_json.assert_called_once_with(200, {"status": "running"})
+
+
+class CatalogueStampTests(GauntletApiTestCase):
+    """E3-S43: when the popular decks list was built, its short sha and its age."""
+
+    def test_the_stamp_gives_the_date_short_sha_and_age(self):
+        from datetime import datetime, timezone
+        now = datetime(2026, 11, 10, 12, tzinfo=timezone.utc)
+        stamp = gauntlet_page.catalogue_stamp
+        self.assertEqual(stamp({"built": "2026-11-01T00:00:00+00:00", "sha": "ab" * 32}, now),
+                         {"built": "2026-11-01T00:00:00+00:00", "sha": "abababab", "age_days": 9, "old": False})
+        # A time without a zone is UTC's (the catalogue saves UTC); old from OLD_DAYS days on.
+        self.assertEqual(stamp({"built": "2026-08-12T12:00:00", "sha": "c" * 64}, now)["age_days"], 90)
+        self.assertTrue(stamp({"built": "2026-08-12T12:00:00", "sha": "c" * 64}, now)["old"])
+        self.assertFalse(stamp({"built": "2026-08-12T12:00:01", "sha": "c" * 64}, now)["old"])
+        # A clock that went backwards, a missing sha and a build time that isn't one.
+        self.assertEqual(stamp({"built": "2026-12-01T00:00:00+00:00"}, now),
+                         {"built": "2026-12-01T00:00:00+00:00", "sha": None, "age_days": 0, "old": False})
+        self.assertEqual(stamp({"built": "soon", "sha": 7}, now),
+                         {"built": "soon", "sha": None, "age_days": None, "old": False})
+        self.assertEqual(stamp({}, now), {"built": None, "sha": None, "age_days": None, "old": False})
+
+    def test_the_view_and_the_public_counts_carry_it(self):
+        answer = self.call("matt", gauntlet_page.gauntlet_view, GRUUL, "target")
+        found = answer["catalogue"]
+        self.assertEqual((found["built"], found["sha"]), ("2026-11-01T00:00:00", "cccccccc"))
+        self.assertIsInstance(found["age_days"], int)
+        self.assertIsInstance(found["old"], bool)
+        public = self.call("user2", gauntlet_page.catalogue_view, "constructed")
+        self.assertEqual((public["built"], public["sha"]), ("2026-11-01T00:00:00", "cccccccc"))

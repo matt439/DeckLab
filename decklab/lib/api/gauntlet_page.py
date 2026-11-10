@@ -40,6 +40,7 @@ import importlib
 import re
 import threading
 import traceback
+from datetime import datetime, timezone
 from urllib.parse import quote
 
 from decklab.lib import jobs, permissions
@@ -66,7 +67,9 @@ TIERS = {"commander": ("core", "upgraded", "precon"),
 BUILD = "python -m decklab.lib.forge gauntlet build --format {fmt}"
 CREDIT = ("Average decks from EDHREC (edhrec.com), Commander precons from MTGJSON, and 60-card decks "
           "bundled with Forge.")
-SAMPLE_RE = re.compile(r"sample:[0-9a-f]{12}")
+SHORT_SHA = 8                   # the characters of the catalogue's sha the pages show (E3-S43)
+OLD_DAYS = 90                   # from this age the "Popular decks list built" line adds how old it is
+SAMPLE_RE =re.compile(r"sample:[0-9a-f]{12}")
 GAUNTLET_BUSY = ("4 field runs, gauntlet runs or tests of changes are already waiting to be played. Try again "
                  "when one of them has finished.")
 ALREADY_PLAYING = "A gauntlet run of this list is already playing (another sample): stop it first."
@@ -190,9 +193,28 @@ def _is_saved(g, sample_id):
     return True
 
 
+def catalogue_stamp(cat, now=None):
+    """When a catalogue was built and which one it is (E3-S43; public data, no deck involved):
+    {"built": its build time as saved, "sha": the first SHORT_SHA characters of its sha or None,
+    "age_days": whole days since it was built (None when "built" isn't a time), "old": True from
+    OLD_DAYS days on, when the pages add a plain note of its age}. It never asks for a rebuild."""
+    built, sha = cat.get("built"), cat.get("sha")
+    try:
+        when = datetime.fromisoformat(built)
+    except (TypeError, ValueError):
+        when = None
+    age = None
+    if when is not None:
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        age = max(0, ((now or datetime.now(timezone.utc)) - when).days)
+    return {"built": built, "sha": sha[:SHORT_SHA] if isinstance(sha, str) and sha else None,
+            "age_days": age, "old": age is not None and age >= OLD_DAYS}
+
+
 def _catalogue_json(cat):
-    """A catalogue's public counts: {"built", "card_data", "decks", "playable", "tiers", "colours",
-    "styles", "credit"}."""
+    """A catalogue's public counts: {"built", "sha", "age_days", "old" (catalogue_stamp), "card_data",
+    "decks", "playable", "tiers", "colours", "styles", "credit"}."""
     playable = [d for d in cat.get("decks") or [] if d.get("playable")]
     counts = {"tiers": {}, "colours": {}, "styles": {}}
     for deck in playable:
@@ -200,7 +222,7 @@ def _catalogue_json(cat):
                           ("styles", (deck.get("style") or {}).get("primary"))):
             if isinstance(key, str):
                 counts[name][key] = counts[name].get(key, 0) + 1
-    return {"built": cat.get("built"), "card_data": cat.get("card_data"), "decks": len(cat.get("decks") or []),
+    return {**catalogue_stamp(cat), "card_data": cat.get("card_data"), "decks": len(cat.get("decks") or []),
             "playable": len(playable), **counts, "credit": CREDIT}
 
 

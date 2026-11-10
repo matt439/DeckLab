@@ -445,3 +445,25 @@ class GauntletUiTests(unittest.TestCase):
           assert(!node.textContent.includes('Before:'));
           assert.equal(gtBeforeLine({}),null);assert.equal(gtOlderLine({older:{reason:'nonsense'}}),null);
         """)
+
+    def test_the_part_says_when_the_popular_decks_list_was_built(self):
+        self.run_js(DAY + """
+          const year=new Date().getFullYear();
+          answers=[played()];let node=await draw();
+          assert(!node.querySelector('.gt-built'));           // the fixture's catalogue has no build time
+          clear(main);
+          answers=[{...played(),catalogue:{playable:3,built:day,sha:'1a2b3c4d',age_days:3,old:false}}];
+          node=await draw();
+          let line=node.querySelector('.gt-built');
+          assert.equal(line.textContent,`Popular decks list built 2 November ${year} (1a2b3c4d).`);
+          assert(hasClass(line,'gt-small'));
+          // Before any games too, and with its age once it's old.
+          clear(main);
+          answers=[base({catalogue:{playable:3,built:day,sha:'1a2b3c4d',age_days:200,old:true}})];
+          node=await draw();
+          assert.equal(node.querySelector('.gt-built').textContent,
+            `Popular decks list built 2 November ${year} (1a2b3c4d), 6 months ago.`);
+          // No catalogue: the build command only.
+          clear(main);answers=[base({catalogue:null})];node=await draw();
+          assert(!node.querySelector('.gt-built'));
+        """)

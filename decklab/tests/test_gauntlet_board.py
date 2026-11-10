@@ -154,11 +154,24 @@ class BoardPrivacyTests(BoardTestCase):
         self.assertIsNone(member["build_command"])
         self.assertEqual(member["rows"], [])
 
+    def test_the_board_says_when_the_list_was_built(self):
+        # E3-S43: the catalogue's build time, short sha and age, to every viewer (public data), never cached.
+        self.g.built = False
+        self.assertIsNone(self.board("matt")["catalogue"])
+        self.g.built = True
+        for who in ("matt", "user1", "user2"):
+            found = self.board(who)["catalogue"]
+            self.assertEqual(set(found), {"built", "sha", "age_days", "old"})
+            self.assertEqual((found["built"], found["sha"]), ("2026-11-01T00:00:00", "cccccccc"))
+        stamp = {"built": "2026-01-01T00:00:00+00:00", "sha": "12345678", "age_days": 313, "old": True}
+        with mock.patch.object(gauntlet_page, "catalogue_stamp", return_value=stamp):
+            self.assertEqual(self.board("matt")["catalogue"], stamp)      # the kept rows don't keep it
+
     def test_no_inventory_fields_and_no_file_path(self):
         self.g.per = {self.sha(GRUUL): {i: 0.5 for i in IDS}}
         found = self.board("matt")
-        self.assertEqual(set(found), {"format", "state", "build_command", "sample", "default_budget", "note",
-                                      "notes", "rows"})
+        self.assertEqual(set(found), {"format", "state", "build_command", "catalogue", "sample", "default_budget",
+                                      "note", "notes", "rows"})
         for row in found["rows"]:
             self.assertEqual(set(row), ROW_KEYS)
             self.assertEqual(set(row["deck"]), {"id", "title", "kind", "version", "card_sha"})

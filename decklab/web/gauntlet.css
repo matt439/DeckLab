@@ -51,7 +51,7 @@ empty state keep to the widths of the matchup controls (.mu-run-buttons, .card-g
 .gt-source { font-size: var(--fs-sm); color: var(--ink-2); }
 .gt-source a { display: inline-block; min-height: var(--tap); align-content: center; }
 .gt-small, .gt-caveat { margin: 0; overflow-wrap: anywhere; font-size: var(--fs-sm); color: var(--ink-2); }
-.gt-credit { margin-top: var(--s-2); }
+.gt-credit, .gt-built { margin-top: var(--s-2); }
 .gt-muted { opacity: 0.6; }
 
 /* E3-S33: the headline over the sample's opponents (also the Overview's panel), in ink like every win rate. */
