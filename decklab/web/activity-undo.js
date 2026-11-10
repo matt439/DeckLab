@@ -214,6 +214,7 @@ function activityUndoEvidence(data, id, space, profile = state.profile?.id) {
   if (data.kind === "wishlist") return activityUndoWishlistEvidence(data, profile) ? data : null;
   if (data.kind === "accessory") return activityUndoAccessoryEvidence(data, space, profile) ? data : null;
   if (data.kind === "product_kit") return activityUndoProductKitEvidence(data, space, profile) ? data : null;
+  if (data.kind === "order_queue") return activityUndoOrderQueueEvidence(data, space, profile) ? data : null;
   if (data.kind === "mixed") return activityUndoMixedEvidence(data, space) ? data : null;
   if (data.kind === "watchlist") return activityUndoWatchlistEvidence(data) ? data : null;
   if (data.space !== space || !["collection", "tokens"].includes(data.kind)) return null;
@@ -276,6 +277,7 @@ function activityUndoTokenBatchRemoveEvidence(data) {
 }
 
 function activityUndoReceipt(answer, preview) {
+  if (preview.kind === "order_queue") return activityUndoOrderQueueReceipt(answer, preview);
   if (preview.kind === "product_kit") return activityUndoProductKitReceipt(answer, preview);
   if (preview.action === "accessory_photo_record_update") return activityUndoAccessoryPhotoRecordReceipt(answer, preview);
   if (preview.action === "collection_change_restore") return activityUndoCollectionReceipt(answer, preview);
@@ -532,6 +534,7 @@ function openActivityUndo(view, id, endpoint = "/api/activity/undo") {
 }
 
 function activityUndoShow(ctx) {
+  if (ctx.preview.kind === "order_queue") return activityUndoOrderQueueShow(ctx);
   if (ctx.preview.kind === "product_kit") return activityUndoProductKitShow(ctx);
   if (ctx.preview.action === "accessory_photo_record_update") return activityUndoAccessoryPhotoRecordShow(ctx);
   if (ctx.preview.action === "collection_change_restore") return activityUndoCollectionShow(ctx);

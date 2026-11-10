@@ -49,6 +49,9 @@ def review_hint(change, shown, profile):
     from . import product_kit_undo
     if (product_kit := product_kit_undo.hint(change, shown, profile)) is not None:
         return product_kit
+    from . import activity_order_queue_undo
+    if (order := activity_order_queue_undo.hint(change, shown, profile)) is not None:
+        return order
     from . import activity_mixed_undo
     mixed = activity_mixed_undo.hint(change, shown, profile)
     if mixed is not None:
@@ -186,6 +189,12 @@ def _review(change_id, profile):
         raise _refused(error) from None
     # The complete source's visibility was checked before any eligibility or receipt.
     kind = plan.get("kind")
+    if kind == "order_queue":
+        from . import activity_order_queue_undo
+        try:
+            return activity_order_queue_undo.check(plan, change_id, space, profile)
+        except (inventory.Invalid, inventory.Conflict, inventory.Unavailable) as error:
+            raise _refused(error) from None
     if kind == "watchlist":
         from . import activity_watchlist_undo
         return activity_watchlist_undo.check(plan, change_id, space, profile)
@@ -281,6 +290,9 @@ def _token_batch_remove_project(plan):
 
 
 def _project(plan):
+    if plan.get("kind") == "order_queue":
+        from . import activity_order_queue_undo
+        return activity_order_queue_undo.project(plan)
     if plan.get("action") == "collection_change_restore":
         from . import activity_collection_undo
         return activity_collection_undo.project(plan)
@@ -443,6 +455,9 @@ def apply_undo(body):
     profile, change_id = _writer(data), _id(data["id"])
     plan = _review(change_id, profile)  # hidden/missing is resolved before malformed or stale receipt errors
     _project(plan)
+    if plan.get("kind") == "order_queue":
+        from . import activity_order_queue_undo
+        return activity_order_queue_undo.apply(data, plan, profile, change_id, _refused, _changed)
     if plan.get("kind") == "watchlist":
         from . import activity_watchlist_undo
         return activity_watchlist_undo.apply(data, plan, profile, change_id, _refused, _changed)

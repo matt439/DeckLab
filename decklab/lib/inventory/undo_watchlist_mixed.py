@@ -240,8 +240,7 @@ def review(change_id, space, snapshot, store, raw=None):
         raise
     except Exception:
         raise UndoConflict(UNSAFE, label) from None
-    digest = rows._receipt(change_id, raw, files.rendered_sha256(snapshot.watchlist), stock, layout, snapshot.revision,
-                           snapshot.decks_revision, ACTION, fence,
+    digest = rows._receipt(change_id, raw, files.rendered_sha256(snapshot.watchlist), stock, layout, ACTION, fence,
                            queue_schema.market_receipt([(item["current"], item["restore"]) for item in items if item["change"] == "updated"]
                              + [(None, item["row"]) for item in items if item["change"] == "removed"]))
     ordered = [item for change in ("updated", "added", "removed") for item in items if item["change"] == change]

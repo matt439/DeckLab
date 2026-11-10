@@ -26,18 +26,20 @@ GROUPS = {
     "test_inventory_rename": ("deck.rename",),
     "test_inventory_kit": ("product.set-kit",),
     "test_product_tokens_pg": ("product.set_tokens",),
-    "test_token_ops": ("tokens.add", "tokens.edit", "tokens.remove"),
-    "test_token_plan_mixed_pg": ("tokens.plan",),
+    "test_token_ops": ("tokens.add", "tokens.edit", "tokens.remove", "tokens.add_many"),
+    "test_token_plan_mixed_pg": ("tokens.plan", "deck.token_cards"),
     "test_receive_partial": ("receipt.receive",),
     "test_inventory_orders": ("order.add", "order.edit", "order.checks", "order.split", "order.cancel", "order.extra_copies",
-                              "product.add", "product.set_intact", "watchlist.set", "watchlist.remove", "watchlist.replace"),
+                              "product.add", "product.set_intact", "watchlist.set", "watchlist.remove", "watchlist.replace", "watchlist.add_many"),
     "test_order_records": ("order.record",),
     "test_order_lifecycle": ("order.remove",),
     "test_order_merge": ("order.merge",),
     "test_pending_products": ("product.edit",),
-    "test_shop_reference_pg": ("watchlist.reference_review",),
+    "test_shop_reference_pg": ("watchlist.reference_review", "watchlist.target_edit"),
     "test_inventory_undo_pg": ("inventory.undo",),
     "test_inventory_undo_mixed_pg": ("inventory.undo_mixed",),
+    "test_undo_collection_changes_pg": ("collection.locations",),
+    "test_undo_order_queue_pg": ("inventory.undo_order_queue",),
     "test_dice_operations_pg": ("dice.add", "dice.edit", "dice.remove"),
 }
 CLAIMS = {kind: "decklab.tests." + module for module, kinds in GROUPS.items() for kind in kinds}
@@ -46,13 +48,7 @@ CLAIMS = {kind: "decklab.tests." + module for module, kinds in GROUPS.items() fo
 # cannot enter this allowance. Changes to this baseline need an explicit review.
 INITIAL_GAPS = frozenset({"dice.add", "dice.edit", "dice.remove", "collection.locations", "deck.token_cards", "tokens.add_many",
                           "watchlist.add_many", "watchlist.target_edit"})
-GAPS = {
-    "collection.locations": "Bulk exact-printing locations currently have only files/API fixtures.",
-    "deck.token_cards": "Direct deck packing operation needs its own successful database operation case.",
-    "tokens.add_many": "Scan/batch additions need a shared database operation suite.",
-    "watchlist.add_many": "Reviewed multi-row queue additions need a direct database operation suite.",
-    "watchlist.target_edit": "The CLI target-edit wrapper needs a direct database operation suite; reference_review is covered separately.",
-}
+GAPS = {}
 
 
 def registered():

@@ -7,7 +7,7 @@ from unittest import mock
 
 from decklab.db import check, export, migrate
 from decklab.lib import config, inventory, shop_reference_source, state
-from decklab.lib.inventory import files, model, paths, pg, rules
+from decklab.lib.inventory import Op, files, model, ops_shop_references, paths, pg, rules
 from decklab.lib.state import pg as state_pg
 from decklab.tests import db_support
 from decklab.tests import test_collection_edit as support
@@ -54,6 +54,28 @@ class ShopReferencePgTests(db_support.DbTestCase):
             return {table: connection.execute(f"select row_to_json(t)::text from {table} t order by 1").fetchall()
                     for table in ("watchlist_item", "collection_card", "purchase_order", "inventory_revision", "deck", "deck_text",
                                   "decks_revision", "audit.change_set", "audit.row_change")}
+
+    def test_direct_cli_target_edit_wrapper_commits_numeric_target_and_real_audit_after_fresh_source_check(self):
+        before = self.fresh()
+        current_source = shop_reference_source.context
+        with mock.patch.object(shop_reference_source, "context", wraps=current_source) as source:
+            operation = ops_shop_references.guard_cli(Op("watchlist.set", {"select": "#1", "values": {"buy_under_aud": "1.25"}}), before)
+            self.assertEqual(operation.kind, "watchlist.target_edit")
+            after, summary = inventory.apply(operation, fixture.ACTOR, "Set a disposable CLI market target")
+        self.assertTrue(summary.changed)
+        self.assertGreaterEqual(source.call_count, 2)
+        self.assertTrue(all(call.kwargs.get("fresh") is True for call in source.call_args_list))
+        self.assertEqual(after.watchlist.rows[0].buy_under_aud, "1.25")
+        self.assertEqual(self.fresh().watchlist.rows[0].buy_under_aud, "1.25")
+        self.assertEqual(after.collections, before.collections)
+        self.assertEqual(after.orders, before.orders)
+        self.assertEqual(after.decks, before.decks)
+        with self.connect("ro") as connection:
+            stored = connection.execute("select buy_under_aud from watchlist_item order by position,id limit 1").fetchone()[0]
+            audit = connection.execute("select table_name,op,before->'buy_under_aud',after->'buy_under_aud' from audit.row_change "
+                "where change_set_id=(select max(id) from audit.change_set)").fetchall()
+        self.assertEqual(str(stored), "1.25")
+        self.assertEqual(audit, [("watchlist_item", "UPDATE", None, 1.25)])
 
     def test_one_audit_each_roundtrip_and_no_collection_order_or_intent_changes(self):
         before = self.persisted()

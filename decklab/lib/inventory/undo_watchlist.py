@@ -183,8 +183,8 @@ def review(change_id, space, snapshot, store, rows=None):
         raise
     except Exception:
         raise UndoConflict(UNSAFE, label) from None
-    receipt = [change_id, raw, files.rendered_sha256(snapshot.watchlist), stock, snapshot.revision,
-               snapshot.decks_revision, ACTION, queue_schema.market_receipt([(item["current"], item["restore"]) for item in items])]
+    receipt = [change_id, raw, files.rendered_sha256(snapshot.watchlist), stock,
+               ACTION, queue_schema.market_receipt([(item["current"], item["restore"]) for item in items])]
     digest = hashlib.sha256(json.dumps(receipt, ensure_ascii=False, sort_keys=True,
                                        separators=(",", ":")).encode("utf-8")).hexdigest()
     # proof stays internal: the API projects only the rows' fields, their stable ids and the count.

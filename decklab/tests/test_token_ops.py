@@ -388,6 +388,35 @@ class PgOpsTests(Tree, Cases, Cli, db_support.DbTestCase):
         self.assertEqual((last["message"], last["reason"], last["rows"]),
                          ("remove token Angel // The Monarch", "traded", [("token_card", "DELETE")]))
 
+    def test_direct_add_many_is_one_changed_database_write_with_fresh_rows_and_audit_facts(self):
+        before = inventory.current()
+        ids = {item.id for item in before.token_set("home").rows}
+        rows = [row(front="Squirrel", quantity="2", notes="single-sided verified"),
+                row(front="Treasure", quantity="3", notes="single-sided verified")]
+        with inventory.pinned():
+            after, summary = self.apply("tokens.add_many", space="home", sha256=self.sha(), rows=rows,
+                                        message="Add a disposable token-card batch")
+            self.assertTrue(inventory.pinned_write())
+            self.assertIs(inventory.pinned_committed_snapshot(), after)
+            self.assertIs(inventory.current(), after)
+        self.assertTrue(summary.changed)
+        self.assertEqual(set(summary.changed), {"magic/tokens.csv"})
+        self.assertEqual(summary.counts["added_rows"], 2)
+        self.assertEqual(summary.counts["added_cards"], 5)
+        fresh = self.backend.load()
+        added = [item for item in fresh.token_set("home").rows if item.id not in ids]
+        self.assertEqual(sorted((item.front, item.qty) for item in added), [("Squirrel", 2), ("Treasure", 3)])
+        self.assertEqual(len({item.id for item in added}), 2)
+        self.assertTrue(all(item.id > 0 for item in added))
+        self.assertEqual(fresh.collections, before.collections)
+        self.assertEqual(fresh.decks_revision, before.decks_revision)
+        with self.connect("ro") as connection:
+            audit = connection.execute("select table_name,op,after->>'front',(after->>'quantity')::int from audit.row_change "
+                "where change_set_id=(select max(id) from audit.change_set) order by id").fetchall()
+        self.assertTrue(all(item[0] == "token_card" for item in audit))
+        self.assertEqual(sorted((item[2], item[3]) for item in audit if item[1] == "INSERT"), [("Squirrel", 2), ("Treasure", 3)])
+        self.assertEqual(after.token_set("home"), fresh.token_set("home"))
+
     def test_the_page_saves_to_the_database_and_names_who_got_in_the_way(self):
         view = api_tok.tokens_view()
         self.assertEqual(("uncommitted" in view, "commit_pending" in view, view["exists"]), (False, False, True))

@@ -165,6 +165,24 @@ class PgInventoryTests(contract.db_support.DbTestCase):
 
     # -------------------------------------------------------- applying
 
+    def test_a_claimed_noop_has_no_changed_paths_audit_or_request_write_acknowledgement(self):
+        self.import_tree(contract.seed_tree)
+        original = contract.inventory.Summary("Preserved no-op text", {"claimed": 1}, {"magic/tokens.csv": ["false claim"]}, {"keep": "extra"})
+        class ClaimedNoop:
+            kind = "fixture.claimed_noop"
+            def run(self, snapshot):
+                return snapshot, original
+        trail = self.trail()
+        with contract.inventory.use(self.backend), contract.inventory.pinned():
+            before = contract.inventory.current()
+            after, summary = contract.inventory.apply(ClaimedNoop(), contract.CLAUDE, "Do not trust a claimed no-op")
+            self.assertEqual(after, before)
+            self.assertEqual(summary.changed, {})
+            self.assertEqual((summary.text, summary.counts, summary.extra), (original.text, original.counts, original.extra))
+            self.assertFalse(contract.inventory.pinned_write())
+            self.assertIsNone(contract.inventory.pinned_committed_snapshot())
+        self.assertEqual(self.trail(), trail)
+
     def test_apply_writes_one_change_set_with_only_what_changed(self):
         self.import_tree(contract.seed_tree)
         before = self.backend.load()
@@ -237,7 +255,8 @@ class PgInventoryTests(contract.db_support.DbTestCase):
 
     def test_imports_are_kept_with_their_change_and_never_twice(self):
         self.import_tree(contract.seed_tree)
-        after, _ = self.backend.apply(contract.inventory.Op("test.keep_import", {"name": "a.csv"}), contract.MATT, "Import a.csv")
+        after, summary = self.backend.apply(contract.inventory.Op("test.keep_import", {"name": "a.csv"}), contract.MATT, "Import a.csv")
+        self.assertEqual(set(summary.changed), {"magic/people/user2/imports/a.csv"})
         self.assertEqual(after.imports["user2"], (contract.model.ImportInfo("a.csv", 20),))
         self.assertEqual([(r[0], r[1]) for r in self.trail()[-1]["rows"]], [("collection_import", "INSERT")])
         self.assertNotIn("content", self.trail()[-1]["rows"][0][4])

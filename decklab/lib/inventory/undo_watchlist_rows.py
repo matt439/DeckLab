@@ -226,8 +226,7 @@ def _review_remove(change_id, snapshot, raw, items, stock, label):
         raise
     except Exception:
         raise UndoConflict(UNSAFE, label) from None
-    digest = _receipt(change_id, raw, files.rendered_sha256(snapshot.watchlist), stock, snapshot.revision,
-                      snapshot.decks_revision, REMOVE)
+    digest = _receipt(change_id, raw, files.rendered_sha256(snapshot.watchlist), stock, REMOVE)
     # proof stays internal: the API projects only the rows' values, their stable ids and the count.
     proof = {"removed": [{"id": item["watch_row_id"], "image": item["image"]} for item in items], "stock": stock}
     plan_rows = [{"row_change_id": item["row_change_id"], "watch_row_id": item["watch_row_id"], "label": item["label"],
@@ -265,8 +264,8 @@ def _review_add(change_id, snapshot, store, raw, items, stock, label, why):
         raise
     except Exception:
         raise UndoConflict(UNSAFE, label) from None
-    digest = _receipt(change_id, raw, files.rendered_sha256(snapshot.watchlist), stock, layout, snapshot.revision,
-                      snapshot.decks_revision, ADD, max(item["row_change_id"] for item in items),
+    digest = _receipt(change_id, raw, files.rendered_sha256(snapshot.watchlist), stock, layout,
+                      ADD, max(item["row_change_id"] for item in items),
                       queue_schema.market_receipt([(None, item["row"]) for item in items]))
     proof = {"deleted_ids": [item["watch_row_id"] for item in items], "stock": stock, "layout": layout,
              "order": order, "positions": positions}

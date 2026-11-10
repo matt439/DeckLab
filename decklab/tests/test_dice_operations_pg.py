@@ -52,3 +52,15 @@ class DiceOperationsPgTests(shared.DiceOperationCases, db_support.DbTestCase):
             rows = connection.execute("select op from audit.row_change where table_name='dice_counter' order by id").fetchall()
             self.assertEqual(rows, [("INSERT",), ("UPDATE",), ("DELETE",)])
             self.assertEqual(connection.execute("select count(*) from dice_counter").fetchone()[0], 0)
+
+    def test_real_dice_write_reports_actual_change_and_acknowledges_its_committed_request_snapshot(self):
+        with inventory.pinned():
+            after, summary = self.apply("add", space="home", sha256=None, row=shared.D20)
+            self.assertEqual(set(summary.changed), {shared.paths.dice("home")})
+            self.assertTrue(inventory.pinned_write())
+            self.assertIs(inventory.pinned_committed_snapshot(), after)
+            self.assertIs(inventory.current(), after)
+        with self.connect("ro") as connection:
+            self.assertEqual(connection.execute("select die_size,quantity from dice_counter where space_id='home'").fetchall(), [("d20", 2)])
+            self.assertEqual(connection.execute("select table_name,op from audit.row_change where change_set_id=(select max(id) from audit.change_set)").fetchall(),
+                             [("dice_counter", "INSERT")])

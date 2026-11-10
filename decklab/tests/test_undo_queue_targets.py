@@ -6,6 +6,7 @@ from decklab.lib import inventory, shop_reference_source
 from decklab.lib.inventory import undo_queue_schema
 from decklab.tests import test_inventory_undo_watchlist as fixture
 from decklab.tests import test_activity_undo_api as source_fixture
+from decklab.lib.api import activity_watchlist_undo as queue_api
 
 
 class QueueTargetUndoTests(fixture.WatchlistUndoFixture):
@@ -61,3 +62,20 @@ class QueueTargetUndoTests(fixture.WatchlistUndoFixture):
             self.run_undo()
         self.assertEqual(self.store.snapshot, before)
         self.assertEqual(self.store.writes, [])
+
+    def test_other_space_records_and_global_counters_never_change_the_home_preview_or_block_its_inverse(self):
+        before = queue_api.project(self.review())
+        private = {**source_fixture.CARD, "quantity": "8", "notes": "Private member fixture note"}
+        self.store.snapshot = self.store.snapshot.with_collection("user2", [private]).replace(
+            revision="other-space-inventory-revision", decks_revision="other-space-deck-revision")
+        self.assertEqual(queue_api.project(self.review()), before)
+        self.run_undo(before["expect"])
+        self.assertEqual(self.store.snapshot.collection("user2").rows[0].text("notes"), "Private member fixture note")
+
+    def test_own_unrelated_queue_change_still_invalidates_the_frozen_receipt(self):
+        shown = self.review()
+        rows = list(self.store.snapshot.watchlist.rows)
+        rows[0] = rows[0].replace(notes="A changed current queue survivor")
+        self.store.snapshot = self.store.snapshot.with_watchlist(rows)
+        with self.assertRaises(inventory.Conflict):
+            self.run_undo(shown["expect"])

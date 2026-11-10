@@ -804,6 +804,16 @@ class PgInventory:
         from .undo_token_delete import read_review
         return read_review(self, change_id, space, _take_lock, reviewer=review)
 
+    def undo_order_queue_review(self, change_id, space):
+        from .undo_order_queue import review
+        from .undo_token_delete import read_review
+        return read_review(self, change_id, space, _take_lock, reviewer=review)
+
+    def undo_order_queue_latest(self, order_id, product_stems):
+        """Latest order/product audit event, including later inserted parts, on this claim."""
+        from . import pg_order_queue
+        return pg_order_queue.latest(self, order_id, product_stems)
+
     def undo_watchlist_rows_review(self, change_id, space):
         from .undo_watchlist_rows import review
         from .undo_token_delete import read_review
@@ -867,6 +877,8 @@ class PgInventory:
                         self._applying.saves = None
                         self._applying.connection = previous_connection
                     after = changes.prepare(before, after)
+                    from . import undo_order_queue_verify
+                    summary = undo_order_queue_verify.prepare(before, after, summary)
                     decks_changed = any(paths.is_deck_part(rel) for rel in changes.changed(before, after))
                     if decks_changed and deck_key is None:
                         raise Unavailable(DECK_SAVES_PAUSED)
@@ -960,12 +972,19 @@ class PgInventory:
                             # A mixed queue change undone whole: prove the exact UPDATEs, DELETEs and
                             # INSERTs and every other row's position before commit (or roll back).
                             summary = undo_watchlist_mixed.confirm_in_transaction(cur, change_set, before, saved, summary)
+                        if undo_order_queue_verify.restoring(summary):
+                            summary = undo_order_queue_verify.confirm_in_transaction(cur, change_set, before, saved, summary)
                         from . import product_kit_undo
                         if isinstance(op, product_kit_undo.Restore):
                             summary = product_kit_undo.confirm_in_transaction(cur, change_set, before, saved, summary)
+                    # Only the committed SQL readback/proofs establish changed paths;
+                    # op hints may omit real writes or claim changes for a no-op.
+                    summary = Summary(summary.text, summary.counts,
+                                      {rel: ["changed"] for rel in changes.changed_paths(before, saved)}, summary.extra)
                     return saved, summary
             except _Unchanged as u:
-                return u.result
+                unchanged, summary = u.result
+                return unchanged, Summary(summary.text, summary.counts, {}, summary.extra)
         out = self._call(work)
         with self._lock:
             if "key" in result:

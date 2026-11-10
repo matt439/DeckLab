@@ -630,6 +630,29 @@ class PgOrderOpsTests(OrderOps, db_support.DbTestCase):
                 inventory.apply(inventory.Op(kind, params), CLAUDE, f"test {kind}")
         self.assertEqual(files.render(self.load()), files.render(twin.load()))
 
+    def test_direct_watchlist_add_many_has_new_ids_exact_values_and_one_database_audit(self):
+        before = self.load()
+        existing = {row.id: row.as_dict() for row in before.watchlist.rows}
+        rows = [{"name": "Llanowar Elves", "quantity": "2", "printing": "any", "for": "Coverage fixture", "state": "ready"},
+                {"name": "Elvish Mystic", "quantity": "1", "printing": "any", "for": "Coverage fixture", "state": "ready"}]
+        after, summary = self.op("watchlist.add_many", rows=rows)
+        self.assertTrue(summary.changed)
+        self.assertEqual(len(after.watchlist.rows), len(existing) + 2)
+        added = [row for row in after.watchlist.rows if row.id not in existing]
+        self.assertEqual(sorted((row.text("name"), row.text("quantity"), row.text("for")) for row in added),
+                         [("Elvish Mystic", "1", "Coverage fixture"), ("Llanowar Elves", "2", "Coverage fixture")])
+        self.assertEqual({row.id: row.as_dict() for row in after.watchlist.rows if row.id in existing}, existing)
+        self.assertTrue(all(row.id > 0 for row in added))
+        with self.connect("ro") as connection:
+            stored = connection.execute("select name,quantity,for_deck from watchlist_item where for_deck=%s order by name",
+                                        ("Coverage fixture",)).fetchall()
+            audit = connection.execute("select table_name,op,after->>'name' from audit.row_change "
+                "where change_set_id=(select max(id) from audit.change_set) order by id").fetchall()
+        self.assertEqual(stored, [("Elvish Mystic", 1, "Coverage fixture"), ("Llanowar Elves", 2, "Coverage fixture")])
+        self.assertEqual(sorted(audit), [("watchlist_item", "INSERT", "Elvish Mystic"), ("watchlist_item", "INSERT", "Llanowar Elves")])
+        self.assertEqual(after.collections, before.collections)
+        self.assertEqual(after.orders, before.orders)
+
 
 # ------------------------------------------------------------------ the command lines
 

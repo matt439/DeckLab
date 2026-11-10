@@ -731,6 +731,12 @@ def review(change_id, space, snapshot=None):
         if not supplied_snapshot and callable(reader):
             return reader(change_id, space)
         return undo_token_edit.review(change_id, space, snapshot, store)
+    from . import undo_order_queue
+    if undo_order_queue.looks_like(store, change_id, space, raw):
+        reader = getattr(store, "undo_order_queue_review", None)
+        if not supplied_snapshot and callable(reader):
+            return reader(change_id, space)
+        return undo_order_queue.review(change_id, space, snapshot, store)
     from . import undo_watchlist, undo_watchlist_mixed
     if undo_watchlist_mixed.queue_rows(raw):
         if space != undo_watchlist.HOME:
