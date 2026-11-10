@@ -16,6 +16,10 @@
 .compare-table th[scope="row"] { color: var(--ink-2); font-weight: var(--fw-semibold); }
 .compare-table td .status { white-space: normal; }
 .compare-hint { color: var(--ink-2); font-size: var(--fs-sm); }
+.compare-delta-table { width: 100%; table-layout: fixed; }
+.compare-delta-table th:first-child { width: 58%; }
+.compare-delta-table td.num { white-space: normal; overflow-wrap: anywhere; }
+.compare-head .segmented { max-width: 100%; flex-wrap: wrap; }
 .compare-count { display: inline-flex; align-items: center; justify-content: flex-end; gap: var(--s-2); width: 100%; }
 .compare-track { flex: 1 1 auto; max-width: 8em; height: 8px; border-radius: var(--r-sm); background: var(--track); overflow: hidden; }
 .compare-bar { display: block; height: 100%; background: var(--series-1); }

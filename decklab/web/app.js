@@ -280,7 +280,7 @@ function route() {
   if (path === "assembly") return seesHomeInventory(state.may) ? showAssembly(params, token) : showNoInventory(routeH1("assembly"));
   if (path === "play") return showPlay(params, token);
   if (path === "history" && params.get("id")) return showHistory(params, token);
-  if (path === "compare" && params.get("a") && params.get("b")) return showCompare(params, token);
+  if (path === "compare" && (params.get("a") || params.get("ap")) && (params.get("b") || params.get("bp"))) return showCompare(params, token);
   if (path === "activity") return showActivity(params, token);
   if (path === "receipt" && params.get("order")) {
     return seesHomeInventory(state.may) ? showReceipt(params, token) : showNoInventory(routeH1("receipt"));

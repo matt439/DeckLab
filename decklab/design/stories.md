@@ -35,7 +35,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 18 | 0 | 2 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 19 | 0 | 1 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 20 | 2 | 3 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 3 | 7 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 24 | 1 | 3 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 32 | 1 | 2 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 50 | 14 | 11 | 4 |
-| **Total** | **376** | **297** | **22** | **41** | **16** |
+| **Total** | **376** | **298** | **22** | **40** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -351,7 +351,7 @@ Built (2026-11-03): global search's short form. To a viewer who may see the spac
 
 Built (2026-11-04): the viewer's line from every page. `card-viewer.js` `viewerUseSpace` now names a space wherever the viewer opens: the deck page's or editor's deck's, the Collection page's, else the page's own `space` parameter or the viewer's own space, still only when the viewer may see that space's inventory (nothing is asked otherwise, and the server's 403 shows nothing). Tests: `test_card_viewer_use_ui.py`. See [HISTORY.md](../HISTORY.md#the-card-viewers-decks-line-on-every-page-2026-11-04-e1-s29).
 
-**E1-S30** · Matt · could · M · missing
+**E1-S30** · Matt · could · M · built
 
 As a deck builder about to re-test, I want Compare to take one of its History revisions, or the published precon it began as, as a side, so that I see what my changes did to its curve, colour sources, roles and bracket without making a second deck.
 
@@ -363,6 +363,8 @@ As a deck builder about to re-test, I want Compare to take one of its History re
 Gap: Compare takes only saved decks' lists (E1-S13, E1-S26); History lists a revision's cards against the deck now, without stats; E3-S39 offers a precon only as a trial deck. From the product review of 2026-11-10, compared with Archidekt's Compare Decks and EDHPowerLevel's Scan a Precon. Needs Matt's decision: whether Add a precon records its precon in a header line, or the precon is always picked.
 
 First slice: a same-deck revision side in `decklab/web/compare.js` reading GET /api/deck/revision, opt-in stats on that read in `decklab/lib/api/history.py`, and a link from `decklab/web/history.js`.
+
+Built (2026-11-11): Compare accepts same-deck revisions with dates and current-list bracket qualification, or an explicitly picked cached MTGJSON precon without a saved header/deck/trial. Lean intrinsic list projections include card and directional stat deltas (curve, land sources, roles, bracket), without kit, prose, private counts or practice/results. Baseline sides suppress shared-card/head-to-head requests. History links preserve selected list availability; hidden decks remain missing before stats/revision validation and unknown cards produce unknown stats. Focused/model/HTTP tests and ten synthetic native captures pass; the full26-case suite remains available for final review. No actual deck/history, private inventory or external precon fetch was used.
 
 **E1-S31** · Matt · could · M · missing
 

@@ -225,6 +225,7 @@ def deck_history(deck_id=None):
     return deck_aliases.metadata({"id": deck_id, "title": parsed.title,
             "sha256": None if retired else deck.sha256, "revisions": rows,
             "truncated": len(found) > MAX_REVISIONS, "may_save": not retired and why is None,
+            "versions": ["target", *(["owned"] if parsed.owned is not None else [])],
             "retired": retired, "may_restore": retired and _may_restore(parsed), "retired_revision": deleted},
             requested_id, deck_id)
 
@@ -368,16 +369,23 @@ def _number(deck_id, revision):
     raise ApiError(400, "Choose a revision from this deck's history")
 
 
-def deck_revision(deck_id=None, revision="", version="target"):
+def deck_revision(deck_id=None, revision="", version="target", stats=None):
     requested_id = deck_id
     deck_id = deck_aliases.canonical_id(deck_id)
+    if stats not in (None, "", "0", "1"):
+        raise ApiError(400, "stats must be 0 or 1")
     _require_cards()
     if version not in ("target", "owned"):
         raise ApiError(400, "Choose target or owned")
     space, kind, slug = _parts(deck_id)
     retired = inventory.current().deck(deck_id) is None
     if retired:
-        retired_record(deck_id)
+        try:
+            retired_record(deck_id)
+        except ApiError as error:
+            if stats == "1" and error.status == 500:
+                raise ApiError(500, "This revision's list couldn't be read safely.") from None
+            raise
     number = _number(deck_id, revision)
     rev = inventory.deck_revision(deck_id, number)
     if rev is None:
@@ -387,10 +395,24 @@ def deck_revision(deck_id=None, revision="", version="target"):
     raw = rev.text.encode("utf-8")
     if len(raw) > 1024 * 1024:
         raise ApiError(400, "This historical deck text is too large")
-    old = _parse(raw, kind, slug, space, f"Revision {number}")
+    try:
+        old = _parse(raw, kind, slug, space, f"Revision {number}")
+    except ApiError:
+        if stats == "1":
+            raise ApiError(500, "This revision's list couldn't be read safely.") from None
+        raise
     sections = old.target if version == "target" else old.owned
     if not old.has_decklist or sections is None:
         raise ApiError(404, "This revision has no selected list")
+    if stats == "1":
+        from .comparison_lists import snapshot
+        answer = snapshot(sections, {"id": deck_id, "title": old.title, "kind": kind,
+                                    "format": old.format, "colors": None}, version,
+                          {"kind": "revision", "revision": number,
+                           "date": rev.at.astimezone().isoformat(timespec="seconds"),
+                           "bracket_note": "Bracket judged using today's card data and Commander lists."})
+        answer["versions"] = ["target", *(["owned"] if old.owned is not None else [])]
+        return deck_aliases.metadata(answer, requested_id, deck_id)
     warnings = []
     # The Sleeves and Deck box lines only for those who see the deck's owner's accessories.
     hidden = () if guard.sees_kit(_holder(old)) else ("Sleeves", "Deck box")

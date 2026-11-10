@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[2]
 TOOL = Path(__file__).resolve().parent
 FIXTURE_TYPE = "decklab-ui-review-v1"
 SUITES = ("capture", "editor", "composition", "variant-layout", "shell-layout", "task-layout",
-          "receipt-layout", "families", "zoom", "crosscheck", "assembly-counters", "precon-bonus", "life-counters")
+          "receipt-layout", "families", "zoom", "crosscheck", "assembly-counters", "precon-bonus", "life-counters", "compare-baselines")
 
 
 class ReviewError(RuntimeError):

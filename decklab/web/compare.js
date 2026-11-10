@@ -25,22 +25,21 @@ function compareHref(a, b, av = "target", bv = "target") {
 }
 
 function showCompare(params, token) {
-  const side = (key) => ({ id: addressDeckId(params.get(key)), version: params.get(`${key}v`) === "owned" ? "owned" : "target" });
-  const a = side("a"), b = side("b");
-  const url = (s) => `/api/deck?id=${encodeURIComponent(s.id)}&version=${s.version}&omit=matchups`;
-  load([url(a), url(b)], token, (sides) => compareDraw(sides),
+  const a = compareSideParams(params, "a"), b = compareSideParams(params, "b");
+  const intrinsic = [a,b].some(side => side.revision || side.precon);
+  load([compareSideUrl(a, intrinsic), compareSideUrl(b, intrinsic)], token, (sides) => compareDraw(sides),
     { title: "These decks couldn't be compared", back: ["#/library", "Back to the library"] });
 }
 
 /** What a side is called: the deck's title, or, comparing a deck's two lists, the list's name. */
 function compareLabel(data, sameDeck) {
-  return sameDeck ? listName(data.version) : data.summary.title;
+  return compareBaselineLabel(data) || (sameDeck ? listName(data.version) : data.summary.title);
 }
 
 /** Whether the sides are one deck's two lists (a pairing's halves in either order count as one deck); one list
  * against itself isn't, so its sides keep the deck's title. */
 function compareTwoLists(a, b) {
-  return sameDeckId(a.summary.id) === sameDeckId(b.summary.id) && a.version !== b.version;
+  return ![a,b].some(compareBaseline) && sameDeckId(a.summary.id) === sameDeckId(b.summary.id) && a.version !== b.version;
 }
 
 function compareDraw(sides) {
@@ -55,35 +54,42 @@ function compareDraw(sides) {
       for (const line of lines) if (line.card && !state.cards.has(line.card.name)) state.cards.set(line.card.name, line.card);
     }
   }
-  const swap = compareHref(b.summary.id, a.summary.id, b.version, a.version);
+  const baseline = sides.some(compareBaseline), anchor = sides.find(side => !compareBaseline(side))
+    || sides.find(side => side.comparison?.kind === "revision");
+  const swap = compareAddress(compareSideOf(b), compareSideOf(a));
   add($("#main"), [
-    pageHead({ crumb: [deckHref(a.summary.id, a.version), a.summary.title], title: routeH1("compare"),
-      description: "Their stats, list differences, the cards both use and how they've done against each other. Nothing here changes either deck.",
+    pageHead({ crumb: anchor ? [deckHref(anchor.summary.id, anchor.version), anchor.summary.title] : null, title: routeH1("compare"),
+      description: baseline ? "Compare the lists and their stats using current card data."
+        : "Their stats, list differences, the cards both use and how they've done against each other. Nothing here changes either deck.",
       more: [{ label: "Swap sides", href: swap },
-        { label: "Compare with another deck…", onclick: () => openCompareChooser(a) }] }),
-    el("div", { class: "compare-heads" }, sides.map((d, i) => compareHead(d, labels[i], sameDeck))),
+        anchor ? { label: "Compare with another deck…", onclick: () => openCompareChooser(anchor) } : null] }),
+    el("div", { class: "compare-heads" }, sides.map((d, i) => compareHead(d, labels[i], sameDeck, sides, i))),
     warningsBox(compareNotes(sides, labels), "About these stats"),
     compareBrief(sides, labels),
+    compareDeltaPart(sides, labels),
     compareCurves(sides, labels),
     compareColours(sides, labels),
     compareTypes(sides, labels),
     compareDifferences(sides, labels),
-    compareShared(sides, labels, sameDeck),
-    compareHeadToHead(sides, labels)]);
+    baseline ? null : compareShared(sides, labels, sameDeck),
+    baseline ? null : compareHeadToHead(sides, labels)]);
   drawCharts();
 }
 
 /** A side's head: its colours, its title (a link to its page), its format, list and card counts. */
-function compareHead(data, label, sameDeck) {
+function compareHead(data, label, sameDeck, sides = null, index = 0) {
   const s = data.summary;
-  const colours = deckColourPieces(Array.isArray(s.colors) ? s.colors : deckPageColours(data));
+  const colours = data.stats_unknown ? null : deckColourPieces(Array.isArray(s.colors) ? s.colors : deckPageColours(data));
   const { main, side } = compareCounts(data);
-  const facts = [s.format, data.versions && data.versions.length > 1 && !sameDeck ? listName(data.version) : null,
+  const facts = [s.format, data.comparison?.kind === "revision" || data.versions && data.versions.length > 1 && !sameDeck ? listName(data.version) : null,
     plural(main, "card"), side ? `${num(side)} in the sideboard` : null].filter(Boolean);
   return el("div", { class: "compare-head" },
     colours ? colours.pips(20) : null,
-    el("a", { class: "compare-title", href: deckHref(s.id, data.version), text: sameDeck ? `${s.title}: ${label}` : label }),
-    el("p", { class: "compare-facts", text: facts.join(" · ") }));
+    data.comparison?.kind === "precon" ? el("span", { class: "compare-title", text: label })
+      : el("a", { class: "compare-title", href: data.comparison?.kind === "revision"
+        ? `#/history?id=${encodeURIComponent(s.id)}&v=${data.version}` : deckHref(s.id, data.version),
+      text: sameDeck ? `${s.title}: ${label}` : label }),
+    el("p", { class: "compare-facts", text: facts.join(" · ") }), sides ? compareVersionLinks(sides, index) : null);
 }
 
 /** The list's cards: {main: the commander and main deck, side: the sideboard}. */
@@ -95,15 +101,18 @@ function compareCounts(data) {
 /** Why a side's stats are missing or partial, named after the side. */
 function compareNotes(sides, labels) {
   const notes = [];
+  const intrinsic = sides.some(compareBaseline);
   sides.forEach((d, i) => {
     const st = d.stats;
-    if (!st) notes.push(`${labels[i]}'s stats couldn't be worked out: its deck page says why.`);
+    if (!st) notes.push(d.stats_note ? `${labels[i]}: ${d.stats_note}` : `${labels[i]}'s stats couldn't be worked out: its deck page says why.`);
     else if (st.unresolved && st.unresolved.length) {
       notes.push(`Left out of ${labels[i]}'s stats (not Scryfall card names): ` +
         `${st.unresolved.map((u) => `${u.qty} ${u.name}`).join(", ")}.`);
     }
+    if (intrinsic) for (const warning of [...(d.warnings || []), ...(st?.warnings || [])]) notes.push(`${labels[i]}: ${warning}`);
   });
-  return notes;
+  for (const side of sides) if (side.comparison?.bracket_note && (side.summary.kind === "commander" || side.stats_kind === "commander")) notes.push(side.comparison.bracket_note);
+  return [...new Set(notes)];
 }
 
 /** A table of rows, one per figure: [what, a's cell, b's cell], under the two sides' names. */
@@ -130,7 +139,7 @@ function comparePart(id, title, ...parts) {
 
 /** In brief: the figures the Stats tab's verdict strip leads with, side by side. */
 function compareBrief(sides, labels) {
-  const of = (fn) => sides.map((d) => (d.stats ? fn(d.stats, d) : null));
+  const of = (fn) => sides.map((d) => (d.stats ? fn(d.stats, d) : d.stats_unknown ? "Unknown" : null));
   const lands = (st) => {
     const l = st.lands;
     if (!l) return null;
@@ -147,7 +156,7 @@ function compareBrief(sides, labels) {
     if (short.length) return status("warn", `Short: ${short.map((x) => x.name).join(", ")}`);
     return c.colours.every((x) => x.ok != null) ? "Enough" : "Not checked";
   };
-  const commander = sides.some((d) => d.stats && d.stats.commander);
+  const commander = sides.some((d) => d.stats?.commander || d.stats_kind === "commander");
   return comparePart("h-compare-brief", "In brief", compareTable("The two lists in brief", labels, [
     ["Cards", ...sides.map((d) => num(compareCounts(d).main))],
     ["Average mana value", ...of((st) => (st.curve && st.curve.average_mv != null ? num(st.curve.average_mv) : null))],
@@ -155,7 +164,8 @@ function compareBrief(sides, labels) {
     ["Creatures", ...of((st) => (st.curve ? num(st.curve.creatures) : null))],
     ["Other spells", ...of((st) => (st.curve ? num(st.curve.noncreatures) : null))],
     ["Colour sources", ...of(sources)],
-    commander ? ["Bracket", ...of((st) => st.commander?.bracket?.label || null)] : null]));
+    commander ? ["Bracket", ...of((st,d) => st.commander?.bracket?.label
+      ? st.commander.bracket.label + (compareBaseline(d) ? " (today's lists)" : "") : null)] : null]));
 }
 
 /** Both mana curves on one scale (a phone stacks them), each with its bars' cards, and the two as one table. */
@@ -163,11 +173,11 @@ function compareCurves(sides, labels) {
   const curves = sides.map((d) => (d.stats && d.stats.curve) || null);
   const top = Math.max(1, ...curves.flatMap((c) => (c ? c.buckets.map((b) => b.total) : [])));
   const charts = el("div", { class: "compare-charts" },
-    curves.map((curve, i) => compareCurve(curve, labels[i], top, `compare-${i}`)));
+    curves.map((curve, i) => compareCurve(curve, labels[i], top, `compare-${i}`, sides[i].stats_unknown)));
   const shown = curves.find(Boolean);
   const table = shown ? el("details", { class: "more" }, el("summary", { text: "The curves as a table" }),
     compareTable("Cards at each mana value", labels, shown.buckets.map((b, at) =>
-      [`Mana value ${b.mv}`, ...curves.map((c) => (c ? num(c.buckets[at]?.total || 0) : null))]))) : null;
+      [`Mana value ${b.mv}`, ...curves.map((c,i) => (c ? num(c.buckets[at]?.total || 0) : sides[i].stats_unknown ? "Unknown" : null))]))) : null;
   return comparePart("h-compare-curve", "Mana curve",
     el("ul", { class: "legend", "aria-label": "Legend" },
       el("li", {}, el("span", { class: "swatch", style: "background: var(--series-1)" }), "Creatures"),
@@ -177,10 +187,10 @@ function compareCurves(sides, labels) {
 }
 
 // Each side's bar cards are their own viewer group (compare-0, compare-1), so a swipe stays in one deck's list.
-function compareCurve(curve, label, top, group) {
+function compareCurve(curve, label, top, group, unknown = false) {
   const figure = el("div", { class: "compare-chart" }, el("h3", { text: label }));
   if (!curve) {
-    figure.append(el("p", { class: "sub", text: "No curve: the stats couldn't be worked out." }));
+    figure.append(el("p", { class: "sub", text: unknown ? "Unknown mana curve." : "No curve: the stats couldn't be worked out." }));
     return figure;
   }
   const chart = el("div", { class: "chart" });
@@ -212,10 +222,12 @@ function compareColours(sides, labels) {
   const order = "WUBRG";
   keys.sort((x, y) => order.indexOf(x.colours[0]) - order.indexOf(y.colours[0]) || x.colours.localeCompare(y.colours));
   const identity = (d) => {
+    if (d.stats_unknown) return "Unknown";
     const pieces = deckColourPieces(Array.isArray(d.summary.colors) ? d.summary.colors : deckPageColours(d));
     return pieces ? pieces.pips(16) : null;
   };
   const sourceCell = (d, key) => {
+    if (d.stats_unknown) return "Unknown";
     const row = (d.stats?.colours?.colours || []).find((c) => c.colours === key.colours);
     if (!row) return null;
     const h = row.hardest || {};
@@ -236,7 +248,8 @@ function compareTypes(sides, labels) {
   const counts = sides.map((d) => new Map((d.stats?.types || []).map((t) => [t.type, t.count])));
   const types = COMPARE_TYPES.filter((t) => counts.some((m) => m.get(t)));
   const max = Math.max(1, ...counts.flatMap((m) => [...m.values()]));
-  const cell = (m, type) => {
+  const cell = (m, type, index) => {
+    if (sides[index].stats_unknown) return "Unknown";
     if (!m.size) return null;
     const n = m.get(type) || 0;
     const bar = el("span", { class: "compare-bar", "aria-hidden": "true" });
@@ -249,10 +262,10 @@ function compareTypes(sides, labels) {
   const roles = [...new Set(roleCounts.flatMap((m) => [...m].filter(([, n]) => n > 0).map(([role]) => role)))]
     .sort((x, y) => at(x) - at(y));
   return comparePart("h-compare-types", "Card types and roles", types.length
-    ? compareTable("Copies of each card type", labels, types.map((t) => [capitalise(t), ...counts.map((m) => cell(m, t))]))
+    ? compareTable("Copies of each card type", labels, types.map((t) => [capitalise(t), ...counts.map((m,i) => cell(m, t, i))]))
     : el("p", { class: "sub", text: "No card types to compare." }),
   roles.length ? [el("h3", { class: "compare-roles-head", text: "Roles" }), compareTable("Copies with each role", labels, roles.map((r) =>
-    [(ROLE_WORDS[r] || [capitalise(r)])[0], ...sides.map((d, i) => (d.stats ? num(roleCounts[i].get(r) || 0) : null))]))]
+    [(ROLE_WORDS[r] || [capitalise(r)])[0], ...sides.map((d, i) => (d.stats ? num(roleCounts[i].get(r) || 0) : d.stats_unknown ? "Unknown" : null))]))]
     : null);
 }
 
@@ -468,9 +481,17 @@ function compareGameParts(answer, a, b, labels) {
 /** "Compare with…": the decks the viewer sees (GET /api/decks, or decks: the library's, already fetched), and
  * the deck's own other list when it has two; choosing one opens the compare page. */
 function openCompareChooser(data, decks = null) {
-  const sheet = openSheet("Compare with…");
-  const token = routeToken, profile = state.profile?.id;
-  const here = () => !sheet.closed && token === routeToken && profile === state.profile?.id;
+  const token = routeToken, profile = state.profile, profileId = profile?.id, space = profile?.space || HOME_SPACE;
+  const hash = location.hash, main = document.getElementById("main"), summary = data.summary, id = summary.id, version = data.version;
+  const pageHere = () => token === routeToken && profile === state.profile && profileId === state.profile?.id
+    && space === (state.profile?.space || HOME_SPACE) && hash === location.hash && document.getElementById("main") === main
+    && main.isConnected && data.summary === summary && summary.id === id && data.version === version;
+  const sheet = openSheet("Compare with…", { onClose: result => {
+    if (result === "precon" && pageHere()) comparePreconChooser(data);
+  } });
+  const body = sheet.body, foot = sheet.foot;
+  const here = () => !sheet.closed && pageHere()
+    && main.isConnected && sheet.body === body && sheet.foot === foot && sheet.dialog.isConnected;
   sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() }]);
   const fetchDecks = () => {
     clear(sheet.body).append(loadingBox("Getting the decks…", { small: true }));
@@ -542,10 +563,14 @@ function drawCompareChoices(sheet, data, answer) {
   const own = (data.versions || []).includes(other)
     ? [{ id: s.id, title: `${s.title}: its ${listName(other, true)}`, colors: s.colors, version: other }] : [];
   const choices = [...own, ...compareSorted(answer.decks).filter((d) => d.id !== s.id)];
-  if (!choices.length) {
-    clear(sheet.body).append(emptyBox("There's no other deck to compare it with yet."));
-    return;
-  }
-  clear(sheet.body).append(el("p", { class: "sub", text: `Show ${s.title}'s stats beside another list's.` }),
-    ...compareChoiceList(choices, (d) => ({ href: compareHref(s.id, d.id, data.version, d.version || "target") })));
+  const token = routeToken, profile = state.profile;
+  const precon = el("button", { type: "button", class: "btn", text: "Compare with a published precon…", onclick: () => {
+    if (!sheet.closed && token === routeToken && profile === state.profile && sheet.body.contains(precon)
+      && precon.isConnected && keyboardDialog() === sheet.dialog) sheet.close("precon");
+  } });
+  add(clear(sheet.body), [el("p", { class: "sub", text: `Show ${s.title}'s stats beside another list's.` }), precon,
+    /^(?:[a-z0-9-]+\/)?(?:casual|commander)\//.test(s.id) ? el("a", { class: "btn btn-quiet",
+      href: `#/history?id=${encodeURIComponent(s.id)}&v=${data.version || "target"}`, text: "Choose a revision from History" }) : null,
+    choices.length ? compareChoiceList(choices, (d) => ({ href: compareHref(s.id, d.id, data.version, d.version || "target") }))
+      : emptyBox("There's no other saved deck to compare it with yet.")]);
 }

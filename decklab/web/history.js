@@ -355,6 +355,9 @@ function historySheet(rev, data, id, version, token, trigger) {
     historyCompare(answer, rev, id, version, token);
   });
   if (rev.op !== "D") body.push(compare);
+  if (rev.op !== "D" && !data.retired && change.kind !== "unreadable") body.push(el("a", { class: "btn",
+    href: compareRevisionHref(id, rev.revision, version, (data.versions || [version]).includes(version) ? version : "target"),
+    text: "Compare stats with the deck now" }));
   // Restoring is offered only to someone who may save this deck (the server's may_save, as the editor's), and
   // only where the editor opens; anyone else gets neither the action nor a note about it.
   const restorable = !data.retired && data.may_save !== false && rev.op !== "D" && change.kind !== "unreadable"

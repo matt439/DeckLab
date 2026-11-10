@@ -8,7 +8,7 @@ import json
 from unittest import mock
 
 from decklab.lib import config, pool
-from decklab.lib.api import (accessories, activity, activity_undo, assembly, assembly_completion, assembly_ticks, collection, compare, cover, editor, history, play_records,
+from decklab.lib.api import (accessories, activity, activity_undo, assembly, assembly_completion, assembly_ticks, collection, compare, comparison_lists, cover, editor, history, play_records,
                              precon_coverage, precon_trial, receipts, shopping, shopping_order_changes, shopping_orders, shopping_queue, tokens)
 from decklab.tests.test_server import ServerTestCase, WRITE
 
@@ -19,10 +19,14 @@ GETS = (
      {"deck": "casual/gruul-test", "version": "owned"}),
     ("/api/compare/shared", compare, "shared_view", "a=casual%2Fgruul-test&av=target&b=commander%2Felf-commander&bv=owned",
      {"a": "casual/gruul-test", "av": "target", "b": "commander/elf-commander", "bv": "owned"}),
+    ("/api/compare/deck", comparison_lists, "current_view", "id=casual%2Fgruul-test&version=owned", {"deck_id": "casual/gruul-test", "version": "owned"}),
+    ("/api/compare/precon", comparison_lists, "precon_view", "file=TestDinos_TST", {"file": "TestDinos_TST"}),
     ("/api/play", play_records, "play_overview", "id=casual%2Fgruul-test", {"deck_id": "casual/gruul-test"}),
     ("/api/deck/history", history, "deck_history", "id=casual%2Fgruul-test", {"deck_id": "casual/gruul-test"}),
     ("/api/deck/revision", history, "deck_revision", "id=casual%2Fgruul-test&version=owned&revision=" + "a" * 40,
      {"deck_id": "casual/gruul-test", "version": "owned", "revision": "a" * 40}),
+    ("/api/deck/revision", history, "deck_revision", "id=casual%2Fgruul-test&version=target&revision=3&stats=1",
+     {"deck_id": "casual/gruul-test", "version": "target", "revision": "3", "stats": "1"}),
     # Two deck reads with near names: the picture picker's cards and the editor's card finder.
     ("/api/deck/cards", cover, "cover_cards", "id=casual%2Fgruul-test", {"deck_id": "casual/gruul-test"}),
     ("/api/deck/find", editor, "find_cards", "q=bolt&scope=all", {"q": "bolt", "scope": "all", "deck_id": None}),

@@ -174,7 +174,7 @@ def _status(key, answer):
 
 
 def dispatch(handler, route, query):
-    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, commander_candidates, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, dice, edhrec, editor, history,
+    from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, commander_candidates, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, comparison_lists, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, dice, edhrec, editor, history,
                                  library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, reference_facts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_combined, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_ideas, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
@@ -197,6 +197,8 @@ def dispatch(handler, route, query):
         ("commanders", "candidate"): (commander_candidates.candidate_view, ("name", "space", "partner")),
         ("assembly",): (assembly.assembly_view, ("deck", "version")),
         ("compare", "shared"): (compare.shared_view, ("a", "av", "b", "bv")),
+        ("compare", "deck"): (comparison_lists.current_view, ("id", "version")),
+        ("compare", "precon"): (comparison_lists.precon_view, ("file",)),
         ("play",): (play_records.play_overview, ("id",)),
         ("play", "sideboard-preview"): (_sideboard_preview, ("id", "sha256")),
         ("play", "sideboard-tests"): (_sideboard_tests, ("id", "sha256")),
@@ -205,7 +207,7 @@ def dispatch(handler, route, query):
         ("deck", "retire"): (retirement.retirement_view, ("id",)),
         ("deck", "rename"): (rename.rename_view, ("id",)),
         ("deck", "find"): (editor.find_cards, ("q", "scope", "colors", "type", "mv", "id", "space", "limit", "page")),
-        ("deck", "revision"): (history.deck_revision, ("id", "revision", "version")),
+        ("deck", "revision"): (history.deck_revision, ("id", "revision", "version", "stats")),
         ("deck", "swaps"): (swaps.suggest_swaps, ("id", "version", "card")),
         ("deck", "replacements"): (swaps.suggest_replacements, ("id", "version", "card")),
         ("deck", "dual-lands"): (swaps.suggest_dual_lands, ("id", "version")),

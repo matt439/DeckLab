@@ -360,6 +360,8 @@ def _colour_check(main, library, sideboard, guidance, lands, kind):
         "deck_lands": deck_lands,
         "land_note": land_note,
         "colours": summaries,
+        "land_sources_by_colour": {
+            colour: _r(sources.lands_for(frozenset(colour))) for colour in MANA_COLOURS},
         "sources": sources.as_json(),
         "rules": list(COLOUR_SOURCE_RULES),
         "ok": None if table is None else all(s["ok"] for s in summaries),

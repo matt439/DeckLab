@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Revision and published-precon comparison baselines (2026-11-11; E1-S30)
+
+- Compare accepts dated same-deck History revisions or an explicitly chosen cached MTGJSON precon without creating a deck/trial. Card differences and directional curve, colour-source, role and bracket deltas use lean intrinsic lists; brackets are qualified by today's data.
+- Baseline sides omit kit, owned/missing, prose, practice/results and the shared-card/head-to-head sections and requests. Unknown cards produce unknown stats; hidden decks retain missing equivalence before other validation. History and swap/version links retain available list choices.
+- Native review caught and fixed the precon route condition and a parent chooser left open. Ten smoke captures completed cleanly with no forbidden private endpoints or overflow; representative phone light/dark images were inspected. Receipt: data/ui-review/20261110T181103Z-02d67f65. These are synthetic Chrome controls, not household device acceptance.
+- Validation:48 final focused checks pass; the earlier236 group had230 passes, five qualification skips and one concurrent migration-inventory mismatch. No actual deck, history, collection, Forge game or saved precon was created/read for this task.
+
 ## Counted observations for merged copies (2026-11-11; E7-S38)
 
 - Mixed or partly unknown condition/language is retained as counted notes; positive ManaBox/Deckbox/Moxfield marks become counted observations. Complete matching breakdowns are reusable on later merges and CSV imports; stale/general evidence stays conservative, and explicit fields win.
