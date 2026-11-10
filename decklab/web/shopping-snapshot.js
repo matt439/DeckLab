@@ -1,8 +1,21 @@
 /* The shops' daily snapshots beside a queued card's recorded reference price (E5-S08): MTGMate's
  * and Games Portal's, each with its own fetch time, and a waiting_for_stock row one finds in stock
  * marked (E5-S19). Read only: a snapshot never changes the queue, and an unknown price stays
- * unknown (never a converted US price). One shop that couldn't be read is unknown on its own. */
+ * unknown (never a converted US price). One shop that couldn't be read is unknown on its own.
+ * A line also says when the match was wrong or cut short (E5-S33): a shop page that was only the first
+ * page of its results, an exact row the shop lists only in other printings (with the shop's sets),
+ * and a token or reminder row, which the shops are never asked for. */
 "use strict";
+
+/** What a line says when the shop's page was only part of its results (Games Portal's first page). */
+const SHOP_SNAPSHOT_PARTIAL = "first page only, more results not read";
+
+/** The shop's own set codes for a card it lists in other printings: "C16, CMM", at most 12 named. */
+function shopSnapshotSets(snap) {
+  const sets = (Array.isArray(snap.shop_sets) ? snap.shop_sets : [])
+    .filter(code => typeof code === "string" && /^[a-z0-9]{1,12}$/i.test(code)).map(code => code.toUpperCase());
+  return sets.length > 12 ? `${sets.slice(0, 12).join(", ")} and ${sets.length - 12} more` : sets.join(", ");
+}
 
 /** Each snapshot shop's own pages, the only links that may leave the page, and whether its pages
  * count stock (Games Portal's say only whether a listing is available). */
@@ -51,6 +64,11 @@ function shopSnapshotWords(snap) {
   if (snap.status === "out_of_stock")
     return [`${shop}: out of stock${price ? ` (listed at ${price})` : ""}`, printing];
   if (snap.status === "not_listed") return [`${shop}: not listed`, null];
+  if (snap.status === "not_matched") {
+    const sets = shopSnapshotSets(snap);
+    return [`${shop}: listed, but not matched to your printing${sets ? ` (the shop's sets: ${sets})` : ""}`, null];
+  }
+  if (snap.status === "token") return [`${shop}: token cards aren't checked at this shop`, null];
   if (snap.status === "unknown") return [`${shop}: price unknown, the shop couldn't be read`, null];
   return [`${shop}: not in the last snapshot`, null];
 }
@@ -72,6 +90,8 @@ function shopSnapshotOne(snap) {
     "data-shop-snapshot-shop": snap.shop || "MTGMate", title: snap.status === "unknown" && snap.error ? snap.error : null},
     chip, el("span", {text: words}),
     printing ? el("small", {}, shopSnapshotLink(snap, printing)) : null,
+    snap.partial === true ? el("small", {class: "shop-snapshot-partial", "data-shop-snapshot-partial": "",
+      text: SHOP_SNAPSHOT_PARTIAL}) : null,
     shopSnapshotWhen(snap.fetched_at));
 }
 
@@ -83,7 +103,7 @@ function shopSnapshotLine(card) {
   return el("span", {class: "shop-snapshot-list", "data-shop-snapshots": String(list.length)}, list.map(shopSnapshotOne));
 }
 
-const SHOP_SNAPSHOT_RANK = ["in_stock", "out_of_stock", "not_listed", "unknown", "not_checked"];
+const SHOP_SNAPSHOT_RANK = ["in_stock", "out_of_stock", "not_matched", "not_listed", "unknown", "not_checked", "token"];
 
 /** The lab table's one-line marker beside the reference price: a dot (or "Back" when a waiting row
  * is back in stock at a shop) whose spoken and hover words give every shop's gist (E5-S26). Its
@@ -97,7 +117,7 @@ function shopSnapshotMarker(card) {
   const gist = list.map(snap => {
     const [words, printing] = shopSnapshotWords(snap);
     const lead = snap.back_in_stock ? "Back in stock. " : snap.newly_in_stock ? "Newly in stock. " : "";
-    return `${lead}${words}${printing ? ` (${printing})` : ""}`;
+    return `${lead}${words}${printing ? ` (${printing})` : ""}${snap.partial === true ? `, ${SHOP_SNAPSHOT_PARTIAL}` : ""}`;
   }).join(list.length > 1 ? "; " : "");
   return el("span", {class: `shop-q-snap shop-q-snap-${best}${back ? " shop-q-snap-back" : ""}`,
     "data-shop-snapshot-marker": best, role: "img", "aria-label": gist, title: gist,
@@ -123,10 +143,12 @@ function shopMissingSnapshotOf(snap, expected) {
   if (snap.status === "not_checked") return empty;
   const fetched = shopMissingSnapshotDate(snap.fetched_at);
   if (!fetched) return unknown;
-  if (["not_listed", "unknown"].includes(snap.status)) return {shop, status: snap.status, fetched_at: fetched};
+  // partial (E5-S33): the shop's page was only the first of its results; never claimed for an unknown.
+  const partial = snap.partial === true && snap.status !== "unknown";
+  if (["not_listed", "unknown"].includes(snap.status)) return {shop, status: snap.status, fetched_at: fetched, partial};
   // Listed only sold out without a price: out of stock, with no price to show.
   if (snap.status === "out_of_stock" && snap.price_aud === null && snap.stock === 0)
-    return {shop, status: snap.status, fetched_at: fetched, price: null, stock: 0, set: null, collector_number: null, url: null};
+    return {shop, status: snap.status, fetched_at: fetched, price: null, stock: 0, set: null, collector_number: null, url: null, partial};
   const price = typeof snap.price_aud === "string" && /^(?:0|[1-9]\d{0,8})\.\d{2}$/.test(snap.price_aud)
     ? Number(snap.price_aud) : NaN;
   if (!Number.isFinite(price) || price <= 0 ||
@@ -137,7 +159,7 @@ function shopMissingSnapshotOf(snap, expected) {
       snap.collector_number !== snap.collector_number.trim() || !shopMissingSnapshotText(snap.collector_number) ||
       /[\u0000-\u001f\u007f/\\?#]/.test(snap.collector_number)) return unknown;
   return {shop, status: snap.status, fetched_at: fetched, price, stock: snap.stock,
-    set: snap.set, collector_number: snap.collector_number, url: shopMissingSnapshotUrl(snap.url, shop)};
+    set: snap.set, collector_number: snap.collector_number, url: shopMissingSnapshotUrl(snap.url, shop), partial};
 }
 
 /** No normalized impossible dates or timezone-free machine times become dated price claims. */
@@ -228,5 +250,7 @@ function shopMissingSnapshotOne(snap, short) {
     "data-shop-snapshot-shop": shop},
     stocked && !short ? el("strong", {text: "Cheapest nonfoil in saved snapshot"}) : null,
     el("span", {text: words}), listed ? el("small", {}, shopSnapshotLink(snap, `${snap.set.toUpperCase()} ${snap.collector_number} nonfoil`)) : null,
+    snap.partial === true ? el("small", {class: "shop-snapshot-partial", "data-shop-snapshot-partial": "",
+      text: SHOP_SNAPSHOT_PARTIAL}) : null,
     when);
 }

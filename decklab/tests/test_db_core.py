@@ -150,6 +150,29 @@ class MigrationFileTests(unittest.TestCase):
         with self.assertRaises(migrate.MigrationError):
             migrate.available(tmp)
 
+    def test_a_database_newer_than_the_code_is_named_apart_from_a_missing_file(self):
+        files = [{"version": v, "name": n, "checksum": "c", "path": Path(f"{v:04d}_{n}.sql")}
+                 for v, n in ((1, "first"), (2, "second"))]
+
+        def row(version, name, checksum="c"):
+            return {"version": version, "name": name, "checksum": checksum}
+
+        migrate._check(files, {1: row(1, "first"), 2: row(2, "second")})        # the same: nothing raised
+        migrate._check(files, {1: row(1, "first")})                             # one pending: nothing raised
+        applied = {1: row(1, "first"), 2: row(2, "second"), 3: row(3, "third"), 4: row(4, "fourth")}
+        with self.assertRaisesRegex(migrate.DatabaseNewer, "the database is newer than this code: it holds "
+                                                           "0003_third, 0004_fourth") as raised:
+            migrate._check(files, applied)
+        self.assertEqual(raised.exception.versions, [3, 4])
+        self.assertIsInstance(raised.exception, migrate.MigrationError)         # callers that refuse still do
+        self.assertNotIn("restore the file", str(raised.exception))
+        # A file gone from among the others, or a changed one, is still the old refusal, and comes first.
+        with self.assertRaisesRegex(migrate.MigrationError, "0001_first is recorded in the database but its file"):
+            migrate._check(files[1:], applied)
+        with self.assertRaisesRegex(migrate.MigrationError, "has changed since it was applied") as raised:
+            migrate._check(files, {1: row(1, "first", "edited"), 3: row(3, "third")})
+        self.assertNotIsInstance(raised.exception, migrate.DatabaseNewer)
+
     def test_the_shipped_migrations_are_well_named(self):
         self.assertEqual(migrate.available()[0]["name"], "foundation")
 

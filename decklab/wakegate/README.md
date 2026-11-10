@@ -10,7 +10,7 @@ The files in this folder:
 | File | What it is |
 |---|---|
 | `wakegate.py` | The gate itself: one Python script, standard library only (Python 3.9 or later) |
-| `compose.yaml` | The Docker stack: `wakegate` (the script in `python:3.13-alpine`) and `cloudflared` (the NAS tunnel) |
+| `compose.yaml` | The Docker stack: `wakegate` (the script in a `python` Alpine image) and `cloudflared` (the NAS tunnel); both images are pinned to exact versions there, and Dependabot proposes newer ones once a month |
 | `.env.example` | The settings to copy into `.env` |
 
 ## The gate's answers

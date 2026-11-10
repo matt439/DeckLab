@@ -50,6 +50,10 @@ def owned(result, p):
             awaited = sum(quantity for _, quantity in labels.get("on_the_way", []))
             labels["on_the_way"] = [(None, awaited)] if awaited else []
             labels["incoming_sources"] = [{"quantity": awaited}] if awaited else []
+            if row.get("own_printing_on_the_way"):
+                # E2-S30's note would name a printing only a pending order or product has.
+                for key in ("own_printing", "own_printing_label", "own_printing_more", "own_printing_on_the_way"):
+                    row.pop(key, None)
     for conflict in result.get("conflicts", []):
         conflict["decks"] = names(conflict.get("decks", []))
     allowed = set(visible_warnings(p))

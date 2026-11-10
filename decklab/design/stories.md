@@ -36,19 +36,19 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 18 | 0 | 2 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 18 | 2 | 5 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 2 | 8 | 0 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 19 | 2 | 4 | 1 |
+| [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 3 | 7 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 20 | 1 | 7 | 2 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 33 | 26 | 0 | 5 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 33 | 28 | 0 | 3 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 24 | 21 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 34 | 28 | 1 | 5 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 28 | 20 | 0 | 7 | 1 |
+| [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 72 | 39 | 8 | 21 | 4 |
-| **Total** | **365** | **268** | **15** | **66** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 72 | 44 | 11 | 13 | 4 |
+| **Total** | **365** | **277** | **19** | **53** | **16** |
 
-Counted from the story headers on 2026-10-29 after the source-aware two-player and pod counters, alongside the current feature and maintenance work. The reviews added five feature stories and eight hygiene stories, then the fixture-only entry-point story E11-S44, and corrected E1-S12 from missing to partial. Rechecked 2026-10-29: E1-S12 is built and E11-S39 partial (its database qualification pending). The TODO audit of 2026-10-29 added fifteen missing stories (twelve from the audit: E1-S27, E1-S28, E2-S27, E3-S25, E3-S26, E5-S25, E6-S25, E6-S26, E9-S26, E9-S27, E11-S45, E11-S46), then Matt's three UI requests (E3-S27, E5-S26, E6-S27), and corrected E7-S32 from missing to partial (its recognition spike and CLI are built). Matt closed E11-S16 as built the same day, and E3-S27, E5-S26, E6-S25, E6-S27 and E11-S46 were built the same day (E11-S12 stays partial after a further slice). Later the same day E5-S25 and E6-S26 were built, E1-S27's first slice (the library) made it partial, and E11-S12 and E3-S26 were built. E1-S27's Overview slices then finished it, and E2-S27 and E9-S27 were built. E1-S28 was built the same day. E3-S25's first slice (its replacements API, 2026-10-29) made it partial. Its dual-lands slice (2026-10-29) finished it. E11-S45 was built the same day. Recounted 2026-10-30: E7-S23's first slice (the token side on deck pages and the printout) made it partial. E7-S24's read-only slice (the counters and dice a deck's cards use) made it partial too. E9-S26's free cards by role on the Stats tab made it partial, leaving its cited role targets to Matt's choice of template; with the Command Zone template's targets (2026-10-31) it is built. Recounted 2026-10-31: E11-S47 (built 2026-10-30) was missing from the E11 row. E4-S16 was built (sideboard-plan tests). E7-S23's second slice (the opponent's tokens under their own heading and counted apart in the library line and the packing ticks) finished it. E7-S08 was built (token counts suggested from saved Forge games), and E9-S07 too (new decks and narrowed pages). Later on 2026-10-31 E11-S39 was built (its database qualification ran), E11-S31 became partial (global search built, its device check left), E11-S30 kept its device gate, and E7-S24 was built once migration 0020 was applied. Matt's self-hosting decisions of 2026-10-31 (Windows first; strangers install their own, family and friends join as members; release zips; currency as a setting) added E11-S48 to E11-S53, all missing; E11-S48 was built the same day, in three slices. Matt's expansion review of 2026-10-31 added twelve missing stories for work no story covered: E1-S29, E4-S27, E5-S27 to E5-S30, E9-S28, E9-S29 and E11-S54 to E11-S57. Matt's request of 2026-11-01 to run the live server on Linux added E11-S58, built the same day. Matt's deck-page question of 2026-11-02 added E5-S31, built the same day. Recounted 2026-11-02: E7-S33 (built 2026-11-02) was missing from the E7 row. The gauntlet design of 2026-11-02 added E3-S28 to E3-S31; E3-S28 and E3-S29 were built the same day, and E3-S30 and E3-S31 are missing. Later on 2026-11-02 the first slices of E5-S27 (Shopping's Baskets), E5-S28 (Build decks together) and E9-S29 (tutors on the Stats tab) made them partial, as the first slices of E1-S29 (the card viewer's decks line) and E5-S30 (the Wishlist page's short decks) made them, and E11-S56 (an empty space's start) was built. Matt's report of 2026-11-02 that the Against popular decks box is too wide added E3-S32, missing. On 2026-11-03 Matt decided E5-S29 is wanted (it stays missing, now ready) and E11-S54 and E4-S27 aren't (not wanted). Later on 2026-11-03 E3-S32 was built, E5-S29's first slice (the 90-day history and `shops history`) made it partial, and E1-S29 gained global search's short form (still partial). Matt's gauntlet decisions of 2026-11-03 (it's the lead feature; a standard sample of 20 core and upgraded Commander opponents; runs up to every playable deck, overnight; Matchups to be renamed Testing) added E3-S33 to E3-S38: E3-S33 and E3-S38 were built the same day, and E3-S34 to E3-S37 are missing. Later on 2026-11-03 E3-S34 was built, then E3-S35 (Matchups renamed Testing, next to Decks, with the Popular decks board), then E3-S36 (the popular-decks figure in the library) and E3-S37 (an editor choice to test against popular decks after saving). Matt's request of 2026-11-03 to try a precon before buying it added E3-S39, built the same day. Later on 2026-11-03 E8-S24 was built (kit on a deck being built). The persona and story review of 2026-11-04 added E11-S59 (wake-on-request, partial: built in code, not yet set up for real) and E11-S60 (the server PC's updater, smoke test and database move, built) for work no story covered, moved the self-hosting stories E11-S50 to E11-S53, E11-S56 and E11-S57 to the new Self-hoster persona, and cut stale Gap lines from twelve stories. Later on 2026-11-04 E11-S53's first slice (the price-check shops as a setting) made it partial. On 2026-11-04 E1-S29 (the viewer's decks line from every page), E5-S29 (price history on Shopping's row) and E5-S30 (the editor's My wishlist tick) were built. Later on 2026-11-04 E9-S28's first slice (Commanders we could build, the ranked list) made it partial. Later on 2026-11-04 E11-S49's first slice (release zips and installs without git) made it partial. E11-S55's phone audit and its fixes (2026-11-04) made it partial; its second slice (the other pages and the lab, 2026-11-04) leaves only a real screen reader. E5-S28's Queue these and each card's queue rows (2026-11-04) finished it. E5-S27's shop postage, free-postage add-ons and fewest-shops plan (2026-11-04) finished it too. Matt's requests of 2026-11-04 added E8-S25 (a setting for how a space's storage works) and E11-S61 (whether the More menus help), both missing. His report of 2026-11-04 from building a deck on an iPad added E4-S28, built the same day. On 2026-11-05 E9-S28's third slice (pairs counted together, held commanders' rows) finished it; E11-S49 gained Settings' newer-release line (still partial), and E8-S25's and E11-S61's reviews were written (both still missing, waiting for Matt). Later on 2026-11-05 E11-S53's second slice (the currency) left it partial; E3-S31 was built (a group run of chosen decks), which also finished E3-S19; E3-S30's command-line slice (`forge variant --gauntlet`) made it partial; E9-S29 was built (the official text on tutors); and E11-S08 gained the wishlist addition that moved other entries (still partial). Later on 2026-11-05 E11-S53's third slice (every currency label and Settings' Prices) finished it, and E11-S08 gained a wishlist removal put back after later changes (still partial). Matt's request of 2026-11-08 for members' own sleeves, deck boxes and playmats added E8-S26, built the same day. The product review of 2026-11-10 (a comparison with similar deck, collection, Commander, play, simulation and buying tools, each proposal then checked against the code and the backlog) added 53 missing stories, each for the part no story covered: E1-S30 and E1-S31, E2-S28 to E2-S32, E3-S41 to E3-S48, E4-S29 to E4-S34, E5-S32 to E5-S35, E6-S28, E7-S34 to E7-S38, E9-S30 to E9-S33, E10-S44, E10-S45 and E11-S62 to E11-S77; Matt has decided none of them yet.
+Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
 ---
 
@@ -771,7 +771,7 @@ Gap: categories are set by hand, one per line (E2-S24, whose Gap records the mis
 
 First slice: Suggest categories, with no schema or text-format change: a role-to-category mapping in a new `decklab/lib/stats/category_suggest.py`, exposed through `decklab/lib/api/card_lookup.py`, and a review sheet in `decklab/web/deck-categories.js`; tests in `decklab/tests/test_deck_categories.py`.
 
-**E2-S30** · Matt · could · S · missing
+**E2-S30** · Matt · could · S · built
 
 As a deck builder whose Planned list names particular printings, I want the deck page to say when I own a card only in another printing, so that I know which listed printings I don't have.
 
@@ -781,6 +781,8 @@ As a deck builder whose Planned list names particular printings, I want the deck
 - Given a built deck with a Printings in box record, when a card that record names is shown, then it has no note, and no note says a copy is free.
 
 Gap: no deck-page mark compares a line's named printing with the collection. E5-S31 (built) shows as-listed prices for missing copies only. A per-deck printing preference and an exact-printing queue action are left out. From the product review of 2026-11-10, compared with Moxfield's collection check and ManaBox's missing-card matching.
+
+Built 2026-11-10: `lib/listed_prices.py` `annotate_owned` (called by `pool.compare` for a Planned list only, with `pool.printing_counts` of the deck's space and the names in the deck's own effective Printings in box record left out) adds `own_printing` (`listed`/`other`), `own_printing_label`, `own_printing_more` and `own_printing_on_the_way` to live rows with copies owned or on the way whose every line names one printing and finish of that card. `web/deck-availability.js` `ownPrintingWords`; the Cards tab's card marks (`deck.js`) show a plain "Own another printing (M19 314)" chip, the card viewer and the price table (`deck-prices.js`) both states ("Own the listed printing (…)", "… on the way"). No count, total, banner, table or saved text changes; no wording about free copies; viewers without `sees_inventory` get no `owned` rows, so no fields. Choices made: the label on "other" names the other printing the space has most copies of (collection before incoming), with "and N more"; the list itself shows only the "another" case, to stay quiet; the editor's missing list isn't given the note. Left out as the story says: a per-deck printing preference and an exact-printing queue action. See [HISTORY.md](../HISTORY.md#the-printing-you-own-of-a-card-your-list-names-2026-11-10-e2-s30).
 
 First slice: extend E5-S31's annotation to owned rows in `decklab/lib/listed_prices.py`, using `printing_counts` in `decklab/lib/pool.py` for live rows only, and render the note in `decklab/web/deck-prices.js` and `decklab/web/deck-availability.js`; tests beside `decklab/tests/test_listed_prices.py`.
 
@@ -1377,7 +1379,7 @@ Gap: free cards by role and the role targets are Commander only (E9-S26); 60-car
 
 First slice: casual decks only: a legality-free fit in `decklab/lib/decks/role_pool.py`, a casual branch in `decklab/lib/api/role_cards.py` replacing its 400, shown in `decklab/web/stats.js`.
 
-**E3-S43** · Matt · could · S · missing
+**E3-S43** · Matt · could · S · partial
 
 As the person who runs the gauntlet, I want to see when the popular decks list was built and what a rebuild would change, so that a rebuild never orphans results by surprise.
 
@@ -1386,7 +1388,13 @@ As the person who runs the gauntlet, I want to see when the popular decks list w
 - Given a saved catalogue, when I run `python -m decklab.lib.forge gauntlet build`, then before saving it prints how many opponents' lists changed and whether the standard sample would change.
 - Given `gauntlet export FILE` on one PC and `gauntlet import FILE` on another, then the catalogues and saved samples arrive with a verified sha, playable decks are screened again, and no house deck's results are included.
 
-Gap: the catalogue already records its build date and sha (E3-S28), and E3-S34 explains results a rebuild set aside; no page shows the date, a build prints no difference, and there is no export or import. From the product review of 2026-11-10. Needs Matt's decision: whether `FG#4` copies the development PC's catalogue to the server or builds its own as planned.
+Status: partial. Now: the first slice is built (2026-11-10; [HISTORY.md](../HISTORY.md#when-the-popular-decks-list-was-built-and-what-a-rebuild-would-change-2026-11-10-e3-s43-first-slice)): the muted "Popular decks list built <date> (<short sha>)" line on the Popular decks board and a deck's Against popular decks, with its age from 90 days old and never a request to rebuild (`gauntlet_page.catalogue_stamp`, `gtBuiltLine`), and `gauntlet build`'s printed difference before saving and on a dry run (opponents' lists changed, joined, left; whether the standard sample would change: `lib/gauntlet/catalogue.difference`). Left: `gauntlet export FILE` / `gauntlet import FILE` (catalogues and saved samples with a verified sha, playable decks screened again, no house results), which waits for Matt's decision on `FG#4` (copy the development PC's catalogue to the server, or build its own).
+
+Awaiting: decision
+
+Remaining: Criterion 4 is unbuilt: `gauntlet export FILE` / `gauntlet import FILE` (catalogues and saved samples with a verified sha, playable decks screened again, no house deck's results). It waits for Matt's decision on FG#4: copy the development PC's catalogue to the server, or build its own there. Criteria 1-3 (the built line on the board and Testing tab, the age note from 90 days, and gauntlet build's printed difference) are done.
+
+Gap: the catalogue already records its build date and sha (E3-S28), and E3-S34 explains results a rebuild set aside; there is no export or import yet. From the product review of 2026-11-10. Needs Matt's decision: whether `FG#4` copies the development PC's catalogue to the server or builds its own as planned.
 
 First slice: the date line and the build difference only: the catalogue's `built` date and short sha in `decklab/lib/api/gauntlet_board.py`, drawn in `decklab/web/gauntlet-board.js` and `gauntlet.js`, and the printed difference in `decklab/lib/forge/cli_gauntlet.py`.
 
@@ -2420,7 +2428,7 @@ As a buyer reading a deck's missing cost, I want to know it's for the cheapest p
 
 Built 2026-11-02: `cards.printing_usd` / `cards.price_aud_printing` (the Collection's own-printing prices use it too), `lib/listed_prices.py` (pool.compare's live rows for a Planned list only, the deck page's and the editor's; never the Play-now list, swaps or precons: `listed_printing`, `listed_finish`, `listed_aud_each`, `listed_aud_missing`, `listed_material`, and `totals.as_listed` / `aud_missing_as_listed` only when material), `web/deck-availability.js`, `web/deck-prices.js`, `web/editor-save.js`. The saved deck text and its table keep the cheapest printing. A card listed in several printings, or with a line naming none, keeps only the cheapest price.
 
-**E5-S32** · Matt · could · S · missing
+**E5-S32** · Matt · could · S · built
 
 As Matt, whose Deck Lab runs on a server PC, I want Shopping to carry on when an order's or queue row's research file isn't on that PC's disk, so that one buylist not yet pulled there doesn't hide the queue, the deliveries and the follow-ups.
 
@@ -2430,9 +2438,11 @@ As Matt, whose Deck Lab runs on a server PC, I want Shopping to carry on when an
 
 Gap: `purchases.overview()` raises on the first missing source, so `GET /api/shopping` answers 500 for the whole page (the queue, the deliveries and E6-S18's follow-ups), and its `warnings` list is always empty. Write-time checks in `decklab/lib/inventory/orders.py` already stop bad rows being saved, so what is left is drift on disk afterwards. From the product review of 2026-11-10.
 
+Built 2026-11-10: `purchases.overview(strict=False)` (`read_records` and `read_queue` take a `missing` list) turns a missing non-deck source into a warning. `lib/api/shopping.py` calls it non-strict, so `GET /api/shopping` lists every row and order, and `data.warnings` names each order, and the queue rows grouped by source, with the missing path. `web/shopping.js` already drew `data.warnings` in its "Some shopping records need attention" box, so the page code is unchanged. Structural problems, coverage problems and a deck source that isn't a deck still answer 500. The strict readers are unchanged: `purchases --check`, `db check`, the tokens check, the order and watchlist writes. `smoke.py`'s `records_repo` warning is reworded. Nothing is left.
+
 First slice: give `overview()` in `decklab/lib/purchases.py` a `strict` keyword (default strict) that turns a missing non-deck source into a warning, call it non-strict from `decklab/lib/api/shopping.py`, and draw `data.warnings` in a warn box in `decklab/web/shopping.js`; reword `decklab/smoke.py`'s `records_repo` warning.
 
-**E5-S33** · Matt · should · M · missing
+**E5-S33** · Matt · should · M · built
 
 As Matt, reading the shops' snapshot before ordering, I want a wrong or cut-short match to say so, so that I don't trust "not listed" or a price trend when the shop was only partly read or my printing wasn't the one compared.
 
@@ -2442,6 +2452,8 @@ As Matt, reading the shops' snapshot before ordering, I want a wrong or cut-shor
 - Given a queue row for a token card, when its shop line shows, then it says token cards aren't checked at this shop.
 
 Gap: the snapshot, both adapters and the 90-day history are built (E5-S08, E5-S19, E5-S29), but `history.day_summary` always picks as an any-printing row, `gamesportal.py` reads one page with no flag for more, `pick()` compares set codes with no tolerance, and `queue_names()` has no token test. From the product review of 2026-11-10, compared with Cardmarket's Shopping Wizard and TCGplayer's optimiser.
+
+Built 2026-11-10 (status: built). All four criteria: Price history is read for the queue row's own printing and finish (history.py's day_summary/report take the row; GET /api/shopping/price-history takes row=<queue_row>, 409 when the row is no longer that card's; shopping-history.js sends it and names the scope; `shops history NAME --row N`); Games Portal entries read from a full page or one linking a further page are marked partial and say "first page only, more results not read" on Shopping, in Baskets, missing cards, deck Prices and the history; an exact row matches with tolerance (case, spaces, leading zeros, lib/shops/rows.py) and otherwise says "listed, but not matched to your printing" with the shop's sets (status not_matched); a token row is never looked up and its line says token cards aren't checked at this shop (status token). Left as it was, outside the criteria: on Shopping's snapshot line and in Baskets an any-printing row with a foil or etched finish is still answered with the cheapest nonfoil (pick()'s existing rule); only its Price history follows the finish. Tolerance is deliberately narrow: no set-code alias table between Scryfall's and the shops' codes (a mismatch shows as not_matched with the shop's sets). Not checked against the live shops or a real browser; an existing snapshot gains the partial flag at its next nightly run.
 
 First slice: `day_summary` and `report` in `decklab/lib/shops/history.py` take the queue row, `decklab/lib/api/shop_history.py` accepts a row selector and `decklab/web/shopping-history.js` sends it.
 
@@ -4291,7 +4303,7 @@ Built (2026-11-04): the second slice. The Overview's At the Commander table name
 
 Built (2026-11-05): the official text. `constants.BRACKET_TUTORS` keeps Wizards' wording on tutors, read 2026-11-05 from the Commander Brackets Beta Update of 2025-10-21, which removed the tutor restrictions from every bracket ("rely on Game Changers to catch the most efficient tutors"); only Bracket 4's "Players expect" list names tutors, and the 2026-02-09 update doesn't mention them. `stats.tutors.tutor_rules` adds `bracket["tutor_rules"]`, "not known" while Wizards' latest Commander announcement (E9-S24) is newer than the wording's `reviewed_through` or its date is unknown. The Stats tab's Minimum bracket, the Overview's What opponents will face and the printout quote it at the target bracket. The text sets no number, so there is no Checks warning and nothing is blocked. Upkeep: re-read `BRACKET_TUTORS` after a new Commander announcement. Tests: `test_commander_readiness.py`, `test_commander_readiness_ui.py`, `test_commander_print_ui.py`, `test_stats_tutors_ui.py`. See [HISTORY.md](../HISTORY.md#the-official-bracket-text-on-tutors-2026-11-05-e9-s29).
 
-**E9-S30** · Matt · could · S · missing
+**E9-S30** · Matt · could · S · built
 
 As Matt, building a Commander deck towards a target bracket, I want a Game Changer mark on a card before I add it, so that I see its bracket cost while choosing, not a moment later in the Checks panel.
 
@@ -4300,6 +4312,8 @@ As Matt, building a Commander deck towards a target bracket, I want a Game Chang
 - Given a casual 60-card deck, then no chip shows anywhere (E2-S21).
 
 Gap: the shared card JSON has no game_changer field, though the card index stores it, so no picker can mark a card before it's added. E9-S03's live check names the Game Changers seconds after adding, E9-S25 covers combo pieces one card away, and the finder's stepper and the EDHREC and wishlist ideas already handle cards in the draft. From the product review of 2026-11-10, compared with Table Commander, Moxfield and Archidekt.
+
+Built (2026-11-10): the whole story. `_card_json` carries `game_changer`; a Commander draft's checked bracket carries `with_game_changer` (from `stats`' new `minimum_with_game_changer`). `editor-cards.js`'s `gameChangerChip` marks flagged cards in the finder, EDHREC ideas, My wishlist (all through `searchResultSide`) and Considering rows (`markEditorConsideringRows`), outside the quantity stepper. From the last check's Planned-list bracket it says "would put the deck at Bracket N, above its target" when one more Game Changer would pass a bracket's limit and the Target bracket, and is redrawn after every check (`syncGameChangerChips`). A 60-card deck shows no chip. Nothing left. Not looked at in a real browser (Node DOM fixture tests only). Tests: `test_game_changer_chip.py`, `test_editor_game_changer_ui.py`. See [HISTORY.md](../HISTORY.md#a-game-changer-chip-on-commander-picker-rows-2026-11-10-e9-s30).
 
 First slice: add game_changer to `_card_json` in `decklab/lib/api/card_lookup.py`, draw the chip in `decklab/web/editor-cards.js` from the bracket `editor-save.js` holds, and reuse it in `editor-edhrec.js`, `editor-wishlist.js` and `editor-considering.js`, with an API test and a UI test.
 
@@ -6083,7 +6097,7 @@ Decided (Matt, 2026-11-04): he couldn't find Build decks on the iPad, though he 
 
 Gap: Matt's decision on the review in [more-menus-review.md](more-menus-review.md) (2026-11-05): make Build decks a top-bar pill in the lab from 1000 px only (a CSS rule as well as `nav: "main"`, since a phone on its side gets the lab's bar from 600 px), staying in the phone's and upright iPad's More sheet and in a phone on its side's More ▾; add a Game log link to the deck Overview's Played at home panel; then take Build decks out of the Collection page's More; keep every other item. Then make the moves he agrees and record their reasons here. The page counts weren't available off the server PC: the review gives the read-only query to weigh Tokens, Sleeves & boxes, Wishlist and Activity with.
 
-**E11-S62** · Matt · should · S · missing
+**E11-S62** · Matt · should · S · partial
 
 As Matt, publishing Deck Lab's code in a public repo, I want the Worker's config to name no real zone and CI to stop the next such leak, so that the public-repo rule is checked, not only written down.
 
@@ -6092,11 +6106,15 @@ As Matt, publishing Deck Lab's code in a public repo, I want the Worker's config
 - Given a tracked Cloudflare or wake gate config file, when a route, `zone_name`, `account_id` or `zone_id` isn't an example placeholder, then the check fails.
 - Given the PC, where `config.json` exists, when the fixture suite runs, then the configured domain and emails are searched for in every tracked file.
 
-Gap: none of this is built. E10-S39's `test_web_no_personal_data.py` reads only the served files and needs a local `config.json`, so CI has nothing to match; E11-S02 lists `wrangler.toml` but says nothing of its routes. The check must never hold the real domain itself (a SHA-256 at most). From the product review of 2026-11-10. Needs Matt's decision: whether to rewrite history, which has held the name since the first public commit; Protect main forbids the force push.
+Now: partial (2026-11-10): all four criteria are built ([HISTORY.md](../HISTORY.md#the-public-repo-leak-guard-2026-11-10-e11-s62)). `decklab/cloudflare/wrangler.toml` names only decklab.example.com placeholders (it already did, since the first public commit); the real routes go in a gitignored `wrangler.local.toml` (README, "The real routes"). `scripts/audit_public_repo.py --check`, with `decklab/tests/test_public_repo_audit.py`, runs in `lint.yml`: emails outside the example domains and a small allow-list; routes, `zone_name`, `hostname`, `account_id` and `zone_id` in Cloudflare and wake gate config files; and, where `config.json` exists, its emails, `allowed_hosts` and Access team and AUD tag in every file (the fixture suite runs it as a child process, since the runner hides `config.json`).
 
-First slice: placeholders in `decklab/cloudflare/wrangler.toml`, a gitignored `wrangler.local.toml` and the step in `decklab/README.md`; then `scripts/audit_public_repo.py --check` with `decklab/tests/test_public_repo_audit.py`, run in `.github/workflows/lint.yml`.
+Evidence:
+- `scripts/audit_public_repo.py`; `decklab/tests/test_public_repo_audit.py`; `.github/workflows/lint.yml`
+- `decklab/cloudflare/wrangler.toml`, `.gitignore` (`wrangler.local.toml`); `decklab/README.md`, "The real routes"
 
-**E11-S63** · Matt · could · S · missing
+Gap: only Matt's decision on a history rewrite. Run against the real config on 2026-11-10, the audit found nothing in the tree, and `git log --all -i -S` for each configured value (6 emails, the domain and its first label alone, the Access team address, the AUD tag) found no commit, so the history doesn't appear to hold the domain or emails as `config.json` has them and no rewrite looks needed. That search covers only values held in `config.json`; the README's wrangler `--config` and `--route` deploy steps were not run against wrangler.
+
+**E11-S63** · Matt · could · S · partial
 
 As Matt, the household admin, I want Deck Lab's pages and API answers to refuse being framed and to carry a strict content policy, so that another site can't put the real page in a frame and borrow a signed-in person's clicks.
 
@@ -6105,11 +6123,15 @@ As Matt, the household admin, I want Deck Lab's pages and API answers to refuse 
 - Given `index.html`, when a test reads it, then it has no inline script body and no `style=` attribute.
 - Given an answer on the tunnel's listener, when its headers are read, then it has `Strict-Transport-Security`, which the home listener never sends, and a `Permissions-Policy` that leaves the camera to card scanning.
 
-Gap: none of it is built. `_send` in `decklab/lib/server_http.py` adds only nosniff and Referrer-Policy; only the `/sym` SVGs, the Worker's off page (E11-S02) and the wake gate (E11-S59) carry a policy. The server's cross-site write check can't see a framed copy of the real page. Check real browsers and scanning (E7-S32) before shipping. From the product review of 2026-11-10.
+Now: partial (built 2026-11-10, both slices; awaiting the real-browser check; [HISTORY.md](../HISTORY.md#no-frames-and-a-content-policy-on-every-answer-2026-11-10-e11-s63)). Built: `X-Frame-Options: DENY`, a `Content-Security-Policy` with `frame-ancestors 'none'` and a `Permissions-Policy` (`camera=(self)`, others off) on every answer from `_send`; HTML answers get `PAGE_POLICY` (self only; images also `data:` and `blob:`; no `unsafe-inline`), all others `default-src 'none'`, `/sym` its own sandboxed policy plus `frame-ancestors`; `Strict-Transport-Security` only on the tunnel's listener; the theme script moved to `web/theme-boot.js`; `el()` sets styles through the style object so no `style=""` attribute is written. HSTS is a year for the host name only (no `includeSubDomains`, no preload). The home listener's page policy also names the configured wake gate's plain origin in `connect-src` (E11-S59's `openWakeGate`); the tunnel's never does.
 
-First slice: the anti-framing headers and default policies in `_send`, the theme script moved from `decklab/web/index.html` into a new `decklab/web/theme-boot.js`, and header cases in `decklab/tests/test_server.py`. HSTS and Permissions-Policy are a second slice.
+Evidence:
+- `decklab/lib/server_http.py` (`_send`, `PAGE_POLICY`, `DATA_POLICY`, `page_policy`); `decklab/web/theme-boot.js`; `decklab/web/core.js` (`el()`)
+- `decklab/tests/test_server.py`, `test_server_access.py`, `test_symbols.py` and `test_web.py`
 
-**E11-S64** · Matt · could · S · missing
+Gap: All four acceptance criteria are built and tested (with one deliberate exception to "connections only from Deck Lab itself": the home page may also read the configured wake gate's origin). What is left is the story's own "check real browsers and scanning (E7-S32) before shipping": Matt, on Safari/iPad/phone after the server is updated, watching the console for "Refused to..." lines, and confirming wake-on-request still opens the gate from a home page. Card scanning (E7-S32) needs the same check under the policy. From the product review of 2026-11-10.
+
+**E11-S64** · Matt · could · S · partial
 
 As Matt, opening Deck Lab on a phone and the iPad, I want the page's scripts and stylesheets kept by the browser and sent compressed, so that a page load doesn't ask the server PC about some 190 files, each read and hashed again.
 
@@ -6117,9 +6139,13 @@ As Matt, opening Deck Lab on a phone and the iPad, I want the page's scripts and
 - Given a text file (HTML, JS, CSS, JSON, SVG), when a client that accepts gzip asks for it, then the answer is gzipped with `Vary: Accept-Encoding` and an ETag of its own; fonts and pictures never are.
 - Given a file edited or replaced by a `git pull`, when it's next asked for, then the new bytes are served without a restart.
 
-Gap: the long caching, the compression and the in-memory copy aren't built. E11-S05's `?v=` stamp exists, but only to bust caches: `_static` in `decklab/lib/server_http.py` still reads and hashes each file per request and answers `no-cache`. Accessory pictures, card images and API answers keep their caching. Time a phone's load before and after, as the gain is unmeasured. `private`, never `public`, so Cloudflare keeps nothing outside the login. From the product review of 2026-11-10.
+Now: partial (built 2026-11-10, branch row/E11-S64; awaiting a timed load on a phone and the iPad; [HISTORY.md](../HISTORY.md#scripts-and-stylesheets-kept-by-the-browser-and-sent-compressed-2026-11-10-e11-s64)). Built (2026-11-10, branch row/E11-S64): all three acceptance criteria. `_static` serves from a per-file in-memory copy keyed on size and modified time, gzips text files on request with `Vary: Accept-Encoding` and a separate ETag (fonts and pictures never), and answers `private, max-age=31536000, immutable` only for a .js/.css whose `v` is the current web revision's stamp and whose file is the one fingerprinted (`build.asset_is_current`); everything else keeps `no-cache` and its ETag. Cases are in `decklab/tests/test_server_static_cache.py` (a new module, since `test_server.py` is near the 1,200-line limit).
 
-First slice: in `_static`, a per-file cache keyed on size and modified time with gzip negotiation, then the immutable header only when `v` matches a cheaply cached revision from `decklab/lib/build.py`; cases in `decklab/tests/test_server.py`.
+Evidence:
+- `decklab/lib/server_http.py` (`_static`, `static_body`, `StaticBody`, `accepts_gzip`); `decklab/lib/build.py` (`asset_is_current`, `web_revision`)
+- `decklab/tests/test_server_static_cache.py`
+
+Gap: Left: time a phone's and the iPad's load before and after on the live server (the gain is still unmeasured on a device); status partial until then. Accessory pictures, card images and API answers keep their caching. `private`, never `public`, so Cloudflare keeps nothing outside the login. From the product review of 2026-11-10.
 
 **E11-S65** · Matt · could · M · missing
 
@@ -6133,7 +6159,7 @@ Gap: the tables hold path, handler, query keys and body cap, and the rules of E1
 
 First slice: an `ACCESS` entry per row in `decklab/lib/feature_routes.py`, a new `decklab/tests/test_route_access.py` (the older routes of `server_http.py` by a hand list), and the stale statements fixed in `decklab/server.py`, `decklab/lib/permissions.py` and `AGENTS.md`. `SECURITY.md` and a check that the docs list every migration follow.
 
-**E11-S66** · Matt · could · S · missing
+**E11-S66** · Matt · could · S · built
 
 As Matt, relying on a hand-written sign-in verifier and picture readers because Deck Lab uses only the standard library, I want them checked against independent vectors and damaged input, so that a later edit can't weaken the door members come through.
 
@@ -6146,7 +6172,9 @@ Gap: no outside vectors and no randomised test exist. The hand-written negative 
 
 First slice: a new `decklab/tests/test_hostile_input.py` reusing the existing tests' picture and token builders with `random.Random(0)`, then the trimmed vector fixture under `decklab/tests/fixtures/`, looped in `decklab/tests/test_access.py`.
 
-**E11-S67** · Matt · could · S · missing
+Now: built 2026-11-10 ([HISTORY.md](../HISTORY.md#outside-vectors-and-seeded-damage-for-the-sign-in-verifier-and-picture-readers-2026-11-10-e11-s66)). Built (2026-11-10). All four criteria met: the trimmed Wycheproof fixture (`decklab/tests/fixtures/wycheproof/`, Apache-2.0 `LICENSE` and a README of the changes kept) is looped in `test_access.py` (`WycheproofTests`: 24 valid pass, 269 invalid and 3 acceptable refused); `decklab/tests/test_hostile_input.py` runs the seeded picture and token mutations, bounded by count. The token run found and fixed one fault: a signature whose last base64url character had spare bits set was accepted as a second spelling of a valid token; `access.py` now requires the encoder's own text for the signature. The two extra token cases (leading zero byte, JSON-array header) are added. Not yet run on Linux: it's standard library only with no paths beyond `pathlib`, and CI's shards will be the first Linux run. Nothing left.
+
+**E11-S67** · Matt · could · S · built
 
 As Matt, the only maintainer of a public repo that publishes release zips, I want its actions, images and dependencies pinned and their updates proposed to me, so that a changed upstream tag can't alter a release.
 
@@ -6158,6 +6186,8 @@ As Matt, the only maintainer of a public repo that publishes release zips, I wan
 Gap: none of the four is built: `.github/` holds only the workflows, whose actions are pinned by major tag. Already in place: Dependabot's alerts, E11-S49's release only of a commit whose checks passed, and the Forge download's SHA-256 check. Checking an attestation inside Deck Lab waits for E11-S51's updater. From the product review of 2026-11-10, compared with OpenMTG's and Deck Lotus's pinned images. Not code: Matt checks in the repo's settings that secret scanning is on.
 
 First slice: `.github/dependabot.yml` for `github-actions` and `pip`, SHAs in `release.yml`, `tests.yml` and `lint.yml`, and a dated cloudflared tag in `decklab/wakegate/compose.yaml`. The attestation follows before the first release is tagged.
+
+Now: built 2026-11-10 ([HISTORY.md](../HISTORY.md#supply-chain-upkeep-2026-11-10-e11-s67)). Built 2026-11-10 (all four criteria): `.github/dependabot.yml` (one monthly multi-ecosystem group over github-actions, pip in /decklab, npm in /decklab/safari and /decklab/ui_review, docker-compose in /decklab/wakegate); every `actions/*` use in the three workflows pinned to a commit SHA with its version comment; `decklab/wakegate/compose.yaml` on `cloudflare/cloudflared:2026.10.7` and `python:3.13.18-alpine`; `release.yml` attests the zip's build provenance and SELF-HOSTING.md gives `gh attestation verify` as an optional check. Tests: `decklab/tests/test_supply_chain.py`. Left: Matt checks secret scanning is on in the repo's settings (not code); the Dependabot file and the attestation step are unproven until GitHub runs them (first monthly pull request, first tagged release); the `postgres:18` CI service image stays a major tag (outside the story's criteria); checking an attestation inside Deck Lab waits for E11-S51.
 
 **E11-S68** · Matt · could · M · missing
 
@@ -6184,7 +6214,7 @@ Gap: neither part is built. E11-S03's nightly writes the dump as it is and the e
 
 First slice: a per-table scope in `decklab/db/export.py` from a new `database.export_remote_scope` setting in `decklab/db/conn.py`, with fixture tests. Encrypting the `backup_dir` copy in `decklab/db/backup.py` is the second slice.
 
-**E11-S70** · Matt · could · S · missing
+**E11-S70** · Matt · could · S · built
 
 As Matt, updating the server PC with `python -m decklab.update`, I want the old server stopped before the backup whenever migrations are pending, and a database newer than the code named as such, so that restoring the pre-migration backup loses no write and a rolled-back checkout explains itself.
 
@@ -6197,7 +6227,9 @@ Gap: none of this is built. E11-S60's updater backs up and migrates while the ol
 
 First slice: in `decklab/update.py`, stop the server before the backup step when migrations are pending, with cases in `decklab/tests/test_update.py` and the wording in SELF-HOSTING.md's "Updating".
 
-**E11-S71** · Matt · could · S · missing
+Now: built 2026-11-10 ([HISTORY.md](../HISTORY.md#safer-schema-changes-in-the-updater-2026-11-10-e11-s70)). Built (2026-11-10). The updater stops a running server before the backup when migrations are pending, on every system, and starts it again afterwards (even with --no-restart); none pending, no early stop. A failed backup or migration says the server is stopped, how to start it, and when a code-only rollback is fine. A database with migrations later than every file here is migrate.DatabaseNewer, dbstatus's "database newer" state, and the admin banner says the database is newer than this code; nothing else is refused. migrate.py's docstring, README "Database" and SELF-HOSTING "Updating" state add-then-remove. Left: nothing to build. Not yet exercised on the live server (a real update with a pending migration), and the new database integration case (test_db_runtime CheckTests.test_a_database_newer_than_the_code_is_its_own_state) has only CI's database job to run it.
+
+**E11-S71** · Matt · could · S · built
 
 As Matt, relying on figures Deck Lab's authors looked up by hand, I want one list of those reference facts with the date each was last reviewed, and a line on Settings when one is overdue, so that land counts, role targets and EDHREC's page layout don't go stale unnoticed.
 
@@ -6210,7 +6242,9 @@ Gap: no index, time-based review signal or Settings line exists. E9-S24 and E9-S
 
 First slice: add `decklab/lib/stats/reviewed.py` (the records and `due(today)`), show its overdue groups on the admin Settings page, and test it in `decklab/tests/test_reviewed.py`.
 
-**E11-S72** · Matt · could · S · missing
+Now: built 2026-11-10 ([HISTORY.md](../HISTORY.md#reference-facts-to-review-2026-11-10-e11-s71)). Built (2026-11-10): the index (`decklab/lib/stats/reviewed.py`: six groups, each with source, reviewed-date constant, interval and, for the two bracket groups, the announcement date reviewed through), `due(today, announced)`, admin-only `GET /api/settings/reference-facts`, and Settings' About line "Reference facts to review", which also names bracket rules or tutor wording older than Wizards' newest Commander announcement without a deck being opened. EDHREC's shape date is `edhrec.SHAPE_CHECKED`. Nothing left. Notes: the intervals (182 and 365 days) are the builder's choice, changeable in `reviewed.py`; the Karsten and bracket-rules reviewed dates were taken from the existing "looked up on 2026-09-29" comment; nothing is due today, so the line is hidden on the live page until a date lapses or a newer announcement is found.
+
+**E11-S72** · Matt · could · S · built
 
 As Matt, keeping Deck Lab's design model honest, I want the story counts worked out from the story headers by a script and checked in CI, so that the summary tables can't drift from the stories and nobody recounts them by hand.
 
@@ -6222,6 +6256,8 @@ As Matt, keeping Deck Lab's design model honest, I want the story counts worked 
 Gap: nothing parses stories.md; the counts are kept by hand and the design README's totals have already drifted from the headers. E11-S41 and E11-S42 (the comment and command-document audits) are the built neighbours. From the product review of 2026-11-10, compared with Playgroup.gg publishing data-quality figures beside results.
 
 First slice: add `scripts/audit_stories.py` (standard library) with `--check` and `--write`, a fixture test in `decklab/tests/test_audit_stories.py` and a step in `.github/workflows/lint.yml`, correcting the design README's totals in the same change.
+
+Now: built 2026-11-10 ([HISTORY.md](../HISTORY.md#story-counts-generated-from-the-story-headers-2026-11-10-e11-s72)). Status: built (2026-11-10). `scripts/audit_stories.py` counts the stories per epic from the header lines; `--check` (run by lint.yml with its fixture tests, documentation-only changes included) fails when stories.md's Summary table or design/README.md's epic table and totals line disagree or a header is malformed; `--write` rewrites only those blocks, idempotently; `--sessions` lists partial stories' optional Awaiting lines by device against TODO.md's rows. The hand recount paragraph under the Summary is one line naming the script. Evidence: `scripts/audit_stories.py` (parse_stories, count, fix_stories, fix_readme, sessions, main); `decklab/tests/test_audit_stories.py`; `.github/workflows/lint.yml` (Check story counts against the story headers); `decklab/README.md`. Gap: none for the story. Notes: after flipping a story's status or adding a story, run `python scripts/audit_stories.py --write` or lint (and test_audit_stories' repo check) fails. No story carries an Awaiting line yet (they are optional); `--sessions` names the partial stories with a DECISION row in TODO.md and no Awaiting line. The design README's hand-written "Must and should stories" line isn't checked; the script's plain output prints the figures to copy. The Gap's claim that the README totals had drifted was no longer true when this was built: all tables agreed.
 
 **E11-S73** · Self-hoster · could · S · missing
 

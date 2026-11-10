@@ -468,6 +468,9 @@ def _commander_checks(by_section, sections, unresolved, warnings):
                      "not_legal": card_list(not_legal), "source": "banned-list"},
         "bracket": {
             "minimum": bracket, "cards_minimum": cards_bracket, "label": BRACKET_LABELS[bracket],
+            # The minimum with one more Game Changer than the deck holds (E9-S30's chip in the pickers).
+            "minimum_with_game_changer": min_bracket(n_gc + 1, len(mld or []) + len(land_combos),
+                                                     len(extra_turns or []), len(infinite_combos)),
             "reasons": reasons,
             "data": data,
             "unknown_cards": sorted({name for section, name in unresolved

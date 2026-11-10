@@ -175,11 +175,12 @@ def _status(key, answer):
 
 def dispatch(handler, route, query):
     from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, commander_candidates, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, dice, edhrec, editor, history,
-                                 library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_combined, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_ideas, wishlist_undo)
+                                 library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, reference_facts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_combined, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_ideas, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
 
     gets = {
         ("settings", "maintenance"): (maintenance.maintenance_view, ()),
+        ("settings", "reference-facts"): (reference_facts.reference_facts_view, ()),
         ("server", "restart"): (server_restart.view, ()),
         ("collection",): (collection.collection_view,
                          ("q", "color", "type", "role", "mv", "availability", "page", "limit", "space")),
@@ -240,7 +241,7 @@ def dispatch(handler, route, query):
         ("gauntlet", "catalogue"): (_gauntlet_catalogue, ("format",)),
         ("gauntlet", "board"): (_gauntlet_board, ("format", "profile")),
         ("shopping", "combined"): (_shopping_combined, ("decks",)),
-        ("shopping", "price-history"): (_price_history, ("name",)),
+        ("shopping", "price-history"): (_price_history, ("name", "row")),
     }
     posts = {
         ("activity", "undo"): activity_undo.apply_undo,

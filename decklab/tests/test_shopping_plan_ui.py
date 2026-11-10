@@ -98,7 +98,7 @@ SETTINGS = SHELL + r"""
   apiWrite = async (path, body, method) => { sent.push({path, body, method}); if (fail) throw fail;
     return {...reply, revision: body.expect + 1}; };
   showFooter = () => {}; loadServerRestart = () => {}; settingsSimulations = () => {}; loadCommanderNightSettings = () => {};
-  loadSettingsMembers = () => {}; loadSettingsMaintenance = () => {}; loadVisits = () => {};
+  loadSettingsMembers = () => {}; loadSettingsMaintenance = () => {}; loadVisits = () => {}; loadReferenceFacts = () => {};
   const openPostage = async (who = 'matt') => { as(who, false); location.hash = '#/settings';
     showSettings(new URLSearchParams(), routeToken); await flush(); return main.querySelector('.postage-form'); };
 """

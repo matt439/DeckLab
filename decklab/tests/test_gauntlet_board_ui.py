@@ -261,6 +261,33 @@ class GauntletBoardUiTests(unittest.TestCase):
           gbRefresh(view,{running:[{id:'j1',status:'queued'}]});await settle();assert.equal(calls.length,3);
         """)
 
+    def test_one_muted_line_says_when_the_list_was_built_and_its_age_only_when_old(self):
+        self.run_js("""
+          const year=new Date().getFullYear();
+          const cat=(extra={})=>({built:`${year}-11-02T12:00:00Z`,sha:'1a2b3c4d',age_days:8,old:false,...extra});
+          let answer=board('commander',[tested('commander/c','Commander C',.5)],{catalogue:cat()});
+          api=async()=>answer;
+          open();await settle();
+          let lines=main.querySelectorAll('.gb-built');
+          assert.equal(lines.length,1);
+          assert.equal(lines[0].textContent,`Popular decks list built 2 November ${year} (1a2b3c4d).`);
+          assert((lines[0].getAttribute('class')||'').split(' ').includes('gt-small'));
+          // Old: its age in plain words, and never a request to rebuild.
+          assert.equal(gtBuiltLine(cat({age_days:120,old:true})).textContent,
+            `Popular decks list built 2 November ${year} (1a2b3c4d), 4 months ago.`);
+          assert(!/rebuild|build again/i.test(gtBuiltLine(cat({age_days:400,old:true})).textContent));
+          // No sha, no line without a build time, and none before a catalogue exists.
+          assert.equal(gtBuiltLine(cat({sha:null})).textContent,`Popular decks list built 2 November ${year}.`);
+          assert.equal(gtBuiltLine(null),null);assert.equal(gtBuiltLine({built:null,sha:'x'}),null);
+          assert.equal(gtBuiltLine({built:'soon',sha:'x'}),null);
+          clear(main);answer=board('commander',[],{state:'no_catalogue',sample:null,catalogue:null});
+          open();await settle();
+          assert(!main.querySelector('.gb-built'));
+          // An answer from an older server (no catalogue) draws no line.
+          clear(main);answer=board('commander',[]);open();await settle();
+          assert(!main.querySelector('.gb-built'));
+        """)
+
 
 if __name__ == "__main__":
     unittest.main()

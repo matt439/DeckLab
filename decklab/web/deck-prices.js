@@ -156,6 +156,8 @@ function ownedRow(r, usable, priceError = false, o = null) {
   if (r.priced_finish && r.priced_finish !== "nonfoil" && priced) labels.push(status("plain", `${r.priced_finish} price`));
   const listed = !priceError && listedPriceWords(r, o);
   if (listed) labels.push(status(r.listed_material ? "warn" : "plain", listed));
+  const ownPrinting = ownPrintingWords(r);       // deck-availability.js: which printing the space has (E2-S30)
+  if (ownPrinting) labels.push(status("plain", ownPrinting));
   const reprints = r.missing > 0 ? reprintInfo(r) : null;
   const savedShop = Number.isSafeInteger(r.missing) && r.missing > 0 && Object.hasOwn(r, "shop_snapshot") && typeof shopMissingSnapshotLine === "function"
     ? shopMissingSnapshotLine(r) : null;

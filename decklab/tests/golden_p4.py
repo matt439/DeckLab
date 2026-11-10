@@ -140,6 +140,11 @@ older code (the committed tests/fixtures/inventory_goldens):
   listed_aud_each, listed_aud_missing and listed_material and the totals' as_listed and
   aud_missing_as_listed are dropped; every count, cheapest price and label still compares.
   test_listed_prices checks the fields themselves.
+- "owned-printings": E2-S30 adds which printing the space has of a card whose Planned list names
+  one to the same live rows (deck pages, and the gate's owned_vs_needed with and without prices).
+  Only the additive row fields own_printing, own_printing_label, own_printing_more and
+  own_printing_on_the_way are dropped; every count, price and label still compares.
+  test_listed_owned_printings checks the fields themselves.
 - "trial-defaults": E3-S39 adds a deck summary's "trial" (the precon file of a trial deck);
   only a None "trial" is dropped (trial_defaults()), so a golden still compares every other field.
 - "building-holders": a deck being built may hold kit (building_holders()): the scan's and the
@@ -696,6 +701,19 @@ def token_peak_defaults(dump):
                     need.pop("forge", None)
 
 
+def game_changer_flags(value):
+    """Drop only E9-S30's boolean "game_changer" from card JSON (card_lookup._card_json: a dict with a
+    name, a type line and its pictures); a flag of any other type, or on anything else, stays."""
+    if isinstance(value, dict):
+        if type(value.get("game_changer")) is bool and {"name", "type_line", "img", "img_small"} <= set(value):
+            value.pop("game_changer")
+        for item in value.values():
+            game_changer_flags(item)
+    elif isinstance(value, list):
+        for item in value:
+            game_changer_flags(item)
+
+
 _LINE_KEYS = {"quantity", "name", "set", "number", "finish", "category"}
 
 
@@ -902,6 +920,28 @@ def listed_printings(dump):
             totals.pop("aud_missing_as_listed", None)
 
 
+OWN_PRINTING_FIELDS = ("own_printing", "own_printing_label", "own_printing_more", "own_printing_on_the_way")
+
+
+def owned_printings(dump):
+    """Drop only E2-S30's owned-printing note fields from deck pages' owned-vs-needed answers and
+    the gate's owned-vs-needed items."""
+    answers = []
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        if not isinstance(mine, dict):
+            continue
+        views = mine.get("deck_view")
+        answers += [view.get("owned") for view in views.values() if isinstance(view, dict)] if isinstance(views, dict) else []
+        for item in ("owned_vs_needed", "owned_vs_needed_priced"):
+            found = mine.get(item)
+            answers += list(found.values()) if isinstance(found, dict) else []
+    for owned in answers:
+        for row in (owned.get("rows") or []) if isinstance(owned, dict) else []:
+            if isinstance(row, dict):
+                for field in OWN_PRINTING_FIELDS:
+                    row.pop(field, None)
+
+
 def absent_shop_prices(dump):
     golden_shop_prices.normalise(dump, _profiles())
 
@@ -973,7 +1013,9 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("departed-defaults", departed_defaults), ("counter-defaults", counter_defaults),
                ("opponent-token-defaults", opponent_token_defaults), ("token-peak-defaults", token_peak_defaults),
                ("absent-shop-prices", absent_shop_prices), ("role-target-defaults", role_target_defaults),
-               ("listed-printings", listed_printings), ("trial-defaults", trial_defaults),
+               ("game-changer-flags", game_changer_flags),
+               ("listed-printings", listed_printings), ("owned-printings", owned_printings),
+               ("trial-defaults", trial_defaults),
                ("building-holders", building_holders))
 
 

@@ -29,7 +29,8 @@ def shopping_overview():
     """GET /api/shopping: a read-only view of purchase and receipt records:
     home's, so 403 for anyone outside the home (guard.require_sees_home_records).
 
-    purchases.overview()'s answer, plus:
+    purchases.overview(strict=False)'s answer (its "warnings" name each order and queue row whose
+    research file isn't on this PC's disk, E5-S32; any other record problem is still 500), plus:
       - "queue_revision", the exact inventory revision, and each queued card's
         "queue_row", its one-based position, for shopping_queue.py's guarded write;
       - "queue_decks", the visible home deck ids and titles offered when adding a card,
@@ -60,7 +61,8 @@ def shopping_overview():
 
 def _overview():
     try:
-        answer = purchases.overview()
+        # A research file missing from this PC's disk is a warning on the page, not a refusal (E5-S32).
+        answer = purchases.overview(strict=False)
     except (ValueError, OSError, csv.Error) as error:
         common._log(f"Shopping overview: {error}")
         raise common.ApiError(500, f"The shopping records couldn't be read: {common._public(error)}") from None
@@ -80,6 +82,8 @@ def _overview():
     reprints.enrich(answer.get("to_buy", []), queued=True, cache=reprint_cache)
     from . import shop_prices
     shop_data = shop_prices.capture()
+    if cards_ready:
+        _flag_tokens(answer)        # before the shops' lines: a token row's says tokens aren't checked (E5-S33)
     shop_prices.enrich(answer, data=shop_data)
     if cards_ready:
         _add_pictures(answer)
@@ -297,6 +301,13 @@ def _token_for(row):
             "colors": [], "color_identity": [], "roles": [], "cmc": 0}
 
 
+def _flag_tokens(answer):
+    """Each queued token or reminder card's "is_token"."""
+    for row in answer.get("to_buy", []):
+        if shopping_missing.is_token(row):
+            row["is_token"] = True
+
+
 def _add_pictures(answer):
     """Each order item's and queued card's "card", from the component's own rows (the items are
     in their order) and the queue's printing. Only the orders still on the way get pictures (the
@@ -323,9 +334,8 @@ def _add_pictures(answer):
                 item["collector_number"] = row.get("collector_number", "") or ""
                 item["finish"] = row.get("finish", "") or ""
                 item["card"] = _card_for(item["name"], item["set"], item["collector_number"], cache)
+    _flag_tokens(answer)
     for row in answer.get("to_buy", []):
-        if shopping_missing.is_token(row):
-            row["is_token"] = True
         row["card"] = _card_for(row["name"], row.get("set", ""), row.get("collector_number", ""), cache)
 
 

@@ -13,7 +13,9 @@ view or format change. Before a Play it never plans or estimates: the deck's Tes
 that starts redraws only when nothing of its format is on screen yet, and a redraw puts the keyboard focus back on
 the same row's Details or Play (or its Details when its Play has gone: it's playing now).
 
-Loaded after gauntlet.js (gtBeforeLine, gtOlderLine, gtFigureWords) and sim-ui.js (winRateFigure, rangeBar,
+Under the rows, one muted line says when the popular decks list was built (E3-S43, gtBuiltLine).
+
+Loaded after gauntlet.js (gtBeforeLine, gtOlderLine, gtFigureWords, gtBuiltLine) and sim-ui.js (winRateFigure, rangeBar,
 freshnessBadge); editor.js supplies ask().
 */
 "use strict";
@@ -188,7 +190,8 @@ function gbBoard(view, a, words) {
     (a.notes || []).map((n) => el("p", { class: "gt-small gb-note", text: n })),
     rows.length ? el("ul", { class: "gb-rows", "aria-label": `${words} decks against popular decks` },
       rows.map((row) => gbRow(view, row)))
-      : emptyBox(`No ${words} decks to test yet.`));
+      : emptyBox(`No ${words} decks to test yet.`),
+    gtBuiltLine(a.catalogue, "gb-built"));
 }
 
 /** One deck: its name, figure and range, opponents and games, age, hardest opponent, an out-of-date state, its

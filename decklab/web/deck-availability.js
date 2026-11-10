@@ -53,6 +53,23 @@ function asListedLine(owned) {
   return el("p", { class: "sub deck-avail-listed", text: `As listed: ${shown}${rest}${total}.` });
 }
 
+/** The quiet note on a card whose list names one printing (E2-S30, lib/listed_prices.py annotate_owned):
+ * "Own another printing (FDN 227)" when the space has the card only in other printings, or, with both,
+ * "Own the listed printing (FIC 207 foil)" when it has the one named. A note, never a warning: it changes no
+ * count and doesn't say which deck holds a copy or whether one is free. null for a row without the fields
+ * (no named printing, no copies, a card the deck's Printings in box record names, or a viewer who may not
+ * see the collection, whose answer has no owned rows at all). */
+function ownPrintingWords(r, both = true) {
+  if (!r || typeof r.own_printing_label !== "string" || !r.own_printing_label) return null;
+  const coming = r.own_printing_on_the_way === true;
+  if (r.own_printing === "listed") {
+    return both ? `${coming ? "Listed printing on the way" : "Own the listed printing"} (${r.own_printing_label})` : null;
+  }
+  if (r.own_printing !== "other") return null;
+  const more = Number.isSafeInteger(r.own_printing_more) && r.own_printing_more > 0 ? ` and ${r.own_printing_more} more` : "";
+  return `${coming ? "Another printing on the way" : "Own another printing"} (${r.own_printing_label}${more})`;
+}
+
 /** A historical date is displayed only as an actual calendar day; it certifies no current contents. */
 function boxCheckDate(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || Number(value.slice(0, 4)) < 1) return null;

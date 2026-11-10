@@ -11,8 +11,17 @@
 const SHOP_BASKET_WORDS = {
   in_stock: "in stock", out_of_stock: "out of stock", not_listed: "not listed",
   unknown: "couldn't be read", not_checked: "not checked", unconfirmed: "printing not confirmed",
-  unread: "no saved check",
+  unread: "no saved check", not_matched: "listed, but not matched to your printing",
+  token: "token cards aren't checked at this shop",
 };
+
+/** One shop's reason a ready row isn't in a basket, with the shop's sets for a printing it didn't match and
+ * whether its page was only the first of its results (E5-S33). */
+function shopBasketReason(shop) {
+  const sets = shop.status === "not_matched" ? shopSnapshotSets(shop) : "";
+  return `${shop.shop}: ${SHOP_BASKET_WORDS[shop.status] || "not known"}${sets ? ` (the shop's sets: ${sets})` : ""}`
+    + (shop.partial === true ? `, ${SHOP_SNAPSHOT_PARTIAL}` : "");
+}
 
 /** A basket's price as A$, or null when it isn't a price. Always A$: the shops list in AUD, never the configured
  * currency's estimate (E11-S53). */
@@ -67,7 +76,9 @@ function shopBasketLine(row, basket) {
       el("span", {text: ` ${each} · ${stock}`}), ...also,
       total && row.copies > 1 ? el("span", {text: ` · ${total}`}) : null,
       row.printing === "exact" ? el("small", {text: " exact printing"}) : null,
-      row.carried ? el("small", {text: " from an earlier run"}) : null),
+      row.carried ? el("small", {text: " from an earlier run"}) : null,
+      row.partial === true ? el("small", {class: "shop-snapshot-partial", "data-basket-partial": "",
+        text: ` ${SHOP_SNAPSHOT_PARTIAL}`}) : null),
     shopSnapshotWhen(row.fetched_at));
 }
 
@@ -84,7 +95,8 @@ function shopBasketGaps(basket) {
   const gaps = [["unconfirmed", "Printing not confirmed here, so no stock is claimed"],
     ["unknown", "Couldn't be read here"], ["not_checked", "Not in this shop's last check"]];
   const lines = gaps.filter(([key]) => (basket[key] || []).length).map(([key, words]) =>
-    el("li", {"data-basket-gap": key, text: `${words}: ${basket[key].map(row => row.name).join(", ")}`}));
+    el("li", {"data-basket-gap": key, text: `${words}: ${basket[key].map(row =>
+      row.partial === true ? `${row.name} (${SHOP_SNAPSHOT_PARTIAL})` : row.name).join(", ")}`}));
   return lines.length ? el("ul", {class: "shop-basket-gaps"}, lines) : null;
 }
 
@@ -146,8 +158,7 @@ function shopBasketsUnavailable(list) {
   return el("div", {class: "shop-basket-unavailable"}, el("h3", {text: "Ready, not in stock at a checked shop"}),
     el("ul", {class: "shop-basket-rows"}, list.map(row => el("li", {class: "shop-basket-row", "data-basket-unavailable": row.name},
       el("span", {class: "shop-basket-name", text: `${row.quantity} × ${row.name}`}),
-      el("span", {class: "shop-basket-facts", text: (row.shops || []).map(shop =>
-        `${shop.shop}: ${SHOP_BASKET_WORDS[shop.status] || "not known"}`).join(" · ")})))));
+      el("span", {class: "shop-basket-facts", text: (row.shops || []).map(shopBasketReason).join(" · ")})))));
 }
 
 /** The Baskets section, or null without a basket answer (no snapshot) or for a viewer outside home's records. */

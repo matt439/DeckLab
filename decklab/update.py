@@ -8,17 +8,22 @@ another PC). In order, stopping at the first failure:
   2. git merge --ff-only with the branch's upstream (never a merge commit or a rebase)
   3. reinstall psycopg into the .venv when requirements.txt changed (or doesn't match); on Windows
      the running server is stopped first, since it keeps psycopg's DLLs locked
-  4. with migrations pending: a backup (python -m decklab.db backup), then python -m decklab.db migrate
+  4. with migrations pending: the running server is stopped (on every system, so nothing is written
+     after the dump and a restore of it loses no write), then a backup (python -m decklab.db
+     backup), then python -m decklab.db migrate; step 6 starts the server again
   5. when this Deck Lab expects another Forge build than forge_dir holds: download the release,
      check its SHA-256, unzip it beside the old one and point config.json's forge_dir at it
-  6. restart the background server, if it's running (python -m decklab.lib.homenet restart)
+  6. restart the background server, if it's running or step 3 or 4 stopped it (python -m
+     decklab.lib.homenet restart)
   7. python -m decklab.smoke
 
 Steps 3-7 run in a new process of the pulled code (`--after-pull`), so an update to this
 updater or to anything it calls takes effect at once. --dry-run fetches and says what would be
 done, changing nothing. On a failure after the pull it prints how to go back: git reset --hard to
 the old commit and restart; migrations aren't undone, so a backup made in step 4 is the way back
-for the data (python -m decklab.db restore).
+for the data (python -m decklab.db restore). The code alone may go back when the migrations
+applied only added things (decklab/db/migrate.py's rule: add in one release, remove in a later
+one): the old code then says the database is newer than it.
 
 Exit codes: 0 updated (or nothing to do) and the smoke test passed, 1 a step failed or was refused.
 """
@@ -367,7 +372,7 @@ def before_pull(args):
             say("  requirements.txt changed: psycopg will be reinstalled")
         new_migrations = [f for f in files if f.startswith(MIGRATIONS) and f.endswith(".sql")]
         if new_migrations:
-            say(f"  {len(new_migrations)} migration files changed: a backup, then migrate")
+            say(f"  {len(new_migrations)} migration files changed: the server stopped, a backup, then migrate")
         old_release = expected_release(git("show", f"{old}:decklab/lib/forge/simjar.py", check=False))
         new_release = expected_release(git("show", f"{new}:decklab/lib/forge/simjar.py", check=False))
         if old_release != new_release:
@@ -412,7 +417,12 @@ def way_back(old, done):
         lines.append("Nothing was migrated. Fix what stopped the backup (is backup_dir reachable?), then run "
                      "python -m decklab.update again.")
     if "server-stopped" in done:
-        lines.append("Deck Lab was stopped to replace psycopg: python -m decklab.lib.homenet start.")
+        if "stopped-for-migration" in done:
+            lines.append("Deck Lab is stopped: it was stopped before the backup, so nothing was written after "
+                         "the dump. Start it with python -m decklab.lib.homenet start"
+                         + (" (it then runs the pulled code)." if old and "pulled" in done else "."))
+        else:
+            lines.append("Deck Lab was stopped to replace psycopg: python -m decklab.lib.homenet start.")
     if old and "pulled" in done:
         back = [f"To go back to the code from before: python -m decklab.lib.homenet stop, git reset --hard {old[:12]}"]
         if "migrated" in done:
@@ -422,6 +432,11 @@ def way_back(old, done):
             back.append("copy decklab/config.json.before-forge-update back over decklab/config.json")
         back.append("python -m decklab.lib.homenet start")
         lines.append(", then ".join(back) + ".")
+        if "migrated" in done:
+            lines.append("Going back to the code alone, without the restore, is fine when the migrations that "
+                         "were applied only added things (tables, columns, indexes): the old code still finds "
+                         "all it uses, and its banner says the database is newer than the code. Restore the dump "
+                         "when one changed or removed something.")
     return "\n".join(lines)
 
 
@@ -459,6 +474,13 @@ def _after_pull(args, old, done):
         raise Failed(f"The migrations can't be checked: {e}") from None
     if pending:
         say(f"\n{len(pending)} migrations are pending: " + ", ".join(f["name"] for f in pending))
+        # The old server is stopped before the backup, on every system (E11-S70): a write it took
+        # after the dump would be lost by restoring that dump, and it shouldn't answer mid-migration.
+        if running and "server-stopped" not in done:
+            step([python, "-m", "decklab.lib.homenet", "stop"], "Stop Deck Lab before the backup", timeout=120)
+            done.add("server-stopped")
+        if "server-stopped" in done:
+            done.add("stopped-for-migration")
         try:
             step([python, "-m", "decklab.db", "backup"], "Back up before migrating", timeout=3600)
         except Failed:
@@ -481,7 +503,12 @@ def _after_pull(args, old, done):
         if CONFIG.exists() and CONFIG.read_bytes() != before:
             done.add("forge")
     changed = reinstalled or bool(pending) or bool(done & {"pulled", "forge", "server-stopped"})
-    if args.no_restart:
+    if args.no_restart and "stopped-for-migration" in done:
+        # --no-restart leaves a running server alone, but this one was stopped for the migration.
+        step([python, "-m", "decklab.lib.homenet", "start"],
+             "Start Deck Lab again (stopped for the migration, so --no-restart can't leave it as it was)", timeout=300)
+        done.discard("server-stopped")
+    elif args.no_restart:
         say("Restart: skipped (--no-restart).")
     elif (running or server_answers()) and not changed and not server_restart_required():
         say("\nNothing changed, so the background server keeps running (any Forge games it's playing go on).")

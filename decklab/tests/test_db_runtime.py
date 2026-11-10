@@ -98,6 +98,7 @@ class ViewTests(unittest.TestCase):
         for snapshot, seen in ((_snapshot(ok=False, error=dbstatus.MIGRATIONS_PENDING, pending_migrations=1), True),
                                (_snapshot(ok=False, usable=False, error=dbstatus.MIGRATIONS_PENDING,
                                           pending_migrations=1), False),
+                               (_snapshot(ok=False, error=dbstatus.DATABASE_NEWER, detail="holds 0099_x"), True),
                                (_snapshot(ok=False, error=dbstatus.CHECK_FAILED, detail="canceled"), True)):
             with self.subTest(error=snapshot["error"], usable=snapshot["usable"]), \
                     mock.patch.object(dbstatus, "_snapshot", snapshot):
@@ -127,6 +128,8 @@ class ViewTests(unittest.TestCase):
         self.assertEqual(dbstatus.describe(_snapshot(ok=False, error=dbstatus.MIGRATIONS_PENDING,
                                                      pending_migrations=2)),
                          "reachable, 2 migrations pending (python -m decklab.db migrate)")
+        self.assertEqual(dbstatus.describe(_snapshot(ok=False, error=dbstatus.DATABASE_NEWER)),
+                         "reachable, newer than this code (update the code; there's nothing to migrate)")
         self.assertEqual(dbstatus.describe(_snapshot(ok=False, error=dbstatus.PSYCOPG_MISSING)), "psycopg missing")
         self.assertEqual(dbstatus.describe(_snapshot(ok=False, error=dbstatus.CHECK_FAILED)),
                          "the check failed (db.log says why)")
@@ -206,6 +209,20 @@ class CheckTests(db_support.DbTestCase):
         self.assertEqual((result["ok"], result["error"], result["pending_migrations"]),
                          (False, dbstatus.MIGRATIONS_PENDING, 1))
         self.assertIs(result["usable"], True)                       # phase 2's tables are there
+        self.assertIs(result["backup_stale"], True)                 # still read: the database answered
+
+    def test_a_database_newer_than_the_code_is_its_own_state(self):
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, folder, True)
+        files = migrate.available()
+        for f in files[:-1]:                                        # this code lacks the newest one applied
+            shutil.copy(f["path"], folder / f["path"].name)
+        with mock.patch.object(migrate, "MIGRATIONS", folder):
+            result = dbstatus.check()
+        self.assertEqual((result["ok"], result["error"], result["pending_migrations"]),
+                         (False, dbstatus.DATABASE_NEWER, 0))
+        self.assertIn(f"{files[-1]['version']:04d}_{files[-1]['name']}", result["detail"])
+        self.assertIs(result["usable"], True)                       # nothing is refused: the stores still work
         self.assertIs(result["backup_stale"], True)                 # still read: the database answered
 
     def test_without_migration_0003_the_stores_cant_be_used(self):

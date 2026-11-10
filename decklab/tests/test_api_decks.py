@@ -188,7 +188,8 @@ class DeckViewTests(ApiTestCase):
             "card": {"name": "Llanowar Elves", "mana_cost": "{G}", "cmc": 1.0,
                      "type_line": "Creature — Elf Druid", "colors": ["G"], "color_identity": ["G"],
                      "roles": ["ramp"], "img": "/img/fdn/227/normal", "img_small": "/img/fdn/227/small",
-                     "oracle_text": "{T}: Add {G}.", "power": "1", "toughness": "1", "loyalty": None, "defense": None}})
+                     "oracle_text": "{T}: Add {G}.", "game_changer": False,
+                 "power": "1", "toughness": "1", "loyalty": None, "defense": None}})
         self.assertEqual(self.lines(view, "Sideboard")[0]["card"]["name"], "Pick Your Poison")
         json.dumps(view, allow_nan=False)
 

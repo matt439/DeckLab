@@ -639,7 +639,8 @@ def step_records(r, ctx):
     if (place / ".git").exists():
         r.note(PASS, f"records_repo {place} is a git checkout")
     else:
-        r.note(WARN, f"records_repo {place} is missing, so buylist and report links won't open: clone it there")
+        r.note(WARN, f"records_repo {place} is missing, so buylist and report links won't open and Shopping "
+                     "lists each order and queue row naming one under needs attention: clone it there")
 
 
 def step_awake(r, ctx, check=None, user=None):

@@ -4,7 +4,7 @@ Usage (from the repo root):
     python -m decklab.lib.edhrec <deck-id> [--page PAGE] [--refresh] [--no-prices] [--all]
 
 EDHREC publishes each commander's page as JSON at
-https://json.edhrec.com/pages/commanders/<slug>.json (checked 2026-10-28; a
+https://json.edhrec.com/pages/commanders/<slug>.json (checked on SHAPE_CHECKED; a
 commander it has no page for answers 403). The slug is the commander's name
 as EDHREC writes it in its addresses (commander_slug): the front face of a
 two-faced card, accents dropped, lowercase, apostrophes and commas removed and
@@ -12,7 +12,7 @@ every other run of non-letters a hyphen; two commanders (partners, a
 Background) are both slugs joined, in alphabetical order first and, when
 EDHREC has no page for that, the other order. For a pair, the order EDHREC
 doesn't use answers 200 with only {"redirect": "/commanders/<its slug>"}
-(checked 2026-10-28 with Thrasios and Tymna, and Wilson and Raised by
+(checked on SHAPE_CHECKED with Thrasios and Tymna, and Wilson and Raised by
 Giants): that's kept like a page (redirect_slug) and its slug followed.
 
 A commander's page can also be narrowed (page=): EDHREC's budget and expensive
@@ -63,6 +63,11 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 from decklab.lib import cards, config, currency, decks, pool, spaces
+
+# When the page shapes the docstring describes (the commander page's JSON, a pair's redirect) were last
+# compared with EDHREC's live answers by hand. decklab.lib.stats.reviewed says when that's due again
+# (E11-S71): after checking, set this and fix whatever changed.
+SHAPE_CHECKED = "2026-10-28"
 
 CACHE = None                        # the cache folder; None: config.DATA / "edhrec" (tests point it elsewhere)
 PAGE_URL = "https://json.edhrec.com/pages/commanders/{slug}.json"

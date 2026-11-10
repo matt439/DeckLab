@@ -17,7 +17,9 @@ CHECK_FAILED and leaves the breaker alone: the database may well be answering.
 
 Who sees what (view): everyone learns whether the stores can be used ("ok"); an admin learns
 whether everything is in order instead, and also why not, in a few plain words (ERRORS), how
-many migrations are pending, when the last backup was and whether it's older than
+many migrations are pending (or that the database is newer than this code, DATABASE_NEWER: it
+holds migrations this checkout has no file for, which is named as that and refuses nothing),
+when the last backup was and whether it's older than
 config.json's stale_backup_hours, a ready-made warning when the newest check of the data
 failed, is older than stale_backup_hours or never ran, or the newest restore check failed
 (checks_warning), and why .venv's packages aren't in use (lib/venv.py), when they aren't. The
@@ -37,8 +39,9 @@ TIMEOUT = 2                         # seconds to connect before a check gives up
 NOT_REACHABLE = "not reachable"
 PSYCOPG_MISSING = "psycopg missing"
 MIGRATIONS_PENDING = "migrations pending"
+DATABASE_NEWER = "database newer"    # it holds migrations this code has no file for (E11-S70)
 CHECK_FAILED = "check failed"
-ERRORS = (NOT_REACHABLE, PSYCOPG_MISSING, MIGRATIONS_PENDING, CHECK_FAILED)
+ERRORS = (NOT_REACHABLE, PSYCOPG_MISSING, MIGRATIONS_PENDING, DATABASE_NEWER, CHECK_FAILED)
 DOWN = (NOT_REACHABLE, PSYCOPG_MISSING)  # the errors meaning the database can't be used
 # SQLSTATEs meaning the schema is older than this code (as lib/state/pg.NEEDS_MIGRATING).
 NEEDS_MIGRATING = ("42P01", "42703", "42501")
@@ -68,7 +71,7 @@ def _log(text):
 def _result(error=None, detail=None, pending=None, last=None, stale_hours=None, now=None, usable=None,
             inventory=None, runs=None):
     stale = warning = None
-    if error in (None, MIGRATIONS_PENDING) and stale_hours is not None:
+    if error in (None, MIGRATIONS_PENDING, DATABASE_NEWER) and stale_hours is not None:
         now = (now or datetime.now()).astimezone()
         stale = last is None or now - last > timedelta(hours=stale_hours)
         if runs is not None:
@@ -165,6 +168,8 @@ def check(dbname=None, now=None):
                 pending = len(migrate.pending(conn=c))
                 error = MIGRATIONS_PENDING if pending else None
                 detail = f"{pending} migration(s) pending" if pending else None
+            except migrate.DatabaseNewer as e:      # newer code migrated it: said as that, nothing refused
+                pending, error, detail = 0, DATABASE_NEWER, str(e)
             except migrate.MigrationError as e:
                 pending, error, detail = None, MIGRATIONS_PENDING, str(e)
             usable = True
@@ -226,6 +231,8 @@ def describe(snapshot):
         return "reachable"
     if snapshot["error"] == CHECK_FAILED:
         return "the check failed (db.log says why)"
+    if snapshot["error"] == DATABASE_NEWER:
+        return "reachable, newer than this code (update the code; there's nothing to migrate)"
     if snapshot["error"] == MIGRATIONS_PENDING:
         n = snapshot["pending_migrations"]
         what = f"{n} migration{'s' if n != 1 else ''} pending" if n else "the migrations need attention"

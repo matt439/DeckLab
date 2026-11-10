@@ -236,11 +236,56 @@ def summary(catalogue):
     return lines
 
 
+def _plural(n, one):
+    return f"{n} {one}{'' if n == 1 else 's'}"
+
+
+def _by_id(catalogue):
+    """A catalogue's decks by id, leaving out anything that isn't a deck with a text id (a saved file
+    damaged or edited by hand must never stop the build that would replace it)."""
+    return {d["id"]: d for d in catalogue.get("decks") or []
+            if isinstance(d, dict) and isinstance(d.get("id"), str)}
+
+
+def difference(old, new, fmt):
+    """Lines saying what saving new in place of the saved catalogue old would change (E3-S43): how
+    many opponents' lists changed, joined and left, and whether the format's standard sample would
+    change (its opponents, or the list of one that stays: results are kept by list, so a changed
+    opponent's are set aside). old None: there's no saved catalogue to compare with."""
+    if not old:
+        return [f"There's no saved {fmt} catalogue yet, so no saved results depend on one."]
+    from . import sample                    # when used: only a build compares catalogues
+    built = str(old.get("built") or "")[:10] or "an unknown date"
+    head = f"Against the saved catalogue (built {built}, {str(old.get('sha') or '')[:8] or 'no sha'}): "
+    before, after = _by_id(old), _by_id(new)
+    changed = {i for i in before.keys() & after.keys() if before[i].get("card_sha") != after[i].get("card_sha")}
+    lists = "1 opponent's list" if len(changed) == 1 else f"{len(changed)} opponents' lists"
+    lines = [head + f"{lists} changed, "
+             f"{len(after.keys() - before.keys())} joined and {len(before.keys() - after.keys())} left."]
+    try:
+        was = sample.standard_sample(dict(old, decks=list(before.values())), fmt)["decks"]
+        now = sample.standard_sample(new, fmt)["decks"]
+    except (AttributeError, KeyError, TypeError, ValueError) as e:
+        return lines + [f"Whether the standard sample would change couldn't be worked out ({type(e).__name__})."]
+    left, joined = [i for i in was if i not in now], [i for i in now if i not in was]
+    moved = [i for i in now if i in was and i in changed]
+    if not (left or joined or moved):
+        return lines + [f"The standard sample would keep its {_plural(len(now), 'opponent')} and their lists, "
+                        "so its saved results still count."]
+    same = len(now) - len(joined) - len(moved)
+    lines.append(f"The standard sample would change: {len(left)} of its {_plural(len(was), 'opponent')} would "
+                 f"leave, {len(joined)} would join, and {len(moved)} that stay would have a changed list. Saved "
+                 f"results against the {_plural(same, 'opponent')} that stay unchanged still count; the others "
+                 "are set aside until those opponents are played again.")
+    return lines
+
+
 def build(fmt, sources=SOURCES, top=100, refresh=False, dry_run=False, log=print):
     """Build a format's catalogue from its sources (edhrec and precons for Commander, forge for
     60-card) and save it, unless dry_run, which fetches nothing (cached copies only) and saves
-    nothing. Prints the summary. Returns the catalogue. The decks of the format's sources not
-    asked for are kept from the saved catalogue. GauntletError (and nothing saved) when none of
+    nothing. Prints the summary and, before saving (a dry run too), what the new catalogue would
+    change against the saved one (difference, E3-S43). Returns the catalogue. The decks of the
+    format's sources not asked for are kept from the saved catalogue. GauntletError (and nothing saved) when none of
     sources serves the format, or a source gave no deck at all (a failed fetch with no cached
     copy): the saved catalogue stays as it was."""
     if fmt not in FORMATS:
@@ -273,6 +318,8 @@ def build(fmt, sources=SOURCES, top=100, refresh=False, dry_run=False, log=print
     if failed:
         raise GauntletError(f"{', '.join(failed)} gave no {fmt} decks (see above), so nothing was saved: "
                             f"{catalogue_path(fmt)} is kept as it was.")
+    for line in difference(load(fmt), catalogue, fmt):
+        log(line)
     if dry_run:
         log(f"Dry run: nothing saved (the catalogue would be {catalogue_path(fmt)}).")
     else:

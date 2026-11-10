@@ -204,6 +204,76 @@ class StaticFileTests(ServerTestCase):
         status, _, body = self.request("GET", "/app.js", headers={"If-None-Match": headers["ETag"]})
         self.assertEqual((status, body), (304, b""))
 
+    def test_no_answer_may_be_framed(self):
+        # E11-S63: clickjacking defence in depth. Every answer refuses a frame, twice over; an HTML one
+        # loads only Deck Lab's own files (pictures also data: and blob:), any other answer nothing.
+        web = self.box.web
+        (web / "boom.html").write_text("<!doctype html><title>x</title>", encoding="utf-8")
+        self.addCleanup((web / "boom.html").unlink)
+        cases = [("GET", "/", 200, "page"), ("HEAD", "/index.html", 200, "page"), ("GET", "/boom.html", 200, "page"),
+                 ("GET", "/app.js", 200, "data"), ("GET", "/style.css", 200, "data"),
+                 ("GET", "/icons/icon-192.png", 200, "data"), ("GET", "/fonts/figtree.woff2", 200, "data"),
+                 ("GET", "/api/status", 200, "data"), ("GET", "/api/nothing", 404, "data"),
+                 ("GET", "/nothing.js", 404, "data"), ("DELETE", "/api/status", 405, "data"),
+                 ("POST", "/api/decklist/parse", 400, "data")]
+        for method, path, expected, kind in cases:
+            with self.subTest(method=method, path=path):
+                status, headers, _ = self.request(method, path, b"{" if method == "POST" else None)
+                self.assertEqual(status, expected)
+                self.assertEqual(headers.get_all("X-Frame-Options"), ["DENY"])
+                policies = headers.get_all("Content-Security-Policy")
+                self.assertEqual(len(policies), 1)
+                parts = [part.strip() for part in policies[0].split(";")]
+                self.assertIn("frame-ancestors 'none'", parts)
+                if kind == "page":
+                    self.assertEqual(policies[0], server_http.PAGE_POLICY)
+                    for part in ("default-src 'self'", "script-src 'self'", "style-src 'self'", "font-src 'self'",
+                                 "connect-src 'self'", "img-src 'self' data: blob:", "object-src 'none'"):
+                        self.assertIn(part, parts)
+                    self.assertNotIn("unsafe", policies[0])
+                else:
+                    self.assertEqual(policies[0], server_http.DATA_POLICY)
+                    self.assertIn("default-src 'none'", parts)
+                # The home listener is plain http: it never sends HSTS. The camera stays the page's, for scanning.
+                self.assertIsNone(headers["Strict-Transport-Security"])
+                self.assertIn("camera=(self)", headers["Permissions-Policy"])
+                self.assertIn("microphone=()", headers["Permissions-Policy"])
+        # A 304 carries them too, and so does a request http.server couldn't parse.
+        etag = self.request("GET", "/app.js")[1]["ETag"]
+        status, headers, _ = self.request("GET", "/app.js", headers={"If-None-Match": etag})
+        self.assertEqual((status, headers["X-Frame-Options"]), (304, "DENY"))
+        status, headers, _ = self.request("BREW", "/")
+        self.assertEqual(headers["X-Frame-Options"], "DENY")
+        self.assertEqual(headers["Content-Security-Policy"], server_http.DATA_POLICY)
+
+    def test_the_home_pages_policy_lets_it_read_the_wake_gate(self):
+        # core.js's openWakeGate reads the gate's /__status from another origin (E11-S59): the page's
+        # policy names that origin, and only a plain one, so config.json can never add a directive.
+        from decklab.lib import keepawake
+        base = server_http.PAGE_POLICY
+        for gate, source in (("http://192.0.2.5:8650", "http://192.0.2.5:8650"),
+                             ("HTTP://NAS.example:8650/", "http://nas.example:8650"),
+                             ("https://[fd00::1]:8650/x", "https://[fd00::1]:8650"),
+                             (None, None), ("", None), ("ftp://192.0.2.5", None), ("192.0.2.5:8650", None),
+                             ("http://x; script-src *", None), ("http://x y", None), ("http://u@x", None),
+                             ("http://x,'unsafe-inline'", None), ("http://x:1\r\nSet-Cookie: a=b", None)):
+            with self.subTest(gate=gate), mock.patch.object(
+                    keepawake, "wake_settings", return_value={"idle_minutes": 20, "gate": gate}):
+                self.assertEqual(server_http.gate_origin(gate), source)
+                policies = self.request("GET", "/")[1].get_all("Content-Security-Policy")
+                expected = base.replace("connect-src 'self'", f"connect-src 'self' {source}") if source else base
+                self.assertEqual(policies, [expected])
+                self.assertEqual(expected.count(";"), base.count(";"))
+                # Only the page's: a JSON answer still loads nothing.
+                self.assertEqual(self.request("GET", "/api/status")[1]["Content-Security-Policy"], server_http.DATA_POLICY)
+        self.assertIn("connect-src 'self';", base)
+        # No "wake" block, or a config.json that can't be read: the plain policy, and the page still answers.
+        for patch in (mock.patch.object(keepawake, "wake_settings", return_value=None),
+                      mock.patch.object(config, "load", side_effect=ValueError("bad json"))):
+            with patch:
+                status, headers, _ = self.request("GET", "/")
+                self.assertEqual((status, headers["Content-Security-Policy"]), (200, base))
+
     def test_only_the_allow_list_is_served(self):
         for path in ("/notes.txt", "/.hidden.js", "/other/extra.js", "/other/", "/icons/", "/icons",
                      "/APP.JS", "/app.js/", "/secret.txt", "/../secret.txt", "/..%2fsecret.txt",

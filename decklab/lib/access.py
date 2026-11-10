@@ -12,6 +12,8 @@ without one that Verifier.identify() accepts:
   fetched again for a key id not seen yet, at most once a minute; a known
   key is used without waiting for that fetch, and requests waiting for the
   same fetch share it);
+- its signature written as an encoder writes it (base64url whose last character
+  has no spare bits set), so no other text signs in with the same signature;
 - JSON without NaN or Infinity; "aud" (a string or a list) containing the AUD
   tag, "iss" the team's address, "exp" (required) not passed and "nbf" (when
   given) reached, each with a minute's leeway, and "exp", "nbf" and "iat"
@@ -183,11 +185,16 @@ def parse_keys(data):
     return keys
 
 
-def _b64(text):
-    """base64url without padding (as JWTs and JWKs write it) as bytes; ValueError otherwise."""
+def _b64(text, exact=False):
+    """base64url without padding (as JWTs and JWKs write it) as bytes; ValueError otherwise.
+    exact: also refuse text that isn't the one way to write those bytes (its last
+    character's spare bits not zero), which a decoder otherwise reads as the same bytes."""
     if not isinstance(text, str) or not re.fullmatch(r"[A-Za-z0-9_-]*", text) or len(text) % 4 == 1:
         raise ValueError("not base64url")
-    return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
+    data = base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
+    if exact and base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii") != text:
+        raise ValueError("not base64url as an encoder writes it")
+    return data
 
 
 def _no_constant(name):
@@ -289,7 +296,7 @@ class Verifier:
         if len(parts) != 3:
             raise bad
         try:
-            header, claims, signature = _json_part(parts[0]), _json_part(parts[1]), _b64(parts[2])
+            header, claims, signature = _json_part(parts[0]), _json_part(parts[1]), _b64(parts[2], exact=True)
         except (ValueError, UnicodeDecodeError, RecursionError):
             raise bad from None
         if header.get("alg") != "RS256" or not isinstance(header.get("kid"), str):

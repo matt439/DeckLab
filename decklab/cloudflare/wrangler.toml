@@ -1,9 +1,12 @@
 # Deck Lab's "off" page (story E11-S02): see worker.mjs and decklab/README.md, "From outside the home".
-# Deploy from this folder with npx wrangler@4.151.1 deploy, after npx wrangler@4.151.1 login.
+# This repo is public, so the routes below are placeholders: they name no real zone, and
+# scripts/audit_public_repo.py (CI's lint) fails on any that does. To deploy, copy this file to
+# wrangler.local.toml beside it (gitignored), put your own hostnames and zone in its routes, then from
+# this folder: npx wrangler@4.151.1 deploy --config wrangler.local.toml, after npx wrangler@4.151.1 login.
 name = "decklab-off-page"
 main = "worker.mjs"
 compatibility_date = "2026-09-15"
-# No address outside Access: only the two routes below, which Access covers.
+# No address outside Access: only the two routes below, which Access covers (real ones: wrangler.local.toml).
 workers_dev = false
 preview_urls = false
 send_metrics = false

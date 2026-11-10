@@ -4,7 +4,10 @@ Games Portal is a Shopify shop whose robots.txt (checked 2026-10-31) disallows t
 checkout, account and sorted or filtered collection pages but not /search, and names no
 Crawl-delay, so the Session keeps its own 60 seconds. The page is SEARCH_PATH + the name,
 quoted whole, with type=product: the shop's own search results, ten products to a page and
-fuzzy (other names come too), of which only the first page is read.
+fuzzy (other names come too), of which only the first page is read. When that page was full
+(PAGE_SIZE products) or links a further page (/search?page=2...), the listings come back marked
+partial (base.Listings, E5-S33): the card may have more listings, or its only ones, on a page
+that wasn't read, so "not listed" and the cheapest price are of the first page only.
 
 Each product on it is a card (<div class="product-card-list2 product-card-list2__ID">, whose
 first /products/ link is its page) followed by a hidden <div id="productCardList2-js-ID">
@@ -21,11 +24,12 @@ import json
 import re
 import urllib.parse
 
-from decklab.lib.shops.base import Adapter, ShopError
+from decklab.lib.shops.base import Adapter, Listings, ShopError
 
 SHOP = "Games Portal"
 SITE = "https://gamesportal.com.au"
 SEARCH_PATH = "/search"                     # ?q=<the card name>&type=product
+PAGE_SIZE = 10                              # products on a full page of search results
 CARD_TYPE = "MTG Single"                    # data-product-type of a single card (sealed products aren't)
 _CARD_CLASS = re.compile(r"\bproduct-card-list2__(\d+)\b")
 _VARIANTS_ID = "productCardList2-js-"
@@ -42,7 +46,7 @@ class _Results(html.parser.HTMLParser):
 
     def __init__(self):
         super().__init__(convert_charrefs=True)
-        self.card, self.pages, self.products = None, {}, []
+        self.card, self.pages, self.products, self.more = None, {}, [], False
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
@@ -58,6 +62,17 @@ class _Results(html.parser.HTMLParser):
             href = attrs.get("href") or ""
             if href.startswith("/products/"):
                 self.pages[self.card] = href.split("?", 1)[0]
+        if tag == "a" and not self.more:
+            self.more = _further_page(attrs.get("href"))
+
+
+def _further_page(href):
+    """True for a link to a later page of these search results (/search?page=2&q=...)."""
+    link = urllib.parse.urlsplit(str(href or ""))
+    if link.path != SEARCH_PATH or (link.netloc and link.netloc != urllib.parse.urlsplit(SITE).netloc):
+        return False
+    pages = urllib.parse.parse_qs(link.query).get("page") or []
+    return any(page.isdigit() and int(page) > 1 for page in pages)
 
 
 def _card_name(title):
@@ -119,15 +134,16 @@ def _price(cents):
 
 def parse_name_page(text, name):
     """The listings of name on Games Portal's search page for it: [] when none of its products is
-    that card. ShopError when the page isn't the one expected (Games Portal changed its pages)."""
+    that card. ShopError when the page isn't the one expected (Games Portal changed its pages).
+    They're marked partial when the page was full or links a further page, which is never read."""
     if _NO_RESULTS.search(text):
-        return []
+        return Listings()
     parser = _Results()
     parser.feed(text)
     if not _SEARCH_PAGE.search(text) or not parser.products:
         raise ShopError(f"{SHOP}'s page for {name} didn't have its usual product data")
     wanted = {name.casefold(), name.split(" // ", 1)[0].casefold()}
-    listings = []
+    listings = Listings(partial=parser.more or len(parser.products) >= PAGE_SIZE)
     for product, kind, raw in parser.products:
         try:
             variants = json.loads(raw)

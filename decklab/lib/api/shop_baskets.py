@@ -14,6 +14,12 @@ for each snapshot shop config.json checks (lib/shops.enabled_adapters(), in that
     "unknown": rows whose page couldn't be read, "not_checked": rows the run didn't reach,
     none of them claiming stock.
 
+Every line carries "partial" (E5-S33): the shop's page was only part of its results (Games Portal's
+first page of a search with more), so the page says "first page only, more results not read" beside
+it, and a basket's "partial" counts its lines read that way. A token or reminder row's status is
+"token" at every shop (never looked up, so no stock is claimed), and an exact row the shop lists only
+in other printings is "not_matched" with the shop's "shop_sets".
+
 A shop without a readable snapshot is listed with read False and no rows. "unavailable" are the
 ready rows no read shop has in stock, with each shop's reason, and "plan" the fewest-shops plan
 (shop_plan.plan: every combination of read shops, weighed by cards and postage). Nothing here changes the queue,
@@ -86,12 +92,17 @@ def line(row, adapter, data):
     if not data:
         shown.update(status="unread", fetched_at=None)
         return shown
+    if shown["is_token"]:
+        shown.update(status="token", fetched_at=None)
+        return shown
     entry = shops._by_name(data.get("cards"), str(row.get("name") or ""))
     if _unconfirmed(row, entry):
-        shown.update(status="unconfirmed", fetched_at=(entry or {}).get("at") or data.get("fetched_at"))
+        shown.update(status="unconfirmed", fetched_at=(entry or {}).get("at") or data.get("fetched_at"),
+                     partial=bool((entry or {}).get("partial")))
         return shown
     matched = shops.match(row, data)
-    shown.update(status=matched["status"], fetched_at=matched["fetched_at"], carried=matched["carried"])
+    shown.update(status=matched["status"], fetched_at=matched["fetched_at"], carried=matched["carried"],
+                 partial=bool(matched.get("partial")), shop_sets=list(matched.get("shop_sets") or ()))
     if matched["status"] != "in_stock":
         return shown
     quantity = _quantity(row)
@@ -157,7 +168,7 @@ def basket(adapter, data, rows, rules=None):
              "rows": [], "add_ons": [], "unconfirmed": [], "unknown": [], "not_checked": []}
     if not data:
         shown.update(_totals([]))
-        shown.update(add_ons_totals=_totals([]), postage=None, reach=None)
+        shown.update(add_ons_totals=_totals([]), postage=None, reach=None, partial=0)
         return shown
     for row in rows:
         state = row.get("state")
@@ -172,6 +183,8 @@ def basket(adapter, data, rows, rules=None):
             shown[item["status"]].append(item)
     shown.update(_totals(shown["rows"]))
     shown["add_ons_totals"] = _totals(shown["add_ons"])
+    shown["partial"] = sum(bool(item.get("partial")) for key in ("rows", "add_ons", "unconfirmed")
+                           for item in shown[key])
     total = shop_plan.money(shown["total_aud"])
     shown["postage"] = shop_plan.postage((rules or {}).get(adapter.key), total, shown["unpriced"])
     reached = shop_plan.reach(shown["add_ons"], shown["postage"]["short_by_aud"]) if shown["rows"] else None
@@ -201,7 +214,8 @@ def build(rows, captured, revision=None, rules=None, adapters=None):
             continue
         shown = {key: row.get(key) for key in ROW_FIELDS}
         shown["is_token"] = bool(row.get("is_token"))
-        shown["shops"] = [{"shop": adapter.name, "status": item["status"], "fetched_at": item.get("fetched_at")}
+        shown["shops"] = [{"shop": adapter.name, "status": item["status"], "fetched_at": item.get("fetched_at"),
+                           "partial": bool(item.get("partial")), "shop_sets": item.get("shop_sets") or []}
                           for adapter, item in zip(adapters, at)]
         unavailable.append(shown)
     return {"queue_revision": revision, "shops": baskets, "unavailable": unavailable,

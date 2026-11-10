@@ -155,7 +155,7 @@ function gtDraw(ctx, a) {
         el("p", { class: "sub", text: `Play ${plural((a.sample || {}).decks || 0, "popular deck")} to see how this ` +
           "list does by colour and by style." }),
         gtPlayBox(ctx, a, { inEmpty: true })),
-    gtCredit(a)]);
+    gtCredit(a), gtBuiltLine(a.catalogue)]);
 }
 
 /** The choices the server drew its sample from, as the controls hold them. */
@@ -383,6 +383,17 @@ function gtSource(src) {
 
 function gtCredit(a) {
   return el("p", { class: "gt-small gt-credit", text: a.credit || "" });
+}
+
+/** When the popular decks list was built (E3-S43; c: the answer's catalogue, gauntlet_page.catalogue_stamp):
+ * "Popular decks list built 3 November 2026 (1a2b3c4d).", one muted line, with how long ago once it's old. It
+ * never asks for a rebuild. Null without a build time. The board (gauntlet-board.js) draws it too. */
+function gtBuiltLine(c, cls = "gt-built") {
+  const d = c && c.built ? new Date(c.built) : null;
+  if (!d || Number.isNaN(d.getTime())) return null;
+  const age = c.old && Number.isInteger(c.age_days) ? `, ${ageWords(c.age_days)}` : "";
+  return el("p", { class: `gt-small ${cls}`,
+    text: `Popular decks list built ${simDay(d, true)}${c.sha ? ` (${c.sha})` : ""}${age}.` });
 }
 
 // ------------------------------------------------------------------ choices and play

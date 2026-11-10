@@ -1,4 +1,6 @@
-# On every pull request and push to main: real-error Ruff checks and the source-length guard.
+# On every pull request and push to main: real-error Ruff checks, the source-length guard and the
+# public-repo leak guard (no real email, Cloudflare zone or id in a tracked file: E11-S62), and the
+# design model's story counts (documentation-only changes included, so a flipped status is caught).
 # Cheap, on Linux. A pull request's own branch pushes aren't linted twice (push and pull_request).
 # The full rule set isn't enforced: the code has thousands of style findings it was never held to.
 name: lint
@@ -15,12 +17,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: pipx run ruff==0.16.0 check --isolated --select E9,F63,F7,F82 .
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.14"
       - name: Test source-length inventory
         run: python scripts/test_fixtures.py decklab.tests.test_source_lengths
       - name: Check source lengths
         run: python scripts/audit_source_lengths.py --check
+      - name: Test the public-repo audit
+        run: python scripts/test_fixtures.py decklab.tests.test_public_repo_audit
+      - name: Check for real emails and Cloudflare config values
+        run: python scripts/audit_public_repo.py --check
+      - name: Test story-count audit
+        run: python scripts/test_fixtures.py decklab.tests.test_audit_stories
+      - name: Check story counts against the story headers
+        run: python scripts/audit_stories.py --check

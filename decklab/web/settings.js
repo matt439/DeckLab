@@ -4,7 +4,9 @@ simulations and how many Forge workers the PC uses (GET/PUT /api/simulations, li
 history (GET /api/settings/maintenance, lib/api/maintenance.py; reading runs no jobs), the shops' postage
 (settings-postage.js, E5-S27), the currency and price-check shops (settings-pricing.js, E11-S53), and About Deck Lab:
 the running server's version, Check for updates, the card data and Restart Deck Lab (settings-restart.js). These used to sit in every page's footer;
-the footer is now one quiet line (version.js).
+the footer is now one quiet line (version.js). About also gets one "Reference facts to review" line when a
+hand-maintained fact group (bracket rules, Karsten's figures, EDHREC's page layout...) is due a review
+(GET /api/settings/reference-facts, lib/api/reference_facts.py, E11-S71); nothing shows when none is.
 
 The parts carry the ids version.js fills (renderSimulations, renderVersionStatus): #sim-settings, #sim-mode
 (a segmented switch of [data-mode] buttons), #sim-workers, #sim-since; #visits-list (renderVisits); .build-footer
@@ -64,6 +66,8 @@ function showSettings(params, token) {
         el("p", { class: "sub", id: "build-checked" }),
         el("p", { class: "sub", id: "settings-cards", role: "status" }),
         el("p", { class: "sub", id: "settings-pricing" }),
+        // Filled only when a hand-maintained fact group is due a review (loadReferenceFacts).
+        el("p", { id: "settings-reference", role: "status", hidden: true }),
         el("div", { class: "actions" }, check),
         settingsRestartPart()))]);
   byId("sim-settings").hidden = true;
@@ -82,6 +86,7 @@ function showSettings(params, token) {
   loadSettingsMembers(token);
   loadSettingsMaintenance(token);
   loadVisits(token);
+  loadReferenceFacts(token);
   loadServerRestart(token);
   showFooter();
 }
@@ -229,6 +234,23 @@ async function settingsSimulations(token) {
     clear(part).append(loadingBox("Loading the simulations setting…", { small: true }));
     settingsSimulations(token);
   }));
+}
+
+// -------------------------------------------------------- reference facts
+
+/** About's "Reference facts to review" line (E11-S71): the server's own words, shown only when a group is due.
+ * It informs only, so a failed read, a refusal or an answer that isn't the expected shape leaves it hidden. */
+async function loadReferenceFacts(token) {
+  const host = byId("settings-reference"), profile = state.profile;
+  if (!host || !profile || !isAdminProfile()) return;
+  let data = null;
+  try {
+    data = await api("/api/settings/reference-facts");
+  } catch (error) { /* quiet: nothing else on Settings depends on it */ }
+  if (!host.isConnected || byId("settings-reference") !== host || token !== routeToken || state.profile !== profile) return;
+  const line = data && Array.isArray(data.due) && data.due.length && typeof data.line === "string" ? data.line : "";
+  host.textContent = line;
+  host.hidden = !line;
 }
 
 // ----------------------------------------------------------------- visits

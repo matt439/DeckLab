@@ -516,7 +516,8 @@ def _rule_warnings(draft, deck):
     """stats.deck_rules for each list as the draft would save it, added to
     draft.warnings ("Play-now list: ..." for that list) with the cards
     each is about (draft.about), and a Commander deck's bracket (None
-    otherwise): {"minimum", "label", "target", "game_changers", "reasons"}.
+    otherwise): {"minimum", "label", "target", "game_changers", "reasons",
+    "with_game_changer" (the minimum with one more Game Changer, E9-S30)}.
     They never block a save."""
     target, owned = _final(draft, deck)
     bracket_target = (draft.fields["target_bracket"] if "target_bracket" in draft.fields
@@ -552,7 +553,8 @@ def _rule_warnings(draft, deck):
             if version == "target" and rules.get("commander"):
                 b = rules["commander"]["bracket"]
                 bracket = {"minimum": b["minimum"], "label": b["label"], "target": bracket_target,
-                           "game_changers": b["game_changers"], "reasons": b["reasons"]}
+                           "game_changers": b["game_changers"], "reasons": b["reasons"],
+                           "with_game_changer": b.get("minimum_with_game_changer")}
                 if bracket_target and b["minimum"] > bracket_target:
                     # About every card its reasons name: Game Changers, mass land denial, extra turns.
                     named = [c["name"] for key in ("game_changers", "mass_land_denial", "extra_turns")

@@ -172,6 +172,16 @@ class Projection:
             return self._empty("unknown")
 
     def _entry(self, entry):
+        """The entry's nonfoil facts, with "partial": True (E5-S33, only when so: the absent default keeps
+        its fields) when the shop's page was only part of its results, so "not listed" and the cheapest
+        price are the first page's."""
+        shown = self._facts(entry)
+        if (isinstance(entry, dict) and entry.get("partial") is True
+                and shown["status"] in ("in_stock", "out_of_stock", "not_listed")):
+            shown["partial"] = True
+        return shown
+
+    def _facts(self, entry):
         if not isinstance(entry, dict):
             return self._empty("unknown")
         at = _at(entry.get("at"))

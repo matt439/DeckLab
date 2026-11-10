@@ -5,7 +5,9 @@ Imported when first asked for, by feature_routes.dispatch.
 
     board_view(format="commander", profile=None)
                         {"format", "state": "ok" | "no_catalogue", "build_command" (an admin's, else
-                         None), "sample": {"id", "size", "tiers"} or None, "default_budget", "note",
+                         None), "catalogue": {"built", "sha", "age_days", "old"} or None (E3-S43:
+                         gauntlet_page.catalogue_stamp, when the popular decks list was built; never
+                         cached), "sample": {"id", "size", "tiers"} or None, "default_budget", "note",
                          "notes", "rows": [row, ...]}, each row
                         {"deck": {"id", "title", "kind", "version": "target", "card_sha"},
                          "state": "untested" | "partial" | "done" | "stale_list" | "stale_older" |
@@ -315,18 +317,23 @@ def standing(fmt, forge, g, seen):
     """(the format's standard sample or None without a catalogue, rows, notes): the viewer's visible
     decks of fmt against it, built and kept as the module docstring says. The board and the library's
     popular-decks line (api/library_gauntlet.py, E3-S36) share it, so one read builds both."""
+    return _standing(fmt, forge, g, seen)[1:]
+
+
+def _standing(fmt, forge, g, seen):
+    """(the format's catalogue or None, *standing's)."""
     try:
         cat = g.catalogue(fmt)
         standard = g.standard(fmt, cat=cat)
     except forge.ForgeError:
-        return None, [], []
+        return None, None, [], []
     if not standard.get("decks"):
-        return standard, [], []
+        return cat, standard, [], []
     visible, hidden = _visible(fmt)
     if not visible:
-        return standard, [], []
+        return cat, standard, [], []
     rows, notes = _built(forge, g, fmt, cat, standard, seen, visible, hidden)
-    return standard, rows, list(notes)
+    return cat, standard, rows, list(notes)
 
 
 def board_view(format="commander", profile=None):
@@ -340,11 +347,13 @@ def board_view(format="commander", profile=None):
     g = gauntlet_page._gauntlet(forge)
     seen = forge_runs._Seen()
     out = {"format": fmt, "state": "no_catalogue", "build_command": gauntlet_page._build_command(fmt, seen),
-           "sample": None, "default_budget": gauntlet_page.DEFAULT_BUDGET, "note": None, "notes": [], "rows": []}
-    standard, rows, notes = standing(fmt, forge, g, seen)
+           "catalogue": None, "sample": None, "default_budget": gauntlet_page.DEFAULT_BUDGET, "note": None,
+           "notes": [], "rows": []}
+    cat, standard, rows, notes = _standing(fmt, forge, g, seen)
     if standard is None:
         return out
-    out.update(state="ok", sample=gauntlet_page.standard_json(standard))
+    out.update(state="ok", catalogue=gauntlet_page.catalogue_stamp(cat),
+               sample=gauntlet_page.standard_json(standard))
     if not standard.get("decks"):
         return out
     out["note"] = (f"Each figure is the list's average win rate against these {len(standard['decks'])} popular "

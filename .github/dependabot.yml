@@ -1,0 +1,41 @@
+# Supply-chain upkeep (E11-S67): once a month Dependabot proposes newer versions of everything this
+# repo pins, as ONE grouped pull request across all the ecosystems below, which goes through the
+# same required checks as any other change. Nothing merges by itself: Matt reads and merges it.
+# Security updates for a known vulnerability still arrive on their own, whenever they're found.
+version: 2
+
+multi-ecosystem-groups:
+  upkeep:
+    schedule:
+      interval: "monthly"
+
+updates:
+  # The workflows' actions, pinned to commit SHAs with the version in a trailing comment.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    patterns: ["*"]
+    multi-ecosystem-group: "upkeep"
+
+  # psycopg, the one Python dependency (decklab/requirements.txt).
+  - package-ecosystem: "pip"
+    directory: "/decklab"
+    patterns: ["*"]
+    multi-ecosystem-group: "upkeep"
+
+  # The Safari regression suite's Appium server and driver.
+  - package-ecosystem: "npm"
+    directory: "/decklab/safari"
+    patterns: ["*"]
+    multi-ecosystem-group: "upkeep"
+
+  # The UI review's headless browser driver.
+  - package-ecosystem: "npm"
+    directory: "/decklab/ui_review"
+    patterns: ["*"]
+    multi-ecosystem-group: "upkeep"
+
+  # The wake gate's images on the NAS (python and cloudflared in compose.yaml).
+  - package-ecosystem: "docker-compose"
+    directory: "/decklab/wakegate"
+    patterns: ["*"]
+    multi-ecosystem-group: "upkeep"

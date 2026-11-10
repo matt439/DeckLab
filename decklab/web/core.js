@@ -83,6 +83,9 @@ function setProps(node, props) {
     if (key === "class") node.setAttribute("class", value);
     else if (key === "text") node.textContent = value;
     else if (key.startsWith("on") && typeof value === "function") node.addEventListener(key.slice(2), value);
+    // Through the style object, never a style="" attribute: the page's Content-Security-Policy
+    // (style-src 'self', lib/server_http.py) drops an attribute's styles but allows these (E11-S63).
+    else if (key === "style" && node.style) node.style.cssText = String(value);
     else node.setAttribute(key, value === true ? "" : String(value));
   }
 }

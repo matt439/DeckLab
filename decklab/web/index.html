@@ -52,20 +52,9 @@
 <link rel="stylesheet" href="/activity.css">
 <link rel="stylesheet" href="/history.css">
 <link rel="stylesheet" href="/compare.css">
-<script>
-  // Before the first paint: the theme last chosen on this device (or ?theme= for screenshots), with "Auto"
-  // resolved from the system's, so data-theme is always light or dark and a dark page never flashes light.
-  // app.js takes over (applyTheme).
-  (function () {
-    var theme = null;
-    try {
-      var last = localStorage.getItem("decklab.lastProfile");
-      theme = new URLSearchParams(location.search).get("theme") || (last && localStorage.getItem("decklab.theme." + last));
-    } catch (e) { /* storage blocked: the system theme it is */ }
-    if (theme !== "light" && theme !== "dark") theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    document.documentElement.setAttribute("data-theme", theme);
-  })();
-</script>
+<!-- Not deferred: it sets the theme before the first paint. A file of its own, as the page's
+     Content-Security-Policy (lib/server_http.py) runs no inline script. -->
+<script src="/theme-boot.js"></script>
 <script src="/editor.js" defer></script>
 <script src="/editor-drafts.js" defer></script>
 <script src="/editor-kept-drafts.js" defer></script>

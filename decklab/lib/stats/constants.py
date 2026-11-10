@@ -12,6 +12,11 @@ KINDS = ("constructed", "commander")
 # --------------------------------------------------------------- sources
 # Everything below was looked up on 2026-09-29 by the Milestone 2 research
 # (land counts, colour sources, Commander Brackets), each from these pages.
+# The two dates are when a person last compared the figures with their pages
+# (decklab.lib.stats.reviewed lists them and says when a review is due,
+# E11-S71): set one when its figures are looked up again, changed or not.
+KARSTEN_CHECKED = "2026-09-29"          # the land formulas and colour-source tables (Karsten's articles)
+BRACKET_RULES_CHECKED = "2026-09-29"    # BRACKETS and its limits; BRACKET_RULES_DATE is the announcement they match
 SOURCES = {
     "karsten-lands": {
         "title": "How Many Lands Do You Need in Your Deck? An Updated Analysis (Frank Karsten)",

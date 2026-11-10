@@ -41,7 +41,7 @@ jobs:
     outputs:
       run_tests: ${{ steps.changed.outputs.run_tests }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Decide whether the full suite is needed
@@ -67,11 +67,11 @@ jobs:
           - { index: 2, name: 3 of 4 }
           - { index: 3, name: 4 of 4 }
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.14"
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
       - name: The .venv with psycopg and tzdata, as on the PC (connections stay blocked)
@@ -86,7 +86,7 @@ jobs:
           --timings-out timings-${{ runner.os == 'Windows' && 'windows' || 'linux' }}-${{ matrix.index }}.json
       - name: Keep the module timings (python scripts/test_shard.py --merge-timings DIR)
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: timings-${{ runner.os == 'Windows' && 'windows' || 'linux' }}-${{ matrix.index }}
           path: timings-*.json
@@ -121,11 +121,11 @@ jobs:
     env:
       PG_SUPER_PASSWORD: ci-only-not-a-secret
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.14"
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
       - name: The .venv with psycopg
@@ -153,8 +153,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.14"
       - name: A systemd user manager for the runner's user
