@@ -636,6 +636,12 @@ class CheckWatchdogTests(unittest.TestCase):
 class StatusTests(Guarded):
     """cmd_status with the watchdog in the facts."""
 
+    def setUp(self):
+        super().setUp()
+        # Watchdog/network scenarios use a usable config; profile diagnostics have their own suite.
+        self.patch("decklab.lib.config.load", return_value={"profiles": [
+            {"id": "user1", "name": "User1", "space": "home", "plays_as": "user", "role": "admin"}]})
+
     def run_status(self, facts):
         self.patch("decklab.lib.homenet.gather.gather_facts", return_value=facts)
         self.patch("decklab.lib.homenet.commands.probe", return_value=UP)

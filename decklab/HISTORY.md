@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Fixture follow-through for config diagnostics and UI cleanup (2026-11-10)
+
+- The watchdog's canned status scenario now supplies a usable synthetic admin, so its five watchdog/network warnings remain the facts under test rather than gaining the new missing-admin warning. The config-diagnostic fixtures still test that warning explicitly.
+- The browser-cleanup proof matrix mocks startup/readiness while retaining actual report/runtime cleanup assertions. It covers every supported suite and missing/negative/positive close receipts without repeatedly starting real fixture servers; dedicated readiness and real-child cleanup tests remain separate.
+- Focused validation: 67 watchdog/status/profile-diagnostic fixtures and all 22 UI-harness fixtures pass (one platform skip). Failed full-suite shards are rerun after these test fixes; the ten-minute CI limit is unchanged.
+
 ## Take-along print background in dark mode (2026-11-10; E4-S29)
 
 - Final screenshot inspection found the dark page background extending below the white take-along print sheet. Print media now sets the root/body backgrounds white only while that sheet is present; other print paths are unchanged.

@@ -151,7 +151,7 @@ const {Review} = require('./decklab/ui_review/common.js');
     def test_started_browser_requires_positive_cleanup_proof(self):
         from decklab.ui_review import runner
 
-        for suite, proof in ((suite, proof) for suite in ("capture", "variant-layout", "shell-layout", "task-layout", "receipt-layout", "families", "zoom") for proof in (None, False, True)):
+        for suite, proof in ((suite, proof) for suite in runner.SUITES for proof in (None, False, True)):
             with self.subTest(suite=suite, browser_closed=proof), tempfile.TemporaryDirectory() as outer:
                 output = runner.prepare_output(Path(outer) / "evidence")
 
@@ -165,9 +165,19 @@ const {Review} = require('./decklab/ui_review/common.js');
                     raise runner.ReviewError("Synthetic browser exit")
 
                 source = {"commit": "synthetic", "dirty": True, "digest": "stable-test-digest", "files": {}}
-                with mock.patch.object(runner, "_run_browser", side_effect=failed_browser), \
+                # This matrix tests cleanup evidence, not fixture startup. Readiness and
+                # real child cleanup have dedicated tests below; no process or socket is
+                # needed to prove missing/negative browser-close receipts fail closed.
+                finished = mock.Mock(pid=123, returncode=0)
+                finished.poll.return_value = 0
+                with mock.patch.object(runner, "_spawn", return_value=finished) as spawn, \
+                        mock.patch.object(runner, "_wait_ready", return_value={}) as ready, \
+                        mock.patch.object(runner, "_run_browser", side_effect=failed_browser) as browser, \
                         mock.patch.object(runner, "_source_state", return_value=source):
                     report = runner.run_review(output, "unused-browser", "unused-node", suite=suite, timeout=15)
+                spawn.assert_called_once()
+                ready.assert_called_once()
+                browser.assert_called_once()
                 self.assertFalse(report["completed"])
                 self.assertEqual(report["cleanup"]["browsers_closed"], proof is True, report)
                 self.assertEqual(report["cleanup"]["complete"], proof is True, report)
