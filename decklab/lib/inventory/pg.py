@@ -83,7 +83,7 @@ from decklab.lib.state import Actor, Conflict, Invalid, Unavailable
 from decklab.lib.state import pg as state_pg
 
 from . import (DECK_SAVES_PAUSED, Summary, changes, files, paths, pg_decks, pg_aliases, pg_check_links,
-               pg_dice, pg_locations)
+               pg_dice, pg_loans, pg_locations)
 from .model import ImageMeta
 # The snapshot-as-rows code is shared with the files backend (table_rows.py); these names stay
 # here for the callers and tests that use them as pg's.
@@ -109,9 +109,9 @@ DECKS_ALREADY = ("the database already holds the decks; import them again only w
 EMPTY_DECKS = files.build({})
 ALREADY = ("the database already holds an inventory; import it again only with "
            "--replace-inventory (which deletes every inventory row first, in the same change set)")
-# Every inventory table, children before parents (the order to delete in; inserts go the other
-# way). collection_import_content goes with its collection_import (on delete cascade) and
-# inventory_revision isn't audited: both are handled on their own.
+# Base inventory tables, children before parents. Later optional dice/loan tables
+# are added by readiness probes. collection_import_content goes with its import
+# (on delete cascade); inventory_revision isn't audited and is handled separately.
 INVENTORY_TABLES = ("order_card_item", "order_token_item", "order_component", "purchase_order",
                     "product_item", "product", "product_status", "collection_card", "collection_import",
                     "token_card", "watchlist_item")
@@ -193,6 +193,7 @@ def _keyed_rows(table, t, status_columns=STATUS_COLUMNS, component_columns=COMPO
     """(key columns, value columns, {key: values}) of one of t's keyed tables (tables()' shape)."""
     return {
         "collection_card": (("space_id", "set_code", "collector_number", "finish"), card_columns),
+        "card_loan": (("space_id", "id"), pg_loans.COLUMNS),
         "product": (("stem",), ("name", "format", "columns")),
         "product_status": (("file",), status_columns),
         "purchase_order": (("id",), ORDER_COLUMNS),
@@ -201,7 +202,7 @@ def _keyed_rows(table, t, status_columns=STATUS_COLUMNS, component_columns=COMPO
 
 
 # The keyed tables, parents before children (product before the components naming it).
-PARENTS_FIRST = ("product", "product_status", "purchase_order", "order_component", "collection_card")
+PARENTS_FIRST = ("product", "product_status", "purchase_order", "order_component", "collection_card", "card_loan")
 
 
 def _plain_key(key):
@@ -217,6 +218,7 @@ def _write_all(cur, t):
     located = pg_locations.ready(cur)
     t, card_columns = pg_locations.compatible(t, located), pg_locations.values(located)
     t = pg_dice.compatible(t, pg_dice.ready(cur))
+    t = pg_loans.compatible(t, pg_loans.ready(cur))
     for table in PARENTS_FIRST:
         keys, values, rows = _keyed_rows(table, t, status_columns, component_columns, card_columns)
         _insert(cur, table, keys + values, [(*_plain_key(k), *map(_db, v)) for k, v in rows.items()])
@@ -255,6 +257,7 @@ def _diff(cur, old, new):
     card_columns = pg_locations.values(located)
     dice_ready = pg_dice.ready(cur)
     new, old = (pg_dice.compatible(t, dice_ready) for t in (new, old))
+    new, old = (pg_loans.compatible(t, pg_loans.ready(cur)) for t in (new, old))
     # Rows kept by id, positions STEP apart within a space where grouped (dice_counter: migration 0020).
     by_id = (("token_card", TOKEN_COLUMNS, True), ("watchlist_item", WATCH_COLUMNS, False)) + \
         (((pg_dice.TABLE, DICE_COLUMNS, True),) if dice_ready else ())
@@ -542,7 +545,7 @@ class PgInventory:
             raise NotImported(NOT_IMPORTED)
         # Whether migration 0016 is there counts too: once it's applied the locations can be read.
         # So does migration 0020's: once it's applied the dice and counters can be read.
-        return (self.dbname or db.settings()["name"], row[1], row[0], pg_locations.ready(c), pg_dice.ready(c))
+        return (self.dbname or db.settings()["name"], row[1], row[0], pg_locations.ready(c), pg_dice.ready(c), pg_loans.ready(c))
 
     def _read(self, c, remember=True):
         """The snapshot the connection sees (the cached one while the revision hasn't moved)."""
@@ -1065,7 +1068,7 @@ def write_model(inv, actor, message, *, contents=None, replace=False, dbname=Non
     if reasons:
         raise Unrepresentable(reasons)
     t = tables(pg_decks.without_deck_parts(inv), strict=True)
-    spaces = set(inv.collections) | set(inv.tokens) | set(inv.imports) | set(inv.dice)
+    spaces = set(inv.collections) | set(inv.tokens) | set(inv.imports) | set(inv.dice) | set(inv.loans)
     own = conn is None
     c = db.connect("app", dbname=dbname) if own else conn
     try:
@@ -1077,15 +1080,14 @@ def write_model(inv, actor, message, *, contents=None, replace=False, dbname=Non
                 raise ValueError(f"the inventory holds space {', '.join(missing)}, which the database doesn't "
                                  f"have: run python -m decklab.db sync-profiles first")
             space_members.admit(cur, space_ids=spaces, actor=actor, lock=False)
+            present_tables = INVENTORY_TABLES + tuple(helper.TABLE for helper in (pg_dice, pg_loans) if helper.ready(cur))
             cur.execute("select exists (select 1 from inventory_revision)" + "".join(
-                f" or exists (select 1 from {table})" for table in INVENTORY_TABLES))
+                f" or exists (select 1 from {table})" for table in present_tables))
             if cur.fetchone()[0]:
                 if not replace:
                     raise ValueError(ALREADY)
-                for table in INVENTORY_TABLES:
+                for table in present_tables:
                     cur.execute(f"delete from {table}")
-                if pg_dice.ready(cur):
-                    cur.execute(f"delete from {pg_dice.TABLE}")
             _write_all(cur, t)
             _add_imports(cur, imports)
             cur.execute("update inventory_revision set revision = revision + 1, imported_at = now() "

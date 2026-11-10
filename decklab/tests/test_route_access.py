@@ -93,6 +93,10 @@ class RouteAccessTests(PermissionTestCase):
         _write(self.box.magic / "people/user3/decks/casual/private-probe.md", R_DECK.replace("User2 Elves", PRIVATE))
         _write(self.box.magic / "people/user3/collection.csv", "name,set,collector_number,finish,quantity,condition,language,notes\n"
                f"Llanowar Elves,fdn,227,nonfoil,7,NM,en,{PRIVATE}\n")
+        from decklab.lib.inventory import loan_rules, rules as inventory_rules
+        loan = {"id": "c" * 32, "name": "Llanowar Elves", "set": "fdn", "collector_number": "227", "finish": "nonfoil",
+                "quantity": "1", "borrower": PRIVATE, "lent_on": "2026-11-11", "returned_on": "", "notes": PRIVATE}
+        _write(self.box.magic / "people/user3/loans.csv", inventory_rules.csv_bytes([loan], loan_rules.FIELDS).decode())
         out = io.StringIO()
         writer = csv.DictWriter(out, fieldnames=accessories.FIELDS)
         writer.writeheader()
@@ -301,6 +305,17 @@ class RouteAccessTests(PermissionTestCase):
             existing = self.probe("POST", ("activity", "undo"), who, "activity", source_id=1)
             missing = self.probe("POST", ("activity", "undo"), who, "activity", source_id=999999)
             self.assertEqual(existing[:2], missing[:2])
+
+    def test_public_inventory_never_widens_loan_detail_routes(self):
+        before = self.persisted()
+        with mock.patch.object(guard, "public_spaces", return_value=frozenset({"user3"})):
+            for who in (None, "user2", "user1", "matt"):
+                for method, path in (("GET", "collection/loans"), ("POST", "collection/lend"), ("POST", "collection/return")):
+                    with self.subTest(viewer=who, method=method, path=path):
+                        status, answer, _ = self.probe(method, tuple(path.split("/")), who, feature_routes.ACCESS[(method, path)])
+                        self.assertEqual(status, 403)
+                        self.assertNotIn(PRIVATE, json.dumps(answer))
+        self.assertEqual(self.persisted(), before)
 
     def test_legacy_private_routes_keep_their_existing_cross_space_boundaries(self):
         before = self.persisted()

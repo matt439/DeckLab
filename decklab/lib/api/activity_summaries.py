@@ -18,6 +18,7 @@ INVENTORY_FIELDS = {
     "collection_import": ("space_id", "file_name"),
     "token_card": ("space_id", "front", "back", "quantity"),
     "dice_counter": ("space_id", "item_type", "die_size", "counter_kind", "design", "quantity"),
+    "card_loan": ("space_id", "name", "set_code", "collector_number", "finish", "quantity", "lent_on", "returned_on"),
     "product": ("stem", "name"),
     "product_status": ("file", "status", "intact", "sleeves", "deck_box"),
     "purchase_order": ("id", "seller", "ordered_on"),
@@ -27,7 +28,7 @@ INVENTORY_FIELDS = {
 # Rows counted per change set rather than listed (a product's list, an order's payload): their
 # audit rows hold cells without column names, and an import has hundreds of them.
 ITEM_TABLES = ("product_item", "order_card_item", "order_token_item")
-SPACE_TABLES = ("collection_card", "collection_import", "token_card", "dice_counter")
+SPACE_TABLES = ("collection_card", "collection_import", "token_card", "dice_counter", "card_loan")
 PROFILE_FIELDS = (("name", "name"), ("role", "role"), ("space_id", "space"), ("plays_as", "plays as"))
 
 
@@ -424,9 +425,18 @@ def _watch_summary(op, before, after, whose):
     return _changed(f"Changed {card} on the watchlist", parts)
 
 
+def _loan_summary(op, before, after, whose):
+    record = after or before
+    verb = "Returned" if after.get("returned_on") else "Lent"
+    if op == "DELETE":
+        verb = "Removed loan of"
+    return f"{verb} {_qty(record)} × {_collection_card(record)} in {whose} collection"
+
+
 INVENTORY_SUMMARIES = {
     "collection_card": _collection_summary, "collection_import": _import_summary, "token_card": _token_summary,
     "dice_counter": _dice_summary,
+    "card_loan": _loan_summary,
     "product": _product_summary, "product_status": _status_summary, "purchase_order": _order_summary,
     "order_component": _component_summary, "watchlist_item": _watch_summary,
 }

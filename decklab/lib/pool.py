@@ -380,6 +380,8 @@ def _load_person_pool(space):
         owned = read_card_csv(collection, unresolved)
     about = {}
     in_use = _built_in_use(space.id, set(), set(), unresolved, warnings, about)
+    from .inventory import ops_loans
+    in_use.extend(ops_loans.holder(inventory.current(), space.id))
     return Pool(owned, {}, in_use, unresolved, warnings, space.id, warning_decks=about)
 
 
@@ -467,6 +469,9 @@ def _load_pool():
     in_use = _built_in_use(spaces.HOME, intact, found, unresolved, warnings, about)
     for stem in sorted(intact - found):
         warnings.append(f"Product {stem} is marked intact but has no deck lists, so nothing is held")
+
+    from .inventory import ops_loans
+    in_use.extend(ops_loans.holder(inv, spaces.HOME))
 
     return Pool(owned, on_the_way, in_use, unresolved, warnings, incoming_sources=incoming_sources,
                 warning_decks=about)
@@ -733,8 +738,9 @@ def compare(sections, pool, exclude=(), prices=True, listed=False):
     for name, needed in need.items():
         owned = pool.owned.get(name, 0)
         coming = pool.on_the_way.get(name, [])
-        used = [(d.title, d.cards[name]) for d in others if d.cards.get(name)]
-        available = max(owned - sum(qty for _, qty in used), 0)
+        used = [(d.title, d.cards[name]) for d in others if d.cards.get(name) and d.why != "lent out"]
+        lent = sum(d.cards.get(name, 0) for d in others if d.why == "lent out")
+        available = max(owned - sum(qty for _, qty in used) - lent, 0)
         missing = max(needed - available, 0)
         price = (cards.price_aud(name, rate=(result["rate"], result["rate_date"]), code=code)
                  if prices and name not in unresolved else None)
@@ -746,6 +752,7 @@ def compare(sections, pool, exclude=(), prices=True, listed=False):
             "on_the_way_from": list(coming),    # [(source, copies)]
             "incoming_sources": [dict(source) for source in pool.incoming_sources.get(name, [])],
             "in_use_elsewhere": used,           # [(deck title, copies)]
+            **({"lent_out": lent} if lent else {}),
             "available": available,
             "missing": missing,
             "aud_each": price.aud if price else None,
@@ -854,7 +861,7 @@ def row_labels(r):
     shows these next to the owned-vs-needed table, so it agrees with the deck
     file's Notes cells."""
     on_the_way = []
-    held = sum(qty for _, qty in r["in_use_elsewhere"])
+    held = sum(qty for _, qty in r["in_use_elsewhere"]) + r.get("lent_out", 0)
     arrived = max(r["owned"] - r["on_the_way"] - held, 0)   # copies here now and free
     waiting = max(r["need"] - r["missing"] - arrived, 0)     # usable copies still on the way
     for source, qty in r["on_the_way_from"]:
@@ -863,14 +870,17 @@ def row_labels(r):
         on_the_way.append((source, min(qty, waiting)))
         waiting -= qty
     short = r["missing"] > max(r["need"] - r["owned"], 0)     # short because of other decks
-    return {"on_the_way": on_the_way, "in_use": list(r["in_use_elsewhere"]) if short else []}
+    return {"on_the_way": on_the_way,
+            "in_use": list(r["in_use_elsewhere"]) if short else [],
+            **({"lent_out": r["lent_out"]} if r.get("lent_out") else {})}
 
 
 def _labels(r):
     """The Notes labels for one result row (see table_rows)."""
     parts = row_labels(r)
     return tuple([f"{qty} on the way ({source})" for source, qty in parts["on_the_way"]]
-                 + [f"{qty} in use in {title}" for title, qty in parts["in_use"]])
+                 + [f"{qty} in use in {title}" for title, qty in parts["in_use"]]
+                 + ([f"{parts['lent_out']} lent out"] if parts.get("lent_out") else []))
 
 
 def table_rows(result):
@@ -1038,7 +1048,7 @@ def _print_result(r):
     sign = currency.symbol(r.get("currency") or currency.DEFAULT).strip()    # "A$", "€" or "SEK" (E11-S53)
     print(f"{'Card':<{width}}  Need  Owned  Coming  Used  Missing  {sign} each  {sign} missing")
     for row in r["rows"]:
-        used = sum(qty for _, qty in row["in_use_elsewhere"])
+        used = sum(qty for _, qty in row["in_use_elsewhere"]) + row.get("lent_out", 0)
         # A card with no non-foil price is priced in foil or etched; say so.
         finish = f"  ({row['priced_finish']} price)" if row["priced_finish"] not in (None, "nonfoil") else ""
         print(f"{row['name']:<{width}}  {row['need']:>4}  {row['owned']:>5}  {row['on_the_way']:>6}  "

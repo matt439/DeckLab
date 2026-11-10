@@ -22,7 +22,7 @@ BRACKET_NUMBERS = range(1, 6)               # Commander Brackets 1-5
 # cards the total leaves out, and the older precon labels written by hand
 # before Deck Lab, which it replaces. Only a run of these at the start of a
 # cell is Deck Lab's; set_table replaces that run and keeps the rest.
-LABEL_RE = re.compile(r"\d+ on the way \([^;|]+\)|\d+ in use in [^;|]+|not counted, no price: [^;|]+"
+LABEL_RE = re.compile(r"\d+ on the way \([^;|]+\)|\d+ in use in [^;|]+|\d+ lent out|not counted, no price: [^;|]+"
                       r"|on the way \([^;|,()]+ precon\)")
 
 

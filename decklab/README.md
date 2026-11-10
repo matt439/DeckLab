@@ -2036,3 +2036,10 @@ Each module's docstring in `lib/` explains the rest. A module that's a package (
 
 
 
+
+
+### Loose-card loans
+
+**Collection → More → Loans** records an exact printing lent to someone and its whole return. Borrower/notes are private to the collection's own people, including when the collection is Public. Ownership stays in the collection, but lent copies are unavailable to decks, Spares and new physical builds until returned. The list gives the whole-return action; partial returns should be recorded as separate batches when lending. Due dates, reminders, basic-land allocations and whole built-deck loans are not tracked.
+
+The CLI equivalents are `python -m decklab.db collection loans [--space S] [--all] [--json]`, `collection lend SET NUMBER FINISH QUANTITY --borrower "..." --date YYYY-MM-DD -m "..."` and `collection return LOAN_ID --date YYYY-MM-DD -m "..."`; writes accept `--dry-run`, `--space` and `--actor`. Lend optionally takes `--expect` with the current collection hash. Migration0024 is required before writes. A loan never transfers cards into another space.

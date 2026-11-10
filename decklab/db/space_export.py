@@ -125,6 +125,11 @@ def snapshot(c, space, *, details=False, personal=False):
                                                 (space,))), key=_json)
         if dice:
             data["dice"] = dice
+    if c.execute("select to_regclass('public.card_loan') is not null").fetchone()[0]:
+        loans = sorted((row[0] for row in c.execute("select to_jsonb(r) from card_loan r where space_id = %s",
+                                                   (space,))), key=_json)
+        if loans:
+            data["loans"] = loans
     cards = [{("set" if key == "set_code" else key): value for key, value in row.items()
               if key != "space_id"} for row in data["collection"]]
     cards.sort(key=rules.sort_key)
@@ -139,6 +144,11 @@ def snapshot(c, space, *, details=False, personal=False):
              "tokens.csv": rules.csv_bytes(tokens, rules.TOKEN_FIELDS)}
     if places:
         files["locations.csv"] = rules.csv_bytes(places, rules.LOCATION_FIELDS)
+    if data.get("loans"):
+        from decklab.lib.inventory import loan_rules
+        made = [{key: (str(row.get("set_code" if key == "set" else key) or "")) for key in loan_rules.FIELDS}
+                for row in data["loans"]]
+        files["loans.csv"] = rules.csv_bytes(sorted(made, key=loan_rules.sort_key), loan_rules.FIELDS)
     if data.get("dice"):
         from decklab.lib.inventory import dice_rules
         from decklab.lib.inventory.table_rows import DICE_COLUMNS

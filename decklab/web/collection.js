@@ -324,6 +324,7 @@ function colHead(cv, query) {
     cv.unsupported ? null : { label: "Precons we could build…", onclick: () => openCoverageSheet(cv) },
     cv.unsupported ? null : { label: "Commanders we could build…", onclick: () => openCommanderCandidates(cv) },
     cv.editable && !cv.unsupported ? { label: "Record a trade…", onclick: () => openTradeSheet(cv) } : null,
+    cv.editable && !cv.unsupported ? { label: "Loans…", onclick: () => openCollectionLoans(cv) } : null,
     cv.unsupported ? null : { label: "Download collection (CSV)", onclick: () => downloadCollection(cv) },
     typeof memberOwnSpace === "function" && memberOwnSpace() && cv.space === ownSpace()
       ? { label: "Download my space (zip)", onclick: () => downloadMemberSpace(cv) } : null,

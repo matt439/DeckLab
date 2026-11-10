@@ -63,6 +63,7 @@ TABLES = [
     ("public.collection_import", ("id",)),
     ("public.token_card", ("space_id", "position", "id")),
     ("public.dice_counter", ("space_id", "position", "id")),
+    ("public.card_loan", ("space_id", "id")),
     ("public.product", ("stem",)),
     ("public.product_item", ("product_stem", "position")),
     ("public.product_status", ("position", "file")),
@@ -85,7 +86,7 @@ DECK_TABLES = {"public.decks_revision", "public.deck", "public.deck_revision", "
 INVENTORY_TABLES = {name for name, _ in TABLES[TABLES.index(("public.inventory_revision", ("id",))):]} - DECK_TABLES
 # Inventory tables a later migration adds (0020's dice_counter). Without one the magic folder is
 # still written (the snapshot reads its rows as none); only its CSV is skipped.
-LATER_INVENTORY_TABLES = {"public.dice_counter"}
+LATER_INVENTORY_TABLES = {"public.dice_counter", "public.card_loan"}
 # Tables a database not yet migrated may lack (0003, 0004, 0006, 0010-0013, 0017 and 0020-0022).
 # Until it's migrated they're skipped, a CSV already written for one is kept and the wishlists
 # (or magic) folder is left as it is (without 0006 no deck file is exported; a missing table of

@@ -28,6 +28,7 @@ ACCESS = MappingProxyType({
     ('GET', 'collection'): 'inventory',
     ('GET', 'collection/rows'): 'inventory',
     ('GET', 'collection/download'): 'inventory',
+    ('GET', 'collection/loans'): 'inventory',
     ('GET', 'printings'): 'open',
     ('GET', 'precons'): 'open',
     ('GET', 'precons/product'): 'home-admin',
@@ -125,6 +126,8 @@ ACCESS = MappingProxyType({
     ('POST', 'tokens/scan'): 'inventory-edit',
     ('POST', 'tokens/scan/add'): 'inventory-edit',
     ('POST', 'collection/save'): 'inventory-edit',
+    ('POST', 'collection/lend'): 'inventory-edit',
+    ('POST', 'collection/return'): 'inventory-edit',
     ('POST', 'collection/bulk'): 'inventory-edit',
     ('POST', 'collection/locations/bulk'): 'inventory-edit',
     ('POST', 'collection/import/preview'): 'inventory-edit',
@@ -396,6 +399,7 @@ def route_tables():
                                  library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, reference_facts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_combined, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_ideas, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
     from decklab.lib.api import error_reports
+    from decklab.lib.api import collection_loans
 
     gets = {
         ("space", "download"): (space_download.download_view, ("space",)),
@@ -408,6 +412,7 @@ def route_tables():
                          ("q", "color", "type", "role", "mv", "availability", "page", "limit", "space")),
         ("collection", "rows"): (collection_edit.rows_view, ("space",)),
         ("collection", "download"): (collection_edit.download_view, ("space",)),
+        ("collection", "loans"): (collection_loans.loans_view, ("space", "before", "include_returned")),
         ("printings",): (collection_edit.printings_view, ("name",)),
         ("precons",): (precons.precons_view, ("q", "products")),
         ("precons", "product"): (precons.product_list_view, ("file", "bonus")),
@@ -507,6 +512,8 @@ def route_tables():
         ("tokens", "scan"): (tokens_scan.scan_token, collection_scan.MAX_SCAN_BODY),     # nothing is written
         ("tokens", "scan", "add"): (tokens_scan.add_scanned, tokens_scan.MAX_ADD_BODY),
         ("collection", "save"): collection_edit.save_card,
+        ("collection", "lend"): collection_loans.lend,
+        ("collection", "return"): collection_loans.return_loan,
         ("collection", "bulk"): (collection_edit.bulk_set, collection_edit.MAX_BULK_BODY),
         ("collection", "locations", "bulk"): (collection_locations.bulk_set, collection_edit.MAX_BULK_BODY),
         ("collection", "import", "preview"): (collection_edit.import_preview, collection_edit.MAX_IMPORT_BODY),

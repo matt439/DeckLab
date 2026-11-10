@@ -149,6 +149,10 @@ def analyze(inv, supply, space, wishlist=()):
                 continue
             pieces = [f"{owned[name]} owned", f"{held[name]} in built decks or intact products",
                       f"{planned[name]} wanted by building or idea decks"]
+            lent = sum(holder.cards.get(name, 0) for holder in supply.in_use if holder.why == "lent out")
+            if lent:
+                pieces[1] = f"{held[name] - lent} in built decks or intact products"
+                pieces.insert(2, f"{lent} lent out")
             if considering[name]:
                 pieces.append(f"{considering[name]} kept for Considering")
             if wishlist_keep:

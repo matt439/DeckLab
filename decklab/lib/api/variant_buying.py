@@ -145,7 +145,7 @@ def _availability(test, added, rows):
         for row in rows:
             counted = by_name[row["name"]]
             need, available = counted["need"], counted["available"]
-            held = sum(quantity for _, quantity in counted["in_use_elsewhere"])
+            held = sum(quantity for _, quantity in counted["in_use_elsewhere"]) + counted.get("lent_out", 0)
             arrived = max(counted["owned"] - counted["on_the_way"] - held, 0)
             baseline = need - row["added"]
             if baseline < 0:

@@ -21,7 +21,7 @@ from collections import defaultdict
 
 from decklab.lib.state import Invalid
 
-from . import dice_rules, files, paths, pg_check_links, pg_dice, pg_locations, rules
+from . import dice_rules, files, loan_rules, paths, pg_check_links, pg_dice, pg_loans, pg_locations, rules
 from .model import QUEUE_FIELDS, Component, ImportInfo, Order
 from .table_rows import (CARD_COLUMNS, COMPONENT_COLUMNS, ITEM_TABLES, ORDER_COLUMNS, PAYLOAD_FIELDS,
                          STATUS_COLUMNS, TOKEN_COLUMNS, WATCH_COLUMNS)
@@ -78,6 +78,8 @@ def _select(c):
     data["locations_ready"] = pg_locations.ready(c)
     data["dice_ready"] = pg_dice.ready(c)
     data[pg_dice.TABLE] = pg_dice.rows(c, data["dice_ready"])
+    data["loans_ready"] = pg_loans.ready(c)
+    data[pg_loans.TABLE] = pg_loans.rows(c, data["loans_ready"])
     return data
 
 
@@ -117,6 +119,12 @@ def snapshot(data, revision):
         if located:
             out[paths.locations(space)] = _render(rules.LOCATION_FIELDS, located)[0]
     token_ids = {}
+    loans = defaultdict(list)
+    for space, loan_id, *values in data.get(pg_loans.TABLE, ()):
+        loans[space].append([loan_id, *values])
+    for space, rows in loans.items():
+        rows.sort(key=lambda row: (str(row[7]), row[0]))
+        out[paths.loans(space)] = _render(loan_rules.FIELDS, rows)[0]
     tokens = defaultdict(list)
     for row in data["token_card"]:
         tokens[row[1]].append(row)
@@ -163,7 +171,8 @@ def snapshot(data, revision):
         order = Order.build(oid, seller, ordered_on, sources, notes, built, audit_notes)
         out[paths.record(oid)] = rules.json_bytes(order.data)
     inv = files.build(out, revision=str(revision), backend="db").replace(
-        locations_ready=data.get("locations_ready", True), dice_ready=data.get("dice_ready", True))
+        locations_ready=data.get("locations_ready", True), dice_ready=data.get("dice_ready", True),
+        loans_ready=data.get("loans_ready", True))
     imports = defaultdict(list)
     for space, file_name, size, digest, at, actor in data["collection_import"]:
         imports[space].append(ImportInfo(file_name, size, digest, at.isoformat() if at else None, actor))

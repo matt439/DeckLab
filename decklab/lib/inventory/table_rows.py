@@ -32,7 +32,7 @@ Nothing here touches a database (or imports psycopg).
 import dataclasses
 import json
 
-from . import dice_rules, paths, rules
+from . import dice_rules, loan_rules, paths, rules
 from .model import QUEUE_FIELDS, Component, Order
 
 CARD_COLUMNS = ("name", "set_code", "collector_number", "finish", "quantity", "condition", "language", "notes")
@@ -222,7 +222,7 @@ def _collect(inv, strict):
     reasons = _Reasons()
     out = {"collection_card": {}, "token_card": [], "watchlist_item": [], "product": {}, "product_item": {},
            "product_status": {}, "purchase_order": {}, "order_component": {}, "order_card_item": {},
-           "order_token_item": {}, "dice_counter": []}
+           "order_token_item": {}, "dice_counter": [], "card_loan": {}}
     for space, sheet in inv.collections.items():
         bad = reasons.about(sheet.path)
         try:
@@ -289,6 +289,7 @@ def _collect(inv, strict):
             cells[6] = qty
             out["token_card"].append((row.id, space, *cells))
     _dice_rows(inv, out, reasons, strict)
+    _loan_rows(inv, out, reasons, strict)
     status = inv.status
     bad = reasons.about(status.path)
     if status.error is not None:
@@ -359,6 +360,36 @@ def _collect(inv, strict):
             reasons.about(path)(f"{path}: no order record names it")
     _deck_rows(inv, out, reasons, strict)
     return out, reasons
+
+
+def _loan_rows(inv, out, reasons, strict):
+    for space, sheet in inv.loans.items():
+        bad = reasons.about(sheet.path)
+        try:
+            paths.space_root(space)
+        except ValueError as error:
+            bad(str(error))
+            continue
+        if sheet.error or sheet.strict_error:
+            bad("The card loans can't be read")
+            continue
+        if strict and sheet.exists and not sheet.rows:
+            bad("A space with no loan records has no loan file")
+        for problem in loan_rules.problems([row.as_dict() for row in sheet.rows], lambda n: paths.row_of(sheet.path, n)):
+            bad(problem)
+        for row in sheet.rows:
+            try:
+                made = loan_rules.clean_row(row.as_dict())
+            except ValueError:
+                continue
+            out["card_loan"][(space, made["id"])] = tuple(
+                int(made[key]) if key == "quantity" else made[key] or None if key == "returned_on" else made[key]
+                for key in loan_rules.FIELDS[1:])
+        valid = [row.as_dict() for row in sheet.rows if not row.get("returned_on")]
+        if not loan_rules.problems(valid, lambda number: "A loan row"):
+            owned = {(row.text("name"), *rules.ident(row)): row.qty for row in inv.collection(space).rows}
+            if any(owned.get(key) is None or quantity > owned.get(key, 0) for key, quantity in loan_rules.counts(valid).items()):
+                bad("This change would remove copies still lent out. Record their return first")
 
 
 def _dice_rows(inv, out, reasons, strict):

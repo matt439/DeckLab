@@ -81,8 +81,8 @@ import tempfile
 import threading
 from pathlib import Path, PurePosixPath
 
-from . import dice_rules, paths, rules
-from .model import (AccessoryRow, CardRow, Deck, DiceRow, ImageMeta, ImportInfo, Inventory, LocationRow, Order, Product,
+from . import dice_rules, loan_rules, paths, rules
+from .model import (AccessoryRow, CardRow, Deck, DiceRow, ImageMeta, ImportInfo, Inventory, LoanRow, LocationRow, Order, Product,
                     ProductItem, Sheet, StatusRow, TokenRow, WatchRow, name_order)
 
 _SPAWN = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
@@ -133,10 +133,10 @@ def tree_files(root, import_bytes=False):
     bytes (build() makes that source unreadable); one removed while we look is left out."""
     root = Path(root)
     magic = root / "magic"
-    candidates = [magic / "collection.csv", magic / "tokens.csv", magic / "locations.csv", magic / "dice.csv",
+    candidates = [magic / "collection.csv", magic / "tokens.csv", magic / "locations.csv", magic / "dice.csv", magic / "loans.csv",
                   magic / "watchlist.csv"]
     for pattern in ("imports/*", "people/*/collection.csv", "people/*/tokens.csv", "people/*/locations.csv",
-                    "people/*/dice.csv",
+                    "people/*/dice.csv", "people/*/loans.csv",
                     "people/*/imports/*", "orders/records/*.json"):
         candidates += sorted(magic.glob(pattern))
     # *.csv in any case, as Windows' glob finds them, so an X.CSV is named below on every system.
@@ -705,6 +705,18 @@ def dice_sheet(rel, data):
                  csv_error=_strict_csv(text))
 
 
+def loans_sheet(rel, data):
+    text, header, rows, error = _lenient(rel, data, LoanRow)
+    if error is not None:
+        return Sheet(rel, exists=True, error=error)
+    problems = tuple(loan_rules.problems([row.as_dict() for row in rows], lambda n: paths.row_of(rel, n)))
+    if any(row.overflow for row in rows):
+        problems += ("A loan row has extra columns",)
+    strict = None if header == loan_rules.FIELDS else "The loan columns don't match Deck Lab's loan records"
+    return Sheet(rel, header, rows, True, None, problems, strict or (problems[0] if problems else None),
+                 csv_error=_strict_csv(text))
+
+
 def deck_of(rel, data):
     """The Deck the deck file at rel holds (its exact text, or error when it isn't UTF-8 or the
     OS refused to read it)."""
@@ -751,7 +763,7 @@ def build(files, revision=None, backend="files", decks_revision=None):
     tree_files, deck_tree_files or git_files give) holds. Never raises for what's in a file (see
     the module docstring)."""
     collections, tokens, imports, products, orders, payloads = {}, {}, {}, [], [], {}
-    locations, dice = {}, {}
+    locations, dice, loans = {}, {}, {}
     status = watchlist = accessories = None
     deck_parts, images = {}, {}
     for rel in sorted(files):
@@ -768,6 +780,8 @@ def build(files, revision=None, backend="files", decks_revision=None):
             locations[detail] = locations_sheet(rel, data)
         elif what == "dice":
             dice[detail] = dice_sheet(rel, data)
+        elif what == "loans":
+            loans[detail] = loans_sheet(rel, data)
         elif what == "import":
             space, name = detail
             size = len(data) if isinstance(data, bytes) else 0 if isinstance(data, OSError) else int(data)
@@ -802,7 +816,7 @@ def build(files, revision=None, backend="files", decks_revision=None):
     return Inventory(
         revision=revision if revision is not None else revision_of(files),
         collections=dict(sorted(collections.items())), tokens=dict(sorted(tokens.items())),
-        locations=dict(sorted(locations.items())), dice=dict(sorted(dice.items())),
+        locations=dict(sorted(locations.items())), dice=dict(sorted(dice.items())), loans=dict(sorted(loans.items())),
         imports={space: tuple(sorted(found, key=lambda i: i.name)) for space, found in sorted(imports.items())},
         status=status_sheet(status), products=tuple(products), orders=tuple(orders),
         payloads=dict(sorted(payloads.items())), watchlist=watchlist_sheet(watchlist), backend=backend,
@@ -849,7 +863,7 @@ def sources(inv):
     """{path: source} of every source of inv that has a file (exists, or a product, record,
     deck or picture), whether or not it can be rendered: the deck parts included."""
     out = {}
-    for sheet in (*inv.collections.values(), *inv.tokens.values(), *inv.locations.values(), *inv.dice.values(),
+    for sheet in (*inv.collections.values(), *inv.tokens.values(), *inv.locations.values(), *inv.dice.values(), *inv.loans.values(),
                   inv.status,
                   inv.watchlist, *inv.payloads.values(), inv.accessories):
         if sheet.exists:

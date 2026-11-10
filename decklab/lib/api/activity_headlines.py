@@ -23,6 +23,7 @@ KINDS = ("decks", "collection", "tokens", "shopping", "wishlist", "sleeves", "ga
 _KIND_OF = {
     "collection_card": "collection", "collection_import": "collection", "token_card": "tokens",
     "dice_counter": "tokens",
+    "card_loan": "collection",
     **{table: "shopping" for table in ("product", "product_status", "purchase_order", "order_component",
                                         "watchlist_item", *ITEM_TABLES)},
     rules.DECK_TABLE: "decks", "deck_alias": "decks", "packing_tick": "decks", rules.ACCESSORY_TABLE: "sleeves", "wishlist_entry": "wishlist",

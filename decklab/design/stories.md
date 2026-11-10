@@ -41,12 +41,12 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 29 | 0 | 3 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 34 | 1 | 1 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 35 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 53 | 14 | 8 | 4 |
-| **Total** | **376** | **303** | **22** | **35** | **16** |
+| **Total** | **376** | **304** | **22** | **34** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -3512,7 +3512,7 @@ Built 2026-11-11: Find cards' Spare filter subtracts built/intact holds, every n
 
 Evidence:104 latest focused/integration,327 earlier broad and16 new counting/API/UI tests pass (overlapping groups), plus Ruff/Node/source checks. Coverage includes same-space privacy, unknown physical assignments, filter pagination/copy/fallback and conservation-based single-printing proof. Cross-member offers/matches remain excluded because they change privacy boundaries. From the product review of 2026-11-10, compared with Deckbox, Dex and ManaArchive.
 
-**E7-S37** · Matt · could · L · missing
+**E7-S37** · Matt · could · L · built
 
 As Matt, lending cards to family and friends, I want Deck Lab to record copies lent out and their return, so that a lent card doesn't look free.
 
@@ -3524,6 +3524,8 @@ As Matt, lending cards to family and friends, I want Deck Lab to record copies l
 Gap: nothing records a loan, so `decklab/lib/pool.py` counts lent loose copies as free; a storage location (E8-S22) doesn't reduce them, and a trade (E7-S22) removes ownership. A lent built deck's mark is a later slice. No due dates or reminders. Needs Matt's decision: whether the household lends cards often enough to keep such records. From the product review of 2026-11-10, compared with OpenMTG.
 
 First slice: a `card_loan` migration with its `UNDO_MIGRATION` entry, a new `decklab/lib/inventory/ops_loans.py`, `python -m decklab.db collection lend|return|loans`, and open loans as one more holder in `decklab/lib/pool.py` with the table's "lent out" label.
+
+Built (2026-11-11): Collection More → Loans and collection lend/return/loans record exact-printing, dated loose-card batches and audited whole returns, with private borrower/notes. Ownership stays in the collection. Lend capacity uses proven physical/intact holds and conservative unlocated-printing bounds, never incoming or guessed allocations. Open loans reduce pool/table/Spares/arrival availability; fresh-operation guards also protect against collection reductions and new built/recorded holders consuming lent supply. Checks stay within touched spaces, so another member's damaged loans cannot block a home change. Private API details remain actual-space-only even for Public inventory; ordinary table/download/Activity projections omit borrower fields, and noninventory public-deck output is invariant. Migration0024 has audit/rollback and optional old-schema refusal plus export/member/check parity.381 broad,158 parity and111 final integration checks pass (overlap;14/2/1 guarded DB skips), with guarded PG transaction/rollback coverage for CI. No live migration, loan, collection or borrower record was made; built-deck lending/basic allocations/due dates/reminders are outside this loose-card story.
 
 **E7-S38** · Matt · could · L · built
 

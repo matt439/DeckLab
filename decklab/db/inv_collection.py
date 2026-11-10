@@ -80,6 +80,8 @@ def register(sub):
     p = sub.add_parser("collection", help="List or merge cards into a space's collection.",
                        description="List a space's collection, or merge card files into it.")
     verbs = p.add_subparsers(dest="verb", required=True, metavar="verb")
+    from . import inv_loans
+    inv_loans.register(verbs)
     sp = verbs.add_parser("list", help="Print a space's collection as CSV, in the collection's columns.")
     sp.add_argument("--space", default=paths.HOME, help="the space (home by default)")
     sp.set_defaults(func=_list)

@@ -78,7 +78,7 @@ function ownedCurrency(o) {
 
 function ownedTable(o, ownership = {}) {
   // Only the cards worth a look: missing, on the way or held by another deck. The rest are simply owned.
-  const rows = [...o.rows].filter((r) => r.missing > 0 || rowLabels(r).on_the_way.length || rowLabels(r).in_use.length)
+  const rows = [...o.rows].filter((r) => r.missing > 0 || rowLabels(r).on_the_way.length || rowLabels(r).in_use.length || rowLabels(r).lent_out)
     .sort((a, b) => rowOrder(a) - rowOrder(b) || b.missing - a.missing || a.name.localeCompare(b.name));
   // "Can use" is capped at Need, as in the decks' tables (PLAN.md part 2).
   const usable = (r) => Math.min(r.available, r.need);
@@ -152,6 +152,7 @@ function ownedRow(r, usable, priceError = false, o = null) {
   if (r.missing > 0) labels.push(status("crit", `${r.missing} missing`));
   labels.push(...rowIncomingSources(r).map(incomingSourceChip));
   for (const [deck, n] of own.in_use) labels.push(status("warn", `${n} in use in ${deck}`));
+  if (own.lent_out) labels.push(status("warn", `${own.lent_out} lent out`));
   const priced = !priceError && Number.isFinite(r.aud_each) && r.aud_each >= 0;
   if (r.priced_finish && r.priced_finish !== "nonfoil" && priced) labels.push(status("plain", `${r.priced_finish} price`));
   const listed = !priceError && listedPriceWords(r, o);

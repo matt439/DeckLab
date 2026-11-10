@@ -231,6 +231,8 @@ def _holder(deck, quantity, sees):
     (guard.hidden_deck), so no holder names a deck the viewer can't see (E10-S29)."""
     from . import guard
     from .inventory_views import named_holder
+    if deck.why == "lent out":
+        return {"id": None, "title": "lent out", "quantity": quantity}
     if named_holder(deck.id, sees):
         return {"id": deck.id, "title": deck.title, "quantity": quantity}
     return {"id": None, "title": guard.hidden_deck(deck.id), "quantity": quantity}

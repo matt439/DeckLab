@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Audited loose-card loans (2026-11-11; E7-S37)
+
+- Collection More → Loans and collection lend/return/loans record dated exact-printing batches and whole returns. Borrower/notes remain private to the actual space; ownership stays in the same collection. Migration0024 adds audited rows and guarded old-schema behavior without any live application.
+- Lending uses confirmed free physical copies, including conservative unlocated holds. Open loans reduce pool, owned-vs-needed Notes, Spares and arrival availability; returned labels disappear on normal refresh while hand notes stay. Fresh operation guards prevent reducing or allocating away lent copies. Checks are scoped to touched spaces.
+- Public inventory grants no borrower details; ordinary downloads/Activity and public decks without inventory cannot relay them. Snapshot/PG keyed writes, exports, member removal and nightly invariants include the new records. No cross-space transfer, basic allocation, due date, reminder or built-deck loan is introduced.
+- Validation:381 broad,158 parity and111 final integration checks pass (overlap;14/2/1 guarded DB skips), plus34 owned checks with one guarded PG class. CI cases cover actual row-diff rollback, audit/revision/ownership and export/member parity. No real loan, borrower record, migration or live database changed; native-device acceptance is unclaimed.
+
 ## Member personal copies and Cards to get (2026-11-11; E10-S44)
 
 - A member's own Collection offers a personal zip; Decks offers a stateless Cards to get sheet with quantity/name Copy. Both are actual-owner-only, with the same collection403 for home, other members, admins and public readers. No queue, order, shop-price or saved-plan behavior is added.
