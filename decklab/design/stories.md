@@ -43,10 +43,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 24 | 21 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 34 | 28 | 1 | 5 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 28 | 20 | 0 | 7 | 1 |
+| [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 72 | 44 | 11 | 13 | 4 |
-| **Total** | **365** | **273** | **18** | **58** | **16** |
+| **Total** | **365** | **274** | **18** | **57** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -4291,7 +4291,7 @@ Built (2026-11-04): the second slice. The Overview's At the Commander table name
 
 Built (2026-11-05): the official text. `constants.BRACKET_TUTORS` keeps Wizards' wording on tutors, read 2026-11-05 from the Commander Brackets Beta Update of 2025-10-21, which removed the tutor restrictions from every bracket ("rely on Game Changers to catch the most efficient tutors"); only Bracket 4's "Players expect" list names tutors, and the 2026-02-09 update doesn't mention them. `stats.tutors.tutor_rules` adds `bracket["tutor_rules"]`, "not known" while Wizards' latest Commander announcement (E9-S24) is newer than the wording's `reviewed_through` or its date is unknown. The Stats tab's Minimum bracket, the Overview's What opponents will face and the printout quote it at the target bracket. The text sets no number, so there is no Checks warning and nothing is blocked. Upkeep: re-read `BRACKET_TUTORS` after a new Commander announcement. Tests: `test_commander_readiness.py`, `test_commander_readiness_ui.py`, `test_commander_print_ui.py`, `test_stats_tutors_ui.py`. See [HISTORY.md](../HISTORY.md#the-official-bracket-text-on-tutors-2026-11-05-e9-s29).
 
-**E9-S30** · Matt · could · S · missing
+**E9-S30** · Matt · could · S · built
 
 As Matt, building a Commander deck towards a target bracket, I want a Game Changer mark on a card before I add it, so that I see its bracket cost while choosing, not a moment later in the Checks panel.
 
@@ -4300,6 +4300,8 @@ As Matt, building a Commander deck towards a target bracket, I want a Game Chang
 - Given a casual 60-card deck, then no chip shows anywhere (E2-S21).
 
 Gap: the shared card JSON has no game_changer field, though the card index stores it, so no picker can mark a card before it's added. E9-S03's live check names the Game Changers seconds after adding, E9-S25 covers combo pieces one card away, and the finder's stepper and the EDHREC and wishlist ideas already handle cards in the draft. From the product review of 2026-11-10, compared with Table Commander, Moxfield and Archidekt.
+
+Built (2026-11-10): the whole story. `_card_json` carries `game_changer`; a Commander draft's checked bracket carries `with_game_changer` (from `stats`' new `minimum_with_game_changer`). `editor-cards.js`'s `gameChangerChip` marks flagged cards in the finder, EDHREC ideas, My wishlist (all through `searchResultSide`) and Considering rows (`markEditorConsideringRows`), outside the quantity stepper. From the last check's Planned-list bracket it says "would put the deck at Bracket N, above its target" when one more Game Changer would pass a bracket's limit and the Target bracket, and is redrawn after every check (`syncGameChangerChips`). A 60-card deck shows no chip. Nothing left. Not looked at in a real browser (Node DOM fixture tests only). Tests: `test_game_changer_chip.py`, `test_editor_game_changer_ui.py`. See [HISTORY.md](../HISTORY.md#a-game-changer-chip-on-commander-picker-rows-2026-11-10-e9-s30).
 
 First slice: add game_changer to `_card_json` in `decklab/lib/api/card_lookup.py`, draw the chip in `decklab/web/editor-cards.js` from the bracket `editor-save.js` holds, and reuse it in `editor-edhrec.js`, `editor-wishlist.js` and `editor-considering.js`, with an API test and a UI test.
 

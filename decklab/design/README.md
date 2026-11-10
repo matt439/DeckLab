@@ -70,14 +70,14 @@ Each epic has a journey in [journeys.md](journeys.md) and its stories in [storie
 | E6 | Record orders and receive cards | `order add\|edit\|checks\|split\|cancel`, products, on the way, Receive delivery (`#/receipt`), follow-ups, keeping a product intact | 21 | 0 | 1 | 2 |
 | E7 | Keep the collection accurate | The Collection page (`#/collection`), imports and Add a precon, `collection merge`, Tokens (`#/tokens`), removals, stale tables, `db check` | 28 | 1 | 5 | 0 |
 | E8 | Sleeves, boxes and storage | Sleeves & boxes (`#/accessories`), Sleeves and Deck box lines, the Choose… picker, kit warnings, put-back steps, the storage box | 18 | 0 | 2 | 2 |
-| E9 | Commander nights | Commander checks and the minimum bracket, multiplayer practice, Forge's Commander field, getting ready for the social Commander night | 20 | 0 | 7 | 1 |
+| E9 | Commander nights | Commander checks and the minimum bracket, multiplayer practice, Forge's Commander field, getting ready for the social Commander night | 21 | 0 | 6 | 1 |
 | E10 | Members, access and privacy | Roles and spaces, the read and write rules, "Who are you?", decklab.example.com behind Cloudflare Access, Activity (`#/activity`), Visits on Settings, private by default | 31 | 1 | 3 | 2 |
 | E11 | Run and trust the system | The server and tunnel, database maintenance, audit trail, typed commands, Forge upkeep, Settings, Safari regressions, visual design and code hygiene | 44 | 11 | 13 | 4 |
 
 ## Headline counts
 
 - **10 personas:** two primary, three secondary (User5, the space members and the self-hoster), one supplementary, one non-human actor and three anti-personas.
-- **11 epics, 365 stories:** 273 built, 18 partial, 58 missing and 16 not wanted (generated, with the epic rows above, from the story headers by `python scripts/audit_stories.py --write`; the lint workflow checks them).
+- **11 epics, 365 stories:** 274 built, 18 partial, 57 missing and 16 not wanted (generated, with the epic rows above, from the story headers by `python scripts/audit_stories.py --write`; the lint workflow checks them).
 - **Must and should stories:** Matt has 121 built, 4 partial (E11-S02, E11-S28, E11-S30, E11-S62) and 4 missing (E8-S25, and the product review's E5-S33, E5-S34 and E11-S69); User1 has 33 built, 1 partial (E2-S22) and 1 missing (E5-S15, deferred); Claude Code has 25 built; User5 4 built and the space members 5; the Commander table 1 built. The self-hoster's stories are all could. (Recounted from the story headers on 2026-11-10.)
 
 Deck Lab already does most of what Matt and User1 need. Private by default and guarded member departure are built and live since 2026-10-19. The visual redesign (E11-S30) stays first, followed by the expanded reserve of deck-building, collection, buying, play and self-hosting work reviewed on 2026-10-28. [TODO.md](../../TODO.md) owns their order and readiness; each story owns its first slice and later gates. The other must and should gaps are the physical-device follow-up (E2-S22), the signed-in off-page check (E11-S02) and User2's testing session (E11-S28), which need the people involved; and User1's purchase requests (E5-S15), which are deferred. Stand-in suggestions, combo detection, official-list change detection, the Forge upgrade check, the prebuilt Forge release and Linux support are already built.
