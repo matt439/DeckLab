@@ -14,11 +14,14 @@ tokens, so it gets no count either.
 
 It's an estimate from simulated games: Forge's AI plays the list, not the household, and its
 opponents are the saved matchups'. Nothing here is a purchase or a claim of what a game needs.
+Fewer than20 games making a token retain the observed peak but offer no extra-copy suggestion;
+the page explicitly names the thin sample instead of calling its tail a suggested count.
 """
 from decklab.lib import cards
 
 PEAK_CAP = 30                   # cardlog.PEAK_CAP: a peak of this many also counts the games above it
 MOST_SHARE = (9, 10)            # "most games": the fewest that 9 in 10 of the games that made one stayed at or under
+MIN_MADE_GAMES = 20             # fewer observations show the peak, without suggesting an extra count
 NOTE = ("Suggested counts come from Deck Lab's simulated Forge games of this list: the most of each token on the "
         "battlefield at once in a game. Forge's AI isn't you and its opponents are the saved matchups', so "
         "they're estimates. Forge names a token by its name only, so tokens with the same name count together.")
@@ -66,6 +69,10 @@ def _words(found):
         return f"No Forge game of the {found['of']} put one on the battlefield"
     def shown(n):
         return f"{n} or more" if n >= PEAK_CAP else str(n)
+    if found["games"] < MIN_MADE_GAMES:
+        words = (f"Only {_plural(found['games'], 'game')} made one: too few for a suggested count "
+                 f"(minimum {MIN_MADE_GAMES}). Observed Forge peak {shown(found['peak'])}.")
+        return words[:-1] + f"; every {found['name']} token counted together." if found["together"] else words
     words = (f"Forge games peaked at {shown(found['peak'])}; most games at most {shown(found['most'])} "
              f"({_plural(found['games'], 'game')} of {found['of']} made one)")
     if found["together"]:
@@ -112,7 +119,8 @@ def annotate(result, pooled):
         found = {"name": need["name"], "games": made, "of": games, "peak": len(peaks) if made else 0,
                  "most": _most(peaks, made) if made else 0,
                  "together": names.count(cards.fold(need["name"]).strip()) > 1}
-        found["more"] = max(found["most"] - int(need.get("usable") or 0), 0)
+        found["more"] = max(found["most"] - int(need.get("usable") or 0), 0) if made >= MIN_MADE_GAMES else 0
+        found["thin"] = 0 < made < MIN_MADE_GAMES
         found["words"] = _words(found)
         annotated.append(dict(need, forge=found))
     out["needs"] = annotated

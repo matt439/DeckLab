@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Simulation cautions and sample floors (2026-11-11; E3-S46)
+
+- Draws, time limits and errors above a declared10% caution threshold add a descriptive line with going-first/second/unknown-start counts on matchup page/CLI and field/gauntlet rows. Group pooling keeps every denominator, including opponents below the warning threshold; existing estimators and run scheduling are unchanged.
+- Gauntlet groups need3 compared opponents and300 games to avoid a muted too-few label. Tokens made in fewer than20 games retain observed peaks and ambiguity notes but offer no extra-copy suggestion. These are explicit engineering caution floors, not new measurements of human play.
+- Fresh catalogues record known AI-screen rejections, shown by overlapping colour and style; older/unclassified exclusions stay unknown. Hardest wording becomes lowest observed unless the uncertainty range clears50%. No rebuild or rerun is started.
+- Validation:220 focused saved-result/field/gauntlet/source/token/UI checks pass (one qualification skip); Ruff and source limits pass. Tests cover strict threshold boundaries, starter reversal, merged denominators, thin-group/token behavior, source provenance and visibility. One additional old CLI status assertion was aligned with E11-S83's installed flag. No actual Forge games, source fetch, catalogue or private results were used.
+
 ## Casual role cards and dated comparable Commander ranges (2026-11-11; E3-S42)
 
 - Free cards by role accepts casual lists through the existing deck/inventory guards. Colours come from the selected list's non-land cards; Commander legality and role targets are not imposed. Existing Commander fit remains the default for callers.

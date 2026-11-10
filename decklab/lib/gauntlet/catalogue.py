@@ -82,12 +82,12 @@ def _card_sha(listed, kind):
     return _list_text(listed, kind)[1]
 
 
-def _entry(record, listed, tagged, fixes, problems, playable, tier, measured):
+def _entry(record, listed, tagged, fixes, problems, playable, tier, measured, ai_excluded=False):
     made = {"id": record["id"], "title": record["title"], "kind": record["kind"],
             "card_sha": _card_sha(listed, record["kind"]), "source": dict(record["source"]),
             "tier": tier, "bracket": measured,
             "identity": tagged["identity"], "colours": tagged["colours"], "style": tagged["style"],
-            "metrics": tagged["metrics"], "fixes": fixes, "problems": problems, "playable": playable,
+            "metrics": tagged["metrics"], "fixes": fixes, "problems": problems, "playable": playable, "ai_excluded": ai_excluded,
             "cards": listed}
     if record.get("duel_title"):
         made["duel_title"] = record["duel_title"]     # a Forge duel's Title: a sample takes one version of it
@@ -117,10 +117,12 @@ def _commander_entry(record, limits):
             fixes.append(moved)
     except (cards.INDEX_ERRORS + (TypeError,)) as e:
         problems.append(f"Its bracket couldn't be measured ({e}).")
+    ai_excluded = False
     if playable:
         playable = _screen(listed, "commander", limits, problems)
+        ai_excluded = not playable
     return _entry(record, listed, _tag("commander", listed, record.get("themes") or []),
-                  fixes, problems, playable, tier, measured)
+                  fixes, problems, playable, tier, measured, ai_excluded)
 
 
 def _constructed_entry(record, limits):
@@ -130,10 +132,12 @@ def _constructed_entry(record, limits):
     if unknown:
         problems.append("Not Scryfall cards: " + ", ".join(sorted(set(unknown))) + ".")
     playable = not problems
+    ai_excluded = False
     if playable:
         playable = _screen(listed, "constructed", limits, problems)
+        ai_excluded = not playable
     return _entry(record, listed, _tag("constructed", {"Commander": [], "Main": resolved}, ()),
-                  [], problems, playable, record["tier"], None)
+                  [], problems, playable, record["tier"], None, ai_excluded)
 
 
 def _screen(listed, kind, limits, problems):

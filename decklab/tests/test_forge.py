@@ -514,7 +514,7 @@ class CommandLineTests(ForgeCase):
         code, out, _ = self.run_main("status")
         self.assertEqual(code, 0)
         found, end = json.JSONDecoder().raw_decode(out)
-        self.assertEqual(found, {"ready": True, "version": "2.0.15", "problem": None,
+        self.assertEqual(found, {"ready": True, "installed": True, "version": "2.0.15", "problem": None,
                                  "card_log": {"ready": False, "problem": NO_JDK}, "pool": None,
                                  "overrides": {"deployed": ["Fiery Annihilation"], "stale": [],
                                                         "hash": forge.overrides.deployed_hash(forge.common._user_dir())},

@@ -42,7 +42,7 @@ from pathlib import Path
 
 from decklab.lib.gauntlet import without
 
-from . import common, engine, field, lists, saved, seqstats
+from . import common, engine, field, lists, saved, seqstats, reliability
 from .common import ForgeError
 
 RESULTS_DIR = common.DATA_DIR / "gauntlet" / "results"
@@ -290,6 +290,7 @@ def _opponent(deck, row):
             "style": (deck.get("style") or {}).get("primary"), "key": row["key"], "games": row["n"],
             "rate": _rate(row["numbers"]), "lead": row["lead"], "verdict": verdict(row["lead"]),
             "not_meaningful": row["not_meaningful"], "problem": row["problem"], "updated": row.get("updated"),
+            **({"stalled": row["stalled_all"]} if row.get("stalled_all", {}).get("caution") else {}),
             "source": deck.get("source")}
 
 
@@ -319,11 +320,20 @@ def _group(key, label, members, extra=None):
         average = None
     values = [n["value"] for n in counted if n.get("value") is not None]
     notes = [extra] if extra else []
+    played = sum(1 for _, row in members if row.get("n") and not row["not_meaningful"])
+    games = sum(row["n"] for _, row in members if not row["not_meaningful"])
+    thin = played < reliability.MIN_GROUP_OPPONENTS or games < reliability.MIN_GROUP_GAMES
+    if thin:
+        notes.append(f"Too few compared opponents/games: need at least {reliability.MIN_GROUP_OPPONENTS} opponents and {reliability.MIN_GROUP_GAMES} games.")
+    stalled = reliability.merge_stalled([row for _, row in members])
+    if stalled["caution"]:
+        notes.append(stalled["words"])
     if len(members) < 2:
         notes.insert(0, ONE)
     elif average and average.get("partial"):
         notes.append(f"based on {average['counted']} of {of} opponents with games on the play and on the draw")
     return {"key": key, "label": label, "opponents": len(members), "games": sum(r["n"] for _, r in members),
+            **({"thin": True} if thin else {}),
             "rate": field._r((average or {}).get("value")), "low": field._r((average or {}).get("low")),
             "high": field._r((average or {}).get("high")),
             "spread": [field._r(min(values)), field._r(max(values))] if values else None,

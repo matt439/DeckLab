@@ -6,7 +6,7 @@ import math
 import traceback
 from statistics import NormalDist
 
-from . import common, engine, pilots
+from . import common, engine, pilots, reliability
 from .ai import _commander_unplayable
 from .cardstats import _is_land, _merged_cards, _r, side_cards, wilson
 from .saved import _pooled, _side_cards, _stored
@@ -250,11 +250,13 @@ def list_item(result, perspective_sha=None):
     runs = result.get("runs") or [{}]
     p = _perspective(result, perspective_sha or runs[-1].get("a"))
     games = _games(result)
+    stalled = reliability.stalled(games, p)
     return {"key": result["key"], "format": result["format"],
             "sides": [_page_side(result["sides"][p]), _page_side(result["sides"][1 - p])],
             "games": len(games), "winrate": _winrate(games, p)["winrate"],
             "updated": result.get("updated"), "by": runs[-1].get("by"),
-            "not_meaningful": _not_meaningful(result), "engine": _engine_view(result)}
+            "not_meaningful": _not_meaningful(result), "engine": _engine_view(result),
+            **({"stalled": stalled} if stalled["caution"] else {})}
 
 
 def _side_cards_or_none(result, side):
@@ -284,6 +286,7 @@ def view(result, perspective_sha):
     p = _perspective(result, perspective_sha)
     games = _games(result)
     n = len(games)
+    stalled = reliability.stalled(games, p)
     rates = _winrate(games, p)
     comparison = _comparison(games, p)
     rounds = [g["rounds"] for g in games if g["rounds"]]
@@ -314,6 +317,7 @@ def view(result, perspective_sha):
         "draws": sum(1 for g in games if g["r"] == "draw"),
         "timeouts": sum(1 for g in games if g["r"] == "timeout"),
         "errors": sum(1 for g in games if g["r"] == "error"),
+        **({"stalled": stalled} if stalled["caution"] else {}),
         **rates,
         "comparison": comparison,
         "lead": _lead(games, p, rates["winrate"], comparison),

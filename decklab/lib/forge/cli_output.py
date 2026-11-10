@@ -426,6 +426,8 @@ def _print_play(a, b, result, v):
     print(f"  wins {v['wins'][0]}-{v['wins'][1]}, draws {v['draws']}, timeouts {v['timeouts']}, errors {v['errors']}; "
           f"raw {_pct(v['raw']['value'])}; on the play {_pct(v['on_play']['value'])} ({v['on_play']['games']}), "
           f"on the draw {_pct(v['on_draw']['value'])} ({v['on_draw']['games']})")
+    if v.get("stalled", {}).get("words"):
+        print("  " + v["stalled"]["words"])
     print(f"  {_starter_words(v['starter'])}")
     if not v["not_meaningful"]:
         print(f"  lead: {_lead_words(v['lead'], (a['title'], b['title']))}")

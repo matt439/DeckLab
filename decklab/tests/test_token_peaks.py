@@ -170,11 +170,11 @@ class AnnotateTests(unittest.TestCase):
     def test_a_need_gets_its_peak_and_most_games(self):
         result = {"needs": [need("Rabbit", usable=2)], "note": "x"}
         before = copy.deepcopy(result)
-        out = peaks.annotate(result, self.pooled({"Rabbit Token": [4, 3, 1, 1, 0, 0, 1]}))
+        out = peaks.annotate(result, self.pooled({"Rabbit Token": [8, 6, 2, 2, 0, 0, 2]}))
         self.assertEqual(result, before)                       # a copy: the cached result is untouched
         found = out["needs"][0]["forge"]
-        self.assertEqual(found, {"name": "Rabbit", "games": 10, "of": 100, "peak": 7, "most": 4, "together": False,
-                                 "more": 2, "words": "Forge games peaked at 7; most games at most 4 (10 games of "
+        self.assertEqual(found, {"name": "Rabbit", "games": 20, "of": 100, "peak": 7, "most": 4, "together": False,
+                                 "more": 2, "thin": False, "words": "Forge games peaked at 7; most games at most 4 (20 games of "
                                                     "100 made one) · 2 more than the cards that fit"})
         self.assertEqual(out["forge"], {"games": 100, "matchups": 2, "untallied": 0, "note": peaks.NOTE})
         self.assertEqual(out["note"], "x")
@@ -197,9 +197,16 @@ class AnnotateTests(unittest.TestCase):
             self.assertNotIn("forge", left)
 
     def test_a_peak_at_the_cap_says_or_more(self):
-        out = peaks.annotate({"needs": [need("Rabbit")]}, self.pooled({"Rabbit Token": [0] * 29 + [3]}))
+        out = peaks.annotate({"needs": [need("Rabbit")]}, self.pooled({"Rabbit Token": [0] * 29 + [20]}))
         self.assertTrue(out["needs"][0]["forge"]["words"].startswith(
             "Forge games peaked at 30 or more; most games at most 30 or more"))
+
+    def test_thin_token_observations_keep_raw_peaks_without_suggesting_extra_copies(self):
+        out = peaks.annotate({"needs": [need("Rabbit")]}, self.pooled({"Rabbit Token": [0, 0, 3]}))
+        found = out["needs"][0]["forge"]
+        self.assertEqual((found["peak"], found["most"], found["more"], found["thin"]), (3, 3, 0, True))
+        self.assertIn("too few for a suggested count", found["words"])
+        self.assertIn("minimum 20", found["words"])
 
     def test_no_games_and_untallied_games_say_why(self):
         for pooled, why in ((None, peaks.NO_GAMES), (self.pooled({}, games=0, untallied=40),
@@ -265,7 +272,8 @@ class DeckPageTests(token_fixture.TokensApiTestCase):
         answer = self.view("matt")
         found = self.insect(answer)["forge"]
         self.assertEqual((found["peak"], found["most"], found["games"], found["of"]), (3, 2, 10, 10))
-        self.assertEqual(found["more"], max(2 - self.insect(answer)["usable"], 0))
+        self.assertEqual(found["more"], 0)
+        self.assertTrue(found["thin"])
         self.assertEqual(answer["tokens"]["forge"]["games"], 10)
         member = self.view("user2")          # the deck is public; home's inventory isn't
         self.assertNotIn("tokens", member)

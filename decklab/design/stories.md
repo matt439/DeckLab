@@ -37,7 +37,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 20 | 2 | 3 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 39 | 30 | 3 | 6 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 39 | 31 | 3 | 5 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 29 | 0 | 3 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 54 | 14 | 7 | 4 |
-| **Total** | **376** | **307** | **22** | **31** | **16** |
+| **Total** | **376** | **308** | **22** | **30** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1429,7 +1429,7 @@ Gap: the card log keeps no per-round tally, and an unchanged list is refused. E3
 
 First slice: an optional `development` tally per side and round in `decklab/lib/forge/cardlog.py`, pooled in a new `decklab/lib/forge/development.py` and shown as a small table from `decklab/web/matchups-cards.js`. The placebo option is a separate slice.
 
-**E3-S46** · Matt · could · M · missing
+**E3-S46** · Matt · could · M · built
 
 As a deck builder without statistics training, I want a result to warn me when many of its games stalled or its sample is thin, so that I don't act on a figure that rests on too little.
 
@@ -1441,6 +1441,8 @@ As a deck builder without statistics training, I want a result to warn me when m
 Gap: nothing reacts to a high share of stalled games, only a one-opponent gauntlet group gets a note, and token suggestions have no floor. E3-S07, E3-S09, E3-S10 and E3-S15 cover plain words, ranges, flags and per-card floors; E3-S28, E3-S29 and E7-S08 the gauntlet groups and token peaks. From the product review of 2026-11-10, compared with 17Lands and Playgroup.gg. Pick the threshold from saved results first.
 
 First slice: a `STALL_SHARE` constant and stalled object in `decklab/lib/forge/views.py`, one caution line in `decklab/web/matchups-results.js` and `decklab/lib/forge/cli_output.py`, and a fixture test in `decklab/tests/test_forge.py`.
+
+Built (2026-11-11): a declared10% engineering caution threshold adds one stalled-game line for draws/time limits/errors, including perspective-correct going-first/second/unknown-starter denominators, on matchup page/CLI and field/gauntlet rows. Existing win-rate estimators remain unchanged. Groups below3 compared opponents or300 games are muted with their floor; tokens made in fewer than20 games keep observed peaks but suggest no extra copies. New catalogue entries record AI-screen provenance; public counts show exclusions by overlapping colour and style, while old/unclassified exclusions remain explicitly unknown rather than guessed. Lowest-observed wording replaces overconfident hardest labels unless the range clears50%.220 focused saved-result/field/gauntlet/source/token/UI tests pass (one qualification skip), including threshold boundary, all-denominator pooling, starter reversal, source flags and old-engine/privacy cases. This is source-tested caution policy, not a new empirical calibration from live household games; no actual simulations/catalogue rebuild or private results were read.
 
 **E3-S47** · Matt · could · M · missing
 
