@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## One saved game's debug transcript (2026-11-11; E3-S44)
+
+- forge game A B selects a saved zero-based game number or loss/longest/timeout example, optionally by full matchup key/results folder. It reuses the soak probe's exact one-shot protocol for saved lists, seed, seating and pilots, refusing incompatible/unverified engine or overrides first.
+- Text/JSON output preserve readable turn events, land drops, cast attempts/failures, combat, life changes and both final hands, with explicit not-captured states. A seat map and saved/replayed winner/starter/turn differences accompany the log; Commander is always qualified as outcome-only comparison.
+- The command uses a scratch folder and never calls a normal results, field, Rankings or per-card write pipeline. Existing soak-probe patch points and behavior remain supported.
+- Validation:85 focused transcript/CLI/engine/Forge checks pass (one native qualification skip), with exact fake launch arguments, stored-data immutability, no-writer assertions and a committed native failed-cast log. The final friendly-difference wording recheck passes eight cases. No actual game, replay or engine/device qualification was run.
+
 ## Simulation cautions and sample floors (2026-11-11; E3-S46)
 
 - Draws, time limits and errors above a declared10% caution threshold add a descriptive line with going-first/second/unknown-start counts on matchup page/CLI and field/gauntlet rows. Group pooling keeps every denominator, including opponents below the warning threshold; existing estimators and run scheduling are unchanged.

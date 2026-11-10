@@ -37,7 +37,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 20 | 2 | 3 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 39 | 31 | 3 | 5 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 39 | 32 | 3 | 4 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 29 | 0 | 3 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 54 | 14 | 7 | 4 |
-| **Total** | **376** | **308** | **22** | **30** | **16** |
+| **Total** | **376** | **309** | **22** | **29** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1404,7 +1404,7 @@ Gap: the catalogue already records its build date and sha (E3-S28), and E3-S34 e
 
 First slice: the date line and the build difference only: the catalogue's `built` date and short sha in `decklab/lib/api/gauntlet_board.py`, drawn in `decklab/web/gauntlet-board.js` and `gauntlet.js`, and the printed difference in `decklab/lib/forge/cli_gauntlet.py`.
 
-**E3-S44** · Matt · could · M · missing
+**E3-S44** · Matt · could · M · built
 
 As a deck builder doubting a simulated result, I want to read one saved Forge game turn by turn, so that I can tell a deck problem from an AI misplay before cutting or buying cards on it.
 
@@ -1416,6 +1416,8 @@ As a deck builder doubting a simulated result, I want to read one saved Forge ga
 Gap: saved batches keep each game's number, winner, turns and loss reason, and games replay from their seeds, but only the operator's soak probe replays one and nothing renders it. E3-S15 covers stuck and never-cast cards across games and E3-S20 the operator's whole-matchup replay. A page sheet, under the simulations setting and deck privacy, comes later. From the product review of 2026-11-10, compared with Archidekt's playtester logs.
 
 First slice: command line only: a new `decklab/lib/forge/transcript.py` (pick and render), the one-game replay lifted from `decklab/lib/forge/cli_soak.py` into a shared helper, and the subcommand in `cli_commands.py`.
+
+Built (2026-11-11): forge game A B --game N (the saved zero-based number) or --pick loss/longest/timeout selects a saved matchup, with optional full-key/alternate-result-folder selection. It refuses unseeded/earlier/unverified engine or override sets before setup/run. The soak probe and command share one exact one-shot launch using stored dcks, seat order, pilots and seed. Human/JSON output retain turn-by-turn land/cast/failed-cast/combat/life lines, both end hands (explicitly not captured when unavailable), seat map and saved/replayed outcome/turn differences; Commander always says outcome-only comparison. Scratch files are cleaned, and no normal result/field/Rankings/per-card pipeline is called.85 focused transcript/CLI/engine/Forge checks pass (one native qualification skip), including committed native-log parsing, exact1-game arguments, refusal-before-launch and no-writer assertions. No actual replay or engine qualification ran in this source task.
 
 **E3-S45** · Matt · could · M · missing
 

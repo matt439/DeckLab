@@ -2048,3 +2048,8 @@ The CLI equivalents are `python -m decklab.db collection loans [--space S] [--al
 
 
 A card viewer's **Open on Scryfall** uses the shown printing, or an exact-name search when none is known. Commander contexts also offer **Open on EDHREC**. **Your copies** unfolds recorded printings/finishes/counts and storage locations only where you may see that collection. **Card link** bookmarks the same viewer over the current page; a fresh opening uses Decks underneath and waits for profile choice. These reference links do not submit your collection to either site.
+
+
+### Read one saved Forge game
+
+`python -m decklab.lib.forge game DECK_A DECK_B --pick loss` replays one saved game into a turn-by-turn debug transcript. Use `--pick longest` or `--pick timeout`, or `--game N` with its saved **zero-based** game number. `--json` gives the same events/outcome comparison as data; `--key FULL_KEY` selects a particular saved matchup, including an earlier list, and `--results-dir DIR` chooses a result folder. This command **plays one real game** when invoked and needs the saved engine/overrides/pilots still available. It refuses incompatible engines and never adds its replay to saved matchups, the field, Rankings or per-card figures. Commander comparisons are outcome-only and explicitly report differing winners/turns. Missing final-hand snapshots say not captured instead of implying an empty hand.
