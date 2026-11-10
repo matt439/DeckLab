@@ -41,6 +41,7 @@ from pathlib import Path
 from decklab.lib import cards
 
 OCR_TIMEOUT = 60            # seconds; Windows' engine takes about one on a phone photo
+TESSERACT_MEMORY = 512 * 1024 * 1024  # Linux address-space cap, enforced without preexec_fn in server threads
 MAX_NAME_ONLY = 12          # printings offered when only the name could be read
 NAME_LINES = 2              # the card's name is one of the first lines read (a type line may come first)
 TOKEN_CUTOFF = 0.8          # how close a misread token name must be to a face name to be proposed
@@ -337,9 +338,15 @@ def _powershell():
     return shutil.which("powershell") or shutil.which("powershell.exe")
 
 
-def _run(command, env=None, explain=None):
+def _run(command, env=None, explain=None, *, memory_limit=None):
     """The engine's stdout as text. explain(stderr) gives the plain reason a failed run names
     (None for none); without it, the last plain stderr line is the reason."""
+    if memory_limit is not None and sys.platform.startswith("linux"):
+        limiter = shutil.which("prlimit")
+        if limiter is None:
+            raise OcrUnavailable("Reading photos safely isn't set up on this server.",
+                                 detail="Install util-linux so prlimit can bound Tesseract's memory.")
+        command = [limiter, f"--as={memory_limit}", "--", *command]
     try:
         done = subprocess.run(command, capture_output=True, timeout=OCR_TIMEOUT, env=env,
                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
@@ -487,10 +494,12 @@ def tesseract_ocr(path):
     exe = _tesseract()
     if exe is None:
         raise OcrMissing("Tesseract isn't installed.")
-    lines = _tsv_lines(_run([exe, str(path), *TESSERACT_ARGS], env=_tesseract_env(), explain=_tesseract_error))
+    lines = _tsv_lines(_run([exe, str(path), *TESSERACT_ARGS], env=_tesseract_env(), explain=_tesseract_error,
+                          memory_limit=TESSERACT_MEMORY))
     if _printing_found(lines) == 2:
         return lines
-    again = _tsv_lines(_run([exe, str(path), *TESSERACT_FALLBACK], env=_tesseract_env(), explain=_tesseract_error))
+    again = _tsv_lines(_run([exe, str(path), *TESSERACT_FALLBACK], env=_tesseract_env(), explain=_tesseract_error,
+                          memory_limit=TESSERACT_MEMORY))
     return again if _printing_found(again) > _printing_found(lines) else lines
 
 

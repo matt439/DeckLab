@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Pinned picture requests and bounded scan/staging resources (2026-11-11; E10-S45)
+
+- Picture fetches connect only to validated numeric addresses while preserving the original HTTP Host and HTTPS certificate/SNI identity. Redirect, private-address and no-proxy checks remain. The wrapped TLS socket is tracked by the deadline watchdog; DNS itself still follows OS resolver timeouts.
+- At most four picture fetches run at once; extras receive429. Staging retains age expiry and locked oldest-pruning at64 files/64MiB. No final accessory records or other permissions are changed by staging admission.
+- Card/token photos over4000px per side are refused before OCR. Linux Tesseract now runs under prlimit's512MiB address-space bound, OMP1 and the existing60-second timeout, refusing safely when the limiter is absent. The existing browser canvas stays2000px; no session-UX or token-format change was needed.
+- Validation:148 transport/scan checks and132 adjacent upload/member/Public/privacy/scanner checks pass (overlap; native/DB skips retained). Changing-resolver and original TLS identity tests pass, as do source/whitespace checks. Actual Linux OCR/photos remain separate qualification; no real URL, photo, collection or setting was touched.
+
 ## Canonical product routing and page locale (2026-11-11; E11-S73)
 
 - Product-specific anonymous hashes and goldfish filtering now use the canonical Beginner Box constant, with SQL values still parameterized. One core LOCALE supplies page dates/numbers, preserving en-AU and all existing options; Shopping uses the same number helper for explicit formatting.

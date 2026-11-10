@@ -183,7 +183,7 @@ class ScanApiTests(tce.CollectionEditTestCase):
 
     def test_a_tiny_picture_is_refused(self):
         tiny = scan_image.png([" "], scale=1, margin=1)     # 8 by 12 pixels
-        self.assertApiError(400, self.scan, photo=base64.b64encode(tiny).decode("ascii"), contains="16 to 10,000")
+        self.assertApiError(400, self.scan, photo=base64.b64encode(tiny).decode("ascii"), contains="16 to 4,000")
 
     def test_one_photo_at_a_time(self):
         self.assertTrue(cs._scan_lock.acquire(blocking=False))

@@ -152,7 +152,11 @@ class TesseractEngineTests(unittest.TestCase):
         lines, run = self.run_with(completed(stdout=ELVES_TSV))
         self.assertEqual(lines[0], "Llanowar Elves")
         command, kwargs = run.call_args
-        self.assertEqual(command[0], ["/usr/bin/tesseract", str(self.photo), "stdout", "-l", "eng", "--psm", "11", "tsv"])
+        expected = ["/usr/bin/tesseract", str(self.photo), "stdout", "-l", "eng", "--psm", "11", "tsv"]
+        self.assertEqual(command[0][-len(expected):], expected)
+        prefix = command[0][:-len(expected)]
+        self.assertEqual(prefix, [shutil.which("prlimit"), f"--as={scan.TESSERACT_MEMORY}", "--"]
+                         if scan.sys.platform.startswith("linux") else [])
         self.assertEqual(kwargs["env"]["OMP_THREAD_LIMIT"], "1")
         self.assertEqual(kwargs["timeout"], scan.OCR_TIMEOUT)
         self.assertTrue(kwargs["capture_output"])
@@ -167,7 +171,7 @@ class TesseractEngineTests(unittest.TestCase):
                                   side_effect=[completed(stdout=sparse), completed(stdout=blocks)]) as run:
             lines = scan.tesseract_ocr(self.photo)
         self.assertEqual(lines, ["Llanowar Elves", "C 0227", "FDN EN"])
-        self.assertEqual([call.args[0][5:7] for call in run.call_args_list], [["--psm", "11"], ["--psm", "6"]])
+        self.assertEqual([call.args[0][-3:-1] for call in run.call_args_list], [["--psm", "11"], ["--psm", "6"]])
         # A second pass that reads no more of the printing leaves the first pass's lines.
         with mock.patch.object(scan, "_tesseract", return_value="/usr/bin/tesseract"), \
                 mock.patch.object(scan.subprocess, "run",
@@ -265,6 +269,7 @@ class AutoEngineTests(unittest.TestCase):
                                                 "open (JPEG or PNG). Tesseract isn't installed. Type the card's name instead.")
         with self.on("linux"), mock.patch.dict(scan.ENGINES, {"tesseract": lambda path: scan.tesseract_ocr(path)}), \
                 mock.patch.object(scan, "_tesseract", return_value="/usr/bin/tesseract"), \
+                mock.patch.object(scan.shutil, "which", return_value="/usr/bin/prlimit"), \
                 mock.patch.object(scan.subprocess, "run", return_value=completed(1, stderr="Error in pixRead: x\n")):
             with self.assertRaises(scan.OcrUnavailable) as caught:
                 scan.ocr(self.photo)

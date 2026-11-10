@@ -44,9 +44,9 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 32 | 1 | 3 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
-| [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
+| [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 32 | 1 | 2 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 48 | 14 | 13 | 4 |
-| **Total** | **376** | **290** | **22** | **48** | **16** |
+| **Total** | **376** | **291** | **22** | **47** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -5082,7 +5082,7 @@ Gap: the whole-space export is a command on the PC only (E10-S40), and the missi
 
 First slice: a new `decklab/lib/api/space_download.py` streams the files `snapshot` in `decklab/db/space_export.py` builds, with a More item in `decklab/web/collection.js`.
 
-**E10-S45** · Matt · could · M · missing
+**E10-S45** · Matt · could · M · built
 
 As Matt, the admin, I want the picture fetch pinned to the address it checked and the routes an outside member can reach bounded, so that a signed-in member's link can't be aimed at home-network addresses or fill the PC's memory and disk.
 
@@ -5091,9 +5091,9 @@ As Matt, the admin, I want the picture fetch pinned to the address it checked an
 - Given staged pictures beyond a set count or size, then the oldest are pruned.
 - Given a scan photo over about 4,000 pixels a side, then it is refused before any reading, and on Linux Tesseract runs under a memory limit.
 
-Gap: the fetch checks the host, then connects by name, so it resolves twice; staging is pruned by age only; and scans accept 10,000 pixels a side. Find picture's other checks (E8-S01) and one scan at a time (E7-S32) are built. A general rate limiter isn't wanted for a hand-invited audience. Needs Matt's decision: the second lookup was an accepted risk (`decklab/PLAN.md`) before E8-S26 gave tunnel members the fetch. From the product review of 2026-11-10.
+Built 2026-11-11 under the all-OPEN approval: picture requests dial only checked numeric addresses while keeping the original HTTP Host and verified TLS/SNI name; redirects retain validation and no-proxy/private-address rules. The active wrapped TLS socket is deadline-tracked. Four concurrent fetches are admitted, with429 beyond; staged previews retain age expiry and oldest-pruning at64 files/64MiB under a staging lock. Card/token scans reject more than4000px per side before OCR. Linux Tesseract uses prlimit with512MiB address space, OMP1 and the existing60-second timeout, failing safely without the limiter. The browser's existing2000px canvas already fits.
 
-First slice: `check_host` in `decklab/lib/accessory_fetch.py` returns the checked addresses and the connection dials one, with a changing-resolver test in `decklab/tests/test_accessory_fetch.py`.
+Evidence:148 transport/scan tests pass (one native skip), plus132 accessory upload/member/Public/privacy/scanner tests (two existing skips), with changing-resolver/no-second-lookup and original certificate/SNI proofs. Source/whitespace guards pass. DNS follows OS resolver timeouts; concurrency remains bounded during resolution, and the watchdog enforces socket work rather than claiming a DNS wall-clock guarantee. No live URLs/photos/records/config were used or changed. Native Linux OCR/photo acceptance remains with the existing device gates; no general rate limiter is introduced. From the product review of 2026-11-10.
 
 ---
 

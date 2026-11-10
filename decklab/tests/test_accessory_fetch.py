@@ -362,7 +362,10 @@ class RealSocketDeadlineTests(unittest.TestCase):
 
     def timed_refusal(self, url):
         started = time.monotonic()
-        with self.assertRaises(ApiError) as caught:
+        # The production transport now pins public addresses. This test's explicit seam permits
+        # only its owned loopback server so the real socket deadline can still be exercised.
+        with mock.patch.object(af, "check_host", side_effect=lambda host, port: socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)), \
+                self.assertRaises(ApiError) as caught:
             af._download(url, af.IMAGE_ACCEPT, af._now() + 1.0, image_only=True)
         took = time.monotonic() - started
         self.assertEqual(caught.exception.message, af.TOO_SLOW)

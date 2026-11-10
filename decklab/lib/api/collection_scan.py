@@ -50,7 +50,7 @@ from .settings import _writer
 
 MAX_PHOTO = accessory_fetch.MAX_IMAGE           # bytes of a photo (4 MiB), as the Sleeves & boxes page's
 MAX_SCAN_BODY = accessory_upload.MAX_BASE64 + 4096
-MAX_SIDE = 10000                                # pixels a side: Windows' engine reads no bigger
+MAX_SIDE = 4000                                 # reject oversized photos before OCR or image decoding
 MAX_LINES = 60                                  # lines read that are answered and proposed from
 HEAD_LINES = 20                                 # of them from the top (the name); the rest from the bottom (the printing)
 MAX_LINE = 200                                  # characters of each
