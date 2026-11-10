@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Card references, own printings and bookmarkable viewer (2026-11-11; E1-S31)
+
+- The existing viewer links the shown printing to Scryfall (an exact-name search without one) and EDHREC in Commander contexts, with safe new-tab relations and no server fetch. Card link gives a bookmarkable address instead of another card page.
+- Your copies unfolds lazily only for an authorized collection, showing owned printings, finishes, quantities and recorded/unset storage locations. It never returns notes, orders, prices or another space's copies. The API guard precedes validation/snapshot reads; Public deck access alone grants no inventory.
+- Card addresses wait for profile choice and open the same modal over the retained page (Library on a fresh opening). Replies and controls belong to the current profile, route, card and connected frame; closing restores the correct underlay.
+- Validation:126 targeted fixtures pass (one qualification skip),13 contract/exact-URL golden checks pass, and193 broader cases pass after four substring assertions were narrowed to actual private IDs. Eight strict synthetic captures passed with cleanup at data/ui-review/20261110T185450Z-96436dce; representative phone views were inspected. No actual cards, member contents, writes, migration or external fetch was used; device acceptance is unclaimed.
+
 ## Optional outbound backup privacy (2026-11-11; E11-S69)
 
 - Defaults retain full readable export and existing dump-copy behavior. An opt-in home scope uses explicit table/file projections, excludes all wishlists/emails/member/mixed/audit/global preference data and rejects unreviewed future tables. Fresh scope-marked history and verified remote refs are required; existing archives are never rewritten or deleted.

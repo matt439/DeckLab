@@ -221,7 +221,7 @@ class PublicGameTests(MixedFixture, ApiTestCase):
         self.assertEqual(plans, {self.home_plan})
         public = next(entry for entry in answer["games"] if entry["record"]["id"] == self.members_game)
         self.assertTrue(all(side["hidden"] and "sections" not in side for side in public["record"]["sides"]))
-        self.assertEqual(public["can"], {"sides": [False, False], "result": False})
+        self.assertEqual(public["can"], {"sides": [False, False], "result": False, "delete": False})
         self.assertEqual(public["record"]["updated_by"], "someone")
         self.assertNotIn("User2 Elves", json.dumps(public))
         self.assertNotIn("User3 Elves", json.dumps(public))

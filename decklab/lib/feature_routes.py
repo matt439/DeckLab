@@ -82,6 +82,8 @@ ACCESS = MappingProxyType({
     ('GET', 'visits'): 'admin',
     ('GET', 'search'): 'viewer-filtered',
     ('GET', 'cards/decks'): 'inventory',
+    ('GET', 'cards/lookup'): 'open',
+    ('GET', 'cards/copies'): 'inventory',
     ('GET', 'gauntlet'): 'deck',
     ('GET', 'gauntlet/summary'): 'deck',
     ('GET', 'gauntlet/catalogue'): 'open',
@@ -398,6 +400,7 @@ def route_tables():
     from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, commander_candidates, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, comparison_lists, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, dice, edhrec, editor, history,
                                  library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, reference_facts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_combined, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_ideas, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
+    from decklab.lib.api import card_details
     from decklab.lib.api import error_reports
     from decklab.lib.api import collection_loans
 
@@ -466,6 +469,8 @@ def route_tables():
         ("visits",): (visits.visits_view, ("days", "who")),
         ("search",): (_global_search, ("q", "group", "limit")),
         ("cards", "decks"): (_card_decks, ("name", "space")),
+        ("cards", "lookup"): (card_details.card_view, ("name", "set", "number")),
+        ("cards", "copies"): (card_details.copies_view, ("name", "space")),
         ("gauntlet",): (_gauntlet_view, ("id", "version", "sample", "size", "colours", "styles", "tiers", "profile")),
         ("gauntlet", "summary"): (_gauntlet_summary, ("id", "version", "profile")),
         ("gauntlet", "catalogue"): (_gauntlet_catalogue, ("format",)),

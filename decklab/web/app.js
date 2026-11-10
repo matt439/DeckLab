@@ -261,6 +261,11 @@ function route() {
     history.replaceState(history.state, "", `#/matchups${query ? `?${query}` : ""}`);
   }
   boxCollectionRoute(path, token);
+  if (path === "card") {
+    if (!state.profile) { closeCardAddress(); return drawWho(); }
+    return showCardAddress(params, token);
+  }
+  closeCardAddress();
   boxEditorRoute(path, token);
   closeEditor(path);                // editor.js: the editor on screen is left (its draft stays)
   if (!state.profile) return drawWho();
@@ -322,6 +327,7 @@ function noteVisit(path, params) {
 }
 
 function afterRender() {
+  rememberCardUnderlay();
   const remembered = state.scroll.get(location.hash);
   if (!state.firstRender) {
     window.scrollTo(0, remembered ? remembered.y : 0);

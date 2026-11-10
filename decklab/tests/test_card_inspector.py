@@ -137,12 +137,12 @@ const history = { state: { pos: 4 }, length: 5,
   replaceState(state) { historyLog.push(['replace', state]); this.state = state; },
   back() { historyLog.push(['back']); this.state = { pos: 4 }; } };
 let now = 1000;
-const ctx = { document, Node, console, history, setTimeout, clearTimeout, Date: { now: () => now },
+const ctx = { document, Node, console, history, URLSearchParams, setTimeout, clearTimeout, Date: { now: () => now },
   matchMedia: () => ({ matches: true }), entryPos: () => history.state.pos,
   window: { addEventListener(k, f) { if (k === 'popstate') ctx.popstate = f; } } };
 ctx.globalThis = ctx;
 vm.createContext(ctx);
-for (const f of ['core.js', 'symbols.js', 'cards-ui.js', 'card-viewer.js', 'deck.js']) {
+for (const f of ['core.js', 'symbols.js', 'cards-ui.js', 'card-viewer-details.js', 'card-viewer.js', 'deck.js']) {
   vm.runInContext(fs.readFileSync(process.argv[1] + '/' + f, 'utf8'), ctx, { filename: f });
 }
 const run = (code) => vm.runInContext(code, ctx);

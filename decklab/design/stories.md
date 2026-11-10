@@ -35,7 +35,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 19 | 0 | 1 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 20 | 2 | 3 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 3 | 7 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 54 | 14 | 7 | 4 |
-| **Total** | **376** | **305** | **22** | **33** | **16** |
+| **Total** | **376** | **306** | **22** | **32** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -366,7 +366,7 @@ First slice: a same-deck revision side in `decklab/web/compare.js` reading GET /
 
 Built (2026-11-11): Compare accepts same-deck revisions with dates and current-list bracket qualification, or an explicitly picked cached MTGJSON precon without a saved header/deck/trial. Lean intrinsic list projections include card and directional stat deltas (curve, land sources, roles, bracket), without kit, prose, private counts or practice/results. Baseline sides suppress shared-card/head-to-head requests. History links preserve selected list availability; hidden decks remain missing before stats/revision validation and unknown cards produce unknown stats. Focused/model/HTTP tests and ten synthetic native captures pass; the full26-case suite remains available for final review. No actual deck/history, private inventory or external precon fetch was used.
 
-**E1-S31** · Matt · could · M · missing
+**E1-S31** · Matt · could · M · built
 
 As a deck builder looking a card up, often at the shop, I want the card viewer to link to the card's Scryfall page and list our own copies by printing and storage location, so that one place answers what the card is, whether we have it and where it is.
 
@@ -386,6 +386,8 @@ First slice: the Scryfall link in `decklab/web/card-viewer.js`, with a server-bu
 Covers making a deck and keeping it right: New deck and Start from, the full editor (from 600px) and the phone's Quick edit, Paste a list, the Planned and Play-now lists, owned vs needed against the space's pool and its other built decks, keeping the write-up current, history and undo, and the command-line route Claude Code uses (`deck pull`/`push`/`new`/`tables`). Drafts stay on the device they were started on unless the editor (full or Quick, a new deck's too) keeps one for later on the PC for the same profile (E2-S16), and the Play-now list's substitutes are hand-written (Packing's physical stand-ins, E4-S21, never change a list). Rename and retirement, with restore from History, are on the deck page (E1-S19). Legality badges on casual decks are deliberately not wanted.
 
 Open: E2-S16, E2-S22.
+
+Built (2026-11-11): the existing card viewer offers server-built shown-printing Scryfall links (exact-name search fallback), EDHREC in Commander contexts and a bookmarkable card address. Your copies loads lazily only for an authorized collection and lists owned printing/finish/count plus recorded-or-unset storage location, never notes, orders or prices. Independent copy guards run before validation/snapshot access. Card addresses open the existing modal over the current page (Library for a fresh opening), wait for a profile, retain the correct underlay and suppress stale profile/route/card replies.126 targeted fixtures pass with one qualification skip;13 contract/exact-URL golden checks and193 broader permission/search/printing/route checks pass after narrowing four misleading substring assertions. Eight strict synthetic native captures completed cleanly at data/ui-review/20261110T185450Z-96436dce; representative images were inspected. No write, migration, external lookup fetch or actual member data was used. Safari/touch acceptance remains separate.
 
 **E2-S01** · Matt · must · L · built
 

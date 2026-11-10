@@ -8,12 +8,15 @@ import json
 from unittest import mock
 
 from decklab.lib import config, pool
+from decklab.lib.api import card_details
 from decklab.lib.api import (accessories, activity, activity_undo, assembly, assembly_completion, assembly_ticks, collection, compare, comparison_lists, cover, editor, history, play_records,
                              precon_coverage, precon_trial, receipts, shopping, shopping_order_changes, shopping_orders, shopping_queue, tokens)
 from decklab.tests.test_server import ServerTestCase, WRITE
 
 
 GETS = (
+    ("/api/cards/lookup", card_details, "card_view", "name=Llanowar+Elves&set=fdn&number=227", {"name": "Llanowar Elves", "set": "fdn", "number": "227"}),
+    ("/api/cards/copies", card_details, "copies_view", "name=Llanowar+Elves&space=home", {"name": "Llanowar Elves", "space": "home"}),
     ("/api/collection", collection, "collection_view", "q=elves&color=G&limit=3", {"q": "elves", "color": "G", "limit": "3"}),
     ("/api/assembly", assembly, "assembly_view", "deck=casual%2Fgruul-test&version=owned",
      {"deck": "casual/gruul-test", "version": "owned"}),

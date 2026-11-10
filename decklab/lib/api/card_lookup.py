@@ -13,7 +13,7 @@ import urllib.parse
 from collections import Counter
 from datetime import date
 
-from decklab.lib import cards, currency, decks, pool, spaces
+from decklab.lib import cards, currency, decks, edhrec, pool, spaces
 
 from . import common
 from .carddata import _require_cards
@@ -107,6 +107,8 @@ def _card_json(card, p):
         "color_identity": list(card["color_identity"]), "roles": list(card["roles"]),
         "img": url("normal"), "img_small": url("small"),
         "oracle_text": card.get("oracle_text", ""), "game_changer": bool(card.get("game_changer")),
+        "scryfall_url": reference_url(card["name"], p),
+        "edhrec_url": "https://edhrec.com/cards/" + edhrec.name_slug(card["name"]),
         **{key: card.get(key) for key in ("power", "toughness", "loyalty", "defense")},
     }
     if card.get("faces"):
@@ -119,6 +121,14 @@ def _card_json(card, p):
                                  "img": url("normal-back" if back else "normal"),
                                  "img_small": url("small-back" if back else "small")})
     return out
+
+
+def reference_url(name, printing=None):
+    """An outbound link only: the shown printing, otherwise Scryfall's exact-name search."""
+    if printing and image_url(printing.get("set"), printing.get("collector_number"), "normal"):
+        return "https://scryfall.com/card/" + urllib.parse.quote(printing["set"], safe="") + "/" + urllib.parse.quote(printing["collector_number"], safe="")
+    quoted = str(name).replace("\\", "\\\\").replace('"', '\\"')
+    return "https://scryfall.com/search?" + urllib.parse.urlencode({"q": f'!"{quoted}"'})
 
 
 def _line_json(line, section, warnings, deck_sets=()):

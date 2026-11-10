@@ -38,6 +38,8 @@ older code (the committed tests/fixtures/inventory_goldens):
 - "stat-source-defaults": E1-S30 adds per-colour land-source totals for Compare. Only a complete
   all-zero map in a deck-view stats answer with no land sources is dropped. Nonzero, malformed
   maps and every existing stat still compare; test_stats checks real counts independently.
+- "card-reference-urls": E1-S31 adds outbound reference URLs to public card projections. Only
+  exact expected URLs in that full card shape are dropped; malformed links and all card data compare.
 - "kit-editability": E10-S33 adds Boolean summary.kit.editable to deck-view answers so public
   kit readers get no Choose controls. Only that exact additive field is dropped; every kit value,
   warning and other editable field still compares. test_golden_kit_editability checks this boundary
@@ -156,6 +158,7 @@ older code (the committed tests/fixtures/inventory_goldens):
 """
 import copy
 import re
+import urllib.parse
 
 from decklab.lib import config
 from decklab.tests import golden_dump as gate
@@ -1032,6 +1035,25 @@ def stat_source_defaults(dump):
                 colours.pop("land_sources_by_colour")
 
 
+def card_reference_urls(value):
+    """Drop only deterministic outbound metadata from the public card JSON shape."""
+    from decklab.lib import edhrec
+    from decklab.lib.api.card_lookup import reference_url
+    if isinstance(value, dict):
+        if all(key in value for key in ("name", "mana_cost", "cmc", "type_line", "colors", "color_identity", "roles", "img", "img_small", "oracle_text")):
+            image = re.fullmatch(r"/img/([^/]+)/([^/]+)/(?:normal|small)", value.get("img") or value.get("img_small") or "")
+            printing = {"set": image[1], "collector_number": urllib.parse.unquote(image[2])} if image else None
+            if value.get("scryfall_url") == reference_url(value["name"], printing):
+                value.pop("scryfall_url")
+            if value.get("edhrec_url") == "https://edhrec.com/cards/" + edhrec.name_slug(value["name"]):
+                value.pop("edhrec_url")
+        for child in value.values():
+            card_reference_urls(child)
+    elif isinstance(value, list):
+        for child in value:
+            card_reference_urls(child)
+
+
 EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase5_reworded),
                ("ui-additions", ui_additions), ("kit-editability", kit_editability), ("shared-sleeves", shared_sleeves),
                ("incoming-sources", incoming_sources), ("assembly-completion", assembly_completion),
@@ -1047,7 +1069,7 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("absent-shop-prices", absent_shop_prices), ("role-target-defaults", role_target_defaults),
                ("game-changer-flags", game_changer_flags),
                ("listed-printings", listed_printings), ("owned-printings", owned_printings),
-               ("trial-defaults", trial_defaults), ("stat-source-defaults", stat_source_defaults),
+               ("trial-defaults", trial_defaults), ("stat-source-defaults", stat_source_defaults), ("card-reference-urls", card_reference_urls),
                ("building-holders", building_holders))
 
 
