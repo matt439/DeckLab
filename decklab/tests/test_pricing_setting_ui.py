@@ -27,7 +27,7 @@ SETUP = SHELL + r'''
       shops: {...answer().shops, saved: body.shops, effective: body.shops || ['mtgmate', 'gamesportal'],
         source: body.shops ? 'saved' : 'default'}}); };
   showFooter = () => { footers++; }; loadSimulations = () => {}; settingsSimulations = () => {};
-  loadCommanderNightSettings = () => {}; loadPostageSettings = () => {}; loadVisits = () => {};
+  loadCommanderNightSettings = () => {}; loadPostageSettings = () => {}; loadVisits = () => {}; loadReferenceFacts = () => {};
   loadSettingsMaintenance = () => {}; loadSettingsMembers = () => {}; loadServerRestart = () => {};
   const openSettings = async (id = 'matt') => { as(id, false); location.hash = '#/settings'; routeToken++;
     showSettings(new URLSearchParams(), routeToken); await flush(); return byId('settings-prices'); };

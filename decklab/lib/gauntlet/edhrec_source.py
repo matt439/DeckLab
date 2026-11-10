@@ -10,7 +10,7 @@ TOP_MAX_AGE, an average deck for AVERAGE_MAX_AGE (they change slowly, and a stab
 result keys stable). A failed fetch keeps the older copy; with none, that deck is left out and the
 build says why.
 
-The pages were read against copies captured once by hand (2026-11-02, decklab/tests/fixtures/
+The pages were read against copies captured once by hand (on SHAPE_CHECKED, decklab/tests/fixtures/
 gauntlet/): an average deck's "deck" holds "commander" (its commander's names) and "cards" ({card
 type: [[name, quantity]]}); "container" -> "json_dict" -> "card" -> "num_decks" the decks it
 averages; "panels" -> "taglinks" its themes with counts. Nothing else is assumed: anything else
@@ -27,6 +27,9 @@ from decklab.lib import edhrec
 
 from . import sources_dir
 
+# When the average-deck and top-commander shapes above were last compared with EDHREC's pages by hand
+# (decklab.lib.stats.reviewed says when that's due again, E11-S71).
+SHAPE_CHECKED = "2026-11-02"
 TOP_PATH = "commanders/year.json"
 AVERAGE_PATH = "average-decks/{slug}/{tier}.json"
 AVERAGE_SITE = "https://edhrec.com/average-decks/{slug}/{tier}"
