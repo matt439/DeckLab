@@ -56,6 +56,9 @@ _LINE = re.compile(r"""^\s*(?:-\s*)?(?:export\s+)?["']?[A-Za-z0-9_.-]*?(?<![A-Za
                    re.IGNORECASE)
 _QUOTED = re.compile(r"""["']([^"']*)["']""")
 MIN_TERM = 6                 # a shorter configured value would match by chance
+# Second-level labels that are registries under a two-letter country ending (com.au, co.uk), so
+# "shop.com.au" is never searched for as somebody's zone.
+_REGISTRY_LABELS = {"com", "net", "org", "co", "edu", "gov", "id", "ac", "asn", "me", "ne", "or"}
 
 
 def tracked_files(root=None):
@@ -90,6 +93,31 @@ def placeholder_id(value):
     if not value or value[0] in "<$" or len(set(value.lower())) == 1:
         return True
     return any(word in value.lower() for word in ("example", "placeholder", "your"))
+
+
+_JSON_STRING = r'"(?:\\.|[^"\\])*"'
+
+
+def strip_jsonc(text):
+    """JSONC as JSON: // and /* */ comments outside strings and trailing commas removed, line breaks kept."""
+    out = re.sub("(" + _JSON_STRING + r")|//[^\n]*|/\*.*?\*/",
+                 lambda m: m.group(1) or re.sub(r"[^\n]", "", m.group(0)), text, flags=re.DOTALL)
+    return re.sub("(" + _JSON_STRING + r")|,(?=\s*[\]}])", lambda m: m.group(1) or "", out)
+
+
+def zone_names(host):
+    """A host and the zones it may sit in: "www.cards.shop.net" gives cards.shop.net and shop.net, never a
+    bare registry such as com.au."""
+    labels = [label for label in host.strip().lower().rstrip(".").split(".") if label]
+    if labels[:1] == ["www"]:
+        labels = labels[1:]
+    names = []
+    for start in range(len(labels) - 1):
+        rest = labels[start:]
+        if len(rest) == 2 and len(rest[1]) == 2 and rest[0] in _REGISTRY_LABELS:
+            break
+        names.append(".".join(rest))
+    return names
 
 
 def is_config_file(name):
@@ -158,6 +186,10 @@ def config_findings(name, text):
             parsed = tomllib.loads(text)
         elif suffix == ".json":
             parsed = json.loads(text)
+        elif suffix == ".jsonc":
+            plain = strip_jsonc(text)
+            parsed = json.loads(plain)
+            lines = plain.splitlines()                  # so a value in a comment isn't the line named
     except ValueError:
         parsed = None                                   # read line by line instead
     found = []
@@ -207,10 +239,9 @@ def config_terms(config_file=None):
     for host in config.get("allowed_hosts") or []:
         if not isinstance(host, str):
             continue
-        host = host.strip().lower().rstrip(".")
-        host = host[4:] if host.startswith("www.") else host
-        if "." in host and not example_host(host) and not re.fullmatch(r"[0-9.]+", host):
-            add("the configured domain", host)
+        if "." in host and not example_host(host) and not re.fullmatch(r"[0-9.:\[\]]+", host.strip()):
+            for zone in zone_names(host):
+                add("the configured domain", zone)
     access = config.get("access")
     if isinstance(access, dict):
         team = str(access.get("team") or "").strip().lower()
@@ -237,6 +268,13 @@ def term_findings(data, terms):
     return sorted(set(found))
 
 
+def _masked(message, terms):
+    """A finding's message without any configured value another rule quoted in it."""
+    for term in sorted({term for values in terms.values() for term in values}, key=len, reverse=True):
+        message = re.sub(re.escape(term), "(a configured value)", message, flags=re.IGNORECASE)
+    return message
+
+
 def audit(root=None, config_file=None, names=None):
     """[(file, line number, message)] over the repo's files, sorted."""
     root = Path(root or ROOT)
@@ -260,8 +298,8 @@ def audit(root=None, config_file=None, names=None):
                 rows += email_findings(text)
                 if is_config_file(name):
                     rows += config_findings(name, text)
-        found.extend((name, number, message) for number, message in rows)
-    return sorted(found), terms
+        found.extend((name, number, _masked(message, terms)) for number, message in rows)
+    return sorted(set(found)), terms
 
 
 def main(argv=None):

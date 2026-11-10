@@ -92,6 +92,18 @@ class RuleTests(unittest.TestCase):
         plain = json.dumps({"env": {"live": {"routes": [{"pattern": REAL_HOST + "/*", "zone_name": "example.com"}]}}})
         self.assertEqual(len(audit.config_findings("wrangler.json", plain)), 1)
 
+    def test_jsonc_is_parsed_past_comments_and_line_breaks(self):
+        jsonc = ('{\n  // "routes": ["' + REAL_HOST + '/*"]\n  "routes": [\n    /* the site */\n'
+                 '    "' + REAL_HOST + '/*",\n    "decklab.example.com/*",\n  ],\n'
+                 '  "main": "https://example.com//x", // trailing\n}\n')
+        self.assertEqual(json.loads(audit.strip_jsonc(jsonc))["main"], "https://example.com//x")
+        self.assertEqual([n for n, _ in audit.config_findings("wrangler.jsonc", jsonc)], [5])
+
+    def test_zone_names(self):
+        self.assertEqual(audit.zone_names("WWW." + REAL_HOST + "."), [REAL_HOST, REAL_HOST.split(".", 1)[1]])
+        self.assertEqual(audit.zone_names("cards.lantern-vale.com.au"), ["cards.lantern-vale.com.au", "lantern-vale.com.au"])
+        self.assertEqual(audit.zone_names("lantern-vale.co"), ["lantern-vale.co"])
+
     def test_config_terms(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "local.json"
@@ -105,7 +117,7 @@ class RuleTests(unittest.TestCase):
             path.write_text("{not json", encoding="utf-8")
             self.assertEqual(audit.config_terms(path), {})
         self.assertEqual(terms["a configured profile's email"], {REAL_EMAIL})
-        self.assertEqual(terms["the configured domain"], {REAL_HOST})
+        self.assertEqual(terms["the configured domain"], {REAL_HOST, REAL_HOST.split(".", 1)[1]})
         self.assertEqual(terms["the configured Cloudflare Access team"], {"lantern.cloudflareaccess.com"})
         self.assertEqual(terms["the configured Cloudflare Access AUD tag"], {"ab12" * 16})
 
@@ -175,6 +187,19 @@ class RepositoryTests(unittest.TestCase):
         self.assertTrue(all("lantern" not in message for _, _, message in found))
         self.local.unlink()
         self.assertEqual(self.found(), [])
+
+    def test_a_configured_zone_is_found_and_never_quoted_by_another_rule(self):
+        zone = REAL_HOST.split(".", 1)[1]
+        self.local.write_text(json.dumps({"profiles": [{"id": "kim", "emails": [REAL_EMAIL]}],
+                                          "allowed_hosts": ["www." + REAL_HOST]}), encoding="utf-8")
+        self.write("decklab/cloudflare/wrangler.toml", WRANGLER.replace("HOST", "decklab.example.com").replace("ZONE", zone))
+        self.write("docs/a.md", "Mail " + REAL_EMAIL.upper() + "\n")
+        self.git("add", "-A")
+        found = self.found()
+        self.assertEqual(sorted({name for name, _, _ in found}), ["decklab/cloudflare/wrangler.toml", "docs/a.md"])
+        self.assertTrue(any(message.startswith("zone_name names") for _, _, message in found))
+        self.assertTrue(any(message.startswith("an email address") for _, _, message in found))
+        self.assertTrue(all("lantern" not in message.lower() for _, _, message in found), found)
 
     def test_check_exit_codes(self):
         script = self.root / "scripts" / "audit_public_repo.py"
