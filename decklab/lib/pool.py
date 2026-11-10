@@ -769,6 +769,13 @@ def compare(sections, pool, exclude=(), prices=True, listed=False):
     if listed and prices and buying:    # the Planned list's printings beside the cheapest (E5-S31)
         listed_prices.annotate(rows, totals, sections, lambda n: _canonical(n, "decklist", {}),
                                (result["rate"], result["rate_date"]), code)
+    if listed and rows:                 # which printing the space has of each named one (E2-S30)
+        try:
+            listed_prices.annotate_owned(
+                rows, sections, lambda n: _canonical(n, "decklist", {}), printing_counts(pool.space),
+                {key[0] for d in pool.in_use if d.id in exclude for key in d.recorded})
+        except (LookupError, RuntimeError, OSError):
+            pass                        # only a note: the counts above stand without it
     result.update(
         rows=rows,
         totals=totals,
@@ -796,7 +803,11 @@ def owned_vs_needed(deck_id, version="target", pool=None, prices=True):
             In the Planned list (version target), a missing row whose list names
             another printing also has listed_printing, listed_finish,
             listed_aud_each, listed_aud_missing and listed_material
-            (lib/listed_prices.py; only the missing copies are priced).
+            (lib/listed_prices.py; only the missing copies are priced). There a row
+            with copies owned or on the way whose list names one printing also has
+            own_printing ("listed" or "other"), own_printing_label, own_printing_more
+            and own_printing_on_the_way (E2-S30: a note only, no count changes; none
+            for a card the deck's Printings in box record names).
       totals: cards, need, missing, aud_missing, unpriced (missing cards with
             no price); as_listed and aud_missing_as_listed only when a listed
             printing costs materially more: every missing copy, each annotated

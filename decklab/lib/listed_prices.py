@@ -21,6 +21,14 @@ annotated row at its listed price whether material or not (so a row unpriced at 
 as listed adds its listing, and the total can exceed aud_missing by more than the as_listed rows), an
 annotated row whose listing has no price and every other row at the cheapest. The deck page's banner
 shows that total ("About A$X in all as listed") only when more than one row is material.
+
+annotate_owned() (E2-S30) is the same comparison for the copies the space has: a row whose list names
+one printing, and whose card the space owns or awaits, also says whether the space has that printing
+or only another (own_printing "listed" or "other", own_printing_label, own_printing_more,
+own_printing_on_the_way). It is a quiet note for whoever may see the space's inventory, never a
+warning: it changes no count, and it says nothing about which deck holds a copy or whether one is
+free (the counts are the space's whole collection and pending orders, pool.printing_counts). A card
+the deck's own Printings in box record names gets none, since that record already says what is there.
 """
 
 from decklab.lib import cards
@@ -44,6 +52,57 @@ def listed_printings(sections, canonical):
             key = (line.set.lower(), str(line.number), line.finish or "nonfoil") if line.set and line.number else None
             seen[name] = key if seen.get(name, key) == key else None
     return {name: key for name, key in seen.items() if key is not None}
+
+
+FINISHES = ("nonfoil", "foil", "etched")
+
+
+def _copies(counts, key):
+    """(copies in the collection, copies on the way) of one printing in pool.printing_counts()."""
+    found = counts.get(key) or {}
+    return found.get("owned", 0), found.get("on_the_way", 0)
+
+
+def annotate_owned(rows, sections, canonical, counts, recorded=()):
+    """Add own_printing ("listed": the space has the printing the list names; "other": only other
+    printings), own_printing_label (that printing, or for "other" the other printing it has most
+    copies of, as "FDN 227" or "FDN 227 foil"), own_printing_more (how many further other printings
+    it has; 0 for "listed") and own_printing_on_the_way (True when the copies named are only on the
+    way, none in the collection yet) to each row with copies owned or on the way whose every line
+    names one and the same printing of this card. counts: pool.printing_counts() of the deck's
+    space; recorded: the names the deck's own Printings in box record names, which get no note.
+    A row whose copies' printings can't be told (none of the card's printings is counted) gets none.
+    Nothing else on a row changes."""
+    listed = listed_printings(sections, canonical)
+    recorded = set(recorded)
+    for row in rows:
+        name = row["name"]
+        printing = listed.get(name)
+        if printing is None or not row.get("owned") or name in recorded:
+            continue
+        set_code, number, finish = printing
+        printed = cards.printing_card(set_code, number)
+        if not printed or printed["name"] != name:
+            continue
+        here, coming = _copies(counts, printing)
+        if here or coming:
+            row.update(own_printing="listed", own_printing_label=_label(*printing), own_printing_more=0,
+                       own_printing_on_the_way=not here)
+            continue
+        others = []
+        for other_set, other_number in (cards.card(name) or {}).get("printings", []):
+            for other_finish in FINISHES:
+                key = (str(other_set).lower(), str(other_number), other_finish)
+                here, coming = _copies(counts, key)
+                if key != printing and (here or coming):
+                    others.append((-here, -coming, key))
+        if not others:
+            continue
+        others.sort()
+        in_hand = [other for other in others if other[0]] or others     # the collection's before incoming ones
+        row.update(own_printing="other", own_printing_label=_label(*in_hand[0][2]),
+                   own_printing_more=len(in_hand) - 1, own_printing_on_the_way=not in_hand[0][0])
+    return rows
 
 
 def material(cheapest, listed):

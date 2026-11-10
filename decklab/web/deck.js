@@ -551,7 +551,8 @@ function cardMarks(data) {
     const labels = rowLabels(r);
     marks.set(r.name, { missing: r.missing, need: r.need,
       coming: labels.on_the_way.reduce((n, [, qty]) => n + qty, 0),
-      sources: rowIncomingSources(r), held: labels.in_use });
+      sources: rowIncomingSources(r), held: labels.in_use,
+      printing: ownPrintingWords(r, false), printingFull: ownPrintingWords(r) });    // E2-S30's quiet note
   }
   return marks;
 }
@@ -572,7 +573,8 @@ function lineMarks(groups, marks) {
       const first = !marked.has(line.name);
       marked.add(line.name);
       byLine.set(line, { missing: line.qty - here, need: line.qty,
-        coming: first ? mark.coming : 0, sources: first ? mark.sources : [], held: first ? mark.held : [] });
+        coming: first ? mark.coming : 0, sources: first ? mark.sources : [], held: first ? mark.held : [],
+        printing: first ? mark.printing : null, printingFull: first ? mark.printingFull : null });
     }
   }
   return byLine;
@@ -615,6 +617,9 @@ function markChips(mark, full = false) {
     else chips.push(status("info", `${mark.coming} on the way`));
   }
   for (const [deck, n] of mark.held) chips.push(status("warn", `${n} in ${deck}`));
+  // Which printing the space has of the one the list names: only "another" on the list, both in the viewer.
+  const printing = full ? mark.printingFull : mark.printing;
+  if (printing) chips.push(status("plain", printing));
   return chips;
 }
 
