@@ -25,6 +25,10 @@ decklab/forge-trial/*/
 decklab/cloudflare/.wrangler/
 decklab/cloudflare/dist/
 decklab/cloudflare/node_modules/
+# ...and the copy of wrangler.toml with the real routes (the tracked one holds only placeholders)
+decklab/cloudflare/wrangler.local.toml
+decklab/cloudflare/wrangler.local.json
+decklab/cloudflare/wrangler.local.jsonc
 
 # Personal data stays out of this repo: the real settings (profiles and their emails, the domain,
 # Cloudflare Access) are decklab/config.json, copied from decklab/config.example.json; a household's

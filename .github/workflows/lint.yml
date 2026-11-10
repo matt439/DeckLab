@@ -1,4 +1,5 @@
-# On every pull request and push to main: real-error Ruff checks and the source-length guard.
+# On every pull request and push to main: real-error Ruff checks, the source-length guard and the
+# public-repo leak guard (no real email, Cloudflare zone or id in a tracked file: E11-S62).
 # Cheap, on Linux. A pull request's own branch pushes aren't linted twice (push and pull_request).
 # The full rule set isn't enforced: the code has thousands of style findings it was never held to.
 name: lint
@@ -24,3 +25,7 @@ jobs:
         run: python scripts/test_fixtures.py decklab.tests.test_source_lengths
       - name: Check source lengths
         run: python scripts/audit_source_lengths.py --check
+      - name: Test the public-repo audit
+        run: python scripts/test_fixtures.py decklab.tests.test_public_repo_audit
+      - name: Check for real emails and Cloudflare config values
+        run: python scripts/audit_public_repo.py --check
