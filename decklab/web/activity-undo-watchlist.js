@@ -6,16 +6,19 @@
 // listed_aud is a shop's own listing in AUD (MTGMate and Games Portal), never converted, so its label stays AUD
 // whatever the configured currency (E11-S53).
 ACTIVITY_UNDO_FIELDS.watchlist = ["name", "set", "collector_number", "finish", "quantity", "for", "printing",
-  "listed_aud", "listed_at", "in_stock", "checked", "notes", "state", "source"];
+  "listed_aud", "listed_at", "in_stock", "checked", "notes", "state", "source", "buy_under_aud"];
 ACTIVITY_UNDO_EDITABLE.watchlist = [...ACTIVITY_UNDO_FIELDS.watchlist];
 const ACTIVITY_UNDO_WATCHLIST_WORDS = { name: "Name", set: "Set", collector_number: "Collector number", finish: "Finish",
   quantity: "Quantity", for: "For deck", printing: "Printing preference", listed_aud: "Reference price (AUD)",
-  listed_at: "Listed at", in_stock: "In stock", checked: "Checked", notes: "Notes", state: "Purchase state", source: "Source" };
+  listed_at: "Listed at", in_stock: "In stock", checked: "Checked", notes: "Notes", state: "Purchase state", source: "Source",
+  buy_under_aud: "AUD market target per copy" };
 
 function activityUndoWatchlistRow(row) {
+  const fields = ACTIVITY_UNDO_FIELDS.watchlist, legacy = fields.filter(field => field !== "buy_under_aud");
   return Boolean(row && typeof row === "object" && !Array.isArray(row)
-    && Object.keys(row).sort().join(",") === [...ACTIVITY_UNDO_FIELDS.watchlist].sort().join(",")
-    && ACTIVITY_UNDO_FIELDS.watchlist.every(field => typeof row[field] === "string")
+    && [fields, legacy].some(schema => Object.keys(row).sort().join(",") === [...schema].sort().join(","))
+    && legacy.every(field => typeof row[field] === "string")
+    && (!Object.hasOwn(row,"buy_under_aud") || row.buy_under_aud === "" || typeof row.buy_under_aud === "string" && /^\d{1,9}\.\d{2}$/.test(row.buy_under_aud))
     && /^[1-9][0-9]*$/.test(row.quantity) && row.name.trim());
 }
 

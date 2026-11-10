@@ -27,6 +27,7 @@ import json
 from decklab.lib import config, inventory
 
 from . import Summary, changes, files, orders, paths
+from . import undo_queue_schema as queue_schema
 from .undo import BATCH_MAX, UndoConflict, UndoMissing, UndoUnsupported, _identifier
 from .undo_token_batch import Refused
 from .undo_watchlist import AUDIT, DUPLICATE, EDITED, HOME, INVALID, KIND, TABLE, UNTOUCHED, _image, _queue, _stock
@@ -265,7 +266,8 @@ def _review_add(change_id, snapshot, store, raw, items, stock, label, why):
     except Exception:
         raise UndoConflict(UNSAFE, label) from None
     digest = _receipt(change_id, raw, files.rendered_sha256(snapshot.watchlist), stock, layout, snapshot.revision,
-                      snapshot.decks_revision, ADD, max(item["row_change_id"] for item in items))
+                      snapshot.decks_revision, ADD, max(item["row_change_id"] for item in items),
+                      queue_schema.market_receipt([(None, item["row"]) for item in items]))
     proof = {"deleted_ids": [item["watch_row_id"] for item in items], "stock": stock, "layout": layout,
              "order": order, "positions": positions}
     plan_rows = [{"row_change_id": item["row_change_id"], "label": item["label"], "restore": item["row"]} for item in items]
@@ -313,7 +315,8 @@ def _confirm_remove(proof, saved, actual, layout):
         old = row.get("before") if isinstance(row, dict) else None
         rid = old.get("id") if isinstance(old, dict) else None
         if not isinstance(row, dict) or row.get("table") != TABLE or row.get("op") != "DELETE" or row.get("after") is not None \
-                or type(rid) is not int or rid not in removed or rid in seen or row.get("key") != {"id": rid} or old != removed[rid]:
+                or type(rid) is not int or rid not in removed or rid in seen or row.get("key") != {"id": rid} \
+                or not queue_schema.same(old, removed[rid]):
             raise ValueError("Another row or changed facts")
         seen.add(rid)
     survivors = [row for row in proof["stock"] if row["id"] not in removed]

@@ -60,6 +60,14 @@ def review_hint(change, shown, profile):
         from . import activity_token_edit_undo
         if (edits := activity_token_edit_undo.hint(change, shown, profile, _space(profile))) is not None:
             return edits
+        if type(total) is int and 2 <= total <= 50 and len(rows) == total and not change.get("groups") \
+                and not change.get("more") and shown.get("id") == change.get("id") \
+                and all(isinstance(row, dict) and row.get("table") == "token_card"
+                        and all(image.get("space_id") == _space(profile) for image in (row.get("before"), row.get("after"))
+                                if isinstance(image, dict)) for row in rows) \
+                and {row.get("op") for row in rows} in ({"INSERT", "UPDATE"}, {"DELETE", "UPDATE"}) \
+                and guard.allowed(profile, "tokens.edit", _space(profile)):
+            return {"review": True}
     if total == 1 and len(rows) == 1 and not change.get("more") and not change.get("groups") and profile \
             and shown.get("id") == change.get("id"):
         row = rows[0]
@@ -201,12 +209,12 @@ def _token_fact(raw):
 def _token_batch_project(plan):
     from decklab.lib.inventory import undo_token_batch as batch
     count, rows = plan.get("row_count"), plan.get("rows")
-    if plan.get("kind") != "tokens" or type(count) is not int or not 2 <= count <= 50 \
+    if plan.get("kind") != "tokens" or type(count) is not int or not 1 <= count <= 50 \
             or not isinstance(rows, list) or len(rows) != count or "current" in plan \
             or plan.get("identity_policy") != batch.IDENTITY_POLICY \
             or plan.get("physical_confirmation_required") is not True or plan.get("packing_restored") is not False \
             or not isinstance(plan.get("expect"), str) or not SHA.fullmatch(plan["expect"]) \
-            or plan.get("label") != f"{count} deleted token-card rows":
+            or plan.get("label") != f"{count} deleted token-card row{'s' if count != 1 else ''}":
         raise ApiError(503, UNCONFIRMED)
     shown, ids = [], set()
     for item in rows:
@@ -238,10 +246,10 @@ def _token_current(raw):
 def _token_batch_remove_project(plan):
     from decklab.lib.inventory import undo_token_batch_remove as batch
     count, rows = plan.get("row_count"), plan.get("rows")
-    if plan.get("kind") != "tokens" or type(count) is not int or not 2 <= count <= 50 \
+    if plan.get("kind") != "tokens" or type(count) is not int or not 1 <= count <= 50 \
             or not isinstance(rows, list) or len(rows) != count or plan.get("reason_required") is not True \
             or not isinstance(plan.get("expect"), str) or not SHA.fullmatch(plan["expect"]) \
-            or plan.get("label") != f"{count} added token-card rows":
+            or plan.get("label") != f"{count} added token-card row{'s' if count != 1 else ''}":
         raise ApiError(503, UNCONFIRMED)
     shown, sources, ids = [], set(), set()
     for item in rows:

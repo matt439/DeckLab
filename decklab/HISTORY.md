@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Whole token-row recovery with allocator moves and queue target parity (2026-11-11; E11-S08 slices)
+
+- Complete own-space token INSERT/DELETE sources may include strictly position-only survivor UPDATEs, even when the first rows are only moves. Exact ordinary forward reconstruction, latest own-token fences and complete physical packing checks precede one inverse; actual inverse audit/layout must match the ordinary allocator. A single target uses the same reason/whole-count confirmation and receipt, with fresh restored ids. Survivor facts/packing remain unchanged. Both directions stay bounded at50 total audited rows; pure/noncanonical reorder restoration refuses.
+- Queue Undo accepts the precise additive0026 nullable numeric target difference in legacy/current audit schemas. Canonical cents restore exactly; changed targets require a fresh saved-source/preference receipt. Actual precommit target mismatch rolls back. The UI displays the optional AUD unit market target, with no paid-price or spending semantics.
+- Validation:147 core checks pass with two guarded PostgreSQL classes skipped; three new real-PG source cases await CI.93 queue/schema/UI and88 latest combined checks pass (overlap). No live database, private records, physical cards or actual files changed. E11-S08 remains partial while coupled order and collection source families are completed.
+
 ## Reviewed pool-checked bulk card adds (2026-11-11; E2-S31)
 
 - Existing editors choose another same-space deck; its printing/finish/category-preserving list enters the normal tickable Paste review. Independently guarded by-name free/in-use/incoming/to-buy marks never promise an exact printing or expose hidden holders. Public readers without inventory receive no marks; stale snapshots withhold them.

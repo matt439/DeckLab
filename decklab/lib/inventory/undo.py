@@ -691,6 +691,15 @@ def review(change_id, space, snapshot=None):
     supplied_snapshot = snapshot is not None
     snapshot = current() if snapshot is None else snapshot
     raw = store.undo_audit(change_id)
+    from . import undo_token_layout
+    position_source = undo_token_layout.looks_like(store, change_id, space, raw)
+    if position_source is not None:
+        from . import undo_token_batch, undo_token_batch_remove
+        module = undo_token_batch_remove if position_source == "INSERT" else undo_token_batch
+        reader = getattr(store, "undo_token_batch_remove_review" if position_source == "INSERT" else "undo_token_batch_review", None)
+        if not supplied_snapshot and callable(reader):
+            return reader(change_id, space)
+        return module.review(change_id, space, snapshot, store)
     from . import undo_token_delete
     if undo_token_delete.is_delete(raw):
         undo_token_delete.source_record(raw, space)

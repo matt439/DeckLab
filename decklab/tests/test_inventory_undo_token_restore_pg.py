@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
+from decklab import db
 from decklab.lib import cards, config, inventory
 from decklab.lib.inventory import Op, files, undo, undo_token_delete as deleted
 from decklab.lib.tokens import names
@@ -102,6 +103,41 @@ class TokenRestoreUndoPgTests(db_support.DbTestCase):
         with self.assertRaises(undo.UndoConflict):
             self.apply(source, plan)
         self.assertEqual(self.persisted(), saved)
+
+    def _positioned_delete(self, positions):
+        for front, back in (("Beast", ""), ("Angel", "The Monarch"), ("Zombie", "")):
+            self.add(self.row(front, back))
+        with self.connect("owner") as connection:
+            with db.change("claude", "cli", "Seed disposable ordering", conn=connection) as (cur, _):
+                for front, position in positions.items():
+                    cur.execute("update token_card set position=%s where space_id='home' and front=%s", (position, front))
+                cur.execute("update inventory_revision set revision=revision+1")
+        sheet = self.fresh().token_set("home")
+        target = next(row for row in sheet.rows if row.front == "Angel")
+        inventory.apply(Op("tokens.remove", {"space": "home", "sha256": files.rendered_sha256(sheet), "base": target.as_dict()}),
+                        existing.ACTOR, "Delete disposable token row", reason="Fixture deletion")
+        return self.source("token_card"), target.id
+
+    def test_single_delete_restore_accepts_only_predicted_inverse_survivor_renumbering(self):
+        source, old_id = self._positioned_delete({"Beast": 0, "Zombie": 1, "Angel": 2})
+        self.assertEqual(self.sql("select op from audit.row_change where change_set_id=%s", (source,)), [("DELETE",)])
+        self.assertEqual(inventory.undo_review(source, "home")["action"], deleted.ACTION)
+        after, summary = self.apply(source)
+        self.assertNotEqual(summary.extra["added_token_row_id"], old_id)
+        self.assertEqual(sorted(row[0] for row in self.sql("select op from audit.row_change where change_set_id=(select max(id) from audit.change_set)")),
+                         ["INSERT", "UPDATE", "UPDATE"])
+        self.assertEqual([row.front for row in after.token_set("home").rows], ["Beast", "Angel", "Zombie"])
+
+    def test_delete_with_position_only_survivors_restores_one_row_through_the_batch_proof(self):
+        source, old_id = self._positioned_delete({"Angel": 0, "Zombie": 1024, "Beast": 2048})
+        self.assertEqual(sorted(row[0] for row in self.sql("select op from audit.row_change where change_set_id=%s", (source,))),
+                         ["DELETE", "UPDATE"])
+        plan = inventory.undo_review(source, "home")
+        self.assertEqual((plan["action"], plan["row_count"]), ("token_batch_add", 1))
+        after, summary = self.apply(source, plan)
+        new_id, = summary.extra["added_token_row_ids"]
+        self.assertNotEqual(new_id, old_id)
+        self.assertEqual([row.front for row in after.token_set("home").rows], ["Beast", "Angel", "Zombie"])
 
     def test_a_tampered_proof_rolls_the_insert_back(self):
         source, _ = self.seed()

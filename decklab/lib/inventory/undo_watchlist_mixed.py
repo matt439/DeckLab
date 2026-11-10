@@ -21,6 +21,7 @@ import collections
 from decklab.lib import config, inventory
 
 from . import Summary, changes, files, orders, paths
+from . import undo_queue_schema as queue_schema
 from .model import QUEUE_FIELDS
 from .undo import BATCH_MAX, UndoConflict, UndoMissing, UndoUnsupported, _identifier
 from .undo_token_batch import Refused
@@ -240,7 +241,9 @@ def review(change_id, space, snapshot, store, raw=None):
     except Exception:
         raise UndoConflict(UNSAFE, label) from None
     digest = rows._receipt(change_id, raw, files.rendered_sha256(snapshot.watchlist), stock, layout, snapshot.revision,
-                           snapshot.decks_revision, ACTION, fence)
+                           snapshot.decks_revision, ACTION, fence,
+                           queue_schema.market_receipt([(item["current"], item["restore"]) for item in items if item["change"] == "updated"]
+                             + [(None, item["row"]) for item in items if item["change"] == "removed"]))
     ordered = [item for change in ("updated", "added", "removed") for item in items if item["change"] == change]
     counts = _counts(items)
     # proof stays internal: the API projects only the rows' values, their stable ids and the counts.
@@ -319,12 +322,12 @@ def _confirm(proof, saved, actual, layout):
         if op == "UPDATE":
             rid = key.get("id") if isinstance(key, dict) else None
             if type(rid) is not int or rid not in updated or rid in seen or key != {"id": rid} \
-                    or old != updated[rid]["current_db"] or new != updated[rid]["restore_db"]:
+                    or not queue_schema.same(old, updated[rid]["current_db"]) or not queue_schema.same(new, updated[rid]["restore_db"]):
                 raise ValueError("Another update")
             seen.add(rid)
         elif op == "DELETE":
             rid = old.get("id") if isinstance(old, dict) else None
-            if new is not None or type(rid) is not int or rid not in removed or rid in seen or key != {"id": rid} or old != removed[rid]:
+            if new is not None or type(rid) is not int or rid not in removed or rid in seen or key != {"id": rid} or not queue_schema.same(old, removed[rid]):
                 raise ValueError("Another removal")
             seen.add(rid)
         elif op == "INSERT":

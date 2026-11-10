@@ -18,6 +18,7 @@ from decklab.lib import config, inventory
 from . import Summary, changes, files, orders, paths
 from .model import QUEUE_FIELDS
 from .table_rows import WATCH_COLUMNS
+from . import undo_queue_schema as queue_schema
 from .undo import BATCH_MAX, UndoConflict, UndoMissing, UndoUnsupported, _identifier
 from .undo_token_batch import Refused
 
@@ -83,16 +84,12 @@ def _refuse(why, total):
 
 def _queue(image):
     """A database image as the queue's 14 text fields (the quantity as text), values verbatim."""
-    return {field: str(image["quantity"]) if field == "quantity" else image[COLUMN[field]] for field in QUEUE_FIELDS}
+    return queue_schema.row(image)
 
 
 def _image(image):
     """Whether one recorded image is a whole queue row the inverse can write back."""
-    return isinstance(image, dict) and set(image) == ROW_FIELDS \
-        and type(image["id"]) is int and 1 <= image["id"] < 10 ** 18 \
-        and type(image["position"]) is int and 0 <= image["position"] < 2 ** 31 \
-        and type(image["quantity"]) is int and 1 <= image["quantity"] < 2 ** 31 \
-        and all(isinstance(image[column], str) for column in WATCH_COLUMNS if column != "quantity")
+    return queue_schema.valid(image)
 
 
 def _parse(record):
@@ -187,7 +184,7 @@ def review(change_id, space, snapshot, store, rows=None):
     except Exception:
         raise UndoConflict(UNSAFE, label) from None
     receipt = [change_id, raw, files.rendered_sha256(snapshot.watchlist), stock, snapshot.revision,
-               snapshot.decks_revision, ACTION]
+               snapshot.decks_revision, ACTION, queue_schema.market_receipt([(item["current"], item["restore"]) for item in items])]
     digest = hashlib.sha256(json.dumps(receipt, ensure_ascii=False, sort_keys=True,
                                        separators=(",", ":")).encode("utf-8")).hexdigest()
     # proof stays internal: the API projects only the rows' fields, their stable ids and the count.
@@ -252,7 +249,8 @@ def confirm(before, saved, summary, actual):
             rid = key.get("id") if isinstance(key, dict) else None
             if not isinstance(row, dict) or row.get("table") != TABLE or row.get("op") != "UPDATE" \
                     or type(rid) is not int or rid not in reviewed or rid in seen or key != {"id": rid} \
-                    or row.get("before") != reviewed[rid]["current_db"] or row.get("after") != reviewed[rid]["restore_db"]:
+                    or not queue_schema.same(row.get("before"), reviewed[rid]["current_db"]) \
+                    or not queue_schema.same(row.get("after"), reviewed[rid]["restore_db"]):
                 raise ValueError("Another row or changed facts")
             seen.add(rid)
         restore = proof["restore"]

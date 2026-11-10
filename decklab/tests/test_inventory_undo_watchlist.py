@@ -31,6 +31,8 @@ def image(values, rid, position):
     """A watchlist_item audit image: database columns, an int quantity, the id and position."""
     out = {queue.COLUMN[field]: int(values[field]) if field == "quantity" else values[field] for field in QUEUE_FIELDS}
     out.update(id=rid, position=position)
+    # PostgreSQL's nullable numeric0026 column is JSON null/number, never text.
+    out["buy_under_aud"] = float(values["buy_under_aud"]) if values.get("buy_under_aud") else None
     return out
 
 
