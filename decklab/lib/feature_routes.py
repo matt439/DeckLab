@@ -17,6 +17,7 @@ wait or play, as the field's do.
 from types import MappingProxyType
 
 ACCESS = MappingProxyType({
+    ('GET', 'deck/role-ranges'): 'deck',
     ('GET', 'space/download'): 'inventory',
     ('GET', 'space/needed'): 'inventory',
     # Enum-only operational reports are an anonymous same-origin exception, never inventory authority.
@@ -395,8 +396,9 @@ def _status(key, answer):
 
 
 def route_tables():
-    from decklab.lib.api import space_download
     """Fresh handler bindings, so request-time patches and lazy imports retain one owner."""
+    from decklab.lib.api import role_ranges
+    from decklab.lib.api import space_download
     from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, commander_candidates, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, comparison_lists, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, dice, edhrec, editor, history,
                                  library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, reference_facts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_combined, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_ideas, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
@@ -405,6 +407,7 @@ def route_tables():
     from decklab.lib.api import collection_loans
 
     gets = {
+        ("deck", "role-ranges"): (role_ranges.ranges_view, ("id", "version")),
         ("space", "download"): (space_download.download_view, ("space",)),
         ("space", "needed"): (space_download.needed_view, ("space",)),
         ("settings", "errors"): (error_reports.view, ()),

@@ -1,4 +1,4 @@
-"""Free pool cards for each of a Commander deck's roles (E9-S26): GET /api/deck/role-cards, the Stats tab's
+"""Free pool cards for each of a saved deck's roles (E9-S26, E3-S42): GET /api/deck/role-cards, the Stats tab's
 "Free cards by role". Writes nothing: a card is added to the deck in the editor, as any other.
 
 What fits is lib/decks/role_pool.py's. The answer counts the deck's space's inventory, so it follows
@@ -8,13 +8,12 @@ collection isn't public." It names no other deck: a candidate's copies are count
 holds the rest.
 """
 from decklab.lib import cards, pool
-from decklab.lib.decks import role_pool
+from decklab.lib.decks import role_pool, swaps
 
 from .card_lookup import _card_json, _shown_printing
 from .common import ApiError, _scrub, _unique
 from .swaps import VERSIONS, _colours, _deck, _here, _space_pool
 
-NOT_COMMANDER = "Free cards by role are for Commander decks: their commander's colours say which cards fit."
 NO_COMMANDER = "Choose the deck's commander first: its colour identity says which cards fit."
 
 
@@ -40,20 +39,19 @@ def role_cards(deck_id=None, version=None):
     "here" (of those, copies not on the way)}], "more" (candidates not listed)}] in cards.ROLES' order,
     "warnings"}.
 
-    Only for a Commander deck with a commander (400 otherwise, after the reading rule's 404 and 403); the
-    list read is the saved Planned list (target) or Play-now list (owned), whose cards are never offered."""
+    Commander needs a commander; casual uses the selected list's non-land colours without Commander
+    legality or a target. The reading rule's404/403 comes first. Cards already in the selected list
+    are never offered."""
     summary, deck = _deck(deck_id)          # a hidden deck's 404 comes before any 400
     version = version or "target"
     if version not in VERSIONS:
         raise ApiError(400, f"version must be one of: {', '.join(VERSIONS)}")
-    if deck.kind != "commander":
-        raise ApiError(400, NOT_COMMANDER)
     source = deck.target if version == "target" else deck.owned
     if not source:
         raise ApiError(404, f"{deck.title} has no {version} list")
-    if not (source.get("Commander") or (deck.target or {}).get("Commander")):
+    if deck.kind == "commander" and not (source.get("Commander") or (deck.target or {}).get("Commander")):
         raise ApiError(400, NO_COMMANDER)
-    identity = _colours(deck, source)
+    identity = _colours(deck, source) if deck.kind == "commander" else swaps.deck_colours(source, "casual", cards.card)
     warnings = []
     p = _space_pool(deck.space, warnings)
     free = pool.free_copies(p, pool.self_ids(summary["id"]))
@@ -65,7 +63,7 @@ def role_cards(deck_id=None, version=None):
         sections.append((deck.target or {}).get("Commander") or ())
     in_deck = {cards.resolve(line.name) or line.name for lines in sections for line in lines}
     tagged = _tag_counts()
-    found = role_pool.free_by_role(cards.ROLES, identity, in_deck, free, cards.card)
+    found = role_pool.free_by_role(cards.ROLES, identity, in_deck, free, cards.card, kind=deck.kind)
     roles = []
     for role in cards.ROLES:
         listed, more = found[role]
@@ -73,7 +71,7 @@ def role_cards(deck_id=None, version=None):
             listed, more = [], 0
         roles.append({"role": role, "tag": cards.ROLE_TAGS[role], "tagged": bool(tagged.get(role)),
                       "cards": [_entry(name, spare, here.get(name, 0)) for name, spare in listed], "more": more})
-    return {"deck_id": summary["id"], "version": version,
+    return {"deck_id": summary["id"], "version": version, "kind": deck.kind,
             "colours": [c for c in "WUBRG" if c in identity],
             "tags_available": any(tagged.get(role) for role in cards.ROLES), "roles": roles,
             "warnings": _unique(_scrub(warnings))}

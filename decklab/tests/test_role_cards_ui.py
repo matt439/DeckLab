@@ -23,7 +23,7 @@ SETUP = PAGE + """
     role('counterspell', [], {tagged: false})]};
   api = async (path) => { asks.push(path); if (answer instanceof Error) throw answer; return answer; };
   const settle = async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); };
-  const openPart = async (part) => { part.open = true; part.fire('toggle'); await settle(); };
+  const openPart = async (part) => { if(!part.isConnected)main.append(part);part.open = true; part.fire('toggle'); await settle(); };
 """
 
 
@@ -64,7 +64,7 @@ class RoleCardsUiTests(unittest.TestCase):
           assert(!part.textContent.includes('Ramp'), part.textContent);
         """)
 
-    def test_only_for_a_commander_deck_whose_collection_is_seen(self):
+    def test_only_for_an_ordinary_deck_whose_collection_is_seen(self):
         self.run_js("""
           // A casual deck (no Commander stats), a visitor who may not see the collection (no "owned"), a product.
           assert.equal(rolePoolPart(makePage()), null);
@@ -73,6 +73,31 @@ class RoleCardsUiTests(unittest.TestCase):
           assert.equal(compositionPanel({types: [], roles: []}, hidden).querySelector('.role-pool-part'), null);
           const product = commanderPage(); product.summary.id = 'product/fdc-test';
           assert.equal(rolePoolPart(product), null);
+          const casual=makePage();casual.summary.kind='casual';casual.stats={};casual.owned={rows:[]};
+          assert(rolePoolPart(casual));
+          assert(rolePoolBody({kind:'casual',tags_available:true,roles:[]}).map(n=>n.textContent).join('').includes('No format legality filter'));
+        """)
+
+    def test_catalogue_ranges_keep_cited_target_first_and_show_date_count_and_qualification(self):
+        self.run_js("""
+          answer={ready:true,tier:'core',built:'2026-11-11',decks:12,note:'A range, not a recipe.',
+            roles:[{role:'ramp',low:8,typical:10,high:12}]};
+          const part=roleRangesPart(commanderPage(),{by_role:{ramp:'ramp'},categories:[{category:'ramp',target:10}]});
+          assert.equal(asks.length,0);await openPart(part);
+          assert(part.textContent.includes('core catalogue built 2026-11-11; 12 complete decks. A range, not a recipe.'));
+          same(part.querySelector('thead').querySelectorAll('th').map(n=>n.textContent),['Role','Cited target','Low','Typical','High']);
+          assert(asks[0].startsWith('/api/deck/role-ranges?'));assert.equal(asks.length,1);
+        """)
+
+    def test_unavailable_bands_and_late_role_reads_never_claim_zero_or_cross_profiles(self):
+        self.run_js("""
+          answer={ready:false,reason:'Too few complete comparable decks.'};
+          const part=roleRangesPart(commanderPage(),null);await openPart(part);
+          assert(part.textContent.includes('Too few'));assert.equal(part.querySelectorAll('table').length,0);
+          let resolve;api=()=>new Promise(done=>resolve=done);
+          const fresh=roleRangesPart(commanderPage(),null);main.append(fresh);fresh.open=true;fresh.fire('toggle');
+          state.profile={id:'user2',space:'user2'};resolve({ready:true,tier:'PRIVATE_OLD',roles:[]});await settle();
+          assert(!fresh.textContent.includes('PRIVATE_OLD'));
         """)
 
     def test_a_refusal_says_why_and_a_failure_offers_try_again(self):

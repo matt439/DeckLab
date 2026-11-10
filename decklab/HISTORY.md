@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Casual role cards and dated comparable Commander ranges (2026-11-11; E3-S42)
+
+- Free cards by role accepts casual lists through the existing deck/inventory guards. Colours come from the selected list's non-land cards; Commander legality and role targets are not imposed. Existing Commander fit remains the default for callers.
+- Commander Stats offers cached same-tier catalogue bands after the cited targets:25th/50th/75th percentiles from unique complete playable lists, date/count and 'a range, not a recipe'. Target Bracket2 uses core and3 uses upgraded; unsupported/missing/thin/tagless sources show no band. At least10 comparable decks are required; no source is fetched or rebuilt and the range endpoint reads no pool.
+- Both role panels keep asynchronous replies in their original profile, route and connected frame. No deck, target, catalogue, inventory or record is written.
+- Validation:68 focused role/model/API/UI/privacy/route/web tests pass; Ruff and source bounds pass. Tests use synthetic catalogue/card/pool data; no real Forge, collection, source fetch or device acceptance is claimed.
+
 ## Card references, own printings and bookmarkable viewer (2026-11-11; E1-S31)
 
 - The existing viewer links the shown printing to Scryfall (an exact-name search without one) and EDHREC in Commander contexts, with safe new-tab relations and no server fetch. Card link gives a bookmarkable address instead of another card page.

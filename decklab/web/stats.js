@@ -574,6 +574,7 @@ function compositionPanel(st, data) {
     roles.length ? barList(roles, roleLabel,
       (r) => (ROLE_WORDS[r.role] || ["", ""])[1]) : el("p", { class: "sub", text: "No cards with a listed role." }),
     targets ? roleTargetsPart(targets) : null,
+    data && data.summary.kind === "commander" ? roleRangesPart(data, targets) : null,
     data ? rolePoolPart(data) : null,
     explain("Where do roles come from?", "Roles come from Scryfall's community tags, so a card can have several roles or none. " +
       "Removal deals with the other player's cards; ramp gives you extra mana sooner; card draw gets you more cards."));
@@ -616,24 +617,59 @@ function roleTargetsPart(targets) {
       el("tbody", {}, rows))));
 }
 
+function roleRangesPart(data, targets) {
+  const body = el("div", {});
+  const fold = el("details", {class: "more role-ranges-part"}, el("summary", {text: "Comparable catalogue ranges"}), body);
+  const profile = state.profile, token = routeToken, hash = location.hash;
+  const current = () => fold.isConnected && state.profile === profile && routeToken === token && location.hash === hash;
+  let asked = false;
+  const read = async () => {
+    if (!current() || asked || !fold.open) return;
+    asked = true;clear(body).append(loadingBox("Counting the same-tier catalogue…", {small: true}));
+    try {
+      const answer = await api(`/api/deck/role-ranges?${new URLSearchParams({id:data.summary.id,version:data.version || "target"})}`);
+      if (!current()) return;
+      clear(body);
+      if (!answer.ready) {body.append(el("p", {class: "sub", text: answer.reason || "No comparable range is available."}));return;}
+      body.append(el("p", {class:"sub", text:`${answer.tier} catalogue built ${answer.built}; ${answer.decks} complete decks. ${answer.note}`}),
+        el("div", {class:"table-wrap"}, el("table", {class:"data"},
+          el("thead", {}, el("tr", {}, ["Role","Cited target","Low","Typical","High"].map(text=>el("th", {scope:"col",text})))),
+          el("tbody", {}, (answer.roles || []).map(row=>{
+            const key=targets?.by_role?.[row.role], target=targets?.categories?.find(item=>item.category===key);
+            return el("tr", {}, el("th", {scope:"row",text:(ROLE_WORDS[row.role] || [capitalise(row.role)])[0]}),
+              ...[target?.target ?? "—",row.low,row.typical,row.high].map(value=>el("td", {class:"num",text:String(value)})));
+          })))));
+    } catch(error) {
+      if (!current()) return;
+      asked=false;clear(body).append(loadFailed("Comparable ranges",error,read));
+    }
+  };
+  fold.addEventListener("toggle",read);
+  return fold;
+}
+
 /** "Free cards by role" under a Commander deck's role bars (E9-S26), or null: only for a deck (not a product or
  * pairing) with a commander whose collection the visitor may see (the server sends "owned" to no one else). Opening
  * it asks GET /api/deck/role-cards once for the list on screen; a refusal (400, 403, 404) says so without retrying,
  * any other failure offers Try again. */
 function rolePoolPart(data) {
   const s = data.summary;
-  if (!data.stats || !data.stats.commander || !data.owned || /^(?:[^/]+\/)?(?:product|pairing)\//.test(s.id)) return null;
+  if (!data.stats || !["casual", "commander"].includes(s.kind) || !data.owned || /^(?:[^/]+\/)?(?:product|pairing)\//.test(s.id)) return null;
   const version = data.version === "owned" ? "owned" : "target";
   const body = el("div", { class: "role-pool" });
   const part = el("details", { class: "more role-pool-part" },
     el("summary", { text: "Free cards by role" }), body);
+  const profile = state.profile, token = routeToken, hash = location.hash;
+  const current = () => part.isConnected && profile === state.profile && token === routeToken && hash === location.hash;
   let asked = false;
   const ask = () => {
+    if (!current()) return;
     asked = true;
     body.replaceChildren(loadingBox("Looking through the collection…", { small: true }));
     api(`/api/deck/role-cards?id=${encodeURIComponent(s.id)}&version=${version}`).then(
-      (answer) => body.replaceChildren(...rolePoolBody(answer)),
+      (answer) => { if (current()) body.replaceChildren(...rolePoolBody(answer)); },
       (e) => {
+        if (!current()) return;
         if ([400, 403, 404].includes(e && e.status)) {
           body.replaceChildren(el("p", { class: "sub", text: (e && e.message) || "Not available for this deck." }));
           return;
@@ -647,8 +683,10 @@ function rolePoolPart(data) {
 
 /** The answer of GET /api/deck/role-cards drawn: a line on where the cards come from, then each role's free cards. */
 function rolePoolBody(answer) {
+  const colours = answer?.kind === "casual" ? "list's non-land colours" : "commander's colours";
   const out = [el("p", { class: "sub", text: "Cards in the collection with a copy free for this deck, inside the " +
-    "commander's colours and not in the list yet. Cards other built decks or intact products hold aren't counted." })];
+    colours + " and not in the list yet. Cards other built decks or intact products hold aren't counted." })];
+  if (answer?.kind === "casual") out.push(el("p", {class: "sub", text: "No format legality filter or Commander role target is applied to this 60-card list."}));
   if (!answer || !answer.tags_available) {
     out.push(el("p", { class: "note note-warn", text: "Role tags are unavailable: Deck Lab's card data has no " +
       "Scryfall role tags, so free cards can't be found by role." }));
@@ -658,7 +696,7 @@ function rolePoolBody(answer) {
     const name = (ROLE_WORDS[r.role] || [capitalise(r.role)])[0];
     let content;
     if (!r.tagged) content = el("p", { class: "sub", text: `Unavailable: the card data has no cards with Scryfall's "${r.tag}" tag.` });
-    else if (!r.cards.length) content = el("p", { class: "sub", text: "None free in the commander's colours." });
+    else if (!r.cards.length) content = el("p", { class: "sub", text: `None free in the ${colours}.` });
     else {
       content = el("ul", { class: "card-names" }, r.cards.map((c) => el("li", {}, cardLink(c, "role-pool"),
         el("span", { class: "sub", text: ` ${c.free} free${c.here < c.free ? `, ${c.free - c.here} on the way` : ""}` }))));

@@ -37,7 +37,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 20 | 2 | 3 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 3 | 7 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 39 | 30 | 3 | 6 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 29 | 0 | 3 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 54 | 14 | 7 | 4 |
-| **Total** | **376** | **306** | **22** | **32** | **16** |
+| **Total** | **376** | **307** | **22** | **31** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1371,7 +1371,7 @@ Gap: the practice games report colour screw and stuck only as deck totals, and h
 
 First slice: per-spell castability only: per-card counters in `decklab/lib/goldfish/engine.py`, a `cards.castability` list in `results.py`, a `GOLDFISH_VERSION` bump in `runs.py` and a "Spells the mana fails most" disclosure in `decklab/web/practice.js`.
 
-**E3-S42** · Matt · could · M · missing
+**E3-S42** · Matt · could · M · built
 
 As a deck builder balancing a deck's roles, I want free owned cards by role for 60-card decks and, for Commander, the range comparable decks run beside each target, so that I fill a thin role from what we own.
 
@@ -1382,6 +1382,8 @@ As a deck builder balancing a deck's roles, I want free owned cards by role for 
 Gap: free cards by role and the role targets are Commander only (E9-S26); 60-card decks already show the role bars, and E2-S21 rules out legality checks there. From the product review of 2026-11-10, compared with Playgroup.gg's Deck Template checker. Needs Matt's decision: E9-S26's decision allows the commander's own EDHREC average beside the targets; whether a range from the gauntlet's same-tier decks, sparring partners and not advice, may sit there too.
 
 First slice: casual decks only: a legality-free fit in `decklab/lib/decks/role_pool.py`, a casual branch in `decklab/lib/api/role_cards.py` replacing its 400, shown in `decklab/web/stats.js`.
+
+Built (2026-11-11): Free cards by role supports ordinary casual lists using the selected list's non-land colours, without Commander legality or a claimed target, through the same hidden-deck/inventory guards. Commander Stats places a lazy comparable-ranges fold after the cited targets. Its intrinsic public-cache-only projection uses unique complete100-card playable same-tier catalogue decks (target Bracket2/core or3/upgraded), with low/typical/high25th/50th/75th percentiles, build date, deck count and 'a range, not a recipe'. Missing dates/tags/catalogue, unsupported tier or fewer than10 comparable decks yield no band. It never fetches, rebuilds, loads inventory for ranges or changes a target. Async panels retain profile/route/connected ownership.68 focused role/API/UI/privacy/declaration/web checks pass; Ruff and source bounds pass. No actual card pool/catalogue, recommendations, Forge run or source fetch was used.
 
 **E3-S43** · Matt · could · S · partial
 
