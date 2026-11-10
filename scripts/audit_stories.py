@@ -219,7 +219,8 @@ def fix_readme(lines, epics, counts):
 def differences(name, old, new):
     """One message for each line of a block that isn't as counted."""
     if len(old) != len(new):
-        return [f"{name}: the summary table has {len(old)} lines; the count needs {len(new)}"]
+        return [f"{name}: the summary table has {abs(len(new) - len(old))} "
+                f"{'too few' if len(new) > len(old) else 'too many'} rows for the epics counted"]
     return [
         f"{name}:{i + 1}: is\n    {before[:200]}\n  and the story headers count\n    {after[:200]}"
         for i, (before, after) in enumerate(zip(old, new)) if before != after
