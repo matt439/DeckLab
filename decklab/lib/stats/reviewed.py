@@ -116,8 +116,8 @@ def due(today, announced=None):
 
 
 def words(record):
-    """One due() entry in words: "Commander bracket rules (last reviewed 2026-09-29; Wizards announced
-    a Commander change on 2026-12-01)"."""
+    """One due() entry in words: "Commander bracket rules (last reviewed 2026-09-29; Wizards made a
+    Commander announcement on 2026-12-01, newer than the 2026-02-09 one it was reviewed through)"."""
     reasons = [f"last reviewed {record['reviewed'].isoformat()}"]
     if record["overdue"]:
         days = record["interval_days"]
