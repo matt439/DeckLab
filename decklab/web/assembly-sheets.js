@@ -155,7 +155,7 @@ function packReviewTakeApart(view, deck) {
     try {
       const answer = await apiWrite("/api/deck/save", { id: deck.id, sha256: info.sha256, fields: { status: "building" } });
       if (answer.saved !== true || answer.id !== deck.id) throw new Error("The save result could not be confirmed.");
-      state.library = null;
+      invalidateLibrary();
       if (!owner()) return;
       saved = true; packSaving(view, false);
       if (!currentSheet()) { finish(); return; }
@@ -165,7 +165,7 @@ function packReviewTakeApart(view, deck) {
       actions();
       if (here() && focusOwned()) confirmation.focus();
     } catch (failure) {
-      state.library = null; // A lost response may follow a committed save; the next read must be fresh.
+      invalidateLibrary(); // A lost response may follow a committed save; the next read must be fresh.
       if (!owner()) return;
       packSaving(view, false); needsRefresh = true;
       if (!currentSheet()) { view.reviewing = false; view.run(); return; }
@@ -391,7 +391,7 @@ function openPackStandins(view, deck) {
         decks: view.selected.map(item => ({ ...item })), fingerprint: ctx.data.completion.fingerprint,
         rows: inputs.map(({ need, select }) => ({ for: need.for, using: select.value || null, qty: need.qty })) });
       if (!assemblySheetHere(ctx)) return;
-      state.library = null; ctx.sheet.close(); packChanged(view); clearTimeout(view.timer);
+      invalidateLibrary(); ctx.sheet.close(); packChanged(view); clearTimeout(view.timer);
       view.run();
     } catch (failure) {
       if (!assemblySheetHere(ctx)) return;

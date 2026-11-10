@@ -57,6 +57,27 @@ const state = {
   firstRender: true,
 };
 let routeToken = 0;       // bumped on every route change, so a slow answer can't draw over a newer page
+const libraryAnswerOwners = new WeakMap();
+
+/** All saved-data changes invalidate the same cache group; an old in-flight answer cannot refill it. */
+function invalidateLibrary() {
+  state.library = null; state.libraryForge = null; state.libraryGauntlet = null;
+  state.libraryEpoch = (state.libraryEpoch || 0) + 1;
+}
+
+function cacheLibrary(answer) {
+  if (!answer) { invalidateLibrary(); return null; }
+  const owner = answer && libraryAnswerOwners.get(answer);
+  if (owner && owner.profile !== state.profile) return null;
+  if (owner?.unverified) return answer;       // existing stale-data UI may show it, but it never becomes a fresh cache
+  if (owner && owner.epoch !== (state.libraryEpoch || 0)) return null;
+  state.library = answer;
+  return answer;
+}
+
+function noteRevisions(answer, options = {}) {
+  if (typeof changesNoteRevisions === "function") changesNoteRevisions(answer, options);
+}
 
 
 // ------------------------------------------------------------------ helpers
@@ -944,6 +965,9 @@ class ApiError extends Error {
  * PC may open the page through the wake gate; a write never does (its draft stays on the page). */
 async function api(path, options = {}) {
   let response;
+  const method = String(options.method || "GET").toUpperCase();
+  const cacheOwner = {profile: state.profile, epoch: state.libraryEpoch || 0};
+  const revisionOwner = typeof changeRequestOwner === "function" ? changeRequestOwner() : null;
   const viewer = state.profile ? { "X-Deck-Lab-Viewer": state.profile.id } : {};
   const { poll, wakeHop, binary, ...fetchOptions } = options;
   const marked = poll === true ? { "X-Deck-Lab-Poll": "1" } : {};
@@ -967,6 +991,13 @@ async function api(path, options = {}) {
     throw new ApiError(response.status, (data && data.error) || `The server answered ${response.status}.`, data);
   }
   if (data === null) throw new ApiError(response.status, "The server's answer wasn't JSON.");
+  const epoch = state.libraryEpoch || 0;
+  const observed = revisionOwner && typeof changesFromHeader === "function" ? changesFromHeader(response, revisionOwner, method, poll === true) : null;
+  if (/^\/api\/decks(?:\?|$)/.test(path) && data && typeof data === "object") {
+    if (cacheOwner.epoch === epoch || observed === "current") cacheOwner.epoch = state.libraryEpoch || 0;
+    cacheOwner.unverified = observed === "unknown";
+    libraryAnswerOwners.set(data, cacheOwner);
+  }
   return data;
 }
 

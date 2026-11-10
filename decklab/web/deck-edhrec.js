@@ -68,7 +68,7 @@ function openEdhrecSheet(data, lead = null, options = {}) {
     if (ctx.afterClose) { ctx.afterClose(); return; }
     const here = parseHash();
     if (ctx.changed && here.path === "deck" && addressDeckId(here.params.get("id") || "") === ctx.id) {
-      state.library = null;
+      invalidateLibrary();
       route();                                  // the Considering list, drawn again from the saved deck
     }
   } });

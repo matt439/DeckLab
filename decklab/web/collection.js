@@ -414,7 +414,7 @@ function colChanged(cv, answer, words, filing = null) {
   if (answer && answer.prices) cv.prices = colPrices(answer.prices);
   cv.storage = answer && answer.storage ? colStorage(answer.storage) : colWithoutHints(cv.storage);
   colTakeLocations(cv, answer);
-  state.library = null;               // the library's missing-card counts come from the collection
+  invalidateLibrary();               // the library's missing-card counts come from the collection
   if (!colActive(cv)) { if (words && state.profile?.id === cv.profile) toast(words); return; }
   if (cv.kind === "rows") {
     drawColRowList(cv);
@@ -988,7 +988,7 @@ async function applyImport(ctx, skipProblems) {
     ctx.sheet.close();
     cv.rows = null;                     // the next write fetches rows for its own current view
     if (answer.sha256) cv.sha256 = answer.sha256;
-    state.library = null;
+    invalidateLibrary();
     const words = `Imported ${plural(added.cards || 0, "card")} (${plural(added.rows || 0, "row")}).`
       + (answer.skipped ? ` ${plural(answer.skipped, "row")} with problems skipped.` : "") + colImportExcludedWords(answer);
     if (here && !document.querySelector("dialog[open]")) colReload(cv, words, answer.stale_tables, colFilingSnapshot(answer, cv));

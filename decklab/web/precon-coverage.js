@@ -185,7 +185,7 @@ async function startCoverageDeck(ctx) {
   clear(ctx.message).append(loadingBox(`Starting ${title}…`));
   try {
     const answer = await apiWrite("/api/precons/start", { space: cv.space, file: detail.answer.deck.file, title });
-    state.library = null;
+    invalidateLibrary();
     if (ctx.sheet.closed || !colActive(cv) || ctx.detail !== detail || requestHash !== location.hash) return;
     ctx.sheet.close();
     // The deck page's box about a new deck (editor-deckpage.js, savedBox), as the editor's Create leaves it.

@@ -226,7 +226,7 @@ function drawDeckMatchups(host, data, m, retry = null) {
     const token = routeToken;
     api("/api/decks").then((library) => {
       if (token !== routeToken) return;           // the page was left: nothing to draw
-      state.library = state.library || library;
+      if (!cacheLibrary(state.library || library)) return;
       if (host.isConnected) {
         const redraw = () => drawDeckMatchups(host, data, m, retry);
         if (typeof keepPlace === "function") keepPlace(redraw); else redraw();

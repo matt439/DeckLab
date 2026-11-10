@@ -149,7 +149,10 @@ function libMatchesTitle(deck, filters) {
 
 function showLibrary(params, token) {
   load("/api/decks", token, (data) => {
-    state.library = data;
+    if (!cacheLibrary(data)) {
+      $("#main").append(errorBox("The saved deck list changed", new ApiError(409, "Reload to get the latest saved copy.")));
+      return;
+    }
     drawLibrary(data, libraryFilters(params));
   });
 }
@@ -937,7 +940,9 @@ function libDetail(d, ctx) {
 function libLoadForge(data, refresh) {
   if (!data.decks.some((d) => d.kind === "casual")) return;
   const profile = state.profile ? state.profile.id : null;
+  const epoch = state.libraryEpoch || 0;
   api("/api/library/forge").then((answer) => {
+    if (epoch !== (state.libraryEpoch || 0) || profile !== state.profile?.id) return;
     if (!answer || answer.error) return;
     state.libraryForge = { profile, decks: answer.decks || {} };
     refresh();

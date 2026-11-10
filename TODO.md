@@ -136,7 +136,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S64` | DECISION | could | S | Built and tested (in-memory copies, gzip, immutable for a current `?v=`). Left: Matt times a phone's and the iPad's load before and after on the live server; the gain is unmeasured on a device. |
 | `E11-S75` | DECISION | could | M | Source hardening and optional script proof built. Left: qualify the updated non-root container and real wake on the NAS with E11-S59; activation/settings remain unchanged. |
 | `E11-S76` | OPEN | could | M | Database test coverage for every inventory operation, and file-era docstrings rewritten; typed order ids need Matt's decision. First slice: test_inventory_backend_coverage.py with a shrinking gap list, one files-only suite run on the database too, the docstring sweep. |
-| `E11-S77` | OPEN | could | L | A per-viewer change signal so open pages notice a save from another device and the library cache is dropped centrally; needs Matt's decision on appetite. First slice: guarded GET /api/changes polled by runs-pill.js, noteRevisions() in core.js, a Reload line; no stream. |
 | `E11-S84` | DECISION | should | S | Config backup safety, release cleanliness, release-update guidance and local simulation settings built. Left: Matt's stable-channel, changelog and updates-available decision. |
 | `E11-S79` | DECISION | should | S | BOM/JSON diagnostics, missing-file startup/status/chooser guidance and role/admin warnings built. Left: Matt's timezone-default decision. |
 

@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Privacy-safe save signals and centralized library caches (2026-11-11; E11-S77)
+
+- GET changes and warm JSON headers return only opaque own-space inventory/deck and already-visible library tokens. Fresh visibility is required; stale/unreadable data is unverified, without IDs/counts/actors/global revisions or cached-Public fallback. Private kit/table changes, including unmapped old player slots, cannot move an unauthorized signal. The legacy visible-deck revision uses the same safe projection.
+- Central invalidation clears library/Forge/gauntlet caches, with profile/epoch ownership on cache fills. Deck/editor/own-Collection notices offer explicit Reload; unsaved drafts use the existing reapply workflow, new decks stay local, and an open modal blocks reloading. Other-space Public collections keep normal manual refresh. Polls neither wake nor hold the PC, and no stream or automatic reload/write is introduced.
+- Review found actual nested-write receipt loss and two baseline races. Only committed inventory changes propagate to the outer request; previews/noops never acknowledge. Background headers cannot establish a page baseline, and an old-route save cannot acknowledge a newer page or suppress its initial older read. Optional profile resolution failures remain unverified without extra reads.
+- Validation:119 broad,95 UI/source,78 privacy/library,42 HTTP/access and31 contract/ops groups pass (overlap;three guarded DB skips in the latter);63 latest feature/HTTP/UI/race checks pass after review fixes. No live save, device, database or visibility setting was changed. Browser emulation elsewhere does not qualify real cross-device acceptance.
+
 ## Listing condition/language and matching preferences (2026-11-11; E5-S34)
 
 - Listings retain separate condition and language, with explicit unknowns and recovery of older Games Portal comma-language records. Home admins can choose minimum condition and/or English-only in Prices; neutral choices preserve prior picks exactly.

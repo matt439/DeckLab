@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 54 | 14 | 7 | 4 |
-| **Total** | **376** | **311** | **22** | **27** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 55 | 14 | 6 | 4 |
+| **Total** | **376** | **312** | **22** | **26** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6409,7 +6409,7 @@ Gap: no test checks that each operation has database coverage, and operations ad
 
 First slice: add `decklab/tests/test_inventory_backend_coverage.py` with its list of current gaps, give one files-only suite (dice, or bulk locations) a database subclass, and rewrite the stale docstrings.
 
-**E11-S77** · Matt · could · L · missing
+**E11-S77** · Matt · could · L · built
 
 As Matt, with Deck Lab open on a phone while User1 edits on the iPad, I want an open page to notice that something in my space was saved elsewhere, so that I reload before working on an old copy instead of finding out at Save.
 
@@ -6421,6 +6421,8 @@ As Matt, with Deck Lab open on a phone while User1 edits on the iPad, I want an 
 Gap: not built. Pages learn of another device's save only through a conflict at Save, which the built conflict flows (E2-S15 among them) handle without losing work. From the product review of 2026-11-10, compared with Archidekt's live collaborators and MTG Compendium's synced games. Needs Matt's decision: whether this is wanted at all, given he declined push notices (E11-S54).
 
 First slice: a guarded `GET /api/changes` in a new `decklab/lib/api/changes.py`, polled by the timer in `decklab/web/runs-pill.js`, with one `noteRevisions()` in `decklab/web/core.js`; no stream yet.
+
+Built (2026-11-11): guarded GET changes and bounded warm-JSON snapshot/commit-proof headers give opaque own-space inventory/deck tokens plus an already-visible deck-library token, with fresh visibility and explicit unverified states. No IDs/counts/actors/global revisions, hidden private kit/table data or cached-Public fallback enter signals; unknown player slots fail closed for kit. Public collections outside the viewer's own space retain explicit manual refresh. Central cache invalidation/owned epoch fills prevent racing/profile-stale answers from repopulating caches. Quiet deck/editor/own-Collection notices offer explicit Reload; drafts reapply/keep through existing checks and open modal edits block reload. Polls don't hold/wake the PC. Actual nested inventory writes propagate only committed snapshots for acknowledgement; read-only previews/noops/background reads and old-route writes cannot reset a page baseline or hide an unseen save.119 final broad,95 UI/source,78 privacy/library and42 HTTP/access groups pass (overlap), with63 latest review/race checks and guarded DB qualifications retained. No actual devices, live database, writes or privacy switches were exercised.
 
 **E11-S78** · Self-hoster · should · M · built
 

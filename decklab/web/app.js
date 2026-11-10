@@ -141,7 +141,7 @@ async function chooseProfile(profile) {
     // it sees. /api/me, asked again now the header names them, answers for them; deriveMay works the same
     // out only if it can't be had (an older server, or a moment's error).
     state.may = deriveMay(profile, false);
-    state.library = null;           // its decks' sleeves are shown only to whoever's they are
+    invalidateLibrary();           // its decks' sleeves are shown only to whoever's they are
     try {
       const me = await loadMe();
       if (state.profile === profile && me.profile === profile.id && me.may) state.may = me.may;
@@ -328,6 +328,7 @@ function noteVisit(path, params) {
 }
 
 function afterRender() {
+  if (typeof renderRevisionNotice === "function") renderRevisionNotice();
   rememberCardUnderlay();
   const remembered = state.scroll.get(location.hash);
   if (!state.firstRender) {

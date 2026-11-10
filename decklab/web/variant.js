@@ -877,7 +877,10 @@ async function vtOpenTestSheet() {
     howHost, problem, runsAllowed() ? null : el("p", { class: "run-blocked", text: runGate().why })]);
   let library = state.library;
   if (!library) {
-    try { library = state.library = await api("/api/decks"); } catch (e) {
+    try {
+      library = cacheLibrary(await api("/api/decks"));
+      if (!library) return;
+    } catch (e) {
       // Not an empty library: say so, with Try again (the sheet opened afresh), and no Start.
       if (sheet.closed) return;
       clear(sheet.body).append(loadFailed("The decks to test against", e, () => { sheet.close(); vtOpenTestSheet(); }));

@@ -105,7 +105,7 @@ async function sendRetireDeck(ctx) {
   try {
     await apiWrite("/api/deck/retire", { profile: ctx.profile, id: ctx.id, sha256: ctx.meta.sha256,
       revision: ctx.meta.revision, reason });
-    state.library = null; ctx.done = true;
+    invalidateLibrary(); ctx.done = true;
     if (!retirementPageHere(ctx)) return;
     if (!retirementHere(ctx)) { location.hash = deckHistoryHref(ctx.id); return; }
     ctx.sheet.close();
@@ -115,7 +115,7 @@ async function sendRetireDeck(ctx) {
       el("div", { class: "actions" }, el("a", { class: "btn btn-primary", href: deckHistoryHref(ctx.id), text: "View retained history" }),
         el("a", { class: "btn", href: "#/library", text: "Back to Decks" }))]);
   } catch (error) {
-    state.library = null;
+    invalidateLibrary();
     if (!retirementHere(ctx)) return;
     ctx.error.textContent = error.message || String(error);
     ctx.error.append(" If you are unsure whether retirement was saved, inspect its history. ",
@@ -153,12 +153,12 @@ async function sendRestoreDeck(ctx) {
   ctx.sending = true; ctx.error.textContent = ""; busy(ctx.button, "Restoring…");
   try {
     await apiWrite("/api/deck/restore", { profile: ctx.profile, id: ctx.id, retired_revision: ctx.data.retired_revision });
-    state.library = null; ctx.done = true;
+    invalidateLibrary(); ctx.done = true;
     if (!retirementPageHere(ctx)) return;
     if (retirementHere(ctx)) ctx.sheet.close();
     location.hash = deckHref(ctx.id);
   } catch (error) {
-    state.library = null;
+    invalidateLibrary();
     if (!retirementHere(ctx)) return;
     ctx.error.textContent = error.message || String(error);
     if ([404, 409].includes(error.status)) {

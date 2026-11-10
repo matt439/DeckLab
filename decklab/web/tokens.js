@@ -903,7 +903,7 @@ function tokShow(view, data, message, warnings, focus) {
   if (focus === undefined) focus = tokFollowFocus(view, data);
   view.data = data;
   view.busy = false;
-  state.library = null;               // the library's token chips come from the same list
+  invalidateLibrary();               // the library's token chips come from the same list
   updateTokens(view, focus);
   clear(view.message);
   if (message) {

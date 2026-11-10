@@ -412,7 +412,7 @@ async function colSend(ctx, body) {
     const words = answer.merged ? `${what}: added to the row already listed.`
       : `${what} ${body.action === "add" ? "added" : "saved"}.`;
     if (addSave && (location.hash !== requestHash || !colAddHere(ctx))) {
-      cv.rows = null; state.library = null;
+      cv.rows = null; invalidateLibrary();
       if (state.profile?.id === cv.profile) toast(words);
       return;
     }
@@ -422,7 +422,7 @@ async function colSend(ctx, body) {
     colChanged(cv, answer, words, filing);
   } catch (error) {
     if (addSave && (location.hash !== requestHash || !colAddHere(ctx))) {
-      addSave.stale = true; cv.rows = null; state.library = null;
+      addSave.stale = true; cv.rows = null; invalidateLibrary();
       return;
     }
     if (ctx.sheet.closed || !colActive(cv) || !boxCollectionEditorHere(ctx)) return;

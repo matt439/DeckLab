@@ -420,7 +420,7 @@ function setAccessoriesBusy(view, busy) {
 function accShow(view, data, message, warnings) {
   view.data = data;
   view.busy = false;
-  state.library = null;               // the library shows each deck's sleeves
+  invalidateLibrary();               // the library shows each deck's sleeves
   updateAccessories(view);
   clear(view.message);
   if (message) {
@@ -770,7 +770,7 @@ async function accSend(ctx, body) {
     if (!accSheetHere(ctx)) return;
     const label = [body.row.brand, body.row.name].filter(Boolean).join(" ");
     const words = `${label} ${body.action === "add" ? "added" : "saved"}.`;
-    state.library = null;
+    invalidateLibrary();
     ctx.sheet.close();
     if (!ctx.onSaved) toast(words);
     else ctx.onSaved(answer, words);
@@ -890,7 +890,7 @@ async function loadKitPicker(ctx) {
   try {
     const data = await api("/api/accessories");
     // canEditDeckId reads the library: which other holders' kit this viewer may move here.
-    if (!state.library) state.library = await api("/api/decks").catch(() => null);
+    if (!state.library) cacheLibrary(await api("/api/decks").catch(() => null));
     if (!accDialogHere(ctx.sheet)) return;
     ctx.data = data;
     const option = (data.holders_options || []).find((o) => o.id === ctx.holder);
@@ -1013,7 +1013,7 @@ async function sendKit(ctx, id, moveFrom) {
   try {
     const answer = await apiWrite("/api/accessories/assign", body);
     if (!accDialogHere(ctx.sheet)) return;
-    state.library = null;
+    invalidateLibrary();
     ctx.sheet.close();
     const done = id ? `${capitalise(ctx.what)} saved.` : `${capitalise(ctx.what)} cleared.`;
     toast(done);

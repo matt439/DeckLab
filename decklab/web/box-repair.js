@@ -80,7 +80,7 @@ function boxRepairOffer(deck, evidence, review, options) {
     error.textContent = ""; busy(true);
     try {
       const answer = await apiWrite("/api/deck/box-repair", { ...options.payload(), confirm: true, result_sha256: preview.result_sha256 });
-      state.library = null;
+      invalidateLibrary();
       if (answer?.saved !== true || answer.id !== deck.id || answer.result_sha256 !== preview.result_sha256
           || typeof answer.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(answer.sha256) || boxCheckDate(answer.checked_on) === null)
         throw new Error("The corrected box couldn't be confirmed. Reload the plan to see what was saved.");
@@ -91,7 +91,7 @@ function boxRepairOffer(deck, evidence, review, options) {
       options.saved(answer);
       return;
     } catch (failure) {
-      state.library = null;
+      invalidateLibrary();
       if (options.here()) error.textContent = (failure.message || "The corrected box couldn't be saved.")
         + (failure.status === 409 ? " Reload the plan before checking again." : "");
       if (failure.status === 409) options.stale?.();

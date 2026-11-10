@@ -432,6 +432,14 @@ class Handler(BaseHTTPRequestHandler):
         stale = inventory.pinned_stale()
         if stale and isinstance(data, dict):
             data = {**data, "inventory_stale": stale}
+        snapshot = inventory.pinned_committed_snapshot() or inventory.pinned_snapshot()
+        if 200 <= status < 300 and snapshot is not None and self.path.split("?", 1)[0] != "/api/changes":
+            from decklab.lib.api import changes
+            revisions = changes.current(snapshot)
+            if revisions:
+                headers = (*headers, (changes.HEADER, json.dumps(revisions, separators=(",", ":"))))
+                if inventory.pinned_write():
+                    headers = (*headers, (changes.WRITE_HEADER, "1"))
         try:
             body = json.dumps(data, ensure_ascii=False, allow_nan=False).encode("utf-8")
         except UnicodeEncodeError:

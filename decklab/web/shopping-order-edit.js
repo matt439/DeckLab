@@ -262,7 +262,7 @@ function shopOrderChangeSheet(order, view, title, form, values, options = {}) {
           options.validatePreview(answer, signedBody, options.targetContext);
         } catch (failure) { uncertainTarget = true; throw failure; }
       }
-      state.library = null;
+      invalidateLibrary();
       if (!alive()) {
         if (shopQueueActive(view)) {shopCloseQueueSheets(view); route();}
         return;

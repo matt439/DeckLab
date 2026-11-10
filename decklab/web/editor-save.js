@@ -726,7 +726,7 @@ async function doSave(sheet, button, { viewAfter = false } = {}) {
     popularTask = queueEditorPopularTest(retest, answer);
   }
   if (button) unbusy(button);
-  state.library = null;               // the library's counts changed
+  invalidateLibrary();               // the library's counts changed
   // The draft kept for later that this editor resumed or kept is published now: gone from every device.
   // Never waited for: the editor started below reads its kept draft once the discard has settled.
   const published = typeof discardKeptAfterSave === "function" ? discardKeptAfterSave(ed) : null;
@@ -841,6 +841,7 @@ async function reapplyLatest(sheet, error, button, requestCurrent = null) {
   saveDraft(ed);
   window.scrollTo(0, 0);
   $("#main").focus({ preventScroll: true });
+  return true;
 }
 
 /** Drop the changes made here and load the deck as it's saved now. sheet: the one asking, or null. */

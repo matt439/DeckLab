@@ -281,6 +281,8 @@ class _Pin:
     def __init__(self, snapshot=None):
         self.snapshot = snapshot
         self.lazy = snapshot is None
+        self.written = False
+        self.committed_snapshot = None
 
 
 _pinned = contextvars.ContextVar("decklab_inventory_pinned", default=None)
@@ -301,11 +303,18 @@ def pinned(snapshot=None):
     """Make current() return snapshot in this block (this context only); with no snapshot, the
     first current() in the block loads one and the rest of the block reuses it. Yields the pin
     holder's snapshot getter."""
-    token = _pinned.set(_Pin(snapshot))
+    parent = _pinned.get()
+    pin = _Pin(snapshot)
+    token = _pinned.set(pin)
     try:
         yield current
     finally:
         _pinned.reset(token)
+        if parent is not None and pin.written:
+            parent.written = True
+            parent.committed_snapshot = pin.committed_snapshot
+            if parent.lazy:
+                parent.snapshot = pin.committed_snapshot
 
 
 def invalidate():
@@ -329,6 +338,24 @@ def pinned_stale():
     without loading anything itself."""
     pin = _pinned.get()
     return pin.snapshot.stale if pin is not None and pin.snapshot is not None else None
+
+
+def pinned_snapshot():
+    """The already-loaded request snapshot, or None; this accessor never opens a database."""
+    pin = _pinned.get()
+    return pin.snapshot if pin is not None else None
+
+
+def pinned_write():
+    """Whether this request completed an inventory operation with recorded changes."""
+    pin = _pinned.get()
+    return bool(pin is not None and pin.written)
+
+
+def pinned_committed_snapshot():
+    """The last actual write's snapshot, independent of any explicitly pinned preview/read view."""
+    pin = _pinned.get()
+    return pin.committed_snapshot if pin is not None and pin.written else None
 
 
 def stale_warning(inv=None):
@@ -439,6 +466,9 @@ def apply(op, actor, message, reason=None, expected_revision=None, refresh=True)
     pin = _pinned.get()
     if pin is not None:
         pin.snapshot = after
+        pin.written = pin.written or bool(summary.changed)
+        if summary.changed:
+            pin.committed_snapshot = after
     return after, summary
 
 

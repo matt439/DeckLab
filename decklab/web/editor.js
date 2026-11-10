@@ -606,7 +606,7 @@ function showNewDeck(params, token) {
   // The library says which titles are taken (someone may have made a deck since it was last read);
   // the title's hint and the bar are drawn again when it comes.
   api("/api/decks").then((data) => {
-    state.library = data;
+    if (!cacheLibrary(data)) return;
     if (editor && editor.mode === "new" && editor.dom) {
       drawTitleHint();
       drawBar();

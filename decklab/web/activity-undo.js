@@ -853,7 +853,7 @@ function activityUndoShow(ctx) {
     try {
       const answer = await apiWrite(endpoint, { id: ctx.id, expect: preview.expect,
         ...(removing ? { reason: reviewedReason } : {}), ...(accessoryCropping ? { confirm_photo: true } : accessoryCorrecting ? { confirm_record: true } : accessoryRetyping ? { confirm_kind: true } : accessoryOwning ? { confirm_owner: true } : accessoryCounting ? { confirm_stock: true } : accessoryAdding ? { confirm_restore: true } : adding ? { confirm_owned: true } : {}) });
-      if (preview.kind !== "wishlist") state.library = null;
+      if (preview.kind !== "wishlist") invalidateLibrary();
       if (!activityUndoReceipt(answer, preview)) throw new Error("The Undo result could not be confirmed.");
       if (!activityUndoOwner(ctx)) return;
       ctx.saved = true;
@@ -862,7 +862,7 @@ function activityUndoShow(ctx) {
         sheet.body.append(confirmation); actions(); if (ctx.here() && focusOwned()) confirmation.focus();
       }
     } catch (failure) {
-      if (preview.kind !== "wishlist") state.library = null;
+      if (preview.kind !== "wishlist") invalidateLibrary();
       if (!activityUndoOwner(ctx)) return;
       ctx.needsRefresh = true;
       error.textContent = (failure.status ? failure.message : "The Undo result could not be confirmed.") + " Reload Activity before reviewing another Undo.";
@@ -1007,7 +1007,7 @@ function activityUndoMixedShow(ctx) {
     ctx.pending = true; error.textContent = ""; actions();
     try {
       const answer = await apiWrite(endpoint, { id: ctx.id, expect: preview.expect, reason: reviewedReason });
-      state.library = null;
+      invalidateLibrary();
       if (!activityUndoMixedReceipt(answer, preview)) throw new Error("The Undo result could not be confirmed.");
       if (!activityUndoOwner(ctx)) return;
       ctx.saved = true;
@@ -1018,7 +1018,7 @@ function activityUndoMixedShow(ctx) {
         sheet.body.append(confirmation); actions(); if (ctx.here()) confirmation.focus();
       }
     } catch (failure) {
-      state.library = null;
+      invalidateLibrary();
       if (!activityUndoOwner(ctx)) return;
       ctx.needsRefresh = true;
       error.textContent = (failure.status ? failure.message : "The Undo result could not be confirmed.") + " Reload Activity before reviewing another Undo.";

@@ -260,7 +260,7 @@ async function tokSend(ctx, body) {
     const answer = await apiWrite("/api/tokens/save", tokBody(ctx, body));
     const label = tokLabel(body.row || body.base);
     const words = `${label} ${body.action === "add" ? "added" : "saved"}.`;
-    state.library = null;
+    invalidateLibrary();
     ctx.sheet.close();
     if (!ctx.onSaved) toast(words);
     else ctx.onSaved(answer, words);

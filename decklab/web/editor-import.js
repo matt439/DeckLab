@@ -302,7 +302,8 @@ function openDeckStart() {
   const ed = editor;
   choiceSheet("Start from another deck", "Search decks", { looking: "Looking for decks…", what: "The decks",
     none: "No decks yet.", noMatch: (q) => `No decks have “${q}” in their title.` }, async (q) => {
-    if (!state.library) state.library = await api("/api/decks");
+    if (!state.library) cacheLibrary(await api("/api/decks"));
+    if (!state.library) return [];
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     return state.library.decks.filter((d) => words.every((w) => d.title.toLowerCase().includes(w)))
       .slice(0, 40).map((d) => ({ label: d.title, sub: d.format || FORMAT_WORDS[d.kind] || "", value: d }));

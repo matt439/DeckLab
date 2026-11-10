@@ -2059,3 +2059,6 @@ Commander **EDHREC ideas → Cuts** (or **Review cuts**) reviews the Planned lis
 
 
 In **Settings → Prices**, a home admin can restrict matching to a minimum listing condition and/or English. The default accepts every condition/language, including unknowns. Unknown facts are shown explicitly; when a restriction needs that fact, the listing is left out. Shop lines, Baskets/plans and historical lows use the same choice and explain skipped cheaper offers. These are market listing facts and matching preferences, never prices paid or spending records. Migration0025 is needed for saving a non-neutral choice; older currency/shops settings remain compatible.
+
+
+When saved data changes while a deck, editor or your own Collection is open, Deck Lab offers a quiet **Reload** line. It never reloads or saves a draft automatically. An editor reapplies its unsaved changes using the existing checks; a new unsaved deck stays local, and an open modal must be finished/kept first. Checks use only your own inventory and authorized deck-library projections; private kit/table edits do not identify themselves to another viewer. Other spaces' Public collections still use manual refresh. Background checks do not keep the PC awake or wake it.

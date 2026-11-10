@@ -377,7 +377,10 @@ async function showMatchups(params, token) {
   const mine = await pending;
   if (token !== routeToken) return;
   return load(["/api/decks", "/api/matchups"], token, ([library, matchups]) => {
-    state.library = library;
+    if (!cacheLibrary(library)) {
+      $("#main").append(errorBox("The saved deck list changed", new ApiError(409, "Reload to get the latest saved copy.")));
+      return;
+    }
     if (!state.matchupGames && mine && Number(mine.matchup_games)) state.matchupGames = Number(mine.matchup_games);
     if (!state.matchupMode && mine && mine.matchup_mode) state.matchupMode = mine.matchup_mode;
     drawMatchups(library, matchups, params, token);
@@ -541,7 +544,8 @@ function drawMatchups(library, matchups, params, token) {
     const current = await api("/api/decks", { signal });
     if (signal.aborted || token !== routeToken || view.profile !== state.profile?.id || !lists.isConnected) return null;
     if (current.decks_revision !== fresh.decks_revision) throw new Error("The decks changed while their names were loading. Trying again automatically.");
-    library = current; state.library = current;
+    if (!cacheLibrary(current)) return null;
+    library = current;
     return true;
   };
   if (needsLibrary(data)) lists.append(loadingBox("Updating the decks…"));

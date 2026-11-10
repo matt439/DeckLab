@@ -55,6 +55,7 @@ function syncRunsPill(force = false) {
 
 /** Stop asking and hide the activity (the Who screen). */
 function stopRunsPill() {
+  if (typeof stopChangeSignals === "function") stopChangeSignals(true);
   clearTimeout(runsPill.timer);
   runsPill.timer = 0;
   if (runsPill.request && runsPill.request.abort) runsPill.request.abort();
@@ -69,10 +70,12 @@ function stopRunsPill() {
 
 function runsPillVisibility() {
   if (document.visibilityState === "hidden") {
+    if (typeof stopChangeSignals === "function") stopChangeSignals();
     clearTimeout(runsPill.timer);
     runsPill.timer = 0;
     if (runsPill.request && runsPill.request.abort) runsPill.request.abort();
   } else if (state.profile) {
+    if (typeof pollChangeSignals === "function") pollChangeSignals(true);
     askRunsPill();
   }
 }
@@ -89,6 +92,7 @@ async function askRunsPill() {
   clearTimeout(runsPill.timer);
   runsPill.timer = 0;
   if (!state.profile || document.visibilityState === "hidden") return;
+  if (typeof pollChangeSignals === "function") pollChangeSignals();
   const profile = state.profile.id;
   if (runsPill.request && runsPill.request.abort) runsPill.request.abort();
   const controller = typeof AbortController === "function" ? new AbortController() : {};
@@ -108,6 +112,7 @@ async function askRunsPill() {
 /** The runs waiting or playing (an /api/matchups answer's "running", from its own ask or a Matchups page's): draw
  * the activity and ask again in a while. */
 function noteRuns(running) {
+  if (typeof pollChangeSignals === "function") pollChangeSignals();
   runsPill.running = Array.isArray(running) ? running : [];
   runsPill.at = Date.now();
   drawRunsPill();

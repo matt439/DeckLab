@@ -249,7 +249,7 @@ async function addPrecon(ctx) {
         tokens_source_sha256: tokenSelection.offer.source_sha256,
         ...(tokenSelection.choices ? { tokens_choices: tokenSelection.choices } : {}) } : {}) });
     cv.rows = null;
-    state.library = null; // The confirmed write stands even if its review is no longer the current UI.
+    invalidateLibrary(); // The confirmed write stands even if its review is no longer the current UI.
     if (ctx.sheet.closed || !colActive(cv) || ctx.preview !== p || requestHash !== location.hash
         || tokensChosen && !preconTokenOwner(ctx, tokenReview) || bonusReview && !preconBonusOwner(ctx, bonusReview)) return;
     const added = answer.collection && answer.collection.added;
@@ -287,7 +287,7 @@ async function addPrecon(ctx) {
     toast("");                        // an older note would cover the box
     location.hash = hash;
   } catch (error) {
-    if (error.status >= 500 || !error.data) { cv.rows = null; state.library = null; }
+    if (error.status >= 500 || !error.data) { cv.rows = null; invalidateLibrary(); }
     if (ctx.sheet.closed || !colActive(cv) || ctx.preview !== p || requestHash !== location.hash
         || tokensChosen && !preconTokenOwner(ctx, tokenReview) || bonusReview && !preconBonusOwner(ctx, bonusReview)) return;
     ctx.busy = false;
@@ -299,7 +299,7 @@ async function addPrecon(ctx) {
       // No answer of Deck Lab's own (no connection, a proxy's error page), or an unexpected failure: the
       // save may have gone in, and adding again would add the cards twice.
       cv.rows = null;
-      state.library = null;
+      invalidateLibrary();
       ctx.tokenPreviewStale = true;
       preconTokensBusy(ctx, true);
       for (const row of bonusReview?.options || []) row.node.disabled = true;

@@ -82,6 +82,21 @@ real endpoint remain explicit operator actions.
 
 ## Route review and checks
 
+`GET /api/changes` gives unnamed requests (scripts included) no data. A named
+viewer receives opaque content tokens for their own space's inventory/decks and
+the deck projections already visible in the library. Public deck signals exclude
+private inventory tables/prose and unreadable kit; the endpoint introduces no
+Public collection polling for another space. No ids, counts, actors or global
+revision numbers are returned. Unreadable/stale data or a failed fresh visibility
+read is explicitly unverified, with no cached Public fallback. Successful JSON
+answers may carry the same bounded `X-Deck-Lab-Changes` baseline only after their
+inventory snapshot was already loaded. A separate write-acknowledgement header
+requires a completed inventory operation with recorded changes; a dry check,
+preview or kept draft cannot acknowledge an unseen save. Browser checks use the poll header and
+disable wake hops; they neither reload nor save a draft. Reload is an explicit
+current-page action, retaining the existing editor reapply/permission checks and
+leaving open collection edits intact.
+
 [`feature_routes.ACCESS`](decklab/lib/feature_routes.py) declares an access class for
 every concrete feature method/path. `LEGACY_ACCESS` is the reviewed inventory of the
 older routes still in `Handler._route`, including dynamic profile and picture paths.
