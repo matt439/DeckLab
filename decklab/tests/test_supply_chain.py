@@ -114,10 +114,11 @@ class WakeGateImageTests(unittest.TestCase):
         self.assertRegex(images["cloudflare/cloudflared"], r"^20\d\d\.\d{1,2}\.\d+$")
         self.assertRegex(images["python"], r"^3\.\d+\.\d+-alpine$")
 
-    def test_the_readme_names_the_same_images(self):
+    def test_the_readme_repeats_no_image_tag(self):
+        # Dependabot's pull request changes compose.yaml alone, so a tag copied here would go stale.
         readme = (COMPOSE.parent / "README.md").read_text(encoding="utf-8")
-        for name, tag in self.images().items():
-            self.assertIn(f"{name}:{tag}", readme)
+        for name in self.images():
+            self.assertNotIn(f"{name}:", readme)
 
 
 if __name__ == "__main__":
