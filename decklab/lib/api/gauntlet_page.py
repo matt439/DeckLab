@@ -69,7 +69,7 @@ CREDIT = ("Average decks from EDHREC (edhrec.com), Commander precons from MTGJSO
           "bundled with Forge.")
 SHORT_SHA = 8                   # the characters of the catalogue's sha the pages show (E3-S43)
 OLD_DAYS = 90                   # from this age the "Popular decks list built" line adds how old it is
-SAMPLE_RE =re.compile(r"sample:[0-9a-f]{12}")
+SAMPLE_RE = re.compile(r"sample:[0-9a-f]{12}")
 GAUNTLET_BUSY = ("4 field runs, gauntlet runs or tests of changes are already waiting to be played. Try again "
                  "when one of them has finished.")
 ALREADY_PLAYING = "A gauntlet run of this list is already playing (another sample): stop it first."

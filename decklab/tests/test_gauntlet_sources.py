@@ -363,6 +363,22 @@ class BuildDifference(GauntletCase):
         lines = catalogue.difference(old, new, "constructed")
         self.assertIn("1 of its 2 opponents would leave, 0 would join", lines[1])
 
+    def test_a_damaged_saved_catalogue_never_stops_the_comparison(self):
+        # load() checks only that "decks" is a list: entries that aren't decks are left out, not raised on.
+        old = self.cat([self.deck(0), self.deck(1)])
+        old["decks"] += ["junk", {"title": "no id"}, {"id": ["a list"]}, None]
+        new = self.cat([self.deck(0), self.deck(1, sha="f" * 64)])
+        lines = catalogue.difference(old, new, "constructed")
+        self.assertTrue(lines[0].endswith("1 opponent's list changed, 0 joined and 0 left."), lines[0])
+        self.assertIn("0 of its 2 opponents would leave, 0 would join, and 1 that stay", lines[1])
+        # A deck without what sampling reads: the first line still prints, and the second says it couldn't.
+        broken = self.cat([self.deck(0)])
+        broken["decks"].append({"id": "gauntlet:forge/duels/odd", "playable": True, "tier": "medium",
+                                "style": "aggro", "identity": 5})
+        lines = catalogue.difference(broken, new, "constructed")
+        self.assertEqual(len(lines), 2)
+        self.assertIn("joined and 1 left.", lines[0])
+
     def test_a_build_prints_it_before_saving_and_a_dry_run_too(self):
         order = []
         real_save = catalogue.save

@@ -240,6 +240,13 @@ def _plural(n, one):
     return f"{n} {one}{'' if n == 1 else 's'}"
 
 
+def _by_id(catalogue):
+    """A catalogue's decks by id, leaving out anything that isn't a deck with a text id (a saved file
+    damaged or edited by hand must never stop the build that would replace it)."""
+    return {d["id"]: d for d in catalogue.get("decks") or []
+            if isinstance(d, dict) and isinstance(d.get("id"), str)}
+
+
 def difference(old, new, fmt):
     """Lines saying what saving new in place of the saved catalogue old would change (E3-S43): how
     many opponents' lists changed, joined and left, and whether the format's standard sample would
@@ -250,17 +257,16 @@ def difference(old, new, fmt):
     from . import sample                    # when used: only a build compares catalogues
     built = str(old.get("built") or "")[:10] or "an unknown date"
     head = f"Against the saved catalogue (built {built}, {str(old.get('sha') or '')[:8] or 'no sha'}): "
-    before = {d.get("id"): d for d in old.get("decks") or []}
-    after = {d.get("id"): d for d in new.get("decks") or []}
+    before, after = _by_id(old), _by_id(new)
     changed = {i for i in before.keys() & after.keys() if before[i].get("card_sha") != after[i].get("card_sha")}
     lists = "1 opponent's list" if len(changed) == 1 else f"{len(changed)} opponents' lists"
     lines = [head + f"{lists} changed, "
              f"{len(after.keys() - before.keys())} joined and {len(before.keys() - after.keys())} left."]
     try:
-        was = sample.standard_sample(old, fmt)["decks"]
+        was = sample.standard_sample(dict(old, decks=list(before.values())), fmt)["decks"]
         now = sample.standard_sample(new, fmt)["decks"]
     except (AttributeError, KeyError, TypeError, ValueError) as e:
-        return lines + [f"Whether the standard sample would change couldn't be worked out ({e})."]
+        return lines + [f"Whether the standard sample would change couldn't be worked out ({type(e).__name__})."]
     left, joined = [i for i in was if i not in now], [i for i in now if i not in was]
     moved = [i for i in now if i in was and i in changed]
     if not (left or joined or moved):
@@ -278,8 +284,8 @@ def build(fmt, sources=SOURCES, top=100, refresh=False, dry_run=False, log=print
     """Build a format's catalogue from its sources (edhrec and precons for Commander, forge for
     60-card) and save it, unless dry_run, which fetches nothing (cached copies only) and saves
     nothing. Prints the summary and, before saving (a dry run too), what the new catalogue would
-    change against the saved one (difference, E3-S43). Returns the catalogue. The decks of the format's sources not
-    asked for are kept from the saved catalogue. GauntletError (and nothing saved) when none of
+    change against the saved one (difference, E3-S43). Returns the catalogue. The decks of the
+    format's sources not asked for are kept from the saved catalogue. GauntletError (and nothing saved) when none of
     sources serves the format, or a source gave no deck at all (a failed fetch with no cached
     copy): the saved catalogue stays as it was."""
     if fmt not in FORMATS:
