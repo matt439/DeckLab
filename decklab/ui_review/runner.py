@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[2]
 TOOL = Path(__file__).resolve().parent
 FIXTURE_TYPE = "decklab-ui-review-v1"
 SUITES = ("capture", "editor", "composition", "variant-layout", "shell-layout", "task-layout",
-          "receipt-layout", "families", "zoom", "crosscheck", "assembly-counters")
+          "receipt-layout", "families", "zoom", "crosscheck", "assembly-counters", "precon-bonus")
 
 
 class ReviewError(RuntimeError):
@@ -174,7 +174,7 @@ def _spawn(command, runtime, label):
     env = os.environ.copy()
     env.update({name: str(runtime) for name in ("TMPDIR", "TEMP", "TMP")})
     env["PYTHONUTF8"] = "1"
-    if label in {"capture", "editor", "composition", "variant-layout", "shell-layout", "task-layout"}:
+    if label in SUITES:
         (runtime / f"browser-{label}.started").touch()
     with (runtime / f"{label}.log").open("wb") as log:
         return subprocess.Popen(command, cwd=ROOT, env=env, stdin=subprocess.DEVNULL,

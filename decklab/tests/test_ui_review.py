@@ -14,6 +14,19 @@ from urllib.parse import urlsplit
 
 
 class ReviewRunnerTests(unittest.TestCase):
+    def test_spawn_marks_every_supported_browser_for_cleanup_audit(self):
+        from decklab.ui_review import runner
+
+        with tempfile.TemporaryDirectory() as folder:
+            runtime = Path(folder)
+            with mock.patch.object(runner.subprocess, "Popen") as spawn:
+                for suite in runner.SUITES:
+                    runner._spawn(["unused-node"], runtime, suite)
+                    self.assertTrue((runtime / f"browser-{suite}.started").is_file(), suite)
+                runner._spawn(["unused-python"], runtime, "fixture")
+            self.assertEqual(spawn.call_count, len(runner.SUITES) + 1)
+            self.assertFalse((runtime / "browser-fixture.started").exists())
+
     def test_replaced_zoom_browsers_require_every_cleanup_proof(self):
         node = shutil.which("node")
         if not node:

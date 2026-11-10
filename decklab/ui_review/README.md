@@ -58,9 +58,16 @@ python scripts/ui_review.py --suite families
 python scripts/ui_review.py --suite zoom
 python scripts/ui_review.py --suite crosscheck
 python scripts/ui_review.py --suite assembly-counters
+python scripts/ui_review.py --suite precon-bonus
 python scripts/ui_review.py --output C:/Temp/decklab-ui-review-01
 python scripts/ui_review.py --browser "C:/Program Files/Google/Chrome/Application/chrome.exe"
 ```
+
+The opt-in `precon-bonus` suite exercises six synthetic bonus-card reviews across
+phone, tablet and desktop widths in both themes. Native checkbox clicks, exact
+request receipts and explicit recovery from a source conflict are intercepted
+without writing inventory. `assembly-counters` captures optional counter/dice
+reminders in ready, failed and unmigrated states across the same widths/themes.
 
 `--check` does not start any application processes. `--smoke` captures a desktop
 board in light, a narrow coarse-pointer receipt in dark and the ten Wishlist/guide
