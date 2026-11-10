@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Whole collection identity and mixed recovery (2026-11-11; E11-S08 slice)
+
+- Complete1–50 own-space collection changes now restore printing identities, name corrections and actual mixed apply/upload-free merge shapes. Review shows every nullable current/restored row and requires one reason/physical confirmation where needed. Ordinary writers reproduce the source and inverse; full holder, Stand-in and aggregate capacity checks precede the whole write.
+- Commit proves unique positive newer actual audit IDs, exact rows/reason and unchanged other data. Own-space receipts exclude global revisions/private other-space facts. Current locations survive same-key changes and unique ordinary-edit replacements; ambiguous nonblank lineage, location-only changes and invalid historical facts refuse explicitly.
+- Validation:319 broader and28 latest feature checks pass (overlap); five guarded PostgreSQL cases and a12-case rendered adapter remain for separate qualification. No actual records changed. E11-S08 remains partial while coupled order/queue and remaining kit protocols finish.
+
 ## Commander/category practice and bounded same-seed land trials (2026-11-11; E9-S32/E3-S41)
 
 - Cachev6 adds independent commander cast timing, physical-copy category milestones, and named spell colour-wait opportunities. Fixed integer chunks give identical one/many-worker results; category labels do not change deck identity or play choices. Numbers describe earliest affordability under the fixed model, not play advice.
@@ -13,7 +19,7 @@ What each milestone and feature built, the decisions made along the way, and the
 
 - Complete own-space token INSERT/DELETE sources may include strictly position-only survivor UPDATEs, even when the first rows are only moves. Exact ordinary forward reconstruction, latest own-token fences and complete physical packing checks precede one inverse; actual inverse audit/layout must match the ordinary allocator. A single target uses the same reason/whole-count confirmation and receipt, with fresh restored ids. Survivor facts/packing remain unchanged. Both directions stay bounded at50 total audited rows; pure/noncanonical reorder restoration refuses.
 - Queue Undo accepts the precise additive0026 nullable numeric target difference in legacy/current audit schemas. Canonical cents restore exactly; changed targets require a fresh saved-source/preference receipt. Actual precommit target mismatch rolls back. The UI displays the optional AUD unit market target, with no paid-price or spending semantics.
-- Validation:147 core checks pass with two guarded PostgreSQL classes skipped; three new real-PG source cases await CI.93 queue/schema/UI and88 latest combined checks pass (overlap). No live database, private records, physical cards or inventory files changed. E11-S08 remains partial while coupled order and collection source families are completed.
+- Validation:149 executed token checks pass with two guarded PostgreSQL classes skipped; three new real-PG source cases await CI.93 queue/schema/UI and88 latest combined checks pass (overlap). No live database, private records, physical cards or inventory files changed. E11-S08 remains partial while coupled order and collection source families are completed.
 
 ## Reviewed pool-checked bulk card adds (2026-11-11; E2-S31)
 

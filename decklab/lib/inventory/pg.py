@@ -651,6 +651,11 @@ class PgInventory:
         applying = getattr(self._applying, "connection", None)
         return work(applying) if applying is not None else self._call(work)
 
+    def undo_collection_changes_review(self, change_id, space):
+        """One fresh whole-collection-change review under the ordinary inventory claim."""
+        from . import undo_collection_changes, undo_token_delete
+        return undo_token_delete.read_review(self, change_id, space, _take_lock, reviewer=undo_collection_changes.review)
+
     def accessory_undo_review(self, change_id, owners):
         """One locked accessory text review, with no audit change for the read."""
         from . import accessory_undo
@@ -941,6 +946,9 @@ class PgInventory:
                             # 2-50 collection rows removed or restored together: prove the exact
                             # DELETEs or INSERTs, the saved collection and the reason before commit.
                             summary = undo_collection_rows.confirm_in_transaction(cur, change_set, before, saved, summary)
+                        from . import undo_collection_changes
+                        if undo_collection_changes.restoring(summary):
+                            summary = undo_collection_changes.confirm_in_transaction(cur, change_set, before, saved, summary)
                         from . import undo_watchlist_mixed
                         if undo_watchlist_mixed.restoring(summary):
                             # A mixed queue change undone whole: prove the exact UPDATEs, DELETEs and

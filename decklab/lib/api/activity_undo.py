@@ -46,10 +46,16 @@ def review_hint(change, shown, profile):
     """
     rows = change.get("rows") or ()
     total = change.get("total", len(rows))
+    from . import product_kit_undo
+    if (product_kit := product_kit_undo.hint(change, shown, profile)) is not None:
+        return product_kit
     from . import activity_mixed_undo
     mixed = activity_mixed_undo.hint(change, shown, profile)
     if mixed is not None:
         return mixed
+    from . import activity_collection_undo
+    if (collection := activity_collection_undo.hint(change, shown, profile)) is not None:
+        return collection
     from . import activity_watchlist_undo
     if (queue := activity_watchlist_undo.hint(change, shown, profile)) is not None:
         return queue
@@ -148,6 +154,9 @@ def _token_insertion(row):
 
 def _refused(error):
     from decklab.lib.inventory import undo, undo_token_batch
+    from decklab.lib.inventory import undo_collection_changes
+    if isinstance(error, undo_collection_changes.Refused):
+        return ApiError(400, str(error))    # fixed words, after complete original ownership
     if isinstance(error, undo_token_batch.Refused):
         return ApiError(400, str(error))    # counts and fixed reasons only, after the ownership pass
     if isinstance(error, undo.UndoMissing):
@@ -272,6 +281,9 @@ def _token_batch_remove_project(plan):
 
 
 def _project(plan):
+    if plan.get("action") == "collection_change_restore":
+        from . import activity_collection_undo
+        return activity_collection_undo.project(plan)
     from decklab.lib.inventory import undo_token_batch, undo_token_batch_remove, undo_token_delete
     if plan.get("kind") == "watchlist" or plan.get("action") == "watchlist_update":
         from . import activity_watchlist_undo
@@ -434,6 +446,9 @@ def apply_undo(body):
     if plan.get("kind") == "watchlist":
         from . import activity_watchlist_undo
         return activity_watchlist_undo.apply(data, plan, profile, change_id, _refused, _changed)
+    if plan.get("action") == "collection_change_restore":
+        from . import activity_collection_undo
+        return activity_collection_undo.apply(data, plan, profile, change_id, _refused)
     from decklab.lib.inventory import undo_token_batch, undo_token_batch_remove, undo_token_delete
     token_batch = plan.get("action") == undo_token_batch.ACTION
     token_adding = token_batch or plan.get("action") == undo_token_delete.ACTION
