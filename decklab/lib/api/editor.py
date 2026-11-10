@@ -315,7 +315,7 @@ def _paste_line(line, exact, warnings, counts):
 
 
 def parse_list(body):
-    """POST /api/decklist/parse {"profile", "text"}: "Paste a list".
+    """POST /api/decklist/parse {"profile", "text"[, "context"]}: "Paste a list".
 
     Reads Arena/MTGO text the way decks.parse_decklist does (the same line
     parser and section headers, and a card straight after a blank line with
@@ -324,10 +324,11 @@ def parse_list(body):
     Returns sections (lines with known names only, with exact names and
     printings, in deck_view's format), unknown [{"line", "text", "name",
     "qty", "section", "suggestions"}] (never saved), errors [{"line", "text",
-    "error"}], warnings and count {"cards", "lines"}."""
+    "error"}], warnings and count {"cards", "lines"}. Optional editor context
+    adds independently guarded name-level pool marks, with no price lookup."""
     data = _parse_body(body)
     _writer(data)       # a dry run: anyone may paste a list (guard.py)
-    _keys(data, ("profile", "text"))
+    _keys(data, ("profile", "text"), ("context",))
     text = data["text"]
     if not isinstance(text, str):
         raise ApiError(400, "text must be the pasted list, as a string")
@@ -391,9 +392,13 @@ def parse_list(body):
             merged[key] = found
     ordered = {name: list(sections[name].values()) for name in decks.SECTIONS if sections.get(name)}
     lines = _lines_json(ordered, warnings)
-    return {"sections": lines, "unknown": unknown, "errors": errors, "warnings": _unique(_scrub(warnings)),
-            "count": {"cards": sum(l.quantity for s in ordered.values() for l in s),
-                      "lines": sum(len(s) for s in ordered.values())}}
+    answer = {"sections": lines, "unknown": unknown, "errors": errors, "warnings": _unique(_scrub(warnings)),
+              "count": {"cards": sum(l.quantity for s in ordered.values() for l in s),
+                        "lines": sum(len(s) for s in ordered.values())}}
+    if "context" in data:
+        from .editor_imports import availability
+        answer.update(availability(lines, data["context"]))
+    return answer
 
 
 def _new_source(data):

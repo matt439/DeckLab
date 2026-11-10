@@ -2,6 +2,17 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Reviewed pool-checked bulk card adds (2026-11-11; E2-S31)
+
+- Existing editors choose another same-space deck; its printing/finish/category-preserving list enters the normal tickable Paste review. Independently guarded by-name free/in-use/incoming/to-buy marks never promise an exact printing or expose hidden holders. Public readers without inventory receive no marks; stale snapshots withhold them.
+- Add allocates stock after current draft demand and earlier selected rows, with unchecked rows consuming none. Replace uses selected demand alone; held incoming copies cannot be offered. Marks redraw in place. Commander defaults respect identity, singleton and basic/card-text copy exceptions. Applying is one ordinary Undo; Check/Save remain authoritative, with no new bundle storage.
+- Stale page/person/frame/text/signature/connected callbacks and changed readonly mode refuse local mutations, preserving existing Public Try a change behavior.257 initial regressions,210 revised and17 latest owned cases pass;56 latest import/manifest/reference/order cases pass (overlap). No actual deck/collection write, metadata fetch or URL import occurred.
+
+## Shopping rendered-review corrections (2026-11-11; E5-S35/E6-S28 verification)
+
+- A twelve-case strict Chromium run completed with zero page/route/HTTP errors and confirmed browser/context/fixture cleanup at `data/ui-review/20261110T221501Z-21431520`; source stayed unchanged. Render inspection found the short modal table's first old/new row overlapped by the inherited sticky header offset. The result now scopes its header to static positioning; a native geometry assertion covers the row. Dated-reference copy and basket quality separators now match the actual semantics.
+- Thirty reference/order/Shopping UI and ten basket/quality checks pass, plus the latest56-case import/manifest/reference/order group (overlap). That retained native receipt predates the visual correction; final rendered recapture remains to verify the scoped fix. No actual route write or purchase was made; test writes were intercepted synthetic requests.
+
 ## Complete named three-card combos without bracket inference (2026-11-11; E9-S33)
 
 - Explicit card-data update makes separate two- and three-card reductions from the same public export. Triple data loads lazily, matches all three named legal pieces and commander requirements, excludes templates/multiple copies, and never fetches on a page. A held pair producing every triple result suppresses only the spare-piece recipe; a payoff with a new result remains.

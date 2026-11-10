@@ -52,7 +52,14 @@ function addPart(onPaste = editorSearchPaste) {
     el("div", { class: "add-to" }, el("span", { class: "add-to-label", text: "Add to" }), ed.dom.addTo),
     cardSearch(),
     el("div", { class: "add-paste" },
-      el("button", { type: "button", class: "btn btn-quiet", text: "Paste a list…", onclick: onPaste })));
+      el("button", { type: "button", class: "btn btn-quiet", text: "Paste a list…", onclick: onPaste }),
+      ed.mode === "edit" && !ed.readOnly ? el("button", {type: "button", class: "btn btn-quiet", text: "Add cards from another deck…",
+        onclick: event => {
+          if (!event.currentTarget.isConnected || !editorKeyboardCurrent(ed) || ed !== editor) return;
+          const dock = ed.dom.searchDock;
+          if (dock?.open) closeEditorSearchDock(dock, {focus: false});
+          if (ed === editor) openDeckImport();
+        }}) : null));
   drawAddTo();
   return part;
 }

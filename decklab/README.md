@@ -1162,6 +1162,8 @@ Interrupted field/group/gauntlet/variant requests have starter-private **Unfinis
 
 Commander Overview/Stats and printed play sheets also list complete **Three-card combos** from a separate cached Commander Spellbook reduction, with total, up to25 findings and its source date. It includes commander-only pieces only in that section, omits unnamed/template pieces and redundant pair-plus-spare recipes, and never raises the counted minimum bracket or flags an early combo. Missing/corrupt data says it was not checked. `python -m decklab.lib.cards update` explicitly refreshes both reductions; page views never download them.
 
+An existing deck editor can **Add cards from another deck…** within its own space. Its lines and **Paste a list** are tickable reviews with guarded by-name availability. Add accounts for the current draft and selected rows; Replace accounts for the selected list alone. Commander identity/duplicate defaults leave questionable lines unticked, with basic/card-text copy exceptions retained. Applying changes only the local draft in one Undo step; normal Check/Save keeps it. Private inventory remains private, and no reusable bundle is stored.
+
 ### Testing a change to a deck
 
 The editor's **Test this change** (since wave 3) answers "does swapping these cards make the deck better?" without saving anything:

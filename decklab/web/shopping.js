@@ -327,7 +327,7 @@ function shopPrinting(card) {
   return `Exact: ${[card.set && card.set.toUpperCase(), card.collector_number, finish].filter(Boolean).join(" ")}`;
 }
 
-/** A reference price: the lowest price seen and where, never a claim of live stock. null without one. */
+/** A dated retailer reference observation, never a claim of live stock. null without one. */
 function shopPrice(card) {
   if (card.listed_aud === "" || card.listed_aud == null) return null;
   const amount = Number(card.listed_aud);
@@ -787,7 +787,7 @@ function drawShopping(data) {
     for (const row of later) if (row.deck) planned.set(row.deck.id, (planned.get(row.deck.id) || 0) + (row.quantity || 0));
     clear(buySlot);
     if (immediate.length) buySlot.append(shopSection("shop-to-buy", "To buy", immediate.length,
-      "Cards we've decided to buy, with the lowest price seen when checked.",
+      "Cards we've decided to buy, with the shop price recorded when checked.",
       shopQueueControls(view), shopQueueGroups(immediate, view)));
     clear(deckSlot);
     if (decks.length) deckSlot.append(shopSection("shop-decks", "Decks still missing cards", decks.length,

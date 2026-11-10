@@ -73,7 +73,7 @@ function shopPriceReview(view, kind, candidates, bulk = false) {
     if (bulk) ctx.content.append(el("p", {class: "field-hint", text: "Select up to 100 ready rows. Add-ons and unselected rows are left as they are."}));
   }
   ctx.edit = ctx.content;
-  ctx.review = el("div", {hidden: true}); sheet.body.append(ctx.review);
+  ctx.review = el("div", {class: "shop-price-result", hidden: true}); sheet.body.append(ctx.review);
   shopPriceEditActions(ctx);
   return ctx;
 }

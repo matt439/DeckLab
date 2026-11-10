@@ -36,7 +36,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 22 | 2 | 1 | 1 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 23 | 2 | 0 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 35 | 3 | 1 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 31 | 0 | 1 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 23 | 0 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 56 | 14 | 5 | 4 |
-| **Total** | **376** | **321** | **22** | **17** | **16** |
+| **Total** | **376** | **322** | **22** | **16** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -794,7 +794,7 @@ Built 2026-11-10: `lib/listed_prices.py` `annotate_owned` (called by `pool.compa
 
 First slice: extend E5-S31's annotation to owned rows in `decklab/lib/listed_prices.py`, using `printing_counts` in `decklab/lib/pool.py` for live rows only, and render the note in `decklab/web/deck-prices.js` and `decklab/web/deck-availability.js`; tests beside `decklab/tests/test_listed_prices.py`.
 
-**E2-S31** · Matt · could · M · missing
+**E2-S31** · Matt · could · M · built
 
 As a deck builder who reuses groups of cards, I want to add chosen cards from another deck with a preview checked against the pool, so that I see which copies are free first.
 
@@ -806,6 +806,8 @@ As a deck builder who reuses groups of cards, I want to add chosen cards from an
 Gap: an existing deck can't pull cards from another deck (Start from another deck needs an empty new deck), and Paste a list's preview has no pool marks or identity filter, though EDHREC ideas (E9-S07) and the finder (E2-S25) have both. No saved, named card bundle exists. From the product review of 2026-11-10, compared with Moxfield's Packages. Needs Matt's decision: whether stored, space-private bundles are wanted at all.
 
 First slice: no new storage: "Add cards from another deck…" in `decklab/web/editor-import.js`, reusing the marks and identity test of `decklab/web/editor-edhrec.js` and `decklab/lib/api/editor.py`; tests in `decklab/tests/test_editor_ui.py`.
+
+Built (2026-11-11): existing editors can choose another same-space real deck and review ticked cards with printing/finish/category retained. Paste uses the same per-line selection and independently guarded name-level pool facts, with generic hidden-holder names and no price lookup/exact-printing promise. Add allocates remaining physical/incoming copies after current draft demand and earlier selected rows; unchecked rows consume none, Replace starts from selected demand, and held incoming copies are not promised. Marks update in place with mode/selection. Commander duplicate/outside/unknown-identity defaults are unticked, preserving basic/own-text copy exceptions through existing rules. Applying is one normal Undo and only normal Save persists; no bundles or new storage. Page/person/frame/text/signature/connected-control and initial readOnly-mode guards prevent stale mutations while preserving Public Try a change drafts.257 initial regressions,210 revised editor/API/category/web and17 latest owned checks pass;56 latest import/manifest/reference/order checks also pass (overlap). Public-without-inventory whole responses stay invariant under hidden collection changes; stale inventory withholds marks. No actual save, collection write, metadata fetch or URL import was made.
 
 **E2-S32** · Matt · could · M · built
 

@@ -15,6 +15,7 @@ from datetime import date
 
 from decklab.lib import cards, currency, decks, edhrec, pool, spaces
 from decklab.lib.stats.category_suggest import suggest as _category_suggest
+from decklab.lib.stats.commander import _copies_allowed as _commander_copies
 
 from . import common
 from .carddata import _require_cards
@@ -124,6 +125,9 @@ def _card_json(card, p):
     suggestion = _category_suggest(card)
     if suggestion:
         out["category_suggestion"] = suggestion
+    copy_limit = _commander_copies({"oracle_text": card.get("oracle_text") or ""})
+    if copy_limit != 1:
+        out["commander_copies"] = copy_limit
     return out
 
 
