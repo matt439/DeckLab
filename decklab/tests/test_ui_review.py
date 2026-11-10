@@ -64,7 +64,9 @@ const {Review} = require('./decklab/ui_review/common.js');
   assert.deepEqual(await request('POST',review.origin+'/api/deck/cuts/save'), [['abort','blockedbyclient']]);
   assert.deepEqual(await request('POST',review.origin+'/api/deck/bracket-replacements'), [['continue']]);
   assert.deepEqual(await request('POST',review.origin+'/api/deck/bracket-replacements/save'), [['abort','blockedbyclient']]);
-  assert.equal(review.report.network.dry_checks,3);
+  assert.deepEqual(await request('POST',review.origin+'/api/goldfish/what-if'), [['continue']]);
+  assert.deepEqual(await request('POST',review.origin+'/api/goldfish/what-if/save'), [['abort','blockedbyclient']]);
+  assert.equal(review.report.network.dry_checks,4);
   assert.equal(review.report.network.allowed_reads,1);
 })().catch(error => {console.error(error);process.exitCode=1;});
 '''

@@ -190,7 +190,7 @@ def _install_handler(fixture, runtime, run_id):
             split = urlsplit(self.path)
             path, query = split.path, parse_qs(split.query)
             if self.command not in {"GET", "HEAD"}:
-                if self.command != "POST" or path not in {"/api/deck/check", "/api/deck/cuts", "/api/deck/bracket-replacements"}:
+                if self.command != "POST" or path not in {"/api/deck/check", "/api/deck/cuts", "/api/deck/bracket-replacements", "/api/goldfish/what-if"}:
                     raise ApiError(403, "This synthetic review fixture permits only reads and dry-run deck checks.")
                 return super()._route()
             if path == "/_ui_review/ready":

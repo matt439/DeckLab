@@ -22,6 +22,7 @@ ACCESS = MappingProxyType({
     ('POST', 'forge/dismiss'): 'profile',
     ('GET', 'deck/development'): 'deck',
     ('GET', 'changes'): 'viewer-filtered',
+    ('POST', 'goldfish/what-if'): 'deck',
     ('GET', 'deck/role-ranges'): 'deck',
     ('GET', 'space/download'): 'inventory',
     ('GET', 'space/needed'): 'inventory',
@@ -399,7 +400,7 @@ GAUNTLET_ROUTES = {("gauntlet",), ("gauntlet", "run"), ("gauntlet", "stop"),
 
 def _status(key, answer):
     """200, or 202 for a gauntlet or group answer whose run waits or plays."""
-    waiting = key in GAUNTLET_ROUTES and isinstance(answer, dict) and answer.get("status") in GAUNTLET_WAITING
+    waiting = (key in GAUNTLET_ROUTES or key == ("goldfish", "what-if")) and isinstance(answer, dict) and answer.get("status") in GAUNTLET_WAITING
     return 202 if waiting else 200
 
 
@@ -419,6 +420,7 @@ def route_tables():
     from decklab.lib.api import bracket_fixes
     from decklab.lib.api import error_reports
     from decklab.lib.api import collection_loans
+    from decklab.lib.api import practice
 
     gets = {
         ("forge", "unfinished"): (run_recovery.view, ()),
@@ -500,6 +502,7 @@ def route_tables():
         ("shopping", "price-history"): (_price_history, ("name", "row")),
     }
     posts = {
+        ("goldfish", "what-if"): (practice.what_if, MAX_BODY),
         ("activity", "undo"): activity_undo.apply_undo,
         ("activity", "wishlist-undo"): wishlist_undo.apply_wishlist_undo,
         ("activity", "accessory-undo"): accessory_undo.apply_accessory_undo,

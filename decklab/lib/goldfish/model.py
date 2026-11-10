@@ -10,6 +10,8 @@ import re
 from collections import Counter
 
 from decklab.lib import stats
+from .cast_metrics import category_queues
+from . import special_mana
 
 from .common import (ANY_MANA, BITS, IF_BASICS, IF_EARLY, IF_FEW, IF_MANY, IF_MANY_TYPE, IF_MULTIPLAYER, IF_REVEAL,
                      IF_TYPE, LAND_TYPE_BITS, LAND_TYPE_RE, POP, TAPPED, UNTAPPED, _colour_bits, _colours_text, _mask)
@@ -29,7 +31,7 @@ EARLY_RE = re.compile(r"unless it's your first, second, or third turn")
 MIN_LANDS_RE = re.compile(r"activate only if you control (\w+) or more lands")
 AURA_RAMP_RE = re.compile(r"enchanted land has \"\{t\}: add|whenever enchanted land is tapped for mana, "
                           r"its controller adds an additional")
-X_NEEDS_ONE_RE = re.compile(r"deals x damage|loses x life|gains? x life|draws? x cards|x \+1/\+1 counters"
+X_NEEDS_ONE_RE = re.compile(r"deals x damage|loses x life|gains? x life|draws? x cards|x \+1/\+1 counters|x charge counters"
                             r"|create x |x target|mill x|return x ")
 OPPONENT_SEARCH_RE = re.compile(r"if an opponent controls more lands|an opponent controls more lands")
 COST_REDUCTION_RE = re.compile(r"costs? \{[^}]+\} less|costs? \{x\} less|costs? x less")
@@ -358,8 +360,11 @@ def _land_model(card, text, identity, special, notes):
 def _effect(card, identity, special, notes):
     """What casting a nonland card does to your mana, or None."""
     text = stats.REMINDER_RE.sub("", stats.front_text(card).lower())
-    # A mana creature or rock: one with a "{T}: Add" ability of its own (Lotus Petal's, which
-    # sacrifices it, is read and noted but makes no mana).
+    resource = special_mana.read(card, identity, _clause_colours)
+    if resource is not None:
+        special.append(special_mana.describe(resource))
+        return ["resource", resource]
+    # An ordinary mana creature or rock. Unsupported extra costs retain their explicit notes.
     ability = stats.mana_kind(card) if card.get("produced_mana") and stats.mana_abilities(text) else None
     if ability:
         mask, amount, cost, symbols, mana_notes, chosen, _ = _mana_output(
@@ -506,6 +511,9 @@ def _card_model(card, identity):
             notes.append("has no mana cost, so it's never cast")
         options.sort(key=lambda o: (-o[0], o[3]))       # most expensive face first, cheapest payment
         effect = _effect(card, identity, special, notes) if kind == "spell" else None
+        if effect and effect[0] == "resource" and effect[1]["cast_extra"]:
+            extra = effect[1]["cast_extra"]
+            options = [[o[0], o[1] + extra, o[2], o[3] + extra] for o in options]
     text = card["oracle_text"].lower()
     if kind != "land":
         if "draw" in card.get("roles", []):
@@ -526,8 +534,14 @@ def _card_model(card, identity):
     for o in options:
         for p in o[2]:
             need |= p
+    front_types = stats.type_words((card.get("faces") or [card])[0].get("type_line", "").split(" // ")[0])
+    front_text = stats.front_text(card).lower()
     model = {"name": card["name"], "kind": kind, "land": land, "options": options, "effect": effect,
-             "need": need}
+             "need": need, "creature": "Creature" in front_types, "legendary": "Legendary" in front_types,
+             "creature_tapped": bool(stats.ENTERS_TAPPED_RE.search(front_text)), "creature_untaps": not bool(NO_UNTAP_RE.search(front_text)),
+             "sacrifice_ramp": bool(effect and effect[0] in ("ramp", "ability") and any(
+                 re.search(rf"sacrifice (?:{re.escape(card['name'].split(' // ')[0].lower())}|this creature)", line.split(":", 1)[0])
+                 for line in text.split("\n") if ":" in line))}
     return model, special, notes
 
 
@@ -546,6 +560,8 @@ def compile_deck(sections, kind):
         for e in commanders:
             identity |= _mask(e.card.get("color_identity"))
     models, ids = [], {}
+    categories, category_info = category_queues(sections)
+    copy_categories, commander_categories = [], []
     special, not_modelled = Counter(), Counter()
     deck, commander_ids = [], []
     for e in commanders + library:
@@ -556,11 +572,19 @@ def compile_deck(sections, kind):
             models.append(model)
             model["_rules"], model["_notes"] = rules, notes
         cid = ids[key]
+        queue = categories[(e.section, e.card["name"], e.card["oracle_id"])]
+        tagged = [queue.popleft() if queue else None for _ in range(e.qty)]
+        if models[cid]["options"]:
+            for category in tagged:
+                if category is not None:
+                    category_info[category]["spells"] += 1
         if e.section == "Commander":
             commander_ids.extend([cid] * e.qty)
+            commander_categories.extend(tagged)
             special[(e.name, "commander: starts in the command zone and is cast when it fits")] += e.qty
         else:
             deck.extend([cid] * e.qty)
+            copy_categories.extend(tagged)
         for rule in models[cid]["_rules"]:
             special[(e.name, rule)] += e.qty
         for note in models[cid]["_notes"]:
@@ -574,6 +598,8 @@ def compile_deck(sections, kind):
                 models.append({"name": "?", "kind": "none", "land": None, "options": [], "effect": None,
                                "need": 0})
             deck.extend([ids["?"]] * qty)
+            queue = categories[(section, name, None)]
+            copy_categories.extend(queue.popleft() if queue else None for _ in range(qty))
     in_library = sum(q for (section, _), q in unresolved.items() if section == "Deck")
     if in_library:
         warnings.append((f"{in_library} cards with names that aren't Scryfall cards take" if in_library != 1 else
@@ -601,6 +627,10 @@ def compile_deck(sections, kind):
             makes |= land[0]
         if effect and effect[0] in ("dork", "rock", "aura"):
             makes |= effect[1]
+        if effect and effect[0] == "resource":
+            for method in effect[1]["methods"]:
+                makes |= method["mask"]
+            makes |= effect[1]["release"]
     colours = _needed_colours(models, deck + commander_ids, makes)
     basics = 0
     for cid in deck:
@@ -623,7 +653,8 @@ def compile_deck(sections, kind):
                 models.append(dict(models[cid], land=[land[0] & ~land[9] | bit] + land[1:9] + [0], choices=None,
                                    variant_of=cid))
     model = {"cards": models, "deck": deck, "commanders": commander_ids, "colours": _colour_bits(colours),
-             "basic_mask": basics, "makes": makes}
+             "basic_mask": basics, "makes": makes, "categories": category_info,
+             "copy_categories": copy_categories, "commander_categories": commander_categories}
     lands = sum(1 for cid in deck if models[cid]["kind"] == "land")
     spell_lands = sum(1 for cid in deck if models[cid]["kind"] == "mdfc")
     lost = sum(q for (section, _), q in unresolved.items() if section == "Commander")

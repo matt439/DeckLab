@@ -3,6 +3,7 @@ JSON-safe result for one setup (_summary), and headline() picks the few
 numbers a deck list shows.
 """
 from decklab.lib import stats
+from . import cast_metrics
 
 from .common import (ALWAYS_KEEP, BIG_SPELL, COLOUR_TURNS, FLOOD_FROM_TURN, FLOOD_GAME_TURNS, MISSED_DROP_TURNS,
                      SETUPS, STUCK_TURNS, _colours_text)
@@ -26,7 +27,7 @@ def _average(n, d, digits):
     return round(n / d, digits) if d else None
 
 
-def _summary(counts, setup, turns, E_colours, big_in_deck):
+def _summary(counts, setup, turns, E_colours, big_in_deck, model=None):
     g = counts["games"]
     kept = [{"cards": size, "share": _share(counts["kept"][size], g)}
             for size in range(7, -1, -1) if counts["kept"][size] or size >= ALWAYS_KEEP]
@@ -47,7 +48,7 @@ def _summary(counts, setup, turns, E_colours, big_in_deck):
             "average_turn": round(turn_sum / cast, 2) if cast else None,
             "by_turn_4": _share(sum(counts["big"][1:BIG_SPELL + 1]), g) if turns >= BIG_SPELL else None,
         }
-    return {
+    result = {
         "id": setup, "label": SETUPS[setup]["label"],
         "mulligans": {"rate": _share(counts["mulligan"], g),
                       "free_rate": _share(counts["free"], g) if SETUPS[setup]["free_mulligan"] else None,
@@ -82,6 +83,9 @@ def _summary(counts, setup, turns, E_colours, big_in_deck):
                       **(first_big or {"by_turn": None, "never": None, "average_turn": None,
                                        "by_turn_4": None})},
     }
+    if model is not None and "casts" in counts:
+        result.update(cast_metrics.summary(counts["casts"], model, turns, g, _share))
+    return result
 
 
 # ============================================================ summaries

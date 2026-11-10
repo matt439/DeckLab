@@ -29,7 +29,7 @@ from .workers import _NewProcessGroups, _run_chunk, _start_worker
 # Saved results are keyed by GOLDFISH_VERSION. The rules are in model.py (how a
 # card is read) and engine.py (how a game is played): a change there that can
 # change a result must raise it.
-GOLDFISH_VERSION = 5        # raise when a rule changes, so saved results are recomputed
+GOLDFISH_VERSION = 6        # cast/category/colour-wait counters and finite mana-source rules
 CACHE_DIR = config.DATA / "goldfish"
 CACHE_MAX_FILES = 1000      # the oldest saved results go past this
 DEFAULT_GAMES = 100_000     # per setup (PLAN.md part 5: "about 100,000 games per deck")
@@ -112,7 +112,7 @@ def simulate(sections, kind, games=DEFAULT_GAMES, turns=DEFAULT_TURNS, seed=None
     workers = min(workers, len(tasks))
     total = games * len(setups)
     done = 0
-    counts = {s: _new_counts(turns, len(model["colours"])) for s in setups}
+    counts = {s: _new_counts(turns, len(model["colours"]), model) for s in setups}
     started = time.perf_counter()
     if workers <= 1:
         for setup, task in tasks:
@@ -150,6 +150,7 @@ def simulate(sections, kind, games=DEFAULT_GAMES, turns=DEFAULT_TURNS, seed=None
         warnings.append(f"This deck has {size} cards to draw from, so from turn {size - 6} on the draw{play} "
                         "there's no card left to draw, and a real game would be lost then. Here those turns go on "
                         "without a draw, so the numbers for them mean little.")
+    from .whatif import choices
     return {
         "version": GOLDFISH_VERSION,
         "kind": kind,
@@ -163,13 +164,14 @@ def simulate(sections, kind, games=DEFAULT_GAMES, turns=DEFAULT_TURNS, seed=None
         "chunks": len(tasks),
         "deck": info["deck"],
         "setups": [{"id": s, "label": SETUPS[s]["label"], "text": _setup_text(s, kind)} for s in setups],
-        "results": {s: _summary(counts[s], s, turns, model["colours"], big_in_deck) for s in setups},
+        "results": {s: _summary(counts[s], s, turns, model["colours"], big_in_deck, model) for s in setups},
         "cards": {"special": info["special"], "not_modelled": info["not_modelled"],
                   "unresolved": info["unresolved"]},
         "rules": list(RULES),
         "definitions": dict(DEFINITIONS),
         "warnings": warnings,
         "sources": {k: dict(v) for k, v in SOURCES.items()},
+        "land_trials": choices(sections, kind),
     }
 
 

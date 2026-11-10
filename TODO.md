@@ -87,7 +87,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E9-S11` | DEFERRED | could | L+pc | Four-player pod runs from the page (with `E9-S21` win shares and `E9-S22` why-not by Start); after `FG#2`. First `lib/forge/pods.py` from the prototype, fixtures only. |
-| `E9-S32` | OPEN | could | M | Goldfish for Commander: commander cast by turn N, the skipped mana source classes one at a time, and a category milestone rate; first slice: record the cast turn in lib/goldfish/engine.py, report it from results.py with a new cache version, a panel in practice.js. |
 
 ## Deck Lab: testing and Forge
 
@@ -100,7 +99,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S28` | DECISION | should | M | Run the user-testing session with User2 from the prepared [checklist](decklab/design/user-testing-user2.md) (confirm his device first), then the follow-up review and stories. |
 | `FG#2` | WAITING | should | L+pc | Forge 2.0.16 (about mid-November 2026): rebase the fork, build, check the overrides, replay every matchup. The post-build checks are one command, built 2026-10-21: `python -m decklab.lib.forge upgrade-check` (`--plan forge-2.0.16` prints the rebase and build steps; `E11-S15`), and `upgrade-check --dir <scratch folder>` checks the scratch build before it's installed (`E11-S45`). |
 | `FG#3` | DEFERRED | could | M+pc | More experiment games (AI profiles, team-pump fix, override sets), decided with `FG#2`'s replay; the clean `fiery` test ran 2026-10-21 (C4 does what `fiery` does). |
-| `E3-S41` | OPEN | could | M | Practice games name the spells the mana fails and try same-seed one-land swaps. First the per-spell castability counters in `lib/goldfish/engine.py` and `results.py`, drawn in `web/practice.js`; the what-if runs follow. |
 | `E3-S43` | DECISION | could | S | Left: `gauntlet export FILE` / `gauntlet import FILE` (catalogues and saved samples with a verified sha, playable decks screened again, no house deck's results). Waits for Matt's decision on `FG#4`: copy the development PC's catalogue to the server, or build its own there. |
 
 ## Deck Lab: running it

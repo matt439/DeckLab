@@ -10,8 +10,8 @@ import traceback
 from decklab.lib import decks, jobs
 
 from . import common
-from .common import ApiError, _public, _scrub
-from .library import _deck_sections, is_half
+from .common import ApiError, _keys, _parse_body, _public, _scrub
+from .library import _deck_sections, _find_summary, check_deck_id, is_half
 
 # Settings for goldfish.cache_key() and get_or_simulate() (games, turns): empty
 # means its defaults, 100,000 games per setup of 8 turns. Tests make them small.
@@ -109,6 +109,7 @@ def goldfish(deck_id, version="target", retry=None):
 
     ApiError as deck_view for the id and version, 400 for a retry other than
     1, and 503 when 20 runs are already waiting."""
+    _find_summary(check_deck_id(deck_id))  # hidden before version/retry/card-data validation
     if retry not in (None, "", "1"):
         raise ApiError(400, "retry must be 1 when it's given")
     summary, sections = _deck_sections(deck_id, version)
@@ -130,3 +131,44 @@ def goldfish(deck_id, version="target", retry=None):
         return {"status": "error", "error": RUN_FAILED}
     return {"status": "running", "queued": snap["status"] == jobs.QUEUED, "ahead": snap["ahead"],
             "progress": snap["progress"]}
+
+
+def what_if(body):
+    """Read-only bounded one-basic replay, through the same single simulation queue."""
+    data = _parse_body(body)
+    deck_id = data.get("id")
+    _find_summary(check_deck_id(deck_id))
+    _keys(data, ("id", "version", "cut", "cache_key"), ("profile", "retry"))
+    summary, sections = _deck_sections(deck_id, data["version"])
+    if is_half(summary):
+        raise ApiError(400, "A Beginner Box half is practised with a pairing")
+    retry = data.get("retry", False)
+    if type(retry) is not bool:
+        raise ApiError(400, "retry must be true or false")
+    module, kind = _goldfish_module(), decks.engine_kind(summary)
+    key, answer = _practice_saved(module, sections, kind)
+    if not isinstance(data["cache_key"], str) or data["cache_key"] != key:
+        raise ApiError(409, "This list's practice result changed. Reload Practice before trying a land change.")
+    if answer is None:
+        answer = _deck_practice(summary, sections)
+    if not answer or answer.get("status") != "done":
+        raise ApiError(409, "Finish this list's practice games before trying a land change.")
+    baseline = answer["result"]
+    try:
+        trial_key, _, _ = module.whatif.prepare(sections, kind, data["cut"], baseline)
+        saved = module.whatif.saved(trial_key)
+    except (ValueError, TypeError):
+        raise ApiError(400, "Choose a card from this list's Deck section and a list with readable basic-land data.") from None
+    if saved is not None:
+        return {"status": "done", "result": _goldfish_json(saved)}
+    try:
+        job = JOBS.submit(f"goldfish-land:{trial_key}", module.whatif.run, sections, kind, data["cut"], baseline,
+                          rerun=retry)
+    except jobs.Busy:
+        raise ApiError(503, "Deck Lab is busy with other simulations. Try again in a minute.") from None
+    snap = JOBS.snapshot(job)
+    if snap["status"] == jobs.DONE:
+        return {"status": "done", "result": _goldfish_json(snap["result"])}
+    if snap["status"] == jobs.ERROR:
+        return {"status": "error", "error": RUN_FAILED}
+    return {"status": "running", "queued": snap["status"] == jobs.QUEUED, "ahead": snap["ahead"], "progress": snap["progress"]}

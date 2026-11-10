@@ -132,12 +132,14 @@ Rules the simulated player follows (RULES has the same in plain words)
       A mana ability that costs mana too (a Signet's "{1}, {T}: Add {W}{B}")
       counts as the mana it adds beyond that cost (one more mana, of either
       colour), and on the turn it's cast only when there's mana left to pay
-      for it. A rock that doesn't untap by itself (Basalt Monolith) and
-      mana from charge counters (Everflowing Chalice, cast for {0}) aren't
-      counted, nor is a mana ability whose cost asks for more than {T},
-      mana and life (Lotus Petal's sacrifice, Springleaf Drum's other
-      creature, Sphere of the Suns' counters), or one a card gives other
-      permanents (Goldspan Dragon's Treasures). "Add one mana ... for each
+      for it. Explicit supported sacrifice, charge-counter, tap-creature and
+      doesn't-untap abilities have finite battlefield state (see special_mana.py
+      and each card's special rules). Sacrificed sources leave; counters and
+      assistants cannot be reused; spare mana can pay an explicit untap cost.
+      Everflowing Chalice pays one kicker, its smallest producing form. A new
+      source may be prepared to enable a more expensive spell. Unsupported
+      additional costs and mana given to other permanents (Goldspan Dragon's
+      Treasures) stay unmodelled. Ordinary "Add one mana ... for each
       ..." and "Add X mana ..., where X is ..." count as one mana (X is at
       least the creature's own power for "the greatest power among
       creatures you control"); limits on what the mana can be spent on
@@ -279,7 +281,7 @@ import types
 
 # Every module, at import: each binds the real stats module before a test
 # swaps it (test_api.py's Sandbox).
-from . import cli, common, engine, model, results, runs, workers
+from . import cli, common, engine, model, results, runs, workers, whatif
 from .common import (ALWAYS_KEEP, ANY_MANA, BIG_SPELL, BITS, BOTTOM_LANDS_ABOVE, COLOUR_ORDER, COLOUR_TURNS,
                      COMMANDER_1V1_NOTE, DEFINITIONS, FLOOD_FROM_TURN, FLOOD_GAME_TURNS, FREE_KEEP_LANDS, IF_BASICS,
                      IF_EARLY, IF_FEW, IF_MANY, IF_MANY_TYPE, IF_MULTIPLAYER, IF_REVEAL, IF_TYPE, KEEP_LANDS,

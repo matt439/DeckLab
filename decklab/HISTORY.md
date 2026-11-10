@@ -2,11 +2,18 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Commander/category practice and bounded same-seed land trials (2026-11-11; E9-S32/E3-S41)
+
+- Cachev6 adds independent commander cast timing, physical-copy category milestones, and named spell colour-wait opportunities. Fixed integer chunks give identical one/many-worker results; category labels do not change deck identity or play choices. Numbers describe earliest affordability under the fixed model, not play advice.
+- Four explicit finite mana classes now model self-sacrifice, charge counters, helper-creature tap costs and no-normal-untap sources. Cloned plans conserve source/body/tap/charge costs; selected plans alone affect the game. Unsupported modes stay named. Sunburst payment coalesces only equivalent masks, matching exhaustive first-best payment with bounded work rather than truncating results.
+- Explicit intrinsic-only one-basic trials replay a chosen copy and an always-tapped cut, deduplicated, at the baseline seed/settings and up to20,000 games/setup. The existing single queue, current model/list/category key and mounted UI ownership guard every request. Deltas show mana outcomes; a best option needs the declared1pp improvement/no-regression screen and all three risk measures. Unknown short-horizon data makes no best claim. No changed deck is stored.
+- Validation:207 combined goldfish/run/API/UI/route cases pass;26 latest source/metrics/trial/UI cases pass after review fixes (overlap). Diagnostic8 strict Chromium states completed with cleanup and inspected phone captures; final24 stable cases remain. No actual database, household record, Forge game, service or operational setting changed.
+
 ## Whole token-row recovery with allocator moves and queue target parity (2026-11-11; E11-S08 slices)
 
 - Complete own-space token INSERT/DELETE sources may include strictly position-only survivor UPDATEs, even when the first rows are only moves. Exact ordinary forward reconstruction, latest own-token fences and complete physical packing checks precede one inverse; actual inverse audit/layout must match the ordinary allocator. A single target uses the same reason/whole-count confirmation and receipt, with fresh restored ids. Survivor facts/packing remain unchanged. Both directions stay bounded at50 total audited rows; pure/noncanonical reorder restoration refuses.
 - Queue Undo accepts the precise additive0026 nullable numeric target difference in legacy/current audit schemas. Canonical cents restore exactly; changed targets require a fresh saved-source/preference receipt. Actual precommit target mismatch rolls back. The UI displays the optional AUD unit market target, with no paid-price or spending semantics.
-- Validation:147 core checks pass with two guarded PostgreSQL classes skipped; three new real-PG source cases await CI.93 queue/schema/UI and88 latest combined checks pass (overlap). No live database, private records, physical cards or actual files changed. E11-S08 remains partial while coupled order and collection source families are completed.
+- Validation:147 core checks pass with two guarded PostgreSQL classes skipped; three new real-PG source cases await CI.93 queue/schema/UI and88 latest combined checks pass (overlap). No live database, private records, physical cards or inventory files changed. E11-S08 remains partial while coupled order and collection source families are completed.
 
 ## Reviewed pool-checked bulk card adds (2026-11-11; E2-S31)
 

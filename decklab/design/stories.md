@@ -37,16 +37,16 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 23 | 2 | 0 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 39 | 35 | 3 | 1 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 39 | 36 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 31 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 23 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 35 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 28 | 23 | 0 | 4 | 1 |
+| [E9: Commander nights](#e9-commander-nights) | 28 | 24 | 0 | 3 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 56 | 14 | 5 | 4 |
-| **Total** | **376** | **322** | **22** | **16** | **16** |
+| **Total** | **376** | **324** | **22** | **14** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1364,7 +1364,7 @@ Decided (Matt, 2026-11-09): implement as much as possible overnight and open a p
 
 Built (2026-11-09): the Testing tab's deliberate saved-list matchup check, command-line card-swap checks, separate immutable engine results and native XMage bridge. Guarded fixtures, disposable native casual/Commander games and headless Chromium checks passed. The [owner](cross-simulator.md) records exact qualification and limits; optional installation on the live server and household-device acceptance remain separate.
 
-**E3-S41** · Matt · could · M · missing
+**E3-S41** · Matt · could · M · built
 
 As a deck builder tuning a mana base, I want the practice games to name the spells my mana fails and to try one-land swaps, so that I know which plain-basic change helps most.
 
@@ -1376,6 +1376,8 @@ As a deck builder tuning a mana base, I want the practice games to name the spel
 Gap: the practice games report colour screw and stuck only as deck totals, and have no what-if runs. E3-S04 covers the deck-level figures, E3-S01 the land verdict and colour-source check, and E3-S25 free dual lands. From the product review of 2026-11-10, compared with Salubrious Snail's Color Analyzer and Tap Analyzer.
 
 First slice: per-spell castability only: per-card counters in `decklab/lib/goldfish/engine.py`, a `cards.castability` list in `results.py`, a `GOLDFISH_VERSION` bump in `runs.py` and a "Spells the mana fails most" disclosure in `decklab/web/practice.js`.
+
+Built (2026-11-11): the colour panel names up to five spells by simulated unpayable-colour share among turns held with enough mana, with exact opportunities and mean blocked turns among games that waited. Integer counters/chunks give identical one/many-worker output. Explicit one-basic trials replace the chosen Deck copy and one known always-tapped cut, one basic per deck colour, deduplicated, through the existing single Practice job queue. All arms replay original seed/mulligan/turn settings at the same capped20,000 games/setup, with no draft/deck/record created. Delta tables show stuck, colour screw/waste, flood and mana use. A fully measured best change needs at least1pp less stuck or colour screw with no more than1pp regressions in stuck/colour screw/flood; this is a screen, not significance or play advice. Short horizons with unknown risk metrics get no best claim. Hidden404 precedes payload details, fresh list/model/category cache keys fence baselines, and connected page/profile/route/list guards reject stale replies.207 combined fixtures and26 latest focused cases pass (overlap); diagnostic8 strict native states have confirmed cleanup, with final24 stable capture pending. No actual records, services, inventory or Forge games were used.
 
 **E3-S42** · Matt · could · M · built
 
@@ -4435,7 +4437,7 @@ First slice: a pure `bracket_fixes` beside `min_bracket` in `decklab/lib/stats/c
 
 Built (2026-11-11): Stats and Overview show an exact bounded minimum-cut plan for the counted floor, with overlapping combo pieces and compact any-K-of-N Game Changer choices. Unknown or malformed inputs and exhausted search remain unavailable. Permitted inventory editors select a concrete option, freshly check free replacements against all selected cuts and see unsafe/unknown candidates disabled. Commander/Companion replacements are explicit section changes; Test also requires the whole single swap to pass existing rules. Public/read-only views carry no raw text receipt. Scoped reload and fresh receipt checks preserve local drafts and ordinary Check/Save/Start gates.201 focused tests pass (one existing qualification skip), plus66 replacement/privacy/legacy-swap/HTTP checks; ten strict Chromium smoke states pass with clean completion/cleanup. These are fixtures, not real Commander games or device acceptance.
 
-**E9-S32** · Matt · could · M · missing
+**E9-S32** · Matt · could · M · built
 
 As Matt, practising a Commander deck, I want the goldfish to report when the commander is cast and to count the mana sources it still skips, so that I know how often the commander is out on time and artifact-ramp decks stop reading as short of mana.
 
@@ -4446,6 +4448,8 @@ As Matt, practising a Commander deck, I want the goldfish to report when the com
 Gap: the engine already casts the commander and the page names the cards it doesn't model (E3-S04), but the cast turn shows only through the first big spell, the named source classes aren't counted, and the goldfish doesn't read categories (E3-S24 gives a draw chance only). From the product review of 2026-11-10, compared with Salubrious Snail and Playgroup.gg.
 
 First slice: the cast turn only. Record it in `decklab/lib/goldfish/engine.py`, report it from `decklab/lib/goldfish/results.py` with a new cache version, and a panel in `decklab/web/practice.js`.
+
+Built (2026-11-11): Practice cachev6 records each commander's independent first affordable cast by turn, mean among games with a cast and not cast by the horizon, under the fixed model's choices rather than play advice. Physical-copy category histograms answer category/count/turn milestones without rerunning or changing seed/play choices; unresolved category data remains unknown. Explicit finite self-sacrifice, charge-counter (including supported smallest-producing kicker/Sunburst/banked-release forms), helper-creature and no-normal-untap sources track costs/body/tap/charge state through cloned plans and selected-turn adoption. Ready ordinary mana creatures cannot double-pay helper costs; unsupported modes stay noted. Each class has conservation fixtures, including front-face bodies and exact bounded Sunburst mask coalescing. Fixed chunks/integer merges preserve one/many-worker results.207 combined source/API/UI/route cases pass;26 latest what-if/UI/resources/metrics cases pass after a conservative missing-metric screen guard. Diagnostic8 strict Chromium cases passed with cleanup; final24-case stable capture remains to run. No actual database, household record, Forge run or service changed.
 
 **E9-S33** · Matt · could · M · built
 

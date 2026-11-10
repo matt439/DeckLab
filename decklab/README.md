@@ -1164,6 +1164,8 @@ Commander Overview/Stats and printed play sheets also list complete **Three-card
 
 An existing deck editor can **Add cards from another deck…** within its own space. Its lines and **Paste a list** are tickable reviews with guarded by-name availability. Add accounts for the current draft and selected rows; Replace accounts for the selected list alone. Commander identity/duplicate defaults leave questionable lines unticked, with basic/card-text copy exceptions retained. Applying changes only the local draft in one Undo step; normal Check/Save keeps it. Private inventory remains private, and no reusable bundle is stored.
 
+Practice now shows each commander's cast timing and optional category/count/by-turn milestones, plus the spells most often waiting for colours despite enough mana. Supported finite sacrifice/charge/helper/untap sources have explicit model notes. These are solo-model estimates under fixed choices. **Try one basic** explicitly replays the chosen Deck copy and a known always-tapped cut with the same seed/settings, up to20,000 games/setup. It saves only disposable simulation cache, never a deck/draft. Delta tables use a declared1-point improvement/no-regression screen; incomplete risk measures yield no best option, and the screen is not significance or play advice.
+
 ### Testing a change to a deck
 
 The editor's **Test this change** (since wave 3) answers "does swapping these cards make the deck better?" without saving anything:

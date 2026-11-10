@@ -4,7 +4,10 @@ plan, land choice and searches, chosen colours, London mulligans, and
 _play_games(), which plays games turn by turn and counts what happens.
 """
 import itertools
+import copy
 from collections import Counter
+from . import cast_metrics
+from . import resources as finite_mana
 
 from .common import (ALWAYS_KEEP, ANY_MANA, BIG_SPELL, BOTTOM_LANDS_ABOVE, COLOUR_TURNS, FLOOD_FROM_TURN,
                      FLOOD_GAME_TURNS, FREE_KEEP_LANDS, IF_BASICS, IF_EARLY, IF_FEW, IF_MANY, IF_MANY_TYPE, IF_REVEAL,
@@ -17,6 +20,7 @@ class _Engine:
     """Lookup tables for one deck, built from its model in each worker."""
 
     def __init__(self, model):
+        self.model = model
         cs = model["cards"]
         self.NAMES = [c["name"] for c in cs]
         self.deck0 = list(model["deck"])
@@ -54,6 +58,14 @@ class _Engine:
         self.OPTS = [tuple((o[0], o[1], tuple(o[2]), o[3]) for o in c["options"]) for c in cs]
         self.NEED = [c["need"] for c in cs]
         self.EFF = [tuple(c["effect"]) if c["effect"] else None for c in cs]
+        self.RESOURCE = [effect[1] if effect and effect[0] == "resource" else None for effect in self.EFF]
+        self.HAS_RESOURCE = any(self.RESOURCE)
+        self.CREW = any(method["crew"] for config in self.RESOURCE if config for method in config["methods"])
+        self.CREATURE = [bool(card.get("creature")) for card in cs]
+        self.LEGENDARY = [bool(card.get("legendary")) for card in cs]
+        self.CREATURE_TAPPED = [bool(card.get("creature_tapped")) for card in cs]
+        self.CREATURE_UNTAPS = [card.get("creature_untaps", True) for card in cs]
+        self.SACRIFICE_RAMP = [bool(card.get("sacrifice_ramp")) for card in cs]
         # The colours the deck can make at all (compile_deck). MINPAID, the least
         # mana a spell can cost, is for the ways to pay it in those colours (a
         # {2/W} spell in a green deck costs its generic price), so colour screw
@@ -195,7 +207,7 @@ def _cast_order_key(casts, spent):
     return tuple(sorted((opt[0] for _, opt in casts), reverse=True)), spent
 
 
-def _cast(E, pool, rem, cg, cp):
+def _cast(E, pool, rem, cg, cp, context=None, preparing=False):
     """Cast from rem (spells sorted most expensive first) with the sources in
     pool, where cg generic and pips cp are already spoken for: (casts
     [(card, option)], mana spent, mana added by rocks, pool, cg, cp) with
@@ -208,6 +220,7 @@ def _cast(E, pool, rem, cg, cp):
     while i < len(rem):
         c = rem[i]
         chosen = None
+        payment = None
         for opt in OPTS[c]:
             g = cg + opt[1]
             p = opt[2]
@@ -216,12 +229,50 @@ def _cast(E, pool, rem, cg, cp):
             if E.payable(pool, pid, g, p):
                 chosen = opt
                 break
+            if context is not None:
+                supplied = context.supply(pool, cg, cp, opt, c)
+                if supplied is not None:
+                    pool, payment = supplied
+                    pid = E.pool_id(pool)
+                    g, p, chosen = 0, (), opt
+                    break
+        if chosen is None and context is not None and not preparing:
+            # Prepare a finite mana source only when it immediately enables this more expensive spell.
+            tried_producers = set()
+            for position in range(i + 1, len(rem)):
+                producer = rem[position]
+                if E.RESOURCE[producer] is None or producer in tried_producers:
+                    continue
+                tried_producers.add(producer)
+                for opt in OPTS[c]:
+                    trial_context = context.clone()
+                    trial = _cast(E, pool, [producer], cg, cp, trial_context, preparing=True)
+                    if not trial[0]:
+                        continue
+                    supplied = trial_context.supply(trial[3], trial[4], trial[5], opt, c)
+                    if supplied is None:
+                        continue
+                    context.adopt(trial_context)
+                    pool, payment = supplied
+                    pid = E.pool_id(pool)
+                    casts.extend(trial[0]); spent += trial[1]; added += trial[2]
+                    del rem[position]
+                    g, p, chosen = 0, (), opt
+                    break
+                if chosen is not None:
+                    break
         if chosen is None:
             i += 1
             continue
         del rem[i]
         casts.append((c, chosen))
         spent += chosen[3]
+        if context is not None:
+            if payment is None and (E.RESOURCE[c] is not None or E.CREW and E.CREATURE[c]):
+                pool, payment = finite_mana.pay(pool, cg, cp, chosen, bool(E.RESOURCE[c] and E.RESOURCE[c]["sunburst"]))
+                pid = E.pool_id(pool)
+                g, p = 0, ()
+            context.spawn(c, payment or [])
         now = NOW[c]
         if now and len(pool) - g - len(p) >= now[2]:
             # Its mana pays for what comes after it, so settle what's been paid so far. Sources
@@ -230,26 +281,34 @@ def _cast(E, pool, rem, cg, cp):
             made = [now[0]] * now[1]
             added += now[1]
             best = None
+            best_context = None
             room = len(pool) - g - len(p) + now[1]
             for left in _leftovers(E, pool, g, p):
-                trial = _cast(E, left + made, list(rem), 0, ())
+                trial_context = context.clone() if context is not None else None
+                trial = _cast(E, left + made, list(rem), 0, (), trial_context)
                 if best is None or _cast_order_key(trial[0], trial[1]) > _cast_order_key(best[0], best[1]):
                     best = trial
+                    best_context = trial_context
                 cast_now = {x for x, _ in trial[0]}
                 if not any(MINPAID[x] <= room for x in rem if x not in cast_now):
                     break       # nothing left in hand could be cast with any leftover
             more, more_spent, more_added, pool, cg, cp = best
+            if context is not None:
+                context.adopt(best_context)
             return casts + more, spent + more_spent, added + more_added, pool, cg, cp
         cg, cp = g, p
+        if context is not None and (E.RESOURCE[c] is not None or E.CREW and E.CREATURE[c]):
+            i = 0
     return casts, spent, added, pool, cg, cp
 
 
-def _plan(E, pool, cands, abilities, t):
+def _plan(E, pool, cands, abilities, t, sources=(), creatures=()):
     """What gets cast this turn: (casts [(card, option)], abilities used,
     mana spent, mana added by rocks). cands are the spells in hand and the
     waiting commander, sorted most expensive first; abilities are ramp
     abilities on the battlefield ([cost, ready turn, ...])."""
-    casts, spent, added, pool, cg, cp = _cast(E, pool, list(cands), 0, ())
+    context = finite_mana.Context(E, sources, creatures, t) if E.HAS_RESOURCE else None
+    casts, spent, added, pool, cg, cp = _cast(E, pool, list(cands), 0, (), context)
     used = []
     ready = [a for a in abilities if a[1] <= t]
     for c, _ in casts:
@@ -262,6 +321,12 @@ def _plan(E, pool, cands, abilities, t):
             cg += a[0]
             spent += a[0]
             used.append(a)
+            if context is not None:
+                context.used_ability(a[-1])
+    if context is not None:
+        context.finish(pool, cg, cp)
+        return finite_mana.Plan(casts, used, spent + context.spent - context.mana_costs,
+                                added + context.generated - context.mana_costs, context)
     return casts, used, spent, added
 
 
@@ -477,39 +542,50 @@ def _bottom(E, hand, k):
     return hand, out
 
 
-def _new_counts(turns, n_colours):
+def _new_counts(turns, n_colours, model=None):
     z = [0] * (turns + 1)
-    return {"games": 0, "mulligan": 0, "free": 0, "kept": [0] * 8,
+    counts = {"games": 0, "mulligan": 0, "free": 0, "kept": [0] * 8,
             "drop": list(z), "mana": list(z), "mana_sum": list(z),
             "stuck": 0, "missed": 0, "flood_turns": 0, "flood_games": 0,
             "colour": [list(z) for _ in range(n_colours)], "screw": 0, "screw_wasted": 0,
             "spent": list(z), "avail": list(z), "all_used": list(z), "had_mana": list(z),
             "big": list(z), "big_never": 0}
+    if model is not None:
+        counts["casts"] = cast_metrics.counts(model, turns)
+    return counts
 
 
 def _add_counts(a, b):
     for key, value in b.items():
+        if key not in a:
+            a[key] = copy.deepcopy(value)
+            continue
+        if isinstance(value, dict):
+            _add_counts(a[key], value)
+            continue
         if isinstance(value, list):
-            if value and isinstance(value[0], list):
-                for x, y in zip(a[key], value):
-                    for i, v in enumerate(y):
-                        x[i] += v
-            else:
-                for i, v in enumerate(value):
-                    a[key][i] += v
+            _add_lists(a[key], value)
         else:
             a[key] += value
+
+
+def _add_lists(a, b):
+    for index, value in enumerate(b):
+        if isinstance(value, list):
+            _add_lists(a[index], value)
+        else:
+            a[index] += value
 
 
 def _play_games(E, setup, turns, games, rng, mulligans, trace=None):
     """Play games and count what happened (_new_counts). rng is a
     random.Random. trace, a list, gets one dict per turn of every game
     (for tests and debugging)."""
-    S = _new_counts(turns, len(E.colour_bits))
+    S = _new_counts(turns, len(E.colour_bits), E.model)
     draw_first = SETUPS[setup]["draw_first"]
     free_mulligan = SETUPS[setup]["free_mulligan"]
     multiplayer = free_mulligan
-    deck = list(E.deck0)
+    deck = [cast_metrics.Copy(cid, category) for cid, category in zip(E.deck0, E.model.get("copy_categories", [None] * len(E.deck0)))]
     K = min(len(deck), 7 + turns)
     IS_LAND, IS_MDFC, SPELL, LMASK, LAMT, LMIN, FETCH, LENTER = (E.IS_LAND, E.IS_MDFC, E.SPELL, E.LMASK, E.LAMT,
                                                                 E.LMIN, E.FETCH, E.LENTER)
@@ -520,6 +596,7 @@ def _play_games(E, setup, turns, games, rng, mulligans, trace=None):
     spent_c, avail_c, all_used, had_mana, big_c = S["spent"], S["avail"], S["all_used"], S["had_mana"], S["big"]
     colour_c = S["colour"]
     for _ in range(games):
+        metrics = cast_metrics.Game(E, S["casts"])
         hand, bottomed, taken = _deal(E, deck, rng, K, free_mulligan, mulligans)
         S["kept"][len(hand)] += 1
         if taken:
@@ -531,7 +608,8 @@ def _play_games(E, setup, turns, games, rng, mulligans, trace=None):
         lands_bf = []           # [land, turn it entered tapped (0: untapped)]
         perms = []              # (mask, amount, first turn it makes mana, mana its ability costs)
         abilities = []          # ramp abilities: [cost, ready turn, lands, to hand, spec, sac, card]
-        waiting = list(E.commanders)
+        finite_sources, creatures_bf = [], []
+        waiting = [cast_metrics.Copy(cid, category) for cid, category in zip(E.commanders, E.model.get("commander_categories", [None] * len(E.commanders)))]
         played = missed = flood = 0
         stuck = False
         first_big = 0
@@ -539,14 +617,17 @@ def _play_games(E, setup, turns, games, rng, mulligans, trace=None):
             if (t > 1 or draw_first) and ptr < len(library):
                 hand.append(library[ptr])
                 ptr += 1
+            released = finite_mana.begin_turn(E, finite_sources, creatures_bf, t) if E.HAS_RESOURCE else []
             cands = [c for c in hand if SPELL[c]] + waiting
             cands.sort(key=RANK.__getitem__)
             # A bounce land or Lotus Field is only played with the lands it needs to take.
             options = ([c for c in hand if IS_LAND[c] and (not LENTER[c] or _can_enter(E, c, lands_bf))]
                        or [c for c in hand if IS_MDFC[c] and (not LENTER[c] or _can_enter(E, c, lands_bf))])
             after = len(lands_bf) + (1 if options else 0)
-            base = []
+            base = list(released)
             have = 0
+            for mask in released:
+                have |= mask
             for l, _ in lands_bf:
                 have |= LMASK[l]
                 a = LAMT[l]
@@ -615,7 +696,7 @@ def _play_games(E, setup, turns, games, rng, mulligans, trace=None):
                             if IS_MDFC[c]:
                                 cc = list(cands)
                                 cc.remove(c)
-                            p = tried[key] = (_plan(E, pool, cc, abilities, t), pool, cc)
+                            p = tried[key] = (_plan(E, pool, cc, abilities, t, finite_sources, creatures_bf), pool, cc)
                         if pl is None or p[0][2] > pl[0][2]:
                             pl, source, a = p, s, sa
                     tried[c] = pl
@@ -662,12 +743,22 @@ def _play_games(E, setup, turns, games, rng, mulligans, trace=None):
             # lands a bounce land took back count as its mana instead of their own.
             avail = len(pool)
             pid = E.pool_id(pool)
+            available = finite_mana.Context(E, finite_sources, creatures_bf, t) if E.HAS_RESOURCE else None
+            capacity = available.capacity(pool) if available is not None else avail
+
+            def affordable(card):
+                if E.castable(pool, pid, card):
+                    return True
+                return available is not None and any(available.clone().supply(pool, 0, (), option, card) is not None for option in E.OPTS[card])
             late = LAMT[land] if land is not None and (not LMIN[land] or after >= LMIN[land]) else 0
-            if avail + late - gone >= t:
+            if capacity + late - gone >= t:
                 mana[t] += 1
-            mana_sum[t] += avail + late - gone
+            mana_sum[t] += capacity + late - gone
             if t <= n_colour_turns:
                 now = LMASK[land] if late else 0
+                if available is not None:
+                    for action in available.actions(pool):
+                        now |= action[3]
                 for m in pool:
                     now |= m
                 for i, bit in enumerate(colour_bits):
@@ -680,7 +771,7 @@ def _play_games(E, setup, turns, games, rng, mulligans, trace=None):
                 flood += 1
             screwed = False
             for c in cands:
-                if MINPAID[c] <= avail and not E.castable(pool, pid, c):
+                if MINPAID[c] <= capacity and not affordable(c):
                     screwed = True
                     S["screw"] += 1
                     break
@@ -689,14 +780,18 @@ def _play_games(E, setup, turns, games, rng, mulligans, trace=None):
                 more = pool + [ANY_MANA]
                 mid = E.pool_id(more)
                 for c in cands:
-                    if not E.castable(pool, pid, c) and E.castable(more, mid, c):
+                    extra_fits = E.castable(more, mid, c) or available is not None and any(
+                        available.clone().supply(more, 0, (), option, c) is not None for option in E.OPTS[c])
+                    if not affordable(c) and extra_fits:
                         stuck = stuck_now = True
                         break
             # --- cast
             if plan is None:
-                plan = _plan(E, pool, cands, abilities, t)
+                plan = _plan(E, pool, cands, abilities, t, finite_sources, creatures_bf)
             casts, used, spent, added = plan
+            metrics.observe_hand(hand, capacity, affordable, casts)
             for c, opt in casts:
+                metrics.cast(c, t, c in waiting)
                 if c in waiting:
                     waiting.remove(c)
                 else:
@@ -723,6 +818,8 @@ def _play_games(E, setup, turns, games, rng, mulligans, trace=None):
             for a in used:
                 abilities.remove(a)
                 _ramp(E, a[2], a[3], a[4], a[5], lands_bf, hand, waiting, library, ptr, perms, rng, turns - t, t)
+            if getattr(plan, "context", None) is not None:
+                finite_sources, creatures_bf = plan.context.sources, plan.context.creatures
             total = avail + added
             spent_c[t] += spent
             avail_c[t] += total
@@ -736,10 +833,11 @@ def _play_games(E, setup, turns, games, rng, mulligans, trace=None):
                 trace.append({
                     "turn": t, "kept": 7 - len(bottomed) if t == 1 else None,
                     "land": played_name, "land_tapped": land is not None,
-                    "mana": avail + late - gone, "usable": avail, "added": added, "spent": spent,
+                    "mana": capacity + late - gone, "usable": capacity, "added": added, "spent": spent,
                     "cast": [E.NAMES[c] for c, _ in casts], "abilities": [E.NAMES[a[-1]] for a in used],
                     "lands": sorted(E.NAMES[l] for l, _ in lands_bf), "hand": sorted(E.NAMES[c] for c in hand),
                     "flood": flooded, "screw": screwed, "stuck": stuck_now})
+            metrics.end_turn(t)
         S["missed"] += missed
         S["flood_turns"] += flood
         if flood >= FLOOD_GAME_TURNS:
@@ -750,6 +848,7 @@ def _play_games(E, setup, turns, games, rng, mulligans, trace=None):
             big_c[first_big] += 1
         else:
             S["big_never"] += 1
+        metrics.finish()
     S["games"] = games
     return S
 
