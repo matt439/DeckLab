@@ -7,6 +7,7 @@ What each milestone and feature built, the decisions made along the way, and the
 - The watchdog's canned status scenario now supplies a usable synthetic admin, so its five watchdog/network warnings remain the facts under test rather than gaining the new missing-admin warning. The config-diagnostic fixtures still test that warning explicitly.
 - The browser-cleanup proof matrix mocks startup/readiness while retaining actual report/runtime cleanup assertions. It covers every supported suite and missing/negative/positive close receipts without repeatedly starting real fixture servers; dedicated readiness and real-child cleanup tests remain separate.
 - Focused validation: 67 watchdog/status/profile-diagnostic fixtures and all 22 UI-harness fixtures pass (one platform skip). Failed full-suite shards are rerun after these test fixes; the ten-minute CI limit is unchanged.
+- The selected-version assembly regression now compares the retained counter/dice estimate with the ordinary token reader, instead of deliberately deleting the field as the old plan did. The rest of its token, printing, packing-key and selected-list checks stay intact.
 
 ## Take-along print background in dark mode (2026-11-10; E4-S29)
 
