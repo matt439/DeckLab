@@ -45,6 +45,9 @@ _running = None
 _latest = None
 _checked_at = 0.0
 _started_at = None
+ASSET_RECHECK_SECONDS = 1.0     # asset_is_current re-reads the web files at most this often
+_web_assets = None              # (root, web revision, {name: (st_mtime_ns, st_size)}) as last fingerprinted
+_web_assets_checked = None      # time.monotonic() of asset_is_current's last re-read
 
 
 class _Unavailable(Exception):
@@ -111,7 +114,9 @@ def _files(root, kind=None):
     return sorted(paths)
 
 
-def _fingerprints(root, kind=None):
+def _fingerprints(root, kind=None, stats=None):
+    """The runtime and web digests and the names hashed; stats, when given, is filled with
+    each hashed file's {name: (st_mtime_ns, st_size)}."""
     paths = _files(root, kind)
     digests = {name: hashlib.sha256() for name in ("runtime", "web")}
     names = set()
@@ -128,6 +133,8 @@ def _fingerprints(root, kind=None):
             data = data.replace(b"\r\n", b"\n")
         digests[category].update(name.encode("utf-8") + b"\0" + hashlib.sha256(data).digest())
         names.add(name)
+        if stats is not None:
+            stats[name] = (before.st_mtime_ns, before.st_size)
     if paths != _files(root, kind):
         raise _Unavailable("Application files changed while checking their version; try again.")
     return {name: digest.hexdigest() for name, digest in digests.items()}, names
@@ -235,12 +242,56 @@ def web_revision():
     """Fresh fingerprint for the HTML response's loaded-assets marker.
 
     This intentionally bypasses the status cache and Git so a newly loaded
-    page's marker describes the files currently being served.
+    page's marker describes the files currently being served. Each answer is
+    also remembered, with the files' sizes and modified times, for
+    asset_is_current.
     """
+    global _web_assets
+    root = Path(_root or _DEFAULT_ROOT)
     try:
-        return _fingerprints(_root or _DEFAULT_ROOT, "web")[0]["web"]
+        stats = {}
+        revision = _fingerprints(root, "web", stats)[0]["web"]
     except (_Unavailable, OSError, UnicodeError):
+        _web_assets = None
         return None
+    _web_assets = (root, revision, stats)
+    return revision
+
+
+def _asset_matches(remembered, root, web_dir, name, stat_key, version):
+    if remembered is None or remembered[0] != root or remembered[1][:len(version)] != version \
+            or remembered[2].get("decklab/web/" + name) != stat_key:
+        return False
+    try:
+        return os.path.samefile(web_dir, root / "decklab" / "web")
+    except OSError:
+        return False
+
+
+def asset_is_current(web_dir, name, stat_key, version, length=16):
+    """Whether version (a stamped URL's ?v=, the web revision's first `length` characters)
+    is the current web revision and the file `name` under web_dir (such as "app.js"), now
+    at stat_key (st_mtime_ns, st_size), is the very file that revision was worked out from:
+    only then may its answer be kept for good (E11-S64).
+
+    It's cheap: it compares against the last fingerprint web_revision() took (each page load
+    takes one), and re-reads the web files itself only on a mismatch, at most once every
+    ASSET_RECHECK_SECONDS. A wrong "no" only costs a conditional request later; it never
+    says yes for a file changed since the fingerprint (short of an edit that keeps both
+    the size and the modified time).
+    """
+    global _web_assets_checked
+    if not isinstance(version, str) or len(version) != length:
+        return False
+    root = Path(_root or _DEFAULT_ROOT)
+    if _asset_matches(_web_assets, root, web_dir, name, stat_key, version):
+        return True
+    now = time.monotonic()
+    if _web_assets_checked is not None and now - _web_assets_checked < ASSET_RECHECK_SECONDS:
+        return False
+    _web_assets_checked = now
+    web_revision()
+    return _asset_matches(_web_assets, root, web_dir, name, stat_key, version)
 
 
 def status():

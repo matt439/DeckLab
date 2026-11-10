@@ -6,6 +6,7 @@ Server is the threaded listener and make_server binds one. decklab/server.py
 is the script that runs them: its docstring has the table of URLs and the
 security rules these follow, and lib/server_run.py starts and stops them.
 """
+import gzip
 import hashlib
 import html
 import ipaddress
@@ -47,6 +48,17 @@ STATIC_TYPES = {
 STATIC_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*(\.[A-Za-z0-9]+)+")
 STATIC_FOLDERS = ("", "icons", "fonts")      # web/ itself, web/icons/ and web/fonts/
 PAGE_PARAMS = ("v", "profile", "theme")     # query parameters index.html accepts
+
+# The page's text files are sent gzipped to a client that accepts it; fonts and pictures are
+# compressed already (E11-S64).
+GZIP_SUFFIXES = (".html", ".js", ".css", ".webmanifest", ".json", ".svg")
+# A script or stylesheet asked for with the current web revision's ?v= stamp (index.html
+# stamps them) never changes under that address, so the browser keeps it without asking again.
+# private, never public: Cloudflare keeps nothing outside the login.
+STAMPED_SUFFIXES = (".js", ".css")
+STAMP_LENGTH = 16                   # characters of the web revision in a stamped address
+IMMUTABLE = "private, max-age=31536000, immutable"
+STATIC_CACHE_FILES = 2048           # the in-memory copies are dropped past this many files
 
 JSON_TYPE = "application/json; charset=utf-8"
 # A request body refused unread (413, 403, 415) is read and dropped before the
@@ -122,6 +134,71 @@ def log(text):
     if sys.stderr is not None:
         sys.stderr.write(text.rstrip("\n") + "\n")
         sys.stderr.flush()
+
+
+class StaticBody:
+    """One answer's bytes with their ETag and, made when first asked for, their gzipped form
+    with an ETag of its own."""
+
+    def __init__(self, body):
+        self.body = body
+        digest = hashlib.sha256(body).hexdigest()
+        self.etag = f'"{digest}"'
+        self.gzip_etag = f'"{digest}-gzip"'
+        self._gzipped = None
+
+    def gzipped(self):
+        if self._gzipped is None:
+            # mtime=0: the same bytes every time, so the ETag describes them.
+            self._gzipped = gzip.compress(self.body, compresslevel=6, mtime=0)
+        return self._gzipped
+
+
+_STATIC_CACHE = {}      # {path: ((st_mtime_ns, st_size), StaticBody)}: each served file as last read
+
+
+def _stat_key(path):
+    info = os.stat(path)
+    return info.st_mtime_ns, info.st_size
+
+
+def static_body(path):
+    """((st_mtime_ns, st_size), StaticBody) for a served file: the copy in memory while the
+    file's size and modified time are those it was read at, else read (and remembered)
+    again, so an edited or pulled file is served without a restart."""
+    key = str(path)
+    stat_key = _stat_key(path)
+    cached = _STATIC_CACHE.get(key)
+    if cached is not None and cached[0] == stat_key:
+        return cached
+    entry = (stat_key, StaticBody(Path(path).read_bytes()))
+    if _stat_key(path) != stat_key:
+        return entry        # changed while it was read: answer with what was read, remember nothing
+    if len(_STATIC_CACHE) >= STATIC_CACHE_FILES:
+        _STATIC_CACHE.clear()
+    _STATIC_CACHE[key] = entry
+    return entry
+
+
+def accepts_gzip(header):
+    """Whether an Accept-Encoding header takes gzip: named (or covered by *) with a q above 0."""
+    named = star = None
+    for part in (header or "").split(","):
+        coding, _, params = part.partition(";")
+        coding = coding.strip().lower()
+        quality = 1.0
+        for param in params.split(";"):
+            name, _, value = param.partition("=")
+            if name.strip().lower() == "q":
+                try:
+                    quality = float(value.strip())
+                except ValueError:
+                    quality = 0.0
+        if coding in ("gzip", "x-gzip"):
+            named = quality > 0 if named is None else named and quality > 0
+        elif coding == "*":
+            star = quality > 0
+    return bool(star) if named is None else named
 
 
 def static_files(web_dir=None):
@@ -914,13 +991,18 @@ class Handler(BaseHTTPRequestHandler):
         if path is None:
             raise api.ApiError(404, "Not found")
         self._allow(*GET)
+        params = {}
         if query:
             # ?v=2 to bust a cache is fine anywhere; the page itself also takes
             # ?profile=<id>&theme=light|dark, which app.js reads (for screenshots).
             params = self._query(query, PAGE_PARAMS if path == files.get("/") else ("v",))
             if not all(re.fullmatch(r"[\w.-]{1,40}", value) for value in params.values()):
                 raise api.ApiError(400, "Bad query parameter value")
-        body = path.read_bytes()
+        try:
+            stat_key, found = static_body(path)
+        except OSError:         # removed since the folder was listed
+            raise api.ApiError(404, "Not found") from None
+        body, suffix = found.body, path.suffix.lower()
         if path == files.get("/") and b"__DECKLAB_WEB_REVISION__" in body:
             # Freeze the page's version in the HTML, not in its later status request.
             revision = build.web_revision() or "unknown"
@@ -930,11 +1012,24 @@ class Handler(BaseHTTPRequestHandler):
             asset_version = revision[:16].encode("ascii")
             body = re.sub(rb'((?:src|href)="/[^"?]+\.(?:js|css))"',
                           lambda match: match[1] + b"?v=" + asset_version + b'"', body)
-        etag = '"' + hashlib.sha256(body).hexdigest() + '"'
-        headers = [("Cache-Control", "no-cache"), ("ETag", etag)]
-        content_type = STATIC_TYPES[path.suffix.lower()]
-        if etag in [t.strip() for t in self.headers.get("If-None-Match", "").split(",")]:
-            return self._send(304, b"", content_type, headers)
+            found = StaticBody(body)
+        # Kept for good only at the address index.html gave it for exactly these bytes;
+        # the page, fonts, an unstamped request and a stale ?v= are asked about each time.
+        cache = "no-cache"
+        if suffix in STAMPED_SUFFIXES and "v" in params and build.asset_is_current(
+                self.server.web_dir or WEB_DIR, "/".join(parts), stat_key, params["v"], STAMP_LENGTH):
+            cache = IMMUTABLE
+        etag, encoding = found.etag, []
+        if suffix in GZIP_SUFFIXES:
+            encoding = [("Vary", "Accept-Encoding")]
+            if accepts_gzip(self.headers.get("Accept-Encoding")):
+                body, etag = found.gzipped(), found.gzip_etag
+                encoding.append(("Content-Encoding", "gzip"))
+        headers = [("Cache-Control", cache), ("ETag", etag), *encoding]
+        content_type = STATIC_TYPES[suffix]
+        # A proxy that recompresses an answer sends its ETag on as a weak one (W/"...").
+        if etag in [t.strip().removeprefix("W/") for t in self.headers.get("If-None-Match", "").split(",")]:
+            return self._send(304, b"", content_type, headers[:3])
         return self._send(200, body, content_type, headers)
 
 
