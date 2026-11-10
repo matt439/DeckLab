@@ -2,6 +2,23 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Frozen OPEN queue: source completion and final rendered checks (2026-11-11)
+
+The 49 OPEN rows at `94f6b7c` now resolve to 45 built stories and four partial external acceptance gates: E2-S16 (actual household-device drafts), E7-S32 (real card/token photographs), E3-S23 (saved field policy in a real browser/run), and E11-S75 (NAS container and physical sleep/wake). TODO keeps those four gates explicit as DECISION; their stories remain partial. Pre-existing decision/deferred work stays outside the frozen queue. The continuing branch retains the earlier overnight work. No live migration, household/member record, visibility switch, deployment or operational setting was changed.
+
+Final source-stable Chromium qualification used committed source `2cae95f`, light/dark themes and phone/tablet/desktop sizes. All 102 states passed strict console checks with zero page/route/HTTP errors, no source drift, and complete fixture/browser/temporary-data cleanup. Selected phone/desktop screenshots were visually inspected for the changed facts, table headers, acknowledgements, footers and recovery actions. These synthetic intercepted controllers qualify rendering and interaction, not actual physical stock, devices or live writes.
+
+| Suite | Cases | Local receipt under `data/ui-review/` |
+|---|---:|---|
+| Shopping reviews | 12 | `20261110T235513Z-ce36b281` |
+| Practice insights | 24 | `20261110T235525Z-460ef672` |
+| Whole collection recovery | 12 | `20261110T235552Z-aebc61a9` |
+| Combined accessory record/crop | 24 | `20261110T235603Z-db2b7d93` |
+| Product-only kit recovery | 18 | `20261110T235630Z-dcf4dcc5` |
+| Coupled order/queue recovery | 12 | `20261110T235649Z-162bc464` |
+
+Repeat with `python scripts/ui_review.py --suite <name> --strict-console --timeout 180` using the corresponding suite identifiers in the runner. Ruff, source-length, story-count and public-repository checks pass. The final UI-tool regression passes 26 checks with one expected skip; final PostgreSQL-summary/coverage checks pass 28, with guarded database execution reserved for required CI. Separately authorised fixed-public-deck real Forge qualification passed as recorded below. Full Windows/Linux fixtures, disposable PostgreSQL and Linux services remain PR CI gates; no local fixture result is substituted for them.
+
 ## Complete coupled order/queue recovery and authoritative write acknowledgements (2026-11-11; E11-S08/E11-S76/E11-S77)
 
 The last source work in the frozen OPEN queue is implemented. Activity can review and reverse one complete unreceived order lifecycle together with its queue intent: add with fulfilment, cancellation or removal, including card/token/product payloads and proven product-status position shifts. One explicit reason covers the whole inverse. Current authored deck text, handwritten notes and private kit survive; ordinary refresh recomputes availability. Source/current/latest/ABA/context checks run again under the inventory claim, then exact order/item/queue/deck audit effects and unique newer IDs are proved before commit. Unrelated member/private-kit changes do not alter the receipt, while relevant own-space changes still invalidate it. More than 50 total audit rows, invalid or ambiguous facts and mixed unproved sources refuse whole. Locations retain E8-S22's explicit separate filing workflow; historical unaudited photos remain unavailable. No live records changed.
