@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 32 | 1 | 2 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 52 | 14 | 9 | 4 |
-| **Total** | **376** | **300** | **22** | **38** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 53 | 14 | 8 | 4 |
+| **Total** | **376** | **301** | **22** | **37** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6484,7 +6484,7 @@ First slice: an unsupported result from `schedule status` off Windows and Linux 
 
 Built (2026-11-11): foreground/manual macOS is the documented built-in mode. Unsupported service/update actions give macOS instructions before native commands or fetches; schedule status exits nonzero. Smoke uses only a recent successful whole-nightly receipt for retrospective evidence, and never claims a future timer was checked. Migration 0023 adds those whole-run receipts without changing existing step exits. Homebrew/Postgres.app hints, two editable operator-managed LaunchAgent examples and Apple Silicon/Intel/system JDK discovery are included. Fixture validation covers unsupported/no-native behavior, wrapper routing, receipt age/result and fake JDK layouts; plist examples parse. No actual Mac scheduling/install or live backup was performed.
 
-**E11-S83** · Self-hoster · could · M · missing
+**E11-S83** · Self-hoster · could · M · built
 
 As a newcomer opening Deck Lab for the first time, I want the page to explain its own words and offer only what fits my install, so that I can import my cards and make a first deck without reading the reference.
 
@@ -6499,6 +6499,8 @@ As a newcomer opening Deck Lab for the first time, I want the page to explain it
 Gap: `decklab/web/editor.js` always offers user, wife and either; the Status and list words have no hints in the page; collection import reads CSV only though the field says .txt; the empty Collection offers only Add card. E11-S52's setup page is separate. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (first-run-ui 3 to 9, database-and-config 6, docs-readability 9).
 
 First slice: Played by offering only the players the profiles have, never a raw key, in `decklab/web/editor.js` and `decklab/web/app.js`, with one-line hints under Status and beside the Planned/Play-now switch.
+
+Built (2026-11-11): Played by offers only configured home slots (and the shared option when applicable), retaining member restrictions and all player/kit draft gates; old absent slots display neutral words. Profile first/second aliases normalize to existing record values without rewriting config. Status/list hints and a static About-linked glossary explain the terms. Import now explicitly requires collection CSV/printing-tagged text, explains that a bare name list needs printing details, names each supported app's export location and supplies a blank CSV template without guessing owned printings. Empty Collection offers Import, precon, Scan and Add one card only to its current editor. Card-data recovery commands/log location are named-admin-only; a missing Forge install is informational/optional and broken installations keep their diagnostic.93 focused checks and46 overlapping web/version/observability checks pass; six strict synthetic phone captures completed cleanly and were inspected. No live config, cards, import, download, Forge or device acceptance was used.
 
 **E11-S84** · Self-hoster · should · S · partial
 

@@ -80,15 +80,29 @@ def _require_cards():
     info, reason = _index_info()
     if info is not None:
         return
+    recovery = _card_recovery()
     if UPDATE["running"]:
         raise ApiError(503, "The card data is still being downloaded from Scryfall and indexed "
-                            "(the first start takes a few minutes). Try again shortly.")
+                            "(the first start takes a few minutes). Try again shortly." + recovery)
     if UPDATE["error"]:
         raise ApiError(503, "There's no card data yet: the last download from Scryfall failed. "
                             "Deck Lab tries again by itself; the server log on the PC says what "
-                            "went wrong.")
+                            "went wrong." + recovery)
     raise ApiError(503, f"{reason}. Deck Lab gets it from Scryfall when it starts; the server log "
-                        f"on the PC says more.")
+                        f"on the PC says more." + recovery)
+
+
+def _card_recovery():
+    """Fixed local instructions only to a named admin; never a raw index/update error."""
+    from . import guard
+    try:
+        viewer = guard.viewer()
+    except ApiError:
+        viewer = None
+    if not viewer or viewer.get("role") != "admin":
+        return ""
+    return (" On the server PC run python -m decklab.lib.cards update; see "
+            "decklab/data/logs/server.log (or the configured server log).")
 
 
 def _cached_rate(code=None):
@@ -131,6 +145,7 @@ def status():
             "built_at": info["built_at"] if info else None,
             "price_date": (cards.price_date() or None) if info else None,
             "error": error,
+            "help": _card_recovery().strip() if info is None else None,
         },
         "updating": UPDATE["running"],
         "update_error": UPDATE["error"],

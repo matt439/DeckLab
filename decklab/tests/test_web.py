@@ -386,6 +386,12 @@ class WebFileTests(unittest.TestCase):
             self.assertTrue(url.startswith("data:") or url.startswith("/"), url)
         for name in SCRIPTS:
             script = _text(name).replace(SVG_NAMESPACE, "")
+            if name == "collection.js":
+                # Explicit help hyperlinks are navigation, never loaded resources or API URLs.
+                help_links = _function(script, "colImportHelp")
+                self.assertNotRegex(help_links, r"\b(?:fetch|api|apiWrite)\(|\bsrc\s*:")
+                self.assertIn('target: "_blank", rel: "noopener noreferrer"', help_links)
+                script = script.replace(help_links, "")
             self.assertNotRegex(script, r"https?://", name)
             self.assertNotRegex(script, r"\bimport\s*\(|importScripts", name)
             for call in re.findall(r"\bapi(?:Write)?\(\s*[`'\"]([^`'\"]*)", script):

@@ -1062,6 +1062,9 @@ function openPlaySheet(library, live, token, preset, format = null) {
 function forgeBox(forge) {
   if (!forge) return null;
   if (forge.ready === false) {
+    if (forge.installed === false) return markedBox("info", "h2", "Simulations are optional", [
+      el("p", {text: "Forge isn't installed. Collection, deck building and manual practice still work. Saved simulation results still show."}),
+      el("p", {text: "To enable simulations, the server's operator can follow SELF-HOSTING.md step 8."})]);
     return markedBox("warn", "h2", "Forge isn't ready on the PC",
       el("p", { text: (forge.problem || "Forge can't be started.") + " Saved results still show, but no new games can be played until it's fixed." }));
   }

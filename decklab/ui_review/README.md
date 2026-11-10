@@ -68,6 +68,7 @@ python scripts/ui_review.py --suite crosscheck
 python scripts/ui_review.py --suite assembly-counters
 python scripts/ui_review.py --suite precon-bonus
 python scripts/ui_review.py --suite life-counters
+python scripts/ui_review.py --suite first-use --smoke --strict-console
 python scripts/ui_review.py --smoke --suite capture --strict-console
 python scripts/ui_review.py --output C:/Temp/decklab-ui-review-01
 python scripts/ui_review.py --browser "C:/Program Files/Google/Chrome/Application/chrome.exe"

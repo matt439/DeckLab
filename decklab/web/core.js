@@ -495,6 +495,7 @@ const ROUTES = [
   { path: "settings", label: "Settings", h1: "Settings", title: "Settings", icon: "settings", nav: "account",
     visible: (profile, may) => isAdminProfile(profile, may) },
   // Child pages: reached from a page above, never from the nav.
+  { path: "help", label: "What these words mean", h1: "What these words mean", title: "Deck Lab words", parent: "library" },
   { path: "deck", label: "Deck", h1: "Deck", title: "Deck", parent: "library" },
   { path: "edit", label: "Edit deck", h1: "Edit deck", title: "Edit deck", parent: "deck" },
   { path: "new", label: "New deck", h1: "New deck", title: "New deck", parent: "library" },

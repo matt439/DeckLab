@@ -164,5 +164,5 @@ function versionPicker(data, screen) {
   return el("div", { class: "deck-lists" },
     el("nav", { class: "deck-lists-row", "aria-label": "Which list" },
       el("div", { class: "segmented" }, links), info),
-    about);
+    el("p", { class: "sub", text: "Planned is the list you want; Play-now uses cards owned or on the way. Check availability before playing." }), about);
 }

@@ -21,7 +21,8 @@ Each profile is a dict:
   (lib/spaces.py). Default "home". Any other value, or a person space whose
   id lib/spaces.py reserves (home, casual, commander, product, pairing,
   people), leaves the profile out;
-- plays_as: which home deck's "Played by" is theirs (user, wife or either).
+- plays_as: which home deck's "Played by" is theirs (first/second aliases
+  normalize to the existing user/wife values, or either).
   Required for a home profile, as before; None for a person space, whose
   decks are theirs by where they live;
 - emails: the lowercase addresses Cloudflare Access may sign for this
@@ -45,6 +46,7 @@ import re
 from decklab.lib import config
 
 ROLES = ("admin", "member")
+PLAYER_ALIASES = {"first": "user", "second": "wife"}
 HOME = "home"
 # Person-space ids that would clash with a deck id's first part or the people folder.
 RESERVED_SPACES = frozenset({HOME, "casual", "commander", "product", "pairing", "people"})
@@ -60,7 +62,7 @@ ISSUE_REASONS = {
     "duplicate_id": "id repeats an earlier usable profile entry.",
     "invalid_name": "name must be text.",
     "invalid_space": "space must be home or the profile's own non-reserved id.",
-    "invalid_plays_as": "A home profile needs plays_as set to user, wife or either.",
+    "invalid_plays_as": "A home profile needs plays_as set to first, second or either (legacy user/wife also work).",
 }
 
 
@@ -173,10 +175,12 @@ def parse_with_diagnostics(listed, access=False):
             continue
         space = p.get("space", HOME)
         if space == HOME:
-            if p.get("plays_as") not in PLAYERS:
+            plays_as = p.get("plays_as")
+            if isinstance(plays_as, str):
+                plays_as = PLAYER_ALIASES.get(plays_as, plays_as)
+            if plays_as not in PLAYERS:
                 reject(index, "invalid_plays_as")
                 continue
-            plays_as = p["plays_as"]
         elif space == p["id"] and space not in RESERVED_SPACES:
             plays_as = None
         else:

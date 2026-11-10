@@ -23,7 +23,7 @@ from unittest import mock
 
 from decklab.db import conn as db
 from decklab.db import export, inv_inventory
-from decklab.lib import config, dbstatus, permissions
+from decklab.lib import config, dbstatus, inventory, permissions
 from decklab.lib.api import activity
 from decklab.lib.inventory import files, paths
 from decklab.lib.inventory.model import CardRow
@@ -343,16 +343,19 @@ class StatusTests(unittest.TestCase):
     def test_imported_and_staleness(self):
         self.assertEqual(dbstatus.inventory_view(self.snapshot()),
                          {"imported": True, "revision": "7", "imported_at": "2026-10-12T09:00:00+10:00",
-                          "stale": False, "not_imported": False})
-        down = dbstatus.inventory_view(self.snapshot(ok=False, usable=False, error=dbstatus.NOT_REACHABLE,
-                                                     inventory=None))
-        self.assertEqual((down["stale"], down["imported"]), (True, None))
+                          "stale": False, "unavailable": False, "not_imported": False})
+        with mock.patch.object(inventory, "cached_snapshot_available", return_value=False):
+            down = dbstatus.inventory_view(self.snapshot(ok=False, usable=False, error=dbstatus.NOT_REACHABLE,
+                                                         inventory=None))
+        self.assertEqual((down["stale"], down["unavailable"], down["imported"]), (False, True, None))
+        with mock.patch.object(inventory, "cached_snapshot_available", return_value=True):
+            self.assertTrue(dbstatus.inventory_view(self.snapshot(usable=False, inventory=None))["stale"])
         empty = dbstatus.inventory_view(self.snapshot(inventory={"tables": True, "revision": None,
                                                                  "imported_at": None}))
         self.assertEqual((empty["stale"], empty["not_imported"]), (False, True))
         unmigrated = dbstatus.inventory_view(self.snapshot(ok=False, error=dbstatus.MIGRATIONS_PENDING, inventory={
             "tables": False, "revision": None, "imported_at": None}))
-        self.assertEqual((unmigrated["stale"], unmigrated["not_imported"]), (True, False))
+        self.assertEqual((unmigrated["unavailable"], unmigrated["not_imported"]), (True, False))
         with mock.patch.object(dbstatus, "_snapshot", self.snapshot()):
             self.assertNotIn("inventory", dbstatus.view({"id": "user1", "role": "member"}))
             self.assertIn("inventory", dbstatus.view({"id": "matt", "role": "admin"}))

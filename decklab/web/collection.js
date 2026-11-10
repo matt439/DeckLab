@@ -638,9 +638,17 @@ function colFindEmpty(cv, filtered, total = 0) {
     return el("div", { class: "empty" }, el("p", { text: "No cards match these filters." }),
       el("a", { class: "btn", href: colHash(cv.space, "find"), text: "Clear the filters" }));
   }
-  return el("div", { class: "empty" }, el("p", { text: "No cards recorded yet." }),
-    cv.editable ? el("button", { type: "button", class: "btn col-mutate", text: "Add card",
-      onclick: () => openCollectionSheet(cv) }) : null);
+  const ways = cv.editable && !cv.unsupported ? [
+    ["Import cards", openImportSheet, "Bring in a collection export."],
+    ["Add a precon", openPreconSheet, "Add an opened precon's cards and deck."],
+    ["Scan cards", openScanSheet, "Review photos of your cards."],
+    ["Add one card", openCollectionSheet, "Choose a card and its printing."]
+  ] : [];
+  return el("div", { class: "empty lib-start" }, el("p", { text: ways.length ? "No cards recorded yet. Start with one of these:" : "No cards recorded yet." }),
+    ways.length ? el("ul", {class: "lib-start-ways"}, ways.map(([text, open, line]) => el("li", {},
+      el("button", {type: "button", class: "btn col-mutate", text, onclick: event => {
+        if (event.currentTarget.isConnected && colActive(cv) && !cv.busy) open(cv);
+      }}), el("span", {class: "lib-start-line", text: line})))) : null);
 }
 
 /** "3 owned · 2 free" (or "· all in decks"); "1 on the way" alone for a card with none owned yet. */
@@ -808,6 +816,30 @@ function colRowFacts(row) {
 
 // ------------------------------------------------------------------ import
 
+/** Export locations link to the source app; no export or external request happens here. */
+function colImportHelp(cv, sheet) {
+  const sources = [
+    ["ManaBox", "Collection tab → top-right menu → export CSV; a binder can be exported from its own menu.", "https://manabox.app/guides/collection/import-export/"],
+    ["Moxfield", "Open Collection and use its Export CSV control, rather than a deck export.", "https://moxfield.com/help"],
+    ["Deckbox", "Open your Inventory and use Export for a collection CSV.", "https://deckbox.org/help/exports_and_imports"],
+    ["Archidekt", "Open Collection and choose Export with quantity, name, set code and collector number included.", "https://archidekt.com/"],
+    ["Dragon Shield", "Open the collection folder and use its export option for a CSV.", "https://mtg.dragonshield.com/"],
+    ["Delver Lens", "Use Export's CSV/site preset with set and collector number; see Exporting to sites in its tutorial.", "https://www.delverlab.com/"],
+    ["TCGplayer", "Account → Settings → Sharing: choose CSV and identifying output columns, then share/export the collection list.", "https://help.tcgplayer.com/hc/en-us/articles/115010308788-Choosing-Your-Settings"]
+  ];
+  return el("details", {class: "col-import-help"}, el("summary", {text: "Where to export, or start a CSV"}),
+    el("ul", {}, sources.map(([name, text, href]) => el("li", {},
+      el("strong", {text: name + ": "}), text, " ", el("a", {href, target: "_blank", rel: "noopener noreferrer", text: "Source app/help"})))),
+    el("p", {class: "sub", text: "Keep card name, quantity, set code, collector number and finish. ID-only exports need printing details added first. Menus can change; use the source app's help if a control moved."}),
+    el("button", {type: "button", class: "btn", text: "Download blank collection CSV", onclick: event => {
+      if (sheet.closed || !event.currentTarget.isConnected || !colActive(cv)) return;
+      const url = URL.createObjectURL(new Blob([COL_FIELDS.join(",") + "\n"], {type: "text/csv;charset=utf-8"}));
+      const link = el("a", {href: url, download: "decklab-collection-template.csv"});
+      document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }}));
+}
+
 /** The text of a chosen file (FileReader, read here in the browser). */
 function readImportFile(file) {
   if (file && typeof file.text === "function") return file.text();
@@ -854,7 +886,8 @@ function openImportSheet(cv) {
     previewImport(ctx, file.name, text);
   });
   sheet.body.append(
-    el("p", { text: "Choose a ManaBox, Moxfield, Deckbox, Archidekt, Dragon Shield or TCGplayer CSV, a supported Delver Lens CSV preset, or a text list with quantity, name, set and number. Nothing is added until you say so. Unknown condition and language stay blank; spending and location columns aren't imported." }),
+    el("p", { text: "Choose a collection CSV or a text list including printings, such as 4 Lightning Bolt (M11) 149. A name-only list such as 4 Lightning Bolt needs its set and number first: use Add one card to choose them. Nothing is added until you review it. Unknown condition and language stay blank; spending and location columns aren't imported." }),
+    colImportHelp(cv, sheet),
     el("label", { class: "field col-file-field", for: input.id }, el("span", { text: "File (.csv or .txt)" }), input),
     ctx.message, ctx.area);
   sheetActions(sheet, [{ text: "Cancel", value: "cancel", onclick: () => sheet.close() }]);

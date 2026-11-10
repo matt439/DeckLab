@@ -157,7 +157,8 @@ function renderVersionStatus(s) {
   const cardWords = s.cards?.ready
     ? `Card data from Scryfall, index built ${(s.cards.built_at || "").slice(0, 10)}` +
       (s.cards.price_date ? `, prices of ${s.cards.price_date}` : "") + (s.fx ? `. 1 USD = ${s.fx.rate} ${priceCurrency()}${s.fx.date ? ` (ECB rate of ${s.fx.date})` : ""}` : "") + "."
-    : s.updating ? "Card data is being downloaded from Scryfall…" : "No card data yet. Deck Lab downloads it from Scryfall when it starts.";
+    : (s.updating ? "Card data is being downloaded from Scryfall…" : "No card data yet. Deck Lab downloads it from Scryfall when it starts.") +
+      (s.cards?.help ? ` ${s.cards.help}` : "");
   // A status region: rewritten only when the words change, so it announces the download starting and finishing,
   // not every check.
   if (cards && cards.textContent !== cardWords) cards.textContent = cardWords;

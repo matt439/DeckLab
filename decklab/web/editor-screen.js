@@ -201,6 +201,7 @@ function editorHead() {
       el("div", { class: "segmented" }, ["target", "owned"].map((v) => el("a", {
         href: editHref(ed.id, v), "aria-current": v === ed.version ? "page" : null },
       listName(v), v === "owned" && ed.view.lists.owned == null ? el("span", { class: "none-yet", text: " (none yet)" }) : null)))));
+    head.append(el("p", { class: "sub", text: "Planned is the list you want; Play-now uses cards owned or on the way. Check availability before playing." }));
     if (ed.readOnly) {
       head.append(el("p", { class: "sub edit-read-only", text: ed.space === HOME_SPACE
         ? "Only the people this deck belongs to can save it. Try changes and test them; nothing is saved."

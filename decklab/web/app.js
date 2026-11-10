@@ -90,7 +90,7 @@ async function changeTheme(theme) {
 function playerWords(player) {
   if (player === "either") return state.profiles.filter((p) => p.plays_as).map((p) => p.name).join(" or ") || "Either";
   const profile = state.profiles.find((p) => p.plays_as && p.plays_as === player);
-  return profile ? profile.name : (player || "Not set");
+  return profile ? profile.name : ({user: "First player", wife: "Second player"}[player] || player || "Not set");
 }
 
 /** Who plays a deck, in words: a person's deck is theirs (it has no Played by of its own unless written). */
@@ -273,6 +273,7 @@ function route() {
   setTitle(routeFor(path).title);
   syncShell(path);
   if (path === "wishlist") return showWishlist(token);
+  if (path === "help") return showTerminology();
   if (path === "shopping") return seesHomeInventory(state.may) ? showShopping(token) : showNoInventory(routeH1("shopping"));
   if (path === "accessories") return mayDo("see_accessories") ? showAccessories(token) : showNoAccessories();
   if (path === "tokens") return showTokens(token, params);

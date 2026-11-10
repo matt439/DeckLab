@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## First-use player choices, terms and collection starts (2026-11-11; E11-S83)
+
+- Played by follows configured home slots, preserves member and player/kit draft restrictions, and uses neutral words for absent old slots. Config first/second aliases normalize to existing user/wife record values without changing permissions or writing configuration; examples explain the two slots and either.
+- Status and Planned/Play-now controls have short hints. About links a static glossary. Empty Collection offers Import, precon, Scan and Add one card to the current editor; stale controls cannot act. Import explicitly requires printing details, names source app export locations and offers a blank eight-column CSV template, with no guessed physical printing.
+- A named admin gets fixed card-data recovery command/log guidance; members retain plain messages. Missing Forge is informational and optional, distinct from an installed but broken setup. Narrow older setup/status test doubles were aligned with the already-shipped PostgreSQL-version and no-retained-snapshot checks.
+- Validation:93 focused backend/UI/player-kit checks and46 overlapping web/version/diagnostic checks pass, plus30 first-use/review-runner checks (one native skip). Six strict synthetic phone captures passed and representative images were inspected: data/ui-review/20261110T183710Z-cbfed045. No actual config, collection, import, Forge installation or device check was performed.
+
 ## Bounded operator diagnostics and optional heartbeat hooks (2026-11-11; E11-S68)
 
 - DB logs rotate at2MB with three backups and a64KiB entry cap. Shop-health receipts retain only public shop keys, dates and outcomes; three distinct consecutive unreadable nights warn a named home admin, with retry/success/gap/disabled-shop handling and the last readable date.

@@ -340,7 +340,7 @@ def load_json(path):
 class StatusTests(ForgeCase):
 
     def test_ready(self):
-        self.assertEqual(forge.status(), {"ready": True, "version": "2.0.15", "problem": None,
+        self.assertEqual(forge.status(), {"ready": True, "installed": True, "version": "2.0.15", "problem": None,
                                           "card_log": {"ready": False, "problem": NO_JDK}, "pool": None,
                                           "overrides": {"deployed": ["Fiery Annihilation"], "stale": [],
                                                         "hash": forge.overrides.deployed_hash(forge.common._user_dir())},
@@ -401,7 +401,7 @@ class StatusTests(ForgeCase):
     def test_not_installed(self):
         self.settings["forge_dir"] = str(self.tmp / "nowhere")
         found = forge.status()
-        self.assertEqual(found, {"ready": False, "version": None,
+        self.assertEqual(found, {"ready": False, "installed": False, "version": None,
                                  "problem": "Forge isn't installed at the folder config.json names.",
                                  "card_log": {"ready": False, "problem": "Forge can't run, so the card log can't either."},
                                  "pool": None, "overrides": {"deployed": [], "stale": [], "hash": "none"},
@@ -414,6 +414,7 @@ class StatusTests(ForgeCase):
         found = forge.status()
         self.assertEqual((found["ready"], found["version"], found["problem"]),
                          (False, "2.0.15", "Java wasn't found, so Forge can't run."))
+        self.assertTrue(found["installed"], "an installed Forge with broken Java is not a missing optional install")
 
     def test_never_raises(self):
         with mock.patch.object(forge.common, "_settings", side_effect=ValueError("bad json")):

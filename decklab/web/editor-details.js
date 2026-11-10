@@ -68,7 +68,8 @@ function drawDetails() {
     }
     add(host, [spaceField()]);
   }
-  const status_ = choiceField("status", "Status", Object.entries(STATUS_WORDS));
+  const status_ = choiceField("status", "Status", Object.entries(STATUS_WORDS),
+    "Idea is a plan; Building is being assembled; Built reserves its physical cards.");
   if (builtVersionGoes()) {
     status_.append(el("small", { class: "field-hint field-note", text: `Its Built version line (${fieldValueWords("built_version",
       ed.base.fields.built_version)}) goes too when it's saved: only a built deck has one.` }));

@@ -120,7 +120,7 @@ In PowerShell, `Copy-Item decklab/config.example.json decklab/config.json` works
 {
   "timezone": "Australia/Brisbane",
   "profiles": [
-    {"id": "alex", "name": "Alex", "plays_as": "user", "role": "admin", "space": "home", "emails": []}
+    {"id": "alex", "name": "Alex", "plays_as": "first", "role": "admin", "space": "home", "emails": []}
   ]
 }
 ```
@@ -128,10 +128,10 @@ In PowerShell, `Copy-Item decklab/config.example.json decklab/config.json` works
 - `id` is lowercase letters, digits and hyphens, and `name` is what the page shows.
 - `role` `admin` may change everything at home. Give the first profile that role.
 - `space` `home` is the household's shared collection and decks.
-- `plays_as` says whose decks are whose at home: `user` for the first home player, `wife` for the second, and a deck's **Played by** can also be `either`. The words are the original household's and only label decks.
+- `plays_as` identifies one of the two supported home player slots: `first` or `second`. They normalize to the older `user`/`wife` values in saved records; existing configs still work. A profile using `either` can edit home decks marked **Played by: either** (an admin can also edit the other home decks). It does not grant both personal slots to a member. Use a separate space for someone with their own collection.
 - `emails` is used only for logins from outside the home (step 10). Leave it empty.
 
-To add a second person who shares your cards, add another profile with `"space": "home"`, `"role": "member"` and `"plays_as": "wife"`. Someone with a collection of their own gets `"space"` set to their own `id` and no `plays_as`. The reference’s [People's own collections (spaces)](decklab/README.md#peoples-own-collections-spaces) explains what each can see and change.
+To add a second person who shares your cards, add another profile with `"space": "home"`, `"role": "member"` and `"plays_as": "second"`. Someone with a collection of their own gets `"space"` set to their own `id` and no `plays_as`. The reference’s [People's own collections (spaces)](decklab/README.md#peoples-own-collections-spaces) explains what each can see and change.
 
 `config.json` is gitignored, so your names and addresses never end up in a commit. The other settings all have defaults. [decklab/config.full.example.json](decklab/config.full.example.json) shows the optional blocks for a backup folder, outside access through Cloudflare and a records repo. Its `backup_dir` and `records_repo` are Windows paths; Linux refuses those, so on Linux give absolute paths such as `/mnt/nas-backups/DeckLab` and `/home/<you>/MyCardRecords`.
 
