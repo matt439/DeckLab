@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## A newcomer path through self-hosting (2026-11-11; E11-S80)
+
+- SELF-HOSTING now leads with time/resource planning, required/optional contents and a Windows PowerShell quick start covering downloads, interpreter/PATH/Store aliases, password custody and doctor checks. Versioned Linux/macOS package examples and the PostgreSQL apt path are linked to vendor instructions; profile/timezone/path and regional pricing examples are explicit.
+- Windows background setup includes at-logon, its bundled watchdog, firewall and signed-in-account behavior. Optional NAS/remote-export hardening is separated; export initializes its own repo. Lost-disk restore instructions and troubleshooting name the supported commands/logs without requiring an old digest file.
+- The root README correctly distinguishes Windows/Linux services from macOS's manual scheduling and marks outside access optional. The command reference has contents, a neutral opening and a roles/pgpass-first Database section, with historical rollout notes moved below current operations.
+- Validation: local heading/anchor and JSON-example checks pass, restore flags match the fixture-guarded parser, public/whitespace audits pass, and current primary download/package/authentication docs were read. Installation, recovery, Autologon and service examples were not executed; resource figures are planning allowances, not certified minima.
+
 ## Shared typed searches and mana-value ranges (2026-11-11; E7-S34)
 
 - Editor and Collection now use one parser for o:/t: terms, aliases, quoted/open/phone phrases, negative rules/type terms and mana-value comparisons (including fractional values). Untyped words retain each page's prior matching scope and the existing identity/free/incoming/location filters.

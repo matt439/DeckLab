@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 46 | 14 | 15 | 4 |
-| **Total** | **376** | **286** | **22** | **52** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 47 | 14 | 14 | 4 |
+| **Total** | **376** | **287** | **22** | **51** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6431,7 +6431,7 @@ Compatibility review: Forge's config update and the strict member-config reader 
 
 Left: Matt's decision about the timezone default (PC's zone or an explicit example setting); the current fallback is unchanged. E11-S52's setup page would replace hand editing later. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (windows-walkthrough 1, errors-and-recovery 0, 7, database-and-config 2, 3, first-run-ui 0, linux-mac 9).
 
-**E11-S80** · Self-hoster · should · M · missing
+**E11-S80** · Self-hoster · should · M · built
 
 As a newcomer reading SELF-HOSTING.md top-down, I want the required path short, ordered and in plain words, with the Windows traps named, so that I know which terminal to open, what to install, how long it takes and what to check after each step.
 
@@ -6445,9 +6445,9 @@ As a newcomer reading SELF-HOSTING.md top-down, I want the required path short, 
 - Given README.md, then it says Windows and Linux both get the background service and nightly task, only macOS needs its own, outside access is optional, and git is required until a release is published (E11-S49).
 - Given a quoted section name of decklab/README.md, then it's a link, and decklab/README.md has a contents list; its `## Database` opens with the roles and pgpass, its migration notes moved below, and its opening reads as a reference without household names or notes to a coding session.
 
-Gap: every step works as written in PowerShell (checked on a fresh clone), but the guide names no shell, no download links, no PATH trap, no time or hardware, introduces the doctor only at step 7, and leaves out `--at-logon`; README.md contradicts it on Linux. Documentation only. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (windows-walkthrough 0, 3 to 5, 7 to 10, linux-mac 6, 10 to 12, database-and-config 4, 5, 7, docs-readability 0, 2 to 8, errors-and-recovery 5, 9, ongoing-use-burden 3 to 6, 8).
+Built 2026-11-11: SELF-HOSTING opens with planning allowances, required/optional contents and a PowerShell quick start with direct prerequisite links, Python3.14/PATH/Store-alias checks, password custody and incremental doctor guidance. Linux/macOS package examples use the versioned interpreter/PostgreSQL tools and link the vendor apt path when needed. Profile/timezone/path/currency/shop examples are explicit. Windows setup names at-logon/watchdog/firewall/sign-in behavior; optional NAS/export controls are separated. A lost-disk recovery path uses restore --replace --force without digest.json, and troubleshooting covers syntax, port, phone/network, interpreter, simulation and log locations.
 
-First slice: the "Before you start" box, contents list and "Quick start (Windows)" box at the top of SELF-HOSTING.md, with step 1's PATH and PowerShell notes, the step 4/5 cross-reference fixed, step 9's `--at-logon`, and README.md's Linux line corrected.
+The root README accurately names Windows/Linux background/nightly support, optional outside access and the release/git boundary. The full reference now has contents and a neutral opening; Database starts with roles/pgpass and keeps historical migration notes after current operations. Exact quoted reference headings are linked. Validation: both contents lists resolve against real headings outside fences, the main JSON example parses, restore flags match the guarded CLI parser, public audit/whitespace pass; current vendor download/package/authentication links were read. Commands are documentation, not executed installs or hardware qualification. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md).
 
 **E11-S81** · Self-hoster · could · M · missing
 

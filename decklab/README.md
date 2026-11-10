@@ -1,6 +1,34 @@
-# Deck Lab
+# Deck Lab reference
 
-A web page for Magic decks: the deck library, personal card wishlists, shared shopping and delivery status, each deck's cards and stats, practice-hand results (how its mana holds up over 100,000 simulated games), matchups between decks and against the rest of a deck's format (full games played by Forge's computer players), what's owned vs still needed, and an editor that saves the decks (in Deck Lab's database) and can test a change on the deck's own games first. It runs on this PC and is used from phones and the iPad on the home network, and in a browser on the PC itself. [PLAN.md](PLAN.md) has the full plan. This file is the reference for one household's PC, so it names that PC's folders and people; to set up your own Deck Lab, start with [SELF-HOSTING.md](../SELF-HOSTING.md).
+This reference explains running, configuring and using a self-hosted Deck Lab installation. For a first install follow [SELF-HOSTING.md](../SELF-HOSTING.md); use this page to look up a command, page or setting. Example paths and profiles are placeholders to replace with your own.
+
+## Contents
+
+- [Start it](#start-it)
+- [Stop, start and restart](#stop-start-and-restart)
+- [The log](#the-log)
+- [Open it](#open-it)
+- [Collection and physical play](#collection-and-physical-play)
+- [People's own collections (spaces)](#peoples-own-collections-spaces)
+- [Wishlists](#wishlists)
+- [Activity](#activity)
+- [Shopping and deliveries](#shopping-and-deliveries)
+- [Accessories](#accessories)
+- [Tokens](#tokens)
+- [Editing and saving decks](#editing-and-saving-decks)
+- [Check with another simulator](#check-with-another-simulator)
+- [Matchups (Forge)](#matchups-forge)
+- [From outside the home](#from-outside-the-home)
+- [Sleeping and waking on request](#sleeping-and-waking-on-request)
+- [Network setup (once, as administrator)](#network-setup-once-as-administrator)
+- [When a phone can't reach it](#when-a-phone-cant-reach-it)
+- [Updating inventory and saved availability](#updating-inventory-and-saved-availability)
+- [Command-line write previews](#command-line-write-previews)
+- [Member export and departure](#member-export-and-departure)
+- [Database](#database)
+- [Headless rendered UI review](#headless-rendered-ui-review)
+- [Tests](#tests)
+- [Command-line helpers](#command-line-helpers)
 
 ## Start it
 
@@ -1563,31 +1591,11 @@ member was exported or removed while developing this feature.
 
 ## Database
 
-Migration `0012_visibility.sql` adds opt-in Public switches and seeds no rows, so
-everything stays Private. **Who sees what** in the avatar menu offers only the
-viewer's own collection, decks, games and kit controls. Public is read-only to
-everyone signed in, members included, never an internet-public page; unnamed
-trusted home readers can read Public data too. The deck control explains that the
-write-up and Play-now list can hint at owned or ordered cards.
+Deck Lab uses PostgreSQL with three local login roles: `decklab_owner` for migrations/backups, `decklab_app` for the running server and `decklab_ro` for read-only commands. `python -m decklab.db setup` creates them and stores their generated passwords in the current account's pgpass file (`%APPDATA%\postgresql\pgpass.conf` on Windows, `~/.pgpass` elsewhere). The server and maintenance jobs must use that account's credentials. Do not put passwords in config.json or command arguments.
 
-`python -m decklab.db visibility list` reports every switch. The documented
-`visibility set OWNER THING on|off -m "..."` changes only home's collection,
-decks/games or its kit owners (the home profiles and shared) as Claude/cli; members flip their
-own switches on the page. Flip messages are fixed and the supplied rationale is
-retained in the audit reason. Missing migration reads fail closed without
-interrupting unrelated state operations. Switches are audited, exported, checked
-and included in restore digests; profile sync removes dropped-space switches.
+Start with [SELF-HOSTING step 5](../SELF-HOSTING.md#5-set-up-the-database), or the commands and backup/restore sections below.
 
-This coding update did not apply the live migration, restart the service or flip
-any live switch. After authorized activation everything remains Private until an
-owner chooses otherwise.
-
-Migration `0013_space_departure.sql` adds minimal departure markers with their
-removal operation and audit identity. Normal writers and profile sync consult
-them; nightly exports, content digests and the member-departures check retain
-them. It starts empty and was not applied to the live database in this run.
-
-Deck Lab's data moved from the repo's CSV, JSON and Markdown files to a **PostgreSQL** database on this PC (the plan and its five phases are in [PLAN.md](PLAN.md), "Moving storage to a database"). **Phases 1 to 4 are built** (2026-10-11 and 2026-10-12), and so are **phase 5a** (2026-10-12: the files era's dead code deleted, messages that name decks by id, and a nightly check of the data; see "The nightly check" under Backups) and **phase 5b** (2026-10-14: the rollback to the files retired; see "No going back to the files" below). The week of side-by-side checks (2026-10-13 to 2026-10-19, the check and a restore check every night) ended clean; its report is [magic/reports/2026-10-19-database-check-week.md](../magic/reports/2026-10-19-database-check-week.md). The database holds the spaces, profiles and their emails (copied from `config.json`), the audit tables, a log of backup runs, since migration 0008 the visits (`ops.visit_day`, `ops.visit_page`: see "Visits" below), since phase 2 (migration `0003_personal_state.sql`) the wishlists (`wishlist_entry`), each profile's settings (`profile_setting`), the simulations mode (`simulation_mode`, one row) and the played games and sideboard plans (`play_record`, one table for both kinds, each record's own fields as jsonb), and since phase 3 the inventory: every space's collection, token cards and raw imports, the orders, the products and the watchlist (see "The inventory in the database" below), and since phase 4 every space's decks with their history and the accessories with their pictures (see "Decks and accessories in the database"). `decklab/simulation.json` (pilots and field edits) and the Forge worker limit stay files.
+The database holds the spaces, profiles and their emails (copied from `config.json`), the audit tables, a log of backup runs, since migration 0008 the visits (`ops.visit_day`, `ops.visit_page`: see "Visits" below), since phase 2 (migration `0003_personal_state.sql`) the wishlists (`wishlist_entry`), each profile's settings (`profile_setting`), the simulations mode (`simulation_mode`, one row) and the played games and sideboard plans (`play_record`, one table for both kinds, each record's own fields as jsonb), and since phase 3 the inventory: every space's collection, token cards and raw imports, the orders, the products and the watchlist (see "The inventory in the database" below), and since phase 4 every space's decks with their history and the accessories with their pictures (see "Decks and accessories in the database"). `decklab/simulation.json` (pilots and field edits) and the Forge worker limit stay files.
 
 - **The state store** (`lib/state/`) is the one way the server reaches phase 2's four kinds of data (the inventory has its own, `lib/inventory/`, below): `state.store()` is a `PgStore` (one connection per call, as `decklab_app`) in the server, and an in-memory `MemoryStore` with the same rules in the tests. Every write is one change set naming who made it (a profile id, `home` for "someone at home", `claude` or `system`), from where (`home` or `tunnel`) and how (`web`, `cli`, `migration`), with a message.
 - **When the database is down,** a request waits at most 2 seconds to connect (`localhost` is tried as 127.0.0.1 only, so it really is 2), and statements give up on a lock after 2 seconds and after 5 in all. After a failure a circuit breaker answers "not reachable" at once for 30 seconds (or until the once-a-minute check finds the database again), so pages don't each wait. Reads and writes of wishlists, settings and play records then answer 503 with `"reason": "database"` ("Deck Lab's database isn't reachable right now. Try again in a minute."), which the page shows as an error with **Try again**, never as the card-data wait. The matchup and field pages and the simulations mode go on with the last values read, else the defaults. Settings and the mode are cached in the server for a minute, so a change made by another process (a test server, a command line) shows within a minute.
@@ -1901,6 +1909,35 @@ python scripts/test_db.py 0 2 --require-db
 
 The second runs one of two shards, as CI does, and fails instead of skipping every test when the database can't be used. (On Linux, `python3.14` or whichever python the server uses.) On 2026-11-02, in WSL's Ubuntu against PostgreSQL 18, that ran 105 modules, 1,897 tests in about 5 minutes (7 skipped: commits only in the private repo, Node.js, a Windows-only case and an old-backend case). A trial restore of a dump into a scratch database uses the same `DECKLAB_DB_NAME` override: see `restore` under "Backups" above.
 
+### Historical migration and visibility notes
+
+These are historical rollout notes; use `python -m decklab.db status` for the current install.
+
+Migration `0012_visibility.sql` adds opt-in Public switches and seeds no rows, so
+everything stays Private. **Who sees what** in the avatar menu offers only the
+viewer's own collection, decks, games and kit controls. Public is read-only to
+everyone signed in, members included, never an internet-public page; unnamed
+trusted home readers can read Public data too. The deck control explains that the
+write-up and Play-now list can hint at owned or ordered cards.
+
+`python -m decklab.db visibility list` reports every switch. The documented
+`visibility set OWNER THING on|off -m "..."` changes only home's collection,
+decks/games or its kit owners (the home profiles and shared) as Claude/cli; members flip their
+own switches on the page. Flip messages are fixed and the supplied rationale is
+retained in the audit reason. Missing migration reads fail closed without
+interrupting unrelated state operations. Switches are audited, exported, checked
+and included in restore digests; profile sync removes dropped-space switches.
+
+This coding update did not apply the live migration, restart the service or flip
+any live switch. After authorized activation everything remains Private until an
+owner chooses otherwise.
+
+Migration `0013_space_departure.sql` adds minimal departure markers with their
+removal operation and audit identity. Normal writers and profile sync consult
+them; nightly exports, content digests and the member-departures check retain
+them. It starts empty and was not applied to the live database in this run.
+
+Deck Lab's data moved from the repo's CSV, JSON and Markdown files to a **PostgreSQL** database on this PC (the plan and its five phases are in [PLAN.md](PLAN.md), "Moving storage to a database"). **Phases 1 to 4 are built** (2026-10-11 and 2026-10-12), and so are **phase 5a** (2026-10-12: the files era's dead code deleted, messages that name decks by id, and a nightly check of the data; see "The nightly check" under Backups) and **phase 5b** (2026-10-14: the rollback to the files retired; see "No going back to the files" below). The week of side-by-side checks (2026-10-13 to 2026-10-19, the check and a restore check every night) ended clean; its report is [magic/reports/2026-10-19-database-check-week.md](../magic/reports/2026-10-19-database-check-week.md).
 ## Headless rendered UI review
 
 The [repeatable UI review workflow](ui_review/README.md) captures disposable
