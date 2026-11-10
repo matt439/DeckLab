@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Overnight TODO validation and handoff (2026-11-10)
+
+- E7-S39 (fixed precon bonus cards) and E4-S29 (counter/dice reminders and the take-along list) are built. E11-S79's remaining timezone-default choice and E11-S84's stable-channel choice are DECISION rows; their locally implementable config/update work is built. No new default or update channel was chosen.
+- All four Windows fixture shards passed with the unchanged 600-second limit: 13,350 discovered cases across 837 modules, with 978 cases in the expanded skip ledgers (database/native/real-Forge qualification, unavailable historical tags and platform prerequisites). Retained final logs/timings are under `data/overnight-todo-2026-11-10/`: `shard-0-final.log`, `shard-1.log`, `shard-2.log`, `shard-3-retry.log` and their timing JSON files. Initial attempts are retained too; the fixture corrections below were followed through to fresh passing shards.
+- Stable-source Chromium reviews passed 36/36 cases on application source `3356869`: `precon-bonus` 6/6 at `data/ui-review/20261110T124702Z-4f27b167/`, and `assembly-counters` 30/30 at `data/ui-review/20261110T124702Z-c055d933/`. Both receipts report unchanged source, complete cooperative fixture/runtime cleanup and closed browsers. Phone/tablet ready and stale layouts, dark mode and corrected white print backgrounds were visually inspected. Optional ticks and bonus saves used intercepted synthetic replies; printing used a stubbed system dialog.
+- Ruff's real-error rules, the source-length guard (1,617 owned files, none over 1,200 lines), public-repo audit (zero findings), story-count audit and whitespace checks pass. Later commits change fixtures/docs only; application source remains the rendered source above.
+- The work is committed on the continuing local `work/overnight-todo` branch, without publishing. No household/member records, config, visibility, live installation or Forge games were changed/run. The development listener on 8642 was absent and left stopped. The timed-out test fixture was identified by its owner/run id, stopped cooperatively and removed; no fixture or shard process remains. PostgreSQL, real Forge, native printing, Safari/touch and household-device acceptance remain separate qualification.
+
 ## Fixture follow-through for config diagnostics and UI cleanup (2026-11-10)
 
 - The watchdog's canned status scenario now supplies a usable synthetic admin, so its five watchdog/network warnings remain the facts under test rather than gaining the new missing-admin warning. The config-diagnostic fixtures still test that warning explicitly.
