@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 72 | 44 | 11 | 13 | 4 |
-| **Total** | **365** | **277** | **19** | **53** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 44 | 11 | 20 | 4 |
+| **Total** | **372** | **277** | **19** | **60** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6321,3 +6321,109 @@ As Matt, with Deck Lab open on a phone while User1 edits on the iPad, I want an 
 Gap: not built. Pages learn of another device's save only through a conflict at Save, which the built conflict flows (E2-S15 among them) handle without losing work. From the product review of 2026-11-10, compared with Archidekt's live collaborators and MTG Compendium's synced games. Needs Matt's decision: whether this is wanted at all, given he declined push notices (E11-S54).
 
 First slice: a guarded `GET /api/changes` in a new `decklab/lib/api/changes.py`, polled by the timer in `decklab/web/runs-pill.js`, with one `noteRevisions()` in `decklab/web/core.js`; no stream yet.
+
+**E11-S78** · Self-hoster · should · M · missing
+
+As a newcomer whose install isn't working yet, I want every setup failure to say what's wrong and what to do next, so that I can fix it myself instead of reading "Try again in a minute" for something that never fixes itself.
+
+- Given PostgreSQL isn't installed, isn't running or isn't listening on the configured port, when the doctor, `db setup`, `db status`, the server console or a page meets it, then each says nothing answered at host:port and how to check the service (Windows: the `postgresql-x64-NN` service, `Get-Service postgresql*`; Linux: `systemctl status postgresql`), whether libpq said "connection refused" or "connection timeout expired".
+- Given PostgreSQL answers but Deck Lab can't sign in, or its roles don't exist yet, then they say to run `python -m decklab.db setup`; the doctor's database finding points to `python -m decklab.db status` for the cause, in plain words, and the console line names `decklab/data/logs/db.log`.
+- Given the `postgres` password is refused on Windows, then `db setup`'s hint points to a troubleshooting entry with the Windows reset recipe (pg_hba.conf to trust, restart, `\password postgres`, back again), as POSIX already has.
+- Given a PostgreSQL older than 16, then `db setup` refuses before creating anything, naming the version found.
+- Given psycopg can't be imported, then the hint follows `venv.reason()`: make the `.venv` first when there isn't one, make it again when it was made by another Python.
+- Given a Python other than 3.14, then the doctor names the version it found, and the server and `decklab.db` say so at start.
+- Given port 8642 is held by another program, then the server says so and names `--port` and `config.json`'s `port`.
+- Given a page with the database never reached, then it words the cause (no psycopg, nothing answering, not set up) without "as they were when it was last reached"; the "holds no inventory" banner says to run `db setup` on a new install, or restore a backup if there was data.
+- Given the first start downloading card data, then the log says it's downloading, not that the index can't be loaded.
+- Given simulations never set up (no `forge_java`, no `forge_dir`, no Forge folder), then the doctor shows one neutral "simulations not set up (optional, step 8)" line, not Java UNVERIFIED and Forge NEEDS SETUP.
+
+Gap: the doctor gives one wording for every database cause (`decklab/lib/preflight.py`); the console says only "not reachable"; SELF-HOSTING.md's troubleshooting covers only "connection refused"; Windows has no password recovery; nothing checks the PostgreSQL version before setup. E11-S68 rotates db.log and is separate. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (windows-walkthrough 2, 6, database-and-config 0, 1, 8, 9, errors-and-recovery 1 to 4, 6, 8, 10, first-run-ui 1, 2, linux-mac 5).
+
+First slice: split `database_unavailable` in `decklab/lib/preflight_local.py` into "no answer at host:port" and "couldn't sign in", with plain wording and a next step naming `db status` in `decklab/lib/preflight.py`, and widen SELF-HOSTING.md's troubleshooting entry to the timeout wording with the service check and the Windows password recipe.
+
+**E11-S79** · Self-hoster · should · S · missing
+
+As a newcomer editing `decklab/config.json` by hand, I want a mistake in it to be named with its line, and a missing file to be noticed, so that a stray comma doesn't end in a Python traceback or an empty "Who are you?" screen.
+
+- Given a config.json with a UTF-8 byte-order mark, then it's read as if it had none.
+- Given invalid JSON (a trailing comma, a single backslash in a Windows path), then the server, the `decklab.db` commands and the doctor each say "decklab/config.json isn't valid JSON: line L, column C" and nothing else of the file; the server doesn't print a traceback.
+- Given a profile whose `role` isn't `admin` or `member`, or no usable admin, then the doctor and `homenet status` warn, while the profile still falls back to member.
+- Given no config.json, then the server logs at start that it's missing and to copy `decklab/config.example.json` (SELF-HOSTING.md step 4), `/api/status` says the config is missing or unreadable (no contents), and the empty "Who are you?" box on the home listener says where profiles come from.
+- Given no `timezone`, then dates follow the PC's own zone on a new install, or the example config carries `timezone` (needs Matt's decision: the UTC+10 fallback suits only his household).
+
+Gap: `decklab/lib/config.py` reads with `utf-8` and doesn't catch `JSONDecodeError`; `decklab/lib/profiles.py` silently maps an unknown role to member; a missing file falls back silently; `decklab/web/app.js`'s empty box gives no hint. E11-S52's setup page would replace hand editing later. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (windows-walkthrough 1, errors-and-recovery 0, 7, database-and-config 2, 3, first-run-ui 0, linux-mac 9).
+
+First slice: `utf-8-sig` and a wrapped `JSONDecodeError` naming line and column in `decklab/lib/config.py`, with the doctor's `config_invalid` text carrying them and tests for a BOM, a trailing comma and a single backslash.
+
+**E11-S80** · Self-hoster · should · M · missing
+
+As a newcomer reading SELF-HOSTING.md top-down, I want the required path short, ordered and in plain words, with the Windows traps named, so that I know which terminal to open, what to install, how long it takes and what to check after each step.
+
+- Given the guide's top, then a "Before you start" box gives the time (core under an hour), disk and RAM (more with Forge), and a contents list marks steps 1 to 7 required and the rest optional; the platform table, the WSL and CI paragraph, the story id and the network ranges move lower.
+- Given a "Quick start (Windows)" box, then it says to use PowerShell for every command, links each download, names Python's "Add python.exe to PATH" box and the Microsoft Store alias, checks `python --version` shows 3.14, keeps PostgreSQL's installer defaults, says to remember the password for step 5 (never in config.json), and says to run `python -m decklab.doctor` after each step.
+- Given step 1 on Linux and macOS, then it has copy-paste `apt` and `brew` lines, including apt.postgresql.org where the distribution's PostgreSQL is below 16.
+- Given step 4, then it says to replace alex/Alex, puts Linux notes under their own heading, drops the migration 0022 remark, shows `timezone` in the main example and says outside Australia to set `currency` and `shops`; the cmd `copy` note uses backslashes; JSON paths use forward slashes or doubled backslashes.
+- Given step 9 on Windows, then the command is `homenet install --at-logon` (the watchdog comes with it), the firewall script follows it, the server and the nightly task need a signed-in session (with how to sign in automatically), the export repo is said to be made automatically, and the NAS and GitHub hardening is an optional part.
+- Given a lost disk, then a "Restoring from a backup" part gives `homenet stop`, `db restore <newest dump> --replace --force`, start and smoke, without `digest.json`.
+- Given "When something goes wrong", then it covers config.json isn't valid JSON, port in use, a phone can't connect (`homenet status`), the Python version, Forge and Java (`forge status`), and names `server.log` and `db.log`.
+- Given README.md, then it says Windows and Linux both get the background service and nightly task, only macOS needs its own, outside access is optional, and git is required until a release is published (E11-S49).
+- Given a quoted section name of decklab/README.md, then it's a link, and decklab/README.md has a contents list; its `## Database` opens with the roles and pgpass, its migration notes moved below, and its opening reads as a reference without household names or notes to a coding session.
+
+Gap: every step works as written in PowerShell (checked on a fresh clone), but the guide names no shell, no download links, no PATH trap, no time or hardware, introduces the doctor only at step 7, and leaves out `--at-logon`; README.md contradicts it on Linux. Documentation only. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (windows-walkthrough 0, 3 to 5, 7 to 10, linux-mac 6, 10 to 12, database-and-config 4, 5, 7, docs-readability 0, 2 to 8, errors-and-recovery 5, 9, ongoing-use-burden 3 to 6, 8).
+
+First slice: the "Before you start" box, contents list and "Quick start (Windows)" box at the top of SELF-HOSTING.md, with step 1's PATH and PowerShell notes, the step 4/5 cross-reference fixed, step 9's `--at-logon`, and README.md's Linux line corrected.
+
+**E11-S81** · Self-hoster · could · M · missing
+
+As a self-hoster who wants Deck Lab from outside the home, I want step 10 to walk me through making the Cloudflare Tunnel and Access application, so that I don't have to work it out from one household's finished setup.
+
+- Given SELF-HOSTING.md step 10, then it numbers the steps: add the domain to Cloudflare; `cloudflared tunnel login`, `tunnel create`, `tunnel route dns`; an example `config.yml` with ingress to `http://127.0.0.1:8644` and `originRequest.access`; the Access application and policy, and where its team name and AUD tag are; the `config.json` blocks; then `homenet status` to check.
+- Given decklab/README.md's "From outside the home", then it stays the reference, written for any install.
+
+Gap: step 10 points to `decklab/config.full.example.json` and a reference section that describes an existing tunnel; the tunnel commands appear only under moving to another PC. Documentation only. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (docs-readability 1).
+
+First slice: the numbered how-to in SELF-HOSTING.md step 10 with an example `config.yml`, checked against `decklab/lib/homenet`'s tunnel start.
+
+**E11-S82** · Self-hoster · could · M · missing
+
+As a self-hoster on a Mac, I want either working background running, stop, restart, update and backups, or docs that say plainly what macOS lacks, so that nothing tells me my backups run when they don't.
+
+- Given macOS, when `python -m decklab.smoke` runs, then the nightly backup step reports WARN (no scheduler: add a launchd or cron job for `python -m decklab.db nightly`) unless `ops.backup_run` shows a recent nightly; `schedule status` doesn't exit 0 as if all were well.
+- Given macOS, then `homenet stop`, `start` and `restart` work (SIGTERM to the recorded pid; `launchctl kickstart -k` for a launchd job), or `update` skips them with a note and SELF-HOSTING.md gives a manual update; `scripts/decklab` runs the server in the foreground there; `homenet status` and the smoke test name no Windows checks or commands that fail.
+- Given Homebrew's PostgreSQL, then setup works or says how: the superuser is configurable or the docs give `createuser -s postgres`, and the hints name `brew services`, not `systemctl`.
+- Given a LaunchAgent wanted, then SELF-HOSTING.md ships a plist (PATH including Homebrew, KeepAlive, RunAtLoad) and a calendar job for `nightly`, or `schedule preview-launchd` prints them.
+- Given a JDK in `/Library/Java/JavaVirtualMachines` or Homebrew, then Forge's Java discovery finds it.
+
+Gap: on darwin `schedule status` exits 0, so the smoke test reports the nightly backup installed and working when nothing is scheduled; `homenet stop/start/restart` fail, so `update` fails; `decklab/db/conn.py` hard-codes `postgres` as the superuser; macOS gets one line each for launchd and cron. Needs Matt's decision: support macOS properly, or narrow the docs to terminal-only (the false backup PASS is fixed either way). From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (linux-mac 0 to 4, 7, 8).
+
+First slice: an unsupported result from `schedule status` off Windows and Linux in `decklab/db/schedule.py` and `decklab/db/__main__.py`, and a WARN in `decklab/smoke.py`'s schedule finding, with tests.
+
+**E11-S83** · Self-hoster · could · M · missing
+
+As a newcomer opening Deck Lab for the first time, I want the page to explain its own words and offer only what fits my install, so that I can import my cards and make a first deck without reading the reference.
+
+- Given one home player, then Played by isn't offered (or offers only the players the profiles have), and the raw word "wife" never shows; config.json accepts neutral aliases for `plays_as` (such as `first`/`second`) stored as today's values, and the docs say what `either` on a profile means and that two home players are the limit.
+- Given the Status choice and the Planned/Play-now switch, then each has a one-line hint, and a short "What these words mean" page (Idea, Building, Built, Planned, Play-now, owned vs needed, Tables out of date) is linked from About.
+- Given Import on the Collection page, then a plain "4 Lightning Bolt" or "4 Lightning Bolt (SET) 123" list is accepted (the deck parser already reads them) or the field says CSV only; each app's export location is named, with a blank template to download.
+- Given an empty collection, then the Collection page offers the library's start box (Import, Add a precon, Scan, Add one card), not only Add card.
+- Given card data still unavailable, then an admin sees the command and log path; a member the plain message.
+- Given Forge not installed (rather than broken), then the page says simulations are optional and where to install them.
+- Given exactly one home profile, then the chooser is skipped or offers "Remember me on this device" on itself (needs Matt's decision: the chooser on every visit is deliberate for shared devices).
+
+Gap: `decklab/web/editor.js` always offers user, wife and either; the Status and list words have no hints in the page; collection import reads CSV only though the field says .txt; the empty Collection offers only Add card. E11-S52's setup page is separate. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (first-run-ui 3 to 9, database-and-config 6, docs-readability 9).
+
+First slice: Played by offering only the players the profiles have, never a raw key, in `decklab/web/editor.js` and `decklab/web/app.js`, with one-line hints under Status and beside the Planned/Play-now switch.
+
+**E11-S84** · Self-hoster · should · S · missing
+
+As a self-hoster keeping Deck Lab up to date, I want updates and release installs to leave my settings alone and to tell me when there's something to update to, so that a copy of my config isn't left where git can pick it up and a release install isn't refused a restart.
+
+- Given `python -m decklab.update` copies config.json before a Forge update, then the copy is gitignored or kept under `decklab/data/`, so `git add .` can't pick up emails and tunnel settings.
+- Given an unzipped release with its required config.json, then `build` doesn't count it as changed since the release, Settings' Restart is offered, and a test unzips a release, writes a config and expects it clean.
+- Given `update` run in a release install, then it says to use the release update steps, not a raw git error.
+- Given `decklab/simulation.json`, then an example ships and a local file is gitignored (or a local overlay), so editing it never blocks `update`.
+- Given a git checkout, then self-hosters get a stable channel (tagged releases or a branch `update` follows), a short changelog, and a "N updates available" line (needs Matt's decision on the channel).
+
+Gap: `decklab/update.py` writes `decklab/config.json.before-forge-update`, which `.gitignore` doesn't cover; `decklab/lib/build.py` fingerprints config.json as runtime but `scripts/make_release.py`'s manifest doesn't, so a release reads as changed; no release is published yet (E11-S49), and updates follow main. E11-S51 is the release updater. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (ongoing-use-burden 0 to 2, 7, 9, 10).
+
+First slice: gitignore the config copy (or move it under `decklab/data/`), and leave `decklab/config.json` out of the release fingerprint comparison in `decklab/lib/build.py`, with the unzip-and-configure test.
