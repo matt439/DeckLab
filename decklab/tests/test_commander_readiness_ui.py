@@ -50,8 +50,8 @@ class CommanderReadinessUiTests(unittest.TestCase):
           const node = showReadiness(readinessPage());
           assert.equal(panel('overview').children[0], node);
           assert.equal(summaryText(node), 'Aims for Bracket 2: no Game Changers, extra turns, mass land denial or two-card combos found.');
-          assert(node.textContent.includes("Combos of three or more cards, combos needing a card that isn't named, chained or repeated extra turns"));
-          assert(node.textContent.includes("Only two-card combos from Commander Spellbook's list are checked, and the list can miss some."));
+          assert(node.textContent.includes("Combos of four or more cards, combos needing a card that isn't named, chained or repeated extra turns"));
+          assert(node.textContent.includes("Named two- and three-card combos from Commander Spellbook's list are checked, and the list can miss some."));
           assert(node.textContent.includes("Two-card combos: none found in Commander Spellbook's two-card combos (list of 2026-10-14)."));
           assert(node.textContent.includes("Commander Spellbook's two-card combos: 2026-10-14."));
           assert(node.textContent.includes("these card checks alone don't establish a bracket"));

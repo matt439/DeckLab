@@ -927,6 +927,7 @@ function commanderPanel(st, summary, data = null) {
       tutorFindings(br, target),
       target ? el("p", { class: "sub", text: `The deck aims for Bracket ${target}.` }) : null));
   const fixes = bracketFixesPart(data || { summary, stats: st }, 4);
+  panel.append(threeComboFindings(k, "names"));
   if (fixes) panel.append(fixes);
   panel.append(explain("What are the rules and brackets?", "A Commander deck has exactly 100 cards including the " +
     "commander, one copy of each card (basic lands excepted), and only cards within the commander's colours. Brackets " +

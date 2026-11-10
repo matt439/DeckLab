@@ -23,6 +23,7 @@ from .bracket_fixes import fixes as _bracket_fixes_impl
 # on decklab.lib.stats fails instead of silently missing.
 TAG_FILE = None     # None: cards' downloaded oracle_tags file; the tests point it at a fixture
 COMBO_FILE = None   # None: combos' two_card.json; the tests point it at a fixture
+THREE_COMBO_FILE = None   # override, otherwise the two-card file's separate sibling
 OFFICIAL_FILE = None    # None: official_lists' official_lists.json; the tests point it at a fixture
 
 
@@ -240,6 +241,29 @@ def _combo_check(by_section):
                         "url": combo["url"]})
     return {"checked": True, "list_date": found["timestamp"], "version": found["version"],
             "matches": matches}
+
+
+THREE_MAX = 25
+
+
+def three_card_combos(by_section, *, unknown=False):
+    """Intrinsic complete triples, separate from every counted bracket/early hint."""
+    if unknown:
+        return {"checked": False, "reason": "Some main-list cards have no data; three-card combos weren't checked."}
+    names = {entry.card["oracle_id"]: entry.name for section in ("Commander", "Companion", "Deck")
+             for entry in by_section[section]}
+    path = THREE_COMBO_FILE or combos.three_path(COMBO_FILE)
+    try:
+        found = combos.find_three([entry.card["oracle_id"] for entry in by_section["Commander"]],
+                                  [entry.card["oracle_id"] for entry in by_section["Companion"] + by_section["Deck"]],
+                                  path, two_card=COMBO_FILE)
+    except combos.ComboListError:
+        return {"checked": False, "reason": "Commander Spellbook's three-card data couldn't be read; three-card combos weren't checked."}
+    matches = [{"names": [names.get(piece["oracle_id"], piece["name"]) for piece in combo["cards"]],
+                "results": list(combo["results"]), "class": combo["class"], "standalone": combo["standalone"],
+                "url": combo["url"], "floor": 1, "raises_floor": False} for combo in found["matches"][:THREE_MAX]]
+    return {"checked": True, "list_date": found["timestamp"], "version": found["version"],
+            "total": len(found["matches"]), "matches": matches}
 
 
 NEAR_MAX = 100      # near combos sent at most (E9-S25); "total" says how many there were
@@ -492,6 +516,8 @@ def _commander_checks(by_section, sections, unresolved, warnings):
             "sources": ["wizards-commander", "brackets-2025-02", "brackets-2025-10",
                         "brackets-2026-02", "tagger", "commander-spellbook"]},
     }
+    answer["three_card_combos"] = three_card_combos(by_section,
+        unknown=any(section in ("Commander", "Deck", "Companion") for section, _ in unresolved))
     if near is not None:        # only beside a combo list that could be read, and a commander
         answer["bracket"]["near_combos"] = near
     return answer

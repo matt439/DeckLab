@@ -138,3 +138,7 @@ Read by Claude on 2026-11-05 from Wizards' announcements (never by Deck Lab, whi
 - **So:** no bracket sets a number of tutors, and the Checks warn about no tutor count.
 
 Deck Lab keeps this wording in `constants.BRACKET_TUTORS` (the quote, each bracket's own words and limit, `read_on` and `reviewed_through`, the latest announcement read). `stats.tutors.tutor_rules` gives it as `bracket["tutor_rules"]` while Wizards' latest Commander announcement (E9-S24) is no newer than `reviewed_through`; otherwise, or when that date is unknown, it says the official text on tutors isn't known. The Stats tab's Minimum bracket, the Overview's What opponents will face and the printed At the table quote it at the deck's target bracket. After a new announcement, read it and update `BRACKET_TUTORS` with `BRACKET_RULES_DATE`; a bracket's `limit` is only ever a number the text itself sets.
+
+## Three-card extension (2026-11-11; E9-S33)
+
+The explicit data update now also reduces named legal three-piece recipes into a separate lazily read file. Full matches appear separately on Overview, Stats and paper, capped with total and cached date. Commander-only requirements apply. A third piece with no new outcome beyond a held two-card recipe is redundant; a necessary new payoff remains. Three-card findings never raise the minimum or add an early-game hint. Four or more pieces and templates remain unchecked; unreadable data never means none found. No deck list is sent anywhere and no page fetches this data.

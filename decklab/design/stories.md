@@ -43,10 +43,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 23 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 35 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 28 | 22 | 0 | 5 | 1 |
+| [E9: Commander nights](#e9-commander-nights) | 28 | 23 | 0 | 4 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 56 | 14 | 5 | 4 |
-| **Total** | **376** | **320** | **22** | **18** | **16** |
+| **Total** | **376** | **321** | **22** | **17** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -4445,7 +4445,7 @@ Gap: the engine already casts the commander and the page names the cards it does
 
 First slice: the cast turn only. Record it in `decklab/lib/goldfish/engine.py`, report it from `decklab/lib/goldfish/results.py` with a new cache version, and a panel in `decklab/web/practice.js`.
 
-**E9-S33** · Matt · could · M · missing
+**E9-S33** · Matt · could · M · built
 
 As Matt, bringing a deck to the shop's Commander pods, I want the three-card combos my deck fully holds listed beside its two-card ones, so that I know about them before an opponent points one out.
 
@@ -4457,6 +4457,8 @@ As Matt, bringing a deck to the shop's Commander pods, I want the three-card com
 Gap: the local reduction keeps only two-card combos (E9-S23), and One card away (E9-S25) stays two-card. No early-combo flag is part of this: Matt decided on 2026-10-21 (E9-S23) to show no early-game hint, so reviving one needs Matt's decision. From the product review of 2026-11-10, compared with Commander Spellbook's Find My Combos and Table Commander.
 
 First slice: let `decklab/lib/combos.py` reduce and match three pieces into a separate lazily loaded file, add `three_card_combos` in `decklab/lib/stats/commander.py` outside `min_bracket`, and add the heading in `decklab/web/commander-readiness.js` and `decklab/web/stats.js`.
+
+Built (2026-11-11): explicit card-data update reduces the cached public export into a separate three_card.json; page reads load it lazily without a fetch. Only complete Commander-legal three-named-piece recipes with one copy each and no templates/unreleased pieces match, respecting commander-only requirements. A pair achieving all the triple's named outcomes suppresses the spare-piece recipe; a necessary third payoff with a new result remains. Stats, What opponents will face and the printed sheet show a separate Three-card combos heading, total and capped25 findings, cached date, unavailable states and explicit no-bracket/no-early-timing wording. Triples never enter min_bracket or cuts. Missing pair data also withholds a positive deduplicated triple claim.164 focused combo/stats/readiness/print/default checks pass, and both complete historical inventory golden cases pass. Narrow compatibility removes only exact role-derived category proposals and the exact unavailable-triple default; real triple facts, wrong labels and all counted bracket values still compare. No actual metadata download, deck write, inventory read or game was run for this story.
 
 ---
 

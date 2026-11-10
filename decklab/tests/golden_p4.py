@@ -1054,7 +1054,10 @@ def card_reference_urls(value):
             card_reference_urls(child)
 
 
-EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase5_reworded),
+from decklab.tests import golden_card_defaults  # noqa: E402
+
+EXPECTED_P5 = (("intrinsic-card-defaults", golden_card_defaults.normalise),
+               ("deck-id-messages", deck_id_messages), ("phase-5-wording", phase5_reworded),
                ("ui-additions", ui_additions), ("kit-editability", kit_editability), ("shared-sleeves", shared_sleeves),
                ("incoming-sources", incoming_sources), ("assembly-completion", assembly_completion),
                ("assembly-progress", assembly_progress), ("usual-opponents", usual_opponents),

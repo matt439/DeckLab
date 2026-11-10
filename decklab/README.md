@@ -1160,6 +1160,8 @@ Testing's **Simulated development** table pools visible current-list/current-eng
 
 Interrupted field/group/gauntlet/variant requests have starter-private **Unfinished runs** offers in the activity icon's details. **Play the rest** explicitly rechecks the original request and current permissions/settings/engine before using existing saved-game checkpoints; **Dismiss** keeps those games and removes only the offer. No work starts automatically. Changed or unverifiable inputs require a deliberate new run, and another live/unknown server lease cannot authorize resume. Metadata lives in the private ignored run journal, with bounded records and no admin/script override ([recovery design](design/run-recovery.md)). The updater refuses to stop/restart busy or unverified work unless `--force`, preserving its other guards.
 
+Commander Overview/Stats and printed play sheets also list complete **Three-card combos** from a separate cached Commander Spellbook reduction, with total, up to25 findings and its source date. It includes commander-only pieces only in that section, omits unnamed/template pieces and redundant pair-plus-spare recipes, and never raises the counted minimum bracket or flags an early combo. Missing/corrupt data says it was not checked. `python -m decklab.lib.cards update` explicitly refreshes both reductions; page views never download them.
+
 ### Testing a change to a deck
 
 The editor's **Test this change** (since wave 3) answers "does swapping these cards make the deck better?" without saving anything:

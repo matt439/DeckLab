@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Complete named three-card combos without bracket inference (2026-11-11; E9-S33)
+
+- Explicit card-data update makes separate two- and three-card reductions from the same public export. Triple data loads lazily, matches all three named legal pieces and commander requirements, excludes templates/multiple copies, and never fetches on a page. A held pair producing every triple result suppresses only the spare-piece recipe; a payoff with a new result remains.
+- Overview's What opponents will face, Stats and the printed play sheet have a separate Three-card combos heading, capped25 rows with total/date, unavailable states, and explicit no-minimum/no-early-timing wording. Four or more pieces remain unchecked. No triple enters the counted bracket/cut solver.
+- Validation:164 focused combo/stats/readiness/print/default checks pass, and both complete historical inventory golden tests pass. Exact additive category/missing-triple normalization preserves wrong labels, real triple matches and all existing physical/private/bracket facts. No real cache update, deck save, inventory or simulation was used.
+
 ## Explicit starter-private unfinished-run recovery (2026-11-11; E3-S47)
 
 - Updater's existing local named-home-admin busy preview refuses busy/unverified work before stop/restart unless --force, preserving all other guards. Accepted field/group/gauntlet/variant requests persist bounded starter-private metadata before queue admission; no startup or timer resumes work.
