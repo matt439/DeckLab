@@ -114,6 +114,12 @@ class TwoListenersTests(unittest.TestCase):
         self.assertEqual(remote[0][1]["Content-Security-Policy"], server_http.PAGE_POLICY)
         self.assertEqual(remote[2][1]["Content-Security-Policy"], server_http.PAGE_POLICY)      # the refusal's page
         self.assertEqual(remote[1][1]["Content-Security-Policy"], server_http.DATA_POLICY)
+        # The wake gate is the home page's alone to read: the tunnel's policy never names it.
+        from decklab.lib import keepawake
+        with mock.patch.object(keepawake, "wake_settings", return_value={"idle_minutes": 20, "gate": "http://192.0.2.5:8650"}):
+            self.assertEqual(self.remote_request("GET", "/")[1]["Content-Security-Policy"], server_http.PAGE_POLICY)
+            self.assertIn("connect-src 'self' http://192.0.2.5:8650;",
+                          self.request(self.home, "GET", "/")[1]["Content-Security-Policy"])
         home = [self.request(self.home, "GET", "/"), self.request(self.home, "GET", "/api/status"),
                 self.request(self.home, "GET", "/api/status", headers={"Host": HOSTS[0]})]
         self.assertEqual([status for status, _, _ in home], [200, 200, 421])

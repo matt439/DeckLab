@@ -73,6 +73,32 @@ NO_FRAMES = "frame-ancestors 'none'"
 # through the element's style object, which the policy allows.
 PAGE_POLICY = ("default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; "
                "img-src 'self' data: blob:; object-src 'none'; base-uri 'none'; form-action 'self'; " + NO_FRAMES)
+# The one address outside Deck Lab the page reads: the wake gate's /__status (core.js's openWakeGate),
+# on the home listener only, where config.json's "wake" names one. Only a plain origin is ever written
+# into the policy, so nothing in config.json can add a directive.
+_GATE_HOST = re.compile(r"(?:[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?|\[[0-9A-Fa-f:.]{2,45}\])(?::[0-9]{1,5})?\Z")
+
+
+def gate_origin(gate):
+    """The wake gate's origin as a policy source (http://nas.example:8650), or None when there's no
+    gate or it isn't a plain http(s) address."""
+    if not isinstance(gate, str):
+        return None
+    try:
+        parts = urllib.parse.urlsplit(gate.strip())
+    except ValueError:
+        return None
+    if parts.scheme.lower() not in ("http", "https") or not _GATE_HOST.match(parts.netloc):
+        return None
+    return f"{parts.scheme.lower()}://{parts.netloc.lower()}"
+
+
+def page_policy(gate=None):
+    """PAGE_POLICY, with the wake gate's origin as one more place the page may read."""
+    origin = gate_origin(gate)
+    return PAGE_POLICY.replace("connect-src 'self'", f"connect-src 'self' {origin}") if origin else PAGE_POLICY
+
+
 # Every other answer (JSON, a script, a stylesheet, a picture): nothing, should it ever be opened as a page.
 DATA_POLICY = "default-src 'none'; " + NO_FRAMES
 # /sym: Scryfall's SVG, which carries its own <style>, and is sandboxed.
@@ -295,7 +321,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header(*HSTS_HEADER)
         if not any(key.lower() == "content-security-policy" for key, _ in headers):
             html_answer = content_type.split(";")[0].strip().lower() == "text/html"
-            self.send_header("Content-Security-Policy", PAGE_POLICY if html_answer else DATA_POLICY)
+            self.send_header("Content-Security-Policy", self._page_policy() if html_answer else DATA_POLICY)
         for key, value in headers:
             self.send_header(key, value)
         if self.close_connection:
@@ -303,6 +329,16 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         if self.command != "HEAD" and status not in (204, 304):
             self.wfile.write(body)
+
+    def _page_policy(self):
+        # The tunnel's page never reads the gate (it has the off page's Worker): the home page's alone may.
+        if getattr(self.server, "remote", False):
+            return PAGE_POLICY
+        try:
+            wake = keepawake.wake_settings(config.load())
+        except (OSError, ValueError):       # an unreadable config.json: the page still answers
+            return PAGE_POLICY
+        return page_policy(wake and wake["gate"])
 
     def _send_json(self, status, data, headers=()):
         # The one place the stale-inventory warning is added (decklab/lib/inventory): when this
