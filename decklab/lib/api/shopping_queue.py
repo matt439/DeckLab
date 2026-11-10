@@ -162,7 +162,7 @@ def save_queue_state(body):
             kwargs = {"expected_revision": expect}
             if reason is not None:
                 kwargs["reason"] = reason
-            after, _ = inventory.apply(op, _web_actor(profile), message, **kwargs)
+            after, summary = inventory.apply(op, _web_actor(profile), message, **kwargs)
     except ApiError:
         raise
     except inventory.Unavailable:
@@ -172,6 +172,10 @@ def save_queue_state(body):
     except (inventory.Invalid, ValueError) as error:
         raise ApiError(400, f"The purchase queue couldn't be changed: {_public(error)}") from None
     result = {"saved": True, "row": row, "revision": after.revision}
+    warnings = (summary.extra or {}).get("warnings", [])
+    if warnings:
+        from . import common
+        result["warnings"] = common._scrub(warnings)
     if action != "remove":
         current_item = after.watchlist.rows[row - 1]
         from .reprints import evidence

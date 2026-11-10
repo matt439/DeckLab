@@ -432,8 +432,14 @@ def _load_pool():
         if listed and source.path not in extra                 and all(collection_printings[key] >= qty for key, qty in listed.items()):
             what = inventory_paths.describe(source.path, owners)      # "order x's cards" names its order
             what = what if label in what else f"{what} ({label})"
+            bonus = []
+            if order is not None and component.kind == "cards":
+                from decklab.lib.inventory import bonus_warnings
+                bonus = bonus_warnings.messages(inv, source.rows, statuses=("owned", "ordered", "preordered"), recorded=True)
+            hint = (". " + "; ".join(bonus) + f". If these are intentional extra copies, use python -m decklab.db "
+                    f"order extra-copies {order.id} {component.id}; nothing is marked automatically") if bonus else ""
             warnings.append(f"every card in {what} is already in the collection; "
-                            f"if it has arrived and been merged, {RECEIVE_IT}, or its cards count twice")
+                            f"if it has arrived and been merged, {RECEIVE_IT}, or its cards count twice" + hint)
 
     # The pending card payloads (magic/orders/*.csv) by file name, whether or not a record names them.
     for path in inv.pending_payloads("cards"):

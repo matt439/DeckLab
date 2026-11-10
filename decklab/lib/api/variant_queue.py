@@ -128,13 +128,14 @@ def _proposal(test_id, name, choice, profile):
     # The existing validator checks supported sources and every queue column.
     # Missing retailer fields stay blank; an estimate is never a shop observation.
     operation = inventory.Op("watchlist.set", {"add": True, "values": values, "repo": str(config.REPO)})
-    operation.run(inv)
+    _, checked = operation.run(inv)
     # A later completed look may change the verdict without changing its cards.
     # Review is tied to the entire saved evidence as well as its recipe.
     return {"ready": True, "proposal": values, "stamp": _stamp(inv, deck_id), "recipe": _digest(saved),
             "test": test_id, "name": row["name"], "choice": choice,
             "deck": {"id": deck_id, "title": title, "version": saved["base"]["version"]},
-            "added": row["added"], "missing_added": quantity, "basis": buying["basis"]}
+            "added": row["added"], "missing_added": quantity, "basis": buying["basis"],
+            "warnings": list((checked.extra or {}).get("warnings", []))}
 
 
 def _keep(record, profile):
@@ -198,7 +199,7 @@ def preview_queue(body):
     except (ApiError, inventory.StateError, ValueError, OSError) as error:
         raise _problem(error) from None
     return {key: deepcopy(record[key]) for key in ("ready", "proposal", "test", "name", "deck", "added", "missing_added", "basis")} | {
-        "preview": token, "expires_in": PREVIEW_TTL}
+        "preview": token, "expires_in": PREVIEW_TTL, **({"warnings": list(record["warnings"])} if record["warnings"] else {})}
 
 
 class _ReviewedQueue:

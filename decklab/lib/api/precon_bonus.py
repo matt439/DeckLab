@@ -14,7 +14,7 @@ from .common import ApiError, _public
 
 
 def stale():
-    return ApiError(409, "The precon's bonus-card source changed or is unavailable. Preview the precon again before adding it.",
+    return ApiError(409, "The published list or bonus-card source changed or is unavailable. Preview it again before adding it.",
                     bonus_conflict=True)
 
 

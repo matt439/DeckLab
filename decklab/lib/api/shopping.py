@@ -67,6 +67,10 @@ def _overview():
         common._log(f"Shopping overview: {error}")
         raise common.ApiError(500, f"The shopping records couldn't be read: {common._public(error)}") from None
     answer["queue_revision"] = inventory.current().revision
+    from decklab.lib.inventory import bonus_warnings
+    bonus = bonus_warnings.public_rows(inventory.current())
+    if bonus:
+        answer["bonus_printings"] = bonus
     for number, row in enumerate(answer.get("to_buy", []), 1):
         row["queue_row"] = number
     answer["warnings"] = common._scrub(answer.get("warnings", []))

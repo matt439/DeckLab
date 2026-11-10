@@ -624,6 +624,10 @@ def add_order(inv, *, record, cards=None, tokens=None, product=None, fulfils=(),
         inv = inv.set_component_rows(oid, cid, rows)
     if made is not None:
         inv = _with_status_row(inv.with_product(made), status_row)
+    from . import bonus_warnings
+    singles = [row for cid, rows in payloads for row in rows
+               if next(component for component in components if component.id == cid).kind == "cards"]
+    warnings += [words for words in bonus_warnings.messages(inv, singles) if words not in warnings]
     from . import order_fulfilment
     inv, reduced = _fulfil(inv, fulfils, ordered, exact)
     inv = inv.with_order(order_fulfilment.record(before, inv, order, fulfils))
@@ -948,7 +952,9 @@ def set_queue(inv, *, select=None, values, add=False, repo="."):
         text = f"Changed the watchlist's {row['name']}" + (f" for {row['for']}" if row["for"] else "") + \
             ": " + ", ".join(sorted(values))
     _no_duplicates(rows)
-    return _done(before, _with_queue(inv, rows), Summary(text, {"rows": len(rows)}))
+    from . import bonus_warnings
+    warnings = bonus_warnings.messages(inv, [row]) if add or {"set", "collector_number", "finish", "printing"}.intersection(values) else []
+    return _done(before, _with_queue(inv, rows), Summary(text, {"rows": len(rows)}, extra={"warnings": warnings} if warnings else None))
 
 
 @register("watchlist.remove")

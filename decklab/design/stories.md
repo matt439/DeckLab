@@ -39,14 +39,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 19 | 2 | 4 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 3 | 7 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 22 | 1 | 5 | 2 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 28 | 0 | 4 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 29 | 0 | 3 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 30 | 1 | 5 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 46 | 13 | 16 | 4 |
-| **Total** | **376** | **284** | **21** | **55** | **16** |
+| **Total** | **376** | **285** | **21** | **54** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -2486,7 +2486,7 @@ Gap: Back in stock and the price history sheet are built (E5-S19, E5-S29), but `
 
 First slice: a previewed `reference` action in `decklab/lib/api/shopping_queue.py` that re-reads the shop's saved snapshot on the server, with its button in `decklab/web/shopping-snapshot.js`.
 
-**E5-S36** · Matt · could · S · missing
+**E5-S36** · Matt · could · S · built
 
 As Matt, about to queue or order a single, I want to be told when that printing is the bonus card of a product already on its way, so that I don't buy a copy the box will bring.
 
@@ -2495,9 +2495,9 @@ As Matt, about to queue or order a single, I want to be told when that printing 
 - Given the pool's "every card in … is already in the collection" warning for a component whose printing came as a product's bonus card, when it shows, then it says so beside the `order extra-copies` hint; nothing is marked automatically.
 - Given User1 or a member, when they see these screens, then the warning shows only to viewers who may read home's records (`permissions.sees_home_records`).
 
-Gap: nothing links a single to a product's bonus card; the Stardew drops' Krobus and Junimo Farmhands were bought as eBay singles the evening the drops were ordered (2026-10-05, [HISTORY.md](../HISTORY.md), "Extra copies of owned printings", 2026-10-13). Depends on E6-S29's `extras` rows. From the bonus-card investigation of 2026-11-10.
+Built 2026-11-11: one snapshot-derived helper matches exact set/collector-number/finish against pending products' bonus extras, excluding display commanders and unusable status records. It advises on watchlist adds/bulk adds, order/fulfils previews (including a product and single in the same order), Shopping's printing choice and saved-variant reviews. The pool's already-owned warning explains recorded bonus provenance beside an explicit extra-copies command; nothing is marked automatically. Matching never changes quantities, refusals or exit codes; malformed optional annotation data produces no advisory instead of blocking a valid save. Home-only guards precede the catalog/source read and no notes or other-space records are published.
 
-First slice: one helper over the pending products' `extras` rows, called from the order and watchlist previews in `decklab/lib/inventory/orders.py` and `decklab/lib/inventory/watchlist.py`, and the extra line in `decklab/lib/pool.py`'s guard.
+Evidence: `inventory/bonus_warnings.py`, orders/queue and Shopping/variant adapters, pool guard; 53 focused and 358 broad pool/shopping/queue/variant/sealed checks pass (groups overlap, 61 expected DB/platform skips in the broad run). Coverage includes exact printing/finish, status consistency, same-order content, CLI preview/save, variant apply, optional-null UI and home/member privacy. From the bonus-card investigation of 2026-11-10; uses E6-S29's existing extras rows without fetching a source or modifying orders.
 
 ---
 

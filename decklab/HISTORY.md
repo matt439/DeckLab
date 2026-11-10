@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Pending bonus-printing purchase advisories (2026-11-11; E5-S36)
+
+- Queue/order previews now warn when an exact printing and finish is a pending product's recorded bonus extra, including a product and single in the same order. Display commanders, mismatched/cancelled/received sources and any-printing intent do not falsely claim a duplicate. Shopping and saved-variant reviews show the same advisory before an explicit add.
+- The pool's already-owned hint can name recorded bonus provenance and the explicit order extra-copies command. No purchase is refused, no quantities/exit codes change and nothing is marked automatically. Optional annotation failure cannot stop a valid purchase operation.
+- The catalog is limited to authorized home-record readers and carries only printing/product labels, never raw notes or other-space data. Existing collection/order permissions are unchanged. The broader precon-source conflict message also now names base-list changes as well as bonus-source changes.
+- Validation: 53 focused plus 358 broad regressions pass (overlapping groups; 61 expected DB/platform skips). Tests cover same-order/fulfils/CLI paths, exact identities, home-member versus other-space-admin privacy, reviewed variant application and the no-warning DOM path. No real queue/order was changed.
+
 ## JavaScript scope checks and an independent browser CI signal (2026-11-11; E11-S74)
 
 - One closeAllSheets() preserves existing global sheet cleanup order for profile/chooser/route changes. The fixture suite inventories closer definitions and fails if the shared entry point omits a family.
