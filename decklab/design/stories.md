@@ -39,14 +39,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 19 | 2 | 4 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 2 | 8 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 20 | 1 | 7 | 2 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 33 | 26 | 0 | 5 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 33 | 27 | 0 | 4 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 24 | 21 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 34 | 28 | 1 | 5 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 72 | 44 | 11 | 13 | 4 |
-| **Total** | **365** | **275** | **18** | **56** | **16** |
+| **Total** | **365** | **276** | **18** | **55** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -2422,7 +2422,7 @@ As a buyer reading a deck's missing cost, I want to know it's for the cheapest p
 
 Built 2026-11-02: `cards.printing_usd` / `cards.price_aud_printing` (the Collection's own-printing prices use it too), `lib/listed_prices.py` (pool.compare's live rows for a Planned list only, the deck page's and the editor's; never the Play-now list, swaps or precons: `listed_printing`, `listed_finish`, `listed_aud_each`, `listed_aud_missing`, `listed_material`, and `totals.as_listed` / `aud_missing_as_listed` only when material), `web/deck-availability.js`, `web/deck-prices.js`, `web/editor-save.js`. The saved deck text and its table keep the cheapest printing. A card listed in several printings, or with a line naming none, keeps only the cheapest price.
 
-**E5-S32** · Matt · could · S · missing
+**E5-S32** · Matt · could · S · built
 
 As Matt, whose Deck Lab runs on a server PC, I want Shopping to carry on when an order's or queue row's research file isn't on that PC's disk, so that one buylist not yet pulled there doesn't hide the queue, the deliveries and the follow-ups.
 
@@ -2431,6 +2431,8 @@ As Matt, whose Deck Lab runs on a server PC, I want Shopping to carry on when an
 - Given a missing source, when `python -m decklab.lib.purchases --check`, the nightly `db check`, the tokens check or an order or watchlist write runs, then it is still an error.
 
 Gap: `purchases.overview()` raises on the first missing source, so `GET /api/shopping` answers 500 for the whole page (the queue, the deliveries and E6-S18's follow-ups), and its `warnings` list is always empty. Write-time checks in `decklab/lib/inventory/orders.py` already stop bad rows being saved, so what is left is drift on disk afterwards. From the product review of 2026-11-10.
+
+Built 2026-11-10: `purchases.overview(strict=False)` (`read_records` and `read_queue` take a `missing` list) turns a missing non-deck source into a warning. `lib/api/shopping.py` calls it non-strict, so `GET /api/shopping` lists every row and order, and `data.warnings` names each order, and the queue rows grouped by source, with the missing path. `web/shopping.js` already drew `data.warnings` in its "Some shopping records need attention" box, so the page code is unchanged. Structural problems, coverage problems and a deck source that isn't a deck still answer 500. The strict readers are unchanged: `purchases --check`, `db check`, the tokens check, the order and watchlist writes. `smoke.py`'s `records_repo` warning is reworded. Nothing is left.
 
 First slice: give `overview()` in `decklab/lib/purchases.py` a `strict` keyword (default strict) that turns a missing non-deck source into a warning, call it non-strict from `decklab/lib/api/shopping.py`, and draw `data.warnings` in a warn box in `decklab/web/shopping.js`; reword `decklab/smoke.py`'s `records_repo` warning.
 
