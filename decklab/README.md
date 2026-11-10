@@ -1920,6 +1920,25 @@ upstream Forge exceptions. The lint workflow runs the guard and its isolated inv
 python scripts/audit_source_lengths.py --check
 ```
 
+The design model's story counts are generated, not counted by hand (E11-S72): `scripts/audit_stories.py`
+reads the header lines of [design/stories.md](design/stories.md) and works out, per epic, how many stories
+are built, partial, missing and not wanted. The lint workflow runs its `--check` on every push and pull
+request, documentation-only ones included, and fails when stories.md's Summary table or the epic table
+and totals in [design/README.md](design/README.md) disagree with the headers or a header is malformed.
+After changing a story's status, or adding a story:
+
+```
+python scripts/audit_stories.py --write      # rewrite those tables and the totals line; safe to run again
+python scripts/audit_stories.py --check      # what CI runs
+python scripts/audit_stories.py              # the counts, and the must and should stories by persona
+python scripts/audit_stories.py --sessions   # partial stories' "Awaiting:" checks by device, against TODO.md's rows
+```
+
+A partial story may carry one `Awaiting: iphone, ipad` line (or `Awaiting: decision`): a comma-separated
+list of what it still waits for. `--sessions` groups those by device, shows each story's TODO.md row status,
+and names waiting stories without a row and partial stories with a `DECISION` row but no Awaiting line.
+A new epic's row in design/README.md is added by hand (its "What it covers" cell isn't generated).
+
 From the repo root, run the default fixture checks:
 
 ```
