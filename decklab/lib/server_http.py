@@ -62,6 +62,28 @@ WRITE_HEADER = ("X-Deck-Lab", "1")      # every POST and PUT must carry it (chec
 # On every answer (_send), so the off page's Worker (decklab/cloudflare/) tells Deck Lab's own
 # 502s and 503s from Cloudflare's "can't reach the PC" errors and never replaces them.
 ORIGIN_HEADER = ("X-Deck-Lab-Origin", "1")
+# Clickjacking defence in depth (E11-S63): no answer may be shown in another site's frame, where
+# the cross-site write check (check_write) can't see that a signed-in person's clicks are borrowed.
+# X-Frame-Options is for browsers that ignore the policy's frame-ancestors.
+FRAME_HEADER = ("X-Frame-Options", "DENY")
+NO_FRAMES = "frame-ancestors 'none'"
+# An HTML answer (index.html, a refusal's page): everything from Deck Lab's own files, pictures also
+# from data: (the stylesheets' icons, a chosen photo's preview) and blob: (a photo preview). So no
+# inline script and no style="" attribute: index.html has neither, and core.js's el() sets a style
+# through the element's style object, which the policy allows.
+PAGE_POLICY = ("default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; "
+               "img-src 'self' data: blob:; object-src 'none'; base-uri 'none'; form-action 'self'; " + NO_FRAMES)
+# Every other answer (JSON, a script, a stylesheet, a picture): nothing, should it ever be opened as a page.
+DATA_POLICY = "default-src 'none'; " + NO_FRAMES
+# /sym: Scryfall's SVG, which carries its own <style>, and is sandboxed.
+SYMBOL_POLICY = "default-src 'none'; style-src 'unsafe-inline'; sandbox; " + NO_FRAMES
+# Only on the tunnel's listener, which browsers reach over https alone; the home listener is plain
+# http by the PC's name or address, where the header would mean nothing (and must never be learnt).
+HSTS_HEADER = ("Strict-Transport-Security", "max-age=31536000")
+# The device features the page may use: the camera, for scanning cards (E7-S32), and nothing else
+# listed here. No frame gets any.
+PERMISSIONS_HEADER = ("Permissions-Policy", "camera=(self), microphone=(), geolocation=(), payment=(), usb=(), "
+                      "accelerometer=(), gyroscope=(), magnetometer=()")
 # Sec-Fetch-Site values a write may come with: the page itself, or a tool typed by hand.
 WRITE_SITES = ("same-origin", "none")
 # The client addresses a script's request may come from (access.SCRIPT_HEADER): this PC's loopback,
@@ -267,6 +289,13 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header(*ORIGIN_HEADER)
+        self.send_header(*FRAME_HEADER)
+        self.send_header(*PERMISSIONS_HEADER)
+        if getattr(self.server, "remote", False):
+            self.send_header(*HSTS_HEADER)
+        if not any(key.lower() == "content-security-policy" for key, _ in headers):
+            html_answer = content_type.split(";")[0].strip().lower() == "text/html"
+            self.send_header("Content-Security-Policy", PAGE_POLICY if html_answer else DATA_POLICY)
         for key, value in headers:
             self.send_header(key, value)
         if self.close_connection:
@@ -661,7 +690,7 @@ class Handler(BaseHTTPRequestHandler):
             # Scryfall's SVG, shown with <img>, where its scripts never run; the policy covers a direct visit.
             return self._send(200, symbols.symbol_svg(parts[1]), "image/svg+xml",
                               [("Cache-Control", f"public, max-age={IMAGE_MAX_AGE}"),
-                               ("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")])
+                               ("Content-Security-Policy", SYMBOL_POLICY)])
 
         if parts[0] == "accessory-img" and len(parts) in (2, 3):
             return self._accessory_image(parts[1:], query)

@@ -47,6 +47,7 @@ MATCHUP_SCRIPTS = ("sim-ui.js", "matchups.js", "matchups-overview.js", "deck-pic
 PLAY_SCRIPTS = ("deck-tools.js", "deck-print.js", "qr.js", "deck-label.js", "collection.js", "collection-import-groups.js", "collection-filing.js", "precon-add.js", "precon-token-choices.js", "precon-coverage.js", "precon-trial.js", "commander-candidates.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js", "collection-guards.js", "collection-trade.js", "collection-scan.js", "storage-locations.js", "assembly.js", "assembly-chooser.js", "assembly-switcher.js", "assembly-finish.js", "assembly-steps.js", "assembly-tokens.js", "assembly-overlap.js", "assembly-sections.js", "assembly-progress.js", "assembly-sheets.js", "assembly-boxcheck.js", "box-check-printings.js", "box-collection.js", "box-editor.js", "box-repair.js", "hands.js", "play.js", "play-pods.js", "play-tonight.js", "pod-life-model.js", "pod-life-counter.js", "sideboard-preview.js", "life-source-model.js", "life-counter.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "printings-in-box.js", "deck-swaps.js", "deck-queue-missing.js", "deck-considering.js", "deck-edhrec.js", "deck-categories.js", "product-storage.js", "history.js", "compare.js", "activity.js", "activity-undo.js", "activity-undo-watchlist.js", "activity-undo-tokens.js",
                 "order-check-targets.js", "receipts.js", "receipt-tiles.js", "receipt-layout.js", "receipt-workflow.js", "receipt-bulk.js", "accessories.js", "accessory-pictures.js", "tokens.js", "tokens-edit.js", "token-plan.js", "product-tokens.js", "token-peaks.js", "tokens-scan.js", "dice.js", "deck-tokens.js")
 SHELL_SCRIPTS = ("keyboard-help.js", "shell.js", "global-search.js", "settings.js", "settings-members.js", "settings-restart.js", "settings-postage.js", "settings-pricing.js", "visibility.js", "arrival-notices.js")  # account pages, just before app.js
+BOOT_SCRIPT = "theme-boot.js"      # index.html's one script that isn't deferred: the theme, before the first paint
 CARD_SCRIPTS = ("ui.js", "symbols.js", "cards-ui.js", "card-viewer.js")     # the shared card pieces (UI-KIT.md)
 SCRIPTS = ("core.js", *CARD_SCRIPTS, "library.js", "library-boxchecks.js", "library-glance.js", "library-tables.js", "library-gauntlet.js", "cover.js", "deck-availability.js", "deck.js", "deck-header.js", "deck-overview.js", "deck-retirement.js", "deck-rename.js", "deck-prices.js", "guide.js", "stats.js", "commander-readiness.js", "deck-near-combos.js", "commander-night.js", "practice.js", "version.js", "wishlist.js", "shopping.js", "shopping-buying.js", "shopping-combined.js", "shopping-queue.js", "shopping-reprints.js", "shopping-snapshot.js", "shopping-history.js", "shopping-baskets.js", "shopping-plan.js", "shopping-orders.js", "shopping-order-edit.js", "shopping-order-rows.js", "shopping-order-split.js", "app.js",
            "editor.js", "editor-drafts.js", "editor-kept-drafts.js", "editor-considering.js", "editor-screen.js", "editor-details.js", "editor-lines.js", "editor-forge.js", "editor-cards.js", "editor-edhrec.js", "editor-wishlist.js", "editor-import.js", "editor-search-quantity.js", "editor-search-dock.js", "editor-swaps.js", "editor-save.js", "editor-deckpage.js",
@@ -334,6 +335,46 @@ class WebFileTests(unittest.TestCase):
                 self.assertTrue(url.startswith("/") and not url.startswith("//"), url)
                 self.assertIsNotNone(self.served(url), url)
 
+    def test_the_page_fits_its_content_security_policy(self):
+        # E11-S63: the server's policy for HTML (server_http.PAGE_POLICY) allows scripts and styles only
+        # from Deck Lab's own files, so index.html has no inline script, <style>, style="" or on...=""
+        # attribute, and no script writes markup or a style attribute (el() sets styles through the
+        # element's style object, which the policy allows).
+        class Inline(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.found, self.script = [], False
+
+            def handle_starttag(self, tag, attrs):
+                attrs = dict(attrs)
+                self.script = tag == "script"
+                if tag == "style" or tag == "base" or (tag == "script" and not attrs.get("src")):
+                    self.found.append(f"<{tag}>")
+                self.found += [f"{tag} {name}" for name in attrs if name == "style" or name.startswith("on")]
+                self.found += [f"{tag} {name}" for name, value in attrs.items()
+                               if name in ("href", "src", "action") and (value or "").strip().lower().startswith("javascript:")]
+
+            def handle_endtag(self, tag):
+                self.script = False
+
+            def handle_data(self, data):
+                if self.script and data.strip():
+                    self.found.append("inline script body")
+
+        page = Inline()
+        page.feed(_text("index.html"))
+        self.assertEqual(page.found, [])
+        self.assertNotIn("style=", _text("index.html"))
+        self.assertNotIn("unsafe", server.server_http.PAGE_POLICY)
+        self.assertIn("node.style.cssText = String(value)", _function(_text("core.js"), "setProps"))
+        for path in sorted(WEB.glob("*.js")):
+            with self.subTest(script=path.name):
+                script = path.read_text(encoding="utf-8")
+                for banned in (r"setAttribute\(\s*[\"']style[\"']", r"\binnerHTML\b", r"\bouterHTML\b",
+                               r"insertAdjacentHTML", r"document\.write", r"\beval\(", r"new Function\(",
+                               r"createElement\(\s*[\"'](?:style|script)[\"']", r"[\"'`]javascript:"):
+                    self.assertNotRegex(script, banned)
+
     def test_nothing_is_loaded_from_the_internet(self):
         for tag, url in self.page.refs:
             self.assertNotRegex(url, r"^(https?:)?//", url)
@@ -384,6 +425,9 @@ class WebFileTests(unittest.TestCase):
         # The matchup detail screen uses editor.js's ask(). core.js comes first of the
         # rest (practice.js reads its NAV_SPACE as it loads), and app.js last (its start() needs every other file).
         scripts = [url for tag, url in self.page.refs if tag == "script"]
+        # theme-boot.js is the one script that isn't deferred or part of the shared scope: it sets the theme
+        # before the first paint, from a file since the page's policy runs no inline script (E11-S63).
+        self.assertEqual(scripts.pop(0), "/" + BOOT_SCRIPT)
         self.assertEqual(scripts, ["/editor.js", "/editor-drafts.js", "/editor-kept-drafts.js", "/editor-considering.js", "/editor-screen.js", "/editor-details.js", "/editor-lines.js",
                          "/editor-forge.js", "/editor-cards.js", "/editor-edhrec.js", "/editor-wishlist.js", "/editor-import.js", "/editor-search-quantity.js", "/editor-search-dock.js", "/editor-swaps.js", "/editor-save.js", "/editor-deckpage.js", *["/" + name for name in MATCHUP_SCRIPTS], "/field.js", "/field-membership.js", "/gauntlet.js", "/gauntlet-board.js", "/field-group.js", "/crosscheck.js",
                                    "/variant.js", "/runs-pill.js", "/core.js", *["/" + name for name in CARD_SCRIPTS],
@@ -395,7 +439,7 @@ class WebFileTests(unittest.TestCase):
         self.assertEqual(scripts[token_start:token_start + 3],
                          ["/tokens.js", "/tokens-edit.js", "/token-plan.js"])
         # Every script in web/ is one the page loads (and so one these tests read).
-        self.assertEqual(sorted(path.name for path in WEB.glob("*.js")), sorted(SCRIPTS))
+        self.assertEqual(sorted(path.name for path in WEB.glob("*.js")), sorted((BOOT_SCRIPT, *SCRIPTS)))
 
     def test_stylesheets_load_in_order(self):
         # The cascade depends on the order: tokens, base and components first (decklab/UI-REVIEW.md 2.1-2.3),
@@ -516,8 +560,10 @@ class WebFileTests(unittest.TestCase):
         self.assertIn("--link: #43248f;", light)               # links dark violet, info boxes blue
         self.assertIn("background: var(--page)", _styles())
         head = _text("index.html").split("</head>")[0]
-        self.assertIn('matchMedia("(prefers-color-scheme: dark)")', head)
-        self.assertIn('setAttribute("data-theme", theme)', head)
+        self.assertRegex(head, r'<script src="/theme-boot\.js"></script>')     # not deferred: before the first paint
+        boot = _text("theme-boot.js")
+        self.assertIn('matchMedia("(prefers-color-scheme: dark)")', boot)
+        self.assertIn('setAttribute("data-theme", theme)', boot)
         apply = _function(_text("app.js"), "applyTheme")
         self.assertIn('root.setAttribute("data-theme", shown)', apply.replace("document.documentElement", "root"))
         self.assertNotIn("removeAttribute", apply)

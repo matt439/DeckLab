@@ -11,6 +11,8 @@ How Deck Lab's pages are built from shared pieces: the design tokens, the CSS co
 
 The scripts share one global scope, so a name may be defined only once across all of them (`test_web.test_no_name_is_defined_twice`). Nothing in the shared files runs at load. The sheet helpers (`openSheet`, `sheetActions`, `ask`, `busy`, `unbusy`) are in `editor.js`.
 
+The page runs under a Content-Security-Policy (E11-S63; `PAGE_POLICY` in `lib/server_http.py`): scripts and styles only from Deck Lab's own files. So never an inline `<script>` or `<style>`, an `on…=""` or `style=""` attribute, `innerHTML` or `setAttribute("style", …)`: the browser drops them silently. Build nodes with `el()`, whose `style` prop goes through the element's style object (allowed), or set `node.style` yourself; prefer a class, with a custom property for a computed size. `theme-boot.js` is the one script that isn't deferred (the theme, before the first paint) and shares nothing with the others. `test_web.test_the_page_fits_its_content_security_policy` holds all of this.
+
 Library title, colour-identity and archetype filters use only its already authorized
 summaries. Native Includes choices require every chosen WUBRG colour; known `[]`
 is colourless and null/malformed/unreadable stays unknown. Archetypes match whole

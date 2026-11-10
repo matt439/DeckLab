@@ -98,6 +98,31 @@ class TwoListenersTests(unittest.TestCase):
                 self.assertTrue(headers["Content-Type"].startswith("text/html"))
                 self.assertIn(b"Sign in", body)
 
+    def test_only_the_tunnels_listener_sends_hsts(self):
+        # E11-S63: the tunnel is https only, so its answers (refusals included) say so; the home listener,
+        # plain http by the PC's name or address, never does. Both refuse frames and leave the camera to scanning.
+        remote = [self.remote_request("GET", "/"), self.remote_request("GET", "/api/status"),
+                  self.remote_request("GET", "/", email=None), self.remote_request("GET", "/api/nothing"),
+                  self.remote_request("GET", "/api/status", headers={"Host": "elsewhere.example.com"})]
+        self.assertEqual([status for status, _, _ in remote], [200, 200, 403, 404, 400])
+        for status, headers, _ in remote:
+            with self.subTest(status=status):
+                self.assertEqual(headers.get_all("Strict-Transport-Security"), ["max-age=31536000"])
+                self.assertEqual(headers["X-Frame-Options"], "DENY")
+                self.assertIn("frame-ancestors 'none'", headers["Content-Security-Policy"])
+                self.assertIn("camera=(self)", headers["Permissions-Policy"])
+        self.assertEqual(remote[0][1]["Content-Security-Policy"], server_http.PAGE_POLICY)
+        self.assertEqual(remote[2][1]["Content-Security-Policy"], server_http.PAGE_POLICY)      # the refusal's page
+        self.assertEqual(remote[1][1]["Content-Security-Policy"], server_http.DATA_POLICY)
+        home = [self.request(self.home, "GET", "/"), self.request(self.home, "GET", "/api/status"),
+                self.request(self.home, "GET", "/api/status", headers={"Host": HOSTS[0]})]
+        self.assertEqual([status for status, _, _ in home], [200, 200, 421])
+        for status, headers, _ in home:
+            with self.subTest(home=status):
+                self.assertIsNone(headers["Strict-Transport-Security"])
+                self.assertEqual(headers["X-Frame-Options"], "DENY")
+                self.assertIn("camera=(self)", headers["Permissions-Policy"])
+
     def test_refusals_on_both_listeners_are_marked_as_deck_labs(self):
         # The off page's Worker never replaces Deck Lab's own answers: its refusals carry the header too.
         name, value = server_http.ORIGIN_HEADER

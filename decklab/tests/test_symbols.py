@@ -161,7 +161,10 @@ class SymbolEndpointTests(ServerTestCase):
             self.assertEqual((status, body), (200, SVG))
             self.assertEqual(headers["Content-Type"], "image/svg+xml")
             self.assertEqual(headers["Cache-Control"], "public, max-age=604800")
-            self.assertIn("sandbox", headers["Content-Security-Policy"])
+            # Its own, stricter policy (sandboxed), which refuses a frame as every answer does (E11-S63).
+            self.assertEqual(headers.get_all("Content-Security-Policy"),
+                             ["default-src 'none'; style-src 'unsafe-inline'; sandbox; frame-ancestors 'none'"])
+            self.assertEqual(headers["X-Frame-Options"], "DENY")
             self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
             self.assertEqual(self.request("HEAD", "/sym/T.svg")[:3:2], (200, b""))
             self.assertEqual(len(box.downloads), 2)

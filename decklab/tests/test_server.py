@@ -204,6 +204,48 @@ class StaticFileTests(ServerTestCase):
         status, _, body = self.request("GET", "/app.js", headers={"If-None-Match": headers["ETag"]})
         self.assertEqual((status, body), (304, b""))
 
+    def test_no_answer_may_be_framed(self):
+        # E11-S63: clickjacking defence in depth. Every answer refuses a frame, twice over; an HTML one
+        # loads only Deck Lab's own files (pictures also data: and blob:), any other answer nothing.
+        web = self.box.web
+        (web / "boom.html").write_text("<!doctype html><title>x</title>", encoding="utf-8")
+        self.addCleanup((web / "boom.html").unlink)
+        cases = [("GET", "/", 200, "page"), ("HEAD", "/index.html", 200, "page"), ("GET", "/boom.html", 200, "page"),
+                 ("GET", "/app.js", 200, "data"), ("GET", "/style.css", 200, "data"),
+                 ("GET", "/icons/icon-192.png", 200, "data"), ("GET", "/fonts/figtree.woff2", 200, "data"),
+                 ("GET", "/api/status", 200, "data"), ("GET", "/api/nothing", 404, "data"),
+                 ("GET", "/nothing.js", 404, "data"), ("DELETE", "/api/status", 405, "data"),
+                 ("POST", "/api/decklist/parse", 400, "data")]
+        for method, path, expected, kind in cases:
+            with self.subTest(method=method, path=path):
+                status, headers, _ = self.request(method, path, b"{" if method == "POST" else None)
+                self.assertEqual(status, expected)
+                self.assertEqual(headers.get_all("X-Frame-Options"), ["DENY"])
+                policies = headers.get_all("Content-Security-Policy")
+                self.assertEqual(len(policies), 1)
+                parts = [part.strip() for part in policies[0].split(";")]
+                self.assertIn("frame-ancestors 'none'", parts)
+                if kind == "page":
+                    self.assertEqual(policies[0], server_http.PAGE_POLICY)
+                    for part in ("default-src 'self'", "script-src 'self'", "style-src 'self'", "font-src 'self'",
+                                 "connect-src 'self'", "img-src 'self' data: blob:", "object-src 'none'"):
+                        self.assertIn(part, parts)
+                    self.assertNotIn("unsafe", policies[0])
+                else:
+                    self.assertEqual(policies[0], server_http.DATA_POLICY)
+                    self.assertIn("default-src 'none'", parts)
+                # The home listener is plain http: it never sends HSTS. The camera stays the page's, for scanning.
+                self.assertIsNone(headers["Strict-Transport-Security"])
+                self.assertIn("camera=(self)", headers["Permissions-Policy"])
+                self.assertIn("microphone=()", headers["Permissions-Policy"])
+        # A 304 carries them too, and so does a request http.server couldn't parse.
+        etag = self.request("GET", "/app.js")[1]["ETag"]
+        status, headers, _ = self.request("GET", "/app.js", headers={"If-None-Match": etag})
+        self.assertEqual((status, headers["X-Frame-Options"]), (304, "DENY"))
+        status, headers, _ = self.request("BREW", "/")
+        self.assertEqual(headers["X-Frame-Options"], "DENY")
+        self.assertEqual(headers["Content-Security-Policy"], server_http.DATA_POLICY)
+
     def test_only_the_allow_list_is_served(self):
         for path in ("/notes.txt", "/.hidden.js", "/other/extra.js", "/other/", "/icons/", "/icons",
                      "/APP.JS", "/app.js/", "/secret.txt", "/../secret.txt", "/..%2fsecret.txt",
