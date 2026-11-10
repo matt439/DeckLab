@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Member personal copies and Cards to get (2026-11-11; E10-S44)
+
+- A member's own Collection offers a personal zip; Decks offers a stateless Cards to get sheet with quantity/name Copy. Both are actual-owner-only, with the same collection403 for home, other members, admins and public readers. No queue, order, shop-price or saved-plan behavior is added.
+- One read-only repeatable-read personal projection builds collection/tokens/dice/locations/raw imports/deck text (and own loans) while skipping departure-only identity, wishlist/settings, mixed-game, draft and visit queries. A file-hash manifest explicitly marks a personal copy, never a departure receipt. Temporary streaming artifacts are bounded and closed on send, HEAD and disconnect; admission stays held until cleanup.
+- Needs count each owned copy once across all own ordinary non-trial Planned decks, including the selected built decks' own holdings; incomplete sources yield no partial list. Page/profile ownership guards retain late responses and clipboard/download actions within the original visit.
+- Validation:46 focused backend/UI/route/web/export checks pass (one guarded DB class),11 latest focused pass. Disposable-PG scoped-query/invariance cases are included. Four strict phone captures passed and were inspected: data/ui-review/20261110T185441Z-501a4676. No actual member cards, zip, queue or live database was used.
+
 ## One-file text play sheets (2026-11-11; E4-S30)
 
 - Download play sheet and Print play sheet use one builder for the list, stand-ins, Commander pregame facts and every guide/review warning. The download adds a saved date and stale-copy note; it makes no request or stored offline cache.

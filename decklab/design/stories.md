@@ -44,9 +44,9 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 34 | 1 | 1 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
-| [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 32 | 1 | 2 | 2 |
+| [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 53 | 14 | 8 | 4 |
-| **Total** | **376** | **302** | **22** | **36** | **16** |
+| **Total** | **376** | **303** | **22** | **35** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -5075,7 +5075,7 @@ Evidence:
 - `decklab/lib/api/collection_edit.py`, `decklab/lib/api/tokens.py`, `decklab/lib/api/precons.py`
 - `decklab/tests/test_inventory_privacy.py`: HomeMemberTests
 
-**E10-S44** · User5 · could · M · missing
+**E10-S44** · User5 · could · M · built
 
 As User5, a member with my own space, I want one download of my whole space and one list of the cards my decks still need, so that I keep a safety copy and a shopping list without anyone else handling my data.
 
@@ -5087,6 +5087,8 @@ As User5, a member with my own space, I want one download of my whole space and 
 Gap: the whole-space export is a command on the PC only (E10-S40), and the missing-cards view across decks is home's Shopping only; a member has the collection CSV (E7-S30) and per-deck decklists. Needs Matt's decision: whether Cards to get is wanted beside E6-S22, and whether home gets the download. From the product review of 2026-11-10, compared with ManaBox and Deckbox.
 
 First slice: a new `decklab/lib/api/space_download.py` streams the files `snapshot` in `decklab/db/space_export.py` builds, with a More item in `decklab/web/collection.js`.
+
+Built (2026-11-11): named members can Download my space from their own Collection and open a stateless Cards to get sheet from Decks. Home and other-space/admin/script/public-reader requests receive the same collection403 before reads. The zip uses one read-only repeatable-read personal projection, excluding departure-only profile/email/settings/wishlist/mixed-game/draft/visit queries; files carry a personal-only manifest, never a departure receipt. Streaming temp artifacts retain two-download admission through send/HEAD/disconnect cleanup and bounded files/bytes. Needs sum all own ordinary non-trial Planned decks against one pool, without prices/orders/queue or a saved plan, and withhold partial counts when unproven. Stale profile/page replies and copy/download controls cannot cross visits.46 focused backend/UI/route/web/export checks passed (one guarded DB class),11 latest focused passed; four strict native member captures passed and were inspected. Disposable PG projection/invariance cases are included for CI. No actual member records or personal download was used.
 
 **E10-S45** · Matt · could · M · built
 

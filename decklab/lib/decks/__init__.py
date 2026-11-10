@@ -506,7 +506,7 @@ def text_sha(text):
     return hashlib.sha256(text if isinstance(text, bytes) else text.encode("utf-8")).hexdigest()
 
 
-def list_decks():
+def list_decks(only_space=None):
     """Summaries of every deck file and product deck, for the library page.
 
     Each summary is a dict: id, space (lib/spaces.py: "home", or the
@@ -526,6 +526,8 @@ def list_decks():
     """
     out = []
     for space, path in _space_files():
+        if only_space is not None and space != only_space:
+            continue
         kind, slug = path.parent.name, path.stem
         deck_id = spaces.join_deck_id(space, kind, slug)
         summary = {
@@ -556,7 +558,7 @@ def list_decks():
             else:
                 summary["error"] = NO_DECKLIST
         out.append(summary)
-    for deck in _product_decks():
+    for deck in _product_decks() if only_space in (None, spaces.HOME) else ():
         out.append(_summary(deck))
     return out
 

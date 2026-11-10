@@ -383,12 +383,12 @@ class Handler(BaseHTTPRequestHandler):
         except OSError:         # the client reset or timed out: nothing more to do
             pass
 
-    def _send(self, status, body, content_type, headers=()):
+    def _send(self, status, body, content_type, headers=(), *, stream=None, length=None):
         if self._unread_body():
             self.close_connection = True
         self.send_response(status)
         self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Content-Length", str(len(body) if stream is None else length))
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header(*ORIGIN_HEADER)
@@ -405,7 +405,16 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Connection", "close")
         self.end_headers()
         if self.command != "HEAD" and status not in (204, 304):
-            self.wfile.write(body)
+            if stream is None:
+                self.wfile.write(body)
+            else:
+                remaining = length
+                while remaining:
+                    chunk = stream.read(min(64 * 1024, remaining))
+                    if not chunk:
+                        raise ConnectionError("The temporary download ended before its declared length")
+                    self.wfile.write(chunk)
+                    remaining -= len(chunk)
 
     def _page_policy(self):
         # The tunnel's page never reads the gate (it has the off page's Worker): the home page's alone may.

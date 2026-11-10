@@ -59,7 +59,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E10-S41` | DEFERRED | could | L | Per-deck public (decision A): only once someone wants it. |
 | `E10-S18` | DEFERRED | could | M | Small person-space items (`E10-S18` first-visit landing, `E4-S19` game players): only if a member asks. Check Settings, Visits first. |
-| `E10-S44` | OPEN | could | M | Member self-service: Download my space (zip) and a stateless Cards to get list for a member's own decks (needs Matt's decision beside E6-S22); first slice: a new lib/api/space_download.py streaming space_export.py's snapshot files, with a More item in collection.js. |
 
 ## Deck Lab: decks, kit and the table
 

@@ -81,18 +81,21 @@ def _deck_path(space, deck_id, retired=False):
     return str(_relative(("retired/" if retired else "") + f"decks/{pieces[1]}/{pieces[2]}.md"))
 
 
-def snapshot(c, space, *, details=False):
+def snapshot(c, space, *, details=False, personal=False):
     """({relative path: bytes}, SHA) on the caller's read-only snapshot connection.
 
     The member must exist in the database. Never consult a cached inventory or
     fall back to source files when the database cannot be read.
     """
     member_space(space)
+    if personal and details:
+        raise ValueError("A personal copy cannot include departure details")
     if not c.execute("select 1 from space where id = %s", (space,)).fetchone():
         raise ValueError(f"No member space {space!r} in the database")
+    selected = {"space", "collection", "tokens", "imports", "decks", "texts", "history", "aliases"} if personal else _QUERIES
     data = {key: sorted((r[0] for r in c.execute(query, (space, space) if key == "play_records" else (space,))), key=_json)
-            for key, query in _QUERIES.items()}
-    if c.execute("select to_regclass('public.visibility') is not null").fetchone()[0]:
+            for key, query in _QUERIES.items() if key in selected}
+    if not personal and c.execute("select to_regclass('public.visibility') is not null").fetchone()[0]:
         data["visibility"] = sorted((r[0] for r in c.execute(
             "select to_jsonb(r) from visibility r where owner = %s "
             "and thing in ('collection', 'decks', 'games')", (space,))), key=_json)
@@ -100,7 +103,7 @@ def snapshot(c, space, *, details=False):
         data["visibility"] = []
     # Drafts kept for later (E2-S16): the member's own, and any of a member deck. Scratch work, so
     # fingerprinted and removed with the member but never written into the artifact.
-    if c.execute("select to_regclass('public.deck_draft') is not null").fetchone()[0]:
+    if not personal and c.execute("select to_regclass('public.deck_draft') is not null").fetchone()[0]:
         data["drafts"] = sorted((r[0] for r in c.execute(
             "select to_jsonb(r) from deck_draft r where profile_id in "
             "(select id from profile where space_id = %s) or split_part(deck_id, '/', 1) = %s",
@@ -109,7 +112,7 @@ def snapshot(c, space, *, details=False):
         data["drafts"] = []
     # A new deck's drafts (migration 0019): the member's own, and any in the member's space. Only
     # when there are some, so an export made before the migration still matches without them.
-    if c.execute("select to_regclass('public.new_deck_draft') is not null").fetchone()[0]:
+    if not personal and c.execute("select to_regclass('public.new_deck_draft') is not null").fetchone()[0]:
         new_drafts = sorted((r[0] for r in c.execute(
             "select to_jsonb(r) from new_deck_draft r where profile_id in "
             "(select id from profile where space_id = %s) or space_id = %s", (space, space))), key=_json)
@@ -180,7 +183,7 @@ def snapshot(c, space, *, details=False):
     return (*found, data) if details else found
 
 
-def database_snapshot(space, dbname=None, *, details=False):
+def database_snapshot(space, dbname=None, *, details=False, personal=False):
     """Read one repeatable-read, read-only snapshot; no DB write or operational log."""
     member_space(space)
     from psycopg import IsolationLevel
@@ -188,7 +191,7 @@ def database_snapshot(space, dbname=None, *, details=False):
         c.isolation_level = IsolationLevel.REPEATABLE_READ
         c.read_only = True
         c.execute("set local timezone = 'UTC'")
-        found = snapshot(c, space, details=details)
+        found = snapshot(c, space, details=details, personal=personal)
         c.rollback()
     return found
 

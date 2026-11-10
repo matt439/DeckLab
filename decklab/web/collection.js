@@ -325,6 +325,8 @@ function colHead(cv, query) {
     cv.unsupported ? null : { label: "Commanders we could build…", onclick: () => openCommanderCandidates(cv) },
     cv.editable && !cv.unsupported ? { label: "Record a trade…", onclick: () => openTradeSheet(cv) } : null,
     cv.unsupported ? null : { label: "Download collection (CSV)", onclick: () => downloadCollection(cv) },
+    typeof memberOwnSpace === "function" && memberOwnSpace() && cv.space === ownSpace()
+      ? { label: "Download my space (zip)", onclick: () => downloadMemberSpace(cv) } : null,
     cv.space === HOME_SPACE && seesInventory(HOME_SPACE) ? { label: routeH1("assembly"), href: "#/assembly" } : null];
   return [
     ...pageHead({ title: colTitle(cv.space),

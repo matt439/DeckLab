@@ -58,6 +58,24 @@ class ApiError(Exception):
 DATABASE_DOWN = "Deck Lab's database isn't reachable right now. Try again in a minute."
 
 
+@dataclasses.dataclass
+class Download:
+    """An already-built private temporary artifact, closed by the response dispatcher."""
+    stream: object
+    filename: str
+    size: int
+    content_type: str = "application/zip"
+    release: object = None
+
+    def close(self):
+        try:
+            self.stream.close()
+        finally:
+            if self.release is not None:
+                release, self.release = self.release, None
+                release()
+
+
 @contextmanager
 def state_errors():
     """Turn decklab.lib.state's errors raised in the block into answers: Unavailable into

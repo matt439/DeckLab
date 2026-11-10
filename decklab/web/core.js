@@ -945,7 +945,7 @@ class ApiError extends Error {
 async function api(path, options = {}) {
   let response;
   const viewer = state.profile ? { "X-Deck-Lab-Viewer": state.profile.id } : {};
-  const { poll, wakeHop, ...fetchOptions } = options;
+  const { poll, wakeHop, binary, ...fetchOptions } = options;
   const marked = poll === true ? { "X-Deck-Lab-Poll": "1" } : {};
   try {
     response = await fetch(path, { ...fetchOptions,
@@ -960,6 +960,7 @@ async function api(path, options = {}) {
     throw new ApiError(0, "The Deck Lab server can't be reached. Check that it's running on the PC " +
       "and that this device is on the home network.");
   }
+  if (binary === true && response.ok) return response.blob();
   let data = null;
   try { data = await response.json(); } catch (e) { /* not JSON: handled below */ }
   if (!response.ok) {

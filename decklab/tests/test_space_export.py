@@ -158,6 +158,39 @@ class MemberExportTests(db_support.DbTestCase):
             self.assertEqual(c.execute("select count(*) from audit.change_set").fetchone(), before)
         self.assertEqual((second / "manifest.json").read_bytes(), (self.dest / "manifest.json").read_bytes())
 
+    def test_personal_snapshot_omits_departure_and_mixed_record_queries(self):
+        seen = []
+        class Observed:
+            def __init__(self, connection):
+                self.connection = connection
+
+            def execute(self, query, params=()):
+                seen.append((query, params))
+                return self.connection.execute(query, params)
+
+        with self.connect("ro") as connection:
+            connection.read_only = True
+            connection.execute("set local timezone = 'UTC'")
+            files, _ = space_export.snapshot(Observed(connection), SPACE, personal=True)
+        self.assertIn("collection.csv", files)
+        self.assertIn("imports/scan.csv", files)
+        self.assertIn("decks/casual/current.md", files)
+        for query, params in seen:
+            self.assertNotRegex(query, r"\b(?:profile|profile_email|play_record|profile_setting|wishlist_entry|deck_draft|new_deck_draft|visibility)\b")
+            self.assertNotIn("ops.visit", query)
+            if "%s" in query:
+                self.assertEqual(params, (SPACE,))
+        for content in files.values():
+            self.assertNotIn(SECRET.encode(), content)
+        self.change("update collection_card set notes = 'changed private content' where space_id = 'other'")
+        again, _ = space_export.database_snapshot(SPACE, self.dbname, personal=True)
+        self.assertEqual(files, again)
+
+    def test_personal_copy_cannot_request_departure_forge_details(self):
+        with self.connect("ro") as connection:
+            with self.assertRaisesRegex(ValueError, "departure details"):
+                space_export.snapshot(connection, SPACE, personal=True, details=True)
+
     def test_other_space_changes_do_not_stale_the_export(self):
         manifest = self.export()
         self.change("update collection_card set quantity = 9 where space_id = 'other'")

@@ -396,6 +396,8 @@ Home profile `plays_as` accepts the neutral aliases `first` and `second`, normal
 
 ## People's own collections (spaces)
 
+Members with their own space can use **Collection → More → Download my space (zip)** for a personal card/list copy, and **Decks → More → Cards to get** for all their saved Planned decks together (trials excluded). The list is not saved and has no queue/orders or shop prices. The zip is not a departure export or a complete database backup; it contains that member's card/token/dice/location/import/deck-text files, with a personal manifest. Home and other-space/admin/public readers cannot request it.
+
 Each profile in `decklab/config.json` has a `space` (`lib/spaces.py`). Matt and User1 share `home`: the shared collection, token cards and decks, with the products, orders, receipts, accessories and watchlist, which only home has. User2, User3 and User4 each have their own space: a collection, token cards (with their raw imports) and decks, all in the database. Nothing is made in advance: a space with no rows reads as empty.
 
 **Members** in Settings is private to a named home admin. To replace an email, choose an existing member with their own space and the exact address to replace, enter the new address, then **Review email change** and **Save email change**. Other aliases, the member's identity and space, their records and unrelated configuration values are preserved. Addresses are normalized and checked for valid ASCII syntax and duplication across profiles. The panel cannot edit a home profile or change an existing role or space. It refuses legacy configurations without explicit roles, active configuration overrides, invalid profiles and configuration/database mismatches rather than guessing a repair.
@@ -2031,3 +2033,6 @@ Tests use a stand-in for Forge (`tests/fixtures/fake_forge.py`) and disposable i
 - `python -m decklab.lib.homenet install | remove | start | stop | restart | status`: the background server (see above). `install --at-logon` also starts it at every logon and installs the watchdog task, which runs `ensure` every 5 minutes to restart it after a crash. `--port N` and `--task NAME` are for testing with a throwaway task on another port (with `install --host 127.0.0.1`, and `--log FILE` for its log). If `config.json` can't be read, `stop`, `status` and `remove` still work when given `--port`; the others say what's wrong and do nothing.
 
 Each module's docstring in `lib/` explains the rest. A module that's a package (`api`, `decks`, `forge`, `goldfish`, `homenet`, `stats`) keeps it in its `__init__.py`, with a list of its parts.
+
+
+

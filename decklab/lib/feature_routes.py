@@ -17,6 +17,8 @@ wait or play, as the field's do.
 from types import MappingProxyType
 
 ACCESS = MappingProxyType({
+    ('GET', 'space/download'): 'inventory',
+    ('GET', 'space/needed'): 'inventory',
     # Enum-only operational reports are an anonymous same-origin exception, never inventory authority.
     ('POST', 'errors/report'): 'open',
     ('GET', 'settings/errors'): 'home-admin',
@@ -388,6 +390,7 @@ def _status(key, answer):
 
 
 def route_tables():
+    from decklab.lib.api import space_download
     """Fresh handler bindings, so request-time patches and lazy imports retain one owner."""
     from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, commander_candidates, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, comparison_lists, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, dice, edhrec, editor, history,
                                  library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, reference_facts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_combined, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_ideas, wishlist_undo)
@@ -395,6 +398,8 @@ def route_tables():
     from decklab.lib.api import error_reports
 
     gets = {
+        ("space", "download"): (space_download.download_view, ("space",)),
+        ("space", "needed"): (space_download.needed_view, ("space",)),
         ("settings", "errors"): (error_reports.view, ()),
         ("settings", "maintenance"): (maintenance.maintenance_view, ()),
         ("settings", "reference-facts"): (reference_facts.reference_facts_view, ()),
@@ -556,6 +561,16 @@ def dispatch(handler, route, query):
             params["deck_id"] = handler._deck_id(params) if "id" in params else None
             params.pop("id", None)
         answer = function(**params)
+        from decklab.lib.api.common import Download
+        if isinstance(answer, Download):
+            try:
+                handler._send(200, b"", answer.content_type,
+                              (("Cache-Control", "no-store, private"),
+                               ("Content-Disposition", f'attachment; filename="{answer.filename}"')),
+                              stream=answer.stream, length=answer.size)
+            finally:
+                answer.close()
+            return True
         handler._send_json(_status(key, answer), answer)
         return True
     if key in posts:
