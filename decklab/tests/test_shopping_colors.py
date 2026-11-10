@@ -42,7 +42,7 @@ class ShoppingColorsTests(unittest.TestCase):
         """Keep unrelated record/count/reprint work inert; no server or index is involved."""
         source = {"to_buy": queue, "orders": [], "checks": [], "warnings": []}
         with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch.object(shopping.purchases, "overview", side_effect=lambda: copy.deepcopy(source)))
+            stack.enter_context(mock.patch.object(shopping.purchases, "overview", side_effect=lambda **_: copy.deepcopy(source)))
             stack.enter_context(mock.patch.object(shopping, "_home_decks", return_value=summaries))
             stack.enter_context(mock.patch.object(shopping, "_editable_components"))
             stack.enter_context(mock.patch.object(shopping, "_product_statuses"))
@@ -264,7 +264,7 @@ class PreparedIndexShoppingColorsTests(unittest.TestCase):
         supply = pool.Pool(Counter({"Bad": 1}), {}, [])
         source = {"to_buy": [queued], "orders": [], "checks": [], "warnings": []}
         with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch.object(shopping.purchases, "overview", side_effect=lambda: copy.deepcopy(source)))
+            stack.enter_context(mock.patch.object(shopping.purchases, "overview", side_effect=lambda **_: copy.deepcopy(source)))
             stack.enter_context(mock.patch.object(shopping, "_home_decks", return_value=[summary(), summary("casual/good", "Good")]))
             stack.enter_context(mock.patch.object(shopping, "_editable_components"))
             stack.enter_context(mock.patch.object(shopping, "_product_statuses"))

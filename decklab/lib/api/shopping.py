@@ -29,7 +29,8 @@ def shopping_overview():
     """GET /api/shopping: a read-only view of purchase and receipt records:
     home's, so 403 for anyone outside the home (guard.require_sees_home_records).
 
-    purchases.overview()'s answer, plus:
+    purchases.overview(strict=False)'s answer (its "warnings" name each order and queue row whose
+    research file isn't on this PC's disk, E5-S32; any other record problem is still 500), plus:
       - "queue_revision", the exact inventory revision, and each queued card's
         "queue_row", its one-based position, for shopping_queue.py's guarded write;
       - "queue_decks", the visible home deck ids and titles offered when adding a card,
@@ -60,7 +61,8 @@ def shopping_overview():
 
 def _overview():
     try:
-        answer = purchases.overview()
+        # A research file missing from this PC's disk is a warning on the page, not a refusal (E5-S32).
+        answer = purchases.overview(strict=False)
     except (ValueError, OSError, csv.Error) as error:
         common._log(f"Shopping overview: {error}")
         raise common.ApiError(500, f"The shopping records couldn't be read: {common._public(error)}") from None

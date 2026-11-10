@@ -112,6 +112,20 @@ def source_exists(root, value, where="path", inv=None, *, retired=None):
     return resolved.is_file()
 
 
+def _on_disk(value):
+    """Whether a source is a research file looked for on disk (a buylist, a report), never a
+    deck's old path, which is checked against the decks themselves."""
+    found = paths.classify(value)
+    return found is None or found[0] != "deck"
+
+
+def _queue_warnings(absent):
+    """One warning for each missing source the queue names, with every row naming it
+    ({path: [card names]}, E5-S32)."""
+    return [f"Purchase queue {'row' if len(names) == 1 else 'rows'} {', '.join(names)}: "
+            f"source {path} isn't on this PC" for path, names in absent.items()]
+
+
 def _unique(pairs):
     result = {}
     for key, value in pairs:
@@ -175,10 +189,15 @@ def _quantity(value, where):
     return int(value)
 
 
-def read_queue():
+def read_queue(*, missing=None):
     """The watchlist's rows (magic/watchlist.csv), checked, as dicts in its order (quantity an
-    int); ValueError naming the first problem."""
+    int); ValueError naming the first problem.
+
+    missing: None (strict, the default) makes a source that isn't there an error. A list
+    instead collects one warning for each research file missing from disk (E5-S32), and the rows
+    naming it are still returned; a deck source that isn't a deck stays an error either way."""
     root = Path(config.REPO)
+    absent = {}
     inv = inventory.current()           # the rows and the decks their sources name: one snapshot
     rows = _csv(paths.WATCHLIST, QUEUE_FIELDS, inv)
     seen, retired = set(), {}
@@ -210,11 +229,15 @@ def read_queue():
             if not row["checked"] or not row["listed_at"]:
                 raise ValueError(f"{where}: reference price needs retailer and checked date")
         if row["source"] and not source_exists(root, row["source"], inv=inv, retired=retired):
-            raise ValueError(f"{where}: source file does not exist")
+            if missing is None or not _on_disk(row["source"]):
+                raise ValueError(f"{where}: source file does not exist")
+            absent.setdefault(row["source"], []).append(row["name"])
         key = tuple(row[k] for k in ("name", "printing", "set", "collector_number", "finish", "for"))
         if key in seen:
             raise ValueError(f"{where}: duplicate purchase request")
         seen.add(key)
+    if missing is not None:
+        missing.extend(_queue_warnings(absent))
     return rows
 
 
@@ -232,10 +255,13 @@ def _exists(inv, value):
     return isinstance(_source(inv, value), Product) or (value in inv.payloads and inv.payloads[value].exists)
 
 
-def read_records(root=None):
+def read_records(root=None, *, missing=None):
     """The order records (magic/orders/records/*.json) checked, as dicts in file-name order;
     ValueError naming the first problem. Each component's file must be where its kind and
     status put it (the paths pool.py and the Shopping page name).
+
+    missing: as read_queue's: a list collects a warning for each record's research file that
+    isn't on disk instead of refusing (E5-S32); everything else is checked as strictly.
 
     root: another tree to read (a test's): its inventory files are read as they are, and the
     records' sources are looked for there. The repo itself (config.REPO, the default) reads the
@@ -243,11 +269,11 @@ def read_records(root=None):
     if root is not None and Path(root).resolve() != Path(config.REPO).resolve():
         from decklab.lib.inventory.files import FileInventory
         with inventory.pinned(FileInventory(root).load()):
-            return _read_records(Path(root))
-    return _read_records(Path(config.REPO))
+            return _read_records(Path(root), missing)
+    return _read_records(Path(config.REPO), missing)
 
 
-def _read_records(root):
+def _read_records(root, missing=None):
     inv = inventory.current()
     records, seen, retired = [], set(), {}
     for order in inv.orders:
@@ -268,7 +294,9 @@ def _read_records(root):
         ordered = _date(record.get("ordered_on"), f"{name}: ordered_on")
         for source in _strings(record.get("sources"), f"{name}: sources"):
             if not source_exists(root, source, inv=inv, retired=retired):
-                raise ValueError(f"{name}: source {source} does not exist")
+                if missing is None or not _on_disk(source):
+                    raise ValueError(f"{name}: source {source} does not exist")
+                missing.append(f"{name}: source {source} isn't on this PC")
         components = record.get("components")
         if not isinstance(components, list) or not components:
             raise ValueError(f"{name}: order needs components")
@@ -356,14 +384,22 @@ def _coverage(records):
     return warnings
 
 
-def overview():
+def overview(*, strict=True):
     """The Shopping page's data: {"to_buy": the watchlist (read_queue), "orders": every order
     record with its status and each component's contents, newest first, "checks": the open
     physical checks of components that aren't cancelled, "warnings": []}, from one inventory
     snapshot. ValueError (or OSError, csv.Error) when the records or the watchlist need
-    attention."""
+    attention.
+
+    strict=False (the Shopping page's, E5-S32) carries on when an order's or a queue row's
+    research file (a buylist, a report) isn't on this PC's disk: "warnings" then names each
+    order, and the queue's rows by source, with the missing path. Every other problem (an
+    unreadable record, a missing payload, a coverage problem, a deck source that isn't a deck)
+    still raises, and the strict checks (--check, db check, the writes) are unchanged."""
+    missing = None if strict else []
+    lenient = {} if strict else {"missing": missing}       # a strict read is called exactly as before
     with contextlib.nullcontext() if inventory.is_pinned() else inventory.pinned():
-        records = read_records()
+        records = read_records(**lenient)
         warnings = _coverage(records)
         if warnings:
             raise ValueError("Shopping records need attention: " + "; ".join(warnings))
@@ -377,7 +413,8 @@ def overview():
                                    "seller": record["seller"], "status": component["status"], "text": check}
                                   for check in component["checks"])
         orders.sort(key=lambda order: (order["ordered_on"], order["id"]), reverse=True)
-        return {"to_buy": read_queue(), "orders": orders, "checks": checks, "warnings": []}
+        to_buy = read_queue(**lenient)
+        return {"to_buy": to_buy, "orders": orders, "checks": checks, "warnings": missing or []}
 
 
 def main(argv=None):
