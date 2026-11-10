@@ -230,6 +230,7 @@ function lifeRecord(open) {
   const game = open.game;
   const original = local.get(LIFE_KEY);
   playGameForm(open.data, "", null, { result: game.ended.result,
+    ...(typeof playCounterFacts === "function" ? { counter: playCounterFacts(game) } : {}),
     sides: game.players.map((p) => ({ id: p.list.id, version: p.list.version, player: p.name })),
     onSaved: () => {
       if (!lifeLegacyHere(open, null, false) || state.profile !== open.originProfile || routeToken !== open.originToken ||

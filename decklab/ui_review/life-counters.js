@@ -10,14 +10,21 @@ function payload() {
     title:index?'Synthetic second deck':'Synthetic first deck',
     sections:{Commander:[line(`Commander ${id.toUpperCase()}`)],Deck:[{...line('Forest'),qty:99}]},
     counter_markers:['poison','energy','experience','monarch','initiative']}));
-  return {lists,pod_lists:lists.map(list=>({...list,can_record:true})),games:[],pods:[],sideboards:[],warnings:[],
+  const today=new Date().toISOString().slice(0,10);
+  const sides=lists.map((list,index)=>{const value=structuredClone(list);delete value.counter_markers;
+    return {...value,player:index?'Opponent':'Matt',mulligans:0};});
+  const saved={record:{version:1,kind:'games',id:'d'.repeat(32),revision:1,space:'home',date:today,result:'a',notes:'Synthetic saved game',
+    created_on:today+'T00:00:00+00:00',updated_on:today+'T00:00:00+00:00',updated_by:'Matt',sides,
+    counter:{duration_seconds:120,seats:[{seat_id:'a',final_life:40,out_reason:null,out_order:null},
+      {seat_id:'b',final_life:0,out_reason:'life',out_order:1}]}},sha256:'e'.repeat(64),can:{sides:[true,true],result:true,delete:true}};
+  return {lists,pod_lists:lists.map(list=>({...list,can_record:true})),games:[saved],pods:[],sideboards:[],warnings:[],
     today:new Date().toISOString().slice(0,10),
     decks:Object.fromEntries(lists.map(list=>[list.id,{player:'user',status:'built',can_record:true}]))};
 }
 
 run('life-counters',async review=>{
   review.report.results=[];
-  review.report.scope='Synthetic Game-log read adapter; native counter launch, marker controls and repeated Undo. Wake Lock API is explicitly simulated; no record requests or physical-device acceptance.';
+  review.report.scope='Synthetic Game-log read adapter; native counter launch, markers/Undo, optional result fields and a cancelled deletion review. Wake Lock is simulated. No record request, save/delete or physical-device acceptance.';
   const specs=[];
   for(const mode of ['duel','pod'])for(const theme of ['light','dark'])for(const wake of ['unavailable','supported'])
     for(const width of (review.options.smoke?[393]:[393,820,1440]))
@@ -86,8 +93,27 @@ run('life-counters',async review=>{
       await counter.locator(spec.mode==='duel'?'.life-bar':'.pod-life-bar').scrollIntoViewIfNeeded();
       result.controlsPng=`${spec.mode}-controls-${spec.wake}-${spec.width}-${spec.theme}.png`;
       await page.screenshot({path:path.join(review.out,result.controlsPng),fullPage:false,animations:'disabled'});
+      if(spec.wake==='unavailable'){
+        await counter.getByRole('button',{name:'End game',exact:true}).click();
+        await counter.getByRole('button',{name:'Draw',exact:true}).click();
+        const edit=page.locator('dialog[open]').last();
+        const facts=edit.locator('.play-counter-fields');await facts.waitFor({state:'visible'});
+        assert.equal(await facts.locator(`[data-counter-life=${spec.mode==='duel'?'a':'s1'}]`).inputValue(),'41');
+        result.counterFieldsPng=`${spec.mode}-result-${spec.width}-${spec.theme}.png`;
+        await facts.scrollIntoViewIfNeeded();
+        await page.screenshot({path:path.join(review.out,result.counterFieldsPng),fullPage:false,animations:'disabled'});
+        await edit.getByRole('button',{name:spec.mode==='duel'?'Back to counter':'Cancel',exact:true}).click();
+      }
       await counter.getByRole('button',{name:'Close',exact:true}).click();
       assert.equal(await counter.count(),0);
+      if(spec.wake==='unavailable'){
+        await page.getByRole('button',{name:'Delete this game',exact:true}).click();
+        const deletion=page.locator('dialog[open]').last();
+        await deletion.getByRole('textbox',{name:'Reason for deleting',exact:true}).fill('Duplicate synthetic fixture');
+        result.deletionPng=`${spec.mode}-delete-${spec.width}-${spec.theme}.png`;
+        await page.screenshot({path:path.join(review.out,result.deletionPng),fullPage:false,animations:'disabled'});
+        await deletion.getByRole('button',{name:'Keep game',exact:true}).click();
+      }
       result.wake=await page.evaluate(()=>window.reviewWake);
       if(spec.wake==='supported')assert(result.wake.requested>=1&&result.wake.released===result.wake.requested);
       else assert.equal(result.wake.requested,0);

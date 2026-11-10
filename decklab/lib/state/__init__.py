@@ -40,7 +40,8 @@ tests/test_state_contract.py checks):
   younger than 60 seconds, else {}, never connecting or raising. These storage methods do not
   grant request access: public readers and owner-only controls must be ready before activation.
 - play_get(kind, id) -> record or None; play_list(kind) -> [record] in id order;
-  play_put(kind, record, expected_sha, actor, message) -> record
+  play_put(kind, record, expected_sha, actor, message) -> record;
+  play_delete(kind, id, expected_sha, actor, message, reason) -> True
   Games retain their version-1 envelope. Explicit pod content uses stable seats
   and a separate game_version; legacy two-player bytes and hashes stay unchanged.
   Pod opponent labels carry no deck reference or invented captured list.

@@ -381,6 +381,9 @@ def _row(row, scope, profiles, space_of, me=None, spaces=None, *, own=None, orde
             # who saved a game goes only to the space that recorded it, as the Game log's
             # "updated_by" does (play_records._view, E10-S32): anyone else is told "someone"
             shown["_anonymous"] = True
+            if op == "DELETE":
+                # A deletion reason belongs to the recording space even when every deck is Public.
+                shown["_masked"] = True
         return shown
     if not everything and not scope.get("system", False):
         return None

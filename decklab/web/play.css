@@ -79,6 +79,13 @@ dialog.life-counter button, .life-total, .life-small-value { touch-action: manip
 .life-marker-options:not([open]) > :not(summary) { display: none; }
 .life-marker-options .actions, .life-marker-claims { display: flex; flex-wrap: wrap; gap: var(--s-1); justify-content: center; }
 .life-marker-claims:empty { display: none; }
+.play-counter-fields, .play-counter-seat { min-width: 0; display: grid; gap: var(--s-3); }
+.play-counter-fields { border: 0; padding: 0; margin: 0; }
+.play-counter-fields > legend { padding: 0; font-weight: var(--fw-bold); }
+.play-counter-seat { grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-3); }
+.play-counter-seat > legend { padding: 0 var(--s-2); font-weight: var(--fw-bold); }
+.play-counter-fields > p { margin: 0; }
 .life-end { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-sizing: border-box;
   width: min(440px, calc(100% - 2 * var(--s-4))); display: grid; gap: var(--s-3); padding: var(--s-5);
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel); box-shadow: var(--shadow-2); }

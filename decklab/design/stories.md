@@ -38,7 +38,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 18 | 0 | 2 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 19 | 2 | 4 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 3 | 7 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 22 | 1 | 5 | 2 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 23 | 1 | 4 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 29 | 0 | 3 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 31 | 1 | 4 | 0 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 47 | 14 | 14 | 4 |
-| **Total** | **376** | **287** | **22** | **51** | **16** |
+| **Total** | **376** | **288** | **22** | **50** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1901,7 +1901,7 @@ Gap: only the plain decklist downloads (`downloadDeck` in `web/deck-tools.js`); 
 
 First slice: split `printDeck` in `web/deck-tools.js` into a `playSheet(data)` builder and a print wrapper, add `downloadPlaySheet(data)` on `downloadDeck`'s Blob pattern, wire it beside Print play sheet in `web/deck.js`, tested like `tests/test_commander_print_ui.py`.
 
-**E4-S31** · Matt · could · M · missing
+**E4-S31** · Matt · could · M · built
 
 As Matt, who records a game from the life counter now and then, I want to delete a game saved by mistake and the result form to keep what the counter knew, so that the Game log holds only real games.
 
@@ -1910,9 +1910,9 @@ As Matt, who records a game from the life counter now and then, I want to delete
 - Given the deletion on Activity, then its row quotes neither notes nor reason outside the recording space.
 - Given a counter game ends, when the result form opens, then game length, each seat's reason and order out, and final life totals are filled in as optional fields.
 
-Gap: play records have only get, list and put in the state store, and the pod counter hands the form only date, notes, result and seats. E4-S11 and E4-S18 built the records, E4-S26 the counters. Hand-entered extras (who went first, a best-of-three link) are a later slice. From the product review of 2026-11-10, compared with Playgroup.gg and MTG Compendium. Needs Matt's decision: he said recording games isn't necessary (E4-S27), so only the delete has evidence of need.
+Built 2026-11-11 under the all-OPEN feature approval: legacy and pod records have one audited, revision-checked delete with a reason/confirmation sheet and positive delete capability. Only the recording space may delete; hidden records answer404 first, and activity reasons/notes stay private even when deck lists are Public. Optional reviewed counter facts carry duration, final life and elimination reason/order into result forms, with explicit clearing and normal-edit preservation. New packets retain elimination order; old packet bytes and snapshot hashes remain compatible, with unknown old tie ordering left unknown. No migration or automatic game record is made.
 
-First slice: delete only: `play_delete` in `lib/state/pg.py` and `lib/state/memory.py`, `delete_game` in `lib/api/play_records.py`, a private summary in `lib/api/activity_summaries.py`, and the action in `web/play.js` and `web/play-pods.js`.
+Evidence:188 comprehensive state/API/HTTP/bridge/web checks pass (one separate DB skip), plus132 overlapping activity/privacy/bridge checks. Memory/transaction-shaped PG fixtures cover CAS/audit rollback; a real-PG case is separately guarded for CI. The eight-case native-control smoke passed with clean source/cleanup and no record POST; phone result/delete layouts were inspected and new fieldsets aligned with shared styles. Hand-entered extras such as who went first/best-of-three links remain excluded. From the product review of 2026-11-10, compared with Playgroup.gg and MTG Compendium.
 
 **E4-S32** · Matt · could · M · built
 

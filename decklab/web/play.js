@@ -375,7 +375,7 @@ function playGameCard(entry, data) {
   // apart; the game's own buttons are described by it (E11-S55). The words shown are unchanged.
   const headId = `play-game-${record.id}`;
   const decks = record.sides.map((side) => side.title || "a deck").join(" vs ");
-  return el("article", { class: "panel play-record" },
+  const card = el("article", { class: "panel play-record" },
     el("div", { class: "play-record-head" },
       el("h3", { id: headId }, playResult(record), el("span", { class: "sr-only", text: `: ${decks}, ${playDay(record.date)}` })),
       el("span", { class: "sub", "aria-hidden": "true", text: playDay(record.date) })),
@@ -383,9 +383,13 @@ function playGameCard(entry, data) {
       side.version === "owned" ? `, ${listName("owned", true)}` : "", side.plan_id ? ", sideboarded" : ""])),
     mulligans.length ? el("p", { class: "sub", text: mulligans.join("; ") + "." }) : null,
     record.notes ? el("p", { class: "play-note", text: record.notes }) : null,
+    typeof playCounterPart === "function" ? playCounterPart(record) : null,
     playSnapshotDetails(record.sides, headId),
     playMayCorrect(entry) ? el("button", { class: "btn btn-quiet", type: "button", text: "Correct this game", "aria-describedby": headId,
       onclick: () => playGameForm(data, "", entry) }) : null);
+  const remove = typeof playDeleteButton === "function" ? playDeleteButton(entry, data, card, headId) : null;
+  if (remove) card.append(remove);
+  return card;
 }
 
 /** What the viewer may change of a game (the server's "can": its own space's sides, and the date, result and
@@ -518,12 +522,15 @@ function playGameForm(data, deckId, entry = null, preset = null) {
   refreshPlans();
   const error = el("p", { class: "form-error", role: "alert" });
   const submit = el("button", { class: "btn btn-primary", type: "submit", text: "Review game" });
-  form.append(el("p", { class: "sub", text: "Choose the lists you actually played. New records snapshot the current saved lists; a correction keeps its historical lists unless you choose replacements." }),
+  const counterDetails = can.result && typeof playCounterFields === "function" ? playCounterFields(old?.counter || preset?.counter,
+    players.map((name,index) => ({ id: index ? "b" : "a", name }))) : null;
+  add(form, [el("p", { class: "sub", text: "Choose the lists you actually played. New records snapshot the current saved lists; a correction keeps its historical lists unless you choose replacements." }),
     playField("Date played", date), el("div", { class: "play-sides" }, sides.map(side => side.row)),
-    playField("Result", result), playField("Notes (optional)", notes), error, submit);
+    playField("Result", result), playField("Notes (optional)", notes), counterDetails?.root, error, submit]);
   form.addEventListener("submit", async event => {
     event.preventDefault();
     if (!playFormActive(sheet, originToken, originProfile)) { sheet.close(); return; }
+    if (counterDetails && !counterDetails.here(form)) return;
     error.textContent = ""; busy(submit, "Checking…");
     const requestGeneration = generation;
     const payload = { id: old ? old.id : null, sha256: entry ? entry.sha256 : null, date: date.value,
@@ -537,8 +544,11 @@ function playGameForm(data, deckId, entry = null, preset = null) {
         }
         return value;
       }) };
-    try { await playReview("/api/play/game", payload, sheet,
-      () => generation === requestGeneration && playFormActive(sheet, originToken, originProfile), preset && preset.onSaved); }
+    try {
+      if (counterDetails) payload.counter = counterDetails.read();
+      await playReview("/api/play/game", payload, sheet,
+      () => generation === requestGeneration && playFormActive(sheet, originToken, originProfile)
+        && (!counterDetails || counterDetails.here(form)), preset && preset.onSaved); }
     catch (failure) { error.textContent = failure.message; }
     finally { if (submit.isConnected) unbusy(submit); }
   });
@@ -560,6 +570,7 @@ function lifeSourceReview(data, packet, bridge) {
     packetStamp: lifeSourceStable(packet), session: packet.session_id, previewId: null };
   if (!lifeSourceOwner(ctx)) return false;
   playGameForm(data, "", null, { source_counter: ctx, date: packet.date, result: packet.ended.result,
+    counter: playCounterFacts(packet),
     sides: packet.players.map(player => ({ id: player.list.id, version: player.list.version,
       sha256: player.list.sha256, player: player.name })) });
   return true;
@@ -581,6 +592,7 @@ function lifeSourceOwner(ctx) {
 }
 function lifeSourceFormHere(ctx) {
   return lifeSourceOwner(ctx) && podFrameHere(ctx.frame) && ctx.form.parentNode === ctx.frame.body &&
+    (!ctx.counterDetails || ctx.counterDetails.here(ctx.form)) &&
     lifeSourceShown(ctx.form) &&
     ctx.submit.parentNode === ctx.form && ctx.cancel.parentNode === ctx.frame.foot &&
     ctx.form.contains(ctx.grid) && ctx.fields.every(node => node.isConnected && ctx.form.contains(node) &&
@@ -649,15 +661,18 @@ function lifeSourceGameForm(data, preset) {
   });
   ctx.refreshPlans = refreshPlans;
   ctx.grid = el("div", { class: "play-sides" }, ctx.sides.map(side => side.row));
+  ctx.counterDetails = playCounterFields(preset.counter, ctx.packet.players.map(player => ({ id: player.seat_id, name: player.name })));
   ctx.error = el("p", { class: "form-error", role: "alert" });
   ctx.submit = el("button", { class: "btn btn-primary", type: "submit", text: "Review game" });
   ctx.cancel = el("button", { class: "btn", type: "button", text: "Back to counter", onclick: () => {
     if (lifeSourceFormHere(ctx) && podTop(ctx.sheet) && !ctx.pending) ctx.sheet.close();
   } });
-  ctx.form.append(el("p", { class: "sub", text: "Review the lists and result before recording this game. Counter totals stay on this device." }),
-    playField("Date played", ctx.date), ctx.grid, playField("Result", ctx.result), playField("Notes (optional)", ctx.notes), ctx.error, ctx.submit);
+  add(ctx.form, [el("p", { class: "sub", text: "Review the lists, result and optional counter details before recording this game." }),
+    playField("Date played", ctx.date), ctx.grid, playField("Result", ctx.result), playField("Notes (optional)", ctx.notes),
+    ctx.counterDetails?.root, ctx.error, ctx.submit]);
   ctx.frame.body.append(ctx.form); ctx.frame.foot.append(ctx.cancel);
-  ctx.fields = [ctx.date, ctx.notes, ctx.result, ...ctx.sides.flatMap(side => [side.select, side.name, side.mulligans, side.plan])];
+  ctx.fields = [ctx.date, ctx.notes, ctx.result, ...ctx.sides.flatMap(side => [side.select, side.name, side.mulligans, side.plan]),
+    ...(ctx.counterDetails?.fields || [])];
   ctx.parents = new Map(ctx.fields.map(node => [node, node.parentNode]));
   const changed = () => { if (lifeSourceFormHere(ctx)) { ctx.generation++; ctx.error.textContent = ""; } };
   for (const node of ctx.fields) for (const event of ["input", "change"]) node.addEventListener(event, changed);
@@ -681,6 +696,7 @@ function lifeSourceGameForm(data, preset) {
 }
 function lifeSourcePayload(ctx) {
   return { profile: ctx.profileId, id: ctx.previewId, sha256: null, date: ctx.date.value, result: ctx.result.value, notes: ctx.notes.value,
+    ...(ctx.counterDetails ? { counter: ctx.counterDetails.read() } : {}),
     sides: ctx.sides.map(side => {
       const list = side.get();
       if (!list) throw Error("replacement");
@@ -737,7 +753,8 @@ function lifeSourceAnswer(ctx, answer, payload, expected, saved = false) {
       (saved ? answer.saved !== true || !podSha(answer.sha256) : answer.preview !== true || !podSha(answer.review_sha256)) ||
       !/^[a-f0-9]{32}$/.test(saved ? record.id || "" : answer.id || "") || payload.id && (saved ? record.id : answer.id) !== payload.id ||
       record.space !== ctx.space || record.date !== payload.date || record.result !== payload.result || record.notes !== podTrim(payload.notes) ||
-      !Array.isArray(record.sides) || record.sides.length !== 2) return null;
+      !Array.isArray(record.sides) || record.sides.length !== 2
+      || lifeSourceStable(record.counter ?? null) !== lifeSourceStable(payload.counter ?? null)) return null;
   if (saved && (record.version !== 1 || record.kind !== "games" || record.revision !== 1 ||
       !podText(record.updated_by, 80) || [record.created_on, record.updated_on].some(value =>
         !podText(value, 80) || !/(?:Z|[+-]\d{2}:\d{2})$/.test(value) || !Number.isFinite(Date.parse(value))))) return null;
@@ -753,12 +770,16 @@ function lifeSourceAnswer(ctx, answer, payload, expected, saved = false) {
       : side.sha256 !== wanted.sha256) return null;
   }
   const content = { date: record.date, result: record.result, notes: record.notes, space: record.space, sides: record.sides };
+  if (record.counter) content.counter = structuredClone(record.counter);
   return { content: structuredClone(content), id: saved ? record.id : answer.id, token: answer.review_sha256 };
 }
 async function lifeSourcePreview(ctx) {
   if (!lifeSourceFormHere(ctx) || !podTop(ctx.sheet) || !podCounterControlVisible(ctx.submit) || ctx.pending || ctx.uncertain) return;
   if (lifeSourceRefreshChoices(ctx)) return;
   let payload;
+  if (ctx.counterDetails) {
+    try { ctx.counterDetails.read(); } catch (error) { ctx.error.textContent = error.message; return; }
+  }
   try { payload = lifeSourcePayload(ctx); }
   catch (failure) { ctx.error.textContent = failure.message === "plan" ? "Choose a current sideboard plan or None before review. Your draft is still here."
     : "Choose current replacement lists before review. You can keep counting without recording."; return; }

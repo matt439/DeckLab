@@ -234,6 +234,12 @@ def play_id(value):
     return value
 
 
+def play_delete_reason(value):
+    if not isinstance(value, str) or not value.strip() or len(value) > 2000 or NOTES_CONTROL.search(value):
+        raise Invalid("Give a reason for deleting this game, at most 2000 characters")
+    return value.strip()
+
+
 def split_record(kind, record):
     """A record dict checked and split into (header, content, deck_ids): header the PLAY_HEADER
     fields, content the kind's own (legacy games: date, sides, result, notes;

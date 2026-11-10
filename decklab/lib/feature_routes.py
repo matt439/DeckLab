@@ -254,6 +254,7 @@ def dispatch(handler, route, query):
         ("assembly", "ticks"): (assembly_ticks.packing_ticks, assembly_ticks.MAX_BODY),
         ("assembly", "standins"): assembly_standins.save_standins,
         ("play", "game"): play_records.save_game,
+        ("play", "game", "delete"): play_records.delete_game,
         ("play", "pod"): (play_pods.save_pod, play_pods.MAX_BODY),
         ("play", "sideboard"): play_records.save_sideboard,
         ("play", "sideboard-test"): _start_sideboard_test,     # run.start (require_start), after the preview's checks

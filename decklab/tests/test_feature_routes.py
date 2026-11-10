@@ -45,6 +45,7 @@ POSTS = (
     ("/api/assembly/built", assembly_completion, "mark_built"),
     ("/api/assembly/ticks", assembly_ticks, "packing_ticks"),
     ("/api/play/game", play_records, "save_game"),
+    ("/api/play/game/delete", play_records, "delete_game"),
     ("/api/play/sideboard", play_records, "save_sideboard"),
     ("/api/receipt/preview", receipts, "preview_receipt"),
     ("/api/receipt/apply", receipts, "apply_receipt"),

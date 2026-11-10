@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Audited game deletion and reviewed counter facts (2026-11-11; E4-S31)
+
+- Legacy/pod Game-log records can be deleted through one reasoned, confirmed audit change with a current revision receipt. The recording space owns deletion; hidden records remain404 and deletion reasons/notes remain private outside that space, including when deck lists are Public.
+- Ended counters can prefill optional reviewed duration, final-life, elimination reason and order fields. Normal edits preserve absent facts and explicit clearing removes them. New pod packets retain ordering, while older packets remain compatible and ambiguous old ordering stays unknown; deck snapshot hashes/schema are unchanged.
+- Validation:188 comprehensive and132 overlapping state/API/HTTP/bridge/activity/privacy/UI checks pass (one separate DB skip). Disposable Memory/PG-shaped checks cover CAS and audit behavior; real-PG qualification is guarded for CI. Eight synthetic native-control captures passed cleanly, with no record POST, and result/delete layouts were inspected. No actual game was recorded or deleted by this task.
+
 ## A newcomer path through self-hosting (2026-11-11; E11-S80)
 
 - SELF-HOSTING now leads with time/resource planning, required/optional contents and a Windows PowerShell quick start covering downloads, interpreter/PATH/Store aliases, password custody and doctor checks. Versioned Linux/macOS package examples and the PostgreSQL apt path are linked to vendor instructions; profile/timezone/path and regional pricing examples are explicit.

@@ -1091,6 +1091,30 @@ class PgStore:
 
     # ------------------------------------------------------------------ the audit trail
 
+    def play_delete(self, kind, record_id, expected_sha, actor, message, reason):
+        """Audited removal with the same membership and per-record transaction locks as save."""
+        kind, record_id = rules.play_kind(kind), rules.play_id(record_id)
+        reason = rules.play_delete_reason(reason)
+        rules.check_write(actor, message, reason)
+        before = self.play_get(kind, record_id)
+        if before is None or rules.record_sha(before) != expected_sha:
+            raise Conflict(rules.CHANGED_MESSAGE)
+        from decklab.lib import spaces
+        owners = {spaces.split_deck_id(deck_id)[0] for deck_id in rules.record_deck_ids(kind, before)}
+        if before.get("space"):
+            owners.add(before["space"])
+
+        def work(c):
+            with self._change(c, actor, message, reason, space_ids=owners) as (cur, _):
+                self._lock(cur, f"play:{kind}:{record_id}")
+                cur.execute(f"select {_PLAY_COLUMNS} from play_record where kind = %s and id = %s", (kind, record_id))
+                row = cur.fetchone()
+                if row is None or rules.record_sha(self._record(kind, row)) != expected_sha:
+                    raise Conflict(rules.CHANGED_MESSAGE)
+                cur.execute("delete from play_record where kind = %s and id = %s", (kind, record_id))
+                return True
+        return self._call(work)
+
     def activity(self, before=None, limit=50, *, visible=None, inventory=None):
         """The audit trail, newest first: {"changes": [...], "next": id or None}.
 

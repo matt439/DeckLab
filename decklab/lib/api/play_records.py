@@ -167,6 +167,10 @@ def _checked(kind, record_id, record):
             expected = _plan_moves(record["deck"], record["out"], record["in"])
             if any(record[key] != expected[key] for key in ("out", "in", "after")):
                 raise ValueError("recorded sideboard result does not match its moves")
+        if kind == "games" and "counter" in record:
+            from .play_counter_facts import normalise
+            normalise(record["counter"], [seat["seat_id"] for seat in record["seats"]]
+                      if pods.mode(record) == "pod" else ["a", "b"])
     except (ValueError, TypeError, KeyError, ApiError, state.Invalid) as exc:
         raise ApiError(500, f"Play record {record_id} cannot be read: {_public(exc)}") from None
     return rules.record_sha(record)
@@ -272,6 +276,7 @@ def _view(kind, record, profile, script=False):
                     out["sides"][i].pop(key, None)
         if _recording_space(record) != own:
             out["notes"] = ""
+            out.pop("counter", None)
             out.pop("space", None)
             if "updated_by" in out:
                 out["updated_by"] = SOMEONE
@@ -303,9 +308,11 @@ def _rights(kind, record, profile):
         return may
     own = permissions._space_of(profile) if profile else None
     recording = _recording_space(record)
+    from .play_deletion import may_delete
     return {"sides": [may and not rules.is_removed_deck(side) and (not profile or _deck_space(side["id"]) == own)
                       for side in record["sides"]],
-            "result": may and bool(recording) and (not profile or recording == own)}
+            "result": may and bool(recording) and (not profile or recording == own),
+            "delete": may_delete(record, profile)}
 
 
 def _selection(value, previous=None, profile=None):
@@ -417,8 +424,9 @@ def _game(data, previous, profile):
         snapshot["player"] = _text(value.get("player"), "Player name", 80, required=True)
         snapshot["mulligans"] = _integer(value.get("mulligans"), "Mulligans", 20)
         sides.append(snapshot)
-    return {"date": data["date"], "sides": sides, "result": data["result"], "notes": notes,
-            "space": recording}
+    from .play_counter_facts import apply
+    return apply({"date": data["date"], "sides": sides, "result": data["result"], "notes": notes,
+                  "space": recording}, data, previous, profile, ["a", "b"])
 
 
 def _moves(value, label, available):
@@ -528,7 +536,8 @@ def _save(kind, body):
     data = _parse_body(body)
     profile = _writer(data)
     fields = ("date", "sides", "result", "notes") if kind == "games" else ("deck", "opponent", "out", "in", "notes")
-    _keys(data, ("profile", "id", "sha256", *fields, "preview"), ("review_sha256",))
+    _keys(data, ("profile", "id", "sha256", *fields, "preview"),
+          ("review_sha256", "counter") if kind == "games" else ("review_sha256",))
     record_id = _record_id(data["id"] or uuid.uuid4().hex)
     with state_errors():
         # While the database is known to be down, refuse at once rather than
@@ -582,6 +591,11 @@ def _save(kind, body):
 def save_game(body):
     """POST /api/play/game; preview:true before preview:false + review_sha256."""
     return _save("games", body)
+
+
+def delete_game(body):
+    from .play_deletion import delete_game as remove
+    return remove(body)
 
 
 def save_sideboard(body):

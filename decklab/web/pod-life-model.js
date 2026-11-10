@@ -169,7 +169,9 @@ function podLifeValid(game, owner, now = Date.now()) {
             expected.includes(`${entry.seat_id}/${entry.source_id}`) && podLifeInteger(entry.value, 0, 99))) return false;
       const threshold = podLifeThreshold(game, seat);
       if (seat.out === null) { if (threshold) return false; }
-      else if (!podLifeObject(seat.out, ["why", "at"]) || !["life", "poison", "commander", "conceded", "chosen"].includes(seat.out.why) ||
+      else if (!podLifeObject(seat.out, ["why", "at", ...(Object.hasOwn(seat.out, "order") ? ["order"] : [])])
+          || Object.hasOwn(seat.out, "order") && !podLifeInteger(seat.out.order, 1, game.seats.length)
+          || !["life", "poison", "commander", "conceded", "chosen"].includes(seat.out.why) ||
           !podLifeTime(seat.out.at, game.updated) || seat.out.at < game.started ||
           seat.out.why === "life" && seat.life > 0 || seat.out.why === "poison" && seat.poison < 10 ||
           seat.out.why === "commander" && !seat.damage.some(entry => entry.value >= 21)) return false;
@@ -186,11 +188,15 @@ function podLifeValid(game, owner, now = Date.now()) {
 function podLifeMutable(game, now) {
   return podLifeValid(game, { profile: game?.profile, space: game?.space }, now) && now >= game.updated && !game.ended;
 }
+function podLifeNextOutOrder(game) {
+  return 1 + Math.max(game.seats.filter(seat => seat.out).length, ...game.seats.map(seat => seat.out?.order || 0));
+}
 function podLifeFinish(game, now) {
   game.updated = now;
+  const order = podLifeNextOutOrder(game);
   for (const seat of game.seats) {
     const why = podLifeThreshold(game, seat);
-    if (!seat.out && why) seat.out = { why, at: now };
+    if (!seat.out && why) seat.out = { why, at: now, order };
   }
   const active = game.seats.filter(seat => !seat.out);
   if (active.length <= 1) game.ended = { result: active[0]?.seat_id || "draw", why: "last", at: now };
@@ -223,7 +229,7 @@ function podLifeConcede(game, seatId, now = Date.now()) {
   if (!podLifeMutable(game, now)) return false;
   const seat = game.seats.find(row => row.seat_id === seatId);
   if (!seat || seat.out) return false;
-  seat.out = { why: "conceded", at: now };
+  seat.out = { why: "conceded", at: now, order: podLifeNextOutOrder(game) };
   podLifeFinish(game, now);
   return true;
 }
