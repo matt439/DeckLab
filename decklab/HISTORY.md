@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Canonical product routing and page locale (2026-11-11; E11-S73)
+
+- Product-specific anonymous hashes and goldfish filtering now use the canonical Beginner Box constant, with SQL values still parameterized. One core LOCALE supplies page dates/numbers, preserving en-AU and all existing options; Shopping uses the same number helper for explicit formatting.
+- Syntax/scope-based fixture guards reject duplicated runtime stems, raw locale arguments and shadowed LOCALE bindings, without scanning comments/docstrings/fixtures as executable policy. No household settings, pilot choices, source data or ordering behavior changed; core stays below the line limit.
+- Validation:136 core/guard/Python checks pass; the102-case UI group had only three stale E11-S78 positive phrases in one test, corrected and rechecked. Canonical-stem tests need no database or Forge. Source/whitespace checks pass.
+
 ## Scan-session defaults and retained unsure proposals (2026-11-11; E7-S35)
 
 - Scan cards now has explicit Keep/Clear controls for defaults applied only to later additions. A language read from the card wins; finishes apply only when the selected printing supports them. Reopening resets defaults without rewriting resolved card facts.

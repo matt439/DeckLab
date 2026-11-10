@@ -13,7 +13,7 @@
 function shopHistoryDay(value) {
   const at = typeof value === "string" ? new Date(`${value.slice(0, 10)}T12:00:00`) : null;
   if (!at || Number.isNaN(at.getTime())) return String(value || "");
-  return at.toLocaleDateString("en-AU", {day: "numeric", month: "short"});
+  return at.toLocaleDateString(LOCALE, {day: "numeric", month: "short"});
 }
 
 function shopHistoryPrice(day) {

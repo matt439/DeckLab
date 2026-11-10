@@ -10,7 +10,7 @@ function deckChangedDate(edited) {
   const when = new Date(edited);
   if (Number.isNaN(when.getTime())) return null;
   return el("time", { class: "deck-changed", datetime: when.toISOString(),
-    title: `Last changed ${when.toLocaleString("en-AU", { dateStyle: "long", timeStyle: "short" })}`,
+    title: `Last changed ${when.toLocaleString(LOCALE, { dateStyle: "long", timeStyle: "short" })}`,
     text: `Last changed ${simDay(when)}` });
 }
 

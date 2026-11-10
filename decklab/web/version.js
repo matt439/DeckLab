@@ -97,7 +97,7 @@ function databaseMessages(db) {
   if (db.backup_stale) {
     const hours = db.stale_hours ? ` (more than ${db.stale_hours} hours ago)` : "";
     out.push(db.last_backup ?
-      `The last database backup that worked was on ${new Date(db.last_backup).toLocaleString("en-AU")}${hours}. ` +
+      `The last database backup that worked was on ${new Date(db.last_backup).toLocaleString(LOCALE)}${hours}. ` +
         "Check the nightly task: python -m decklab.db schedule status." :
       "No database backup has worked yet. Run python -m decklab.db backup on the PC.");
   }
@@ -148,7 +148,7 @@ function renderVersionStatus(s) {
   const checked = $("#build-checked"), version = $("#build-version");
   if (checked) {
     checked.hidden = !buildLine;
-    checked.textContent = `Last checked ${new Date().toLocaleTimeString("en-AU")}.`;
+    checked.textContent = `Last checked ${new Date().toLocaleTimeString(LOCALE)}.`;
   }
   if (version) version.textContent = view.label;
   showVersionWarning(buildLine ? view.messages : view.forEveryone, view.reload, databaseMessages(s.database),
@@ -286,7 +286,7 @@ function renderSimulations(s) {
     workers.value = String(s.workers || s.max_workers);
     workers.dataset.max = String(s.max_workers);
   }
-  const since = s.by ? `Set by ${s.by}${s.since ? ` on ${new Date(s.since).toLocaleString("en-AU")}` : ""}.` : "";
+  const since = s.by ? `Set by ${s.by}${s.since ? ` on ${new Date(s.since).toLocaleString(LOCALE)}` : ""}.` : "";
   // The database couldn't be read: the server goes by the last setting it knew (or the default).
   const unavailable = s.unavailable ? " The database isn't reachable, so this may not be the saved setting." : "";
   const sinceLine = $("#sim-since");

@@ -66,8 +66,8 @@ function historyDraw(data, id, version, token) {
 function historyWhen(rev) {
   const when = new Date(rev.date);
   if (Number.isNaN(when.getTime())) return rev.date.slice(0, 10);
-  const time = when.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }).replace(/\s/g, " ");
-  return `${when.toLocaleDateString("en-AU", HISTORY_MONTH)}, ${time}`;
+  const time = when.toLocaleTimeString(LOCALE, { hour: "numeric", minute: "2-digit" }).replace(/\s/g, " ");
+  return `${when.toLocaleDateString(LOCALE, HISTORY_MONTH)}, ${time}`;
 }
 
 /** The server sends only the subject this viewer may read, or a plain summary for an outside reader. */

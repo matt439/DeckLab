@@ -385,7 +385,7 @@ class VersionInteractionTests(unittest.TestCase):
           assert.equal(host.hidden, true);
           renderVersionStatus({...answer(), database: {ok: false}});      // what anyone but an admin gets
           assert.equal(host.hidden, false);
-          assert.match(host.textContent, /Deck Lab's database isn't reachable/);
+          assert.match(host.textContent, /Deck Lab couldn't verify a database connection/);
           assert.doesNotMatch(host.textContent, /migrat|backup/);
           renderVersionStatus({...answer(), database: {ok: false, error: "migrations pending", pending_migrations: 1,
             last_backup: "2026-10-11T03:30:00+10:00", backup_stale: false, stale_hours: 36, venv: null}});
@@ -408,7 +408,7 @@ class VersionInteractionTests(unittest.TestCase):
           assert.doesNotMatch(host.textContent, /isn't reachable/);
           renderVersionStatus({...answer(), database: {ok: false, error: "psycopg missing", pending_migrations: null,
             last_backup: null, backup_stale: null, stale_hours: 36, venv: "there's no .venv in the repo"}});
-          assert.match(host.textContent, /isn't reachable.*there's no \\.venv in the repo/);
+          assert.match(host.textContent, /couldn't verify a database connection.*there's no \\.venv in the repo/);
           renderVersionStatus({...answer(), database: {ok: true, error: null, pending_migrations: 0,
             last_backup: "2026-10-01T03:30:00+10:00", backup_stale: true, stale_hours: 36, venv: null}});
           assert.match(host.textContent, /last database backup that worked was on .*more than 36 hours ago/);
@@ -423,7 +423,7 @@ class VersionInteractionTests(unittest.TestCase):
           assert.match(host.textContent, /database check of 2026-10-12 03:35 found a problem \\(deck lines\\)/);
           // Beside a version warning, both are shown.
           renderVersionStatus({...answer({...currentBuild, restart_required: true}), database: {ok: false}});
-          assert.match(host.textContent, /database isn't reachable.*server code has changed/);
+          assert.match(host.textContent, /couldn't verify a database connection.*server code has changed/);
         """)
 
     def test_a_database_outage_is_an_error_box_not_the_card_data_wait(self):

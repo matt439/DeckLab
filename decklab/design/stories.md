@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 47 | 14 | 14 | 4 |
-| **Total** | **376** | **289** | **22** | **49** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 48 | 14 | 13 | 4 |
+| **Total** | **376** | **290** | **22** | **48** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6329,7 +6329,7 @@ First slice: add `scripts/audit_stories.py` (standard library) with `--check` an
 
 Now: built 2026-11-10 ([HISTORY.md](../HISTORY.md#story-counts-generated-from-the-story-headers-2026-11-10-e11-s72)). Status: built (2026-11-10). `scripts/audit_stories.py` counts the stories per epic from the header lines; `--check` (run by lint.yml with its fixture tests, documentation-only changes included) fails when stories.md's Summary table or design/README.md's epic table and totals line disagree or a header is malformed; `--write` rewrites only those blocks, idempotently; `--sessions` lists partial stories' optional Awaiting lines by device against TODO.md's rows. The hand recount paragraph under the Summary is one line naming the script. Evidence: `scripts/audit_stories.py` (parse_stories, count, fix_stories, fix_readme, sessions, main); `decklab/tests/test_audit_stories.py`; `.github/workflows/lint.yml` (Check story counts against the story headers); `decklab/README.md`. Gap: none for the story. Notes: after flipping a story's status or adding a story, run `python scripts/audit_stories.py --write` or lint (and test_audit_stories' repo check) fails. No story carries an Awaiting line yet (they are optional); `--sessions` names the partial stories with a DECISION row in TODO.md and no Awaiting line. The design README's hand-written "Must and should stories" line isn't checked; the script's plain output prints the figures to copy. The Gap's claim that the README totals had drifted was no longer true when this was built: all tables agreed.
 
-**E11-S73** · Self-hoster · could · S · missing
+**E11-S73** · Self-hoster · could · S · built
 
 As a self-hoster running my own Deck Lab, I want the Beginner Box product code and the date and number locale each defined in exactly one place, so that what one household happens to own or where it lives isn't scattered through shared code.
 
@@ -6338,9 +6338,9 @@ As a self-hoster running my own Deck Lab, I want the Beginner Box product code a
 - Given a new product-stem literal or raw locale string elsewhere in the code, then a fixture test fails, naming the file; docstrings and fixtures are left alone.
 - Given the current household's install, then nothing it sees changes.
 
-Gap: the stem is repeated as a literal in three places beside its constant, and `en-AU` is written out across the page's scripts. E10-S39's test covers only names and titles in the page code; E11-S53 and E11-S48 are built, the storage box is E8-S25's and first-run choices E11-S52's, so no "house profile" config block is wanted. From the product review of 2026-11-10, compared with OpenMTG's admin-set choices. Needs Matt's decision: whether the locale stays en-AU or follows the browser for other installs.
+Built 2026-11-11: anonymous product-hash SQL and goldfish half filtering use `decks.BEGINNER_BOX`; the page retains its one canonical prefix. `core.js` defines the single LOCALE and all date/number formatters refer to that actual global binding, preserving en-AU and current formatting options under the approved documented defaults. The existing thousands helper accepts explicit options for Shopping as well. Python AST and Acorn lexical guards reject new runtime stem/locale literals and shadowed locale bindings while ignoring docstrings/comments/fixtures. No household setting, pilot choice, data or order changed; core remains1126 lines.
 
-First slice: use `decks.BEGINNER_BOX` in `space_forge.py` and `goldfish/cli.py`, add a `LOCALE` constant and helpers to `decklab/web/core.js`, and add `decklab/tests/test_no_household_literals.py`.
+Evidence:136 core/guard/Python checks pass. The102-case affected UI run had one old E11-S78 wording expectation, corrected and rechecked with eight focused cases; the other101 passed. Tests exercise a changed canonical stem without a database or actual simulation. Source/whitespace guards pass. From the product review of 2026-11-10, compared with OpenMTG's admin-set choices; no new house-profile setting is introduced.
 
 **E11-S74** · Matt · could · M · built
 

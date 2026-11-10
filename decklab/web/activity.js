@@ -297,9 +297,9 @@ function activityDayName(when) {
   const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
   if (activityDayKey(when) === activityDayKey(today)) return "Today";
   if (activityDayKey(when) === activityDayKey(yesterday)) return "Yesterday";
-  return when.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  return when.toLocaleDateString(LOCALE, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
 
 function activityTime(when) {
-  return when.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }).replace(/\s/g, " ");
+  return when.toLocaleTimeString(LOCALE, { hour: "numeric", minute: "2-digit" }).replace(/\s/g, " ");
 }

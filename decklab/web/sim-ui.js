@@ -161,7 +161,7 @@ function ageWords(days) {
 function simDay(d, long = false, now = Date.now()) {
   const opts = long ? { day: "numeric", month: "long", year: "numeric" } : { day: "numeric", month: "short" };
   if (!long && d.getFullYear() !== new Date(now).getFullYear()) opts.year = "numeric";
-  return d.toLocaleDateString("en-AU", opts);
+  return d.toLocaleDateString(LOCALE, opts);
 }
 
 /** How old a result is (4.9), or any other dated check ("pulled 24 Oct" for prices, "checked 3 days ago" for a

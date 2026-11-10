@@ -79,7 +79,7 @@ def _main(argv):
 
     if args.all:
         everything = [s for s in decks.list_decks() if not s.get("error")]
-        chosen = [s for s in everything if args.halves or not s["id"].startswith("product/fdn-beginner-box/")]
+        chosen = [s for s in everything if args.halves or not s["id"].startswith(f"product/{decks.BEGINNER_BOX}/")]
         if args.pairings:
             chosen += decks.beginner_box_pairings()
         print(f"{'deck':<48} {'ver':<6} {'games':<11} {'mull%':>6} {'L3@3':>6} {'L4@4':>6} {'screw':>6} "

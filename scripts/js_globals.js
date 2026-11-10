@@ -76,7 +76,7 @@ function guarded(call, name, parents) {
   return false;
 }
 
-function audit(files) {
+function audit(files, trackedLiterals = []) {
   let text = "";
   const sources = [];
   for (const file of files) {
@@ -92,16 +92,31 @@ function audit(files) {
   let tree;
   try { tree = acorn.parse(text, {ecmaVersion: "latest", sourceType: "script", ranges: true}); }
   catch (error) { return {issues: [{...locate(error.pos), name: null, message: "JavaScript syntax could not be parsed"}]}; }
-  const parents = new Map(), calls = new Map();
+  const parents = new Map(), calls = new Map(), literalUses = [], localeNodes = [];
   const visit = node => {
     if (["CallExpression", "NewExpression"].includes(node.type) && node.callee.type === "Identifier") {
       calls.set(node.callee, node);
     }
+    const value = node.type === "Literal" ? node.value : node.type === "TemplateElement" ? node.value.cooked : null;
+    if (typeof value === "string") for (const tracked of trackedLiterals) {
+      if (value.includes(tracked)) literalUses.push({...locate(node.start), value: tracked});
+    }
+    const member = ["CallExpression", "NewExpression"].includes(node.type) ? node.callee : null;
+    if (member?.type === "MemberExpression" && !member.computed && (
+      ["toLocaleString", "toLocaleDateString", "toLocaleTimeString"].includes(member.property.name)
+      || member.object.type === "Identifier" && member.object.name === "Intl" && ["DateTimeFormat", "NumberFormat",
+        "Collator", "RelativeTimeFormat", "ListFormat", "DisplayNames", "PluralRules", "Segmenter", "Locale"]
+        .includes(member.property.name))) localeNodes.push(node);
     for (const child of children(node)) { parents.set(child, node); visit(child); }
   };
   visit(tree);
   const manager = scopes.analyze(tree, {ecmaVersion: 2025, sourceType: "script", optimistic: true,
                                        ignoreEval: true, impliedStrict: true});
+  const bindings = new Map(manager.scopes.flatMap(scope => scope.references.map(reference => [reference.identifier, reference.resolved])));
+  const locale = manager.globalScope.set.get("LOCALE");
+  const localeCalls = localeNodes.map(node => ({...locate(node.start), method: node.callee.property.name,
+    shared: node.arguments[0]?.type === "Identifier" && node.arguments[0].name === "LOCALE"
+      && Boolean(locale) && bindings.get(node.arguments[0]) === locale}));
   const issues = [];
   for (const reference of manager.globalScope.through) {
     const identifier = reference.identifier, call = calls.get(identifier), name = identifier.name;
@@ -125,13 +140,13 @@ function audit(files) {
     findCalls(closer.body);
   }
   return {issues, sheetClosers: top.filter(node => /^(?:close.*Sheets|.*Close.*Sheets)$/.test(node.id.name))
-    .map(node => ({name: node.id.name, ...locate(node.start)})), closeCalls};
+    .map(node => ({name: node.id.name, ...locate(node.start)})), closeCalls, literalUses, localeCalls};
 }
 
 if (require.main === module) {
   try {
     const input = JSON.parse(fs.readFileSync(0, "utf8"));
-    process.stdout.write(JSON.stringify(audit(input.files)));
+    process.stdout.write(JSON.stringify(audit(input.files, input.trackedLiterals || [])));
   } catch (error) {
     process.stderr.write("JavaScript audit failed: " + error.message + "\n");
     process.exitCode = 1;

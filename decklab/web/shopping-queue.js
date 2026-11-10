@@ -94,7 +94,7 @@ function shopQueueTableRecord(card, casual, showFor, view) {
   const reprints = casual.querySelector(".reprint-info"), words = casual.querySelector(".shop-match-words");
   const snapshot = casual.querySelector(".shop-snapshot-list") || casual.querySelector(".shop-snapshot");
   const nameCell = el("td", {class: "shop-q-name"});
-  const price = shopPrice(card), value = price ? Number(card.listed_aud).toLocaleString("en-AU",
+  const price = shopPrice(card), value = price ? thousands(card.listed_aud,
     {minimumFractionDigits: 2, maximumFractionDigits: 2}) : null;
   const printingLine = shopQueuePrinting(card);
   const printing = el("td", {class: "shop-q-printing"}, printingLine);

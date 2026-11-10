@@ -21,6 +21,7 @@ wants (JSON and "X-Deck-Lab: 1") and, for a POST, the profile making the change.
 
 const RETRY_SECONDS = 15;           // how often to retry while the card data isn't ready
 const STORE = "decklab.";           // prefix of every storage key
+const LOCALE = "en-AU";            // date and number presentation stays the same for this install
 const BOX_PREFIX = "product/fdn-beginner-box/";     // ids of the ten Beginner Box halves
 const SHELL_TOP = 56;               // px of the sticky top bar (48 on a phone): shell.css's --shell-top
 const NAV_SPACE = 60 + SHELL_TOP;   // px at the top of a deck page under the top bar and its sticky section nav
@@ -204,7 +205,7 @@ function pct(x, digits = 1) {
 /** A chance as a whole percentage, for chart caps and table cells: "86%", "<1%", ">99%". */
 function pctShort(x) { return pct(x, 0); }
 
-function thousands(n) { return Number(n).toLocaleString("en-AU"); }
+function thousands(n, options) { return Number(n).toLocaleString(LOCALE, options); }
 
 function capitalise(text) { return text ? text[0].toUpperCase() + text.slice(1) : text; }
 

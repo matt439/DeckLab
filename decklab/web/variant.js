@@ -167,7 +167,7 @@ function vtDraw(page, data) {
   setTitle(`Test of a change to ${base.title || "a deck"}`);
   const started = t.created ? new Date(t.created) : null;
   const when = started && !Number.isNaN(started.getTime())
-    ? started.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: false }) : null;
+    ? started.toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit", hour12: false }) : null;
   clear(page.host);
   add(page.host, [
     crumb(deckHref(base.id, base.version), base.title || "The deck"),

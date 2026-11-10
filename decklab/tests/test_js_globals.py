@@ -10,9 +10,10 @@ WEB = ROOT / "decklab" / "web"
 NODE = shutil.which("node")
 
 
-def audit(files):
+def audit(files, *, tracked_literals=()):
     result = subprocess.run([NODE, str(ROOT / "scripts" / "js_globals.js")],
-                            input=json.dumps({"files": [{"name": name, "source": source} for name, source in files]}),
+                            input=json.dumps({"files": [{"name": name, "source": source} for name, source in files],
+                                              "trackedLiterals": tracked_literals}),
                             text=True, encoding="utf-8", capture_output=True, timeout=30)
     if result.returncode:
         raise AssertionError("JS audit needs pinned dependencies: npm ci --ignore-scripts --prefix decklab/ui_review\n"

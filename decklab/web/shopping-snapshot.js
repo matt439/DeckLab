@@ -31,7 +31,7 @@ function shopSnapshotWhen(value) {
   const at = typeof value === "string" ? new Date(value) : null;
   if (!at || Number.isNaN(at.getTime())) return null;
   return el("time", {class: "shop-snapshot-when", datetime: value, title: value,
-    text: `fetched ${at.toLocaleString("en-AU", {day: "numeric", month: "short", hour: "numeric", minute: "2-digit"})}`});
+    text: `fetched ${at.toLocaleString(LOCALE, {day: "numeric", month: "short", hour: "numeric", minute: "2-digit"})}`});
 }
 
 /** True when url is one of that shop's own listing pages. */
@@ -242,7 +242,7 @@ function shopMissingSnapshotOne(snap, short) {
   const when = snap.fetched_at ? shopSnapshotWhen(snap.fetched_at) : null;
   // Short lines keep the year whenever it isn't this one, so an old check never reads as current.
   const fetched = snap.fetched_at ? new Date(snap.fetched_at) : null;
-  if (when) when.textContent = `fetched ${fetched.toLocaleString("en-AU", !short
+  if (when) when.textContent = `fetched ${fetched.toLocaleString(LOCALE, !short
     ? {day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit"}
     : fetched.getFullYear() === new Date().getFullYear() ? {day: "numeric", month: "short"}
       : {day: "numeric", month: "short", year: "numeric"})}`;

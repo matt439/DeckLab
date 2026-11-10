@@ -187,7 +187,7 @@ function settingsMaintenanceAnswer(data) {
 }
 
 function settingsMaintenanceWhen(value) {
-  return settingsMaintenanceDate(value) ? new Date(value).toLocaleString("en-AU") : "Date unavailable";
+  return settingsMaintenanceDate(value) ? new Date(value).toLocaleString(LOCALE) : "Date unavailable";
 }
 
 /** When a run finished (or started), never an invented date; with both, its start and finish. */

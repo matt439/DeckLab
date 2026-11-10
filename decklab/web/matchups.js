@@ -194,7 +194,7 @@ function momentWords(iso) {
   if (Number.isNaN(d.getTime())) return String(iso);
   const opts = { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" };
   if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
-  return d.toLocaleString("en-AU", opts);
+  return d.toLocaleString(LOCALE, opts);
 }
 
 /** 3200 -> "3,200 games". */
