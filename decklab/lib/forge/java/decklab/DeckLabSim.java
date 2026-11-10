@@ -138,12 +138,16 @@ public final class DeckLabSim {
         private final GameLog log;
         private final Map<Integer, String> deckNames = new HashMap<>();
         private boolean decksDumped = false;
+        private final Map<String, Integer> developmentDrawn = new HashMap<>();
+        private int developmentTurn = 0;
+        private boolean developmentInvalid = false;
 
         /** Made between Match.createGame and Match.startGame, so its line is the game's first. */
         CardLog(Game game) {
             this.game = game;
             this.log = game.getGameLog();
             add("DL|log|" + FORMAT);
+            add("DL|development|1|start");
         }
 
         private void add(String msg) {
@@ -245,8 +249,42 @@ public final class DeckLabSim {
             add("DL|zone|" + turnPrefix() + "|" + from + "|" + to + "|" + seat(owner == null ? null : owner.getName()) + "|" + c.getId() + "|" + name);
         }
 
+        /** End-of-two-global-turn-block resource snapshots. Pure observation only.
+         * Player cleanup has preserved actual draws in getNumDrawnLastTurn;
+         * opening hands, tutors and returns do not increment that counter.
+         * A restarted/nonconsecutive turn stream is unverified, never a zero.
+         */
+        private void developmentAtTurn(int turn) {
+            if (developmentInvalid || turn > 21) return;
+            if (turn != developmentTurn + 1) {
+                developmentInvalid = true;
+                add("DL|development_error|1");
+                return;
+            }
+            if (turn > 1) {
+                for (Player player : game.getRegisteredPlayers()) {
+                    String key = seat(player.getName());
+                    int previous = player.getNumDrawnLastTurn();
+                    developmentDrawn.put(key, developmentDrawn.getOrDefault(key, 0) + previous);
+                }
+            }
+            developmentTurn = turn;
+            if (turn > 1 && (turn - 1) % 2 == 0) {
+                int round = (turn - 1) / 2;
+                for (Player player : game.getRegisteredPlayers()) {
+                    int lands = 0;
+                    for (Card card : game.getCardsIn(ZoneType.Battlefield)) {
+                        if (card.getController() == player && card.isLand() && !card.isPhasedOut()) lands++;
+                    }
+                    String key = seat(player.getName());
+                    add("DL|development|1|" + round + "|" + key + "|" + lands + "|" + developmentDrawn.getOrDefault(key, 0));
+                }
+            }
+        }
+
         @Subscribe
         public void onTurnBegan(GameEventTurnBegan ev) {
+            developmentAtTurn(ev.turnNumber());
             if (ev.turnNumber() == 1) {
                 if (!decksDumped) {
                     dumpDecks();

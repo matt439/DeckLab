@@ -311,7 +311,9 @@ class Game:
                         raise ValueError
                     round, seat, lands, drawn = map(int, f[3:])
                     if (seat not in SEATS or not 1 <= round <= development_data.ROUNDS
-                            or self.last_turn < 2*round+1
+                            # Subscribers may log the observation immediately before
+                            # Forge's ordinary Turn line for the next global turn.
+                            or self.last_turn < 2*round
                             or not 0 <= lands <= development_data.MAX_VALUE or not 0 <= drawn <= development_data.MAX_VALUE
                             or round in self.development[seat]):
                         raise ValueError

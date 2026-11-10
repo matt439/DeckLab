@@ -37,7 +37,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 21 | 2 | 2 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 39 | 33 | 4 | 2 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 39 | 34 | 3 | 2 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 31 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 23 | 0 | 0 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 22 | 0 | 5 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 33 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 56 | 14 | 5 | 4 |
-| **Total** | **376** | **317** | **23** | **20** | **16** |
+| **Total** | **376** | **318** | **22** | **20** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1421,7 +1421,7 @@ First slice: command line only: a new `decklab/lib/forge/transcript.py` (pick an
 
 Built (2026-11-11): forge game A B --game N (the saved zero-based number) or --pick loss/longest/timeout selects a saved matchup, with optional full-key/alternate-result-folder selection. It refuses unseeded/earlier/unverified engine or override sets before setup/run. The soak probe and command share one exact one-shot launch using stored dcks, seat order, pilots and seed. Human/JSON output retain turn-by-turn land/cast/failed-cast/combat/life lines, both end hands (explicitly not captured when unavailable), seat map and saved/replayed outcome/turn differences; Commander always says outcome-only comparison. Scratch files are cleaned, and no normal result/field/Rankings/per-card pipeline is called.85 focused transcript/CLI/engine/Forge checks pass (one native qualification skip), including committed native-log parsing, exact1-game arguments, refusal-before-launch and no-writer assertions. No actual replay or engine qualification ran in this source task.
 
-**E3-S45** · Matt · could · M · partial
+**E3-S45** · Matt · could · M · built
 
 As a deck builder reading Forge results, I want to see how a deck develops round by round in its simulated games, and a command-line check that two identical lists test as equal, so that I can tell why a deck loses and trust a tested swap's range.
 
@@ -1433,7 +1433,7 @@ Gap: the card log keeps no per-round tally, and an unchanged list is refused. E3
 
 First slice: an optional `development` tally per side and round in `decklab/lib/forge/cardlog.py`, pooled in a new `decklab/lib/forge/development.py` and shown as a small table from `decklab/web/matchups-cards.js`. The placebo option is a separate slice.
 
-Source slices (2026-11-11): versioned optional per-round histograms, strict protocol validation, merge/warm-delta handling, current-pilot/engine and both-side visibility filtering, and the Testing table are implemented. Legacy/invalid/early-ended observations remain unknown, with coverage and observed median/min/max, never synthetic zero fills. A round is two global turns; actual draws exclude opening hands, tutors and returns. The CLI unchanged-list control uses the ordinary paired coordinator in an isolated experiments area and compares finite ranges with exact-pair same-install engine-check disagreement receipts, withholding equality when that evidence is absent. Ten tally/API/renderer tests pass, including hidden refusal and stale-profile replies;12 control/CLI/math fixtures and195 broader checks pass (overlap). The Java observer candidate compiles against the installed SDK but is deliberately not activated or recorded qualified. Remaining: Matt's separately required idle-PC real `cardlog-check --require-development` approval and a passing parity/warm/protocol receipt before changing the active observer/source qualification hash. No real Forge game was run.
+Built (2026-11-11): versioned optional round histograms, strict protocol validation, merge/warm-delta handling, current-pilot/engine and both-side visibility filtering, and the Testing table are implemented. Legacy/invalid/early-ended observations remain unknown, with coverage and observed median/min/max, never synthetic zero fills. A round is two global turns; actual draws exclude opening hands, tutors and returns. The CLI unchanged-list control uses the paired coordinator in isolated experiments and reports finite ranges against exact-pair same-install engine-check disagreements, withholding equality when evidence is absent. Matt separately authorized the bounded idle-PC real qualification: final serial cardlog-check passed12 Constructed and3 Commander seeded games across plain/patch/logging/fresh/warm comparisons, with valid development packets in all15 and zero invalid. The qualified Java source is60f69e2f7eedc5cefd6fc1022126e2451f88a224f03c1d558d118617822d81ce on2.0.15-decklab-52387e83f; only after that pass was CHECKED_SOURCE updated. Earlier attempts exposed subscriber/Turn-line ordering and a warm-hook lookup; both are fixed with regressions.103 latest fixture checks pass (one qualification skip), plus earlier195 broader checks. Fixed public qualification decks only: no household deck, saved matchup, database or installation/settings change. All qualification JVMs exited.
 
 **E3-S46** · Matt · could · M · built
 

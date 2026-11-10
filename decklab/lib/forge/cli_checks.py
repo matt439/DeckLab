@@ -450,7 +450,7 @@ def _run_one(setup, folder, env, args, going):
     return _check_run(setup, folder, *args[:3], env, *args[3:], going=going, **more)
 
 
-def _play_check_runs(setup, folder, env, runs, first_use):
+def _play_check_runs(setup, folder, env, runs, first_use, *, max_processes=None):
     """_check_run for each of runs, CHECK_PROCESSES at once (the first alone when Forge's user
     folder is new, first_use: see runner._play); {name: (output, reader, seconds)}. A run's
     arguments may end with a RunOptions (engine-check: its own setup and pilots). The first
@@ -499,7 +499,7 @@ def _play_check_runs(setup, folder, env, runs, first_use):
         except BaseException as e:
             errors.append(e)
     if not errors:
-        wait([shared.threading.Thread(target=worker, daemon=True) for _ in range(min(CHECK_PROCESSES, len(todo)))])
+        wait([shared.threading.Thread(target=worker, daemon=True) for _ in range(min(max_processes or CHECK_PROCESSES, len(todo)))])
     if errors:
         raise errors[0]
     return done
@@ -520,7 +520,7 @@ def _staged_setup(forge_dir):
     return shared._setup(forge_dir=forge_dir, remember=False)
 
 
-def _cardlog_check(games, commander_games=CHECK_COMMANDER_GAMES, forge_dir=None, *, require_development=False):
+def _cardlog_check(games, commander_games=CHECK_COMMANDER_GAMES, forge_dir=None, *, require_development=False, serial=False):
     """cardlog-check, for wave 2's engine (contract section 18). For each format (Constructed,
     Commander) the check decks play games 0 to n - 1 of their seed stream (base CHECK_SEED):
       1. Parity with plain Forge: one DeckLabSim process plays them (-dlgame) with its game
@@ -571,7 +571,8 @@ def _cardlog_check(games, commander_games=CHECK_COMMANDER_GAMES, forge_dir=None,
               "patches off and on, without the card log, and by a warm worker...", file=shared.sys.stderr)
         marker = shared.runner._first_use_marker(setup["user_dir"], version)
         runs = _check_runs(setup, folder, legs, env, log)
-        done = _play_check_runs(setup, folder, env, runs, not marker.exists())
+        run_options = {"max_processes": 1} if serial else {}
+        done = _play_check_runs(setup, folder, env, runs, not marker.exists(), **run_options)
         try:
             marker.touch()
         except OSError:
@@ -596,7 +597,10 @@ def _cardlog_check(games, commander_games=CHECK_COMMANDER_GAMES, forge_dir=None,
                         problems.append(("failed", [problem]))
         requests = [(fmt, f"{runs[fmt, 'off'][1][0]}.dck", f"{runs[fmt, 'off'][1][1]}.dck", n, CHECK_SEED,
                      runs[fmt, "off"][5]) for fmt, _, n in legs]
-        warm = shared.servecheck.warm_leg(dict(setup, card_log=log), folder, env, log, requests)
+        warm_options = {"serial": True} if serial else {}
+        if require_development:
+            warm_options["require_development"] = True
+        warm = shared.servecheck.warm_leg(dict(setup, card_log=log), folder, env, log, requests, **warm_options)
         if warm:
             problems.append(warm)
     finally:
@@ -633,7 +637,8 @@ def _development_problem(fmt, games, reader):
             or not all(side.get("1", {}).get("n", 0) for side in tally["rounds"])
             or not all(any(int(value) > 0 for value in side["1"]["lands"]) for side in tally["rounds"])
             or not any(any(int(value) > 0 for value in row["drawn"]) for side in tally["rounds"] for row in side.values())):
-        return f"The {fmt} development protocol was incomplete, invalid or had no observed lands/draws."
+        counts = (f" ({tally.get('games')} covered, {tally.get('bad')} invalid of {games})" if isinstance(tally, dict) else " (missing tally)")
+        return f"The {fmt} development protocol was incomplete, invalid or had no observed lands/draws{counts}."
     return None
 
 
@@ -653,10 +658,13 @@ def _cardlog_check_args(sub):
     check.add_argument("--commander-games", type=_check_games, default=CHECK_COMMANDER_GAMES,
                        help=f"Commander games each way (at most {CHECK_MAX_GAMES})")
     check.add_argument("--require-development", action="store_true", help="also qualify complete observed round resource packets")
+    check.add_argument("--serial", action="store_true", help="run at most one Forge process at a time, including the warm check")
 
 
 def _cmd_cardlog_check(args):
     options = {"require_development": True} if args.require_development else {}
+    if args.serial:
+        options["serial"] = True
     return _cardlog_check(args.games, args.commander_games, getattr(args, "forge_dir", None), **options)
 
 

@@ -69,12 +69,16 @@ class DevelopmentDataTests(unittest.TestCase):
 
 
 class DevelopmentProtocolTests(unittest.TestCase):
-    def read(self, packets):
+    def read(self, packets, before_turn=False):
         script = Script().keep([1, 3, 5], [21, 23, 24])
         if packets:
             script.lines.append(packets[0])
-        script.at(2).at(3)
-        script.lines.extend(packets[1:])
+        script.at(2)
+        if before_turn:
+            script.lines.extend(packets[1:])
+        script.at(3)
+        if not before_turn:
+            script.lines.extend(packets[1:])
         script.finish()
         reader = logreader.LogReader(0, card_log=True)
         for line in [HEADER, *script.lines]:
@@ -90,11 +94,13 @@ class DevelopmentProtocolTests(unittest.TestCase):
         self.assertTrue(data.valid(value, normal["games"]))
         self.assertEqual(value["games"], 1)
         self.assertEqual(value["rounds"][0]["1"]["drawn"], {"1": 1})
+        self.assertEqual(self.read(packets, before_turn=True), self.read(packets))
 
     def test_optional_bad_or_incomplete_packets_do_not_poison_normal_card_data(self):
         normal = self.read([])
         for packets in ([dl("development", 2, "start")],
                         [dl("development", 1, "start"), dl("development", 1, 1, 1, 2, 1)],
+                        [dl("development", 1, "start"), dl("development", 1, 2, 1, 2, 1), dl("development", 1, 2, 2, 3, 2)],
                         [dl("development", 1, "start"), dl("development_error", 1)]):
             value = self.read(packets)
             optional = value.pop("development")

@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Qualified Forge development observer (2026-11-11; E3-S45)
+
+- The compiled Java observer now emits actual lands in play and accumulated actual draws after each two-global-turn block, through round10. Opening hands, tutors/returns and phased-out lands are excluded; missing/early-ended observations are never filled with zero. The existing optional consumer/table/placebo complete this story.
+- With Matt's separate approval and an idle PC, the final `cardlog-check --games 12 --commander-games 3 --require-development --serial` passed game parity, logging parity, and the interleaved/repeated warm-worker comparison, with12/12 Constructed and3/3 Commander development records valid in both cold logged modes and verified fresh/warm copies. The serial schedule has a fixture regression proving no fresh/warm process overlap.
+- Qualified source: `60f69e2f7eedc5cefd6fc1022126e2451f88a224f03c1d558d118617822d81ce`, Forge `2.0.15-decklab-52387e83f`. The source receipt and final log are kept in ignored `data/open-goal/development-java/`; CHECKED_SOURCE changed only after the actual pass. Two earlier attempts found packet ordering before Forge's Turn line and a helper lookup in the new strict warm hook; both have focused regressions.
+- Validation:103 latest fixture checks pass (one existing qualification skip), alongside the bounded native check. Only fixed public check decks were used; no household saved result, database, installation, scheduling or operational setting changed. All qualification JVMs exited.
+
 ## Inventory database coverage guard and current storage docs (2026-11-11; E11-S76)
 
 - Every registered production inventory operation must have a real DbTestCase suite owner or an explicit known gap. The initial gap allowance is frozen; dice add/edit/remove now share their operation cases across files and disposable PostgreSQL, with fresh persisted rows and insert/update/delete audit assertions.

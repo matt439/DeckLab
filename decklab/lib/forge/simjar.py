@@ -89,7 +89,7 @@ CHECKED_BUILDS = {V: V}
 # The card log's source each of CHECKED was checked with: its source_sha256(). A test in
 # test_forge_simjar holds it to the source, so an edit to Deck Lab's Java fails the tests until
 # cardlog-check passes with the edit and this is updated.
-CHECKED_SOURCE = {V: "7ea9e41b75193f79d871e9f6f732572d69565913c9ed8715cf1040522e147e43"}
+CHECKED_SOURCE = {V: "60f69e2f7eedc5cefd6fc1022126e2451f88a224f03c1d558d118617822d81ce"}
 # The fork build a new install downloads: its release on GitHub is tagged with the build name and
 # holds the whole install, with a checksum (SELF-HOSTING.md, "Forge simulations"; the fork's
 # decklab/RELEASE.md makes one). Move it with CHECKED when a new build is checked.
