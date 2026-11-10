@@ -603,6 +603,11 @@ def main(argv=None):
         args = _parse_args(argv)
         if args.stop:
             return _stop(args.port)
+        from decklab.lib.db_failures import runtime_problem
+        problem = runtime_problem()
+        if problem:
+            server_http.log(problem)
+            return 1
         settings = config.load()
         port = settings.get("port", 8642) if args.port is None else args.port
         background = not console or args.background

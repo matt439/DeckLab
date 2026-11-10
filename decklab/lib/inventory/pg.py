@@ -385,6 +385,11 @@ class PgInventory:
     def __repr__(self):
         return f"PgInventory({self.dbname or db.settings()['name']!r})"
 
+    def cached_snapshot_available(self):
+        """Whether load() can serve a retained snapshot, without connecting or loading it."""
+        with self._lock:
+            return self._cache is not None and (self._decks is not None or not self._migrated)
+
     # -------------------------------------------------------- plumbing
 
     def reachable(self):

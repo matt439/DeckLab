@@ -257,7 +257,8 @@ def _password_hint(posix=None):
     posix = pathsetting.on_posix() if posix is None else posix
     if not posix:
         return (f"Give the {db.SUPERUSER} password set when PostgreSQL was installed, then run "
-                "python -m decklab.db setup again")
+                "python -m decklab.db setup again. If it is forgotten, use SELF-HOSTING.md's "
+                "Windows postgres password reset instructions")
     return (f"If {db.SUPERUSER} has no password yet, or you don't know it, set one with "
             f'sudo -u postgres psql -c "\\password {db.SUPERUSER}", then run python -m decklab.db setup again')
 
@@ -329,6 +330,11 @@ def _run(dbname=None, say=print):
     listed = profiles.read_checked()
     name = dbname or db.settings()["name"]
     with _superuser(say) as c:
+        version = c.execute("select current_setting('server_version_num')::integer").fetchone()[0]
+        if type(version) is not int or version < 160000:
+            shown = str(version // 10000) if type(version) is int and version > 0 else "unknown"
+            raise db.DbUnavailable(f"PostgreSQL {shown} is not supported; install PostgreSQL 16 or later "
+                                   "before setup (SELF-HOSTING.md step 2). Nothing was created.")
         ensure_roles(c, say=say)
         ensure_database(c, name, say=say)
     secure_database(name)

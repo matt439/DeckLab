@@ -484,7 +484,8 @@ Phones and tablets bookmark the gate's address instead of the PC's. A Deck Lab p
 ## When something goes wrong
 
 - **"no password supplied"** from `setup`: run it in a terminal, so it can ask, or add the pgpass line from step 5.
-- **"can't reach PostgreSQL ... connection refused":** PostgreSQL isn't running, or it isn't on port 5432 (set `database.port` in `config.json`).
+- **"nothing answered", "connection refused" or "connection timeout expired":** check that PostgreSQL is running and `database.host`/`database.port` name its listener. On Windows, `Get-Service postgresql*` in PowerShell lists the service; on Linux, use `systemctl status postgresql`. Start the installed service if stopped, then run `python -m decklab.db status`. An unclassified connection error is not proof the service is down; `decklab/data/logs/db.log` on the PC holds its detail.
+- **PostgreSQL answered but Deck Lab couldn't sign in, or its database/roles don't exist:** run `python -m decklab.db setup` on the PC. A refused `postgres` password on Windows has the reset procedure below. Setup refuses PostgreSQL older than 16 before creating roles or a database.
 - **"Ident authentication failed", "Peer authentication failed" or "no pg_hba.conf entry"** on Linux: PostgreSQL doesn't take a password on `127.0.0.1`. `sudo -u postgres psql -c "show hba_file"` says where its `pg_hba.conf` is: set the `host` lines for `127.0.0.1/32` and `::1/128` to `scram-sha-256`, then `sudo systemctl reload postgresql`. Give `postgres` a password (step 5) and run `python -m decklab.db setup` again as yourself, not with `sudo`.
 - **A locale or encoding error** from `setup`, `restore` or the restore check: the PostgreSQL cluster needs a UTF-8 (or C) locale. Make it again with `initdb --locale=C.UTF-8` (or your own UTF-8 locale, such as `en_AU.UTF-8`).
 - **"Failed to connect to bus"** from `homenet` or `schedule` on Linux: `systemctl --user` can't find your session (after `sudo -u`, `su` or from cron). Log in as that user over SSH, or `export XDG_RUNTIME_DIR=/run/user/$(id -u)`, with lingering on.
@@ -492,3 +493,27 @@ Phones and tablets bookmark the gate's address instead of the PC's. A Deck Lab p
 - **"the database holds no inventory"** or **"the database holds no decks":** run `python -m decklab.db setup` again. It starts the empty collection and deck library on a new database.
 - **The page says the card data isn't ready:** wait for the download, or run `python -m decklab.lib.cards update` and read what it says.
 - **The server's log** is `decklab/data/logs/server.log` when it runs in the background.
+
+### Windows postgres password reset
+
+Use this only for the local PostgreSQL installation you administer when its `postgres` password is forgotten. Stop Deck Lab first and keep this recovery window short: temporary `trust` authentication lets local programs connect as `postgres`. Never enable it for a network range or all users/databases.
+
+1. In an administrator PowerShell, run `Get-Service postgresql*` and note the installed service name (for example `postgresql-x64-18`). Find that installation's data folder and save a copy of `pg_hba.conf` so its original authentication can be restored.
+2. Add these temporary lines **before** other matching host rules:
+
+   ```text
+   host postgres postgres 127.0.0.1/32 trust
+   host postgres postgres ::1/128      trust
+   ```
+
+3. Restart that installed service, for example `Restart-Service postgresql-x64-18`. Open its `psql` from PowerShell (change `18` if another version is installed):
+
+   ```powershell
+   & 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -h 127.0.0.1 -U postgres -d postgres
+   ```
+
+   At the `psql` prompt, enter `\password postgres`, type the new password twice, then `\q`. The password is prompted, never placed in a command line or config.json.
+4. Immediately restore the original `pg_hba.conf` (removing both temporary lines), and restart the same PostgreSQL service again. Keep its original password authentication, normally `scram-sha-256`.
+5. Verify the new password with `psql -h 127.0.0.1 -U postgres -d postgres -W` from the same installation, then `\q`. Run `python -m decklab.db setup` and `python -m decklab.doctor` from the Deck Lab folder.
+
+PostgreSQL uses the [first matching authentication rule](https://www.postgresql.org/docs/current/auth-pg-hba-conf.html); on Windows changes also apply to new connections immediately. The interactive [psql password command](https://www.postgresql.org/docs/current/app-psql.html) avoids putting a new password in shell history. These are recovery instructions, never steps Deck Lab runs automatically.

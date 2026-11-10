@@ -71,9 +71,13 @@ function databaseMessages(db) {
     } else if (db.error === "check failed") {
       out.push("Deck Lab couldn't check its database just now; decklab/data/logs/db.log on the PC says why. " +
         "It checks again in a minute.");
+    } else if (db.error === "sign-in refused" || db.error === "not set up") {
+      out.push("PostgreSQL answered, but Deck Lab " + (db.error === "sign-in refused" ? "couldn't sign in." : "isn't set up yet.")
+        + " Run python -m decklab.db setup on the PC; decklab/data/logs/db.log says more.");
     } else {
-      out.push("Deck Lab's database isn't reachable, so wishlists, settings and play records can't be " +
-        "read or saved right now. Try again in a minute.");
+      out.push((db.error === "no answer" ? "Nothing answered at the configured PostgreSQL host and port." :
+        "Deck Lab couldn't verify a database connection.") + " Wishlists, settings and play records can't be " +
+        "read or saved right now. Check the PostgreSQL service and run python -m decklab.db status on the PC.");
       if (db.error === "psycopg missing") out.push("The server's Python can't use the database: " +
         (db.venv || "psycopg isn't installed for it") + ".");
     }
@@ -83,9 +87,12 @@ function databaseMessages(db) {
     out.push("The collection, decks, orders, products, watchlist and accessories are read from the database, " +
       "which can't be used right now: the pages show them as they were when it was last reached, and changes to " +
       "them can't be saved.");
+  } else if (inv && inv.unavailable) {
+    out.push("The collection and decks can't be read or saved until the database is available. " +
+      "No retained inventory snapshot is available on this server.");
   } else if (inv && inv.not_imported) {
-    out.push("Deck Lab's database holds no inventory. Restore the newest backup into it on the PC, then check " +
-      "it with python -m decklab.db status.");
+    out.push("Deck Lab's database holds no inventory. On a new install, run python -m decklab.db setup on the PC. " +
+      "If this install had data, restore the newest backup instead; python -m decklab.db status says more.");
   }
   if (db.backup_stale) {
     const hours = db.stale_hours ? ` (more than ${db.stale_hours} hours ago)` : "";

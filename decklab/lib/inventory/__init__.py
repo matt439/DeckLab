@@ -345,6 +345,15 @@ def reachable():
     return backend().reachable()
 
 
+def cached_snapshot_available():
+    """Passive cache fact for status: never instantiate a backend or read household rows."""
+    from decklab.lib import config
+    with _lock:
+        installed = _active[-1] if _active else _defaults.get(("db", str(config.REPO)))
+    probe = getattr(installed, "cached_snapshot_available", None)
+    return probe() is True if callable(probe) else False
+
+
 # ------------------------------------------------------------------ the decks part's other reads
 
 def image(name, sha256=None):

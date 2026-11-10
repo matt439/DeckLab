@@ -84,7 +84,7 @@ class ViewTests(unittest.TestCase):
                    "last_backup": "2026-10-11T03:30:00+10:00", "backup_stale": False, "stale_hours": 36.0,
                    "checks_warning": None, "venv": "there's no .venv in the repo",
                    "inventory": {"imported": None, "revision": None, "imported_at": None,
-                                 "stale": True, "not_imported": False}}
+                                 "stale": False, "unavailable": True, "not_imported": False}}
         self.assertEqual(dbstatus.view(admin), details)
         self.assertEqual(dbstatus.view(admin, script=True), details)
         self.assertEqual(dbstatus.view(member, script=True), {"ok": False})      # by role, not by where

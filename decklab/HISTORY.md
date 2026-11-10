@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Actionable first-run diagnostics (2026-11-11; E11-S78)
+
+- Recognized no-answer, sign-in and missing-role/database failures now have distinct doctor/page/local-console guidance. SQLSTATE is preferred, known libpq phrases cover startup errors without it, and unknown failures remain unverified. Raw exception contents never enter doctor/page prose; local db.log retains the cause.
+- Setup refuses PostgreSQL older than 16 before role/database writes. Server/database commands name unsupported Python before work, and server stop still works independently. Missing-driver guidance follows the venv reason; occupied-port errors name --port and config.json.
+- Status uses a passive cache fact instead of assuming a failed database has retained data. First installs get setup guidance, existing installs still get restore guidance, initial card downloads are worded as progress, and optional simulations never configured show one neutral finding.
+- SELF-HOSTING.md covers refused/timed-out connections, service checks and a temporary localhost-only Windows postgres password reset, with original authentication restored immediately. No service, password or real config was changed by this source task.
+- Validation: 146 targeted setup/preflight/runtime/lifecycle/config checks and 112 focused checks pass (groups overlap, three guarded DB skips). Peer review found no blocking issue; new tests exercise no-write setup refusal, sanitizer boundaries and passive-cache/first-use UI truth.
+
 ## Secret Lair drops as cards-only imports (2026-11-11; E7-S40)
 
 - Add a precon and `collection add-precon` now offer Secret Lair drops, marked cards only. The ordinary reviewed cards, fixed bonus choices, optional confirmed tokens and raw import save as one change, without making a deck, table/history or deck-revision change.

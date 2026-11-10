@@ -162,11 +162,18 @@ class Local:
         self._results = {}
         self._config_location = None
         self._config_warnings = ()
+        self._simulations_selected = False
 
     @property
     def settings(self):
         """Already validated private settings, for the optional adapter; never reads."""
         return self._settings
+
+    @property
+    def optional_settings(self):
+        """Captured settings with optional-choice provenance; no additional file read."""
+        return None if self._settings is None else {
+            **self._settings, "_decklab_simulations_selected": self._simulations_selected}
 
     @property
     def config_location(self):
@@ -267,6 +274,7 @@ class Local:
                 return "config_profiles_invalid"
             if not any(profile["space"] == "home" for profile in listed):
                 return "config_no_home_profile"
+            self._simulations_selected = bool(settings.get("forge_java") or settings.get("forge_dir"))
             settings = {**config.DEFAULTS, **settings}
             settings.setdefault("port", 8642)
             if not _port(settings["port"]) or not _text(settings.get("host", "0.0.0.0")):
@@ -401,9 +409,10 @@ class Local:
         try:
             connect = self.connect or self._loaded_driver.connect
             connection = connect(**kwargs)
-        except Exception:
-            # Authentication and network failures are not safely distinguished by text.
-            return "database_unavailable"
+        except Exception as error:
+            from decklab.lib.db_failures import connection_reason
+            return {"network": "database_no_answer", "authentication": "database_signin_failed",
+                    "setup": "database_setup_needed"}.get(connection_reason(error), "database_unavailable")
         try:
             with connection:
                 with connection.transaction():

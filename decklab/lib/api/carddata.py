@@ -68,7 +68,9 @@ def _index_info():
         detail = f"{type(e).__name__}: {e}"
         if _last_index_error[0] != detail:
             _last_index_error[0] = detail
-            common._log(f"The card index can't be loaded: {detail}")
+            common._log("Card data is being downloaded and indexed for this first start."
+                        if isinstance(e, FileNotFoundError) and UPDATE["running"] else
+                        f"The card index can't be loaded: {detail}")
         return None, reason
 
 

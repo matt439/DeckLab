@@ -327,6 +327,11 @@ def _private_files(args, windows=None, umask=None):
 
 def main(argv=None):
     args = parser().parse_args(argv)
+    from decklab.lib.db_failures import runtime_problem
+    problem = runtime_problem()
+    if problem:
+        print(problem, file=sys.stderr)
+        return 1
     _private_files(args)
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):

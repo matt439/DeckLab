@@ -61,6 +61,11 @@ class DbUnavailable(Exception):
     """The database can't be used from here: psycopg isn't installed for this Python, or the
     server can't be reached (or refused the login). The message says which, in plain English."""
 
+    def __init__(self, message, *, reason=None):
+        from decklab.lib.db_failures import REASONS, connection_reason
+        super().__init__(message)
+        self.reason = reason if isinstance(reason, str) and reason in REASONS else connection_reason(message)
+
 
 def settings():
     """DEFAULTS overlaid with config.json's "database" block and then the environment
@@ -81,8 +86,11 @@ def _psycopg():
     try:
         import psycopg
     except ImportError:
-        raise DbUnavailable(f"psycopg isn't installed for this Python ({sys.executable}); install it "
-                            f"with {venv.pip_hint()}") from None
+        why = venv.reason()
+        repair = (f"{why}. First create or re-create .venv with this Python using python -m venv .venv "
+                  "(SELF-HOSTING.md step 3). " if why else "")
+        raise DbUnavailable(f"psycopg isn't installed for this Python ({sys.executable}). "
+                            f"{repair}Install its packages with {venv.pip_hint()}.", reason="driver") from None
     return psycopg
 
 
@@ -122,9 +130,16 @@ def connect(role="app", dbname=None, autocommit=False, timeout=None, options=Non
                                connect_timeout=timeout or CONNECT_TIMEOUT,
                                application_name="decklab.db", **extra)
     except psycopg.OperationalError as e:
+        from decklab.lib.db_failures import connection_reason
         detail = (str(e).strip().splitlines() or ["no detail"])[-1]
-        raise DbUnavailable(f"can't reach PostgreSQL at {s['host']}:{s['port']} as {user} "
-                            f"(database {dbname}): {detail}") from None
+        reason = connection_reason(e)
+        if reason == "network":
+            detail = "nothing answered; check the PostgreSQL service and database.host/port. " + detail
+        elif reason in ("authentication", "setup"):
+            detail = "PostgreSQL answered; run python -m decklab.db setup. " + detail
+        prefix = "couldn't sign in to PostgreSQL" if reason == "authentication" else "can't reach PostgreSQL"
+        raise DbUnavailable(f"{prefix} at {s['host']}:{s['port']} as {user} "
+                            f"(database {dbname}): {detail}", reason=reason) from None
 
 
 @contextmanager

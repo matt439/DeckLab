@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 44 | 13 | 18 | 4 |
-| **Total** | **376** | **281** | **21** | **58** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 45 | 13 | 17 | 4 |
+| **Total** | **376** | **282** | **21** | **57** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6392,7 +6392,7 @@ Gap: not built. Pages learn of another device's save only through a conflict at 
 
 First slice: a guarded `GET /api/changes` in a new `decklab/lib/api/changes.py`, polled by the timer in `decklab/web/runs-pill.js`, with one `noteRevisions()` in `decklab/web/core.js`; no stream yet.
 
-**E11-S78** · Self-hoster · should · M · missing
+**E11-S78** · Self-hoster · should · M · built
 
 As a newcomer whose install isn't working yet, I want every setup failure to say what's wrong and what to do next, so that I can fix it myself instead of reading "Try again in a minute" for something that never fixes itself.
 
@@ -6407,9 +6407,9 @@ As a newcomer whose install isn't working yet, I want every setup failure to say
 - Given the first start downloading card data, then the log says it's downloading, not that the index can't be loaded.
 - Given simulations never set up (no `forge_java`, no `forge_dir`, no Forge folder), then the doctor shows one neutral "simulations not set up (optional, step 8)" line, not Java UNVERIFIED and Forge NEEDS SETUP.
 
-Gap: the doctor gives one wording for every database cause (`decklab/lib/preflight.py`); the console says only "not reachable"; SELF-HOSTING.md's troubleshooting covers only "connection refused"; Windows has no password recovery; nothing checks the PostgreSQL version before setup. E11-S68 rotates db.log and is separate. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (windows-walkthrough 2, 6, database-and-config 0, 1, 8, 9, errors-and-recovery 1 to 4, 6, 8, 10, first-run-ui 1, 2, linux-mac 5).
+Built 2026-11-11: setup diagnostics classify recognized network/authentication/missing-role-or-database failures, preferring SQLSTATE and retaining an honest unverified category for unknown causes. Doctor and page messages are fixed wording, while local CLI/db.log keep actionable detail. PostgreSQL version is checked before setup's role/database writes; unsupported Python is named before server/CLI startup (stop remains usable). Missing-driver guidance names the matching venv repair before package installation. A port occupied by another program points to --port/config.json. An inventory cache probe reads no records, so a first install never claims to show a retained snapshot. First card indexing is progress; never-configured simulations get one neutral optional finding. SELF-HOSTING.md has service/timeout troubleshooting and a bounded local Windows postgres password reset procedure.
 
-First slice: split `database_unavailable` in `decklab/lib/preflight_local.py` into "no answer at host:port" and "couldn't sign in", with plain wording and a next step naming `db status` in `decklab/lib/preflight.py`, and widen SELF-HOSTING.md's troubleshooting entry to the timeout wording with the service check and the Windows password recipe.
+Evidence: `lib/db_failures.py`, preflight/doctor, db.conn/setup/CLI, server startup, dbstatus and version.js; `test_setup_diagnostics.py` plus existing preflight/runtime/CLI/lifecycle tests cover sanitized classifications, write-free version refusal, cache truth, setup-vs-restore wording and optional simulation behavior. Targeted groups (146 and 112 tests, overlapping; three separate DB skips) pass. The password recipe follows PostgreSQL's HBA/psql docs; it was not executed on this install. E11-S68's log rotation remains separate. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md).
 
 **E11-S79** · Self-hoster · should · S · partial
 

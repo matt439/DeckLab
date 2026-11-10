@@ -375,6 +375,9 @@ def _cant_listen(host, port, error, default_port):
     if running and running.get("port") == port:
         return (f"Deck Lab is already running (process {running.get('pid')}, started {_when(running)}). "
                 f"Stop it with: {_stop_command(port, default_port)}")
+    if _port_in_use(error):
+        return (f"Port {port} is in use by another program. Choose a different port with --port "
+                "or config.json's port, then start Deck Lab again.")
     return f"Can't listen on {host}:{port}: {error}"
 
 

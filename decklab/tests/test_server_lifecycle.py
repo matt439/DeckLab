@@ -407,7 +407,9 @@ class MainTests(unittest.TestCase):
         port = httpd.server_address[1]
         argv = ["--host", "127.0.0.1", "--port", str(port), "--no-update"]
         self.assertEqual(server.main(argv), 1)
-        self.assertTrue(self.log[-1].startswith(f"Can't listen on 127.0.0.1:{port}: "), self.log)
+        self.assertIn(f"Port {port} is in use", self.log[-1])
+        self.assertIn("--port", self.log[-1])
+        self.assertIn("config.json", self.log[-1])
         # The state file says a Deck Lab server is there: say which, and how to stop it.
         control.write_state(own_state(version=1, pid=os.getpid(), port=port, started=now_iso()),
                             self.state_file)
@@ -423,7 +425,7 @@ class MainTests(unittest.TestCase):
         control.write_state(own_state(version=1, pid=os.getpid(), port=port + 1, started=now_iso()),
                             self.state_file)
         self.assertEqual(server.main(argv), 1)
-        self.assertTrue(self.log[-1].startswith("Can't listen on"), self.log[-1])
+        self.assertIn("is in use by another program", self.log[-1])
         self.assertTrue(self.state_file.exists())           # never removed by a server that didn't start
 
     def test_a_bad_address_isnt_taken_for_a_running_server(self):
