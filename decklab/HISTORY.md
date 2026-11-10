@@ -2,6 +2,17 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Supply-chain upkeep (2026-11-10; E11-S67)
+
+**2026-11-10: supply-chain upkeep (E11-S67).**
+
+- `.github/dependabot.yml`: once a month Dependabot proposes newer versions as one grouped pull request (a multi-ecosystem group, `upkeep`) across the workflows' GitHub Actions, psycopg (`decklab/requirements.txt`), the Safari and UI-review tools' npm packages and the wake gate's compose images. It goes through the same required checks as any change; nothing merges by itself.
+- The three workflows (`tests.yml`, `lint.yml`, `release.yml`) pin every `actions/*` use to a commit SHA with its version in a trailing comment (checkout v7.0.1, setup-python v7.1.0, setup-node v7.1.0, upload-artifact v7.0.2), each SHA looked up from GitHub's API and the same as the `v7` tag pointed to that day, so nothing a run uses changed.
+- `decklab/wakegate/compose.yaml`: cloudflared is `cloudflare/cloudflared:2026.10.7` in place of `latest`, and Python `python:3.13.18-alpine` in place of `3.13-alpine`; the wake gate's README says they're pinned there without repeating the tags, which Dependabot's pull request would leave stale. The NAS only picks them up at its next redeploy.
+- `release.yml` records a build-provenance attestation of the zip (`actions/attest-build-provenance` v4.2.2, with `id-token: write` and `attestations: write`) before attaching it to the draft release, whose notes and SELF-HOSTING.md give `gh attestation verify decklab-VERSION.zip --repo matt439/DeckLab` as an optional check beside the `.sha256`. Checking an attestation inside Deck Lab still waits for E11-S51's updater.
+- `decklab/tests/test_supply_chain.py` holds the pins in place (it reads the files as text; the `.github` checks skip in a release zip, which leaves that folder out).
+- Not code: Matt checks in the repo's settings that secret scanning is on. Not yet seen running on GitHub: Dependabot's first monthly pull request and the attestation step on the first tagged release.
+
 ## Outside vectors and seeded damage for the sign-in verifier and picture readers (2026-11-10; E11-S66)
 
 **2026-11-10: outside vectors and seeded damage for the sign-in verifier and picture readers (E11-S66).**
