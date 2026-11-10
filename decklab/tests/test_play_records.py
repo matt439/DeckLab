@@ -755,6 +755,12 @@ class PlayPgStoreTests(PlayFixture, db_support.DbTestCase):
         self.assertEqual(caught.exception.status, 409)
         overview = play.play_overview()
         self.assertEqual([e["sha256"] for e in overview["games"]], [second["sha256"]])
+        self.assertEqual([e["sha256"] for e in overview["sideboards"]], [revised["sha256"]])
+        with self.connect("ro") as c:
+            rows = c.execute("select s.actor, s.source, s.via, s.message from audit.change_set s "
+                             "order by s.id").fetchall()
+        self.assertEqual(rows, [("matt", "web", "home", "Save sideboard plan Practice deck vs Other deck")] * 2
+                         + [("matt", "web", "home", "Save game Practice deck vs Other deck")] * 2)
 
     def test_game_delete_is_audited_and_checks_the_expected_record(self):
         from decklab.tests.test_play_counter_facts import details
@@ -769,9 +775,3 @@ class PlayPgStoreTests(PlayFixture, db_support.DbTestCase):
         latest = self.store.activity(limit=1)["changes"][0]
         self.assertEqual(latest["reason"], "Duplicate")
         self.assertEqual([(row["table"], row["op"]) for row in latest["rows"]], [("play_record", "DELETE")])
-        self.assertEqual([e["sha256"] for e in overview["sideboards"]], [revised["sha256"]])
-        with self.connect("ro") as c:
-            rows = c.execute("select s.actor, s.source, s.via, s.message from audit.change_set s "
-                             "order by s.id").fetchall()
-        self.assertEqual(rows, [("matt", "web", "home", "Save sideboard plan Practice deck vs Other deck")] * 2
-                         + [("matt", "web", "home", "Save game Practice deck vs Other deck")] * 2)

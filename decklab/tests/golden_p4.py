@@ -35,6 +35,9 @@ older code (the committed tests/fixtures/inventory_goldens):
   "cover", "colors", "revision", "cover_card" and "edited" in the library and the deck page, the
   packing plan's "cards", a wishlist entry's "source_deck" and "short_in" (E5-S30) and the wishlist
   view's "short_warnings" (E5-S30) are dropped.
+- "stat-source-defaults": E1-S30 adds per-colour land-source totals for Compare. Only a complete
+  all-zero map in a deck-view stats answer with no land sources is dropped. Nonzero, malformed
+  maps and every existing stat still compare; test_stats checks real counts independently.
 - "kit-editability": E10-S33 adds Boolean summary.kit.editable to deck-view answers so public
   kit readers get no Choose controls. Only that exact additive field is dropped; every kit value,
   warning and other editable field still compares. test_golden_kit_editability checks this boundary
@@ -1009,6 +1012,26 @@ def trial_defaults(dump):
 
 EXPECTED_P4 = (("no-git", no_git), ("deck-ids", deck_ids), ("hidden-inventory", hidden_inventory),
                ("per-viewer-accessory-token", per_viewer_accessory_token))
+
+
+def stat_source_defaults(dump):
+    """Only the new all-zero map for old fixtures whose lists have no land sources."""
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        if not isinstance(mine, dict) or not isinstance(mine.get("deck_view"), dict):
+            continue
+        for view in mine["deck_view"].values():
+            stats = view.get("stats") if isinstance(view, dict) else None
+            colours = stats.get("colours") if isinstance(stats, dict) else None
+            if not isinstance(colours, dict) or not isinstance(colours.get("sources"), list):
+                continue
+            counts = colours.get("land_sources_by_colour")
+            if (isinstance(counts, dict) and set(counts) == set("WUBRGC")
+                    and all(type(value) in (int, float) and value == 0 for value in counts.values())
+                    and all(isinstance(source, dict) and source.get("kind") not in ("land", "fetch", "special", "mdfc")
+                            for source in colours["sources"])):
+                colours.pop("land_sources_by_colour")
+
+
 EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase5_reworded),
                ("ui-additions", ui_additions), ("kit-editability", kit_editability), ("shared-sleeves", shared_sleeves),
                ("incoming-sources", incoming_sources), ("assembly-completion", assembly_completion),
@@ -1024,7 +1047,7 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("absent-shop-prices", absent_shop_prices), ("role-target-defaults", role_target_defaults),
                ("game-changer-flags", game_changer_flags),
                ("listed-printings", listed_printings), ("owned-printings", owned_printings),
-               ("trial-defaults", trial_defaults),
+               ("trial-defaults", trial_defaults), ("stat-source-defaults", stat_source_defaults),
                ("building-holders", building_holders))
 
 

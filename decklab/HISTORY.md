@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Contract verification follow-ups (2026-11-11; E1-S30, E4-S31)
+
+- Legacy inventory goldens normalize only the exact additive six-colour zero-land-source map when the list has no land/fetch/special/MDFC sources. Nonzero, malformed and unrelated stats still compare, with direct guard cases and the existing real-count stats tests.
+- A misplaced preexisting save/edit assertion block now remains in its PostgreSQL method, instead of referencing that method's local variables from the new deletion case. Global Ruff exposed this skipped-local-DB defect before publication.
+- Validation:50 focused contract/golden/play tests pass with one disposable-DB qualification skip; targeted Ruff passes. No production behavior or live records changed.
+
 ## First-use player choices, terms and collection starts (2026-11-11; E11-S83)
 
 - Played by follows configured home slots, preserves member and player/kit draft restrictions, and uses neutral words for absent old slots. Config first/second aliases normalize to existing user/wife record values without changing permissions or writing configuration; examples explain the two slots and either.
