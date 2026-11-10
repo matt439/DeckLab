@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## The public-repo leak guard (2026-11-10; E11-S62)
+
+- `scripts/audit_public_repo.py --check` reads every tracked file (and each untracked one `.gitignore` doesn't cover) and fails, naming the file and line, on an email address outside the example domains (example.com/.org/.net and the reserved `.example`, `.invalid` and `.test` endings) and a small allow-list of tool and made-up test addresses; on a route, `pattern`, `hostname`, `zone_name`, `account_id` or `zone_id` that isn't a placeholder in a Cloudflare or wake gate config file (any wrangler config, config files under `decklab/cloudflare/` and `decklab/wakegate/`); and, on a PC with a `decklab/config.json`, on that config's profile emails, `allowed_hosts` and Access team address and AUD tag anywhere in any file, binary ones included, without ever printing a configured value. The script holds no real value itself.
+- `lint.yml` runs it and its tests (`decklab/tests/test_public_repo_audit.py`); the fixture suite's whole-repo test runs it as a child process, so on the PC the hidden `config.json` is still read.
+- The Worker's `wrangler.toml` already held only `decklab.example.com` placeholders; its comments and README's "The real routes" now say the real routes go in a gitignored `decklab/cloudflare/wrangler.local.toml`, deployed with `--config wrangler.local.toml`.
+- Checked against the real config: nothing found in the tree, and a pickaxe search of the whole history for each configured value found no commit. Left: Matt's decision on a history rewrite, which that search suggests isn't needed.
+
 ## Independent Forge and XMage checks (2026-11-09; E3-S40)
 
 - A deck's Testing tab can explicitly play its saved list against one visible same-format opponent in both engines. The CLI also checks a card swap against its baseline. Scores, 95% ranges, unsupported cards and unfinished games remain separate; no combined rating or games enter Forge's field, gauntlet, Rankings or card statistics.
