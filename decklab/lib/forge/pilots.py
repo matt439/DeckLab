@@ -1,7 +1,8 @@
 """Pilots: which AI profile and which of Deck Lab's AI switches play each list (simulation wave
 3's R16, forge-trial/sim-wave3-contract.md section 5). They're set per list in
 decklab/simulation.json, which ships with every list on Forge's Default profile and no
-switches until a pilot is adopted. A pilot is {"profile": a name, "switches": [ids, sorted]}.
+switches until a pilot is adopted. Optional gitignored simulation.local.json replaces
+that whole document for this install. A pilot is {"profile": a name, "switches": [ids, sorted]}.
 
     SIMULATION_FILE         decklab/simulation.json (section 5.1)
     PROFILES_DIR            Deck Lab's own AI profiles (ai-profiles/*.ai, section 5.3)
@@ -146,13 +147,27 @@ def _list_id(name):
     return bool(LIST_ID.fullmatch(deck)) and (not at or version in VERSIONS)
 
 
-def _read():
+def simulation_file():
+    """The complete local override when present, otherwise the shipped defaults.
+
+    Only a missing override falls back. A broken link or unreadable local file must
+    report a problem instead of silently restoring shipped choices.
+    """
+    local = SIMULATION_FILE.with_name("simulation.local.json")
+    try:
+        local.lstat()
+    except FileNotFoundError:
+        return SIMULATION_FILE
+    return local
+
+
+def _read(path=None):
     """simulation.json read and checked (load()'s answer, without the cache)."""
     try:
-        data = json.loads(SIMULATION_FILE.read_text(encoding="utf-8"))
+        data = json.loads((path or simulation_file()).read_text(encoding="utf-8-sig"))
     except (OSError, ValueError) as e:
         return {"default": copy.deepcopy(DEFAULT_PILOT), "lists": {}, "field": {}, "version": None,
-                "problems": [f"decklab/simulation.json can't be read ({type(e).__name__}), so every list plays "
+                "problems": [f"Simulation settings can't be read ({type(e).__name__}), so every list plays "
                              "with Forge's Default profile."]}
     known = available()
     problems = []
@@ -186,16 +201,18 @@ def load():
     {list id: pilot}, "field": its field section, "version", "problems": [sentences]}. Read
     again when the file's modification time changes; each bad entry is left out, with one log
     line."""
+    path = None
     try:
-        stat = SIMULATION_FILE.stat()
-        stamp = (stat.st_mtime_ns, stat.st_size, tuple(available()["switches"]))
+        path = simulation_file()
+        stat = path.stat()
+        stamp = (str(path), stat.st_mtime_ns, stat.st_size, tuple(available()["switches"]))
     except OSError:
         stamp = None
     with _lock:
         known = _loaded.get(str(SIMULATION_FILE))
         if known and stamp is not None and known[0] == stamp:
             return known[1]
-    answer = _read()
+    answer = _read(path)
     for problem in answer["problems"]:
         if problem not in _logged:
             _logged.add(problem)

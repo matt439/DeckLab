@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Local simulation settings without changed tracked files (2026-11-10; E11-S84)
+
+- Optional gitignored `decklab/simulation.local.json` replaces the whole shipped settings document for pilot and field readers; the neutral `simulation.example.json` is a starting point. Existing shipped/adopted defaults stay as they were, and no local file is created automatically.
+- Pilot caching notices local file creation, edits and removal, including a replacement whose size/time matches the shipped file. An invalid or unreadable override reports a problem using the existing invalid-settings behavior, without silently restoring shipped choices. README explains how to retain local settings when updating or moving an install.
+- Validation: local-override fixtures and existing pilot, field-membership, field and privacy fixtures. No Forge games or local settings were changed. E11-S84's remaining update-channel choice needs Matt.
+
 ## Configuration syntax diagnostics (2026-11-10; E11-S79 first slice)
 
 - Config files saved with a UTF-8 BOM now load in Deck Lab and the doctor. A malformed file is named with its JSON line and column, consistently in the server log, database commands and doctor text/JSON; server startup reports it without a traceback or private file contents.

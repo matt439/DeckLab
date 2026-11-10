@@ -118,8 +118,9 @@ class ReleaseInstallTests(unittest.TestCase):
 @unittest.skipUnless(_git_works() and shutil.which("git"), "needs this checkout's git")
 class MakeReleaseTests(unittest.TestCase):
     def test_update_config_backup_is_gitignored(self):
-        name = "decklab/config.json.before-forge-update"
-        self.assertEqual(make_release._git("check-ignore", "--no-index", "--", name), name)
+        for name in ("decklab/config.json.before-forge-update", "decklab/simulation.local.json"):
+            with self.subTest(name=name):
+                self.assertEqual(make_release._git("check-ignore", "--no-index", "--", name), name)
 
     def test_head_makes_a_matching_zip_sha_and_manifest_twice_the_same(self):
         with tempfile.TemporaryDirectory(prefix="decklab-release-out-") as folder:

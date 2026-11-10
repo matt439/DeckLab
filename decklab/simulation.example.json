@@ -1,0 +1,11 @@
+{
+ "version": 1,
+ "pilots": {
+  "default": {"profile": "Default"},
+  "lists": {}
+ },
+ "field": {
+  "Constructed": {"add": [], "remove": []},
+  "Commander": {"add": [], "remove": []}
+ }
+}

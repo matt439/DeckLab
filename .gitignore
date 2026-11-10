@@ -35,6 +35,8 @@ decklab/cloudflare/wrangler.local.jsonc
 # own buylists and reports (magic/, pokemon/) live in a private repo of their own.
 decklab/config.json
 decklab/config.json.before-forge-update
+# Optional complete local simulation settings; shipped defaults remain tracked.
+decklab/simulation.local.json
 magic/
 pokemon/
 

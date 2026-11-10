@@ -25,6 +25,7 @@ class FixtureRunnerTests(unittest.TestCase):
         for name in ("decklab/__init__.py", "decklab/lib/__init__.py"):
             self.write(name, "")
         self.write("decklab/config.json", "FAKE PRIVATE CANARY")
+        self.write("decklab/simulation.local.json", "FAKE LOCAL SIMULATION CANARY")
         self.write("home/.pgpass", "FAKE CREDENTIAL CANARY")
         self.write("roaming/postgresql/pgpass.conf", "FAKE WINDOWS CANARY")
         self.write("secrets/pgpass-extra.conf", "FAKE OVERRIDE CANARY")
@@ -67,6 +68,7 @@ class FixtureRunnerTests(unittest.TestCase):
             from pathlib import Path
             from decklab.lib import config, venv
             assert not config.CONFIG_FILE.exists(), 'private config was visible before test package import'
+            assert not config.CONFIG_FILE.with_name('simulation.local.json').exists(), 'local simulation settings were visible'
             assert 'DECKLAB_CONFIG_EXTRA' not in os.environ, 'extra overlay survived'
             assert 'DECKLAB_DECK_EXPORT' not in os.environ, 'export overlay survived'
             assert 'DECKLAB_FORGE_TESTS' not in os.environ, 'real Forge opt-in survived'
@@ -133,12 +135,16 @@ class FixtureRunnerTests(unittest.TestCase):
                     self.assertFalse(private.exists()); self.assertFalse(private.is_file())
                     self.assertFalse(os.path.exists(private)); self.assertFalse(os.path.isfile(private))
                     for credential in [Path(os.environ['FAKE_HOME']) / '.pgpass',
+                                       private.with_name('simulation.local.json'),
                                        Path(os.environ['FAKE_ROAMING']) / 'postgresql' / 'pgpass.conf',
                                        Path(os.environ['FAKE_PASSFILE']), Path(os.environ['FAKE_SERVICEFILE'])]:
                         with self.assertRaises(FileNotFoundError): credential.read_text()
                     fixture = private.parent / 'fixture' / 'config.json'
                     fixture.parent.mkdir()
                     fixture.write_text('temporary configuration')
+                    local_simulation = fixture.with_name('simulation.local.json')
+                    local_simulation.write_text('temporary local simulation')
+                    self.assertEqual(local_simulation.read_text(), 'temporary local simulation')
                     self.assertEqual(fixture.read_text(), 'temporary configuration')
                     with builtins.open(file=fixture, mode='r') as stream: self.assertEqual(stream.read(), 'temporary configuration')
                     import shutil, tempfile
