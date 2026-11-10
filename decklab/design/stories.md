@@ -39,14 +39,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 19 | 2 | 4 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 3 | 7 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 20 | 1 | 7 | 2 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 33 | 27 | 0 | 4 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 33 | 28 | 0 | 3 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 24 | 21 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 34 | 28 | 1 | 5 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 72 | 44 | 11 | 13 | 4 |
-| **Total** | **365** | **276** | **19** | **54** | **16** |
+| **Total** | **365** | **277** | **19** | **53** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -2442,7 +2442,7 @@ Built 2026-11-10: `purchases.overview(strict=False)` (`read_records` and `read_q
 
 First slice: give `overview()` in `decklab/lib/purchases.py` a `strict` keyword (default strict) that turns a missing non-deck source into a warning, call it non-strict from `decklab/lib/api/shopping.py`, and draw `data.warnings` in a warn box in `decklab/web/shopping.js`; reword `decklab/smoke.py`'s `records_repo` warning.
 
-**E5-S33** · Matt · should · M · missing
+**E5-S33** · Matt · should · M · built
 
 As Matt, reading the shops' snapshot before ordering, I want a wrong or cut-short match to say so, so that I don't trust "not listed" or a price trend when the shop was only partly read or my printing wasn't the one compared.
 
@@ -2452,6 +2452,8 @@ As Matt, reading the shops' snapshot before ordering, I want a wrong or cut-shor
 - Given a queue row for a token card, when its shop line shows, then it says token cards aren't checked at this shop.
 
 Gap: the snapshot, both adapters and the 90-day history are built (E5-S08, E5-S19, E5-S29), but `history.day_summary` always picks as an any-printing row, `gamesportal.py` reads one page with no flag for more, `pick()` compares set codes with no tolerance, and `queue_names()` has no token test. From the product review of 2026-11-10, compared with Cardmarket's Shopping Wizard and TCGplayer's optimiser.
+
+Built 2026-11-10 (status: built). All four criteria: Price history is read for the queue row's own printing and finish (history.py's day_summary/report take the row; GET /api/shopping/price-history takes row=<queue_row>, 409 when the row is no longer that card's; shopping-history.js sends it and names the scope; `shops history NAME --row N`); Games Portal entries read from a full page or one linking a further page are marked partial and say "first page only, more results not read" on Shopping, in Baskets, missing cards, deck Prices and the history; an exact row matches with tolerance (case, spaces, leading zeros, lib/shops/rows.py) and otherwise says "listed, but not matched to your printing" with the shop's sets (status not_matched); a token row is never looked up and its line says token cards aren't checked at this shop (status token). Left as it was, outside the criteria: on Shopping's snapshot line and in Baskets an any-printing row with a foil or etched finish is still answered with the cheapest nonfoil (pick()'s existing rule); only its Price history follows the finish. Tolerance is deliberately narrow: no set-code alias table between Scryfall's and the shops' codes (a mismatch shows as not_matched with the shop's sets). Not checked against the live shops or a real browser; an existing snapshot gains the partial flag at its next nightly run.
 
 First slice: `day_summary` and `report` in `decklab/lib/shops/history.py` take the queue row, `decklab/lib/api/shop_history.py` accepts a row selector and `decklab/web/shopping-history.js` sends it.
 
