@@ -213,6 +213,7 @@ function activityUndoEvidence(data, id, space, profile = state.profile?.id) {
       || typeof data.label !== "string" || !data.label.trim()) return null;
   if (data.kind === "wishlist") return activityUndoWishlistEvidence(data, profile) ? data : null;
   if (data.kind === "accessory") return activityUndoAccessoryEvidence(data, space, profile) ? data : null;
+  if (data.kind === "product_kit") return activityUndoProductKitEvidence(data, space, profile) ? data : null;
   if (data.kind === "mixed") return activityUndoMixedEvidence(data, space) ? data : null;
   if (data.kind === "watchlist") return activityUndoWatchlistEvidence(data) ? data : null;
   if (data.space !== space || !["collection", "tokens"].includes(data.kind)) return null;
@@ -275,6 +276,7 @@ function activityUndoTokenBatchRemoveEvidence(data) {
 }
 
 function activityUndoReceipt(answer, preview) {
+  if (preview.kind === "product_kit") return activityUndoProductKitReceipt(answer, preview);
   if (preview.action === "accessory_photo_record_update") return activityUndoAccessoryPhotoRecordReceipt(answer, preview);
   if (preview.action === "collection_change_restore") return activityUndoCollectionReceipt(answer, preview);
   if (preview.action === "token_batch_update") return activityUndoTokenEditReceipt(answer, preview);
@@ -406,7 +408,7 @@ function activityUndoButton(view, change) {
   if (change.undo && Object.hasOwn(change.undo, "read_only")) return null;
   if (change.undo?.review !== true || !Number.isSafeInteger(change.id) || change.id < 1) return null;
   const id = change.id, root = view.days, endpoint = change.undo.kind === "wishlist" ? "/api/activity/wishlist-undo"
-    : change.undo.kind === "accessory" ? "/api/activity/accessory-undo" : change.undo.kind === "mixed" ? ACTIVITY_UNDO_MIXED_ENDPOINT : "/api/activity/undo";
+    : change.undo.kind === "accessory" ? "/api/activity/accessory-undo" : change.undo.kind === "product_kit" ? "/api/activity/product-kit-undo" : change.undo.kind === "mixed" ? ACTIVITY_UNDO_MIXED_ENDPOINT : "/api/activity/undo";
   const button = el("button", { type: "button", class: "btn btn-quiet activity-review-undo", text: "Review undo", onclick: () => {
     if (view.undoBusy || view.undoRefreshNeeded || view.undoCtx || view.older?.disabled || root !== view.days || !root.isConnected
         || !button.isConnected || !root.contains(button) || view.token !== routeToken || view.profile !== state.profile?.id
@@ -490,7 +492,7 @@ function activityUndoPhotoPreview(ctx, frames, changed) {
 }
 
 function openActivityUndo(view, id, endpoint = "/api/activity/undo") {
-  if (!["/api/activity/undo", "/api/activity/wishlist-undo", "/api/activity/accessory-undo", ACTIVITY_UNDO_MIXED_ENDPOINT].includes(endpoint)) return null;
+  if (!["/api/activity/undo", "/api/activity/wishlist-undo", "/api/activity/accessory-undo", "/api/activity/product-kit-undo", ACTIVITY_UNDO_MIXED_ENDPOINT].includes(endpoint)) return null;
   const ctx = { view, id, endpoint, root: view.days, seq: view.seq, profile: state.profile?.id, space: ownSpace(), token: routeToken,
     hash: location.hash, filter: { ...view.filter }, filterSignature: JSON.stringify(view.filter),
     pending: false, saved: false, needsRefresh: false, refreshing: false, refreshed: false, preview: null };
@@ -514,7 +516,7 @@ function openActivityUndo(view, id, endpoint = "/api/activity/undo") {
         sheetActions(sheet, [{ text: "Close", onclick: () => sheet.close() }]); return;
       }
       const preview = activityUndoEvidence(data, id, ctx.space, ctx.profile);
-      const expectedEndpoint = preview?.kind === "wishlist" ? "/api/activity/wishlist-undo" : preview?.kind === "accessory" ? "/api/activity/accessory-undo"
+      const expectedEndpoint = preview?.kind === "wishlist" ? "/api/activity/wishlist-undo" : preview?.kind === "accessory" ? "/api/activity/accessory-undo" : preview?.kind === "product_kit" ? "/api/activity/product-kit-undo"
         : preview?.kind === "mixed" ? ACTIVITY_UNDO_MIXED_ENDPOINT : "/api/activity/undo";
       if (!preview || endpoint !== expectedEndpoint) throw new Error("The Undo preview could not be checked.");
       ctx.preview = preview;
@@ -530,6 +532,7 @@ function openActivityUndo(view, id, endpoint = "/api/activity/undo") {
 }
 
 function activityUndoShow(ctx) {
+  if (ctx.preview.kind === "product_kit") return activityUndoProductKitShow(ctx);
   if (ctx.preview.action === "accessory_photo_record_update") return activityUndoAccessoryPhotoRecordShow(ctx);
   if (ctx.preview.action === "collection_change_restore") return activityUndoCollectionShow(ctx);
   const { sheet, preview, view, endpoint } = ctx, signature = JSON.stringify(preview);

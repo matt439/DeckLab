@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Whole product-only kit recovery (2026-11-11; E11-S08 slice)
+
+- Complete1–50 product-status kit changes now restore through ordinary kit.set with both-side Shared IDs/types, current owned/intact products/card lists, latest/full-row and box-availability proofs. Selected facts alone fence the receipt; unrelated private accessory/member data and global counters do not. Existing sleeve-shortage warning semantics remain.
+- Exact opposite audit rows, unique newer IDs, absent reason and unchanged survivors/other data are proved before commit. An initially unchecked whole-kit acknowledgement is required; unknown Save/stale UI requires Reload. Mixed deck/product sources have no partial inverse and retain Deck History-to-draft/manual product review. Stale/preview snapshots and unverifiable legacy IDs refuse; the precise0014 blank token-column addition is supported without erasing packing.
+- Validation:88 broader checks pass with one existing platform skip,21 selected-product/focused cases pass, and23 latest pure/API/UI cases pass after root legacy/stale hardening (overlap). Six guarded PostgreSQL cases await CI; diagnostic6 strict Chromium states passed with cleanup at data/ui-review/20261110T231120Z-79114e93. Final18 stable states remain. No actual records, history retention, services or exports changed.
+
 ## Combined accessory record and current-photo crop recovery (2026-11-11; E11-S08 slice)
 
 - A distinct combined action restores recorded details, links, capacity, count, owner/kind and crop together with fullRAW13/current-photo proof. Ordinary Edit must reproduce the exact opposite audit row; photo bytes, id/image and all unrelated data stay unchanged. Owner/kind corrections retain unused proof, and current holders may keep text/capacity/count corrections.

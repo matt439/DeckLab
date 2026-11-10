@@ -22,6 +22,8 @@ ACCESS = MappingProxyType({
     ('POST', 'forge/dismiss'): 'profile',
     ('GET', 'deck/development'): 'deck',
     ('GET', 'changes'): 'viewer-filtered',
+    ('GET', 'activity/product-kit-undo'): 'home-records',
+    ('POST', 'activity/product-kit-undo'): 'home-records',
     ('POST', 'goldfish/what-if'): 'deck',
     ('GET', 'deck/role-ranges'): 'deck',
     ('GET', 'space/download'): 'inventory',
@@ -421,8 +423,10 @@ def route_tables():
     from decklab.lib.api import error_reports
     from decklab.lib.api import collection_loans
     from decklab.lib.api import practice
+    from decklab.lib.api import product_kit_undo
 
     gets = {
+        ("activity", "product-kit-undo"): (product_kit_undo.view, ("id",)),
         ("forge", "unfinished"): (run_recovery.view, ()),
         ("deck", "development"): (development.development_view, ("id", "version")),
         ("changes",): (changes.view, ()),
@@ -502,6 +506,7 @@ def route_tables():
         ("shopping", "price-history"): (_price_history, ("name", "row")),
     }
     posts = {
+        ("activity", "product-kit-undo"): (product_kit_undo.apply, MAX_BODY),
         ("goldfish", "what-if"): (practice.what_if, MAX_BODY),
         ("activity", "undo"): activity_undo.apply_undo,
         ("activity", "wishlist-undo"): wishlist_undo.apply_wishlist_undo,
@@ -596,7 +601,7 @@ def dispatch(handler, route, query):
         function, names = gets[key]
         params = handler._query(query, names)
         if "id" in names and key not in {("activity", "undo"), ("activity", "wishlist-undo"), ("activity", "accessory-undo"),
-                                         ("activity", "mixed-undo"), ("play", "sideboard-preview"),
+                                         ("activity", "mixed-undo"), ("activity", "product-kit-undo"), ("play", "sideboard-preview"),
                                          ("play", "sideboard-tests")}:
             params["deck_id"] = handler._deck_id(params) if "id" in params else None
             params.pop("id", None)

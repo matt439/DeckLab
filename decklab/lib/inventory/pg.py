@@ -642,7 +642,7 @@ class PgInventory:
         """Latest *audit row* touching this key. Change-set IDs are allocated before
         the inventory lock and therefore cannot establish write order. A collection row's
         location-only update (E8-S22) doesn't count: Undo leaves locations alone."""
-        if table not in ("collection_card", "token_card", "accessory", "watchlist_item"):
+        if table not in ("collection_card", "token_card", "accessory", "watchlist_item", "product_status"):
             raise Invalid("That row does not support Undo.")
         def work(c):
             found = c.execute("select id from audit.row_change r where table_name=%s and row_key=%s::jsonb "
@@ -671,6 +671,11 @@ class PgInventory:
                 finally:
                     self._applying.connection = previous
         return self._call(work)
+
+    def product_kit_undo_review(self, change_id, owners):
+        from . import product_kit_undo, undo_token_delete
+        return undo_token_delete.read_review(self, change_id, "home", _take_lock,
+            reviewer=lambda cid, _space, snapshot, store: product_kit_undo.review(cid, owners, snapshot, store))
 
     def accessory_undo_photo(self, name, sha256, size):
         """Target-only current bytes, on Undo's already locked review/save connection."""
@@ -955,6 +960,9 @@ class PgInventory:
                             # A mixed queue change undone whole: prove the exact UPDATEs, DELETEs and
                             # INSERTs and every other row's position before commit (or roll back).
                             summary = undo_watchlist_mixed.confirm_in_transaction(cur, change_set, before, saved, summary)
+                        from . import product_kit_undo
+                        if isinstance(op, product_kit_undo.Restore):
+                            summary = product_kit_undo.confirm_in_transaction(cur, change_set, before, saved, summary)
                     return saved, summary
             except _Unchanged as u:
                 return u.result
