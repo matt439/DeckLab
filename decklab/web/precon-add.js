@@ -11,7 +11,10 @@ const PRECON_SEARCH_MS = 250;       // wait this long after typing before search
 function openPreconSheet(cv) {
   if (!colActive(cv) || cv.busy || !cv.editable) return null;
   const whose = colWhose(cv.space);
-  const sheet = colOpenSheet(`Add a precon to ${whose}`, { wide: true, onClose: () => clearTimeout(ctx.timer) });
+  const sheet = colOpenSheet(`Add a precon to ${whose}`, { wide: true, onClose: () => {
+    clearTimeout(ctx.timer);
+    if (ctx.dropReceipt && colActive(cv)) colReload(cv, ctx.dropReceipt.words, ctx.dropReceipt.stale, ctx.dropReceipt.filing);
+  } });
   const ctx = { cv, sheet, whose, seq: 0, busy: false, preview: null, timer: null };
   const input = el("input", { id: `precon-q-${sheet.heading.id}`, type: "search", autocomplete: "off",
     placeholder: "Deck or set name" });
@@ -24,7 +27,7 @@ function openPreconSheet(cv) {
     ctx.timer = setTimeout(() => searchPrecons(ctx), PRECON_SEARCH_MS);
   });
   ctx.searchField = el("div", { class: "precon-search-area" },
-    el("p", { class: "sub", text: "Its cards go into the collection and its list becomes a built deck, in one go."
+    el("p", { class: "sub", text: "A precon's cards go into the collection and its list becomes a built deck, in one go. Secret Lair drops add cards only, without a deck."
       + (cv.space === HOME_SPACE ? ` A product bought through a recorded order arrives through ${routeFor("shopping").label} (${routeFor("receipt").label}) instead.` : "") }),
     el("label", { class: "field precon-search", for: input.id }, el("span", { class: "sr-only", text: "Find a precon" }), input));
   add(sheet.body, [ctx.searchField, ctx.message, ctx.area]);
@@ -55,7 +58,7 @@ async function searchPrecons(ctx) {
   const q = ctx.query.value.trim();
   clear(ctx.message).append(loadingBox("Finding precons…"));
   try {
-    const answer = await api(`/api/precons?${new URLSearchParams({ q })}`);
+    const answer = await api(`/api/precons?${new URLSearchParams({ q, products: "1" })}`);
     if (seq !== ctx.seq || ctx.sheet.closed) return;
     clear(ctx.message);
     const decks = answer.decks || [];
@@ -63,7 +66,7 @@ async function searchPrecons(ctx) {
       decks.length ? el("ul", { class: "precon-list" }, decks.map((d) => el("li", {},
         el("button", { type: "button", class: "precon-pick", onclick: () => previewPrecon(ctx, d) },
           el("span", { class: "precon-pick-words" }, el("strong", { text: d.name }),
-            el("small", { text: [d.set_name || d.code.toUpperCase(), d.type].filter(Boolean).join(" · ") })),
+            el("small", { text: [d.set_name || d.code.toUpperCase(), d.type, d.type === "Secret Lair Drop" ? "Cards only" : null].filter(Boolean).join(" · ") })),
           d.released ? el("small", { class: "precon-pick-date", text: String(d.released).slice(0, 4) }) : null))))
         : emptyBox(q
           ? "No precon matches that. Only decks whose list has been published are here."
@@ -183,7 +186,7 @@ function drawPreconPreview(ctx) {
     el("p", { class: "sub precon-meta" }, [d.set_name || d.code.toUpperCase(), d.type, d.released ? `released ${d.released}` : null].filter(Boolean).join(" · "),
       d.source ? [" · ", el("a", { href: d.source, target: "_blank", rel: "noopener noreferrer",
         text: fromWizards(d.source) ? "Wizards' list" : "Where the list is from" })] : null),
-    el("p", { class: "precon-summary" }, `${p.kind === "commander" ? "Commander deck" : "60-card deck"} · ${plural(total, "card")}. `,
+    el("p", { class: "precon-summary" }, `${p.cards_only ? "Cards only; no deck is created" : p.kind === "commander" ? "Commander deck" : "60-card deck"} · ${plural(total, "card")}. `,
       ctx.addSummary,
       p.dropped_basics ? ` (plain basic lands left out)` : "", "."),
     p.problems && p.problems.length ? el("div", { class: "box box-warn" },
@@ -193,8 +196,8 @@ function drawPreconPreview(ctx) {
     p.deck_problems && p.deck_problems.length ? el("div", { class: "box box-warn" },
       el("h3", { text: "Its list can't be made into a deck" }),
       el("ul", {}, p.deck_problems.slice(0, 20).map((x) => el("li", { text: x.message })))) : null,
-    el("label", { class: "field precon-title", for: titleInput.id }, el("span", { text: "Deck title" }), titleInput),
-    ctx.titleNote,
+    p.cards_only ? null : el("label", { class: "field precon-title", for: titleInput.id }, el("span", { text: "Deck title" }), titleInput),
+    p.cards_only ? null : ctx.titleNote,
     leftOut.length || (p.tokens && p.tokens.length) ? el("p", { class: "sub" },
       leftOut.length ? `Not added: ${leftOut.join(", ")}. ` : "",
       !p.token_import && p.tokens && p.tokens.length ? ["Its token cards (", p.tokens.map((t) => `${t.count} ${t.name}`).join(", "),
@@ -203,9 +206,9 @@ function drawPreconPreview(ctx) {
     preconTokenChoice(ctx),
     preconBonusChoice(ctx),
     Object.entries(lists).map(([section, lines]) => el("section", { class: "precon-section" },
-      el("h3", { text: `${section === "Deck" ? "Deck" : section} (${num(counts[section] || 0)})` }),
+      el("h3", { text: `${section === "Deck" ? p.cards_only ? "Cards" : "Deck" : section} (${num(counts[section] || 0)})` }),
       el("div", { class: "card-tiles precon-tiles" }, lines.map((c) => tile(c, section)))))]);
-  if (!p.editable) ctx.area.append(el("p", { class: "box box-info", text: "You can't add cards and decks here." }));
+  if (!p.editable) ctx.area.append(el("p", { class: "box box-info", text: p.cards_only ? "You can't add cards here." : "You can't add cards and decks here." }));
   sheetActions(ctx.sheet, [ctx.back,
     p.ready && p.editable && !ctx.bonusMalformed ? { text: `Add ${d.name}`, kind: "primary", value: "add", onclick: event => {
       if (preconAddHere(ctx, p, event.currentTarget)) addPrecon(ctx);
@@ -233,7 +236,7 @@ async function addPrecon(ctx) {
   if (tokensChosen && !tokenSelection) return;
   const requestHash = location.hash;
   const title = ctx.titleInput.value.trim();
-  if (!title) { ctx.titleNote.textContent = "The deck needs a title."; ctx.titleInput.focus(); return; }
+  if (!title && !p.cards_only) { ctx.titleNote.textContent = "The deck needs a title."; ctx.titleInput.focus(); return; }
   ctx.busy = true;
   preconTokensBusy(ctx, true);
   for (const row of bonusReview?.options || []) row.node.disabled = true;
@@ -250,12 +253,31 @@ async function addPrecon(ctx) {
     if (ctx.sheet.closed || !colActive(cv) || ctx.preview !== p || requestHash !== location.hash
         || tokensChosen && !preconTokenOwner(ctx, tokenReview) || bonusReview && !preconBonusOwner(ctx, bonusReview)) return;
     const added = answer.collection && answer.collection.added;
+    const tokenCount = tokensChosen && answer.tokens?.cards === tokenSelection.cards && answer.tokens?.rows === tokenSelection.rows
+      ? tokenSelection.cards : null;
+    if (p.cards_only) {
+      if (answer.cards_only !== true || answer.deck !== null) throw Error("The cards-only result could not be confirmed. Check the collection before adding again.");
+      const words = `${Number.isSafeInteger(added?.cards) ? plural(added.cards, "card") : "Cards"} from ${p.deck.name} added to ${ctx.whose}. No deck was created.`;
+      const filing = colFilingSnapshot(answer.collection, cv);
+      ctx.dropReceipt = { words, stale: answer.stale_tables, filing };
+      ctx.preview = null;
+      ctx.sheet.heading.textContent = `${p.deck.name} is added`;
+      clear(ctx.message).append(el("div", { class: "box box-good", role: "status", text: words }));
+      const receiptCv = { ...cv, message: ctx.area };
+      clear(ctx.area);
+      if (tokensChosen) ctx.area.append(el("p", { class: tokenCount === null ? "box box-warn" : "sub", text: tokenCount === null
+        ? "The token addition count was not confirmed. Check the Tokens page before adding any again."
+        : `${plural(tokenCount, "token card")} also added as unconfirmed rows. Check their printings and reverse faces on the Tokens page.` }));
+      if (filing) add(ctx.area, [colFilingGuide(receiptCv, filing)]);
+      if (answer.stale_tables?.length) add(ctx.area, [staleTablesPart(answer.stale_tables)]);
+      if (answer.trials?.length) add(ctx.area, [ptrTrialsPart(answer.trials)]);
+      sheetActions(ctx.sheet, [{ text: "Close", kind: "primary", onclick: () => ctx.sheet.close() }]);
+      return;
+    }
     ctx.sheet.close();
     // The deck page's box about a new deck (editor-deckpage.js, savedBox), as the editor's Create leaves it:
     // warnings (no sleeves yet, the deck rules) and other decks' tables now out of date.
     const hash = deckHref(answer.deck.id, "target");
-    const tokenCount = tokensChosen && answer.tokens?.cards === tokenSelection.cards && answer.tokens?.rows === tokenSelection.rows
-      ? tokenSelection.cards : null;
     const filing = colFilingSnapshot(answer.collection, cv, "precon");
     state.saved = { hash, profile: state.profile?.id, version: "target", mode: "new", answer: { ...answer.deck,
       precon: { name: p.deck.name, whose: ctx.whose, cards: added ? added.cards : 0,
@@ -282,7 +304,8 @@ async function addPrecon(ctx) {
       preconTokensBusy(ctx, true);
       for (const row of bonusReview?.options || []) row.node.disabled = true;
       clear(ctx.message).append(el("div", { class: "box box-crit", role: "alert" }, el("p", { text: error.message }),
-        el("p", { text: `It isn't known whether its cards went into ${ctx.whose}. Look there (and on the Decks page${tokensChosen ? " and Tokens page" : ""}) before adding it again.` })));
+        el("p", { text: `It isn't known whether its cards went into ${ctx.whose}. Look there${p.cards_only
+          ? tokensChosen ? " and on the Tokens page" : "" : ` (and on the Decks page${tokensChosen ? " and Tokens page" : ""})`} before adding it again.` })));
       sheetActions(ctx.sheet, [{ text: "Close", kind: "primary", value: "close",
         onclick: () => { ctx.sheet.close(); if (colActive(cv)) colReload(cv, error.message); } }]);
       return;

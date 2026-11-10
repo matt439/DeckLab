@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Secret Lair drops as cards-only imports (2026-11-11; E7-S40)
+
+- Add a precon and `collection add-precon` now offer Secret Lair drops, marked cards only. The ordinary reviewed cards, fixed bonus choices, optional confirmed tokens and raw import save as one change, without making a deck, table/history or deck-revision change.
+- The sheet hides deck-title controls and ends with a cards-only receipt retaining filing/stale-table/trial reminders. Source receipts bind type and normalized base cards as well as bonus contents; stale or uncertain saves require the existing explicit recovery flow. Trial and coverage readers still accept decks only.
+- Validation: 14 new API/CLI/Node UI cases, 193 core/legacy precon checks and 101 secondary checks pass (groups overlap). Two disposable-PostgreSQL cases are added for CI, locally guarded. The 12-case synthetic rendered review is qualified at the stable batch point; no actual cards or decks were imported by this task.
+
 ## Overnight TODO validation and handoff (2026-11-10)
 
 - E7-S39 (fixed precon bonus cards) and E4-S29 (counter/dice reminders and the take-along list) are built. E11-S79's remaining timezone-default choice and E11-S84's stable-channel choice are DECISION rows; their locally implementable config/update work is built. No new default or update channel was chosen.

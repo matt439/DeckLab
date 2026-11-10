@@ -30,7 +30,8 @@ def offer(entry, data, existing, *, fetch=False, choices=None, source_sha256=Non
         raise ApiError(502, _public(error)) from None
     if found is None:
         raise stale()
-    encoded = json.dumps([entry["file"], found], ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    encoded = json.dumps([entry["file"], entry["type"], precons.cards_of(data), found],
+                         ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     receipt = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
     if source_sha256 is not None and source_sha256 != receipt:
         raise stale()
@@ -58,6 +59,8 @@ def offer(entry, data, existing, *, fetch=False, choices=None, source_sha256=Non
             selected.append(raw)
     random = list(found.get("random") or [])
     notes = [note for note in precons.notes(entry["type"]) if not (random or fixed) or note != precons.RANDOM_NOTE]
+    if entry["type"] in precons.PRODUCT_TYPES:
+        notes = [note for note in notes if note != precons.RANDOM_NOTE]
     if random:
         notes.append("Also in the box: " + "; ".join(random) + " (random, not added).")
     varies = [sealed.describe(card) for card in found.get("varies") or []]

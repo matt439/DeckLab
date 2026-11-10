@@ -5,11 +5,12 @@ const assert = require('node:assert/strict');
 const { run } = require('./common.js');
 
 const DECK = {file:'SyntheticBonus_TST',name:'Synthetic woodland precon',code:'tst',set_name:'Synthetic set',type:'Theme Deck'};
+const DROP = {file:'SyntheticDrop_SLD',name:'Synthetic cards-only drop',code:'sld',set_name:'Synthetic set',type:'Secret Lair Drop'};
 const COLLECTION = 'a'.repeat(64), SOURCE = 'c'.repeat(64);
 const NEXT_COLLECTION = 'b'.repeat(64), NEXT_SOURCE = 'd'.repeat(64);
 
-function preview(fresh = false) {
-  return {deck:DECK,kind:'casual',title:'Synthetic woodland precon',exists:null,ready:true,editable:true,
+function preview(fresh = false, cardsOnly = false) {
+  return {deck:cardsOnly?DROP:DECK,kind:'casual',title:cardsOnly?DROP.name:DECK.name,cards_only:cardsOnly,exists:null,ready:true,editable:true,
     sha256:fresh?NEXT_COLLECTION:COLLECTION,counts:{Deck:4},adds:{rows:2,cards:fresh?5:6},
     dropped_basics:0,left_out:{},tokens:[],problems:[],deck_problems:[],
     lists:{Deck:[{name:'Llanowar Elves',qty:4,set:'fdn',number:'227',finish:'nonfoil',card:null}]},
@@ -36,10 +37,10 @@ async function snapshot(page, block) {
 }
 
 run('precon-bonus', async review => {
-  review.report.scope='Six native bonus-card reviews with synthetic intercepted GET/POST replies; no inventory, deck, database or source fetch is saved.';
+  review.report.scope='Twelve native precon/drop reviews with synthetic intercepted GET/POST replies; no inventory, deck, database or source fetch is saved.';
   review.report.results=[];
-  for(const theme of ['light','dark']) for(const width of [393,820,1440]) {
-    const spec={theme,width,height:width===820?1106:900,coarse:width<1000};
+  for(const mode of ['precon','drop']) for(const theme of ['light','dark']) for(const width of [393,820,1440]) {
+    const spec={mode,theme,width,height:width===820?1106:900,coarse:width<1000},cardsOnly=mode==='drop',deck=cardsOnly?DROP:DECK;
     const result={spec,status:'failed',page_errors:[],http_errors:[],synthetic_requests:[]};
     let context;
     try {
@@ -53,29 +54,33 @@ run('precon-bonus', async review => {
         assert.equal(url.origin,review.origin,'Only this run\'s fixture origin may be intercepted');
         if(url.pathname==='/api/precons') {
           assert.equal(request.method(),'GET');
-          return route.fulfill({status:200,json:{date:'2026-11-10',decks:[DECK],more:false}});
+          assert.equal(url.searchParams.get('products'),'1');
+          return route.fulfill({status:200,json:{date:'2026-11-10',decks:[deck],more:false}});
         }
         if(url.pathname==='/api/precons/preview') {
-          assert.equal(request.method(),'GET');assert.equal(url.searchParams.get('file'),DECK.file);
+          assert.equal(request.method(),'GET');assert.equal(url.searchParams.get('file'),deck.file);
           previews++;
-          return route.fulfill({status:200,json:preview(previews>1)});
+          return route.fulfill({status:200,json:preview(previews>1,cardsOnly)});
         }
         assert.equal(url.pathname,'/api/precons/add');assert.equal(request.method(),'POST');
         const body=request.postDataJSON();
         result.synthetic_requests.push(body);adds++;
         assert.deepEqual(Object.keys(body).sort(),['profile','space','file','title','sha256','bonus_choices','bonus_source_sha256'].sort());
-        assert.equal(body.profile,'matt');assert.equal(body.space,'home');assert.equal(body.file,DECK.file);
-        assert.equal(body.title,'Synthetic reviewed title');
+        assert.equal(body.profile,'matt');assert.equal(body.space,'home');assert.equal(body.file,deck.file);
+        assert.equal(body.title,cardsOnly?DROP.name:'Synthetic reviewed title');
         assert.equal(body.sha256,adds===1?COLLECTION:NEXT_COLLECTION);
         assert.equal(body.bonus_source_sha256,adds===1?SOURCE:NEXT_SOURCE);
         assert.deepEqual(body.bonus_choices,adds===1?[2]:[1]);
         assert(adds<=2,'Unexpected automatic or repeated add');
         // Even explicit clicks receive synthetic refusals, so no inventory write or route change occurs.
+        if(adds===2 && cardsOnly) return route.fulfill({status:200,json:{cards_only:true,deck:null,
+          collection:{added:{cards:6,rows:2}},stale_tables:[],trials:[]}});
         return route.fulfill({status:409,json:adds===1
           ? {error:'Synthetic source changed. Preview the precon again.',bonus_conflict:true}
           : {error:'Synthetic title is already in use.',conflict:'casual/safari-fixture'}});
       });
       await page.goto(review.pageUrl('/#/collection?open=precon',theme),{waitUntil:'domcontentloaded'});
+      if(cardsOnly) assert((await page.locator('.precon-pick').first().innerText()).includes('Cards only'));
       await page.locator('.precon-pick').first().click();
       const block=page.locator('.precon-bonus');
       await block.waitFor({state:'visible',timeout:10000});
@@ -87,21 +92,24 @@ run('precon-bonus', async review => {
       await block.scrollIntoViewIfNeeded();
       result.initial=await snapshot(page,block);
       assert(!result.initial.documentOverflow,'The review overflows the document');
-      result.initialPng=`${width}-${theme}-initial.png`;
+      result.initialPng=`${mode}-${width}-${theme}-initial.png`;
       await page.screenshot({path:path.join(review.out,result.initialPng),fullPage:false,animations:'disabled'});
 
-      await dialog.locator('.precon-title input').fill('Synthetic reviewed title');
+      if(cardsOnly) {
+        assert.equal(await dialog.locator('.precon-title input').count(),0);
+        assert((await dialog.innerText()).includes('Cards only; no deck is created'));
+      } else await dialog.locator('.precon-title input').fill('Synthetic reviewed title');
       await checks.nth(0).uncheck();await checks.nth(1).check();
       assert((await dialog.locator('.precon-summary').innerText()).includes('5 cards go into the collection'));
       assert.equal(adds,0,'Changing a local checkbox must not write');
-      await dialog.getByRole('button',{name:`Add ${DECK.name}`,exact:true}).click();
+      await dialog.getByRole('button',{name:`Add ${deck.name}`,exact:true}).click();
       const refresh=dialog.getByRole('button',{name:'Preview again',exact:true});
       await refresh.waitFor({state:'visible'});
       assert.equal(adds,1);assert.equal(previews,1,'A conflict must not automatically refresh the preview');
-      assert.equal(await dialog.getByRole('button',{name:`Add ${DECK.name}`,exact:true}).count(),0);
+      assert.equal(await dialog.getByRole('button',{name:`Add ${deck.name}`,exact:true}).count(),0);
       assert((await dialog.innerText()).includes('Nothing was added. Preview again'));
       assert(await checks.nth(0).isDisabled());assert(await checks.nth(1).isDisabled());
-      result.stalePng=`${width}-${theme}-stale.png`;
+      result.stalePng=`${mode}-${width}-${theme}-stale.png`;
       await page.screenshot({path:path.join(review.out,result.stalePng),fullPage:false,animations:'disabled'});
 
       await refresh.click();
@@ -109,15 +117,22 @@ run('precon-bonus', async review => {
         && document.querySelectorAll('.precon-bonus input')[1]?.checked===true
         && !document.querySelector('.precon-bonus input')?.disabled);
       assert.equal(previews,2);assert.equal(adds,1);
-      assert.equal(await dialog.locator('.precon-title input').inputValue(),'Synthetic reviewed title');
+      if(!cardsOnly) assert.equal(await dialog.locator('.precon-title input').inputValue(),'Synthetic reviewed title');
       result.refreshed=await snapshot(page,block);
       assert(!result.refreshed.documentOverflow);
-      result.refreshedPng=`${width}-${theme}-refreshed.png`;
+      result.refreshedPng=`${mode}-${width}-${theme}-refreshed.png`;
       await block.scrollIntoViewIfNeeded();
       await page.screenshot({path:path.join(review.out,result.refreshedPng),fullPage:false,animations:'disabled'});
       await checks.nth(0).check();await checks.nth(1).uncheck();
-      await dialog.getByRole('button',{name:`Add ${DECK.name}`,exact:true}).click();
-      await dialog.getByText('Synthetic title is already in use.',{exact:true}).waitFor();
+      await dialog.getByRole('button',{name:`Add ${deck.name}`,exact:true}).click();
+      if(cardsOnly) {
+        await dialog.getByText(/6 cards from Synthetic cards-only drop added/).waitFor();
+        assert((await dialog.innerText()).includes('No deck was created'));
+        assert.equal(await dialog.getByRole('button',{name:`Add ${deck.name}`,exact:true}).count(),0);
+        assert(await page.evaluate(()=>state.saved===null));
+        result.savedPng=`${mode}-${width}-${theme}-saved.png`;
+        await page.screenshot({path:path.join(review.out,result.savedPng),fullPage:false,animations:'disabled'});
+      } else await dialog.getByText('Synthetic title is already in use.',{exact:true}).waitFor();
       assert.equal(adds,2);assert.equal(previews,2);
       for(const error of result.http_errors) if(error.status===409
           && new URL(error.url,review.origin).pathname==='/api/precons/add') error.category='expected_synthetic_refusal';

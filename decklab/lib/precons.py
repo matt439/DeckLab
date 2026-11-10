@@ -67,8 +67,8 @@ TYPES = frozenset((
     "Guild Kit", "Clash Pack", "Advanced Pack", "Demo Deck", "Archenemy Deck",
     "Pioneer Challenger Deck", "Halfdeck", "Spellslinger Starter Kit", "Premium Deck", "Modern Event Deck",
 ))
-# Types listed only when a sealed product's list is filled from MTGJSON (lib/sealed.py, E6-S29):
-# a Secret Lair drop isn't a deck, but its cards (and its bonus card) are a product's list.
+# Extra types for sealed product lists (E6-S29) and Add a precon's cards-only imports (E7-S40).
+# A Secret Lair drop isn't a deck; neither trial nor coverage deck pickers include it.
 PRODUCT_TYPES = frozenset(("Secret Lair Drop",))
 # The parts of a deck file whose cards go into the collection, and the deck
 # section each one becomes. DISPLAY is the card in the box's window, not

@@ -41,12 +41,12 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 21 | 1 | 6 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 28 | 0 | 4 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 29 | 1 | 6 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 30 | 1 | 5 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 44 | 13 | 18 | 4 |
-| **Total** | **376** | **280** | **21** | **59** | **16** |
+| **Total** | **376** | **281** | **21** | **58** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -3549,7 +3549,7 @@ Built 2026-11-10: the page previews fixed bonus cards separately with exact-prin
 
 Evidence: `lib/api/precon_bonus.py`, `lib/api/precons.py`, `db/inv_collection.py`, `web/precon-add.js`; `test_precon_bonus.py` covers a real cached sealed extract, exact defaults and finish, explicit choices, CLI, stale-source/collection refusal, native checkbox ownership/recovery, and rollback after a late deck-create failure. Existing precon/token/import and sealed-reader suites pass. The stable-source `precon-bonus` Chromium matrix passed 6/6 cases at phone/tablet/desktop widths in both themes, including explicit stale-preview recovery and intercepted request receipts (HISTORY's overnight handoff). PostgreSQL and actual household devices were not qualified by this source task. From the bonus-card investigation of 2026-11-10.
 
-**E7-S40** · Matt · could · M · missing
+**E7-S40** · Matt · could · M · built
 
 As Matt who bought Secret Lair drops, I want to add one from Add a precon as cards only, so that a drop's cards and its bonus card reach the collection without typing the list.
 
@@ -3559,9 +3559,9 @@ As Matt who bought Secret Lair drops, I want to add one from Add a precon as car
 
 Decided (Matt, 2026-11-10): wanted.
 
-Gap: E6-S29 added `precons.PRODUCT_TYPES` (Secret Lair drops, for `collection precons --products` and a product list's fill), but Add a precon's lists still use `TYPES` alone, and `plan_add` in `decklab/lib/api/precons.py` always makes a deck. Depends on E7-S39. From the bonus-card investigation of 2026-11-10.
+Built 2026-11-11: Add a precon and `collection add-precon` offer Secret Lair drops as cards only. The reviewed fixed cards, bonus choices, optional confirmed token rows and raw import are saved by one existing `precon.add` operation, without creating a deck, deck history, tables or a deck-revision change. The preview hides deck-title controls; success is a cards-only receipt with existing filing, table and trial reminders. Source receipts bind product type, normalized base list and bonus content, so a changed source cannot silently change the operation into deck creation. Trial/coverage readers remain deck-only.
 
-First slice: offer `PRODUCT_TYPES` entries in Add a precon and a no-deck branch in `plan_add`, its preview wording in `decklab/web/precon-add.js` and `collection add-precon`.
+Evidence: 14 new API/CLI/Node UI fixtures, 193 core/legacy precon regressions and 101 secondary regressions pass. Disposable-PostgreSQL tests cover one audit set, unchanged deck tables/revisions and late token rollback; they are guarded locally and await CI. `precon-bonus` has 12 synthetic rendered cases for normal precons and drops; final capture waits for the batch's stable source. From the bonus-card investigation of 2026-11-10.
 
 ---
 

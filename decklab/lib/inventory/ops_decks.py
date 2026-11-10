@@ -422,11 +422,14 @@ def delete(inv, *, deck_id, base_sha256):
 
 @register("precon.add")
 def add_precon(inv, *, space, kind, slug, text, collection, owners=frozenset(), token_rows=(), tokens_sha256=None,
-               capture_filing=False):
+               capture_filing=False, cards_only=False):
     """A precon's cards merged into the space's collection (collection.import, with collection
     as its parameters) and its deck created (deck.create, owners as its), on the same snapshot:
-    one change."""
+    one change. cards_only imports a drop and optional token rows without any deck change;
+    its kind, slug and text must all be None."""
     from . import ops_collection
+    if not isinstance(cards_only, bool) or cards_only and any(value is not None for value in (kind, slug, text)):
+        raise Invalid("A cards-only import cannot also create a deck")
     params = dict(collection)
     if capture_filing:
         params["capture_additions"] = True
@@ -446,9 +449,10 @@ def add_precon(inv, *, space, kind, slug, text, collection, owners=frozenset(), 
             token_cards += int(row["quantity"])
             sheet = merged.token_set(space)
             expected = files.rendered_sha256(sheet) if sheet.exists else None
-    made, created = create(merged, space=space, kind=kind, slug=slug, text=text, owners=owners)
+    made, created = ((merged, Summary("cards only, no deck created", {"decks": 0}, {}, {})) if cards_only else
+                     create(merged, space=space, kind=kind, slug=slug, text=text, owners=owners))
     extra = {**(imported.extra or {}), **(created.extra or {})}
-    if capture_filing:
+    if capture_filing and not cards_only:
         # A precon creates a holder as well as adding cards. This JSON-only proof lets
         # optional advice distinguish its new reservations from already held stock.
         current = made.deck(created.extra["deck"])
