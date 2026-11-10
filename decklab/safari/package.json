@@ -9,8 +9,8 @@
   },
   "packageManager": "npm@11.9.0",
   "devDependencies": {
-    "appium": "3.8.0",
-    "appium-xcuitest-driver": "12.22.7"
+    "appium": "3.9.0",
+    "appium-xcuitest-driver": "13.0.7"
   },
   "overrides": {
     "@appium/base-driver": "10.8.1",

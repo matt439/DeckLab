@@ -5,4 +5,4 @@
 #   .venv\Scripts\python -m pip install -r decklab/requirements.txt   (Windows)
 #   .venv/bin/python -m pip install -r decklab/requirements.txt       (Linux and macOS)
 # Pinned, since psycopg's binary wheels follow Python releases (PLAN.md, "Risks of the move").
-psycopg[binary]==3.3.6
+psycopg[binary]==3.3.8
