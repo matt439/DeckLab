@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Declared route boundaries and cross-space probes (2026-11-11; E11-S65)
+
+- Feature routes now declare an access class for each concrete method/path and fail closed without one. A reviewed legacy inventory preserves the older routing aliases/lazy loading. Metadata documents policy; existing handlers remain the permission engine.
+- Table probes use valid private targets for nobody, a tunnel member, another home profile and relevant home-admin cases, asserting hidden-marker omission and unchanged persisted state. A validation-only refusal does not count as proof of a guard; worker/network/native writes are prohibited in the probes.
+- SECURITY.md records both listeners, script proof, trusted home chooser, current /img public-source-cache policy, new-route checks and source migrations. Stale admin-override/Activity/home-chooser/dice statements are corrected without changing permissions.
+- Validation:15 current route/declaration checks pass, plus earlier targeted listener/script/privacy checks. No live access policy, member setting or household record was changed.
+
 ## Revision and published-precon comparison baselines (2026-11-11; E1-S30)
 
 - Compare accepts dated same-deck History revisions or an explicitly chosen cached MTGJSON precon without creating a deck/trial. Card differences and directional curve, colour-source, role and bracket deltas use lean intrinsic lists; brackets are qualified by today's data.

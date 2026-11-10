@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 32 | 1 | 2 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 50 | 14 | 11 | 4 |
-| **Total** | **376** | **298** | **22** | **40** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 51 | 14 | 10 | 4 |
+| **Total** | **376** | **299** | **22** | **39** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6221,7 +6221,7 @@ Evidence:
 
 Gap: Left: time a phone's and the iPad's load before and after on the live server (the gain is still unmeasured on a device); status partial until then. Accessory pictures, card images and API answers keep their caching. `private`, never `public`, so Cloudflare keeps nothing outside the login. From the product review of 2026-11-10.
 
-**E11-S65** · Matt · could · M · missing
+**E11-S65** · Matt · could · M · built
 
 As Matt, keeping every space private as routes are added, I want each route to declare who may use it and one test to probe them all, so that a new route without a guard fails CI before it reaches a member.
 
@@ -6232,6 +6232,8 @@ As Matt, keeping every space private as routes are added, I want each route to d
 Gap: the tables hold path, handler, query keys and body cap, and the rules of E10-S29, E10-S30, E10-S35 and E10-S38 are tested per area, but no row declares its permission and no test walks them. Docstrings in `server.py` and `permissions.py` still say an admin reads a member's collection and sees everything on Activity, and AGENTS.md says dice both are and aren't recorded. From the product review of 2026-11-10. Needs Matt's decision: whether `/img`, a GET that writes the image cache, should need a named viewer.
 
 First slice: an `ACCESS` entry per row in `decklab/lib/feature_routes.py`, a new `decklab/tests/test_route_access.py` (the older routes of `server_http.py` by a hand list), and the stale statements fixed in `decklab/server.py`, `decklab/lib/permissions.py` and `AGENTS.md`. `SECURITY.md` and a check that the docs list every migration follow.
+
+Built (2026-11-11): explicit access metadata covers each concrete feature route and a reviewed legacy inventory; declarations fail closed when absent and table-driven probes exercise existing handlers without weakening their guards. Seeded private targets are checked as nobody, a tunnel member, another home profile and a home admin where applicable, with invariant files/config/audit and no native/network worker activity. SECURITY.md describes listeners, script proof, trusted home chooser, Public projections, new-route review and migration inventory; stale security/dice statements are corrected. Existing public-card /img cache policy is preserved, as required by the user's unchanged-privacy boundary. Fifteen current route/declaration checks pass; earlier related listener/script/permission qualification is retained. No actual permission setting or data was changed.
 
 **E11-S66** · Matt · could · S · built
 

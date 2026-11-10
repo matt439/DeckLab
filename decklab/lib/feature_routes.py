@@ -12,6 +12,217 @@ stop (api/gauntlet_page.py) and the group run's (api/field_group.py, E3-S31) ans
 wait or play, as the field's do.
 """
 
+# Audit metadata, not a second permission engine. Existing handlers retain all access checks.
+# Every concrete method/path must be declared; adding an unclassified route fails closed and CI.
+from types import MappingProxyType
+
+ACCESS = MappingProxyType({
+    ('GET', 'settings/maintenance'): 'admin',
+    ('GET', 'settings/reference-facts'): 'admin',
+    ('GET', 'server/restart'): 'home-admin',
+    ('GET', 'collection'): 'inventory',
+    ('GET', 'collection/rows'): 'inventory',
+    ('GET', 'collection/download'): 'inventory',
+    ('GET', 'printings'): 'open',
+    ('GET', 'precons'): 'open',
+    ('GET', 'precons/product'): 'home-admin',
+    ('GET', 'precons/preview'): 'inventory-edit',
+    ('GET', 'precons/coverage'): 'inventory',
+    ('GET', 'precons/coverage/deck'): 'inventory',
+    ('GET', 'precons/trial'): 'deck',
+    ('GET', 'commanders/candidates'): 'inventory',
+    ('GET', 'commanders/candidate'): 'inventory',
+    ('GET', 'assembly'): 'home-records',
+    ('GET', 'compare/shared'): 'deck',
+    ('GET', 'compare/deck'): 'deck',
+    ('GET', 'compare/precon'): 'open',
+    ('GET', 'play'): 'play',
+    ('GET', 'play/sideboard-preview'): 'play',
+    ('GET', 'play/sideboard-tests'): 'play',
+    ('GET', 'play/pairs'): 'profile',
+    ('GET', 'deck/history'): 'deck',
+    ('GET', 'deck/retire'): 'deck',
+    ('GET', 'deck/rename'): 'deck',
+    ('GET', 'deck/find'): 'deck',
+    ('GET', 'deck/revision'): 'deck',
+    ('GET', 'deck/swaps'): 'deck',
+    ('GET', 'deck/replacements'): 'deck',
+    ('GET', 'deck/dual-lands'): 'deck',
+    ('GET', 'deck/role-cards'): 'deck',
+    ('GET', 'deck/cards'): 'deck',
+    ('GET', 'deck/opponents'): 'deck',
+    ('GET', 'deck/draft'): 'draft',
+    ('GET', 'deck/new-draft'): 'draft',
+    ('GET', 'deck/edhrec'): 'deck',
+    ('GET', 'deck/wishlist'): 'deck',
+    ('GET', 'receipt'): 'home-records',
+    ('GET', 'arrivals'): 'profile',
+    ('GET', 'rankings'): 'viewer-filtered',
+    ('GET', 'field/membership'): 'deck',
+    ('GET', 'field/group'): 'deck',
+    ('GET', 'crosscheck'): 'deck',
+    ('GET', 'library/forge'): 'viewer-filtered',
+    ('GET', 'library/gauntlet'): 'viewer-filtered',
+    ('GET', 'product'): 'home-records',
+    ('GET', 'accessories'): 'accessories',
+    ('GET', 'tokens'): 'inventory',
+    ('GET', 'dice'): 'inventory',
+    ('GET', 'tokens/plan'): 'inventory',
+    ('GET', 'activity'): 'activity',
+    ('GET', 'activity/undo'): 'activity',
+    ('GET', 'activity/wishlist-undo'): 'activity',
+    ('GET', 'activity/accessory-undo'): 'activity',
+    ('GET', 'activity/mixed-undo'): 'activity',
+    ('GET', 'visits'): 'admin',
+    ('GET', 'search'): 'viewer-filtered',
+    ('GET', 'cards/decks'): 'inventory',
+    ('GET', 'gauntlet'): 'deck',
+    ('GET', 'gauntlet/summary'): 'deck',
+    ('GET', 'gauntlet/catalogue'): 'open',
+    ('GET', 'gauntlet/board'): 'viewer-filtered',
+    ('GET', 'shopping/combined'): 'home-records',
+    ('GET', 'shopping/price-history'): 'home-records',
+    ('POST', 'activity/undo'): 'activity',
+    ('POST', 'activity/wishlist-undo'): 'activity',
+    ('POST', 'activity/accessory-undo'): 'activity',
+    ('POST', 'activity/mixed-undo'): 'activity',
+    ('POST', 'assembly/preview'): 'home-records',
+    ('POST', 'assembly/built'): 'home-records',
+    ('POST', 'assembly/ticks'): 'home-records',
+    ('POST', 'assembly/standins'): 'home-records',
+    ('POST', 'play/game'): 'play',
+    ('POST', 'play/game/delete'): 'play',
+    ('POST', 'play/pod'): 'play',
+    ('POST', 'play/sideboard'): 'play',
+    ('POST', 'play/sideboard-test'): 'deck-run',
+    ('POST', 'receipt/preview'): 'home-admin',
+    ('POST', 'receipt/apply'): 'home-admin',
+    ('POST', 'arrivals/dismiss'): 'profile',
+    ('POST', 'product/intact/preview'): 'home-admin',
+    ('POST', 'product/intact/apply'): 'home-admin',
+    ('POST', 'product/token-cards'): 'home-admin',
+    ('POST', 'shopping/check'): 'home-admin',
+    ('POST', 'shopping/queue'): 'home-admin',
+    ('POST', 'shopping/queue/missing'): 'home-admin',
+    ('POST', 'shopping/queue/combined'): 'home-admin',
+    ('POST', 'variant/queue/preview'): 'home-admin',
+    ('POST', 'variant/queue'): 'home-admin',
+    ('POST', 'shopping/order/preview'): 'home-admin',
+    ('POST', 'shopping/order/apply'): 'home-admin',
+    ('POST', 'shopping/order/change/preview'): 'home-admin',
+    ('POST', 'shopping/order/change/apply'): 'home-admin',
+    ('POST', 'accessories/fetch'): 'accessories',
+    ('POST', 'accessories/save'): 'accessories',
+    ('POST', 'accessories/assign'): 'accessories',
+    ('POST', 'tokens/save'): 'inventory-edit',
+    ('POST', 'dice/save'): 'inventory-edit',
+    ('POST', 'tokens/plan'): 'inventory-edit',
+    ('POST', 'tokens/scan'): 'inventory-edit',
+    ('POST', 'tokens/scan/add'): 'inventory-edit',
+    ('POST', 'collection/save'): 'inventory-edit',
+    ('POST', 'collection/bulk'): 'inventory-edit',
+    ('POST', 'collection/locations/bulk'): 'inventory-edit',
+    ('POST', 'collection/import/preview'): 'inventory-edit',
+    ('POST', 'collection/import/apply'): 'inventory-edit',
+    ('POST', 'collection/scan'): 'inventory-edit',
+    ('POST', 'collection/trade/preview'): 'inventory-edit',
+    ('POST', 'collection/trade'): 'inventory-edit',
+    ('POST', 'precons/add'): 'inventory-edit',
+    ('POST', 'precons/start'): 'inventory-edit',
+    ('POST', 'precons/trial'): 'inventory-edit',
+    ('POST', 'precons/trial/keep'): 'deck-edit',
+    ('POST', 'field/policy/preview'): 'home-admin',
+    ('POST', 'field/policy'): 'home-admin',
+    ('POST', 'deck/cover'): 'deck-edit',
+    ('POST', 'deck/token-cards'): 'deck-edit',
+    ('POST', 'deck/printings'): 'deck-edit',
+    ('POST', 'deck/box-check'): 'deck-edit',
+    ('POST', 'deck/box-repair'): 'deck-edit',
+    ('POST', 'deck/opponents'): 'deck-edit',
+    ('POST', 'deck/draft'): 'draft',
+    ('POST', 'deck/new-draft'): 'draft',
+    ('POST', 'deck/considering'): 'deck-edit',
+    ('POST', 'deck/swaps'): 'deck',
+    ('POST', 'deck/retire'): 'deck-edit',
+    ('POST', 'deck/rename/preview'): 'deck-edit',
+    ('POST', 'deck/rename'): 'deck-edit',
+    ('POST', 'deck/restore'): 'deck-edit',
+    ('POST', 'server/restart'): 'home-admin',
+    ('POST', 'gauntlet/run'): 'deck-run',
+    ('POST', 'gauntlet/stop'): 'run-stop',
+    ('POST', 'field/group/run'): 'deck-run',
+    ('POST', 'field/group/stop'): 'run-stop',
+    ('POST', 'crosscheck/run'): 'deck-run',
+    ('POST', 'crosscheck/stop'): 'run-stop',
+    ('POST', 'visit'): 'open',
+})
+
+# Older routes remain in Handler._route; this reviewed inventory gives them the same audit vocabulary.
+# GET includes its HEAD alias. These declarations describe policy; handlers enforce it.
+LEGACY_ACCESS = MappingProxyType({
+    ('GET', '/api/status'): 'open',
+    ('GET', '/api/profiles'): 'viewer-filtered',
+    ('GET', '/api/me'): 'open',
+    ('GET', '/api/visibility'): 'profile',
+    ('PUT', '/api/visibility'): 'profile',
+    ('GET', '/api/simulations'): 'viewer-filtered',
+    ('PUT', '/api/simulations'): 'admin',
+    ('GET', '/api/shop-postage'): 'home-records',
+    ('PUT', '/api/shop-postage'): 'home-admin',
+    ('GET', '/api/pricing-setting'): 'home-records',
+    ('PUT', '/api/pricing-setting'): 'home-admin',
+    ('GET', '/api/commander-night'): 'home-records',
+    ('PUT', '/api/commander-night'): 'home-admin',
+    ('GET', '/api/settings/members'): 'home-admin',
+    ('POST', '/api/settings/member-email'): 'home-admin',
+    ('POST', '/api/settings/member'): 'home-admin',
+    ('GET', '/api/profiles/{profile}/settings'): 'profile',
+    ('PUT', '/api/profiles/{profile}/settings'): 'profile',
+    ('GET', '/api/profiles/{profile}/wishlist'): 'profile',
+    ('POST', '/api/profiles/{profile}/wishlist'): 'profile',
+    ('GET', '/api/shopping'): 'home-records',
+    ('GET', '/api/decks'): 'viewer-filtered',
+    ('POST', '/api/decks'): 'deck-edit',
+    ('GET', '/api/deck'): 'deck',
+    ('GET', '/api/deck/edit'): 'deck',
+    ('POST', '/api/deck/check'): 'deck-edit',
+    ('POST', '/api/deck/save'): 'deck-edit',
+    ('POST', '/api/decklist/parse'): 'profile',
+    ('POST', '/api/tables/update'): 'deck-edit',
+    ('GET', '/api/tables/stale'): 'viewer-filtered',
+    ('GET', '/api/goldfish'): 'deck',
+    ('GET', '/api/matchups'): 'viewer-filtered',
+    ('GET', '/api/matchup'): 'deck',
+    ('POST', '/api/matchup/run'): 'deck-run',
+    ('POST', '/api/matchup/stop'): 'run-stop',
+    ('GET', '/api/field'): 'deck',
+    ('GET', '/api/variant'): 'deck',
+    ('GET', '/api/variant/estimate'): 'deck',
+    ('GET', '/api/variants'): 'deck',
+    ('POST', '/api/field/run'): 'deck-run',
+    ('POST', '/api/field/stop'): 'run-stop',
+    ('POST', '/api/variant/run'): 'deck-run',
+    ('POST', '/api/variant/stop'): 'run-stop',
+    ('POST', '/api/variant/more'): 'deck-run',
+    ('GET', '/api/cards/search'): 'open',
+    ('GET', '/api/cards/printings'): 'open',
+    ('GET', '/api/cards/rulings'): 'open',
+    ('GET', '/img/{set}/{number}/{size}'): 'open',
+    ('GET', '/symbols/{symbol}'): 'open',
+    ('GET', '/accessory-img/{name}'): 'accessories',
+    ('GET', '/accessory-img/staged/{token}'): 'accessories',
+    ('GET', '/{static-file}'): 'open',
+})
+
+
+def declared_access(method, route):
+    """The reviewed access class; never infer one from a prefix or handler name."""
+    key = (method, "/".join(route))
+    if key not in ACCESS:
+        raise RuntimeError("Route has no declared access class")
+    return ACCESS[key]
+
+
 GAUNTLET_WAITING = ("queued", "running")       # a gauntlet answer's statuses sent with 202
 
 
@@ -173,7 +384,8 @@ def _status(key, answer):
     return 202 if waiting else 200
 
 
-def dispatch(handler, route, query):
+def route_tables():
+    """Fresh handler bindings, so request-time patches and lazy imports retain one owner."""
     from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, commander_candidates, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, comparison_lists, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, dice, edhrec, editor, history,
                                  library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, reference_facts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_combined, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_ideas, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
@@ -321,8 +533,14 @@ def dispatch(handler, route, query):
         ("crosscheck", "stop"): (_crosscheck_stop, MAX_BODY),
         ("visit",): (visits.beacon, MAX_BODY),      # not a data write: no guard rule, the requester's own visit
     }
+    return gets, posts
+
+
+def dispatch(handler, route, query):
+    gets, posts = route_tables()
     key = tuple(route)
     if key in gets and not (key in posts and handler.command == "POST"):
+        declared_access("GET", key)
         handler._allow("GET", "HEAD")
         function, names = gets[key]
         params = handler._query(query, names)
@@ -335,6 +553,7 @@ def dispatch(handler, route, query):
         handler._send_json(_status(key, answer), answer)
         return True
     if key in posts:
+        declared_access("POST", key)
         handler._allow("POST")
         handler._no_query(query)
         function, limit = posts[key] if isinstance(posts[key], tuple) else (posts[key], None)
