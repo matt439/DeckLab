@@ -6,7 +6,7 @@
 # COMPOSE_PROFILES=tunnel and TUNNEL_TOKEN (README.md, step 3).
 services:
   wakegate:
-    image: python:3.13-alpine
+    image: python:3.13.18-alpine
     # The host's network, so the magic packet's broadcast reaches the home network.
     network_mode: host
     restart: unless-stopped
@@ -30,7 +30,7 @@ services:
     # Only with COMPOSE_PROFILES=tunnel. The token isn't :? here because compose reads the whole
     # file even for the gate alone, so a required token would stop the gate deploying first.
     profiles: ["tunnel"]
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:2026.10.7
     network_mode: host
     restart: unless-stopped
     command: tunnel --no-autoupdate run

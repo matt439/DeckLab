@@ -1,6 +1,7 @@
 # A Deck Lab release (E11-S49): on a version tag on main (v1.2.0), or by hand with a version, build
-# decklab-VERSION.zip, its .sha256 and its manifest (scripts/make_release.py) and attach them to a
-# DRAFT GitHub release. Nothing is published: Matt reads the draft and clicks Publish himself.
+# decklab-VERSION.zip, its .sha256 and its manifest (scripts/make_release.py), record the zip's
+# build-provenance attestation (E11-S67) and attach them to a DRAFT GitHub release. Nothing is
+# published: Matt reads the draft and clicks Publish himself.
 name: release
 
 on:
@@ -15,6 +16,8 @@ on:
 permissions:
   contents: write           # create the draft release (and, by hand, its tag)
   checks: read              # the commit's tests and ruff checks must have passed
+  id-token: write           # sign the zip's build-provenance attestation (E11-S67)
+  attestations: write       # and record it against this repository
 
 concurrency:
   group: release
@@ -25,10 +28,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.14"
       - name: Work out the version and check it's on main and passed CI
@@ -65,6 +68,12 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Build the zip, its SHA-256 and its manifest
         run: python scripts/make_release.py "${{ steps.version.outputs.version }}" --out dist
+      # Signed proof that this workflow built the zip from this commit (E11-S67); anyone can check
+      # it with: gh attestation verify decklab-VERSION.zip --repo OWNER/REPO (SELF-HOSTING.md).
+      - name: Record the zip's build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/decklab-${{ steps.version.outputs.version }}.zip
       - name: Attach them to a draft release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -72,4 +81,4 @@ jobs:
         run: |
           gh release create "v$VERSION" dist/* --draft --target "$(git rev-parse HEAD)" \
             --title "Deck Lab $VERSION" \
-            --notes "Deck Lab $VERSION. Download decklab-$VERSION.zip and check it against decklab-$VERSION.zip.sha256. decklab-$VERSION.json lists its commit and database migrations. See SELF-HOSTING.md."
+            --notes "Deck Lab $VERSION. Download decklab-$VERSION.zip and check it against decklab-$VERSION.zip.sha256. decklab-$VERSION.json lists its commit and database migrations. Optionally, gh attestation verify decklab-$VERSION.zip --repo $GITHUB_REPOSITORY confirms this repository's release workflow built it. See SELF-HOSTING.md."
