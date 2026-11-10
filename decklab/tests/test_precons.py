@@ -14,7 +14,7 @@ import os
 import time
 from unittest import mock
 
-from decklab.lib import precons
+from decklab.lib import precons, sealed
 from decklab.lib.api import precons as api
 from decklab.tests.test_api import _write
 from decklab.tests.test_collection_edit import CollectionEditTestCase
@@ -73,6 +73,8 @@ class PreconTestCase(CollectionEditTestCase):
         for file, data in (("TestDinos_TST", DINOS), ("ElfTheme_TST", ELVES), ("Unfinished_TST", UNFINISHED)):
             self.seed(f"decks/{file}.json", data)
         for target, name, value in ((precons, "CACHE", self.cache), (api, "_added_on", lambda: "2026-10-10"),
+                                    (sealed, "contents", mock.Mock(return_value={"products": [], "fixed": [], "varies": [],
+                                                                             "random": [], "other": []})),
                                     (precons, "_fetch", mock.Mock(side_effect=AssertionError("no network"))),
                                     (precons, "_failed", {}), (precons, "_kept", {})):
             patcher = mock.patch.object(target, name, value)

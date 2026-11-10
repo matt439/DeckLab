@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Fixed bonus cards when adding a precon (2026-11-10; E7-S39)
+
+- Add a precon previews fixed bonus cards separately, checked by default unless the space already owns that exact printing and finish. Native per-card checkboxes update the collection total. Selected cards have blank condition/language and the note `bonus card in <precon>`; they stay out of deck lines.
+- The cards and raw import save with the new deck in one existing operation. Page choices are bound to the preview's sealed-source receipt and the collection SHA; a missing/changed source or collection requires a new review. Only previews fetch the sealed extract; saves use the cached source.
+- CLI dry runs show bonus printings/defaults and name random contents without adding them. Saving a precon with fixed bonus cards requires `--bonus-cards include` or `--bonus-cards skip`; dry-run first if the sealed source isn't cached.
+- Validation: 15 new API/CLI/UI fixtures, including a real cached sealed reader and rollback after late deck-create failure; existing precon, token-choice, filing, coverage, sealed and web fixtures pass. Groups overlap. PostgreSQL and household devices remain separate qualification.
+
 ## Local simulation settings without changed tracked files (2026-11-10; E11-S84)
 
 - Optional gitignored `decklab/simulation.local.json` replaces the whole shipped settings document for pilot and field readers; the neutral `simulation.example.json` is a starting point. Existing shipped/adopted defaults stay as they were, and no local file is created automatically.

@@ -41,12 +41,12 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 20 | 1 | 7 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 28 | 0 | 4 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 28 | 1 | 7 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 29 | 1 | 6 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 44 | 13 | 18 | 4 |
-| **Total** | **376** | **278** | **21** | **61** | **16** |
+| **Total** | **376** | **279** | **21** | **60** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -3530,7 +3530,7 @@ Gap: `merge_rows` in `decklab/lib/inventory/rules.py` and the import preview in 
 
 First slice: a counted breakdown replacing the general note in both places, the Misprint, Altered and Signed columns in the importers, and both note prefixes in `decklab/web/collection-bulk.js`.
 
-**E7-S39** · Matt · should · S · missing
+**E7-S39** · Matt · should · S · built
 
 As Matt adding a precon I opened, I want its fixed bonus card added too, so that the collection holds every card the box always has.
 
@@ -3541,9 +3541,9 @@ As Matt adding a precon I opened, I want its fixed bonus card added too, so that
 
 Decided (Matt, 2026-11-10): as E6-S29's.
 
-Gap: `_build` in `decklab/lib/api/precons.py` adds the deck file's boards and display commander only, so a Secret Lair Commander deck's bonus card is dropped without a word (verified 2026-11-10: Hatsune Miku's foil Tigereye Cameo SLD 7093, Everyone's Invited's foil Changeling Outcast SLD 894). Depends on E6-S29's reader. From the bonus-card investigation of 2026-11-10.
+Built 2026-11-10: the page previews fixed bonus cards separately with exact-printing defaults, native checkboxes and a live collection total. Selected cards, their raw import and the new deck are saved in the same existing operation; the bonus cards never enter the deck list. The command line requires `--bonus-cards include|skip` when saving a precon with fixed bonus cards. Page previews and CLI dry runs may fetch the sealed source; saves use the cache, compare its source receipt and check the collection receipt again in the operation. An unavailable/changed source or collection needs fresh review. Random contents are named and never imported.
 
-First slice: the bonus rows in `_build` and `plan_add` in `decklab/lib/api/precons.py` beside the display commander, the heading and tick in `decklab/web/precon-add.js`, and the command line's flag.
+Evidence: `lib/api/precon_bonus.py`, `lib/api/precons.py`, `db/inv_collection.py`, `web/precon-add.js`; `test_precon_bonus.py` covers a real cached sealed extract, exact defaults and finish, explicit choices, CLI, stale-source/collection refusal, native checkbox ownership/recovery, and rollback after a late deck-create failure. Existing precon/token/import and sealed-reader suites pass. PostgreSQL and actual household devices were not qualified by this source task. From the bonus-card investigation of 2026-11-10.
 
 **E7-S40** · Matt · could · M · missing
 

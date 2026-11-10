@@ -9,7 +9,7 @@
     collection apply FILE [--space S] --expect SHA -m MESSAGE [--reason R] [--allow-in-use]
                      [--remove-missing] [--dry-run]    many rows changed or removed, as one change
     collection precons [QUERY ...]                     published precons' CODEs (MTGJSON's paper decks)
-    collection add-precon CODE [--space S] [--title T] [--played-by P] -m MESSAGE [--dry-run]
+    collection add-precon CODE [--space S] [--title T] [--played-by P] [--bonus-cards include|skip] -m MESSAGE [--dry-run]
     collection trade --out FILE --in FILE [--space S] [--with T] -m MESSAGE [--dry-run]
                                                        a trade as one change (collection_trade.py)
 
@@ -155,6 +155,8 @@ def register(sub):
     sp.add_argument("--dry-run", action="store_true", help="show what it would add and make; save nothing")
     sp.add_argument("--add-tokens", action="store_true",
                     help="also add token entries with explicit source counts; printing and reverse face stay unconfirmed")
+    sp.add_argument("--bonus-cards", choices=("include", "skip"),
+                    help="confirm whether the fixed bonus cards are present; required to save a precon that has them")
     sp.add_argument("--token-rows", metavar="FILE",
                     help="confirmed physical token choices as CSV: source_row,front,quantity (0 skips an entry)")
     sp.add_argument("--tokens-source-sha256", metavar="SHA",
@@ -863,7 +865,8 @@ def _add_precon(args):
     try:
         # Checked with no profile: a script naming nobody may write every space, as the command line does.
         made = page.plan_add(args.space, args.code, args.title, {"player": player} if player else None, None,
-                             actor.name, add_tokens=args.add_tokens, **token_params)
+                             actor.name, add_tokens=args.add_tokens, bonus_choices=args.bonus_cards,
+                             preview=args.dry_run, **token_params)
     except common.ApiError as e:
         return _api_refusal(e)
     built, plan, whose = made["built"], made["plan"], made["whose"]
@@ -881,7 +884,14 @@ def _add_precon(args):
         if left:
             print(f"Left out: {', '.join(left)}.")
         print(f"Would make {made['deck_id']} ({plan['title']}), a built {plan['kind']} deck: {sections}.")
-        for note in page.precons.notes(entry["type"]):
+        bonus = built["bonus_import"]
+        if bonus["rows"]:
+            print("Fixed bonus cards (collection only, not deck lines):")
+            for row in bonus["rows"]:
+                print(f"  [{'x' if row['selected'] else ' '}] {row['qty']} {row['words']}"
+                      + (f" ({row['owned']} already owned)" if row["owned"] else ""))
+            print("To save, choose --bonus-cards include or --bonus-cards skip after checking the box's contents.")
+        for note in built["notes"]:
             print(note)
         if made["table"].get("note"):
             print(made["table"]["note"])

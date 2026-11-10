@@ -107,6 +107,55 @@ function preconLine(c) {
   return `${c.qty} ${c.name}${c.set ? ` (${c.set.toUpperCase()}) ${c.number}${finish}` : ""}`;
 }
 
+/** Source receipts and choices belong to the current preview, person and connected sheet. */
+function preconBonusOwner(ctx, choice) {
+  return choice && !ctx.sheet.closed && !ctx.tokenPreviewStale && colActive(ctx.cv) && ctx.bonusChoice === choice
+    && ctx.preview === choice.preview && ctx.seq === choice.seq && state.profile?.id === choice.profile
+    && routeToken === choice.token && location.hash === choice.hash && ctx.cv.root === choice.root
+    && JSON.stringify(choice.preview.bonus_import) === choice.signature && ctx.area.isConnected
+    && (!choice.section || choice.section.isConnected && ctx.area.contains(choice.section))
+    && choice.options.every(row => row.node.isConnected && row.node.parentNode === row.label && choice.section.contains(row.label));
+}
+
+function preconBonusChoice(ctx) {
+  ctx.bonusChoice = null; ctx.bonusMalformed = false;
+  const p = ctx.preview, offer = p.bonus_import;
+  if (!offer) return null; // Compatibility with a page fixture or an older server without the feature.
+  if (typeof offer.source_sha256 !== "string" || !/^[a-f0-9]{64}$/.test(offer.source_sha256)
+      || !Array.isArray(offer.rows) || offer.rows.length > 250
+      || new Set(offer.rows.map(row => row?.source_row)).size !== offer.rows.length
+      || !offer.rows.every(row => row && Number.isSafeInteger(row.source_row) && row.source_row > 0
+        && typeof row.words === "string" && row.words.length && Number.isSafeInteger(row.qty) && row.qty > 0 && row.qty <= 250
+        && Number.isSafeInteger(row.owned) && row.owned >= 0 && typeof row.selected === "boolean"
+        && (row.problem === null || typeof row.problem === "string") && !(row.problem && row.selected))) {
+    ctx.bonusMalformed = true;
+    return el("p", { class: "box box-warn", text: "The bonus cards could not be checked. Preview this precon again before adding it." });
+  }
+  const choice = ctx.bonusChoice = { preview: p, offer, signature: JSON.stringify(offer), options: [],
+    seq: ctx.seq, token: routeToken, hash: location.hash, root: ctx.cv.root, profile: state.profile?.id, section: null };
+  if (!offer.rows.length) return null;
+  const baseCards = p.adds.cards - offer.rows.filter(row => row.selected).reduce((sum, row) => sum + row.qty, 0);
+  const section = choice.section = el("section", { class: "precon-section precon-bonus" },
+    el("h3", { text: "Fixed bonus cards" }),
+    el("p", { class: "sub", text: "Check the box's contents. Selected cards go into the collection only, never the deck list." }));
+  for (const row of offer.rows) {
+    const node = el("input", { type: "checkbox" });
+    node.checked = row.selected; node.disabled = Boolean(row.problem) || !p.editable;
+    const label = el("label", { class: "choice" }, node, el("span", { text: `${row.qty} ${row.words}`
+      + (row.owned ? ` · ${row.owned} already owned` : "") }));
+    const option = { node, label, row, accepted: row.selected }; choice.options.push(option);
+    node.addEventListener("change", () => {
+      if (ctx.busy || !preconBonusOwner(ctx, choice) || node.disabled
+          || [...document.querySelectorAll("dialog[open]")].at(-1) !== ctx.sheet.dialog) { node.checked = option.accepted; return; }
+      option.accepted = Boolean(node.checked);
+      ctx.addSummary.textContent = `${plural(baseCards + choice.options.filter(item => item.accepted).reduce((sum, item) => sum + item.row.qty, 0), "card")} go into ${ctx.whose}`;
+    });
+    section.append(label);
+    if (row.problem) section.append(el("p", { class: "field-problem", text: row.problem }));
+  }
+  return section;
+}
+
 function drawPreconPreview(ctx) {
   const p = ctx.preview;
   const d = p.deck;
@@ -129,12 +178,13 @@ function drawPreconPreview(ctx) {
     meta: c.set ? `${c.set.toUpperCase()} ${c.number}` : "Any printing", finish: c.finish,
     viewerGroup: "precon", caption: `${section === "Deck" ? "" : `${section} · `}${preconLine(c)}` });
   clear(ctx.area);
+  ctx.addSummary = el("b", { text: `${plural(adds.cards || 0, "card")} go into ${ctx.whose}` });
   add(ctx.area, [
     el("p", { class: "sub precon-meta" }, [d.set_name || d.code.toUpperCase(), d.type, d.released ? `released ${d.released}` : null].filter(Boolean).join(" · "),
       d.source ? [" · ", el("a", { href: d.source, target: "_blank", rel: "noopener noreferrer",
         text: fromWizards(d.source) ? "Wizards' list" : "Where the list is from" })] : null),
     el("p", { class: "precon-summary" }, `${p.kind === "commander" ? "Commander deck" : "60-card deck"} · ${plural(total, "card")}. `,
-      el("b", { text: `${plural(adds.cards || 0, "card")} go into ${ctx.whose}` }),
+      ctx.addSummary,
       p.dropped_basics ? ` (plain basic lands left out)` : "", "."),
     p.problems && p.problems.length ? el("div", { class: "box box-warn" },
       el("h3", { text: "It can't be added yet" }),
@@ -151,12 +201,13 @@ function drawPreconPreview(ctx) {
         ") aren't added: record them on the ", el("a", { href: "#/tokens", text: "Tokens page" }), " once checked."] : null) : null,
     (p.notes || []).length ? el("p", { class: "sub precon-notes" }, p.notes.join(" ")) : null,
     preconTokenChoice(ctx),
+    preconBonusChoice(ctx),
     Object.entries(lists).map(([section, lines]) => el("section", { class: "precon-section" },
       el("h3", { text: `${section === "Deck" ? "Deck" : section} (${num(counts[section] || 0)})` }),
       el("div", { class: "card-tiles precon-tiles" }, lines.map((c) => tile(c, section)))))]);
   if (!p.editable) ctx.area.append(el("p", { class: "box box-info", text: "You can't add cards and decks here." }));
   sheetActions(ctx.sheet, [ctx.back,
-    p.ready && p.editable ? { text: `Add ${d.name}`, kind: "primary", value: "add", onclick: event => {
+    p.ready && p.editable && !ctx.bonusMalformed ? { text: `Add ${d.name}`, kind: "primary", value: "add", onclick: event => {
       if (preconAddHere(ctx, p, event.currentTarget)) addPrecon(ctx);
     } } : null]);
 }
@@ -170,7 +221,13 @@ async function addPrecon(ctx) {
   const cv = ctx.cv;
   const p = ctx.preview;
   if (ctx.busy || ctx.sheet.closed || !p || !p.ready || !p.editable || !cv.editable || !canEditSpace(cv.space)
-      || !colActive(cv) || ctx.tokenPreviewStale) return;
+      || !colActive(cv) || ctx.tokenPreviewStale || ctx.bonusMalformed) return;
+  const bonusReview = ctx.bonusChoice;
+  if (bonusReview && (!preconBonusOwner(ctx, bonusReview)
+      || [...document.querySelectorAll("dialog[open]")].at(-1) !== ctx.sheet.dialog
+      || bonusReview.options.some(row => row.node.checked !== row.accepted))) return;
+  const bonus = bonusReview ? { bonus_source_sha256: bonusReview.offer.source_sha256,
+    bonus_choices: bonusReview.options.filter(row => row.accepted).map(row => row.row.source_row) } : {};
   const tokensChosen = ctx.tokenChoice?.node.checked === true;
   const tokenReview = ctx.tokenChoice, tokenSelection = tokensChosen ? preconTokenSelection(ctx) : null;
   if (tokensChosen && !tokenSelection) return;
@@ -179,17 +236,19 @@ async function addPrecon(ctx) {
   if (!title) { ctx.titleNote.textContent = "The deck needs a title."; ctx.titleInput.focus(); return; }
   ctx.busy = true;
   preconTokensBusy(ctx, true);
+  for (const row of bonusReview?.options || []) row.node.disabled = true;
   for (const button of ctx.sheet.foot.querySelectorAll("button")) button.disabled = true;
   clear(ctx.message).append(loadingBox(`Adding ${p.deck.name}…`));
   try {
     const answer = await apiWrite("/api/precons/add", { space: cv.space, file: p.deck.file, title, sha256: p.sha256,
+      ...bonus,
       ...(tokensChosen ? { add_tokens: true, tokens_sha256: tokenSelection.offer.sha256,
         tokens_source_sha256: tokenSelection.offer.source_sha256,
         ...(tokenSelection.choices ? { tokens_choices: tokenSelection.choices } : {}) } : {}) });
     cv.rows = null;
     state.library = null; // The confirmed write stands even if its review is no longer the current UI.
     if (ctx.sheet.closed || !colActive(cv) || ctx.preview !== p || requestHash !== location.hash
-        || tokensChosen && !preconTokenOwner(ctx, tokenReview)) return;
+        || tokensChosen && !preconTokenOwner(ctx, tokenReview) || bonusReview && !preconBonusOwner(ctx, bonusReview)) return;
     const added = answer.collection && answer.collection.added;
     ctx.sheet.close();
     // The deck page's box about a new deck (editor-deckpage.js, savedBox), as the editor's Create leaves it:
@@ -208,9 +267,10 @@ async function addPrecon(ctx) {
   } catch (error) {
     if (error.status >= 500 || !error.data) { cv.rows = null; state.library = null; }
     if (ctx.sheet.closed || !colActive(cv) || ctx.preview !== p || requestHash !== location.hash
-        || tokensChosen && !preconTokenOwner(ctx, tokenReview)) return;
+        || tokensChosen && !preconTokenOwner(ctx, tokenReview) || bonusReview && !preconBonusOwner(ctx, bonusReview)) return;
     ctx.busy = false;
     preconTokensBusy(ctx, false);
+    for (const row of bonusReview?.options || []) row.node.disabled = Boolean(row.row.problem);
     for (const button of ctx.sheet.foot.querySelectorAll("button")) button.disabled = false;
     const data = error.data || {};
     if (error.status >= 500 || !error.data) {
@@ -220,19 +280,22 @@ async function addPrecon(ctx) {
       state.library = null;
       ctx.tokenPreviewStale = true;
       preconTokensBusy(ctx, true);
+      for (const row of bonusReview?.options || []) row.node.disabled = true;
       clear(ctx.message).append(el("div", { class: "box box-crit", role: "alert" }, el("p", { text: error.message }),
         el("p", { text: `It isn't known whether its cards went into ${ctx.whose}. Look there (and on the Decks page${tokensChosen ? " and Tokens page" : ""}) before adding it again.` })));
       sheetActions(ctx.sheet, [{ text: "Close", kind: "primary", value: "close",
         onclick: () => { ctx.sheet.close(); if (colActive(cv)) colReload(cv, error.message); } }]);
       return;
     }
-    if (error.status === 409 && (data.token_conflict || tokensChosen && data.sha256)) {
+    if (error.status === 409 && (data.token_conflict || data.bonus_conflict || (tokensChosen || bonusReview) && data.sha256)) {
       ctx.tokenPreviewStale = true;
       preconTokensBusy(ctx, true);
+      for (const row of bonusReview?.options || []) row.node.disabled = true;
       clear(ctx.message).append(el("div", { class: "box box-warn", role: "alert" }, el("p", { text: error.message }),
-        el("p", { text: "Nothing was added. Preview again to review the current collection and token list, then choose whether to add the token cards." })));
-      sheetActions(ctx.sheet, [ctx.back, { text: "Preview again", kind: "primary", onclick: () => {
-        if (!ctx.sheet.closed && colActive(cv) && !ctx.busy && ctx.preview === p) previewPrecon(ctx, p.deck, ctx.titleInput.value.trim());
+        el("p", { text: bonusReview ? "Nothing was added. Preview again to review the current collection and bonus cards before choosing what to add."
+          : "Nothing was added. Preview again to review the current collection and token list, then choose whether to add the token cards." })));
+      sheetActions(ctx.sheet, [ctx.back, { text: "Preview again", kind: "primary", onclick: event => {
+        if (preconAddHere(ctx, p, event.currentTarget) && colActive(cv) && !ctx.busy) previewPrecon(ctx, p.deck, ctx.titleInput.value.trim());
       } }]);
       return;
     }
