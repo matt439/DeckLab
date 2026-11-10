@@ -41,12 +41,12 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 22 | 1 | 5 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 29 | 0 | 3 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 30 | 1 | 5 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 31 | 1 | 4 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 46 | 14 | 15 | 4 |
-| **Total** | **376** | **285** | **22** | **53** | **16** |
+| **Total** | **376** | **286** | **22** | **52** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -3470,7 +3470,7 @@ Evidence:
 
 Now (2026-11-02): built ([HISTORY.md](../HISTORY.md#a-shorter-tokens-part-on-the-cards-tab-2026-11-02-e7-s33)). No API change; the Packing plan, Build decks and the Tokens page keep their words.
 
-**E7-S34** · Matt · could · M · missing
+**E7-S34** · Matt · could · M · built
 
 As Matt, building from what the household owns, I want the card searches to take mana value ranges and the same typed terms everywhere, so that "mana value 2 or less" is one query in either.
 
@@ -3479,9 +3479,9 @@ As Matt, building from what the household owns, I want the card searches to take
 - Given `-o:` or `-t:` in either search, when it runs, then cards matching that term are left out.
 - Given a term neither search knows, when it runs, then both give the same sentence listing the known terms.
 
-Gap: both searches take one mana value only (0 to 6, or 7 and over), and the Collection page's search reads `o:` and `t:` as literal text. E2-S25 built the finder's terms, E7-S13 Free now, E7-S28 In storage only and E8-S23 the location filter, so `is:free` and `loc:` aren't needed. Keyword, power, rarity and set terms, OR and filter chips are left out. From the product review of 2026-11-10, compared with Archidekt, Scryfall and Moxfield search.
+Built 2026-11-11: editor and Collection share `api/card_terms.py` for rules/type terms, negation and mana-value comparisons. It preserves aliases, quoted/open/phone phrases, multiface type/rules and self-name substitution. Ordinary words keep the editor's name matching versus Collection's name/rules semantics; existing colour identity/free/incoming/location controls are unchanged. Typed mv=7 means exactly7, while the old dropdown7 still means7+. Both endpoints use the same known-term diagnostic and refuse hidden collections before parsing; invalid terms don't load a pool or write anything.
 
-First slice: move the term parser from `decklab/lib/api/editor.py` into a new `decklab/lib/api/card_terms.py` with `mv` comparisons and negation, use it in `decklab/lib/api/collection.py`, and change only the hint and unknown-term message in `decklab/web/collection.js`.
+Evidence: 11 new parser/endpoint/privacy/UI checks and95 isolated search checks pass. The broad356 run passed355 with only a concurrent play-delete script-inventory update outstanding in another feature; that integration is checked at the stable batch. Existing editor helper names remain compatibility aliases. Keyword/power/rarity/set terms, OR and new filter chips remain excluded as designed. From the product review of 2026-11-10, compared with Archidekt, Scryfall and Moxfield search.
 
 **E7-S35** · Matt · could · M · missing
 

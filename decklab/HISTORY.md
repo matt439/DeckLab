@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Shared typed searches and mana-value ranges (2026-11-11; E7-S34)
+
+- Editor and Collection now use one parser for o:/t: terms, aliases, quoted/open/phone phrases, negative rules/type terms and mana-value comparisons (including fractional values). Untyped words retain each page's prior matching scope and the existing identity/free/incoming/location filters.
+- Typed mv=7 is exact, while the old dropdown's7+ behavior is unchanged. Unknown terms get the same known-term sentence; hidden collections are refused before parsing and invalid terms read no pool. Editor compatibility helper names remain available; typed/negative queries suppress irrelevant name-guess suggestions without rewriting the user's query.
+- Validation:11 new checks and95 isolated search tests pass;355 of356 broad editor/collection checks passed, with one unrelated moving-tree play-delete inventory mismatch deferred to its own integration. Ruff/Node syntax/source guards pass. No collection, card index or external source was changed.
+
 ## Wake-gate connection bounds and optional local-script proof (2026-11-11; E11-S75 source)
 
 - The gate admits at most 32 HTTP connections before starting threads and gives each socket a 10-second idle timeout; capacity is released on close, failure or timeout. Disposable tests exercise stalled connections, overload rejection and recovery without a real wake packet.

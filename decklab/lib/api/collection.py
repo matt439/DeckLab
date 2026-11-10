@@ -12,6 +12,7 @@ import math
 from decklab.lib import cards, decks, inventory, pool, spaces
 from decklab.lib.inventory import unreadable
 from .carddata import _require_cards
+from . import card_terms
 from .card_lookup import _card_json, _shown_printing
 from .common import ApiError, _CONTROL_RE, _public, _scrub
 
@@ -131,6 +132,9 @@ def collection_view(q=None, color=None, type=None, role=None, mv=None,
                     availability=None, page=None, limit=None, space=None):
     """GET /api/collection. All filters optional; name and Oracle text share q.
 
+    q also accepts the editor's shared o:/t:, -o:/-t: and mv comparisons;
+    ordinary words keep the existing name-and-rules substring search.
+
     color matches colour identity (E11-S30 question 6, Matt 2026-10-31): one to five of
     W/U/B/R/G in any order is "within those colours" (the card's identity is a subset, so
     colourless cards fit every choice, as in a Commander deck's colours), and C is colourless
@@ -167,12 +171,13 @@ def collection_view(q=None, color=None, type=None, role=None, mv=None,
     else:
         mv = None
     _require_cards()
+    q, terms = card_terms.parse(q)
     try:
         # One inventory snapshot: the request's (server_http pins one per request).
         p = pool.load_pool() if space == spaces.HOME else pool.load_pool(space)
         special, special_incoming = _special_basics(space)
         answer = _collection(p, special, special_incoming, q, color, type, role, mv,
-                             availability, page, limit, guard.deck_reader(), recorded_printings(space))
+                             availability, page, limit, guard.deck_reader(), recorded_printings(space), terms)
     except (ValueError, OSError, csv.Error) as error:
         if space == spaces.HOME and not guard.sees_home_records():
             raise ApiError(409, "The collection couldn't be read.") from None
@@ -230,7 +235,7 @@ def _holders(p, name, sees):
 
 
 def _collection(p, special, special_incoming, q, color, type, role, mv, availability, page, limit,
-                sees=lambda deck_id: True, recorded=None):
+                sees=lambda deck_id: True, recorded=None, terms=()):
     from .library import visible_unresolved, visible_warnings
     names = set(p.owned) | set(special) | set(special_incoming)
     rows, roles, types = [], set(), set()
@@ -246,6 +251,8 @@ def _collection(p, special, special_incoming, q, color, type, role, mv, availabi
             roles.update(card.get("roles", []))
             types.update(card.get("type_line", "").split(" — ")[0].split())
         if q.casefold() not in (name + " " + (card or {}).get("oracle_text", "")).casefold():
+            continue
+        if not card_terms.matches(card, terms):
             continue
         if color and (not card or not _within_identity(card, color)):
             continue

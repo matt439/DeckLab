@@ -476,7 +476,8 @@ function colFilters(cv) {
     return node;
   };
   const search = el("input", { id: id("q"), type: "search", maxlength: 160, autocomplete: "off", spellcheck: "false",
-    placeholder: "Name or rules text", value: q.get("q") || "" });
+    placeholder: "Name or rules text", value: q.get("q") || "",
+    title: 'Name or rules text. o: searches rules, t: searches type; -o: and -t: leave matches out. Mana value: mv<=2, mv>=5 or mv=3.' });
   // Each typed filter has its own timer, so changing one doesn't drop the other's pending change.
   let searchTimer = 0, mvTimer = 0;
   search.addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => colFilter(cv, "q", search.value.trim()), COL_TYPE_MS); });
@@ -519,7 +520,8 @@ function colFilters(cv) {
       field("role", "Role", select("role", [["", "Any"], ...(data.roles || []).map((v) => [v, capitalise(v)])])),
       field("mv", "Mana value", mv)),
     el("p", { class: "sub col-find-colour-note",
-      text: "Colour identity, as the pips show it: cards within the chosen colours, colourless ones included." })]);
+      text: "Colour identity, as the pips show it: cards within the chosen colours, colourless ones included." }),
+    el("p", { class: "sub col-find-search-note", text: 'Search terms: o:"draw a card", t:creature, -o:discard, -t:land; mana value mv<=2, mv>=5 or mv=3.' })]);
   return form;
 }
 
