@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Counter and dice reminders in Build decks (2026-11-10; E4-S29 first slice)
+
+- Build decks now shows optional counter/dice kind estimates with each kind's selected deck sources, including sideboard-only notes. Coverage is calculated once across the plan, allocating generic cover deterministically across distinct kinds; repeated deck rows don't imply extra stock.
+- The reminders are read-only. They add no required task, tick, card reservation or completion condition, and existing physical-token tick identities remain stable. Failed reads/estimates show unknown coverage; an unapplied dice migration stays explicit. Home-inventory and kit permissions are unchanged.
+- Validation: counter summary/key/UI/privacy fixtures, the inventory contract suite and UI harness checks pass. An opt-in `assembly-counters` headless suite adds 18 ready/failed/unmigrated light/dark phone/tablet/desktop captures; final stable-source rendering and household device acceptance remain separate. The take-along list is the next slice.
+
 ## Fixed bonus cards when adding a precon (2026-11-10; E7-S39)
 
 - Add a precon previews fixed bonus cards separately, checked by default unless the space already owns that exact printing and finish. Native per-card checkboxes update the collection total. Selected cards have blank condition/language and the note `bonus card in <precon>`; they stay out of deck lines.

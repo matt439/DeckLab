@@ -656,12 +656,21 @@ def departed_defaults(dump):
 
 
 def counter_defaults(dump):
-    """Drop only E7-S24's empty "counters" on deck pages' tokens (with nothing owned)."""
+    """Drop only empty counter defaults with nothing owned, including E4-S29's plan summary."""
+    from decklab.lib.api import assembly_counters
     from decklab.lib.tokens import counters, dice_cover
     empty = dice_cover.cover({"needs": [], "note": counters.NOTE}, [])
+    empty_plan = dice_cover.cover({"needs": [], "note": assembly_counters.NOTE, "details": counters.NOTE}, [])
     for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
         views = mine.get("deck_view") if isinstance(mine, dict) else None
-        for view in views.values() if isinstance(views, dict) else []:
+        entries = list(views.values()) if isinstance(views, dict) else []
+        plans = mine.get("assembly") if isinstance(mine, dict) else None
+        for plan in plans.values() if isinstance(plans, dict) else []:
+            if isinstance(plan, dict):
+                if plan.get("counters") == empty_plan:
+                    plan.pop("counters")
+                entries.extend(plan.get("decks") or [])
+        for view in entries:
             found = view.get("tokens") if isinstance(view, dict) else None
             if isinstance(found, dict) and found.get("counters", 0) in ({"needs": [], "note": counters.NOTE}, empty):
                 found.pop("counters")

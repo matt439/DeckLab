@@ -246,6 +246,45 @@ class AssemblyTokensUiTests(unittest.TestCase):
           checkCards(); await settle(); assert(packCanFinish(v));
         """)
 
+    def test_counter_kinds_show_plan_wide_coverage_and_sources_without_ticks_or_counts(self):
+        self.run_js("""
+          const a = tokened([]), b = {...item('casual/b'), tokens:{needs:[]}};
+          const counters = {note:'An estimate of kinds only. Coverage is checked across all chosen decks together.',
+            needs:[{key:'poison',name:'Poison counters',group:'player',cover:{state:'generic',words:'A generic counter stands in'},
+              decks:[{id:a.id,title:a.title},{id:b.id,title:b.title,sideboard_only:true}]},
+              {key:'energy',name:'Energy counters',group:'player',cover:{state:'none',words:'No spare generic counter'},
+              decks:[{id:b.id,title:b.title}]}]};
+          const v = openPlan([a,b], {counters}); await settle();
+          const blocks = main.querySelectorAll('.pack-counters');
+          assert.equal(blocks.length, 2);
+          assert.equal(blocks[0].querySelector('h4').textContent, 'Counters and dice (optional)');
+          assert.equal(blocks[0].querySelectorAll('li').length, 1);
+          assert.equal(blocks[1].querySelectorAll('li').length, 2);
+          assert(blocks[0].textContent.includes('Used by Elves, Burn (sideboard only)'));
+          assert(blocks[0].textContent.includes('Any-kind stands in'));
+          assert(blocks[1].textContent.includes('Not covered'));
+          assert(blocks.every(block => !block.querySelector('button') && !block.querySelector('input')));
+          assert.equal(tokenTicks().length, 0);
+          assert.equal(v.ticks.length, 2);
+          checkCards(); await settle(); assert(packCanFinish(v));
+          assert.equal(v.bar.progress.state.textContent, 'All packed.');
+        """)
+
+    def test_unavailable_counter_coverage_is_unknown_and_still_optional(self):
+        self.run_js("""
+          const counters = {error:"Counters and dice couldn't be checked; the rest of the plan still works.",
+            needs:[{key:'poison',name:'Poison counters',decks:[{id:'casual/a',title:'Elves'}]}]};
+          const v = openPlan([tokened([])], {counters}); await settle();
+          const block = main.querySelector('.pack-counters');
+          assert(block.textContent.includes(counters.error));
+          assert.equal(block.querySelector('.dice-cover'), null);
+          assert(!block.textContent.includes('No dice'));
+          assert.equal(tokenTicks().length, 0);
+          checkCards(); await settle(); assert(packCanFinish(v));
+          clear(main); openPlan([tokened([])], {counters:{needs:[],owned:{ready:true}}}); await settle();
+          assert.equal(main.querySelector('.pack-counters'), null);
+        """)
+
 
 class AssemblyTokensSourceTests(unittest.TestCase):
     def test_token_tiles_are_as_big_as_the_cards_and_a_blank_one_says_its_words_once(self):

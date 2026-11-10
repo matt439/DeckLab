@@ -38,7 +38,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 18 | 0 | 2 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 19 | 2 | 4 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 39 | 29 | 3 | 7 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 20 | 1 | 7 | 2 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 20 | 2 | 6 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 28 | 0 | 4 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 29 | 1 | 6 | 0 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 31 | 1 | 3 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 44 | 13 | 18 | 4 |
-| **Total** | **376** | **279** | **21** | **60** | **16** |
+| **Total** | **376** | **279** | **22** | **59** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1872,7 +1872,7 @@ Evidence:
 - `decklab/lib/api/assembly_printings.py`: annotate's set_name; `decklab/lib/api/assembly_tokens.py`
 - `decklab/tests/test_assembly_big_view_ui.py`, `test_assembly_tokens_ui.py`, `test_assembly_tokens.py`, `test_deck_page_ui.py`
 
-**E4-S29** · Matt · could · M · missing
+**E4-S29** · Matt · could · M · partial
 
 As Matt, packing for a Commander night, I want the counters and dice my chosen decks use shown in Build decks, and one take-along list for built decks, so that I leave home with everything the pod needs.
 
@@ -1881,9 +1881,11 @@ As Matt, packing for a Commander night, I want the counters and dice my chosen d
 - Given a viewer who may not see home's inventory, then no counter or dice line shows, and kit names show only to their owners.
 - Given every chosen home deck is already built, then one tickable, printable list gives each deck's box and sleeves, its Token cards line and the merged counter and dice kinds, with the viewer's own and shared playmats as a reminder line.
 
-Gap: `lib/api/assembly_ticks.py` drops each deck's counters from the plan, and there is no take-along list. E7-S24 shows the needs and cover on the deck page; E4-S28 built the optional Tokens step; E1-S28 suggests pairs only. From the product review of 2026-11-10, compared with Magic Life Counter.
+Built 2026-11-10: Build decks preserves counter estimates and merges each kind with its selected deck sources. Coverage is checked once across all selected decks; generic items are allocated deterministically across distinct kinds rather than independently per deck. Each deck's optional Tokens step shows its read-only counter/dice reminders and the whole-plan coverage wording. Failed reads/estimates show unknown coverage, and migration-not-ready stays explicit. No reminder creates a tick, reservation or required build task; existing token tick identities and Mark as built stay unchanged. Home-inventory guards and kit privacy stay as before.
 
-First slice: stop popping `counters` in `lib/api/assembly_ticks.py`, apply `lib/tokens/dice_cover.py` in `lib/api/assembly.py`'s `_token_sources`, and render a read-only, unticked "Counters and dice (optional)" block in `web/assembly.js`, with tests in `tests/test_assembly_token_keys.py`.
+Evidence: `lib/api/assembly_counters.py`, `assembly.py`, `assembly_ticks.py`, `web/assembly-tokens.js`, `assembly.js`; focused summary/key/UI/privacy fixtures and inventory contracts pass. The opt-in synthetic headless `assembly-counters` suite covers ready, failed and unmigrated states in both themes at phone/tablet/desktop widths; final provenance-qualified capture follows the completed source. Actual household device acceptance remains separate.
+
+Next slice: the tickable/printable take-along list for selected home decks whose chosen recipes match their saved physical builds. Reuse existing optional shared packing ticks and print-sheet styling; show only visible kit and the viewer's own/shared playmats. E7-S24 supplies the existing needs/cover model, E4-S28 the optional Tokens step and E1-S28 pairs. From the product review of 2026-11-10, compared with Magic Life Counter.
 
 **E4-S30** · Matt · could · S · missing
 

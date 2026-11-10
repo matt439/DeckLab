@@ -57,6 +57,7 @@ python scripts/ui_review.py --suite receipt-layout
 python scripts/ui_review.py --suite families
 python scripts/ui_review.py --suite zoom
 python scripts/ui_review.py --suite crosscheck
+python scripts/ui_review.py --suite assembly-counters
 python scripts/ui_review.py --output C:/Temp/decklab-ui-review-01
 python scripts/ui_review.py --browser "C:/Program Files/Google/Chrome/Application/chrome.exe"
 ```

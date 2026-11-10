@@ -12,3 +12,5 @@
 .pack-token-group > h4 { margin: 0; }
 .assembly-token-list[open] > .pack-token-tiles { margin-top: var(--s-3); }
 .pack-token-problems > summary { cursor: pointer; }
+.pack-counters { display: grid; gap: var(--s-2); }
+.pack-counters > h4, .pack-counters > p { margin: 0; }

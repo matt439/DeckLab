@@ -6,7 +6,7 @@ from functools import partial
 import traceback
 
 from decklab.lib import accessories, cards, decks, inventory, pool, spaces, tokens
-from . import common
+from . import assembly_counters, common
 from .assembly_ticks import token_packing_keys
 from .assembly_tokens import row_pictures, with_pictures
 from .carddata import _require_cards
@@ -42,22 +42,23 @@ def _deck_tokens(deck_id, version, sections, inv, inc, held=None):
 
 
 def _token_sources():
-    """(owned token cards, pending token rows, failed). Tokens are always optional, so a read
+    """(owned token cards, pending token rows, failed, dice sources). Tokens are always optional, so a read
     that fails is logged and the plan carries on with no token cards: failed says to show every
     deck's tokens as unavailable rather than as none owned."""
     try:
         inv = tokens.read()
         incoming, _ = tokens.incoming()
-        return inv, incoming, False
+        source = inv, incoming, False
     except Exception:
         common._log("The token cards couldn't be read for the plan:\n" + traceback.format_exc())
-        return tokens.Inventory(), [], True
+        source = tokens.Inventory(), [], True
+    return *source, assembly_counters.read_sources()
 
 
 def _participant_tokens(deck_id, version, sections, sources, holds):
     """A participant's "tokens": _deck_tokens with its packing keys and tile pictures. Whatever
     goes wrong here leaves that deck's tokens {"error": ...}, never a plan that can't be built."""
-    inv, incoming, failed = sources
+    inv, incoming, failed, _ = sources
     if failed:
         return {"error": TOKEN_FAILED}
     try:
@@ -72,7 +73,7 @@ def _participant_tokens(deck_id, version, sections, sources, holds):
 def _token_summary(participants, sources):
     """The plan's whole-plan token fields, which never stop it: on a failure the lists are empty
     and token_problems says so in one line."""
-    inv, _, failed = sources
+    inv, _, failed, dice = sources
     answer = {"token_plan": [], "token_plan_note": TOKEN_PLAN_NOTE, "tokens": [], "token_note": TOKEN_NOTE,
               "token_problems": [TOKEN_SOURCE_FAILED] if failed else _scrub(inv.problems)}
     try:
@@ -82,6 +83,7 @@ def _token_summary(participants, sources):
     except Exception:
         common._log("The plan's token cards couldn't be listed:\n" + traceback.format_exc())
         answer.update(token_plan=[], tokens=[], token_problems=[TOKEN_SOURCE_FAILED])
+    answer["counters"] = assembly_counters.summary(participants, dice)
     return answer
 
 
