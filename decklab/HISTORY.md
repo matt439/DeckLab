@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## A conservative Spare list and price-free copy (2026-11-11; E7-S36)
+
+- Collection now shows spare copies with reasons after protecting physical built/intact holds, all non-trial unbuilt Planned lists and Considering, and the signed-in viewer's own wishlist. Incoming copies/basics aren't offered, and stale or incomplete sources withhold the claim.
+- Copy covers every matching page without prices/totals. Proven printing/finish assignments get tags; ambiguous physical allocation stays name/quantity-only with an explicit physical-check note. Existing holds/inventory and trading state are unchanged.
+- Public collection readers outside the space get a fixed unavailable Spare view before private plan/wishlist reads; hidden plan edits do not change that response. No cross-member offers or another person's wishlist are exposed.
+- Validation:104 current focused/integration and327 earlier broad checks pass, including16 new cases (groups overlap). Ruff/Node/source checks pass. No actual pool, collection, wishlist or trading record was read/changed by the coding task.
+
 ## Per-deck recorded pod summaries (2026-11-11; E4-S34)
 
 - Deck-filtered Game log summaries use only already-visible pod projections and pinned deck aliases. At least 10 decided games are needed; draws are separate, fair share averages1/table-size, and the existing95% Wilson helper supplies the interval. Invalid/ambiguous results are excluded and smaller samples show no premature rate.

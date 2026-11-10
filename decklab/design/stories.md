@@ -41,12 +41,12 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 24 | 1 | 3 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 29 | 0 | 3 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 32 | 1 | 3 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 33 | 1 | 2 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 32 | 1 | 2 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 49 | 14 | 12 | 4 |
-| **Total** | **376** | **293** | **22** | **45** | **16** |
+| **Total** | **376** | **294** | **22** | **44** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -3496,17 +3496,17 @@ Built 2026-11-11: Scan cards keeps condition/language/finish only after explicit
 
 Evidence: 27 current interaction checks and the broader 95 scan/API/token/layout/web checks pass (overlap); Ruff, Node syntax and source guards pass. The ordinary reviewed one-change import path and backend/token scan are unchanged. Actual card-photo acceptance remains with E7-S32. From the product review of 2026-11-10.
 
-**E7-S36** · Matt · could · M · missing
+**E7-S36** · Matt · could · M · built
 
 As Matt, before a trade at shop night, I want a Spares list of the copies no deck in our space holds or still wants, so that I don't trade away a card a planned deck needs.
 
 - Given the Collection page, when I choose Spare, then each card shows its copies left after those built decks and intact products hold and those the space's building and idea decks' Planned lists still want (trial decks left out), with a reason such as "4 owned, 1 in a built deck, 1 wanted by an idea deck: 2 spare".
-- Given the Spare list, when I choose Copy list, then I get `N Name (SET) number` lines with no prices, values or totals.
+- Given the Spare list, when I choose Copy list, then proven allocations use `N Name (SET) number` and finish markers, without prices/values/totals. Unknown physical printing assignments stay name/quantity-only with an explicit check-the-cards note; no printing is guessed.
 - Given a viewer who may not see the space's inventory, when they ask for it, then the answer is "That collection isn't public.", and a reason names no deck the viewer can't see.
 
-Gap: E7-S13's Free now subtracts only built decks and intact products, so it overstates what's safe to trade, and no collection list can be copied. Considering cards and the viewer's own wishlist are a second slice. Needs Matt's decision: whether members may offer cards to each other and see mutual matches, which would reveal other spaces' deck shortfalls. From the product review of 2026-11-10, compared with Deckbox, Dex and ManaArchive.
+Built 2026-11-11: Find cards' Spare filter subtracts built/intact holds, every non-trial building/idea Planned list and Considering, and protects one total copy of each viewer-owned wishlist name without double-counting. Incoming and basics are excluded. Copy covers all matching pages, uses proven printing/finish allocations and explicit name-only uncertainty otherwise. Incomplete/stale protected sources withhold the spare claim. Only actual same-space viewers/scripts calculate spares: Public collection outsiders get fixed unavailable output before pool/private-plan/wishlist reads, invariant under hidden plan changes. No holds, inventory or trade state changes.
 
-First slice: `availability=spare` in `decklab/lib/api/collection.py` from the pool's holders and the unbuilt decks' Planned lists, then a Spare choice, reason line and Copy list in `decklab/web/collection.js`.
+Evidence:104 latest focused/integration,327 earlier broad and16 new counting/API/UI tests pass (overlapping groups), plus Ruff/Node/source checks. Coverage includes same-space privacy, unknown physical assignments, filter pagination/copy/fallback and conservation-based single-printing proof. Cross-member offers/matches remain excluded because they change privacy boundaries. From the product review of 2026-11-10, compared with Deckbox, Dex and ManaArchive.
 
 **E7-S37** · Matt · could · L · missing
 

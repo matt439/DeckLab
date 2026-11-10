@@ -53,6 +53,8 @@ button.col-find-open { cursor: pointer; }
 .col-find-name { min-width: 0; font-size: var(--fs-row); font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
 .col-find-count { grid-column: 3; white-space: nowrap; font-size: var(--fs-meta); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
 .col-find-meta, .col-find-type { grid-column: 2 / -1; min-width: 0; color: var(--ink-2); font-size: var(--fs-meta); overflow-wrap: anywhere; }
+.col-find-spare-reason { grid-column: 2 / -1; min-width: 0; color: var(--ink-2); font-size: var(--fs-meta); overflow-wrap: anywhere; }
+.col-spare-reason { margin: var(--s-2); overflow-wrap: anywhere; }
 .col-find-identity { display: inline-flex; min-width: 0; }
 .col-tiles .col-find-identity { padding: 0 var(--s-2) var(--s-2); }
 @media (min-width: 1000px) {

@@ -48,7 +48,7 @@ const COL_LANGUAGES = [["", "Not recorded"], ["en", "English"], ["ja", "Japanese
   ["he", "Hebrew"], ["la", "Latin"], ["grc", "Ancient Greek"], ["ar", "Arabic"],
   ["sa", "Sanskrit"], ["ph", "Phyrexian"], ["qya", "Quenya"]];
 const COL_FILTER_KEYS = ["q", "color", "type", "role", "mv", "availability", "page"];
-const COL_AVAILABILITY = [["all", "All"], ["free", "Free now"], ["incoming", "On the way"], ["held", "In decks"]];
+const COL_AVAILABILITY = [["all", "All"], ["free", "Free now"], ["incoming", "On the way"], ["held", "In decks"], ["spare", "Spare"]];
 const COL_IMPORT_MAX = 4 * 1024 * 1024;     // bytes: the server's limit (collection_edit.MAX_IMPORT; 20,000 rows)
 const COL_NOTES_MAX = 500;
 const COL_ROWS_PAGE = 100;                  // Card list rows a page
@@ -609,16 +609,21 @@ function drawCollectionResults(cv, data) {
   const cards = data.cards || [];
   const filtered = COL_FILTER_KEYS.some((key) => key !== "page" && cv.query.get(key));
   const go = (page) => colFilter(cv, "page", page > 1 ? String(page) : "");
-  const counted = filtered ? `${plural(data.total || 0, "card name")} match` : plural(data.total || 0, "card name");
+  const counted = data.spares?.ready === false ? "Spare copies unavailable"
+    : filtered ? `${plural(data.total || 0, "card name")} match` : plural(data.total || 0, "card name");
   clear(cv.results);
   add(cv.results, [
     warningsBox(data.warnings, "Collection counts need attention"),
     el("div", { class: "col-result-head" },
       el("p", { class: "result-count", role: "status", text: counted }),
+      data.spares?.ready && data.spares.copy?.text && ownSpace() === cv.space && seesInventory(cv.space) ? el("button", {type: "button", class: "btn btn-quiet col-spare-copy", text: "Copy list",
+        onclick: event => colCopySpares(cv, data, event.currentTarget)}) : null,
       colPager(data.page, data.pages, go, "Pages, top")),
+    data.spares ? el("p", {class: data.spares.ready ? "sub col-spare-note" : "box box-warn col-spare-note", role: "status",
+      text: data.spares.message || data.spares.note || "Spare copies couldn't be confirmed."}) : null,
     cards.length ? [el("div", { class: "col-find-lab" },
       el("div", { class: "card-tiles col-tiles" }, cards.map((row) => colTile(cv, row)))),
-      el("div", { class: "col-find-casual" }, colFindRows(cv, cards))] : colFindEmpty(cv, filtered, data.total || 0),
+      el("div", { class: "col-find-casual" }, colFindRows(cv, cards))] : data.spares?.ready === false ? null : colFindEmpty(cv, filtered, data.total || 0),
     colPager(data.page, data.pages, go, "Pages, bottom")]);
 }
 
@@ -640,6 +645,7 @@ function colFindEmpty(cv, filtered, total = 0) {
 
 /** "3 owned · 2 free" (or "· all in decks"); "1 on the way" alone for a card with none owned yet. */
 function colCountWords(row) {
+  if (Number.isSafeInteger(row.spares?.spare) && row.spares.spare > 0) return `${row.spares.spare} spare`;
   if (!row.owned) return row.incoming ? `${row.incoming} on the way` : "";
   if (row.basic || row.free_now == null) return `${row.owned} owned`;
   return `${row.owned} owned · ${row.free_now ? `${row.free_now} free` : "all in decks"}`;
@@ -654,6 +660,8 @@ function colFindCaption(cv, row) {
     el("span", { class: "col-viewer-counts", text: [row.owned ? `${row.owned} owned` : "None owned yet",
       !row.basic && row.owned && row.free_now != null ? `${row.free_now} free now` : null,
       row.incoming ? `${row.incoming} on the way` : null].filter(Boolean).join(" · ") }),
+    row.spares ? el("span", {class: "col-viewer-note", text: row.spares.reason
+      + (row.spares.printing_uncertain ? " Printing assignment is unconfirmed; check the deck boxes." : "")}) : null,
     row.basic ? el("span", { class: "col-viewer-note", text: "Special basic land: which deck uses it isn't tracked." }) : null,
     row.holders && row.holders.length ? el("span", { class: "col-viewer-decks" }, "In decks: ",
       row.holders.map((h, i) => [i ? ", " : "", `${h.quantity} in `, colViewerLink(deckHref(h.id), h.title)])) : null,
@@ -676,6 +684,7 @@ function colTile(cv, row) {
     label: `${row.name}, ${colCountWords(row) || "none owned"}`,
     onclick: row.card ? null : (cv.editable ? () => openCopiesSheet(cv, row.name) : null) });
   add(tile, [colFindIdentity(row.card)]);
+  if (row.spares) add(tile, [el("p", {class: "sub col-spare-reason", text: row.spares.reason})]);
   return tile;
 }
 
@@ -695,11 +704,41 @@ function colFindRows(cv, cards) {
       el("span", { class: "col-find-heading" }, el("span", { class: "col-find-name", text: row.name }), colFindIdentity(row.card, 20)),
       el("span", { class: "col-find-count", text: `${row.owned || 0} owned` }),
       el("span", { class: "col-find-meta", text: [words, ...extra].join(" · ") }),
+      ...(row.spares ? [el("span", {class: "col-find-spare-reason", text: row.spares.reason
+        + (row.spares.printing_uncertain ? " Printing assignment unconfirmed." : "")})] : []),
       row.card?.type_line ? el("span", { class: "col-find-type", text: row.card.type_line })
         : el("span", { class: "col-find-type" }, row.card ? "Type not recorded" : status("warn", "Name not matched")));
     if (row.card) viewerItem(node, row.card, "collection-find", caption);
     return el("li", { class: "col-find-row" }, node);
   }));
+}
+
+/** The response owns every matching line across pages; changes invalidate a pending copy/fallback. */
+async function colCopySpares(cv, data, button) {
+  const copy = data.spares?.copy, text = copy?.text, seq = cv.findSeq, query = cv.query.toString(), hash = location.hash;
+  const current = () => colActive(cv) && cv.query.get("availability") === "spare" && cv.findSeq === seq
+    && cv.query.toString() === query && location.hash === hash && button.isConnected && cv.results.contains(button)
+    && !cv.busy && ownSpace() === cv.space && seesInventory(cv.space) && !document.querySelector("dialog[open]")
+    && cv.results.getAttribute("aria-busy") !== "true" && data.spares?.copy === copy && copy?.text === text;
+  if (!current() || button.disabled || data.spares?.ready !== true || typeof copy?.text !== "string"
+      || !copy.text || copy.text.length > 2 * 1024 * 1024) return;
+  button.disabled = true;
+  try {
+    if (!navigator.clipboard?.writeText) throw Error("Clipboard unavailable");
+    await navigator.clipboard.writeText(text);
+    if (current()) toast("Spare list copied.");
+  } catch (_) {
+    if (!current()) return;
+    const sheet = colOpenSheet("Copy spare list", {wide: true});
+    const area = el("textarea", {readonly: "", rows: 12, class: "export-copy col-spare-copy-text", spellcheck: "false",
+      "aria-label": "Spare cards list"});
+    area.value = text;
+    sheet.body.append(el("p", {text: "Select and copy this price-free list. Untagged lines need a physical printing check."}), area);
+    sheetActions(sheet, [{text: "Close", onclick: () => sheet.close()}]);
+    area.focus(); area.select();
+  } finally {
+    if (button.isConnected) button.disabled = false;
+  }
 }
 
 /** "Edit copies": the rows that hold a card (one per printing), each opening its sheet, and Add another
