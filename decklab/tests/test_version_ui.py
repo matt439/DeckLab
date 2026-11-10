@@ -395,6 +395,13 @@ class VersionInteractionTests(unittest.TestCase):
           renderVersionStatus({...answer(), database: {ok: false, usable: false, error: "migrations pending",
             pending_migrations: 1, last_backup: null, backup_stale: false, stale_hours: 36, venv: null}});
           assert.match(host.textContent, /migrate on the PC .*Until then, wishlists, settings and play records can't/);
+          // A database migrated by later code (E11-S70) is named as that, not as migrations needing attention.
+          renderVersionStatus({...answer(), database: {ok: false, usable: true, error: "database newer",
+            pending_migrations: 0, last_backup: "2026-10-11T03:30:00+10:00", backup_stale: false, stale_hours: 36, venv: null}});
+          assert.equal(host.hidden, false);
+          assert.match(host.textContent, /Deck Lab's database is newer than this code/);
+          assert.match(host.textContent, /Update the code on the PC .*there's nothing to migrate/);
+          assert.doesNotMatch(host.textContent, /need attention|waiting|Run python -m decklab\\.db migrate|isn't reachable|Until then/);
           renderVersionStatus({...answer(), database: {ok: false, usable: true, error: "check failed",
             pending_migrations: null, last_backup: null, backup_stale: null, stale_hours: 36, venv: null}});
           assert.match(host.textContent, /couldn't check its database just now/);

@@ -477,7 +477,7 @@ class UpdateRestartTests(unittest.TestCase):
         self.assertEqual(self.steps({"forge"}), restart)
         self.assertEqual(self.steps(set(), required=True), restart)
         self.assertEqual(self.steps(set(), pending=[{"name": "0021_x.sql"}]),
-                         ["Back up before migrating", "Migrate"] + restart)
+                         ["Stop Deck Lab before the backup", "Back up before migrating", "Migrate"] + restart)
 
 
 class ServiceWordingTests(unittest.TestCase):

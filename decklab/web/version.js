@@ -62,6 +62,12 @@ function databaseMessages(db) {
         "Deck Lab's database migrations need attention.") +
         " Run python -m decklab.db migrate on the PC (decklab/data/logs/db.log says more)." +
         (db.usable === false ? " Until then, wishlists, settings and play records can't be read or saved." : ""));
+    } else if (db.error === "database newer") {
+      // It holds migrations this code has no file for (a checkout put back to an older commit): nothing to migrate.
+      out.push("Deck Lab's database is newer than this code: it was migrated by a later version. " +
+        "Update the code on the PC (python -m decklab.update, or git pull and a restart); there's nothing to " +
+        "migrate (decklab/data/logs/db.log names the migrations)." +
+        (db.usable === false ? " Until then, wishlists, settings and play records can't be read or saved." : ""));
     } else if (db.error === "check failed") {
       out.push("Deck Lab couldn't check its database just now; decklab/data/logs/db.log on the PC says why. " +
         "It checks again in a minute.");

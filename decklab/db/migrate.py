@@ -9,6 +9,16 @@ Write a new migration instead.
 
 Migrations run without decklab.change_set, so the audit trigger refuses any data they write;
 one that writes data has to make its own change set (none does yet).
+
+The rule for a schema change: add in one release, remove in a later one. A migration only adds
+(a table, a column that allows null or has a default, an index, a grant) unless every release
+still in use has already stopped reading and writing what it removes or renames. So the
+release that stops using a column leaves it in place and a later release's migration drops it;
+a rename is an add and a copy, then a drop a release later. Two things rest on it: the pulled
+code's migrations never break the server they are applied under, and after a failed update the
+code alone can be put back (git reset --hard) without restoring the backup, since the older
+code still finds everything it uses. That older code then meets recorded migrations it has no
+file for: DatabaseNewer, which the page's banner names as a database newer than the code.
 """
 import hashlib
 import re
@@ -31,6 +41,16 @@ create table if not exists public.schema_migration (
 
 class MigrationError(Exception):
     """The migrations can't be applied as they stand (the message says why)."""
+
+
+class DatabaseNewer(MigrationError):
+    """The database records migrations later than every migration file here: newer code
+    migrated it (a checkout put back to an older commit, or a newer dump restored). versions:
+    those migrations' versions, in order."""
+
+    def __init__(self, message, versions=()):
+        super().__init__(message)
+        self.versions = list(versions)
 
 
 BOM = b"\xef\xbb\xbf"
@@ -76,10 +96,17 @@ def _applied(cur):
 
 
 def _check(files, applied):
-    """Refuse recorded migrations whose file has changed or gone."""
+    """Refuse recorded migrations whose file has changed or gone. Recorded migrations later than
+    every file here mean a database newer than this code (DatabaseNewer, raised once the others
+    are found sound), told apart from a file gone missing among the others."""
     by_version = {f["version"]: f for f in files}
-    for version, row in applied.items():
+    newest = max(by_version, default=0)
+    newer = []
+    for version, row in sorted(applied.items()):
         f = by_version.get(version)
+        if f is None and version > newest:
+            newer.append(version)
+            continue
         if f is None:
             raise MigrationError(f"migration {version:04d}_{row['name']} is recorded in the database but its "
                                  f"file isn't in {MIGRATIONS.name}/: restore the file")
@@ -87,6 +114,11 @@ def _check(files, applied):
             raise MigrationError(f"{f['path'].name} has changed since it was applied (its checksum differs "
                                  f"from the one recorded): put the file back as it was, and make any change "
                                  f"in a new migration")
+    if newer:
+        names = ", ".join(f"{v:04d}_{applied[v]['name']}" for v in newer)
+        raise DatabaseNewer(f"the database is newer than this code: it holds {names}, which "
+                            f"{MIGRATIONS.name}/ here doesn't have (its newest file is {newest:04d}). Update the "
+                            f"code to the release that migrated it; there's nothing to migrate", newer)
 
 
 def status(dbname=None, directory=None):
