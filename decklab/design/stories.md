@@ -41,12 +41,12 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 24 | 1 | 3 | 2 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 34 | 29 | 0 | 3 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 22 | 0 | 1 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 33 | 1 | 2 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 34 | 1 | 1 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 22 | 18 | 0 | 2 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 28 | 21 | 0 | 6 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 37 | 32 | 1 | 2 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 79 | 50 | 14 | 11 | 4 |
-| **Total** | **376** | **296** | **22** | **42** | **16** |
+| **Total** | **376** | **297** | **22** | **41** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -3521,7 +3521,7 @@ Gap: nothing records a loan, so `decklab/lib/pool.py` counts lent loose copies a
 
 First slice: a `card_loan` migration with its `UNDO_MIGRATION` entry, a new `decklab/lib/inventory/ops_loans.py`, `python -m decklab.db collection lend|return|loans`, and open loans as one more holder in `decklab/lib/pool.py` with the table's "lent out" label.
 
-**E7-S38** · Matt · could · L · missing
+**E7-S38** · Matt · could · L · built
 
 As Matt, importing or receiving copies of one printing that differ, I want the row's note to say how the copies differ, so that what a receipt's checks or an export recorded isn't lost.
 
@@ -3533,6 +3533,8 @@ As Matt, importing or receiving copies of one printing that differ, I want the r
 Gap: `merge_rows` in `decklab/lib/inventory/rules.py` and the import preview in `decklab/lib/api/collection_import.py` write only a general note, and the importers map only condition and language. E7-S02 built the imports, E7-S29 the bulk sheet. Needs Matt's decision: real per-copy sub-rows are the L-sized part, and AGENTS.md says the identity key doesn't separate copies; only the notes slice is proposed. From the product review of 2026-11-10, compared with ManaArchive, Moxfield, CardCastle and Archidekt.
 
 First slice: a counted breakdown replacing the general note in both places, the Misprint, Altered and Signed columns in the importers, and both note prefixes in `decklab/web/collection-bulk.js`.
+
+Built (2026-11-11): counted note breakdowns for mixed or partly unknown condition/language and positive vendor copy marks survive imports, merges, receipts and CSV round trips. Existing row fields override older observations; invalid/stale breakdowns remain unknown/prose. The bulk sheet recognizes old/new notes. The eight columns, printing identity and reservations are unchanged; no per-copy sub-rows were added. Partial splits scale only uniform evidence and otherwise refuse before writes until the actual facts are supplied. Validation includes 360 broad and94 latest focused checks (overlap;31 and5 guarded database skips), receipt remainder/archive conservation, malformed/bounded counts and unchanged import atomicity. No real cards/imports/receipts changed.
 
 **E7-S39** · Matt · should · S · built
 

@@ -561,7 +561,7 @@ class ImportTests(CollectionEditTestCase):
                            r["language"], r["line"]) for r in good],
                          [("Llanowar Elves", "fdn", "227", "foil", "3", "NM", "", 2),
                           ("Sol Ring", "ecc", "57", "nonfoil", "1", "MP", "ja", 5)])
-        self.assertIn("differing or unreported language", good[0]["notes"])
+        self.assertEqual(good[0]["notes"], "Copies: language 2 en, 1 ja")
         self.assertEqual(answer["problems"], [{"line": 6, "message": "Scryfall has no card named 'Nonsense Card'"}])
         self.assertEqual(answer["adds"], {"rows": 2, "cards": 4})
 

@@ -124,7 +124,8 @@ function colFields(ctx, row) {
   ctx.strip = el("div", { class: "col-strip-area" }, el("p", { class: "sub", text: "Choose the card first." }));
   ctx.picture = el("div", { class: "col-sheet-picture" });
   ctx.inputs = { name, quantity, condition, language,
-    notes: el("input", { id: id("notes"), type: "text", maxlength: COL_NOTES_MAX, value: value("notes"), autocomplete: "off" }) };
+    notes: el("input", { id: id("notes"), type: "text", maxlength: Math.max(COL_NOTES_MAX, value("notes").length),
+      value: value("notes"), autocomplete: "off" }) };
   ctx.printingNote = el("small", { class: "field-hint", "aria-live": "polite" });
   name.addEventListener("input", () => colSuggestNames(ctx));
   name.addEventListener("change", () => loadColPrintings(ctx, name.value));

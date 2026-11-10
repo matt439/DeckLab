@@ -10,7 +10,7 @@ import io
 import re
 
 from decklab.lib import decks
-from decklab.lib.inventory import rules
+from decklab.lib.inventory import copy_notes, rules
 
 from .common import ApiError, _public
 from . import collection_import_formats as vendors
@@ -93,7 +93,12 @@ def _checked(row, set_name, problem=None):
     else:
         row["quantity"] = str(int(row["quantity"]))
     for key in ("condition", "language", "notes"):
-        row[key] = row[key][:owner.MAX_TEXT[key]]
+        limit = owner.MAX_TEXT[key]
+        if key == "notes":
+            limit = copy_notes.note_limit(row[key], row["quantity"], limit)
+            if len(row[key]) > limit and copy_notes.has_counts(row[key], row["quantity"]):
+                problem = problem or "The notes are too long to keep their counted copy details. Shorten the prose before importing."
+        row[key] = row[key][:limit]
     return row, problem
 
 
@@ -134,6 +139,9 @@ def _source_rows(text, fmt, reader, line_offset=0):
                    "notes": ""}
             set_name = get("edition") if fmt == "deckbox" else None
         row, problem = _checked(row, set_name, problem)
+        if problem is None:
+            marks, problem = copy_notes.source_flags(values, fmt, row["quantity"])
+            row["notes"] = rules.merge_notes(row["notes"], marks)
         out.append((line, row, set_name, problem))
     return out
 
@@ -210,13 +218,7 @@ def review_rows(source_rows, skip_groups=()):
             continue
         if problem is None and rules.ident(row) in by_key:
             first = by_key[rules.ident(row)]
-            first["quantity"] = str(int(first["quantity"]) + int(row["quantity"]))
-            first["notes"] = rules.merge_notes(first["notes"], row["notes"])
-            for key in ("condition", "language"):
-                if first[key] != row[key]:
-                    first[key] = ""
-                    first["notes"] = rules.merge_notes(
-                        first["notes"], f"Merged copies have differing or unreported {key}")
+            first.update(copy_notes.merge(first, row))
             continue
         entry = {**{k: row.get(k, "") for k in owner.FIELDS}, "line": line, "problem": problem}
         rows.append(entry)

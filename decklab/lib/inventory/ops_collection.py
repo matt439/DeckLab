@@ -37,8 +37,8 @@ the rows the ones before it left, and any refusal refuses them all.
 
 The rules are the ones collection.csv has always had (AGENTS.md, "magic/collection.csv"): one row
 per identity key (set, collector_number, finish), merges by rules.merge_rows (quantities add,
-notes are combined, a condition or language the copies don't share goes blank with the note
-"Merged copies have differing or unreported ..."), and an ordinary basic land is never added
+notes are combined, a condition or language the copies don't share goes blank with a counted
+"Copies: condition ..." or "Copies: language ..." note), and an ordinary basic land is never added
 unless that printing is already tracked. An edit replaces the whole row (notes aren't merged)
 and may not take another listed row's key.
 

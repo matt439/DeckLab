@@ -2,6 +2,13 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Counted observations for merged copies (2026-11-11; E7-S38)
+
+- Mixed or partly unknown condition/language is retained as counted notes; positive ManaBox/Deckbox/Moxfield marks become counted observations. Complete matching breakdowns are reusable on later merges and CSV imports; stale/general evidence stays conservative, and explicit fields win.
+- The bulk sheet recognizes both note formats. Valid structured evidence has room beyond the unchanged prose limit without truncation. Row identity, eight CSV columns and reservations remain unchanged; no per-copy records are introduced.
+- Partial order/receipt splits scale uniform evidence, or refuse before writes when a physical allocation cannot be known. Receipt/archive/remainder checks cover conservation and explicit separate-row facts.
+- Validation:360 broad and94 latest focused checks pass (overlap;31 and5 guarded DB skips). Ruff/Node/source checks pass; actual PostgreSQL parity cases remain for disposable CI. No real import, collection, order or receipt was changed.
+
 ## Honest macOS foreground operation and nightly evidence (2026-11-11; E11-S82)
 
 - macOS uses the documented foreground/manual mode. Built-in background commands and updater give useful macOS guidance before running Windows/Linux commands or fetching; the wrapper starts the foreground server. Unsupported schedule status exits nonzero.

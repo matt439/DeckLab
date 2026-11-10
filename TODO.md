@@ -90,7 +90,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E5-S35` | OPEN | could | M | Record a shop snapshot reading as a queue row's reference from Shopping, then a 90-day-low mark and optional buy-under targets; first slice a previewed, home-admin reference action in shopping_queue.py. Needs Matt's decision on page overwrites. |
 | `E6-S28` | OPEN | could | S | Record this order from a basket or plan shop: opens the existing Record an order sheet prefilled with seller, cards, snapshot printings and fulfils ticks; first slice client only, a seed for shopOrderSheet and a Baskets and plan button. Needs Matt's decision. |
 | `E7-S37` | OPEN | could | L | Loans of loose cards: lend and return as audited changes, lent copies not free in the pool and tables ("1 lent out"); needs Matt's say that the household lends; first slice: card_loan migration, new lib/inventory/ops_loans.py, collection lend/return/loans, pool.py. |
-| `E7-S38` | OPEN | could | L | Merged copies of one printing keep a counted note ("Copies: 2 NM, 1 LP", "1 signed") instead of a general one; sub-rows need Matt's decision; first slice: rules.merge_rows and collection_import.py, the Misprint/Altered/Signed columns, collection-bulk.js. |
 
 ## Deck Lab: Commander nights
 

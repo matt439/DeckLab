@@ -778,7 +778,15 @@ def split_order(inv, *, order, component, new_id, take, move_checks=(), copy_che
         qty = have if item.get("quantity") is None else _quantity(item["quantity"], paths.row_of(c.path, n, owners))
         if qty > have:
             raise Invalid(f"{paths.row_of(c.path, n, owners)} has {have}, not {qty}")
-        moved.append({**row, "quantity": str(qty)})
+        moved_row = {**row, "quantity": str(qty)}
+        if c.kind == "cards" and qty < have:
+            from . import copy_notes
+            try:
+                moved_row["notes"] = copy_notes.split_notes(row, qty)
+                row["notes"] = copy_notes.split_notes(row, have - qty)
+            except ValueError as e:
+                raise Invalid(str(e)) from None
+        moved.append(moved_row)
         row["quantity"] = str(have - qty)
     kept = [row for row in rows if row["quantity"] != "0"]
     if not kept:
