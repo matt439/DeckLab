@@ -43,6 +43,47 @@ class ShoppingLayoutUiTests(unittest.TestCase):
           assert.equal(location.hash,'#/shopping','a stale jump does not route away');
         """)
 
+    def test_shortcuts_group_primary_counts_and_keep_secondary_destinations_in_one_disclosure(self):
+        self.run_js(r"""
+          const parts=[
+            {id:'shop-on-the-way',label:'On the way',count:2,number:2},
+            {id:'shop-to-buy',label:'To buy',count:4,number:4},
+            {id:'shop-decks',label:'Decks missing cards',count:7,number:7},
+            {id:'shop-missing-cards',label:'Missing cards',count:true,number:36},
+            {id:'shop-by-shop',label:'By shop',count:4,number:0},
+            {id:'shop-follow-ups',label:'Follow-ups',count:2,number:2},
+            {id:'shop-long-term',label:'Long-term plan',count:0,number:0}];
+          const nav=shopJumps(parts);main.append(nav);
+          same(nav.querySelector('.shop-jump-primary').querySelectorAll('a').map(a=>a.getAttribute('href')),
+            parts.slice(0,4).map(p=>'#'+p.id));
+          const more=nav.querySelector('.shop-jump-more');
+          assert.equal(more.tag,'details');assert.equal(more.getAttribute('open'),null);
+          assert.equal(more.querySelector('summary').textContent,'More sections');
+          same(more.querySelectorAll('a').map(a=>a.getAttribute('href')),['#shop-by-shop','#shop-follow-ups']);
+          const first=nav.querySelector('a');assert.equal(first.textContent,'On the way\u00a02');
+          assert.equal(first.querySelector('.shop-jump-count').closest('a'),first);
+          assert.equal(nav.querySelector('.shop-count'),null,'counts have no separate badge');
+          const heading=el('h2',{id:'shop-follow-ups',text:'Follow-ups'});main.append(heading);
+          more.setAttribute('open','');more.querySelectorAll('a')[1].click();
+          assert.equal(document.activeElement,heading);assert.equal(location.hash,'#/shopping');
+          assert.equal(more.getAttribute('open'),'','jumping does not reset the local disclosure');
+        """)
+
+    def test_shortcuts_handle_unavailable_counts_and_secondary_only_content(self):
+        self.run_js(r"""
+          const nav=shopJumps([
+            {id:'shop-missing-cards',label:'Missing cards',count:true,number:0},
+            {id:'shop-to-buy',label:'To buy',count:1,number:1}]);
+          assert.equal(nav.querySelector('.shop-jump-more'),null);
+          same(nav.querySelectorAll('a').map(a=>a.textContent),['Missing cards','To buy']);
+          const secondary=shopJumps([
+            {id:'shop-by-shop',label:'By shop',count:1,number:0},
+            {id:'shop-long-term',label:'Long-term plan',count:1,number:0}]);
+          assert.equal(secondary.querySelector('details'),null,'secondary-only pages expose their destinations');
+          assert.equal(secondary.querySelectorAll('a').length,2);
+          assert.equal(shopJumps([{id:'shop-to-buy',label:'To buy',count:1,number:1}]),null);
+        """)
+
     def test_initial_empty_add_last_remove_and_add_again_attach_the_same_frame(self):
         self.run_queue_js(r"""
           for(const category of ['ready','long_term']){

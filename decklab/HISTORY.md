@@ -2,6 +2,18 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Group missing-card deck and source links (2026-11-11; E11-S30)
+
+Missing cards and Build together replace comma-separated deck links with one bordered list of full-width navigation rows. Each wrapping title and copy count shares one anchor and tap target, with a decorative chevron. The ordinary shortfall count and combined per-deck demand keep their existing meanings and destination filters. Missing-card shop evidence and upcoming printings also group their existing facts, source links and dates into compact blocks. Styling is scoped to missing-card articles; other queue and deck-price source views retain their presentation.
+
+Saved facts, validated external URLs, date/provenance caveats, queue intent and card-viewer controls remain unchanged. All 181 focused fixture checks pass with one platform skip. The disposable shopping-card-links browser suite passes 18 cases across 320–1440px, both themes and enlarged text: wrapping, count containment, 44px targets, native activation, original destinations, external-link attributes and combined chooser behavior all pass without document overflow or writes. Source stays stable and owned processes clean up. Checks use invented data; no live records or source fetches are used. Physical Safari and household touch acceptance remain separate.
+
+## Group Shopping shortcuts and their counts (2026-11-11; E11-S30)
+
+Shopping's stacked layout replaces the spread of underlined links and separate count pills with one neutral bordered navigation panel. The four main destinations use a two-column grid, with each label and inline count inside one full-cell link. Other destinations sit under the native More sections disclosure; secondary-only pages show those links directly. Enlarged text can reflow to one column, and an odd final item fills its row.
+
+Destination filtering, count meanings, keyboard focus-to-heading, the Shopping route and the wide two-pane layout stay unchanged. Queue changes retain the existing delivery, follow-up Undo and history nodes. All 108 focused fixtures pass; 42 harness/source checks pass with one platform skip. The disposable shopping-navigation browser suite passes 18 cases in both themes, including 144 keyboard jumps and 24 pointer clicks, count containment, touch sizes and narrow/enlarged layouts. Source is stable and owned processes clean up. At 320px with 200% root text, the navigation stays contained while existing deck-shortfall rows retain a recorded 6px page overflow. The suite uses synthetic data and blocks actual writes. Physical iPhone/iPad Safari acceptance remains separate; no live records or server deployment changed.
+
 ## Show failed precon tests instead of silently finishing (2026-11-11; E3-S39)
 
 A field or popular-deck test whose attempted matchups all fail before reporting any new games now saves a failed run note and shows an error on the Testing tab. A shared cause, such as cards unsupported by the installed Forge build, appears once with bounded text; different causes get a short explanation with details in the server log. Previously every opponent could be dropped while the coordinator returned success, so the progress display disappeared without explaining why no games were played.

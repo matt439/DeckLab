@@ -40,10 +40,12 @@ function shopMissingCard(item, queue) {
   const row = cardRow(item.card || null, {name: item.name, qty: item.missing, aside: null,
     meta: `${plural(item.missing, "copy", "copies")} missing across ${plural((item.decks || []).length, "deck")}`,
     unknownMeta: "Missing from Planned lists", viewerGroup: "shopping-missing"});
-  // One wrapping line of decks, not a bulleted list: a count only where a deck needs more than one.
-  const wants = el("ul", {class: "shop-missing-decks"}, (item.decks || []).map(deck => el("li", {},
-    el("a", {href: `${deckHref(deck.id)}&tab=cards&filter=missing`, text: deck.title}),
-    deck.missing > 1 ? el("span", {class: "shop-missing-count", text: ` ×${deck.missing}`}) : null)));
+  // A bounded row per deck: its title and any repeated-copy count share the same link.
+  const wants = el("ul", {class: "shop-missing-decks", "aria-label": "Decks needing this card"},
+    (item.decks || []).map(deck => el("li", {},
+      el("a", {href: `${deckHref(deck.id)}&tab=cards&filter=missing`},
+        el("span", {class: "shop-missing-deck-label"}, deck.title,
+          deck.missing > 1 ? el("span", {class: "shop-missing-count", text: ` ×${deck.missing}`}) : null)))));
   // The queue's state leads the facts line; each queued row's details follow, one small line each.
   const facts = el("div", {class: "shop-missing-facts"}, shopQueuedChip(queued),
     shopMissingSnapshotLine(item, {short: true}));
