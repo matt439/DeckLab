@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Show failed precon tests instead of silently finishing (2026-11-11; E3-S39)
+
+A field or popular-deck test whose attempted matchups all fail before reporting any new games now saves a failed run note and shows an error on the Testing tab. A shared cause, such as cards unsupported by the installed Forge build, appears once with bounded text; different causes get a short explanation with details in the server log. Previously every opponent could be dropped while the coordinator returned success, so the progress display disappeared without explaining why no games were played.
+
+Already-complete tests, partial successes and Stop keep their existing behavior. All 180 targeted fixture checks pass, along with Ruff and the source-length and public-repo audits. Regressions cover coordinator execution, failed top-ups over saved games, both API answers, and the real page sections from Play through the failed poll: the error stays visible, Play returns, polling ends and no automatic retry starts. These checks use synthetic data and fake Forge calls; no actual games, card-support update or server deployment was performed.
+
 ## Keep Settings forms within phone screens (2026-11-11; E11-S30)
 
 Settings' form and field grids now use shrinkable columns, native controls can shrink to their available width, and nested fieldsets no longer impose their content's minimum width. This addresses native sizing that can make the page scroll sideways without hiding or clipping overflow. Existing Commander range columns, touch targets and desktop select width caps stay intact.

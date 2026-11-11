@@ -152,6 +152,19 @@ class EntryTests(GauntletCase):
 
 class RunTests(GauntletCase):
 
+    def test_all_failed_popular_matchups_report_failure_instead_of_success(self):
+        self.gfake.fail = {deck_id: "Forge couldn't play this matchup." for deck_id in IDS}
+        with self.assertRaises(common.ForgeError) as caught:
+            gauntlet.run(self.alpha, self.sample, inflight=2, pool=object())
+        error = "No new games could be played. Forge couldn't play this matchup."
+        self.assertEqual(str(caught.exception), error)
+        note = field.last_note(self.alpha, self.gauntlet_dir)
+        self.assertEqual((note["played"], note["stopped"], note["error"]), (0, False, error))
+        self.assertEqual(note["sample"], self.sample["id"])
+        self.assertEqual(len(note["dropped"]), 4)
+        self.assertEqual((self.fake.calls, self.fake.store), ([], {}))
+        self.assertFalse((self.results / "field").exists())
+
     def test_plan_and_run_use_the_gauntlet_folder_only(self):
         planned = gauntlet.plan(self.alpha, self.sample)
         self.assertEqual((planned["sample"], planned["new_games"]), (self.sample["id"], 400))

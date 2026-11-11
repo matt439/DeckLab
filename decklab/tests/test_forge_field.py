@@ -391,6 +391,7 @@ class RunTests(FieldTestCase):
         self.play()
         self.assertEqual(len(json.loads(path.read_text(encoding="utf-8"))["runs"]), 2)
         self.assertEqual(field.last_note(a, self.results)["played"], 0)
+        self.assertIsNone(field.last_note(a, self.results)["error"])
 
     def test_apt_gives_the_closest_matchup_the_next_games(self):
         self.fake.rates = {"casual/beta": 0.5, "casual/gamma": 0.85, "product/aggro": 0.95}
@@ -473,6 +474,73 @@ class RunTests(FieldTestCase):
                          ["couldn't be played: Forge doesn't know this card, so the matchup can't be played: Opt."])
         self.assertEqual([c[0] for c in self.fake.calls].count("casual/gamma"), 1)
         self.assertEqual(note["played"], 2 * 400)
+        self.assertIsNone(note["error"])
+
+    def test_a_run_with_only_failed_matchups_reports_failure_and_logs_the_reasons(self):
+        reason = "Forge doesn't know this card, so the matchup can't be played: Opt."
+        self.fake.fail = {deck_id: reason for deck_id in ("casual/beta", "casual/gamma", "product/aggro")}
+        with self.assertRaises(common.ForgeError) as caught:
+            self.play()
+        error = f"No new games could be played. {reason}"
+        self.assertEqual(str(caught.exception), error)
+        note = field.last_note(self.entry("casual/alpha"), self.results)
+        self.assertEqual((note["played"], note["stopped"], note["error"]), (0, False, error))
+        self.assertEqual(len(note["dropped"]), 3)
+        self.assertIn(reason, "\n".join(self.logs))
+        self.assertEqual(str(caught.exception).count(reason), 1)
+        self.assertNotIn("Gamma", str(caught.exception))
+
+    def test_different_failures_get_a_safe_summary_and_their_reasons_are_logged(self):
+        self.fake.fail = {deck_id: f"Forge couldn't play {deck_id}."
+                          for deck_id in ("casual/beta", "casual/gamma", "product/aggro")}
+        with self.assertRaises(common.ForgeError) as caught:
+            self.play()
+        self.assertEqual(str(caught.exception), field.NO_GAMES_PLAYED)
+        for reason in self.fake.fail.values():
+            self.assertIn(reason, "\n".join(self.logs))
+            self.assertNotIn(reason, str(caught.exception))
+
+    def test_a_common_failure_is_bounded_but_the_full_reason_is_logged(self):
+        reason = "Forge doesn't know this card: " + "X" * 2000
+        self.fake.fail = {"casual/beta": reason}
+        with self.assertRaises(common.ForgeError) as caught:
+            self.play(opponents=["casual/beta"])
+        self.assertEqual(len(str(caught.exception)), 1000)
+        self.assertTrue(str(caught.exception).endswith("..."))
+        self.assertIn(reason, "\n".join(self.logs))
+
+    def test_a_failed_top_up_is_not_hidden_by_already_complete_matchups(self):
+        a = self.entry("casual/alpha")
+        for deck_id, version in (("product/aggro", "target"), ("casual/beta", "owned")):
+            self.fake.add_games(a, self.entry(deck_id, version), 200)
+        self.fake.fail = {"casual/gamma": "Forge couldn't play this matchup."}
+        with self.assertRaisesRegex(common.ForgeError, "Forge couldn't play this matchup"):
+            self.play()
+        self.assertEqual([c[0] for c in self.fake.calls], ["casual/gamma"])
+        note = field.last_note(a, self.results)
+        self.assertEqual((note["played"], len(note["dropped"])), (0, 1))
+
+    def test_a_run_with_only_exhausted_busy_retries_reports_failure(self):
+        self.fake.busy = {"casual/beta": 2}
+        with self.assertRaises(common.ForgeError) as caught:
+            self.play(opponents=["casual/beta"])
+        self.assertIn(field.BUSY_TWICE, str(caught.exception))
+        self.assertEqual(len(self.fake.calls), 2)
+        note = field.last_note(self.entry("casual/alpha"), self.results)
+        self.assertEqual(list(note["dropped"].values()), [f"couldn't be played: {field.BUSY_TWICE}"])
+        self.assertIn(field.BUSY_TWICE, "\n".join(self.logs))
+
+    def test_stop_after_a_dropped_matchup_stays_a_stop(self):
+        self.fake.fail = {"casual/beta": "Forge couldn't play this matchup.",
+                          "casual/gamma": "Forge couldn't play this matchup."}
+
+        def progress(done, total, detail):
+            if any(p.get("dropped") for p in detail["pairs"].values()):
+                raise jobs.Stopped("stopped")
+        with self.assertRaises(jobs.Stopped):
+            self.play(opponents=["casual/beta", "casual/gamma"], progress=progress)
+        note = field.last_note(self.entry("casual/alpha"), self.results)
+        self.assertEqual((note["played"], note["stopped"], note["error"]), (0, True, None))
 
     def test_another_key_stops_the_run(self):
         self.fake.rekey = {"casual/beta": "f" * 64}
