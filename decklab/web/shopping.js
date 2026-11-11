@@ -1,4 +1,4 @@
-/* Shopping (UI-REVIEW.md WP10): a row of links to the parts (a phone's and a portrait tablet's), the deliveries on the way, each a disclosure titled "seller · topic" with a strip
+/* Shopping (UI-REVIEW.md WP10): grouped shortcuts to the parts on a stacked page, the deliveries on the way, each a disclosure titled "seller · topic" with a strip
 of its cards' pictures, its arrival checks inside it and Receive delivery as its main action; follow-ups left
 open on deliveries that have arrived, each with Done (POST /api/shopping/check, an admin's); the cards we've
 decided to buy; the decks still missing cards (a link to each deck's missing cards, kept apart from the queue:
@@ -213,22 +213,30 @@ function shopChecks(checks) {
     el("ul", {}, checks.map((check) => el("li", { text: check.text }))));
 }
 
-/** A row of links to the page's parts, for a phone or a tablet in portrait, where the parts are one column:
- * "On the way 8 · To buy 3 · Decks missing cards 5 · Follow-ups 4 · Long-term plan", each with its count. */
+/** One navigation surface on a stacked page: the four main destinations, then optional sections.
+ * A count is part of its link's words, never a separate badge or hit target. */
 function shopJumps(parts) {
   const shown = parts.filter((p) => p.count);
   if (shown.length < 2) return null;
+  const mainIds = new Set(["shop-on-the-way", "shop-to-buy", "shop-decks", "shop-missing-cards"]);
+  const primary = shown.filter((p) => mainIds.has(p.id));
+  const secondary = shown.filter((p) => !mainIds.has(p.id));
+  const list = (items, className) => el("ul", { class: className }, items.map((p) => el("li", {},
+    el("a", { href: `#${p.id}`, onclick: (e) => {
+      e.preventDefault();
+      const target = document.getElementById(p.id);
+      if (target) {
+        target.setAttribute("tabindex", "-1");
+        target.focus({ preventScroll: true });
+        target.scrollIntoView({ block: "start" });
+      }
+    } }, el("span", { class: "shop-jump-label", text: p.label }),
+    p.number > 1 ? ["\u00a0", el("span", { class: "shop-jump-count", text: String(p.number) })] : null))));
   return el("nav", { class: "shop-jumps", "aria-label": "Parts of this page" },
-    el("ul", {}, shown.map((p) => el("li", {}, el("a", { href: `#${p.id}`,
-      onclick: (e) => {
-        e.preventDefault();
-        const target = document.getElementById(p.id);
-        if (target) {
-          target.setAttribute("tabindex", "-1");
-          target.focus({ preventScroll: true });
-          target.scrollIntoView({ block: "start" });
-        }
-      } }, el("span", { text: p.label }), p.number > 1 ? el("span", { class: "shop-count", text: String(p.number) }) : null)))));
+    primary.length ? list(primary, "shop-jump-primary") : null,
+    secondary.length ? (primary.length
+      ? el("details", { class: "shop-jump-more" }, el("summary", { text: "More sections" }), list(secondary, "shop-jump-secondary"))
+      : list(secondary, "shop-jump-secondary")) : null);
 }
 
 /** A follow-up left open on a delivery that has arrived: what to check, where it came from, and Done. */

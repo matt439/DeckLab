@@ -26,16 +26,28 @@
 }
 .shop-section-head h2 { scroll-margin-top: calc(var(--shell-top) + var(--s-3)); }
 
-/* The one-column page's jump links stay available on a stacked landscape tablet too. */
-.shop-jumps ul { list-style: none; display: flex; flex-wrap: wrap; gap: var(--s-2); margin: var(--s-3) 0 0; padding: 0; }
+/* One bounded navigation surface: labels and counts share a control. Secondary parts stay in a disclosure. */
+.shop-jumps { margin-top: var(--s-3); border: 1px solid var(--border); border-radius: var(--r-control);
+  background: var(--border); overflow: hidden; }
+.shop-jumps ul { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px; margin: 0; padding: 0; }
+.shop-jumps li { min-width: 0; background: var(--surface); }
+.shop-jumps li:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .shop-jumps a {
-  display: inline-flex; align-items: center; gap: var(--s-2);
-  min-height: var(--tap); padding: 0 var(--s-3);
-  border: 0; border-radius: 0; background: none;
-  color: var(--link); font-size: var(--fs-sm); font-weight: var(--fw-medium); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap;
+  display: block; height: 100%; min-height: var(--tap); padding: var(--s-3);
+  color: var(--ink); font-size: var(--fs-sm); font-weight: var(--fw-medium); line-height: var(--lh-body);
+  text-decoration: none; overflow-wrap: anywhere;
 }
-.shop-jumps a:hover { color: var(--accent-strong); }
-.shop-jumps .shop-count { min-width: 0; }
+.shop-jump-count { color: var(--accent-strong); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
+.shop-jump-more { margin-top: 1px; background: var(--surface-2); }
+.shop-jump-more > summary { display: flex; align-items: center; min-height: var(--tap); padding: var(--s-2) var(--s-3);
+  color: var(--ink-2); font-size: var(--fs-sm); font-weight: var(--fw-medium); }
+.shop-jump-more > ul { border-top: 1px solid var(--border); background: var(--border); }
+.shop-jumps :is(a, summary):focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+.shop-jumps :is(a, summary):active { background: var(--accent-soft); }
+@media (hover: hover) and (pointer: fine) { .shop-jumps :is(a, summary):hover { background: var(--hover); } }
+/* At most two columns; enlarged text gets full-width controls rather than squeezed labels. */
+@media (max-width: 40rem) { .shop-jumps ul { grid-template-columns: repeat(auto-fit, minmax(min(100%, max(8rem, calc(50% - .5px))), 1fr)); } }
 @media (min-width: 1281px) { .shop-jumps { display: none; } }
 .shop-description { margin: 0 0 var(--s-3); color: var(--ink-2); font-size: var(--fs-sm); }
 

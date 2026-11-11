@@ -63,6 +63,7 @@ python scripts/ui_review.py --suite shell-layout
 python scripts/ui_review.py --suite task-layout
 python scripts/ui_review.py --suite receipt-layout
 python scripts/ui_review.py --suite families
+python scripts/ui_review.py --suite shopping-navigation
 python scripts/ui_review.py --suite zoom
 python scripts/ui_review.py --suite crosscheck
 python scripts/ui_review.py --suite assembly-counters
@@ -84,6 +85,15 @@ without writing inventory. `assembly-counters` has 30 counter/dice and take-alon
 cases across the same widths/themes: ready/failed/unmigrated reminders and
 ready/failed take-along lists. Optional checks use intercepted in-memory replies;
 the guarded print action uses a stubbed system dialog and actual print CSS.
+
+The opt-in `shopping-navigation` suite uses invented deliveries, queue rows and
+shortfalls to check the grouped section controls at 320, 393, 430, 600, 820, 1280 and
+1440px in both themes, plus 200% CSS root-font stress at 320 and 600px. It checks
+native More sections disclosure keys, label/count containment and heading focus
+without a route change or write. The 393px top/expanded and enlarged-text captures
+are retained for visual inspection. Enlarged-text checks require navigation
+containment and retain broader page overflow as a diagnostic; ordinary cases
+also require no document overflow. This does not qualify Safari or physical touch.
 
 `--check` does not start any application processes. `--smoke` captures a desktop
 board in light, a narrow coarse-pointer receipt in dark and the ten Wishlist/guide
