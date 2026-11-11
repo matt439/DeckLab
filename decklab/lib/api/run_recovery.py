@@ -98,6 +98,23 @@ def _canonical(kind, request, run, profile):
     return data
 
 
+def _variant_work(run, opponents, summary, looks, complete):
+    """A numeric upper bound, refined from verified saved session work only at submission."""
+    games = max(looks) * len(opponents) * 2
+    v = run.forge.variants
+    try:
+        if summary is not None and v._keys_today(summary, run.base, opponents):
+            if complete:
+                return {"games": 0, "approximate": True}
+            from . import variant_page
+            variant = v.variant_entry(run.base, run.cards)
+            games = v._planned(run.base, variant, opponents, summary, max(looks),
+                               variant_page._results_of(run.forge, run.test))
+    except Exception:
+        pass        # saved data cannot reduce an unverified upper bound
+    return {"games": games, "approximate": True}
+
+
 def _prepare(forge, kind, run, profile, request):
     snapshot = inventory.current()
     if snapshot.stale or not snapshot.persisted:
@@ -117,6 +134,7 @@ def _prepare(forge, kind, run, profile, request):
         keys = sorted(pair["key"] for pair in plan["pairs"])
         target = plan["per_opponent"]
         remaining = plan["new_games"]
+        work = {"games": remaining, "approximate": True}
         extras = {"target": target, "pair_keys": keys, "budget": run.budget}
         if kind == "gauntlet":
             extras["sample"] = run.sample["id"]
@@ -134,6 +152,7 @@ def _prepare(forge, kind, run, profile, request):
         terminal = (summary or {}).get("outcome") in v.seqstats.PAIRED_VERDICTS or good >= max(looks)
         complete = terminal and (not run.extend or good > previous)
         remaining = 0 if complete else 1     # the original backend, not this receipt, allocates every saved game
+        work = _variant_work(run, opponents, summary, looks, complete)
         extras = {"test": run.test, "looks": looks, "prior_look": previous if run.extend else 0}
     if not _visible(refs, profile):
         raise ApiError(404, "That unfinished run isn't available.")
@@ -145,7 +164,8 @@ def _prepare(forge, kind, run, profile, request):
     base_identity = (permissions._deck_space(base["id"]), base.get("version"), base["card_sha"], base.get("kind"),
                      base_ref["side"], _hash(base_ref["pilot"]))
     manifest["signature"] = _hash({"kind": kind, "engine": manifest["engine"], "base": base_identity, "lists": identities, **extras})
-    return {"manifest": manifest, "remaining": remaining, "request": _canonical(kind, request, run, profile)}
+    return {"manifest": manifest, "remaining": remaining, "request": _canonical(kind, request, run, profile),
+            "planned_work": work}
 
 
 class Binding:
@@ -189,7 +209,7 @@ def submit(forge, kind, run, profile, request, key, *, rerun=True):
             raise Prepared(prepared)
         binding = Binding(kind, prepared, profile, forge.common._results_dir())
         run._journal_event, run._journal_scope, run._journal_binding = binding.event, binding.scope, binding
-        job = forge_runs.COORD_JOBS.submit(key, run, rerun=rerun)
+        job = forge_runs.COORD_JOBS.submit(key, run, rerun=rerun, planned_work=prepared["planned_work"])
         if binding.expected is not None and job.fn is not run:
             raise ApiError(409, "This saved list is already running. Finish or stop that run before resuming.")
         return job

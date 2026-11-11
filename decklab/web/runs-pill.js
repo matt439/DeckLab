@@ -178,7 +178,8 @@ function runDetailsParts(runs) {
       el("h3", { class: "run-waiting-head", text: playing.length ? "Waiting" : "Waiting to play" }),
       el("ul", { class: "run-waiting-list" }, waiting.map((run) => el("li", {},
         el("span", { class: "run-waiting-name", text: runsPillName(run) }),
-        el("span", { class: "run-waiting-ahead", text: run.ahead > 0 ? `${plural(run.ahead, "run")} ahead` : "next" }),
+        el("span", { class: "run-waiting-ahead", text: metaWords(
+          run.ahead > 0 ? `${plural(run.ahead, "run")} ahead` : "next", runAheadWork(run)) }),
         runStop(run, named))))) : null,
     typeof runRecoveryParts === "function" ? runRecoveryParts() : null,
     el("p", { class: "run-details-foot" }, el("a", { class: "btn btn-quiet btn-inline", href: "#/matchups",

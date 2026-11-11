@@ -23,6 +23,20 @@ const SWAP_VERDICTS = { better: "better", "likely-better": "probably better, not
 
 // ------------------------------------------------------------------ numbers and words
 
+/** Anonymous remaining work before a queued run. These are game counts in this queue, never an ETA;
+ * unknown sizes and adaptive upper bounds stay explicit. Older or malformed answers add no words. */
+function runAheadWork(run) {
+  const work = run?.ahead_work;
+  if (run?.status !== "queued" || !Number.isSafeInteger(run.ahead) || run.ahead <= 0 || !work
+      || !Number.isSafeInteger(work.games) || work.games < 0 || !Number.isSafeInteger(work.unknown)
+      || work.unknown < 0 || work.unknown > run.ahead || typeof work.approximate !== "boolean") return null;
+  if (work.unknown && work.games === 0) return "size of the work ahead is not known yet";
+  const games = `${thousands(work.games)} game${work.games === 1 ? "" : "s"} remaining in this queue`;
+  if (work.unknown) return work.approximate ? `known work: up to ${games}; some run sizes are unknown`
+    : `at least ${games}; some run sizes are unknown`;
+  return `${work.approximate ? "up to " : ""}${games}`;
+}
+
 /** 0.613 -> "61": a share in whole points of win rate, as every figure shows it. */
 function simPoints(x) { return String(Math.round(x * 100)); }
 

@@ -70,7 +70,7 @@ svg.icon-more { stroke-width: 4; }
 
 /* The run activity goes here (runs-pill.js: Forge's turning ring, its popover under it); shown, it pushes itself
    and the avatar right. Hidden, the avatar's own auto margin keeps it at the bar's right edge. */
-.shell-status { position: relative; margin-left: auto; display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.shell-status { position: relative; flex: none; margin-left: auto; display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
 
 /* The global search (global-search.js, E11-S31; visual-design.md 3.2-3.3): a round field before the
    avatar (300 px on the iPad in portrait, 280 in the lab), its results in a panel under it; under 600 px a search

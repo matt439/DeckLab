@@ -212,7 +212,7 @@ def _forge_runner():
     finishes first), at most 10 waiting, and apart from JOBS, so practice hands
     never wait behind a matchup."""
     return jobs.Runner(max_running=MATCHUPS_AT_ONCE, max_queued=10, log=lambda text: common._log(text),
-                       describe=_matchup_error, name="matchup")
+                       describe=_matchup_error, name="matchup", track_game_work=True)
 
 
 FORGE_JOBS = _forge_runner()
@@ -227,7 +227,7 @@ def _coord_runner():
     waiting. A coordinator's pair runs are threads inside its job that play in the server's warm
     pool with every other run, so it never takes one of FORGE_JOBS's slots."""
     return jobs.Runner(max_running=COORDINATORS_AT_ONCE, max_queued=COORDINATORS_QUEUED,
-                       log=lambda text: common._log(text), describe=_matchup_error, name="coordinator")
+                       log=lambda text: common._log(text), describe=_matchup_error, name="coordinator", track_game_work=True)
 
 
 COORD_JOBS = _coord_runner()
@@ -493,7 +493,7 @@ def _job_json(job, snap, flip, key=None, sides=None):
     total = snap["progress"]["total"]
     ranges = detail.get("range")
     shown = ranges[1 if flip else 0] if isinstance(ranges, list) and len(ranges) == 2 else None
-    return {"status": snap["status"], "ahead": snap["ahead"], "done": snap["progress"]["done"],
+    return {**jobs.queue_work(snap), "status": snap["status"], "ahead": snap["ahead"], "done": snap["progress"]["done"],
             "total": (run.games or 0) if total is None else total, "wins": wins, "other": detail.get("other", 0),
             "games_per_min": detail.get("games_per_min"), "eta_s": detail.get("eta_s"), "by": run.by,
             "seconds": snap["seconds"], "waiting": detail.get("waiting"), "fallback": detail.get("fallback"),
@@ -561,7 +561,7 @@ def _pair_json(job, snap, key, sides=None):
             _TodaysLists._id(sides[0].get("id")) != _TodaysLists._id(deck.get("id")) or
             (sides[0].get("version") or "target") != (deck.get("version") or "target")):
         wins.reverse()
-    return {"status": snap["status"], "ahead": snap["ahead"], "done": done, "total": int(pair.get("total") or 0),
+    return {**jobs.queue_work(snap), "status": snap["status"], "ahead": snap["ahead"], "done": done, "total": int(pair.get("total") or 0),
             "wins": wins, "other": other, "games_per_min": None, "eta_s": None, "by": _coord_by(job, detail),
             "seconds": snap["seconds"], "waiting": None, "fallback": None, "mode": "fixed", "plan": None,
             "range": _live_range(wins, other), "via": _via_json(job, detail)}
@@ -582,7 +582,7 @@ def _running_json(job, first_sha=None):
         if snap["status"] not in MATCHUP_WAITING:
             return None
         detail = snap["detail"] if isinstance(snap["detail"], dict) else {}
-        return {"key": job.key, "kind": _coord_kind(job), "title": _coord_title(job, detail),
+        return {**jobs.queue_work(snap), "key": job.key, "kind": _coord_kind(job), "title": _coord_title(job, detail),
                 "by": _coord_by(job, detail), "done": snap["progress"]["done"],
                 "total": snap["progress"]["total"], "link": _coord_link(job, detail), "status": snap["status"],
                 "ahead": snap["ahead"], "sides": None}
@@ -595,7 +595,7 @@ def _running_json(job, first_sha=None):
         sides.reverse()
         progress["wins"].reverse()
     titles = " v ".join(side.get("title") or "?" for side in sides)
-    return {"key": job.key, "sides": sides, "status": snap["status"], "ahead": snap["ahead"],
+    return {**jobs.queue_work(snap), "key": job.key, "sides": sides, "status": snap["status"], "ahead": snap["ahead"],
             "done": progress["done"], "total": progress["total"], "wins": progress["wins"], "by": job.fn.by,
             "waiting": progress["waiting"], "fallback": progress["fallback"], "kind": "matchup", "title": titles,
             "link": f"#/matchup?key={job.key}",
@@ -605,7 +605,7 @@ def _running_json(job, first_sha=None):
 def _hidden_run(item, title=HIDDEN_RUN):
     """A Running item of a run the viewer may not see, as an admin is shown it (_Seen): its key,
     kind, status and progress, nothing of its decks or who started it."""
-    return {"key": item["key"], "kind": item["kind"], "title": title, "by": SOMEONE,
+    return {**jobs.queue_work(item), "key": item["key"], "kind": item["kind"], "title": title, "by": SOMEONE,
             "done": item["done"], "total": item["total"], "link": None, "status": item["status"],
             "ahead": item["ahead"], "sides": None, "hidden": True, "may_stop": True}
 
@@ -1042,7 +1042,9 @@ def run_matchup(body):
     run = _MatchupRun(forge, entries, [dict(side) for side in sides], ai_lists, games, profile["name"], mode,
                        by_id=profile["id"])
     try:
-        job = FORGE_JOBS.submit(key, run, rerun=True)
+        cap = getattr(getattr(getattr(forge, "adaptive", None), "seqstats", None), "CAP", None)
+        work = {"games": games if mode == "fixed" else cap, "approximate": mode != "fixed"}
+        job = FORGE_JOBS.submit(key, run, rerun=True, planned_work=work)
     except jobs.Busy as e:
         raise ApiError(503, MATCHUP_STOPPING if e.stopping else MATCHUP_BUSY) from None
     joined, seen = None, _Seen(profile)

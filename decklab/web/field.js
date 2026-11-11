@@ -313,7 +313,8 @@ function fvLive(ctx, a) {
   const playing = pairs.filter((p) => p.playing).map((p) => p.opponent.title);
   const waiting = pairs.filter((p) => !p.playing && !p.dropped && p.done < p.total).length;
   const words = a.status === "queued"
-    ? (job.ahead > 0 ? `Waiting: ${plural(job.ahead, "run")} ahead of it` : "Starting…")
+    ? metaWords(job.ahead > 0 ? `Waiting: ${plural(job.ahead, "run")} ahead of it` : "Starting…",
+      runAheadWork({ ...job, status: a.status }))
     : playing.length ? `Playing: ${playing.join(", ")}` + (waiting ? ` (${waiting} waiting)` : "")
       : "Choosing the next decks to play…";
   return [

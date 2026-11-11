@@ -417,6 +417,8 @@ function liveBox(page) {
           `it starts as soon as ${n === 1 ? "that's" : "they're"} done.`
           : job.plan || job.mode === "assess" || job.mode === "ahead" ? "The games are about to start."
             : `${thousands(job.total || 0)} games are about to start.`;
+        const work = runAheadWork(job);
+        if (work) played.textContent += ` ${capitalise(work)}.`;
         bar.set(0, 1);
         clear(score);
         pace.textContent = job.by ? `Asked for by ${job.by}.` : "";

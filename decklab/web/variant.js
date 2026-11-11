@@ -452,12 +452,14 @@ function vtLivePanel(page, data) {
   }
   const pairs = Object.values(job.pairs || {});
   const live = job.range;
+  const aheadWork = runAheadWork({ ...job, status: data.status });
   // Not a live region: it's drawn afresh on every answer; vtAnnounce says what changes.
   return el("section", { class: "vt-panel vt-live" },
     el("div", { class: "vt-live-head" }, el("span", { class: "spinner", "aria-hidden": "true" }),
       el("h2", { text: data.status === "queued" ? "Waiting to start" : "Playing" })),
     data.status === "queued" ? el("p", { text: job.ahead ? `${plural(job.ahead, "test or field run")} ahead of it.`
       : "It starts in a moment." }) : null,
+    aheadWork ? el("p", { class: "sub", text: `${capitalise(aheadWork)}.` }) : null,
     bar.node,
     el("p", { class: "vt-count", text: `${thousands(job.done || 0)} of up to ${thousands(total)} games` }),
     job.next_look ? el("p", { text: `Next check at ${thousands(job.next_look)} games a deck` }) : null,
