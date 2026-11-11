@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Keep Settings forms within phone screens (2026-11-11; E11-S30)
+
+Settings' form and field grids now use shrinkable columns, native controls can shrink to their available width, and nested fieldsets no longer impose their content's minimum width. This addresses native sizing that can make the page scroll sideways without hiding or clipping overflow. Existing Commander range columns, touch targets and desktop select width caps stay intact.
+
+The rendered `families` checks now wait for the complete forms, include condition/language preferences, and assert document width, panel/control bounds and focus without horizontal scrolling at 320/375/393/430/820/1440px plus 200% root-font stress in both themes. Error-state waits select a visible notice instead of an empty validation alert. All 114 page-family cases pass, including 14 populated Settings layout cases, with owned-process cleanup confirmed; the focused fixture suite passes 226 tests with one platform skip, and Ruff, the source-length guard and public-repo audit pass. Chromium did not reproduce the original iPhone behavior before the change; physical Safari acceptance remains open. No live settings or household records changed.
+
 ## Full-CI integration repairs (2026-11-11)
 
 The first complete PR matrix exposed an integration regression: sideboard-plan tests still submitted the pre-recovery launch contract. They now provide the named starter and canonical verified post-board list/opponent request, and a regression replays that request through real recovery preview to prove identical manifest/signature without queuing or sharing another starter's journal. Deleted pod games also retain their existing anonymous three/four-player Activity summary; ordinary duel deletion still omits private identities and notes.
