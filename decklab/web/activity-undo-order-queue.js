@@ -99,7 +99,8 @@ function activityUndoOrderQueueShow(ctx) {
   sheet.body.append(el("label",{class:"field"},el("span",{text:"Reason for this complete recorded correction (required)"}),input),error);
   let accepted="",reason="";
   input.addEventListener("input",()=>{if(!current()||ctx.pending||ctx.saved||ctx.needsRefresh||!input.isConnected||!sheet.body.contains(input)){input.value=accepted;return;}
-    accepted=input.value;reason=activityUndoRemovalReason(accepted);error.textContent="";actions();});
+    accepted=input.value;reason=activityUndoRemovalReason(accepted);error.textContent="";actions();
+    if(document.activeElement===input)input.scrollIntoView?.({block:"nearest"});});
   function actions(){
     input.disabled=ctx.pending||ctx.saved||ctx.needsRefresh;
     sheetActions(sheet,ctx.saved?[{text:"Done",kind:"primary",onclick:()=>{if(ctx.here())sheet.close();}}]:ctx.needsRefresh?

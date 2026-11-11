@@ -98,3 +98,13 @@ class OrderQueueUndoUiTests(unittest.TestCase):
           for(const words of ['Fixture product','preordered','Section: extras','Product deck: Fixture deck','Rarity: common','In play boosters: no',
               'Condition: LP','Language: ja'])assert(text.includes(words),words);
         ''')
+
+    def test_focused_reason_is_revealed_after_footer_update_without_scrolling_an_unfocused_or_stale_control(self):
+        self.order_js(r'''
+          const{sheet}=await open(orderPreview()),input=reason(sheet);input.focus();typeReason(sheet);
+          assert.equal(input.scrolled,1);same(input.scrollOptions,{block:'nearest'});assert.equal(save(sheet).disabled,false);
+          document.body.focus();input.value='Changed without focus';input.fire('input');assert.equal(input.scrolled,1);
+          input.focus();const profile=state.profile;state.profile={id:'user2',space:'user2',role:'member'};
+          input.value='Stale input';input.fire('input');assert.equal(input.scrolled,1);state.profile=profile;
+          input.remove();input.fire('input');assert.equal(input.scrolled,1);
+        ''')

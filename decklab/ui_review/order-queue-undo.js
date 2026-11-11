@@ -4,6 +4,22 @@ const path=require('node:path');
 const assert=require('node:assert/strict');
 const {run}=require('./common.js');
 
+function reasonGeometry(requireClear){
+  const dialog=[...document.querySelectorAll('dialog[open]')].at(-1);
+  const input=dialog?.querySelector('input[aria-label="Reason for restoring the complete order and queue"]');
+  const body=dialog?.querySelector('.sheet-body'),foot=dialog?.querySelector('.sheet-foot'),head=dialog?.querySelector('.sheet-head');
+  if(!input||!body||!foot||!head)return false;
+  const rect=input.getBoundingClientRect(),viewport=body.getBoundingClientRect(),footer=foot.getBoundingClientRect(),header=head.getBoundingClientRect();
+  const css=getComputedStyle(input),shadow=(css.boxShadow.match(/-?\d+(?:\.\d+)?px/g)||[]).map(value=>Math.abs(parseFloat(value)));
+  const ring=Math.max(0,parseFloat(css.outlineWidth)+(parseFloat(css.outlineOffset)||0),...shadow);
+  const metrics={focused:document.activeElement===input,ring,input_top:rect.top,input_bottom:rect.bottom,footer_top:footer.top,
+    bottom_clearance:Math.min(viewport.bottom,footer.top)-rect.bottom,top_clearance:rect.top-Math.max(viewport.top,header.bottom),
+    left_clearance:rect.left-viewport.left,right_clearance:viewport.right-rect.right};
+  const clear=metrics.focused&&rect.height>0&&[metrics.bottom_clearance,metrics.top_clearance,metrics.left_clearance,metrics.right_clearance]
+    .every(gap=>gap>=ring);
+  return requireClear?clear:metrics;
+}
+
 run('order-queue-undo',async review=>{
   review.report.results=[];
   review.report.scope='Synthetic complete order/queue controller. Intercepted invented GET/POST replies only; no database, shop request, physical stock or actual order write.';
@@ -46,6 +62,10 @@ run('order-queue-undo',async review=>{
       if(product){assert((await dialog.innerText()).includes('Rarity: common'));assert((await dialog.innerText()).includes('In play boosters: no'));}
       result.review_png=`review-${mode}-${width}-${theme}.png`;await page.screenshot({path:path.join(review.out,result.review_png),animations:'disabled'});
       await dialog.getByRole('textbox',{name:'Reason for restoring the complete order and queue',exact:true}).fill('Synthetic recorded correction');
+      // Observe settled real geometry after the controller's input/footer update;
+      // the adapter never scrolls or changes layout to make this assertion pass.
+      await page.waitForFunction(reasonGeometry,true,{polling:'raf'});
+      result.reason_geometry=await page.evaluate(reasonGeometry,false);
       assert.equal(await save.isDisabled(),false);assert.equal(result.requests.length,0);
       result.png=`confirm-${mode}-${width}-${theme}.png`;await page.screenshot({path:path.join(review.out,result.png),animations:'disabled'});
       await save.click();await dialog.getByRole('button',{name:'Done',exact:true}).waitFor({state:'visible'});assert.equal(result.requests.length,1);
