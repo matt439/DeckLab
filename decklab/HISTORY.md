@@ -6,7 +6,9 @@ What each milestone and feature built, the decisions made along the way, and the
 
 The 49 OPEN rows at `94f6b7c` now resolve to 45 built stories and four partial external acceptance gates: E2-S16 (actual household-device drafts), E7-S32 (real card/token photographs), E3-S23 (saved field policy in a real browser/run), and E11-S75 (NAS container and physical sleep/wake). TODO keeps those four gates explicit as DECISION; their stories remain partial. Pre-existing decision/deferred work stays outside the frozen queue. The continuing branch retains the earlier overnight work. No live migration, household/member record, visibility switch, deployment or operational setting was changed.
 
-Final source-stable Chromium qualification used committed source `2cae95f`, light/dark themes and phone/tablet/desktop sizes. All 102 states passed strict console checks with zero page/route/HTTP errors, no source drift, and complete fixture/browser/temporary-data cleanup. Selected phone/desktop screenshots were visually inspected for the changed facts, table headers, acknowledgements, footers and recovery actions. These synthetic intercepted controllers qualify rendering and interaction, not actual physical stock, devices or live writes.
+Source-stable Chromium qualification covered light/dark themes and phone/tablet/desktop sizes: 90 states from committed source `2cae95f`, plus the 12 order/queue states repeated after the scoped footer fix at `992c258`. All 102 states passed strict console checks with zero page/route/HTTP errors, no source drift, and complete fixture/browser/temporary-data cleanup. Selected phone/desktop screenshots were visually inspected for the changed facts, table headers, acknowledgements, footers and recovery actions. These synthetic intercepted controllers qualify rendering and interaction, not actual physical stock, devices or live writes.
+
+Visual inspection of the initial order/queue capture found the focused reason field's lower edge clipped by the action footer. The controller now reveals the focused input after updating the footer, using the existing Activity pattern and retaining page/profile/control guards. The adapter asserts the entire focused input and computed focus ring remain within the body/header/footer bounds after real input, without scrolling from the harness. All 12 final states pass that geometry assertion; the final focused API/UI regression passes 15. The other five suites are unchanged by this scoped fix. The table records the superseding final order/queue receipt.
 
 | Suite | Cases | Local receipt under `data/ui-review/` |
 |---|---:|---|
@@ -15,7 +17,7 @@ Final source-stable Chromium qualification used committed source `2cae95f`, ligh
 | Whole collection recovery | 12 | `20261110T235552Z-aebc61a9` |
 | Combined accessory record/crop | 24 | `20261110T235603Z-db2b7d93` |
 | Product-only kit recovery | 18 | `20261110T235630Z-dcf4dcc5` |
-| Coupled order/queue recovery | 12 | `20261110T235649Z-162bc464` |
+| Coupled order/queue recovery | 12 | `20261111T000131Z-c21f2af6` |
 
 Repeat with `python scripts/ui_review.py --suite <name> --strict-console --timeout 180` using the corresponding suite identifiers in the runner. Ruff, source-length, story-count and public-repository checks pass. The final UI-tool regression passes 26 checks with one expected skip; final PostgreSQL-summary/coverage checks pass 28, with guarded database execution reserved for required CI. Separately authorised fixed-public-deck real Forge qualification passed as recorded below. Full Windows/Linux fixtures, disposable PostgreSQL and Linux services remain PR CI gates; no local fixture result is substituted for them.
 
