@@ -69,6 +69,7 @@ python scripts/ui_review.py --suite shopping-queue-cards
 python scripts/ui_review.py --suite shopping-baskets-layout
 python scripts/ui_review.py --suite zoom
 python scripts/ui_review.py --suite crosscheck
+python scripts/ui_review.py --suite queue-workload --strict-console
 python scripts/ui_review.py --suite assembly-counters
 python scripts/ui_review.py --suite precon-bonus
 python scripts/ui_review.py --suite life-counters
@@ -145,6 +146,12 @@ deck response is unchanged. Its fixtures use the ordinary deck, guide and Game l
 readers, with invented records and placeholder art. Scores and a realistic mana
 base are not being assessed. `all` retains the original capture/editor suites;
 run `composition` separately when changing these page compositions.
+
+The opt-in `queue-workload` suite exercises a queued synthetic member test and
+the native top-bar activity sheet/popover at phone and desktop widths in both
+themes, including enlarged text. Exact, capped, partially unknown and wholly
+unknown anonymous work summaries must fit their containers. Responses are
+intercepted; no run is started or stopped and no household data is read.
 
 The opt-in `crosscheck` suite exercises the new second-simulator section on the
 Testing tab, in light and dark at phone, tablet and desktop widths. Ready saved

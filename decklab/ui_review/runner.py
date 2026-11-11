@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[2]
 TOOL = Path(__file__).resolve().parent
 FIXTURE_TYPE = "decklab-ui-review-v1"
 SUITES = ("capture", "editor", "composition", "variant-layout", "shell-layout", "task-layout",
-          "receipt-layout", "families", "zoom", "crosscheck", "assembly-counters", "precon-bonus", "life-counters", "compare-baselines", "first-use", "card-viewer-details", "member-tools", "deck-cuts", "bracket-fixes", "shopping-reviews", "shopping-navigation", "shopping-card-links", "shopping-queue-cards", "shopping-baskets-layout", "practice-insights", "accessory-photo-record", "collection-undo", "product-kit-undo", "order-queue-undo")
+          "receipt-layout", "families", "zoom", "crosscheck", "assembly-counters", "precon-bonus", "life-counters", "compare-baselines", "first-use", "card-viewer-details", "member-tools", "deck-cuts", "bracket-fixes", "shopping-reviews", "shopping-navigation", "shopping-card-links", "shopping-queue-cards", "shopping-baskets-layout", "practice-insights", "accessory-photo-record", "collection-undo", "product-kit-undo", "order-queue-undo", "queue-workload")
 
 
 class ReviewError(RuntimeError):

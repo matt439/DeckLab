@@ -201,7 +201,7 @@ def _job_json(run, snap, found):
             paired = found["opponents"][0].get("paired") or {}
             if paired.get("delta") is not None:
                 live = {"delta": paired.get("delta"), "low": paired.get("low"), "high": paired.get("high")}
-    return {"status": snap["status"], "ahead": snap["ahead"], "done": snap["progress"]["done"],
+    return {**jobs.queue_work(snap), "status": snap["status"], "ahead": snap["ahead"], "done": snap["progress"]["done"],
             "total": snap["progress"]["total"], "stage": detail.get("stage"), "next_look": detail.get("next_look"),
             "games_per_opponent": detail.get("games_per_opponent"), "pairs": detail.get("pairs") or {},
             "by": run.by, "started": run.started, "seconds": snap["seconds"], "range": live}

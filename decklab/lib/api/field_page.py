@@ -132,7 +132,7 @@ def _job_json(job, snap):
     """The "job" of a field answer: section 10.3's detail, with status, ahead, done, total, by
     and started (seconds running, None while queued)."""
     detail = snap["detail"] if isinstance(snap["detail"], dict) else {}
-    return {**detail, "status": snap["status"], "ahead": snap["ahead"], "done": snap["progress"]["done"],
+    return {**detail, **jobs.queue_work(snap), "status": snap["status"], "ahead": snap["ahead"], "done": snap["progress"]["done"],
             "total": snap["progress"]["total"], "by": job.fn.by, "started": snap["seconds"]}
 
 

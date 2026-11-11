@@ -160,7 +160,8 @@ function grLive(ctx, a) {
   bar.set(job.total ? job.done / job.total : 0);
   const playing = Object.values(job.pairs || {}).filter((p) => p.playing).map((p) => p.opponent.title);
   const words = a.status === "queued"
-    ? (job.ahead > 0 ? `Waiting: ${plural(job.ahead, "run")} ahead of it` : "Starting…")
+    ? metaWords(job.ahead > 0 ? `Waiting: ${plural(job.ahead, "run")} ahead of it` : "Starting…",
+      runAheadWork({ ...job, status: a.status }))
     : playing.length ? `Playing: ${playing.join(", ")}` : "Choosing the next decks to play…";
   return [
     el("h3", {}, el("span", { class: "spinner spinner-small", "aria-hidden": "true" }), " Playing the chosen decks"),

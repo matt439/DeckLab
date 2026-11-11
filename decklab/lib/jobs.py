@@ -96,7 +96,7 @@ class Job:
     """One piece of work. Read it through Runner.snapshot(); status, result
     and error only change under the runner's lock."""
 
-    def __init__(self, key, fn, args, stopping=None):
+    def __init__(self, key, fn, args, stopping=None, *, planned_work=None, lock=None):
         self.key, self.fn, self.args = key, fn, args
         self._stopping = stopping or threading.Event()      # the runner's, set by stop()
         self._cancelled = threading.Event()                 # set by Runner.cancel()
@@ -105,6 +105,8 @@ class Job:
         self.result = None
         self.error = None
         self._reported = (0, None, None)    # (done, total, detail); total is None until fn says
+        self._planned_work = planned_work
+        self._lock = lock
         self.submitted = _now()
         self.started = None
         self.finished = None
@@ -125,7 +127,8 @@ class Job:
         half. Raises Stopped once the runner is stopping or the job is
         cancelled; its "by" is who cancelled it (None if no one was named),
         so fn can record that."""
-        self._reported = (done, total, detail)
+        with self._lock if self._lock is not None else nullcontext():
+            self._reported = (done, total, detail)
         if self._stopping.is_set():
             raise Stopped("Deck Lab is stopping")
         if self._cancelled.is_set():
@@ -142,7 +145,7 @@ class Runner:
     """Runs submitted jobs in background threads; see the module docstring."""
 
     def __init__(self, max_running=1, max_queued=20, keep_seconds=15 * 60, max_kept=100,
-                 log=None, describe=None, name="job"):
+                 log=None, describe=None, name="job", track_game_work=False):
         if max_running < 1 or max_queued < 1:
             raise ValueError("max_running and max_queued must be at least 1")
         self.max_running = max_running
@@ -150,6 +153,7 @@ class Runner:
         self.keep_seconds = keep_seconds
         self.max_kept = max_kept
         self.name = name
+        self.track_game_work = track_game_work
         self._log = log or _log
         self._describe = describe or _describe
         self._lock = threading.Lock()
@@ -158,7 +162,7 @@ class Runner:
         self._threads = 0                       # worker threads alive
         self._stopping = threading.Event()      # set by stop()
 
-    def submit(self, key, fn, *args, rerun=False):
+    def submit(self, key, fn, *args, rerun=False, planned_work=None):
         """The job for key: the one queued or running, a finished one (unless
         rerun), or a new one that runs fn(*args, progress=report) when a
         thread is free. Raises Busy when max_queued jobs are waiting."""
@@ -171,7 +175,7 @@ class Runner:
                 raise Busy("Deck Lab is stopping", stopping=True)
             if len(self._queue) >= self.max_queued:
                 raise Busy(f"{len(self._queue)} jobs are already waiting")
-            job = Job(key, fn, args, self._stopping)
+            job = Job(key, fn, args, self._stopping, planned_work=_planned_work(planned_work), lock=self._lock)
             self._journal("queued", job, required=True)    # opt-in durable intent before a worker can see it
             self._jobs[key] = job
             self._queue.append(job)
@@ -259,7 +263,7 @@ class Runner:
                 ahead = running + (self._queue.index(job) if job in self._queue else 0)
             done, total, detail = job._reported
             end = job.finished if job.finished is not None else _now()
-            return {
+            out = {
                 "key": job.key,
                 "status": job.status,
                 "progress": {"done": done, "total": total},
@@ -269,6 +273,11 @@ class Runner:
                 "error": job.error,
                 "seconds": round(end - job.started, 2) if job.started is not None else None,
             }
+            if job.status == QUEUED and self.track_game_work:
+                earlier = list(self._queue)[:self._queue.index(job)] if job in self._queue else []
+                predecessors = [j for j in self._jobs.values() if j.status == RUNNING] + earlier
+                out["ahead_work"] = _ahead_work(predecessors)
+            return out
 
     # ------------------------------------------------------------ inside
 
@@ -333,3 +342,51 @@ class Runner:
         for i, job in enumerate(finished):
             if i < excess or now - job.finished > self.keep_seconds:
                 del self._jobs[job.key]
+
+
+def _count(value):
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def queue_work(snapshot):
+    """The queued-only numeric workload field for an API serializer, when its runner tracks games."""
+    value = snapshot.get("ahead_work") if snapshot.get("status") == QUEUED else None
+    return {"ahead_work": dict(value)} if isinstance(value, dict) else {}
+
+
+def _planned_work(value):
+    """Keep only an optional numeric game budget, never submission identities or mutable details."""
+    if not isinstance(value, dict) or not _count(value.get("games")) or not isinstance(value.get("approximate"), bool):
+        return None
+    return {"games": value["games"], "approximate": value["approximate"]}
+
+
+def _ahead_work(predecessors):
+    """Anonymous game work in this queue, read with its status and progress under the runner lock.
+
+    Adaptive matchup totals describe their current stage; their plan's overall cap and saved-game
+    offset instead bound the whole session. Other Forge progress totals already describe session work.
+    An unreported queued job needs an explicit submission budget; otherwise its size stays unknown.
+    """
+    games, unknown, approximate = 0, 0, False
+    for job in predecessors:
+        if job._cancelled.is_set():
+            continue
+        done, total, detail = job._reported
+        planned = job._planned_work
+        estimated = planned["approximate"] if planned is not None else False
+        if job.status == RUNNING and isinstance(detail, dict) and isinstance(detail.get("plan"), dict):
+            plan = detail["plan"]
+            if _count(plan.get("max")) and _count(plan.get("games_before")):
+                total = max(0, plan["max"] - plan["games_before"])
+                estimated = True
+            else:
+                total = None          # a stage total cannot stand in for the whole adaptive run
+        elif total is None and planned is not None:
+            total = planned["games"]
+        if not _count(done) or not _count(total):
+            unknown += 1
+            continue
+        games += max(0, total - done)
+        approximate = approximate or estimated
+    return {"games": games, "unknown": unknown, "approximate": approximate}

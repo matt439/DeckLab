@@ -868,6 +868,7 @@ As a player who plays 1v1 at home, I want to know which of two decks is stronger
 - Given two lists of the same format that I may see, when I start a run with Precise, Settle it, Quick look or a set number of games, then Forge plays them and saves the result.
 - Given a run choice, when I pick it, then one rough time is shown and my choice follows me to other devices.
 - Given four matchups are already playing, when I start another, then it queues.
+- Given my run is queued, then its waiting message gives the combined remaining game workload of the runs ahead in that queue, including private runs without naming them. Adaptive budgets say "up to"; unknown sizes stay explicit. This is workload, not an estimated wait or a total across the PC's separate queues.
 - Given #/matchups, when I look at the matrix, then each cell shows the latest win rate, with older-list results faded.
 
 Evidence:
@@ -884,6 +885,7 @@ Review note: size L bundling run modes, synced choice, queueing and the matrix; 
 As a user on any device, I want to see from any page that Forge is playing and how far along it is, and to stop a run, so that I can carry on with other things and stop a run that isn't needed.
 
 - Given a run I may see waits or plays, when I'm on any page, then the top bar shows the run activity icon, and its details show each run's progress, the runs waiting and Stop.
+- Given a visible run is queued, then its activity details include the same anonymous workload-ahead summary as its page; no other run's deck, player, result or identifier is disclosed by that summary.
 - Given a run is playing, when I open it, then I see progress, the score so far and a live range, with no verdict until the end.
 - Given I started a run, or it uses a deck of my space, or I'm an admin, when I press Stop, then the run stops and every finished game is kept; anyone else isn't offered Stop.
 - Given the server stops, when it starts again, then checkpointed games are kept and labelled Recovered.

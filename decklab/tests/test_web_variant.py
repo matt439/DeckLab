@@ -87,7 +87,7 @@ class VariantPageTests(unittest.TestCase):
 @unittest.skipUnless(NODE, "needs Node.js")
 class VariantScriptTests(unittest.TestCase):
 
-    NAMES = ("core.js", "deck.js", "editor.js", "editor-drafts.js", "variant.js")
+    NAMES = ("core.js", "sim-ui.js", "deck.js", "editor.js", "editor-drafts.js", "variant.js")
 
     def state(self, base, now, kind="casual"):
         return (f"(editor = {{mode: 'edit', hasFileList: true, kind: {json.dumps(kind)}, "

@@ -49,7 +49,8 @@ class ExpectedFieldListTests(ApiTestCase):
         self.assertEqual(key, field_page.job_key(self.forge, entry))
         self.assertIs(job.entry, entry)
         self.assertEqual(job.budget, "standard")
-        self.assertEqual(self.runner.submit.call_args.kwargs, {"rerun": True})
+        self.assertEqual(self.runner.submit.call_args.kwargs,
+                         {"rerun": True, "planned_work": {"games": 400, "approximate": True}})
         self.status.assert_called_once()
         # Start validates the participants, then recovery plans the same captured list.
         self.assertEqual(self.opponents.call_count, 2)

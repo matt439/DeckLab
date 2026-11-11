@@ -362,7 +362,7 @@ def _budgets(forge, g, entry, chosen):
 
 def _progress(job, snap, seen):
     detail = snap["detail"] if isinstance(snap["detail"], dict) else {}
-    out = {**detail, "status": snap["status"], "ahead": snap["ahead"], "done": snap["progress"]["done"],
+    out = {**detail, **jobs.queue_work(snap), "status": snap["status"], "ahead": snap["ahead"], "done": snap["progress"]["done"],
            "total": snap["progress"]["total"], "by": job.fn.by, "started": snap["seconds"],
            "sample": job.fn.sample["id"], "budget": job.fn.budget}
     out.pop("deck", None)       # the house deck that started it: this page names its own

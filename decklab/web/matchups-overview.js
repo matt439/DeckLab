@@ -298,7 +298,7 @@ function runningRow(run, { against = false } = {}) {
   const how = MODE_UNTIL[run.mode] ? MODE_UNTIL[run.mode].split(":")[0] : null;
   // One line of words (with who started it), so a wrapped line never starts with a separator.
   const words = waiting
-    ? metaWords(run.ahead > 0 ? `${plural(run.ahead, "run")} ahead of it` : "Starting...", personName(run.by))
+    ? metaWords(run.ahead > 0 ? `${plural(run.ahead, "run")} ahead of it` : "Starting...", runAheadWork(run), personName(run.by))
     : metaWords(run.waiting || `${thousands(p.done)} of ${p.approx ? "~" : ""}${thousands(p.total)} games`,
       run.waiting ? null : `${wins[0]}-${wins[1]} so far`, how, personName(run.by) && `started by ${run.by}`);
   // After the waiting sentence: why it's slower than its estimate (E3-S26).
@@ -316,7 +316,8 @@ function jobRow(run) {
   const bar = progressBar("Games played", "span");
   bar.set(run.total ? run.done / run.total : 0);
   const words = metaWords(waiting ? (run.ahead > 0 ? `${plural(run.ahead, "run")} ahead of it` : "Starting...")
-    : `${thousands(run.done || 0)} of ${thousands(run.total || 0)} games`, personName(run.by) && `started by ${run.by}`);
+    : `${thousands(run.done || 0)} of ${thousands(run.total || 0)} games`, runAheadWork(run),
+    personName(run.by) && `started by ${run.by}`);
   return el("li", {}, el(run.hidden ? "div" : "a", { class: "mu-row", href: run.hidden ? null : run.link || "#/matchups" },
     rowNames({ title: run.title || "A run of many matchups" }, null, false),
     bar.node,
