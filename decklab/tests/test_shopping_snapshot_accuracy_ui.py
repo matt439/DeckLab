@@ -14,6 +14,22 @@ class SnapshotLineAccuracyTests(unittest.TestCase):
     run_js = test_shopping_snapshot_ui.ShoppingSnapshotTests.run_js
     run_snapshot_js = test_shopping_snapshot_ui.ShoppingSnapshotTests.run_snapshot_js
 
+    def test_structured_shop_words_preserve_unknowns_zero_and_printing_mismatch_evidence(self):
+        self.run_snapshot_js("""
+          for(const shop of ['MTGMate','Games Portal']) for(const status of
+              ['in_stock','out_of_stock','not_listed','not_matched','not_eligible','token','unknown','not_checked']) {
+            for(const amount of ['0.00','4.50',null]) {
+              const evidence=snap({shop,status,price_aud:amount,shop_sets:['fdn','new']}), before=JSON.stringify(evidence);
+              const words=shopSnapshotWords(evidence)[0], summary=shopSnapshotSummary(evidence,words);
+              assert.equal(summary.textContent,words,'layout must retain the exact evidence wording');
+              assert.equal(JSON.stringify(evidence),before);
+              if(!['in_stock','out_of_stock'].includes(status)) assert.equal(summary.querySelector('.shop-snapshot-price'),null);
+              if(amount==='0.00'&&['in_stock','out_of_stock'].includes(status))
+                assert.equal(summary.querySelector('.shop-snapshot-price').textContent,'A$0.00');
+            }
+          }
+        """)
+
     def test_a_first_page_only_line_says_more_results_were_not_read(self):
         self.run_snapshot_js("""
           const portal = extra => snap({shop: "Games Portal", url: null, ...extra});

@@ -97,17 +97,30 @@ function shopSnapshotList(card) {
   return snap && typeof snap === "object" ? [snap] : [];
 }
 
-/** One shop's snapshot line. */
+/** Preserve the canonical evidence words while giving each shop and its saved price a clear hierarchy. */
+function shopSnapshotSummary(snap, words) {
+  const prefix = `${snap.shop || "MTGMate"}: `;
+  if (!words.startsWith(prefix)) return el("span", {class: "shop-snapshot-words", text: words});
+  const value = words.slice(prefix.length);
+  const price = snap.price_aud != null && Number.isFinite(Number(snap.price_aud)) ? listedAud(Number(snap.price_aud)) : null;
+  const at = price ? value.indexOf(price) : -1;
+  return el("span", {class: "shop-snapshot-words"},
+    el("span", {class: "shop-snapshot-shop", text: prefix}),
+    el("span", {class: "shop-snapshot-value"}, at < 0 ? value : [value.slice(0, at),
+      el("strong", {class: "shop-snapshot-price", text: price}), value.slice(at + price.length)]));
+}
+
+/** One shop's snapshot line. Original nodes travel together through the dense-table projection. */
 function shopSnapshotOne(snap, card = null, view = null) {
   const [words, printing] = shopSnapshotWords(snap);
   const chip = snap.back_in_stock ? status("good", "Back in stock")
     : snap.newly_in_stock ? status("info", "Newly in stock") : null;
   return el("span", {class: `shop-snapshot shop-snapshot-${snap.status}`, "data-shop-snapshot": snap.status,
     "data-shop-snapshot-shop": snap.shop || "MTGMate", title: snap.status === "unknown" && snap.error ? snap.error : null},
-    chip, el("span", {text: words}),
+    chip, shopSnapshotSummary(snap, words),
     snap.lowest_kept ? status("good", "Lowest in kept 90 days") : null,
     snap.target_comparison?.at_or_below === true ? status("good", `At or below ${listedAud(Number(snap.target_comparison.amount_aud))} target`) : null,
-    printing ? el("small", {}, shopSnapshotLink(snap, printing)) : null,
+    printing ? el("small", {class: "shop-snapshot-printing"}, shopSnapshotLink(snap, printing)) : null,
     ["in_stock", "out_of_stock"].includes(snap.status) ? el("small", {class: "shop-snapshot-quality", text: shopSnapshotQuality(snap)}) : null,
     snap.skipped_cheaper ? el("small", {class: "shop-snapshot-skipped", text: "Cheaper copy skipped by household preference"}) : null,
     snap.status === "not_eligible" && shopSnapshotPreference(snap) ? el("small", {text: shopSnapshotPreference(snap)}) : null,

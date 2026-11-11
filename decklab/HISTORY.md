@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Give purchase-queue cards a reading hierarchy (2026-11-11; E11-S30)
+
+Below 1000px, each purchase-queue entry has one neutral card surface: the original artwork, quantity and printing header; an inset recorded-reference block; separate dated shop checks with emphasized prices and contained printing links; and aligned action controls. The saved reference remains distinct from each shop's snapshot. Price history stays attached to its original snapshot so it remains reachable in the lab's extra row. Canonical words, zero prices, unknown/mismatch/partial caveats and dates remain unchanged.
+
+The existing viewer, deck, snapshot, history, reprint and write-control nodes still move through the table projection and By state/By shop grouping, preserving identity, focus and guards. The dense table layout stays unchanged. Focused fixture groups pass (219 checks and 107 device/harness checks, each with one platform skip). All 20 shopping-queue-cards browser cases pass across both themes and enlarged text, including native menus/sheets/history/viewer actions and grouping/density roundtrips with the original nodes. There is no document/control overflow, write or page error; source stays stable and owned processes clean up. Reference tracks and long status badges shrink/wrap rather than widening the page; casual action sizes use the shared tap token. Checks use synthetic data. No live records, price refreshes or deployment are used; physical Safari/touch acceptance remains separate.
+
 ## Group missing-card deck and source links (2026-11-11; E11-S30)
 
 Missing cards and Build together replace comma-separated deck links with one bordered list of full-width navigation rows. Each wrapping title and copy count shares one anchor and tap target, with a decorative chevron. The ordinary shortfall count and combined per-deck demand keep their existing meanings and destination filters. Missing-card shop evidence and upcoming printings also group their existing facts, source links and dates into compact blocks. Styling is scoped to missing-card articles; other queue and deck-price source views retain their presentation.
