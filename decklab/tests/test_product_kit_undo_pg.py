@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
+from decklab.db import migrate
 from decklab.lib import access, config, inventory
 from decklab.lib.api import product_kit_undo as api
 from decklab.lib.inventory import Op, Summary, kit, pg, product_kit_undo as undo
@@ -58,6 +59,7 @@ class ProductKitUndoPgTests(db_support.DbTestCase):
         return self.assign(False)
 
     def test_pre_0014_audit_rows_restore_with_the_known_blank_token_default(self):
+        self.addCleanup(migrate.apply, dbname=self.dbname)
         with self.connect("owner") as connection:
             db_support.roll_back_schema(connection, 13)
         source = self.source()
