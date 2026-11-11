@@ -61,6 +61,23 @@ class ShoppingBasketsTests(unittest.TestCase):
           assert(main.querySelector('.shop-jumps').querySelectorAll('a').some(link => link.getAttribute('href') === '#shop-baskets'));
         """)
 
+    def test_optional_art_requires_one_matching_current_queue_row_and_never_adds_a_viewer(self):
+        self.run_baskets_js(r"""
+          const item=line('Elves',1,{line_aud:'0.00'}),queued=row('Elves',{queue_row:1,card:{name:'Elves',img_small:'/img/fixture/small'}});
+          const view={data:answer({shops:[]},{to_buy:[queued]})},before=JSON.stringify(view.data);
+          const head=shopBasketItemHead(item,view);
+          assert.equal(head.querySelector('img').getAttribute('alt'),'');
+          assert.equal(head.querySelector('img').getAttribute('src'),'/img/fixture/small');
+          assert.equal(head.querySelector('button'),null);assert.equal(head.querySelector('a'),null);
+          assert.equal(head.querySelector('.shop-basket-line-total').textContent,'Row totalA$0.00');
+          assert.equal(JSON.stringify(view.data),before);
+          for(const changed of [
+              {...view.data,queue_revision:'q2'}, {...view.data,to_buy:[queued,queued]},
+              {...view.data,to_buy:[{...queued,name:'Different'}]}, {...view.data,to_buy:[{...queued,is_token:true}]}])
+            assert.equal(shopBasketItemHead(item,{data:changed}).querySelector('img'),null);
+          assert.equal(shopBasketItemHead({...item,line_aud:null},view).querySelector('.shop-basket-line-total').textContent,'Row totalNot known');
+        """)
+
     def test_an_unread_shop_and_unchecked_rows_claim_no_stock(self):
         self.run_baskets_js(r"""
           drawShopping(answer({shops: [basket('mtgmate', 'MTGMate', {not_checked: [line('Late', 3, {status: 'not_checked'})],

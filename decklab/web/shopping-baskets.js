@@ -45,9 +45,33 @@ function shopBasketCopyList(view, key) {
   return shopCopyRows(basket.rows.map(row => ({...row, quantity: row.copies})));
 }
 
+/** Optional name-level art from this answer's current, unambiguous queue row, never a shop-printing claim. */
+function shopBasketArt(view, row) {
+  if (!view || !shopBasketsCurrent(view) || !view.data.queue_revision || row.is_token
+      || !Number.isSafeInteger(row.queue_row) || row.queue_row < 1) return null;
+  const matches = (view.data.to_buy || []).filter(item => item.queue_row === row.queue_row);
+  const queued = matches.length === 1 ? matches[0] : null;
+  const src = queued?.name === row.name && !queued.is_token ? queued.card?.img_small : null;
+  return typeof src === "string" && src ? el("img", {class: "shop-basket-art", src, alt: "", loading: "lazy", decoding: "async",
+    width: 40, height: 56, onerror: event => event.currentTarget.remove()}) : null;
+}
+
+/** Quantity/name and the already-computed line total; plans reuse only this header, not shop evidence. */
+function shopBasketItemHead(row, view = null, {copies = row.copies, showTotal = true} = {}) {
+  const total = shopBasketAud(row.line_aud);
+  return el("div", {class: "shop-basket-item-head"}, shopBasketArt(view, row),
+    el("span", {class: "shop-basket-name", text: `${copies} × ${row.name}`}),
+    showTotal ? el("span", {class: "shop-basket-line-total"},
+      el("small", {text: "Row total"}), el(total ? "strong" : "span", {text: total || "Not known"})) : null);
+}
+
+function shopBasketActions(...controls) {
+  return controls.some(Boolean) ? el("div", {class: "shop-basket-actions"}, controls) : null;
+}
+
 /** One row's listing words: "2 × Name", the printing, the price each and the stock, then any further
  * listings an any-printing row is filled from ("also 1 × M19 314 A$0.50 each") and the line's total. */
-function shopBasketLine(row, basket) {
+function shopBasketLine(row, basket, view = null) {
   const listing = row.listing || {};
   const price = shopBasketAud(listing.price_aud);
   const printing = listing.set ? `${String(listing.set).toUpperCase()} ${listing.collector_number || ""}`.trim()
@@ -58,26 +82,26 @@ function shopBasketLine(row, basket) {
   const stock = basket.counts_stock ? (row.short ? `only ${counted} of ${row.quantity} in stock`
     : more.length ? `${counted} in stock across ${more.length + 1} listings` : `${listing.stock} in stock`)
     : "in stock (count not shown)";
-  const total = shopBasketAud(row.line_aud);
   const also = more.map(item => {
     const name = `${String(item.set).toUpperCase()} ${item.collector_number || ""}`.trim()
       + (item.finish && item.finish !== "nonfoil" ? ` ${item.finish}` : "");
     const itemPrice = shopBasketAud(item.price_aud);
-    return el("span", {class: "shop-basket-more", "data-basket-more": name},
-      ` · also ${item.copies} × `, shopSnapshotLink({shop: basket.shop, url: item.url}, name),
-      ` ${itemPrice ? `${itemPrice} each` : "price not shown"} · ${shopSnapshotQuality(item)}`);
+    return el("span", {class: "shop-basket-more shop-basket-listing", "data-basket-more": name},
+      el("span", {class: "shop-basket-printing"}, `also ${item.copies} × `, shopSnapshotLink({shop: basket.shop, url: item.url}, name)),
+      " ", el("span", {class: "shop-basket-unit-price", text: itemPrice ? `${itemPrice} each` : "price not shown"}),
+      el("small", {class: "shop-snapshot-quality", text: shopSnapshotQuality(item)}));
   });
   return el("li", {class: "shop-basket-row", "data-basket-row": row.name, "data-basket-status": row.status},
-    row.add_on ? status("outline", "Add-on") : null,
+    shopBasketItemHead(row, view), row.add_on ? status("outline", "Add-on") : null,
     row.lifts ? status("good", "Reaches free postage") : null,
-    el("span", {class: "shop-basket-name", text: `${row.copies} × ${row.name}`}),
     el("span", {class: "shop-basket-facts"},
-      more.length && Number.isInteger(listing.copies) ? `${listing.copies} × ` : null,
-      printing ? shopSnapshotLink({shop: basket.shop, url: listing.url}, printing) : null,
-      el("span", {text: ` ${each} · ${stock}`}), ...also,
-      el("small", {class: "shop-snapshot-quality", text: ` · ${shopSnapshotQuality(listing)}`}),
+      el("span", {class: "shop-basket-listing"},
+        el("span", {class: "shop-basket-printing"}, more.length && Number.isInteger(listing.copies) ? `${listing.copies} × ` : null,
+          printing ? shopSnapshotLink({shop: basket.shop, url: listing.url}, printing) : null),
+        " ", el("span", {class: "shop-basket-unit-price", text: each}),
+        el("small", {class: "shop-snapshot-quality", text: shopSnapshotQuality(listing)})),
+      el("span", {class: `shop-basket-stock${row.short ? " status status-warn" : ""}`, text: stock}), ...also,
       row.skipped_cheaper ? el("small", {text: " · Cheaper copy skipped by household preference"}) : null,
-      total && row.copies > 1 ? el("span", {text: ` · ${total}`}) : null,
       row.printing === "exact" ? el("small", {text: " exact printing"}) : null,
       row.carried ? el("small", {text: " from an earlier run"}) : null,
       row.partial === true ? el("small", {class: "shop-snapshot-partial", "data-basket-partial": "",
@@ -88,9 +112,12 @@ function shopBasketLine(row, basket) {
 /** "A$12.50 for 5 cards; 1 without a price", or the words for none priced. */
 function shopBasketTotal(totals, what) {
   const total = shopBasketAud(totals.total_aud);
-  const parts = [total ? `${what} ${total} for ${plural(totals.priced, "priced row")}` : `${what} not known: no row has a price`];
-  if (total && totals.unpriced) parts.push(`${plural(totals.unpriced, "row")} without a price`);
-  return el("p", {class: "shop-basket-total", "data-basket-total": totals.total_aud || "", text: parts.join("; ")});
+  return el("p", {class: "shop-basket-total", "data-basket-total": totals.total_aud || ""},
+    el("span", {class: "shop-basket-total-label", text: `${what} `}),
+    total ? [el("strong", {class: "shop-basket-amount", text: total}),
+      el("span", {class: "shop-basket-total-note", text: ` for ${plural(totals.priced, "priced row")}`
+        + (totals.unpriced ? `; ${plural(totals.unpriced, "row")} without a price` : "")})]
+      : el("span", {class: "shop-basket-total-note", text: "not known: no row has a price"}));
 }
 
 /** The rows a shop couldn't speak for, named so nothing is claimed. */
@@ -98,8 +125,8 @@ function shopBasketGaps(basket) {
   const gaps = [["unconfirmed", "Printing not confirmed here, so no stock is claimed"],
     ["unknown", "Couldn't be read here"], ["not_checked", "Not in this shop's last check"]];
   const lines = gaps.filter(([key]) => (basket[key] || []).length).map(([key, words]) =>
-    el("li", {"data-basket-gap": key, text: `${words}: ${basket[key].map(row =>
-      row.partial === true ? `${row.name} (${SHOP_SNAPSHOT_PARTIAL})` : row.name).join(", ")}`}));
+    el("li", {"data-basket-gap": key}, el("strong", {text: `${words}: `}),
+      el("span", {text: basket[key].map(row => row.partial === true ? `${row.name} (${SHOP_SNAPSHOT_PARTIAL})` : row.name).join(", ")})));
   return lines.length ? el("ul", {class: "shop-basket-gaps"}, lines) : null;
 }
 
@@ -146,21 +173,21 @@ function shopBasket(view, basket) {
   if (copy && !shopBasketsCurrent(view)) copy.disabled = true;
   return el("article", {class: "shop-basket", "data-basket": basket.key, "data-basket-read": "true"}, head,
     rows.length ? shopBasketPostage(basket.postage) : null,
-    rows.length ? [shopBasketTotal(basket, "Total"), el("ul", {class: "shop-basket-rows"}, rows.map(row => shopBasketLine(row, basket)))]
+    rows.length ? [shopBasketTotal(basket, "Total"), el("ul", {class: "shop-basket-rows"}, rows.map(row => shopBasketLine(row, basket, view)))]
       : el("p", {class: "sub", text: "No ready rows in stock here."}),
-    shopBasketGaps(basket), copy, shopReferenceBulkButton(view, basket), shopBasketOrderButton(view, basket),
+    shopBasketGaps(basket), shopBasketActions(copy, shopReferenceBulkButton(view, basket), shopBasketOrderButton(view, basket)),
     addOns.length ? el("div", {class: "shop-basket-addons"}, el("h4", {text: "Add-ons in stock here"}),
       el("p", {class: "sub", text: "Long-term and waiting rows this shop has, to add to the same order if you choose."}),
       shopBasketTotal(basket.add_ons_totals || {}, "Add-ons"), rows.length ? shopBasketReach(basket) : null,
-      el("ul", {class: "shop-basket-rows"}, addOns.map(row => shopBasketLine(row, basket)))) : null);
+      el("ul", {class: "shop-basket-rows"}, addOns.map(row => shopBasketLine(row, basket, view)))) : null);
 }
 
 /** The ready rows no checked shop has in stock, with each shop's reason. */
-function shopBasketsUnavailable(list) {
+function shopBasketsUnavailable(list, view = null) {
   if (!list.length) return null;
   return el("div", {class: "shop-basket-unavailable"}, el("h3", {text: "Ready, not in stock at a checked shop"}),
     el("ul", {class: "shop-basket-rows"}, list.map(row => el("li", {class: "shop-basket-row", "data-basket-unavailable": row.name},
-      el("span", {class: "shop-basket-name", text: `${row.quantity} × ${row.name}`}),
+      shopBasketItemHead(row, view, {copies: row.quantity, showTotal: false}),
       el("span", {class: "shop-basket-facts", text: (row.shops || []).map(shopBasketReason).join(" · ")})))));
 }
 
@@ -173,5 +200,5 @@ function shopBaskets(view) {
   return shopSection("shop-baskets", "Baskets", 0,
     "Proposed from each shop's saved daily check: the ready cards in stock there, and each shop's postage as set in Settings. Check the shop before ordering.",
     stale, typeof shopBasketPlan === "function" ? shopBasketPlan(view) : null, el("div", {class: "shop-baskets"}, baskets.shops.filter(Boolean).map(basket => shopBasket(view, basket))),
-    shopBasketsUnavailable(baskets.unavailable || []));
+    shopBasketsUnavailable(baskets.unavailable || [], view));
 }

@@ -419,8 +419,20 @@ known, linking an admin to Settings) and marks add-ons that reach free postage w
 shops' cards + postage = total, buying each card where it's cheapest beside it, a note when postage
 wasn't weighed, each plan shop's rows with its own Copy this shop's list (`.shop-plan-copy`), and the
 other combinations folded under Other ways. `settings-postage.js` is Settings' Shops' postage panel
-(a home admin's; blank is not known; a 409 keeps the entries and offers Load the saved postage). No writes
-from Shopping.
+(a home admin's; blank is not known; a 409 keeps the entries and offers Load the saved postage).
+
+Baskets use grouped item headers with quantity/name and the saved row total, distinct from the
+per-listing unit prices, stock, condition/language and fetch time below. Further printings remain
+separate listing rows; shortages retain a warning, and add-ons keep their own group and totals.
+Optional decorative art comes only from one matching name/queue-row in the same current answer;
+stale, duplicate, token or mismatched metadata draws none. This is name-level art, not evidence of
+the retailer's printing, and it adds no viewer or detail request. Plan rows reuse only the header
+and their own allocated-prefix total: they do not borrow a basket's stock, date or full-line price.
+Fewest shops and its comparison show cards, counted postage and total as figures. Unknown postage
+and unpriced rows stay adjacent and label the amount Known total. Uncovered names use a native
+disclosure with a visible row count; Other ways remains native. Copy, reference review and Record
+this order share an action group while retaining original objects, permissions and reviewed flows.
+The presentation performs no automatic write, price fetch or calculation change.
 
 `shopping-reprints.js` follows `shopping-buying.js`. Its shared `reprintInfo` draws
 known upcoming paper-printing set/date evidence as a sibling of the card viewer
