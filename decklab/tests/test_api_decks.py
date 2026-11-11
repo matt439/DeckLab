@@ -189,6 +189,8 @@ class DeckViewTests(ApiTestCase):
                      "type_line": "Creature — Elf Druid", "colors": ["G"], "color_identity": ["G"],
                      "roles": ["ramp"], "img": "/img/fdn/227/normal", "img_small": "/img/fdn/227/small",
                      "oracle_text": "{T}: Add {G}.", "game_changer": False,
+                     "scryfall_url": "https://scryfall.com/card/fdn/227",
+                     "edhrec_url": "https://edhrec.com/cards/llanowar-elves", "category_suggestion": "Ramp",
                  "power": "1", "toughness": "1", "loyalty": None, "defense": None}})
         self.assertEqual(self.lines(view, "Sideboard")[0]["card"]["name"], "Pick Your Poison")
         json.dumps(view, allow_nan=False)

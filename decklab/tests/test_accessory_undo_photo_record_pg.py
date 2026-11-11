@@ -10,7 +10,7 @@ from unittest import mock
 from decklab.lib import access, config, inventory
 from decklab.lib.api import accessory_undo as api
 from decklab.lib.inventory import Op, accessory_undo as undo
-from decklab.tests import db_support, household_config
+from decklab.tests import db_support, household_config, accessory_undo_photo_record_support as combined
 from decklab.tests import test_accessory_undo_crop_pg as crop_pg
 from decklab.tests.test_accessory_fetch import jpeg
 
@@ -41,7 +41,13 @@ class AccessoryPhotoRecordPgTests(db_support.DbTestCase):
         return api.apply_accessory_undo(json.dumps({"profile": "matt", "id": cid, "expect": preview["expect"], **options}))
 
     def source(self):
-        return self.edit({"crop": "0.1,0.1,0.8,0.8", "notes": "Current <img> literal note", "quantity": "80"})
+        cid = self.edit(combined.source_changes())
+        source = self.backend.undo_audit(cid)
+        self.assertEqual(len(source), 1)
+        self.assertEqual({field for field in source[0]["before"] if source[0]["before"][field] != source[0]["after"][field]},
+                         {"crop", "notes", "quantity"})
+        self.assertEqual(undo.update_action(source[0]["before"], source[0]["after"]), "accessory_photo_record_update")
+        return cid
 
     def test_held_crop_notes_and_count_save_one_actual_opposite_row_with_photo_pinned_on_same_connection(self):
         cid = self.source()

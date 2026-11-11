@@ -290,7 +290,9 @@ class MatchupSelectedSummaryUiTests(unittest.TestCase):
               return fail?field('casual/a','target',{opponents}):field();};
             const host=mount();await muRefreshSelectedSummary(view);await settle();
             const panel=view.selectedCache.get(view.selectedSummary.key).panels.field;
-            assert.equal(panel.answer,null);assert(panel.error);assert(host.textContent.includes('field opponents'));
+            assert.equal(panel.answer,null);assert(panel.error.includes('field opponents'));
+            assert(host.textContent.includes("The Forge field couldn't be loaded"));assert(/Reference [a-f0-9]{32}/.test(host.textContent));
+            assert(!host.textContent.includes('field opponents'));
             fail=false;button(host).click();await settle();
             assert.equal(fieldReads,2);assert(panel.answer);assert.equal(panel.error,null);
             assert(host.textContent.includes('64'));assert.equal(writes,0);

@@ -125,7 +125,7 @@ class AccessoryUndoPgTests(db_support.DbTestCase):
             api.accessory_undo_view(cid)
         self.assertEqual(aba.exception.status, 409)
 
-    def test_global_mixed_source_and_immutable_photo_change_refuse_without_partial_save(self):
+    def test_global_mixed_source_and_invalid_current_photo_refuse_without_partial_save(self):
         current = accessories.from_sheet(self.fresh().accessories, strict=True)
         class Mixed:
             kind = "fixture.mixed"
@@ -143,7 +143,16 @@ class AccessoryUndoPgTests(db_support.DbTestCase):
         self.assertEqual(self.persisted(), before)
         self.edit({"crop": "0,0,1,1", "notes": "Photo crop and text"})
         cid = self.sql("select max(id) from audit.change_set")[0][0]
-        self.assertEqual(api.accessory_undo_view(cid)["action"], "accessory_photo_record_update")
+        source = self.backend.undo_audit(cid)
+        self.assertEqual(undo.update_action(source[0]["before"], source[0]["after"]), "accessory_photo_record_update")
+        # This fixture deliberately contains arbitrary bytes, not a verified photo.
+        # A supported row shape must still refuse when its actual current bytes are invalid.
+        before = self.persisted()
+        with mock.patch.object(self.backend, "accessory_undo_photo", wraps=self.backend.accessory_undo_photo) as reader:
+            preview = api.accessory_undo_view(cid)
+        self.assertIs(preview["available"], False)
+        self.assertEqual([call.args[0] for call in reader.call_args_list], ["a-sleeves.jpg"])
+        self.assertEqual(self.persisted(), before)
 
     def test_same_file_unaudited_image_replacement_is_preserved_by_text_only_inverse(self):
         from decklab.tests.test_accessory_fetch import jpeg

@@ -289,7 +289,11 @@ class MatchupRankingsUiTests(unittest.TestCase):
         self.run_js("""
           clear(main);local.set(HOME_VIEW_KEY,'rankings');document.visibilityState='visible';
           runGate=()=>({may:false,why:'Simulations are paused.'});const pending=[];
-          api=(url,opts)=>new Promise(resolve=>pending.push({url,resolve,signal:opts.signal}));
+          const background=[];
+          api=(url,opts)=>{
+            if(url==='/api/changes'){background.push(url);return Promise.resolve({ready:true,inventory:'a'.repeat(64),decks:'b'.repeat(64),library:'c'.repeat(64)});}
+            if(url==='/api/forge/unfinished'){background.push(url);return Promise.resolve({available:true,unfinished:[]});}
+            return new Promise(resolve=>pending.push({url,resolve,signal:opts.signal}));};
           drawMatchups(library,data,new URLSearchParams(),routeToken);
           assert.equal(pending.length,1);assert(pending[0].url.includes('/api/rankings'));
           document.visibilityState='hidden';document.fire('visibilitychange');await settle();
@@ -307,6 +311,7 @@ class MatchupRankingsUiTests(unittest.TestCase):
           const before=main.textContent;pending[4].resolve(answer('Constructed',{rows:[row('casual/a','Stopped answer')]}));await settle();
           assert.equal(main.textContent,before);assert(!main.textContent.includes('Stopped answer'));
           assert(!main.textContent.includes('Rankings read cancelled'));assert.equal(writes,0);
+          same(background,['/api/changes','/api/forge/unfinished']);
         """)
 
 

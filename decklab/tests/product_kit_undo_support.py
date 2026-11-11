@@ -2,7 +2,7 @@
 import copy
 
 from decklab.lib import accessories
-from decklab.lib.inventory import files, paths, rules, product_kit_undo as undo, changes
+from decklab.lib.inventory import files, model, paths, rules, product_kit_undo as undo, changes
 from decklab.tests import accessory_undo_support as accessory
 
 CID = 42
@@ -15,7 +15,8 @@ def snapshot():
                accessory.row(id="shared-box-a", owner="shared", kind="deck_box", quantity="1", capacity="100", image="", crop=""),
                accessory.row(id="shared-box-b", owner="shared", kind="deck_box", quantity="1", capacity="100", image="", crop=""),
                accessory.row(id="private-sleeves", owner="user1", image="", crop="")]
-    tree = {paths.ACCESSORIES: accessories.csv_bytes(listing), paths.STATUS: (",".join(rules.STATUS_FIELDS) + "\n" +
+    tree = {paths.ACCESSORIES: accessories.csv_bytes(listing), paths.WATCHLIST: (",".join(model.QUEUE_FIELDS) + "\n").encode(),
+        paths.STATUS: (",".join(rules.STATUS_FIELDS) + "\n" +
         "alpha.csv,owned,yes,shared-sleeves-b,shared-box-b,Keep alpha,\n" +
         "beta.csv,owned,yes,shared-sleeves-a,shared-box-a,Keep beta,\n").encode()}
     for stem in ("alpha", "beta"):

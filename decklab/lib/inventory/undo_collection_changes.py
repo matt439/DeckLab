@@ -37,6 +37,11 @@ class Refused(UndoUnsupported):
     """Fixed explanatory wording, raised only after complete-source ownership is proved."""
 
 
+def row_label(row):
+    """The ordinary collection label; callers need no inventory-path constants."""
+    return _label(COLLECTION, row)
+
+
 def handles(raw):
     if not isinstance(raw, list) or not raw or any(not isinstance(row, dict) or row.get("table") != COLLECTION
                                                  or not isinstance(row.get("op"), str) for row in raw):

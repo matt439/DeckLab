@@ -120,6 +120,9 @@ class RouteAccessTests(PermissionTestCase):
             view=mock.Mock(side_effect=AssertionError("Hidden field reached its backend")))
         self.box.forge.lists = SimpleNamespace(one_snapshot=inventory.pinned)
         self.box.forge.group = SimpleNamespace(MAX_OPPONENTS=12)
+        from decklab.tests.test_gauntlet_api import FakeGauntlet
+        self.box.forge.gauntlet = FakeGauntlet(self.box.forge, self.box.data / "no-gauntlet-results")
+        self.box.forge.gauntlet.built = False
         self.box.forge.variants = SimpleNamespace(run_test=mock.Mock(side_effect=AssertionError("A run started")),
             load_summary=lambda *args: None, view=lambda *args, **kwargs: None,
             gauntlet_tests=SimpleNamespace(results_dir=lambda: self.box.data / "no-results"))

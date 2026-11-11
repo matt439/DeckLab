@@ -119,7 +119,7 @@ class OrderQueueUndoPgTests(db_support.DbTestCase):
         self.assertNotEqual(after.watchlist.rows[0].id, old_id)
         for text in ("Later authored game plan.", "#Ramp", "private-legacy-sleeves", "private-legacy-box", "Keep this handwritten note", "Keep the total note"):
             self.assertIn(text, after.deck(DECK_ID).text)
-        self.assertIn("| Llanowar Elves | 4 | 1 | 3 |", after.deck(DECK_ID).text)
+        self.assertIn("| Llanowar Elves | 4 | 1 | **3** |", after.deck(DECK_ID).text)
         self.assertEqual(self.sql("select row_to_json(t)::text from audit.row_change t where change_set_id=%s order by id", (source,)), original_audit)
         saved = self.persisted()
         self.assertEqual(saved["collection_card"], before["collection_card"])

@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
-from decklab import db
+from decklab.db import conn as db
 from decklab.lib import config, inventory, tokens
 from decklab.lib.inventory import Op, Summary, files, undo, undo_token_batch_remove as batch
 from decklab.tests import db_support, test_inventory_undo_pg as existing

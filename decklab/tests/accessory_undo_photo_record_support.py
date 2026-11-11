@@ -15,6 +15,11 @@ def options():
     return {"confirm_record": True, "confirm_photo": True}
 
 
+def source_changes():
+    """Ordinary-writer recipe that changes the base fixture's crop, notes and quantity."""
+    return {"crop": "0.2,0,0.8,1", "notes": "Current <img> literal note", "quantity": "80"}
+
+
 def actual(plan):
     return support.actual_source(plan)
 

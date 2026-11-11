@@ -91,6 +91,30 @@ class StartTests(SideboardTestCase):
                                                                        "rate (+0.6 to +4.2)"))
         self.assertEqual(self.store.play_get("sideboards", self.saved["record"]["id"]), self.saved["record"])
 
+    def test_post_board_run_journals_the_starter_and_replays_the_same_verified_variant_without_queuing(self):
+        from decklab.lib.api import run_recovery
+        from decklab.lib.forge import engine, run_journal
+        self.gate.clear()
+        answer = self.begin(mode="quick")
+        self.assertTrue(self.started.wait(5))
+        record, = run_journal.store().records("matt")
+        self.assertEqual(record["kind"], "variant")
+        self.assertEqual({key: record["request"][key] for key in ("profile", "id", "version", "mode", "against")},
+                         {"profile": "matt", "id": GREEN_ID, "version": "target", "mode": "quick",
+                          "against": {"id": RED_ID, "version": "target"}})
+        with _as("matt"):
+            checked = preview.preview_sideboard(self.saved["record"]["id"], self.saved["sha256"])
+            self.assertEqual(record["request"]["list"], checked["post_board"]["sections"])
+            with mock.patch.object(engine, "read_only_today", side_effect=self.today), \
+                    mock.patch.object(api.forge_runs.COORD_JOBS, "submit", side_effect=AssertionError("Read-only replay queued work")):
+                replay = run_recovery._preview(record)
+        self.assertEqual(replay["manifest"]["signature"], record["manifest"]["signature"])
+        self.assertEqual(replay["manifest"]["test"], answer["test"])
+        self.assertEqual(replay["request"], record["request"])
+        self.assertEqual(run_journal.store().records("user2"), [])
+        self.gate.set()
+        self.finish(answer["test"])
+
     def test_the_default_mode_is_ahead_and_an_unknown_mode_is_refused_before_any_read(self):
         with mock.patch.object(preview, "preview_sideboard") as read:
             self.assertApiError(400, self.begin, "matt", "forever")

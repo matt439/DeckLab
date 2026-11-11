@@ -746,7 +746,8 @@ class DatabaseCheckTests(unittest.TestCase):
     def test_an_unreachable_database_is_one_line_and_no_sync(self):
         server_run._database_check(True)
         self.first(self.snapshot(server_run.dbstatus.NOT_REACHABLE))
-        self.assertEqual(self.lines(), ["Database: not reachable."])
+        self.assertEqual(self.lines(), ["Database: the PostgreSQL connection could not be verified "
+                                       "(decklab/data/logs/db.log says why)."])
         self.sync.assert_not_called()
 
     def test_a_failed_sync_is_one_line(self):

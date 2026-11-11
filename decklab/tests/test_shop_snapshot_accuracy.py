@@ -238,7 +238,7 @@ class RowHistoryTests(unittest.TestCase):
         self.assertEqual([day["partial"] for day in self.days()], [False, False, True])
         said = history.lines(self.report({"name": "Sol Ring", **EXACT}))
         self.assertEqual(said[0], "Read for LTC 12 foil.")
-        self.assertEqual(said[2], "  2026-11-01  A$9.00, 1 in stock (LTC 12 foil)  lowest in stock")
+        self.assertEqual(said[2], "  2026-11-01  A$9.00, 1 in stock (LTC 12 foil; Near Mint, language unknown)  lowest in stock")
         self.assertEqual(said[4], "  2026-11-03  listed, but not in this printing; first page only, more results not read")
         self.assertNotIn("Read for", history.lines(self.report())[0])
 
@@ -302,13 +302,13 @@ class HistoryCommandRowTests(TwoShopTestCase):
         with mock.patch.object(shops, "_queue", return_value=[{"name": "Opt"}, {"name": "Sol Ring", **EXACT}]):
             out, _ = self.run_history("Sol Ring", "--row", "2", "--shop", "mtgmate")
             self.assertEqual(out.splitlines()[:3], ["Read for LTC 12 foil.", "MTGMate: 3 days",
-                                                    "  2026-11-01  A$9.00, 1 in stock (LTC 12 foil)  lowest in stock"])
+                                                    "  2026-11-01  A$9.00, 1 in stock (LTC 12 foil; Near Mint, language unknown)  lowest in stock"])
             out, err = self.run_history("Sol Ring", "--row", "1", "--shop", "mtgmate", code=1)
             self.assertEqual(out, "")
             self.assertIn("Row #1 of the purchase queue isn't Sol Ring", err)
         with mock.patch.object(shops, "_queue", side_effect=AssertionError("the queue isn't read without --row")):
             out, _ = self.run_history("Sol Ring", "--shop", "mtgmate")
-        self.assertEqual(out.splitlines()[1], "  2026-11-01  A$1.00, 5 in stock (C16 272 nonfoil)")
+        self.assertEqual(out.splitlines()[1], "  2026-11-01  A$1.00, 5 in stock (C16 272 nonfoil; Near Mint, language unknown)")
 
 
 class BasketAccuracyTests(unittest.TestCase):

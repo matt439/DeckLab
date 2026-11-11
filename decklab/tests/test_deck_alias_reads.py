@@ -506,7 +506,7 @@ class DeckAliasPlayTests(PlayFixture, ApiTestCase):
                 with self.subTest(requested=requested):
                     value = play.play_overview(requested)
                     self.assertEqual(value["games"], [{"record": game["record"], "sha256": game["sha256"],
-                                                       "can": {"sides": [True, True], "result": True}}])
+                                                       "can": {"sides": [True, True], "result": True, "delete": False}}])
                     self.assertEqual(value["sideboards"][0]["record"], plan["record"])
                     self.assertEqual(value["sideboards"][0]["sha256"], plan["sha256"])
                     self.assertEqual(value["games"][0]["record"]["sides"][0]["id"], OLD)

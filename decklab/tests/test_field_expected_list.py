@@ -51,7 +51,13 @@ class ExpectedFieldListTests(ApiTestCase):
         self.assertEqual(job.budget, "standard")
         self.assertEqual(self.runner.submit.call_args.kwargs, {"rerun": True})
         self.status.assert_called_once()
-        self.opponents.assert_called_once()
+        # Start validates the participants, then recovery plans the same captured list.
+        self.assertEqual(self.opponents.call_count, 2)
+        validation, planning = self.opponents.call_args_list
+        self.assertIs(validation.args[0], entry)
+        self.assertIs(planning.args[0], entry)
+        self.assertIs(validation.kwargs["fail_closed"], True)
+        self.assertEqual(planning.kwargs, job.options)
         self.assertEqual(self.forge.field.runs, [])
 
     def test_omitting_identity_preserves_existing_submission(self):

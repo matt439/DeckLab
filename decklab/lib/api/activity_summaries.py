@@ -163,8 +163,6 @@ def _hidden_title(deck_id, space_of, profiles):
 def _play_summary(op, record, seen=None, profiles=None, space_of=None):
     """A play summary: hidden decks by space only, removed decks without their old identity."""
     content = _dict(record.get("content"))
-    if op == "DELETE" and record.get("kind") == "games":
-        return "Deleted a played game"  # no private game notes, opponent labels or removal reason
     verb = {"INSERT": "Saved", "UPDATE": "Changed", "DELETE": "Removed"}.get(op, "Changed")
     space_of = space_of or _deck_space
 
@@ -183,6 +181,8 @@ def _play_summary(op, record, seen=None, profiles=None, space_of=None):
                 return f"{verb} a {len(content['seats'])}-player pod game"
         except Invalid:
             return f"{verb} a play record"
+    if op == "DELETE" and record.get("kind") == "games":
+        return "Deleted a played game"  # no private game notes, opponent labels or removal reason
     sides = content.get("sides") if isinstance(content.get("sides"), list) else []
     a, b = (title(sides[i]) if i < len(sides) else "a deck" for i in (0, 1))
     result = content.get("result")

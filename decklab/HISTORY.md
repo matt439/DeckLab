@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Full-CI integration repairs (2026-11-11)
+
+The first complete PR matrix exposed an integration regression: sideboard-plan tests still submitted the pre-recovery launch contract. They now provide the named starter and canonical verified post-board list/opponent request, and a regression replays that request through real recovery preview to prove identical manifest/signature without queuing or sharing another starter's journal. Deleted pod games also retain their existing anonymous three/four-player Activity summary; ordinary duel deletion still omits private identities and notes.
+
+The remaining failures were test-contract and fixture defects: outdated card/quality/count/category/menu/route expectations, fake transports that did not model ApiError or change/recovery polls, missing idle/planning adapters, incomplete product-kit snapshots, a crop recipe that did not actually change its crop, incorrect test transaction imports, and dice omitted from disposable-database reset. Strict photo/kit/packing/privacy guards remain intact. Route tests now inspect the actual route table and method/body limits. The source-path guard keeps exact export-member output exceptions and moves collection row labels behind the inventory boundary. New reset, plain-error privacy and real sideboard-replay regressions cover these integration seams.
+
+Focused groups pass: 104 simulation/API checks, 77 UI checks, 47 inventory/reset/guard checks, 32 accessory/kit checks and corrected platform/schema/shopping/route/Activity checks. Guarded PostgreSQL cases remain CI-only. The initial two PostgreSQL jobs nevertheless observed all 54 registered operation claims as successful changed writes in passing test methods, with zero coverage gaps; that coverage receipt does not substitute for a passing complete matrix. Fresh CI on the repaired head is required.
+
 ## Frozen OPEN queue: source completion and final rendered checks (2026-11-11)
 
 The 49 OPEN rows at `94f6b7c` now resolve to 45 built stories and four partial external acceptance gates: E2-S16 (actual household-device drafts), E7-S32 (real card/token photographs), E3-S23 (saved field policy in a real browser/run), and E11-S75 (NAS container and physical sleep/wake). TODO keeps those four gates explicit as DECISION; their stories remain partial. Pre-existing decision/deferred work stays outside the frozen queue. The continuing branch retains the earlier overnight work. No live migration, household/member record, visibility switch, deployment or operational setting was changed.

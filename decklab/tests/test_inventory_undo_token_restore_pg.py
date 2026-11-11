@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
-from decklab import db
+from decklab.db import conn as db
 from decklab.lib import cards, config, inventory
 from decklab.lib.inventory import Op, files, undo, undo_token_delete as deleted
 from decklab.lib.tokens import names

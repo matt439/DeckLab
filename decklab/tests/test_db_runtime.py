@@ -274,7 +274,7 @@ class CheckTests(db_support.DbTestCase):
         settings = dict(db.settings(), host="127.0.0.1", port=closed)
         with mock.patch.object(db, "settings", lambda: dict(settings)):
             result = dbstatus.check()
-        self.assertEqual((result["ok"], result["error"], result["backup_stale"]), (False, dbstatus.NOT_REACHABLE, None))
+        self.assertEqual((result["ok"], result["error"], result["backup_stale"]), (False, dbstatus.NO_ANSWER, None))
         self.assertIn(str(closed), result["detail"])
         with mock.patch.object(db, "_psycopg", side_effect=db.DbUnavailable("psycopg isn't installed")):
             result = dbstatus.check()
@@ -293,7 +293,8 @@ class CheckTests(db_support.DbTestCase):
         self.assertEqual(dbstatus.refresh()["ok"], True)       # the real check: the database answers
         self.assertFalse(self.breaker.is_open())
         text = self.log.read_text(encoding="utf-8")
-        self.assertEqual(text.count("dbstatus: not reachable (connection refused)"), 1, text)
+        self.assertEqual(text.count("dbstatus: the PostgreSQL connection could not be verified "
+                                    "(decklab/data/logs/db.log says why) (connection refused)"), 1, text)
         self.assertEqual(text.count("dbstatus: reachable"), 1, text)
         self.assertEqual(dbstatus.view(None, script=True)["ok"], True)
 

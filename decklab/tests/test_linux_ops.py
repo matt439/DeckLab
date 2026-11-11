@@ -433,7 +433,8 @@ class UpdatePsycopgTests(unittest.TestCase):
     def run_after_pull(self, needs_stop):
         steps = []
         args = types.SimpleNamespace(no_forge=True, no_restart=True, no_smoke=True)
-        with mock.patch.object(update, "PIP_NEEDS_STOP", needs_stop), \
+        with mock.patch.object(update, "busy_work", return_value=[]), \
+                mock.patch.object(update, "PIP_NEEDS_STOP", needs_stop), \
                 mock.patch.object(update, "changed_files", return_value=[update.REQUIREMENTS]), \
                 mock.patch.object(update, "git", return_value="abc"), \
                 mock.patch.object(update, "server_answers", return_value=True), \
@@ -456,7 +457,8 @@ class UpdateRestartTests(unittest.TestCase):
     def steps(self, done, required=False, pending=(), files=()):
         steps = []
         args = types.SimpleNamespace(no_forge=True, no_restart=False, no_smoke=True)
-        with mock.patch.object(update, "changed_files", return_value=list(files)), \
+        with mock.patch.object(update, "busy_work", return_value=[]), \
+                mock.patch.object(update, "changed_files", return_value=list(files)), \
                 mock.patch.object(update, "git", return_value="abc"), \
                 mock.patch.object(update, "server_answers", return_value=True), \
                 mock.patch.object(update, "psycopg_mismatch", return_value=False), \

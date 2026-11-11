@@ -37,7 +37,7 @@ STATE_TABLES = PHASE2_TABLES + ("packing_tick", "commander_night", "visibility",
 # then migration 0006's (the decks part: its history and derived rows before the decks, a text
 # with its deck; reset() empties decks_revision too), and migration 0010's rename aliases.
 DECK_TABLES = ("deck_alias", "deck_revision", "deck_line", "deck_text", "deck", "accessory", "accessory_image")
-INVENTORY_TABLES = ("card_loan", "order_card_item", "order_token_item", "order_component", "purchase_order",
+INVENTORY_TABLES = ("card_loan", "dice_counter", "order_card_item", "order_token_item", "order_component", "purchase_order",
                     "product_item", "product", "product_status", "collection_card", "collection_import",
                     "token_card", "watchlist_item") + DECK_TABLES
 _COMMENT = "Deck Lab test database, made at "
@@ -228,7 +228,7 @@ def reset(dbname, tables=STATE_TABLES):
             if cur.execute("select to_regclass('public.space_departure')").fetchone()[0]:
                 cur.execute("delete from space_departure")
             for table in tables:
-                if table == "card_loan" and not c.execute("select to_regclass('public.card_loan') is not null").fetchone()[0]:
+                if table in ("card_loan", "dice_counter") and not c.execute("select to_regclass(%s) is not null", ("public." + table,)).fetchone()[0]:
                     continue
                 cur.execute(sql.SQL("delete from {}").format(sql.Identifier(table)))
             if set(tables) & set(INVENTORY_TABLES) - set(DECK_TABLES):

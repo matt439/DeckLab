@@ -3,8 +3,8 @@ import copy
 import unittest
 from unittest import mock
 
-from decklab.lib import inventory, profiles
-from decklab.lib.inventory import accessory_undo as undo, changes
+from decklab.lib import accessories, inventory, profiles
+from decklab.lib.inventory import accessory_undo as undo, changes, ops_accessories
 from decklab.tests import accessory_undo_crop_support as crop
 from decklab.tests import accessory_undo_photo_record_support as combined
 from decklab.tests import accessory_undo_support as support, household_config
@@ -20,6 +20,16 @@ class AccessoryPhotoRecordTests(unittest.TestCase):
 
     def review(self, owners=support.OWNERS):
         return undo.review(support.CHANGE_ID, owners, self.store.snapshot, self.store)
+
+    def test_postgresql_fixture_recipe_makes_a_real_combined_crop_source_through_ordinary_edit(self):
+        before = self.store.snapshot
+        listing = accessories.from_sheet(before.accessories, strict=True)
+        after, _ = ops_accessories.edit_accessory(before, id="a-sleeves", row=combined.source_changes(), image="keep",
+            sha256=accessories.view_sha256(listing, support.OWNERS), owners=support.OWNERS)
+        old = next(row for row in undo.raw_rows(before) if row["id"] == "a-sleeves")
+        new = next(row for row in undo.raw_rows(after) if row["id"] == "a-sleeves")
+        self.assertEqual({field for field in old if old[field] != new[field]}, {"crop", "notes", "quantity"})
+        self.assertEqual(undo.update_action(old, new), "accessory_photo_record_update")
 
     def test_every_permitted_record_field_can_restore_with_crop_and_full_photo_receipt(self):
         variants = {"owner": "shared", "kind": "playmat", "quantity": "0", "brand": "Earlier brand", "name": "Earlier name",

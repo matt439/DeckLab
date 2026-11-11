@@ -78,8 +78,7 @@ def project(plan):
             raise ApiError(503, UNCONFIRMED)
         audit_ids.add(rid)
         keys.add(identity)
-        from decklab.lib.inventory.undo import COLLECTION, _label
-        label = _label(COLLECTION, current or restored)
+        label = recovery.row_label(current or restored)
         if item.get("label") != label:
             raise ApiError(503, UNCONFIRMED)
         renamed = current is not None and restored is not None and current["name"] != restored["name"]

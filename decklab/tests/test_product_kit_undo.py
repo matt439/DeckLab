@@ -5,7 +5,7 @@ import unittest
 from unittest import mock
 
 from decklab.lib import inventory, profiles
-from decklab.lib.inventory import product_kit_undo as undo
+from decklab.lib.inventory import product_kit_undo as undo, table_rows
 from decklab.tests import household_config, product_kit_undo_support as fixture
 from decklab.tests import accessory_undo_support as accessory_fixture
 from decklab.tests.test_goldfish import setUpModule, tearDownModule  # noqa: F401
@@ -19,6 +19,9 @@ class ProductKitTests(unittest.TestCase):
 
     def review(self):
         return undo.review(fixture.CID, fixture.OWNERS, self.store.snapshot, self.store)
+
+    def test_shared_fixture_is_exactly_representable_by_the_database_writer(self):
+        self.assertEqual(table_rows.representable(fixture.snapshot()), [])
 
     def test_complete_two_product_swap_reproduces_both_rows_without_partial_selection(self):
         before = self.store.snapshot
