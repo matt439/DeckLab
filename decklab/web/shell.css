@@ -341,9 +341,13 @@ svg.icon-more { stroke-width: 4; }
 
 .settings-parts { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); align-items: start; }
 .settings-part h2 { margin-top: 0; font-size: var(--fs-lg); }
-.settings-fields { display: grid; gap: var(--s-3); }
+/* Native fields and fieldsets must fit the panel, including Safari's intrinsic select widths. Both
+   grid levels need a shrinkable track: max-width alone can still size against an overflowing auto track. */
+.settings-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-3); }
 .settings-fields[hidden] { display: none; }
-.settings-fields .field { display: grid; gap: var(--s-1); justify-items: start; }
+.settings-fields fieldset { min-inline-size: 0; }
+.settings-fields .field { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--s-1); justify-items: start; }
+.settings-fields .field > :where(input, select, textarea) { min-width: 0; max-width: 100%; }
 .settings-fields .field > span:where(:not(.field-hint)) { font-weight: var(--fw-semibold); }
 .settings-members-form { min-width: 0; }
 .settings-members-form .field { min-width: 0; justify-items: stretch; }

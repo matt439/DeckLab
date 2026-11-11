@@ -166,8 +166,12 @@ the saved receipt response stays unchanged. No preview or arrival write is allow
 
 The opt-in `families` suite covers Collection Find/Card list, Shopping, Tokens,
 accessories, Game log, Activity, Settings and Wishlist in both themes at phone,
-tablet and desktop widths. Its 106 cases include empty primary lists, unavailable
-and pending GET responses; `--smoke` captures the 36 ordinary phone/desktop cases.
+tablet and desktop widths. Its 114 cases include empty primary lists, unavailable
+and pending GET responses; `--smoke` captures 40 cases. Settings additionally covers
+320/375/393/430/820/1440px (320/393/1440px in smoke), with explicit 200% CSS root-font
+stress at 393px in both themes. Its loaded forms include the condition/language
+preferences; assertions check document width, panel/control bounds and focus without
+horizontal scrolling. These are Chromium layout checks, not physical Safari acceptance.
 The Activity and database-only Settings panels use invented read adapters. Tokens,
 accessories, queued cards and larger parcels are seeded only in the owned temporary
 inventory. A token search preference is checked through browser reload.
