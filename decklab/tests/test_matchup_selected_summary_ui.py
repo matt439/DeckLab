@@ -132,12 +132,16 @@ class MatchupSelectedSummaryUiTests(unittest.TestCase):
 
     def test_failed_field_can_retry_without_refetching_a_successful_swap(self):
         self.run_js(r"""
+          // An error reference can contain the same digits as a field win rate.
+          pageErrorReference=()=> '64'.repeat(16);
           let failed=true;const calls=[];api=async url=>{calls.push(url);if(isSwap(url))return {tests:[swap()]};
             if(failed)throw new Error('offline');return field();};
           const host=mount();await muRefreshSelectedSummary(view);await settle();
-          assert(button(host));assert(host.textContent.includes('Bolt'));assert(!host.textContent.includes('64'));
+          assert(button(host));assert(host.textContent.includes('Bolt'));
+          assert(host.textContent.includes('Reference '+'64'.repeat(16)));
+          assert(!view.selectedSummary.fieldHost.querySelector('.fv-summary'));
           failed=false;button(host).click();await settle();
-          assert(host.textContent.includes('64'));assert(!button(host));
+          assert(view.selectedSummary.fieldHost.querySelector('.fv-summary').textContent.includes('64'));assert(!button(host));
           assert.equal(calls.filter(isField).length,2);assert.equal(calls.filter(isSwap).length,1);assert.equal(writes,0);
         """)
 
