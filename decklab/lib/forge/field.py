@@ -65,6 +65,7 @@ ENGINE_CHANGED = "The engine changed during this run: play it again."
 NO_OPPONENTS = "There's no other deck in the {fmt} field for it to play."
 BUSY_TWICE = "it was being played elsewhere twice, so the field run left it out"
 FAILED = "an error in Deck Lab ({name})"
+NO_GAMES_PLAYED = "No new games could be played. Every matchup that needed games failed; the server log says why."
 NOTES_DIR = "field"             # <card_sha>-<format>-<space>.json; legacy files belong to home
 NOTE_WAIT = 30                  # seconds a note waits for another process writing the same file
 LOOP_S = 0.2                    # how often the coordinator looks at its pair runs (and reports)
@@ -857,7 +858,9 @@ def run_field(entry, budget="standard", *, by, progress=None, results_dir=None, 
     ValueError for a budget or opponent names that don't suit, ForgeError when the field has no
     opponent for it or home's saved field choices can't be read (it fails closed, E3-S23).
     opponent_entries, when given, replace the field (the gauntlet's sample; no field policy applies);
-    note_extra, a dict, is added to the note (the gauntlet's sample id and catalogue sha)."""
+    note_extra, a dict, is added to the note (the gauntlet's sample id and catalogue sha). A run
+    that drops opponents without playing any new games saves its note, then raises ForgeError;
+    already-complete matchups and stopped runs are not failures."""
     from . import pool as pools         # pool.py comes after lists; field comes after both
     _budget(budget)
     fmt = lists.fmt_for(entry["kind"])
@@ -880,6 +883,16 @@ def run_field(entry, budget="standard", *, by, progress=None, results_dir=None, 
                 coordinator.report()        # the finished pairs, none playing
             except common.STOPS:
                 pass                        # Stop pressed as the last games ended: they're all saved
+    dropped = [p for p in coordinator.pairs if p["dropped"]]
+    if interrupt is None and not coordinator.error and not coordinator.played and dropped:
+        reasons = {p["dropped"].removeprefix("couldn't be played: ") for p in dropped}
+        # The same failure for every attempted pair commonly names an unsupported card in the
+        # tested list. Existing job visibility and API path scrubbing still apply to this error.
+        error = f"No new games could be played. {next(iter(reasons))}" if len(reasons) == 1 else NO_GAMES_PLAYED
+        coordinator.error = error if len(error) <= 1000 else error[:997] + "..."
+        # Failed pairs may have no saved result: keep every reason in the local log as well.
+        common._log(f"No new games could be played in the run of {entry['title']}:\n" + "\n".join(
+            f"{p['opponent']['title']}: {p['dropped']}" for p in dropped))
     note = {"when": when, "by": by, "budget": budget, "planned": coordinator.planned, "played": coordinator.played,
             "wall_s": round(time.monotonic() - began, 1), "stopped": interrupt is not None,
             "per_opponent": {p["key"]: p["done"] for p in coordinator.pairs}, "deck": _who(entry),
