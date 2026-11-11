@@ -211,6 +211,7 @@ function resultPart(data, page, ctx = {}) {
   const reading = el("div", { class: "mu-reading" });
   section.append(reading);
   add(reading, [matchupRealGames(data)]);
+  if (r.stalled?.words) reading.append(el("p", {class:"box box-warn",text:r.stalled.words}));
   reading.append(el("details", { class: "more mu-why" },
     el("summary", { text: "Why we're confident" }),
     el("p", {}, el("b", { text: `${ta} won ${rateWords(wr)} of ${gamesWords(r.games)}` }),

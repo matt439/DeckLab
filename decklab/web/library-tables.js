@@ -69,7 +69,7 @@ async function libReloadShelf(data, refresh) {
   try {
     const fresh = await api("/api/decks");
     Object.assign(data, fresh);
-    if (refresh()) state.library = data;
+    if (refresh()) cacheLibrary(data);
   } catch (e) {
     toast("Tables updated. Reload Decks to see the new counts.");
   }

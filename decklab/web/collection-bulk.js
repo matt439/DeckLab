@@ -4,8 +4,8 @@
  * after a filter, refresh or conflict. Shared with collection-rows.js and collection.js. */
 "use strict";
 
-// rules.merge_rows' note on a row whose merged copies didn't share a condition or language.
-const COL_MERGED_NOTE = "Merged copies have differing or unreported";
+// Old general observations and E7-S38's counted condition/language evidence.
+const COL_MERGED_NOTES = ["Merged copies have differing or unreported", "Copies: condition ", "Copies: language "];
 const COL_BULK_FIELDS = ["language", "condition"];    // the order the summary names them
 
 /** The Card list's button (where the visitor may change this collection), or null. */
@@ -211,7 +211,7 @@ function drawBulkSheet(ctx) {
   if (ctx.selected) ctx.selectionList.append(...rows.map(row => el("li", { "data-selected-key": colBulkKey(row), text:
     `${row.name} (${colPrinting(row)}), ${plural(Number(row.quantity), "copy", "copies")}; `
       + `${row.condition || "condition not recorded"}, ${row.language ? colLanguageWord(row.language) : "language not recorded"}` })));
-  const merged = rows.filter((row) => String(row.notes || "").includes(COL_MERGED_NOTE)).length;
+  const merged = rows.filter((row) => COL_MERGED_NOTES.some(prefix => String(row.notes || "").includes(prefix))).length;
   clear(ctx.merged);
   if (merged) {
     ctx.merged.append(el("p", { class: "box box-info", text: `${plural(merged, "row")} ${merged === 1 ? "holds copies whose" : "hold copies whose"}`

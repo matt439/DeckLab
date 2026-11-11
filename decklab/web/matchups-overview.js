@@ -377,7 +377,10 @@ async function showMatchups(params, token) {
   const mine = await pending;
   if (token !== routeToken) return;
   return load(["/api/decks", "/api/matchups"], token, ([library, matchups]) => {
-    state.library = library;
+    if (!cacheLibrary(library)) {
+      $("#main").append(errorBox("The saved deck list changed", new ApiError(409, "Reload to get the latest saved copy.")));
+      return;
+    }
     if (!state.matchupGames && mine && Number(mine.matchup_games)) state.matchupGames = Number(mine.matchup_games);
     if (!state.matchupMode && mine && mine.matchup_mode) state.matchupMode = mine.matchup_mode;
     drawMatchups(library, matchups, params, token);
@@ -541,7 +544,8 @@ function drawMatchups(library, matchups, params, token) {
     const current = await api("/api/decks", { signal });
     if (signal.aborted || token !== routeToken || view.profile !== state.profile?.id || !lists.isConnected) return null;
     if (current.decks_revision !== fresh.decks_revision) throw new Error("The decks changed while their names were loading. Trying again automatically.");
-    library = current; state.library = current;
+    if (!cacheLibrary(current)) return null;
+    library = current;
     return true;
   };
   if (needsLibrary(data)) lists.append(loadingBox("Updating the decks…"));
@@ -1062,6 +1066,9 @@ function openPlaySheet(library, live, token, preset, format = null) {
 function forgeBox(forge) {
   if (!forge) return null;
   if (forge.ready === false) {
+    if (forge.installed === false) return markedBox("info", "h2", "Simulations are optional", [
+      el("p", {text: "Forge isn't installed. Collection, deck building and manual practice still work. Saved simulation results still show."}),
+      el("p", {text: "To enable simulations, the server's operator can follow SELF-HOSTING.md step 8."})]);
     return markedBox("warn", "h2", "Forge isn't ready on the PC",
       el("p", { text: (forge.problem || "Forge can't be started.") + " Saved results still show, but no new games can be played until it's fixed." }));
   }

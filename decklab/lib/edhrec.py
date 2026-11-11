@@ -419,6 +419,15 @@ def _counts(lines):
     return out
 
 
+def cuts(deck_id=None, *, sections=None, commanders=None, forge_stats=None, page=None):
+    """Read-only cut evidence from cached EDHREC pages; this path never fetches or writes a page."""
+    from .edhrec_cuts import project
+    deck, names = _deck(deck_id, commanders)
+    answer = project(sections if sections is not None else deck.target, names, forge_stats=forge_stats, page=page)
+    answer["deck"] = deck
+    return answer
+
+
 def ideas(deck_id, p=None, prices=True, refresh=False, commanders=None, page=None):
     """EDHREC's cards for a Commander deck: {"deck_id", "commanders", "identity", "source" (fetch()'s
     commander, decks, url, fetched and stale), "page" (the narrowed page, or ""), "pages" (page_choices:

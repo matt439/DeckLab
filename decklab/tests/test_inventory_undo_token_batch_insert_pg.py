@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
+from decklab.db import conn as db
 from decklab.lib import config, inventory, tokens
 from decklab.lib.inventory import Op, Summary, files, undo, undo_token_batch_remove as batch
 from decklab.tests import db_support, test_inventory_undo_pg as existing
@@ -68,6 +69,23 @@ class TokenBatchRemoveUndoPgTests(db_support.DbTestCase):
         return inventory.apply(Op("inventory.undo", {"change_id": source, "space": "home", "expect": plan["expect"],
                                                      "reason": REASON}), existing.ACTOR, "Undo fixture token additions",
                                reason=REASON)
+
+    def test_one_addition_that_renumbered_survivors_is_removed_from_its_complete_source(self):
+        self.add(self.row("Beast", "", "1", set="tst", finish="nonfoil", front_collector_number="1"))
+        self.add(self.row("Zombie", "", "1", set="tst", finish="nonfoil", front_collector_number="7"))
+        with self.connect("owner") as connection:
+            with db.change("claude", "cli", "Seed dense disposable positions", conn=connection) as (cur, _):
+                cur.execute("update token_card set position=case front when 'Beast' then 0 else 1 end where space_id='home'")
+                cur.execute("update inventory_revision set revision=revision+1")
+        source = self.add(self.row(set="tst", finish="nonfoil", front_collector_number="3", back_collector_number="4"))
+        original = self.sql("select op,before,after from audit.row_change where change_set_id=%s order by id", (source,))
+        self.assertEqual(sorted(row[0] for row in original), ["INSERT", "UPDATE", "UPDATE"])
+        plan = inventory.undo_review(source, "home")
+        self.assertEqual((plan["action"], plan["row_count"]), (batch.ACTION, 1))
+        after, summary = self.apply(source, plan)
+        self.assertEqual([row.front for row in after.token_set("home").rows], ["Beast", "Zombie"])
+        self.assertEqual(summary.extra["removed_token_row_ids"], [plan["rows"][0]["token_row_id"]])
+        self.assertEqual(self.sql("select op,before,after from audit.row_change where change_set_id=%s order by id", (source,)), original)
 
     def test_removal_is_exactly_three_deletes_with_the_survivor_packing_and_history_kept(self):
         source = self.seed()

@@ -309,6 +309,9 @@ def _ensure(name, port, note):
             note(f"It didn't answer. The server's log may say why: {log_file}")
     if json.dumps(record, sort_keys=True) != before:
         _save(record, port, note)
+    if action == "give-up":
+        from decklab.lib.operator_alerts import notify
+        notify({"watchdog": False}, log=note)
     return 0
 
 

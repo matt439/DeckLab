@@ -141,11 +141,18 @@ class ProductStorageUiTests(unittest.TestCase):
 
     def test_read_errors_retry_and_unavailable_products_are_hidden(self):
         self.run_js("""
-          let reads=0;api=async()=>{if(++reads===1)throw new Error('Connection lost');return info();};
+          let reads=0;api=async()=>{if(++reads===1)throw new ApiError(0,'Connection lost');return info();};
           const part=await mount();assert(part.textContent.includes('Connection lost'));
           button(part,'Try again').click();await settle();assert(button(part,'Break up into storage'));
-          clear(main);api=async()=>{throw Object.assign(new Error('No product'),{status:404});};
+          clear(main);api=async()=>{throw new ApiError(404,'No product');};
           const absent=await mount();assert(absent.hidden);
+        """)
+
+    def test_unexpected_read_failure_does_not_echo_private_diagnostics(self):
+        self.run_js("""
+          api=async()=>{throw new Error('PRIVATE fixture diagnostic');};
+          const part=await mount();assert(!part.textContent.includes('PRIVATE'));assert(/Reference [a-f0-9]{32}/.test(part.textContent));
+          api=async()=>info();button(part,'Try again').click();await settle();assert(button(part,'Break up into storage'));
         """)
 
     def test_late_reads_previews_and_saves_never_update_another_viewer(self):

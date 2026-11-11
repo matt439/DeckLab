@@ -5,6 +5,8 @@ integrity of household records. Optional files never establish game execution.
 """
 from types import MappingProxyType
 
+from decklab.lib.config_errors import syntax_message, valid_location
+
 
 VERSION = 1
 CHECKS = (
@@ -20,10 +22,17 @@ CHECKS = (
     ("backups", "Backup folders", "optional", ("config",)),
 )
 SIMULATION_FILES = ("java", "forge")     # the optional checks optional_files_status sums up
+CONFIG_WARNINGS = MappingProxyType({
+    "config_unknown_role": ("One or more profiles have an unknown role and are treated as members.",
+                            "Use admin or member for each role in decklab/config.json."),
+    "config_no_admin": ("No usable admin profile is configured.",
+                        "Choose an intended admin locally in decklab/config.json before using admin settings."),
+})
 
-# Each outcome contains only public, fixed wording. The adapter's submitted
-# values, paths, exception messages and configuration never enter the report.
+# Each outcome contains only public, fixed wording, apart from validated JSON
+# line/column integers. Submitted values, paths and exception messages never enter the report.
 OUTCOMES = MappingProxyType({
+    "simulations_not_set_up": ("not_configured", "Simulations not set up (optional, step 8).", None),
     "runtime_ready": ("ready", "The supported Python 3.14 runtime is selected.", None),
     "runtime_unsupported": ("needs_setup", "This runtime is outside the supported Python 3.14 setup.",
                             "Use Python 3.14 as described in SELF-HOSTING.md, then run the preflight again."),
@@ -50,8 +59,15 @@ OUTCOMES = MappingProxyType({
     "driver_venv_mismatch": ("needs_setup", "The repository's .venv does not match the selected Python runtime.",
                              "Re-create .venv with the Python used for Deck Lab, following SELF-HOSTING.md step 3."),
     "database_ready": ("ready", "An app-role connection, the migration ledger and inventory/deck initialization markers passed.", None),
+    "database_no_answer": ("needs_setup", "Nothing answered at the configured PostgreSQL host and port.",
+                           "Check the PostgreSQL service (Get-Service postgresql* on Windows; systemctl status postgresql "
+                           "on Linux), then run python -m decklab.db status on the PC."),
+    "database_signin_failed": ("needs_setup", "PostgreSQL answered, but Deck Lab could not sign in.",
+                               "Run python -m decklab.db setup on the PC; python -m decklab.db status names the cause."),
+    "database_setup_needed": ("needs_setup", "PostgreSQL answered, but the database or login roles are not set up.",
+                              "Run python -m decklab.db setup on the PC, then python -m decklab.db status."),
     "database_unavailable": ("unverified", "A database connection could not be verified; the cause is not classified as server downtime.",
-                             "Review PostgreSQL availability and local connection settings using SELF-HOSTING.md step 5, then retry."),
+                             "Run python -m decklab.db status on the PC for the cause; see SELF-HOSTING.md step 5."),
     "database_host_unsupported": ("unverified", "This preflight checks one database host at a time; the configured host form was not contacted.",
                                   "Review database.host and SELF-HOSTING.md step 5 before checking a single host."),
     "database_version_unsupported": ("needs_setup", "The database server is older than the supported PostgreSQL 16 setup.",
@@ -150,13 +166,14 @@ ALLOWED = MappingProxyType({
     "config": frozenset({"config_ready", "config_missing", "config_invalid", "config_unavailable",
                          "config_profiles_invalid", "config_no_home_profile", "config_profile_pending", "config_override_active"}),
     "driver": frozenset({"driver_ready", "driver_missing", "driver_unusable", "driver_venv_mismatch"}),
-    "database": frozenset({"database_ready", "database_unavailable", "database_host_unsupported", "database_version_unsupported",
+    "database": frozenset({"database_ready", "database_unavailable", "database_no_answer", "database_signin_failed",
+                           "database_setup_needed", "database_host_unsupported", "database_version_unsupported",
                            "database_schema_missing", "database_migrations_pending", "database_migrations_mismatch",
                            "database_schema_unavailable", "database_uninitialized", "database_catalog_invalid"}),
     "cards": frozenset({"cards_ready", "cards_missing", "cards_invalid", "cards_unavailable", "cards_oversized"}),
-    "java": frozenset({"java_files_ready", "java_missing", "java_incomplete", "java_unavailable",
+    "java": frozenset({"simulations_not_set_up", "java_files_ready", "java_missing", "java_incomplete", "java_unavailable",
                       "java_version_unknown", "java_version_unsupported", "java_linked"}),
-    "forge": frozenset({"forge_files_ready", "forge_missing", "forge_incomplete", "forge_invalid", "forge_unavailable",
+    "forge": frozenset({"simulations_not_set_up", "forge_files_ready", "forge_missing", "forge_incomplete", "forge_invalid", "forge_unavailable",
                         "forge_linked"}),
     "ocr": frozenset({"ocr_ready", "ocr_missing", "ocr_no_language", "ocr_unusable"}),
     "timezone": frozenset({"timezone_not_set", "timezone_matches", "timezone_differs", "timezone_invalid",
@@ -166,11 +183,13 @@ ALLOWED = MappingProxyType({
 })
 
 
-def report(probe):
+def report(probe, *, config_location=None, config_warnings=None, runtime_version=None, platform_name=None):
     """Call eligible probes once in order; every output field comes from this catalog.
 
-    A provider returns a code string. Unknown values and ordinary exceptions fail
-    closed; cancellation is deliberately not caught or converted into readiness.
+    A provider returns a code string. The optional config_location callback returns
+    only an already checked (line, column) tuple; config_warnings returns fixed warning
+    codes without changing readiness or dependencies. Unknown values and ordinary exceptions
+    fail closed; cancellation is deliberately not caught or converted into readiness.
     """
     checks, by_id = [], {}
     for ident, label, scope, dependencies in CHECKS:
@@ -187,15 +206,46 @@ def report(probe):
             if type(code) is not str or code not in ALLOWED[ident]:
                 code = "probe_unverified"
             status, message, next_step = OUTCOMES[code]
+            if code == "database_no_answer" and platform_name is not None:
+                try:
+                    if platform_name() == "darwin":
+                        next_step = ("For PostgreSQL on this Mac, check brew services list (or Postgres.app). "
+                                     "Then run python -m decklab.db status; see SELF-HOSTING.md step 5.")
+                except Exception:
+                    pass
+            if ident == "runtime" and code == "runtime_unsupported" and runtime_version is not None:
+                try:
+                    version = runtime_version()
+                    if type(version) is tuple and len(version) == 2 and all(type(n) is int and 0 <= n < 100 for n in version):
+                        message = f"Python {version[0]}.{version[1]} is running; Deck Lab requires Python 3.14."
+                except Exception:
+                    pass
+            if ident == "config" and code == "config_invalid" and config_location is not None:
+                try:
+                    location = config_location()
+                    if type(location) is tuple and len(location) == 2 and valid_location(*location):
+                        message = syntax_message(*location)
+                except Exception:           # noqa: BLE001 - diagnostics cannot add arbitrary output or fail a report
+                    pass
         row = {"id": ident, "label": label, "scope": scope, "status": status, "code": code,
                "message": message, "next_step": next_step, "blocked_by": blocked}
+        if ident == "config" and code == "config_ready" and config_warnings is not None:
+            try:
+                warnings = config_warnings()
+                if type(warnings) is tuple and len(warnings) <= len(CONFIG_WARNINGS) and all(
+                        type(value) is str and value in CONFIG_WARNINGS for value in warnings):
+                    row["warnings"] = [{"code": value, "message": CONFIG_WARNINGS[value][0],
+                                        "next_step": CONFIG_WARNINGS[value][1]} for value in dict.fromkeys(warnings)]
+            except Exception:               # noqa: BLE001 - optional diagnostics never publish adapter faults
+                pass
         checks.append(row)
         by_id[ident] = row
     core = [row for row in checks if row["scope"] == "core"]
     optional = [row for row in checks if row["id"] in SIMULATION_FILES]
     core_ready = all(row["status"] == "ready" for row in core)
     exit_code = 0 if core_ready else 2 if any(row["status"] == "unverified" for row in core) else 1
-    files = ("present" if all(row["status"] == "ready" for row in optional) else "not_verified"
+    files = ("not_configured" if all(row["code"] == "simulations_not_set_up" for row in optional) else
+             "present" if all(row["status"] == "ready" for row in optional) else "not_verified"
              if any(row["status"] in ("unverified", "blocked") for row in optional) else "incomplete")
     return {"version": VERSION, "core_ready": core_ready, "optional_files_status": files,
             "simulation_execution": "not_performed", "exit_code": exit_code, "checks": checks}
@@ -205,13 +255,23 @@ def text(result):
     """Render only a report constructed here; the CLI never renders adapter objects."""
     core = "ready" if result["core_ready"] else "not verified" if result["exit_code"] == 2 else "needs setup"
     lines = [f"Core preflight: {core}."]
+    simulations_said = False
     status_words = {"ready": "READY", "needs_setup": "NEEDS SETUP", "unverified": "UNVERIFIED", "blocked": "NOT RUN"}
     for row in result["checks"]:
+        if row["code"] == "simulations_not_set_up":
+            if not simulations_said:
+                lines.append("OPTIONAL Simulations not set up (optional, step 8).")
+                simulations_said = True
+            continue
         optional = " (optional)" if row["scope"] == "optional" else ""
         lines.append(f"{status_words[row['status']]} {row['label']}{optional}: {row['message']}")
         if row["next_step"]:
             lines.append("  Next: " + row["next_step"])
-    files = {"present": "present", "incomplete": "incomplete", "not_verified": "not verified"}[result["optional_files_status"]]
+        for warning in row.get("warnings", []):
+            lines.append(f"WARN {row['label']}: {warning['message']}")
+            lines.append("  Next: " + warning["next_step"])
+    files = {"present": "present", "incomplete": "incomplete", "not_verified": "not verified",
+             "not_configured": "not set up"}[result["optional_files_status"]]
     lines.append(f"Optional simulation files: {files}. Simulation execution qualification: not performed.")
     lines.append("No installation, download, migration, schedule, service activation or game is performed by this preflight.")
     return "\n".join(lines)

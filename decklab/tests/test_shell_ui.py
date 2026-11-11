@@ -23,6 +23,8 @@ SETUP = r"""
   }
   document.body.append(el("a", { class: "skip" }));
   setUpDialog = () => {}; setUpPeek = () => {}; startVersionMonitor = () => {};
+  // Recovery polling is outside shell scenarios; its real functions have their own promise/owner tests.
+  if (typeof pollRunRecovery === "function") pollRunRecovery = () => {};
   const store = (data = {}) => ({ getItem: (k) => (k in data ? data[k] : null), setItem: (k, v) => { data[k] = String(v); },
     removeItem: (k) => { delete data[k]; }, data });
   window.localStorage = store(); window.sessionStorage = store();
@@ -101,7 +103,7 @@ class ShellUiTests(unittest.TestCase):
             tokens: "Tokens", accessories: "Sleeves & boxes", assembly: "Build decks", play: "Game log",
             wishlist: "Wishlist", activity: "Activity", visibility: "Who sees what", settings: "Settings", deck: "Deck", edit: "Edit deck",
             new: "New deck", history: "History", compare: "Compare decks", variant: "Test of a change", receipt: "Receive delivery",
-            matchup: "Matchup" });
+            matchup: "Matchup", help: "What these words mean" });
           for (const r of ROUTES) assert(r.nav || r.parent, r.path);
           // A child page sits under its parent's place in the nav.
           assert.equal(routeSection("deck").path, "library");

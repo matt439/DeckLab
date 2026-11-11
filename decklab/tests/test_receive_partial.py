@@ -92,6 +92,33 @@ class _Fixture:
 
 
 class FilePartialReceiptTests(_Fixture, unittest.TestCase):
+    def test_mixed_counted_rows_need_explicit_facts_before_partial_receipt_and_preview_writes_nothing(self):
+        rows = self.rows(self.backend.load())
+        rows[1].update(condition="", notes="Copies: condition 2 NM, 2 LP; Copies: 2 signed")
+        component = {"id": "cards", "verified": True, "rows": rows, "take": [{"row": 2, "quantity": 1}]}
+        before = self.backend.load()
+        with self.assertRaisesRegex(Invalid, "Supply separate rows with the actual copy facts"):
+            inventory.preview(self.operation(component))
+        self.unchanged(before)
+        self.refuse(component)
+        # The caller can explicitly divide the full row into observed uniform facts.
+        facts = [rows[0], dict(rows[1], quantity="2", condition="NM", notes="Copies: 2 signed"),
+                 dict(rows[1], quantity="2", condition="LP", notes="")]
+        after, _ = self.apply({"id": "cards", "verified": True, "rows": facts, "take": [{"row": 2, "quantity": 1}]})
+        pending = self.rows(after)
+        self.assertEqual([(row["quantity"], row["notes"]) for row in pending if row["name"] == "Llanowar Elves"],
+                         [("1", "Copies: 1 signed"), ("2", "")])
+        arrived = self.rows(after, "cards-received-1")
+        self.assertEqual((arrived[0]["quantity"], arrived[0]["condition"], arrived[0]["notes"]), ("1", "NM", "Copies: 1 signed"))
+        self.assertEqual(next(row.notes for row in after.collection().rows if row.name == "Llanowar Elves"), "Copies: 1 signed")
+
+    def test_all_copies_marks_scale_for_arrived_and_remaining_rows(self):
+        rows = self.rows(self.backend.load())
+        rows[1]["notes"] = "inspected; Copies: 4 altered; Copies: 4 signed"
+        after, _ = self.apply({"id": "cards", "verified": True, "rows": rows, "take": [{"row": 2, "quantity": 1}]})
+        self.assertEqual(self.rows(after)[1]["notes"], "inspected; Copies: 3 altered; Copies: 3 signed")
+        self.assertEqual(self.rows(after, "cards-received-1")[0]["notes"], "inspected; Copies: 1 altered; Copies: 1 signed")
+
     def test_preview_and_apply_split_one_quantity_with_one_apply_and_conserve_physical_supply(self):
         before = self.backend.load()
         operation = self.operation({"id": "cards", "verified": True, "take": [{"row": 2, "quantity": 1}]})
@@ -353,6 +380,16 @@ class PgPartialReceiptTests(_Fixture, db_support.DbTestCase):
         with self.connect() as connection:
             return connection.execute("select count(*) from audit.change_set").fetchone()[0]
 
+    def test_counted_mixed_facts_refuse_atomically_then_explicit_facts_save_once(self):
+        count = self.count()
+        FilePartialReceiptTests.test_mixed_counted_rows_need_explicit_facts_before_partial_receipt_and_preview_writes_nothing(self)
+        self.assertEqual(self.count(), count + 1)
+
+    def test_uniform_counted_marks_scale_in_the_database(self):
+        count = self.count()
+        FilePartialReceiptTests.test_all_copies_marks_scale_for_arrived_and_remaining_rows(self)
+        self.assertEqual(self.count(), count + 1)
+
     def test_received_copies_pending_remainder_tables_revisions_and_audit_save_together(self):
         before, count = self.backend.load(), self.count()
         after, summary = self.apply({"id": "cards", "verified": True, "take": [{"row": 2, "quantity": 1}]})
@@ -380,6 +417,8 @@ class PgPartialReceiptTests(_Fixture, db_support.DbTestCase):
             raise RuntimeError("Injected partial receipt database failure")
 
         with mock.patch.object(pg, "_diff", side_effect=fail), self.assertRaisesRegex(Exception, "Injected partial receipt"):
-            self.apply({"id": "cards", "verified": True, "take": [{"row": 2, "quantity": 1}]})
+            rows = self.rows(before)
+            rows[1]["notes"] = "Copies: 4 signed"
+            self.apply({"id": "cards", "verified": True, "rows": rows, "take": [{"row": 2, "quantity": 1}]})
         self.unchanged(before)
         self.assertEqual(self.count(), count)

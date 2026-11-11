@@ -27,6 +27,9 @@ function argumentsFor(argv) {
     if (key === '--smoke') {
       assert.equal(result.smoke, false, 'Duplicate --smoke');
       result.smoke = true;
+    } else if (key === '--strict-console') {
+      assert(!result.strictConsole, 'Duplicate --strict-console');
+      result.strictConsole = true;
     } else {
       assert(values.has(key), 'Unknown review worker argument');
       const name = values.get(key);
@@ -129,7 +132,7 @@ class Review {
     this.contexts = new Set();
     this.report = {
       schema_version: 1, suite, fixture_type: FIXTURE_TYPE, synthetic: true,
-      headless: true, no_native_input: true, smoke: options.smoke,
+      headless: true, no_native_input: true, smoke: options.smoke, strict_console: Boolean(options.strictConsole),
       browser_version: null, playwright_core_version: PLAYWRIGHT_VERSION,
       limitations: LIMITATIONS,
       network: { allowed_reads: 0, dry_checks: 0, blocked: [] },
@@ -232,11 +235,14 @@ class Review {
       const url = new URL(request.url());
       const method = request.method();
       const same = url.origin === this.origin;
-      const check = same && method === 'POST' && url.pathname === '/api/deck/check';
+      const check = same && method === 'POST' && ['/api/deck/check', '/api/deck/cuts', '/api/deck/bracket-replacements', '/api/goldfish/what-if'].includes(url.pathname);
       if (!same || (!['GET', 'HEAD'].includes(method) && !check)) {
+        const telemetry = same && method === 'POST' && ['/api/visit', '/api/errors/report'].includes(url.pathname);
         this.report.network.blocked.push({ method, url: this.safeUrl(url.href),
-          category: same && method === 'POST' && url.pathname === '/api/visit'
-            ? 'expected_fixture_telemetry' : 'unexpected_blocked_request' });
+          category: telemetry ? 'expected_fixture_telemetry' : 'unexpected_blocked_request' });
+        // Suppress the beacon inside the browser boundary: no app route or database write.
+        // Aborting expected telemetry generates a browser console error and spoils strict smoke.
+        if (telemetry) return route.fulfill({status: 204, body: ''});
         return route.abort('blockedbyclient');
       }
       this.report.network[check ? 'dry_checks' : 'allowed_reads']++;
@@ -247,6 +253,9 @@ class Review {
 
   observe(page, errors, httpErrors) {
     page.on('pageerror', error => errors.push(this.safeText(error.message)));
+    if (this.options?.strictConsole) page.on('console', message => {
+      if (message.type() === 'error') errors.push('Console error: ' + this.safeText(message.text()));
+    });
     page.on('response', response => {
       if (response.status() < 400) return;
       const url = new URL(response.url());
@@ -272,7 +281,7 @@ class Review {
     assert(typeof pathname === 'string' && pathname.startsWith('/') && !pathname.startsWith('//'), 'Expected a local API path');
     const url = new URL(pathname, this.origin);
     assert.equal(url.origin, this.origin);
-    assert(['/api/deck/edit', '/api/deck/draft', '/api/profiles/matt/wishlist', '/api/receipt'].includes(url.pathname),
+    assert(['/api/deck', '/api/cards/lookup', '/api/deck/edit', '/api/deck/draft', '/api/profiles/matt/wishlist', '/api/receipt'].includes(url.pathname),
       'Unapproved fixture proof read');
     this.checkCancelled();
     const response = await context.request.get(url.href, { timeout: 15000, maxRedirects: 0 });

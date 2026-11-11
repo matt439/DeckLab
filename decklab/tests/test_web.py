@@ -44,14 +44,14 @@ from decklab import server
 WEB = server.WEB_DIR
 MATCHUP_SCRIPTS = ("sim-ui.js", "matchups.js", "matchups-overview.js", "deck-picker.js", "matchups-summary.js", "matchups-detail.js", "matchups-results.js", "matchups-play.js",
                    "matchups-cards.js")
-PLAY_SCRIPTS = ("deck-tools.js", "deck-print.js", "qr.js", "deck-label.js", "collection.js", "collection-import-groups.js", "collection-filing.js", "precon-add.js", "precon-token-choices.js", "precon-coverage.js", "precon-trial.js", "commander-candidates.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js", "collection-guards.js", "collection-trade.js", "collection-scan.js", "storage-locations.js", "assembly.js", "assembly-chooser.js", "assembly-switcher.js", "assembly-finish.js", "assembly-steps.js", "assembly-tokens.js", "assembly-overlap.js", "assembly-sections.js", "assembly-progress.js", "assembly-sheets.js", "assembly-boxcheck.js", "box-check-printings.js", "box-collection.js", "box-editor.js", "box-repair.js", "hands.js", "play.js", "play-pods.js", "play-tonight.js", "pod-life-model.js", "pod-life-counter.js", "sideboard-preview.js", "life-source-model.js", "life-counter.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "printings-in-box.js", "deck-swaps.js", "deck-queue-missing.js", "deck-considering.js", "deck-edhrec.js", "deck-categories.js", "product-storage.js", "history.js", "compare.js", "activity.js", "activity-undo.js", "activity-undo-watchlist.js", "activity-undo-tokens.js",
+PLAY_SCRIPTS = ("deck-tools.js", "deck-print.js", "qr.js", "deck-label.js", "collection.js", "member-tools.js", "collection-import-groups.js", "collection-filing.js", "precon-add.js", "precon-token-choices.js", "precon-coverage.js", "precon-trial.js", "commander-candidates.js", "collection-rows.js", "collection-cards.js", "collection-bulk.js", "collection-guards.js", "collection-trade.js", "collection-loans.js", "collection-scan.js", "storage-locations.js", "assembly.js", "assembly-chooser.js", "assembly-switcher.js", "assembly-finish.js", "assembly-steps.js", "assembly-tokens.js", "assembly-takealong.js", "assembly-overlap.js", "assembly-sections.js", "assembly-progress.js", "assembly-sheets.js", "assembly-boxcheck.js", "box-check-printings.js", "box-collection.js", "box-editor.js", "box-repair.js", "hands.js", "play.js", "play-delete.js", "play-counter-details.js", "play-pods.js", "play-tonight.js", "pod-life-model.js", "life-counter-tools.js", "pod-life-counter.js", "sideboard-preview.js", "life-source-model.js", "life-counter.js", "deck-sideboard.js", "deck-opponents.js", "deck-standins.js", "printings-in-box.js", "deck-swaps.js", "deck-queue-missing.js", "deck-considering.js", "deck-edhrec.js", "deck-cuts.js", "deck-categories.js", "editor-category-suggest.js", "product-storage.js", "history.js", "compare-baselines.js", "compare.js", "activity.js", "activity-undo.js", "activity-undo-watchlist.js", "activity-undo-tokens.js", "activity-undo-collection.js", "activity-undo-accessory-photo.js", "activity-undo-product-kit.js", "activity-undo-order-queue.js",
                 "order-check-targets.js", "receipts.js", "receipt-tiles.js", "receipt-layout.js", "receipt-workflow.js", "receipt-bulk.js", "accessories.js", "accessory-pictures.js", "tokens.js", "tokens-edit.js", "token-plan.js", "product-tokens.js", "token-peaks.js", "tokens-scan.js", "dice.js", "deck-tokens.js")
-SHELL_SCRIPTS = ("keyboard-help.js", "shell.js", "global-search.js", "settings.js", "settings-members.js", "settings-restart.js", "settings-postage.js", "settings-pricing.js", "visibility.js", "arrival-notices.js")  # account pages, just before app.js
+SHELL_SCRIPTS = ("keyboard-help.js", "shell.js", "global-search.js", "settings.js", "settings-observability.js", "settings-members.js", "settings-restart.js", "settings-postage.js", "settings-pricing.js", "visibility.js", "arrival-notices.js")  # account pages, just before app.js
 BOOT_SCRIPT = "theme-boot.js"      # index.html's one script that isn't deferred: the theme, before the first paint
-CARD_SCRIPTS = ("ui.js", "symbols.js", "cards-ui.js", "card-viewer.js")     # the shared card pieces (UI-KIT.md)
-SCRIPTS = ("core.js", *CARD_SCRIPTS, "library.js", "library-boxchecks.js", "library-glance.js", "library-tables.js", "library-gauntlet.js", "cover.js", "deck-availability.js", "deck.js", "deck-header.js", "deck-overview.js", "deck-retirement.js", "deck-rename.js", "deck-prices.js", "guide.js", "stats.js", "commander-readiness.js", "deck-near-combos.js", "commander-night.js", "practice.js", "version.js", "wishlist.js", "shopping.js", "shopping-buying.js", "shopping-combined.js", "shopping-queue.js", "shopping-reprints.js", "shopping-snapshot.js", "shopping-history.js", "shopping-baskets.js", "shopping-plan.js", "shopping-orders.js", "shopping-order-edit.js", "shopping-order-rows.js", "shopping-order-split.js", "app.js",
-           "editor.js", "editor-drafts.js", "editor-kept-drafts.js", "editor-considering.js", "editor-screen.js", "editor-details.js", "editor-lines.js", "editor-forge.js", "editor-cards.js", "editor-edhrec.js", "editor-wishlist.js", "editor-import.js", "editor-search-quantity.js", "editor-search-dock.js", "editor-swaps.js", "editor-save.js", "editor-deckpage.js",
-           *MATCHUP_SCRIPTS, "field.js", "field-membership.js", "gauntlet.js", "gauntlet-board.js", "field-group.js", "crosscheck.js", "variant.js", "runs-pill.js", *PLAY_SCRIPTS, *SHELL_SCRIPTS)    # every script the page loads
+CARD_SCRIPTS = ("ui.js", "symbols.js", "cards-ui.js", "card-viewer-details.js", "card-viewer.js")     # the shared card pieces (UI-KIT.md)
+SCRIPTS = ("error-references.js", "core.js", *CARD_SCRIPTS, "library.js", "library-boxchecks.js", "library-glance.js", "library-tables.js", "library-gauntlet.js", "cover.js", "deck-availability.js", "deck.js", "deck-header.js", "deck-overview.js", "deck-retirement.js", "deck-rename.js", "deck-prices.js", "guide.js", "stats.js", "commander-readiness.js", "bracket-fixes.js", "deck-near-combos.js", "commander-night.js", "practice.js", "practice-insights.js", "version.js", "wishlist.js", "shopping.js", "shopping-buying.js", "shopping-combined.js", "shopping-queue.js", "shopping-reprints.js", "shopping-snapshot.js", "shopping-history.js", "shopping-references.js", "shopping-baskets.js", "shopping-plan.js", "shopping-orders.js", "shopping-basket-order.js", "shopping-order-edit.js", "shopping-order-rows.js", "shopping-order-split.js", "app.js",
+           "editor.js", "editor-drafts.js", "editor-kept-drafts.js", "editor-considering.js", "editor-screen.js", "editor-details.js", "editor-lines.js", "editor-forge.js", "editor-cards.js", "editor-edhrec.js", "editor-wishlist.js", "editor-import.js", "editor-import-review.js", "editor-search-quantity.js", "editor-search-dock.js", "editor-swaps.js", "editor-save.js", "editor-deckpage.js",
+           *MATCHUP_SCRIPTS, "field.js", "field-membership.js", "gauntlet.js", "gauntlet-board.js", "field-group.js", "crosscheck.js", "variant.js", "runs-pill.js", "changes.js", "run-recovery.js", *PLAY_SCRIPTS, *SHELL_SCRIPTS)    # every script the page loads
 # The design tokens, the base and the shared components first (decklab/UI-REVIEW.md 2.1-2.3), then the shell
 # and the page files, which only lay the components out.
 FOUNDATION = ("tokens.css", "base.css", "components.css")
@@ -101,7 +101,7 @@ const quiet = { addEventListener() {}, removeEventListener() {} };
 const document = Object.assign({ createElement: (tag) => new Node(tag), createElementNS: (ns, tag) => new Node(tag),
   createTextNode: (data) => new Text(data), querySelector: () => null, querySelectorAll: () => [],
   documentElement: new Node("html"), body: new Node("body") }, quiet);
-const context = { document, Node, console, setTimeout, clearTimeout, navigator: {}, location: { hash: "" },
+const context = { document, Node, console, setTimeout, clearTimeout, URLSearchParams, navigator: {}, location: { hash: "" },
   history: {}, fetch: () => Promise.reject(new Error("no network")),
   localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
   window: Object.assign({ location: { hash: "" },
@@ -125,6 +125,8 @@ const text = (part) => part == null || part === false ? "" : Array.isArray(part)
 def _run_page(calls, names=("core.js", *MATCHUP_SCRIPTS)):
     """The text each of calls (JavaScript expressions, run in turn after the scripts names) comes out as,
     under Node.js with NODE_RUNNER's stand-in for the document."""
+    if "core.js" in names and "error-references.js" not in names:
+        names = ("error-references.js", *names)
     done = subprocess.run([NODE, "-e", NODE_RUNNER], input=json.dumps([[str(WEB / n) for n in names], calls]),
                           capture_output=True, text=True, encoding="utf-8", timeout=60)
     if done.returncode:
@@ -384,6 +386,12 @@ class WebFileTests(unittest.TestCase):
             self.assertTrue(url.startswith("data:") or url.startswith("/"), url)
         for name in SCRIPTS:
             script = _text(name).replace(SVG_NAMESPACE, "")
+            if name == "collection.js":
+                # Explicit help hyperlinks are navigation, never loaded resources or API URLs.
+                help_links = _function(script, "colImportHelp")
+                self.assertNotRegex(help_links, r"\b(?:fetch|api|apiWrite)\(|\bsrc\s*:")
+                self.assertIn('target: "_blank", rel: "noopener noreferrer"', help_links)
+                script = script.replace(help_links, "")
             self.assertNotRegex(script, r"https?://", name)
             self.assertNotRegex(script, r"\bimport\s*\(|importScripts", name)
             for call in re.findall(r"\bapi(?:Write)?\(\s*[`'\"]([^`'\"]*)", script):
@@ -429,9 +437,9 @@ class WebFileTests(unittest.TestCase):
         # before the first paint, from a file since the page's policy runs no inline script (E11-S63).
         self.assertEqual(scripts.pop(0), "/" + BOOT_SCRIPT)
         self.assertEqual(scripts, ["/editor.js", "/editor-drafts.js", "/editor-kept-drafts.js", "/editor-considering.js", "/editor-screen.js", "/editor-details.js", "/editor-lines.js",
-                         "/editor-forge.js", "/editor-cards.js", "/editor-edhrec.js", "/editor-wishlist.js", "/editor-import.js", "/editor-search-quantity.js", "/editor-search-dock.js", "/editor-swaps.js", "/editor-save.js", "/editor-deckpage.js", *["/" + name for name in MATCHUP_SCRIPTS], "/field.js", "/field-membership.js", "/gauntlet.js", "/gauntlet-board.js", "/field-group.js", "/crosscheck.js",
-                                   "/variant.js", "/runs-pill.js", "/core.js", *["/" + name for name in CARD_SCRIPTS],
-                               "/library.js", "/library-boxchecks.js", "/library-glance.js", "/library-tables.js", "/library-gauntlet.js", "/cover.js", "/deck-availability.js", "/deck.js", "/deck-header.js", "/deck-overview.js", "/deck-retirement.js", "/deck-rename.js", "/deck-prices.js", "/guide.js", "/stats.js", "/commander-readiness.js", "/deck-near-combos.js", "/commander-night.js", "/practice.js", "/version.js", "/wishlist.js", "/shopping.js", "/shopping-buying.js", "/shopping-combined.js", "/shopping-queue.js", "/shopping-reprints.js", "/shopping-snapshot.js", "/shopping-history.js", "/shopping-baskets.js", "/shopping-plan.js", "/shopping-orders.js", "/shopping-order-edit.js", "/shopping-order-rows.js", "/shopping-order-split.js",
+                         "/editor-forge.js", "/editor-cards.js", "/editor-edhrec.js", "/editor-wishlist.js", "/editor-import.js", "/editor-import-review.js", "/editor-search-quantity.js", "/editor-search-dock.js", "/editor-swaps.js", "/editor-save.js", "/editor-deckpage.js", *["/" + name for name in MATCHUP_SCRIPTS], "/field.js", "/field-membership.js", "/gauntlet.js", "/gauntlet-board.js", "/field-group.js", "/crosscheck.js",
+                                   "/variant.js", "/runs-pill.js", "/changes.js", "/run-recovery.js", "/error-references.js", "/core.js", *["/" + name for name in CARD_SCRIPTS],
+                               "/library.js", "/library-boxchecks.js", "/library-glance.js", "/library-tables.js", "/library-gauntlet.js", "/cover.js", "/deck-availability.js", "/deck.js", "/deck-header.js", "/deck-overview.js", "/deck-retirement.js", "/deck-rename.js", "/deck-prices.js", "/guide.js", "/stats.js", "/commander-readiness.js", "/bracket-fixes.js", "/deck-near-combos.js", "/commander-night.js", "/practice.js", "/practice-insights.js", "/version.js", "/wishlist.js", "/shopping.js", "/shopping-buying.js", "/shopping-combined.js", "/shopping-queue.js", "/shopping-reprints.js", "/shopping-snapshot.js", "/shopping-history.js", "/shopping-references.js", "/shopping-baskets.js", "/shopping-plan.js", "/shopping-orders.js", "/shopping-basket-order.js", "/shopping-order-edit.js", "/shopping-order-rows.js", "/shopping-order-split.js",
                                *["/" + name for name in PLAY_SCRIPTS], *["/" + name for name in SHELL_SCRIPTS], "/app.js"])
         self.assertEqual(sorted(s.lstrip("/") for s in scripts), sorted(SCRIPTS))
         # Tokens keeps shared row/parser helpers before its sheets and both before packing workflows.
@@ -480,14 +488,25 @@ class WebFileTests(unittest.TestCase):
                 code = re.sub(r"/\*.*?\*/", "", _text(name), count=1, flags=re.S).lstrip()
                 self.assertTrue(code.startswith('"use strict";\n'), code[:60])
 
+    def test_library_cache_writes_have_one_owner(self):
+        for name in SCRIPTS:
+            if name != "core.js":
+                self.assertNotRegex(_text(name), r"state\.library\s*=(?!=)", name)
+        self.assertIn("state.library = null", _function(_text("core.js"), "invalidateLibrary"))
+
     def test_every_write_sends_the_write_check_header(self):
         # Milestone 4: the server refuses a POST or PUT without JSON and "X-Deck-Lab: 1" (check_write),
         # so every write goes through apiWrite(), and nothing else sends one.
         helper = _function(_scripts(), "apiWrite")
+        report = _function(_scripts(), "sendPageFailure")
+        self.assertIn('fetch("/api/errors/report"', report)
+        self.assertIn('"X-Deck-Lab": "1"', report)
+        self.assertIn('"Content-Type": "application/json"', report)
+        self.assertIn('JSON.stringify({reference, page, type})', report)
         self.assertIn('"X-Deck-Lab": "1"', helper)
         self.assertIn('"Content-Type": "application/json"', helper)
         for name in SCRIPTS:
-            rest = _text(name).replace(helper, "")
+            rest = _text(name).replace(helper, "").replace(report, "")
             with self.subTest(script=name):
                 self.assertNotRegex(rest, r"method:\s*[\"'`](POST|PUT|PATCH|DELETE)")
         # Crop Undo reads verified photo bytes with one explicit GET. All other
@@ -500,7 +519,7 @@ class WebFileTests(unittest.TestCase):
         self.assertEqual(len(re.findall(r"\bfetch\(", gate)), 1)
         self.assertIn('"/__status"', gate)
         self.assertNotRegex(gate, r"method:")
-        rest = _scripts().replace(helper, "").replace(photo, "").replace(gate, "")
+        rest = _scripts().replace(helper, "").replace(report, "").replace(photo, "").replace(gate, "")
         self.assertEqual(len(re.findall(r"\bfetch\(", rest)), 1)
         self.assertIn("fetch(", _function(rest, "api"))
 
@@ -698,6 +717,23 @@ class WebFileTests(unittest.TestCase):
                 with self.subTest(name=defined):
                     self.assertNotIn(defined, seen, f"{defined} is in {seen.get(defined)} and {name}")
                 seen[defined] = name
+
+    @unittest.skipUnless(NODE, "Node.js is needed for the sheet-closer inventory")
+    def test_every_global_sheet_family_closes_through_the_shared_entry_point(self):
+        from decklab.tests.test_js_globals import audit
+        found = audit([(name, _text(name)) for name in SCRIPTS])
+        # This per-view redraw helper uses the same tracked sheets closed by shopCloseQueueSheets.
+        scoped = {"shopCloseCopySheets"}
+        families = {row["name"] for row in found["sheetClosers"]} - {"closeAllSheets"} - scoped
+        self.assertEqual(families - set(found["closeCalls"]), set())
+        self.assertEqual(found["closeCalls"], ["shopCloseQueueSheets", "closeReprintSheets", "colCloseSheets",
+            "closeDeckOpponentSheets", "closeDeckRetirementSheets", "closeAssemblySheets", "closeProductStorageSheets",
+            "closeTokenPlanSheets", "closeLifeCounter", "closePodLifeCounter", "closeAccessorySheets",
+            "closeReceiptSheets", "closeWishlistSheets", "closeEdhrecSheets"])
+        for name in ("chooseProfile", "drawWho", "route"):
+            body = _function(_text("app.js"), name)
+            self.assertIn("closeAllSheets();", body)
+            self.assertFalse(any(re.search(rf"\b{family}\(", body) for family in families))
 
     def test_shadow_token_works_inside_a_list_of_shadows(self):
         # Review finding: dark mode's "--shadow: none" made "box-shadow: 0 0 0 1px ..., var(--shadow)"

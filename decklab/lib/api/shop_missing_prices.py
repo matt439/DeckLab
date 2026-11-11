@@ -94,7 +94,7 @@ def _listing(item, key="mtgmate"):
             not _text(number, 64) or any(char in number for char in "/\\?#") or not _url(item.get("url"), key)):
         return None
     return {"price_aud": price, "stock": stock, "set": set_code,
-            "collector_number": number, "finish": "nonfoil", "url": item["url"]}
+            "collector_number": number, "finish": "nonfoil", "url": item["url"], **shops.listing_preferences.words(item)}
 
 
 def _empty(status="not_checked", at=None, carried=False, shop=shops.SHOP):
@@ -106,8 +106,9 @@ def _empty(status="not_checked", at=None, carried=False, shop=shops.SHOP):
 
 
 class Projection:
-    def __init__(self, data, resolve, adapter=None):
+    def __init__(self, data, resolve, adapter=None, preference=shops._UNSET_PREFERENCE):
         self.adapter = adapter or shops.ADAPTER
+        self.preference = shops.listing_preference() if preference is shops._UNSET_PREFERENCE else preference
         self.absent = data is None
         self.failed = False
         self.resolve = resolve
@@ -189,39 +190,55 @@ class Projection:
         if at is None or type(carried) is not bool:
             return self._empty("unknown")
         shown = self._empty("unknown", at, carried)
+        from decklab.lib import listing_preference
+        if self.preference is listing_preference.UNAVAILABLE:
+            return {**shown, "preference_unknown": True, "error": listing_preference.UNKNOWN}
         status, listings = entry.get("status"), entry.get("listings")
         if status not in ("ok", "not_listed") or not isinstance(listings, list) or len(listings) > MAX_LISTINGS:
             return shown
         if status == "not_listed" and listings:
             return shown
-        scope, sold_out = [], False
+        scope, baseline, sold_out, excluded = [], [], False, False
         for item in listings:
             if not isinstance(item, dict) or item.get("finish") not in shops.FINISHES:
                 return shown
             if item["finish"] != "nonfoil":
                 continue  # Known to be outside this scope; no foil fallback.
+            fits = shops.listing_preferences.fits(item, self.preference)
+            if not fits:
+                excluded = True
+                checked = _listing(item, self.adapter.key)
+                if checked is not None:
+                    baseline.append((checked, item))
+                continue
             if item.get("price") is None and type(item.get("stock")) is int and item["stock"] == 0:
                 sold_out = True  # Sold out and unpriced: neither buyable nor a listed price to claim,
                 continue         # but still proof the shop lists it.
             checked = _listing(item, self.adapter.key)
             if checked is None:
                 return shown  # Cannot claim another listing is cheapest.
-            scope.append(checked)
+            scope.append((checked, item))
+            baseline.append((checked, item))
         if not scope:
             # Listed only sold out without a price: out of stock, never "not listed".
-            return ({**self._empty("out_of_stock", at, carried), "stock": 0} if sold_out
-                    else self._empty("not_listed", at, carried))
-        stocked = [item for item in scope if item["stock"] > 0]
-        choice = min(stocked or scope, key=lambda item: (Decimal(item["price_aud"]), item["set"],
-                                                       item["collector_number"], item["url"]))
-        return {**self._empty("in_stock" if stocked else "out_of_stock", at, carried), **choice,
+            return ({**self._empty("out_of_stock", at, carried), "stock": 0} if sold_out else
+                    {**self._empty("not_eligible", at, carried), "preference_applied": True} if excluded else
+                    self._empty("not_listed", at, carried))
+        stocked = [pair for pair in scope if pair[0]["stock"] > 0]
+        key = lambda pair: (Decimal(pair[0]["price_aud"]), pair[0]["set"], pair[0]["collector_number"], pair[0]["url"])
+        choice, raw = min(stocked or scope, key=key)
+        original = min([pair for pair in baseline if pair[0]["stock"] > 0] or baseline, key=key)[1]
+        extra = {"preference_applied": True} if self.preference else {}
+        if shops.listing_preferences.cheaper_skipped(original, raw, self.preference):
+            extra["skipped_cheaper"] = True
+        return {**self._empty("in_stock" if stocked else "out_of_stock", at, carried), **choice, **extra,
                 "in_stock_printings": len({(item["set"], item["collector_number"])
-                                           for item in stocked})}
+                                           for item, _ in stocked})}
 
 
-def _project(data, resolve, adapter):
+def _project(data, resolve, adapter, preference=shops._UNSET_PREFERENCE):
     try:
-        return Projection(data, resolve, adapter)
+        return Projection(data, resolve, adapter, preference)
     except Exception:
         return None
 
@@ -240,14 +257,15 @@ def enrich(rows, data, resolve):
         row["shop_snapshot"] = _for_row(projection, shops.ADAPTER, row, number)
 
 
-def enrich_shops(rows, captured, resolve):
+def enrich_shops(rows, captured, resolve, preference=shops._UNSET_PREFERENCE):
     """enrich() at every snapshot shop: "shop_snapshots", one entry a shop in enabled_adapters()
     order (a shop without a snapshot not checked), and MTGMate's again as "shop_snapshot".
     captured is {shop key: snapshot} (shop_prices.by_shop)."""
     if not rows or not shops.enabled_adapters():    # no shop checked (E11-S53): no shop facts at all
         return
     captured = captured if isinstance(captured, dict) else {}
-    projections = [(adapter, _project(captured.get(adapter.key), resolve, adapter))
+    preference = shops.listing_preference() if preference is shops._UNSET_PREFERENCE else preference
+    projections = [(adapter, _project(captured.get(adapter.key), resolve, adapter, preference))
                    for adapter in shops.enabled_adapters()]
     for number, row in enumerate(rows):
         every = [_for_row(projection, adapter, row, number) for adapter, projection in projections]

@@ -157,6 +157,7 @@ function activityUndoAccessoryCropEvidence(data, space, profile) {
 }
 
 function activityUndoAccessoryEvidence(data, space, profile) {
+  if (data.action === "accessory_photo_record_update") return activityUndoAccessoryPhotoRecordEvidence(data, space, profile);
   if (data.action === "accessory_crop_update") return activityUndoAccessoryCropEvidence(data, space, profile);
   const removing = data.action === "accessory_remove", adding = data.action === "accessory_add";
   const counting = data.action === "accessory_stock_update";
@@ -212,9 +213,12 @@ function activityUndoEvidence(data, id, space, profile = state.profile?.id) {
       || typeof data.label !== "string" || !data.label.trim()) return null;
   if (data.kind === "wishlist") return activityUndoWishlistEvidence(data, profile) ? data : null;
   if (data.kind === "accessory") return activityUndoAccessoryEvidence(data, space, profile) ? data : null;
+  if (data.kind === "product_kit") return activityUndoProductKitEvidence(data, space, profile) ? data : null;
+  if (data.kind === "order_queue") return activityUndoOrderQueueEvidence(data, space, profile) ? data : null;
   if (data.kind === "mixed") return activityUndoMixedEvidence(data, space) ? data : null;
   if (data.kind === "watchlist") return activityUndoWatchlistEvidence(data) ? data : null;
   if (data.space !== space || !["collection", "tokens"].includes(data.kind)) return null;
+  if (data.action === "collection_change_restore") return activityUndoCollectionEvidence(data) ? data : null;
   if (data.action === "token_batch_update") return activityUndoTokenEditEvidence(data) ? data : null;
   if (data.action === "token_batch_add") return activityUndoTokenBatchEvidence(data) ? data : null;
   if (data.action === "token_batch_remove") return activityUndoTokenBatchRemoveEvidence(data) ? data : null;
@@ -250,7 +254,8 @@ function activityUndoTokenBatchEvidence(data) {
   const label = row => row.back ? row.front + " / " + row.back : row.front;
   return data.kind === "tokens" && data.physical_confirmation_required === true && data.identity_policy === "fresh_id" && data.packing_restored === false
     && Object.keys(data).sort().join(",") === "action,available,cards,expect,id,identity_policy,kind,label,packing_restored,physical_confirmation_required,row_count,rows,space"
-    && Number.isSafeInteger(data.row_count) && data.row_count >= 2 && data.row_count <= 50 && data.label === data.row_count + " deleted token-card rows"
+    && Number.isSafeInteger(data.row_count) && data.row_count >= 1 && data.row_count <= 50
+    && data.label === data.row_count + " deleted token-card row" + (data.row_count === 1 ? "" : "s")
     && Array.isArray(data.rows) && data.rows.length === data.row_count
     && data.rows.every(item => item && typeof item === "object" && Object.keys(item).sort().join(",") === "label,restored"
       && activityUndoRow(item.restored, "tokens") && item.label === label(item.restored))
@@ -262,7 +267,8 @@ function activityUndoTokenBatchRemoveEvidence(data) {
   const label = row => row.back ? row.front + " / " + row.back : row.front, ids = new Set();
   return data.kind === "tokens" && data.reason_required === true
     && Object.keys(data).sort().join(",") === "action,available,cards,expect,id,kind,label,reason_required,row_count,rows,space"
-    && Number.isSafeInteger(data.row_count) && data.row_count >= 2 && data.row_count <= 50 && data.label === data.row_count + " added token-card rows"
+    && Number.isSafeInteger(data.row_count) && data.row_count >= 1 && data.row_count <= 50
+    && data.label === data.row_count + " added token-card row" + (data.row_count === 1 ? "" : "s")
     && Array.isArray(data.rows) && data.rows.length === data.row_count
     && data.rows.every(item => item && typeof item === "object" && Object.keys(item).sort().join(",") === "current,label,token_row_id"
       && Number.isSafeInteger(item.token_row_id) && item.token_row_id > 0 && !ids.has(item.token_row_id) && ids.add(item.token_row_id)
@@ -271,6 +277,10 @@ function activityUndoTokenBatchRemoveEvidence(data) {
 }
 
 function activityUndoReceipt(answer, preview) {
+  if (preview.kind === "order_queue") return activityUndoOrderQueueReceipt(answer, preview);
+  if (preview.kind === "product_kit") return activityUndoProductKitReceipt(answer, preview);
+  if (preview.action === "accessory_photo_record_update") return activityUndoAccessoryPhotoRecordReceipt(answer, preview);
+  if (preview.action === "collection_change_restore") return activityUndoCollectionReceipt(answer, preview);
   if (preview.action === "token_batch_update") return activityUndoTokenEditReceipt(answer, preview);
   if (preview.kind === "watchlist") return activityUndoWatchlistReceipt(answer, preview);
   if (preview.kind === "accessory") {
@@ -400,7 +410,7 @@ function activityUndoButton(view, change) {
   if (change.undo && Object.hasOwn(change.undo, "read_only")) return null;
   if (change.undo?.review !== true || !Number.isSafeInteger(change.id) || change.id < 1) return null;
   const id = change.id, root = view.days, endpoint = change.undo.kind === "wishlist" ? "/api/activity/wishlist-undo"
-    : change.undo.kind === "accessory" ? "/api/activity/accessory-undo" : change.undo.kind === "mixed" ? ACTIVITY_UNDO_MIXED_ENDPOINT : "/api/activity/undo";
+    : change.undo.kind === "accessory" ? "/api/activity/accessory-undo" : change.undo.kind === "product_kit" ? "/api/activity/product-kit-undo" : change.undo.kind === "mixed" ? ACTIVITY_UNDO_MIXED_ENDPOINT : "/api/activity/undo";
   const button = el("button", { type: "button", class: "btn btn-quiet activity-review-undo", text: "Review undo", onclick: () => {
     if (view.undoBusy || view.undoRefreshNeeded || view.undoCtx || view.older?.disabled || root !== view.days || !root.isConnected
         || !button.isConnected || !root.contains(button) || view.token !== routeToken || view.profile !== state.profile?.id
@@ -484,7 +494,7 @@ function activityUndoPhotoPreview(ctx, frames, changed) {
 }
 
 function openActivityUndo(view, id, endpoint = "/api/activity/undo") {
-  if (!["/api/activity/undo", "/api/activity/wishlist-undo", "/api/activity/accessory-undo", ACTIVITY_UNDO_MIXED_ENDPOINT].includes(endpoint)) return null;
+  if (!["/api/activity/undo", "/api/activity/wishlist-undo", "/api/activity/accessory-undo", "/api/activity/product-kit-undo", ACTIVITY_UNDO_MIXED_ENDPOINT].includes(endpoint)) return null;
   const ctx = { view, id, endpoint, root: view.days, seq: view.seq, profile: state.profile?.id, space: ownSpace(), token: routeToken,
     hash: location.hash, filter: { ...view.filter }, filterSignature: JSON.stringify(view.filter),
     pending: false, saved: false, needsRefresh: false, refreshing: false, refreshed: false, preview: null };
@@ -508,7 +518,7 @@ function openActivityUndo(view, id, endpoint = "/api/activity/undo") {
         sheetActions(sheet, [{ text: "Close", onclick: () => sheet.close() }]); return;
       }
       const preview = activityUndoEvidence(data, id, ctx.space, ctx.profile);
-      const expectedEndpoint = preview?.kind === "wishlist" ? "/api/activity/wishlist-undo" : preview?.kind === "accessory" ? "/api/activity/accessory-undo"
+      const expectedEndpoint = preview?.kind === "wishlist" ? "/api/activity/wishlist-undo" : preview?.kind === "accessory" ? "/api/activity/accessory-undo" : preview?.kind === "product_kit" ? "/api/activity/product-kit-undo"
         : preview?.kind === "mixed" ? ACTIVITY_UNDO_MIXED_ENDPOINT : "/api/activity/undo";
       if (!preview || endpoint !== expectedEndpoint) throw new Error("The Undo preview could not be checked.");
       ctx.preview = preview;
@@ -524,6 +534,10 @@ function openActivityUndo(view, id, endpoint = "/api/activity/undo") {
 }
 
 function activityUndoShow(ctx) {
+  if (ctx.preview.kind === "order_queue") return activityUndoOrderQueueShow(ctx);
+  if (ctx.preview.kind === "product_kit") return activityUndoProductKitShow(ctx);
+  if (ctx.preview.action === "accessory_photo_record_update") return activityUndoAccessoryPhotoRecordShow(ctx);
+  if (ctx.preview.action === "collection_change_restore") return activityUndoCollectionShow(ctx);
   const { sheet, preview, view, endpoint } = ctx, signature = JSON.stringify(preview);
   const accessoryRemoving = preview.kind === "accessory" && preview.action === "accessory_remove";
   const accessoryAdding = preview.kind === "accessory" && preview.action === "accessory_add";
@@ -618,7 +632,8 @@ function activityUndoShow(ctx) {
       const warning = accessoryRemoving ? "Undo removes this entire accessory record, including its recorded quantity of " + preview.current.quantity
         + (preview.current.kind === "sleeves" ? " individual sleeves." : Number(preview.current.quantity) === 1 ? " item." : " items.")
         : batchRemoving ? "Undo removes all " + plural(copies, "recorded copy", "recorded copies") + " across all " + plural(preview.row_count, "printing") + ". Every added row will be removed together."
-        : tokenBatchRemoving ? "Undo removes all " + plural(copies, "physical token card") + " recorded in these " + preview.row_count + " added rows. Every added row will be removed together."
+        : tokenBatchRemoving ? "Undo removes all " + plural(copies, "physical token card")
+          + (preview.row_count === 1 ? " recorded in this added row." : " recorded in these " + preview.row_count + " added rows. Every added row will be removed together.")
         + (preview.rows.some(item => item.current.back.trim()) ? " Each front/back pair is one physical card." : "")
         : tokenCards ? "Undo removes all " + plural(preview.current.quantity, "physical token card") + " recorded in this row."
         + (preview.current.back.trim() ? " Each front/back pair is one physical card." : "")
@@ -684,10 +699,10 @@ function activityUndoShow(ctx) {
       confirmedOwned = ownershipInput.checked === true; ownershipInput.checked = confirmedOwned; error.textContent = ""; actions();
     });
   } else if (tokenAdding) {
-    // One deleted row, or every row of a token batch (2-50): all of them together, never a selection.
+    // One deleted row, or every target of a token batch: all of them together, never a selection.
     const rows = tokenBatch ? preview.rows.map(item => item.restored) : [preview.restored];
     const cards = plural(rows.reduce((sum, row) => sum + row.quantity, 0), "physical token card");
-    const where = tokenBatch ? " recorded in these " + preview.row_count + " deleted rows" : " recorded in this deleted row";
+    const where = tokenBatch && preview.row_count !== 1 ? " recorded in these " + preview.row_count + " deleted rows" : " recorded in this deleted row";
     const historical = row => el("dl", {}, ACTIVITY_UNDO_FIELDS.tokens.flatMap(field => [el("dt", { text: field.replaceAll("_", " ") }),
       el("dd", { class: ["front_details", "back_details", "notes"].includes(field) ? "activity-undo-note" : null, text: text(row[field]) })]));
     sheet.body.append(el("p", { class: "box box-warn", text: "Undo restores all " + cards + where
@@ -702,7 +717,7 @@ function activityUndoShow(ctx) {
     const id = "activity-undo-owned-" + sheet.heading.id;
     ownershipInput = el("input", { id, type: "checkbox" }); ownershipInput.checked = false;
     sheet.body.append(el("label", { class: "choice", for: id }, ownershipInput, el("span", { text: "I confirm I still physically have all " + cards
-      + (tokenBatch ? " recorded in these " + preview.row_count + " rows." : " recorded in this row.") })));
+      + (tokenBatch && preview.row_count !== 1 ? " recorded in these " + preview.row_count + " rows." : " recorded in this row.") })));
     ownershipInput.addEventListener("change", () => {
       if (!ctx.here() || ctx.pending || ctx.saved || ctx.needsRefresh || !ownershipInput.isConnected || !sheet.body.contains(ownershipInput)
           || ctx.preview !== preview || JSON.stringify(preview) !== signature) { ownershipInput.checked = confirmedOwned; return; }
@@ -853,7 +868,7 @@ function activityUndoShow(ctx) {
     try {
       const answer = await apiWrite(endpoint, { id: ctx.id, expect: preview.expect,
         ...(removing ? { reason: reviewedReason } : {}), ...(accessoryCropping ? { confirm_photo: true } : accessoryCorrecting ? { confirm_record: true } : accessoryRetyping ? { confirm_kind: true } : accessoryOwning ? { confirm_owner: true } : accessoryCounting ? { confirm_stock: true } : accessoryAdding ? { confirm_restore: true } : adding ? { confirm_owned: true } : {}) });
-      if (preview.kind !== "wishlist") state.library = null;
+      if (preview.kind !== "wishlist") invalidateLibrary();
       if (!activityUndoReceipt(answer, preview)) throw new Error("The Undo result could not be confirmed.");
       if (!activityUndoOwner(ctx)) return;
       ctx.saved = true;
@@ -862,7 +877,7 @@ function activityUndoShow(ctx) {
         sheet.body.append(confirmation); actions(); if (ctx.here() && focusOwned()) confirmation.focus();
       }
     } catch (failure) {
-      if (preview.kind !== "wishlist") state.library = null;
+      if (preview.kind !== "wishlist") invalidateLibrary();
       if (!activityUndoOwner(ctx)) return;
       ctx.needsRefresh = true;
       error.textContent = (failure.status ? failure.message : "The Undo result could not be confirmed.") + " Reload Activity before reviewing another Undo.";
@@ -1007,7 +1022,7 @@ function activityUndoMixedShow(ctx) {
     ctx.pending = true; error.textContent = ""; actions();
     try {
       const answer = await apiWrite(endpoint, { id: ctx.id, expect: preview.expect, reason: reviewedReason });
-      state.library = null;
+      invalidateLibrary();
       if (!activityUndoMixedReceipt(answer, preview)) throw new Error("The Undo result could not be confirmed.");
       if (!activityUndoOwner(ctx)) return;
       ctx.saved = true;
@@ -1018,7 +1033,7 @@ function activityUndoMixedShow(ctx) {
         sheet.body.append(confirmation); actions(); if (ctx.here()) confirmation.focus();
       }
     } catch (failure) {
-      state.library = null;
+      invalidateLibrary();
       if (!activityUndoOwner(ctx)) return;
       ctx.needsRefresh = true;
       error.textContent = (failure.status ? failure.message : "The Undo result could not be confirmed.") + " Reload Activity before reviewing another Undo.";

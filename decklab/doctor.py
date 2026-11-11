@@ -33,7 +33,7 @@ def _provider():
         if optional is None:
             try:
                 from decklab.lib.preflight_forge import ForgeFiles
-                optional = ForgeFiles(settings=lambda: local.settings)
+                optional = ForgeFiles(settings=lambda: local.optional_settings)
                 if not callable(getattr(optional, "probe", None)):
                     optional_failed = True
                     return "probe_unverified"
@@ -41,6 +41,10 @@ def _provider():
                 optional_failed = True
                 return "probe_unverified"
         return optional.probe(ident)
+    probe.config_location = lambda: local.config_location
+    probe.config_warnings = lambda: local.config_warnings
+    probe.runtime_version = lambda: local.version
+    probe.platform_name = lambda: local.platform
     return probe
 
 
@@ -62,7 +66,10 @@ def main(argv=None, *, provider_factory=None):
             probe = (_provider if provider_factory is None else provider_factory)()
         except Exception:               # noqa: BLE001 - a broken adapter import is a fixed finding
             probe = None
-        result = preflight.report(probe)
+        result = preflight.report(probe, config_location=lambda: probe.config_location(),
+                                  config_warnings=lambda: probe.config_warnings(),
+                                  runtime_version=lambda: probe.runtime_version(),
+                                  platform_name=lambda: probe.platform_name())
     except KeyboardInterrupt:
         _say_error("Preflight cancelled.")
         return 130

@@ -54,6 +54,26 @@ class MixedTokenPlanPgTests(db_support.DbTestCase):
             return {table: connection.execute(f"select row_to_json(t)::text from {table} t order by 1").fetchall()
                     for table in TABLES}
 
+    def test_direct_deck_token_cards_write_persists_text_history_and_only_deck_audit(self):
+        before = inventory.current()
+        _, planned = self.case.operation()
+        items = planned.params["items"]
+        self.assertEqual(len(items), 1)
+        after, summary = inventory.apply(inventory.Op("deck.token_cards", {"items": items,
+            "expected_inventory_revision": before.revision, "expected_decks_revision": before.decks_revision}),
+            mixed.ACTOR, "Pack disposable deck token cards directly")
+        self.assertTrue(summary.changed)
+        self.assertEqual(summary.counts, {"decks": 1})
+        fresh = pg.PgInventory(dbname=self.dbname, breaker=state_pg.Breaker()).load()
+        self.assertEqual(fresh.deck(items[0]["id"]).text, after.deck(items[0]["id"]).text)
+        self.assertIn("**Token cards:**", fresh.deck(items[0]["id"]).text)
+        self.assertEqual(fresh.tokens, before.tokens)
+        self.assertEqual(fresh.status, before.status)
+        self.assertEqual(self.sql("select table_name,op from audit.row_change where change_set_id=(select max(id) from audit.change_set)"),
+                         [("deck", "UPDATE")])
+        self.assertEqual(self.sql("select count(*) from deck_revision where change_set_id=(select max(id) from audit.change_set)"), [(1,)])
+        self.assertEqual(self.sql("select text from deck_text where deck_id=%s", (items[0]["id"],)), [(fresh.deck(items[0]["id"]).text,)])
+
     def test_two_products_and_one_deck_save_in_one_audit_set(self):
         plan = self.case.preview()
         before = inventory.current()

@@ -850,6 +850,12 @@ class CommandTests(Guarded):
 class StatusCommandTests(Guarded):
     """cmd_status from end to end, with canned facts."""
 
+    def setUp(self):
+        super().setUp()
+        # These scenarios vary network/service facts; keep their synthetic config usable.
+        self.patch("decklab.lib.config.load", return_value={"profiles": [
+            {"id": "user1", "name": "User1", "space": "home", "plays_as": "user", "role": "admin"}]})
+
     def run_status(self, facts, state=None, answer=None, mdns=None):
         self.control.read_state.return_value = state
         self.patch("decklab.lib.homenet.gather.gather_facts", return_value=facts)

@@ -31,6 +31,8 @@ import json
 import re
 from datetime import date
 
+from . import copy_notes
+
 # How a refusal ends when a row or a deck can't be read strictly, so nothing can rewrite it
 # without losing what it holds ("A row after row 3 of the home token cards: ...; it can't be changed
 # until that's put right"). tokens.check strips it to match a lenient read's problem with the strict one's.
@@ -95,14 +97,7 @@ def ordinary_basic(row):
 
 def merge_notes(existing, incoming):
     """Keep existing prose and append distinct semicolon-separated observations."""
-    seen = {part.strip() for part in existing.split(";") if part.strip()}
-    additions = []
-    for part in incoming.split(";"):
-        part = part.strip()
-        if part and part not in seen:
-            additions.append(part)
-            seen.add(part)
-    return "; ".join(filter(None, (existing, *additions)))
+    return copy_notes.merge_notes(existing, incoming)
 
 
 def parse_cards(stream, where, *, existing=False, numbered=False):
@@ -171,13 +166,7 @@ def merge_rows(existing, inputs):
                 skipped_basics += qty
                 continue
             if old:
-                old["quantity"] = str(int(old["quantity"]) + qty)
-                old["notes"] = merge_notes(old["notes"], new.get("notes", ""))
-                for field in ("condition", "language"):
-                    if old[field] != new.get(field, ""):
-                        old[field] = ""
-                        note = f"Merged copies have differing or unreported {field}"
-                        old["notes"] = merge_notes(old["notes"], note)
+                old.update(copy_notes.merge(old, new))
                 bumped_rows += 1
             else:
                 row = {k: new.get(k, "") or "" for k in FIELDS}

@@ -327,7 +327,7 @@ function shopPrinting(card) {
   return `Exact: ${[card.set && card.set.toUpperCase(), card.collector_number, finish].filter(Boolean).join(" ")}`;
 }
 
-/** A reference price: the lowest price seen and where, never a claim of live stock. null without one. */
+/** A dated retailer reference observation, never a claim of live stock. null without one. */
 function shopPrice(card) {
   if (card.listed_aud === "" || card.listed_aud == null) return null;
   const amount = Number(card.listed_aud);
@@ -353,7 +353,7 @@ function shopQueueRow(card, group, showFor = true, view = null, showLongTerm = f
   if (row.matches("button")) row.setAttribute("aria-label", `${card.name}, ${plural(card.quantity, "copy", "copies")}`);
   const move = view && mayDo("orders") && view.data.queue_revision && card.queue_row
     ? shopQueueMove(card, view) : null;
-  const reprints = reprintInfo(card), snapshot = shopSnapshotLine(card);
+  const reprints = reprintInfo(card), snapshot = shopSnapshotLine(card, view);
   const history = snapshot ? shopHistoryButton(card, view) : null;   // E5-S29, shopping-history.js
   if (history) snapshot.append(history);
   return view || deck || move || price || reprints || snapshot ? el("div", { class: `shop-queue-row${shopSnapshotBack(card) ? " shop-queue-back" : ""}`,
@@ -378,7 +378,7 @@ function shopQueueMove(card, view) {
     onclick: () => shopQueueSheet(view, card) });
   button.disabled = details.disabled = Boolean(view.busy || view.stale);
   button.setAttribute("class", `${button.getAttribute("class")} shop-queue-write`);
-  return el("div", { class: "shop-queue-actions" }, el("div", { class: "actions" }, menu, details), error);
+  return el("div", { class: "shop-queue-actions" }, el("div", { class: "actions" }, menu, details, shopMarketTargetButton(card, view)), error);
 }
 
 /** All queue writes share one revision and one pending request, including Move. */
@@ -465,9 +465,18 @@ function shopQueueSheet(view, card = null) {
   const notes = field("notes", "Notes", "input", { type: "text", maxlength: 2000 });
   notes.value = card ? card.notes || "" : "";
   const printingWords = el("p", { class: "field-hint" });
+  const bonusWords = el("p", { class: "note note-warn shop-bonus-warning", role: "status", hidden: true });
   function sayPrinting() {
     printingWords.textContent = printing
       ? `Exact: ${printing.set.toUpperCase()} ${printing.number} ${printing.finish}` : "Any printing, nonfoil";
+    const exact = printing || (card?.printing === "exact" ? {set: card.set, number: card.collector_number, finish: card.finish} : null);
+    const products = exact && typeof exact.set === "string" && typeof exact.number === "string"
+      && seesHomeInventory(state.may) && Array.isArray(view.data.bonus_printings)
+      ? view.data.bonus_printings.filter(row => row && row.set === exact.set.toLowerCase()
+        && row.collector_number === exact.number && row.finish === exact.finish && Array.isArray(row.products))
+        .flatMap(row => row.products).filter(name => typeof name === "string" && name) : [];
+    bonusWords.textContent = [...new Set(products)].map(name => `Expected as the bonus card in ${name}.`).join(" ");
+    bonusWords.hidden = !products.length;
   }
   sayPrinting();
   if (!card) form.append(el("div", { class: "field" }, el("span", { text: "Printing" }), printingWords,
@@ -480,6 +489,7 @@ function shopQueueSheet(view, card = null) {
         if (alive() && inputs.name.value.trim() === name && picked && picked.set) { printing = picked; sayPrinting(); }
       } }),
       el("button", { type: "button", class: "btn btn-quiet", text: "Any printing", onclick: () => { printing = null; sayPrinting(); } }))));
+  form.append(bonusWords);
   const error = el("div", { class: "form-error", role: "alert", hidden: true });
   sheet.queueError = error;
   form.append(error);
@@ -574,8 +584,9 @@ async function shopSaveQueue(view, sheet, error, body, card) {
     sheet.close();
     focusAfter = body.action === "edit" ? Array.from(view.root.querySelectorAll(".shop-queue-edit"))
       .find((button) => Number(button.dataset.queueRow) === row) : view.root.querySelector(".shop-queue-add");
-    toast(body.action === "remove" ? `${card.name} removed from the purchase queue.`
-      : body.action === "edit" ? `${card.name} updated.` : `${answer.item.name} added to the purchase queue.`);
+    const savedWords = body.action === "remove" ? `${card.name} removed from the purchase queue.`
+      : body.action === "edit" ? `${card.name} updated.` : `${answer.item.name} added to the purchase queue.`;
+    toast(savedWords + (Array.isArray(answer.warnings) ? " " + answer.warnings.filter(word => typeof word === "string").join(" ") : ""));
     return true;
   } catch (failure) {
     if (!shopQueueActive(view)) { shopCloseQueueSheets(view); return false; }
@@ -776,7 +787,7 @@ function drawShopping(data) {
     for (const row of later) if (row.deck) planned.set(row.deck.id, (planned.get(row.deck.id) || 0) + (row.quantity || 0));
     clear(buySlot);
     if (immediate.length) buySlot.append(shopSection("shop-to-buy", "To buy", immediate.length,
-      "Cards we've decided to buy, with the lowest price seen when checked.",
+      "Cards we've decided to buy, with the shop price recorded when checked.",
       shopQueueControls(view), shopQueueGroups(immediate, view)));
     clear(deckSlot);
     if (decks.length) deckSlot.append(shopSection("shop-decks", "Decks still missing cards", decks.length,

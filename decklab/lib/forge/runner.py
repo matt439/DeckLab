@@ -213,7 +213,7 @@ def _release(fd, path):
 # The keywords of run() that wave 3's R has built (sim-wave3-contract.md section 8). Tests of the
 # packages that need them skip until then (skipUnless(RUN_FEATURES >= {...})).
 RUN_FEATURES = frozenset(("numbers", "seeds", "key", "kind", "extra", "override_sets", "log_dir"))
-RESULT_KINDS = ("paired", "experiment")         # run(kind=...) besides None, a matchup (saved.RESULT_KINDS)
+RESULT_KINDS = ("paired", "experiment", "unpaired")  # non-matchup kinds (saved.RESULT_KINDS)
 PAIRED_FOLDER = "paired"        # in the results folder: kind "paired" results, which listings never read
 PAIRED_VERSION = 1              # a new paired result's "paired_version"
 KEY_RE = re.compile(r"[0-9a-f]{64}")
@@ -404,6 +404,11 @@ def _hooks(games, entry_a, entry_b, *, numbers, seed_record, key, kind, extra, o
         out["extra"] = deepcopy(extra)
     if kind == "paired" and not isinstance(out["extra"].get("paired"), dict):
         raise ValueError('a paired result needs extra\'s "paired" block')
+    if kind == "unpaired":
+        block = out["extra"].get("unpaired")
+        if (not isinstance(block, dict) or not isinstance(block.get("test"), str)
+                or re.fullmatch(r"[0-9a-f]{64}", block["test"]) is None or block.get("arm") not in ("base", "variant")):
+            raise ValueError("an unpaired result needs its exact test id and base or variant arm")
     if override_sets is not None:
         sets = None if isinstance(override_sets, str) else list(override_sets)
         if sets is None or not all(isinstance(name, str) and name for name in sets):
@@ -641,7 +646,7 @@ def _run(setup, key, eng, fmt, entry_a, entry_b, ordered, games, by, progress, r
 
 
 def _kind_words(kind):
-    return {"paired": "a paired test's", "experiment": "an experiment's"}.get(kind, "a matchup's")
+    return {"paired": "a paired test's", "experiment": "an experiment's", "unpaired": "an independent size-change test's"}.get(kind, "a matchup's")
 
 
 def _record(setup, key, eng, fmt, entry_a, entry_b, ordered, existing, sides, specs, procs, when, by,

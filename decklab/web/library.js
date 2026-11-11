@@ -149,7 +149,10 @@ function libMatchesTitle(deck, filters) {
 
 function showLibrary(params, token) {
   load("/api/decks", token, (data) => {
-    state.library = data;
+    if (!cacheLibrary(data)) {
+      $("#main").append(errorBox("The saved deck list changed", new ApiError(409, "Reload to get the latest saved copy.")));
+      return;
+    }
     drawLibrary(data, libraryFilters(params));
   });
 }
@@ -288,6 +291,9 @@ function drawLibrary(data, filters) {
     if (first) first.focus();
   } }] : [];
   // Compare two decks (compare.js, E1-S13): choose the two from the decks shown here.
+  if (typeof memberOwnSpace === "function" && memberOwnSpace()) more.push({label: "Cards to get…", onclick: () => {
+    if (view.current?.()) openMemberNeeds();
+  }});
   if (data.decks.filter((d) => !d.error).length > 1) more.push({ label: "Compare two decks…", onclick: () => openCompareFirst(data.decks) });
   // New deck is the page's one primary action for whoever may make a deck (on a phone it opens in the Quick
   // edit); without it, More ("⋯") sits at the end of the filter row instead of on a row of its own under the title.
@@ -934,7 +940,9 @@ function libDetail(d, ctx) {
 function libLoadForge(data, refresh) {
   if (!data.decks.some((d) => d.kind === "casual")) return;
   const profile = state.profile ? state.profile.id : null;
+  const epoch = state.libraryEpoch || 0;
   api("/api/library/forge").then((answer) => {
+    if (epoch !== (state.libraryEpoch || 0) || profile !== state.profile?.id) return;
     if (!answer || answer.error) return;
     state.libraryForge = { profile, decks: answer.decks || {} };
     refresh();

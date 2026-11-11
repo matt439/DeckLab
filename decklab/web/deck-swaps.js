@@ -187,11 +187,11 @@ function drawReplacements(box, data, answer) {
  * unsaved changes to that list, as the test page's Save this change does) and its Test this change sheet
  * open (variant.js vtOpenTestFromRoute). Copies the list no longer plays aren't swapped. Nothing more is done
  * once the person has left the page or switched profile, and the button waits while it works. */
-async function testReplacementSwap(data, card, candidate, button) {
+async function testReplacementSwap(data, card, candidate, button, ownership = null) {
   if (button && button.disabled) return;
   const version = data.version === "owned" ? "owned" : "target";
   const token = routeToken, hash = location.hash, profile = state.profile && state.profile.id;
-  const here = () => token === routeToken && hash === location.hash && (state.profile && state.profile.id) === profile;
+  const here = () => token === routeToken && hash === location.hash && (state.profile && state.profile.id) === profile && (!ownership || ownership());
   if (button) button.disabled = true;
   try {
     let view;
@@ -202,6 +202,10 @@ async function testReplacementSwap(data, card, candidate, button) {
       return;
     }
     if (!here()) return;
+    if (candidate.expected_sha256 && view.sha256 !== candidate.expected_sha256) {
+      toast("The deck changed. Reload its bracket counts before testing this swap.");
+      return;
+    }
     const id = view.id || data.summary.id;
     const sections = view.lists && view.lists[version];
     const swapped = sections ? replacementSwapList(sections, card.name, candidate) : null;
@@ -229,22 +233,24 @@ async function testReplacementSwap(data, card, candidate, button) {
   }
 }
 
-/** A list's sections with up to candidate.max_qty copies of name taken off its Deck lines and as many of the
+/** A list's sections with up to candidate.max_qty copies of name taken off its selected section and as many of the
  * candidate added (on its line of the same printing, else a new line in its default printing), or null when
- * the Deck section has no copy of name. */
+ * selected section has no copy of name. Legacy callers use Deck; checked bracket replacements may name an identity section. */
 function replacementSwapList(sections, name, candidate) {
+  const destination = candidate.section || "Deck";
+  if (!["Deck", "Commander", "Companion"].includes(destination)) return null;
   const out = {};
   for (const [section, lines] of Object.entries(sections)) out[section] = (lines || []).map((l) => ({ ...l }));
   const same = (a, b) => a.toLowerCase() === b.toLowerCase();
   let left = Math.max(1, candidate.max_qty || 1), taken = 0;
-  for (const line of out.Deck || []) {
+  for (const line of out[destination] || []) {
     if (left && same(line.name, name)) {
       const take = Math.min(left, line.qty);
       line.qty -= take; left -= take; taken += take;
     }
   }
   if (!taken) return null;
-  out.Deck = out.Deck.filter((l) => l.qty > 0);
+  out[destination] = out[destination].filter((l) => l.qty > 0);
   const printing = candidate.default || {};
   const line = { qty: taken, name: candidate.name, card: candidate.card || null };
   if (printing.set) {
@@ -252,10 +258,10 @@ function replacementSwapList(sections, name, candidate) {
     if (printing.number) line.number = printing.number;
   }
   if (printing.finish && printing.finish !== "nonfoil") line.finish = printing.finish;
-  const existing = out.Deck.find((l) => same(l.name, candidate.name) && (l.set || "") === (line.set || "")
+  const existing = out[destination].find((l) => same(l.name, candidate.name) && (l.set || "") === (line.set || "")
     && (l.number || "") === (line.number || "") && (l.finish || "nonfoil") === (line.finish || "nonfoil"));
   if (existing) existing.qty += taken;
-  else out.Deck.push(line);
+  else out[destination].push(line);
   return out;
 }
 

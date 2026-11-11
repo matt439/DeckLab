@@ -375,6 +375,9 @@ def _cant_listen(host, port, error, default_port):
     if running and running.get("port") == port:
         return (f"Deck Lab is already running (process {running.get('pid')}, started {_when(running)}). "
                 f"Stop it with: {_stop_command(port, default_port)}")
+    if _port_in_use(error):
+        return (f"Port {port} is in use by another program. Choose a different port with --port "
+                "or config.json's port, then start Deck Lab again.")
     return f"Can't listen on {host}:{port}: {error}"
 
 
@@ -418,7 +421,8 @@ def _serve(host, port, no_update, settings, log_path, background):
     home_hosts = [h for h in settings.get("allowed_hosts") or [] if str(h).strip().lower().rstrip(".") not in hosts]
     try:
         server = server_http.make_server(host, port, allowed_hosts=home_hosts, tunnel_hosts=hosts,
-                                         home_networks=home_scope.networks(settings, server_http.log))
+                                         home_networks=home_scope.networks(settings, server_http.log),
+                                         script_secret=settings.get("script_secret"))
     except (OSError, OverflowError) as e:       # port in use, bad address, port over 65535
         server_http.log(_cant_listen(host, port, e, default_port))
         return 1

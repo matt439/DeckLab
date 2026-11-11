@@ -22,9 +22,11 @@ function matchesReadiness(deck, filter) {
     : filter === "waiting" ? missing === 0 && waiting > 0 : missing > 0);
 }
 
-function exportedDeck(data) {
+function exportedDeck(data, {categories = false} = {}) {
   return Object.entries(data.sections).filter(([, lines]) => lines.length).map(([section, lines]) =>
-    [section, ...lines.map(l => `${l.qty} ${l.name}${l.set && l.number ? ` (${l.set.toUpperCase()}) ${l.number}` : ""}`)].join("\n")).join("\n\n") + "\n";
+    [section, ...lines.map(l => `${l.qty} ${l.name}${l.set ? ` (${l.set.toUpperCase()})${l.number ? ` ${l.number}` : ""}` : ""}`
+      + (l.finish === "foil" ? " *F*" : l.finish === "etched" ? " *E*" : "")
+      + (categories && l.category ? ` #${l.category}` : ""))].join("\n")).join("\n\n") + "\n";
 }
 
 function downloadDeck(data) {
@@ -35,22 +37,28 @@ function downloadDeck(data) {
 }
 
 /** Copy the list shown to the clipboard; where that isn't allowed, a sheet with the list selected to copy. */
-async function copyDeck(data) {
-  const text = exportedDeck(data);
+async function copyDeck(data, options = {}) {
+  const text = exportedDeck(data, options), profile = state.profile?.id, token = routeToken, hash = location.hash;
+  const main = document.getElementById("main");
+  const current = () => profile === state.profile?.id && token === routeToken && hash === location.hash
+    && main?.isConnected && document.getElementById("main") === main && exportedDeck(data, options) === text;
+  if (!current()) return;
   try {
     await navigator.clipboard.writeText(text);
-    toast("Decklist copied.");
+    if (current()) toast(options.categories ? "Decklist with categories copied." : "Decklist copied.");
   } catch (_) {
+    if (!current()) return;
     const area = el("textarea", {"aria-label": "Decklist to copy", readonly: true, rows: 14, class: "export-copy"});
     area.value = text;
-    const sheet = openSheet({title: "Copy the decklist", body: [el("p", {class: "sub", text: "Select it and copy, or use Download decklist."}), area]});
+    const sheet = openSheet({title: options.categories ? "Copy the decklist with categories" : "Copy the decklist",
+      body: [el("p", {class: "sub", text: "Select and copy this list. Finish marks are kept."}), area]});
     sheetActions(sheet, [{text: "Done", kind: "primary", onclick: () => sheet.close()}]);
     area.focus(); area.select();
   }
 }
 
-function printDeck(data) {
-  document.querySelector(".print-sheet")?.remove();
+/** The common text play sheet; it never attaches to the page or reads further records. */
+function playSheet(data) {
   const version = listName(data.version);
   const sheet = el("article", {class: "print-sheet"}, el("h1", {text: data.summary.title}),
     el("p", {text: version}), el("pre", {text: exportedDeck(data)}));
@@ -68,9 +76,43 @@ function printDeck(data) {
     `Guide needs review: the list changed on ${guide.changed_on}. Check its advice against this list.`}));
   sheet.append(el("p", {text: "Guide notes may discuss both lists; follow their labels."}));
   for (const part of guide?.sections || []) sheet.append(el("h2", {text: part.title}), guideMarkdown(part.markdown));
+  return sheet;
+}
+
+function printDeck(data) {
+  document.querySelector(".print-sheet")?.remove();
+  const sheet = playSheet(data);
   document.body.append(sheet);
   window.addEventListener("afterprint", () => sheet.remove(), {once: true});
   window.print();
+}
+
+/** Serialize only the print builder's text structure, without links, pictures or active attributes. */
+function playSheetMarkup(node) {
+  const escaped = value => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  if (node.nodeType === 3) return escaped(node.textContent);
+  const tag = (node.tagName || "").toLowerCase();
+  if (["script","style","iframe","object","embed"].includes(tag)) return "";
+  if (["img","svg"].includes(tag)) return escaped(node.getAttribute("alt") || node.getAttribute("aria-label") || "");
+  const content = Array.from(node.childNodes || []).map(playSheetMarkup).join("");
+  if (tag === "br" || tag === "hr") return `<${tag}>`;
+  return ["article","section","div","span","h1","h2","h3","h4","p","pre","ul","ol","li","b","strong","em","i","blockquote","dl","dt","dd","table","thead","tbody","tr","th","td"].includes(tag)
+    ? `<${tag}>${content}</${tag}>` : content;
+}
+
+function savedPlaySheet(data, when = new Date()) {
+  const sheet = playSheet(data);
+  const saved = el("p", {text: `Saved ${when.toISOString()}. This copy may be out of date; check Deck Lab before using it.`});
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+    + '<title>Deck Lab play sheet</title><style>body{font:1rem/1.5 system-ui,sans-serif;max-width:50rem;margin:1rem auto;padding:0 1rem;overflow-wrap:anywhere}pre{white-space:pre-wrap}h1,h2{line-height:1.2}</style></head><body>'
+    + playSheetMarkup(saved) + playSheetMarkup(sheet) + '</body></html>\n';
+}
+
+function downloadPlaySheet(data) {
+  const url = URL.createObjectURL(new Blob([savedPlaySheet(data)], {type: "text/html;charset=utf-8"}));
+  const link = el("a", {href: url, download: `${data.summary.id.replaceAll("/", "-")}-${data.version}-play-sheet.html`});
+  document.body.append(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /** A pattern that finds the deck's card names (state.cards) in text, longest first, as whole words; null
@@ -184,7 +226,7 @@ function drawDeckMatchups(host, data, m, retry = null) {
     const token = routeToken;
     api("/api/decks").then((library) => {
       if (token !== routeToken) return;           // the page was left: nothing to draw
-      state.library = state.library || library;
+      if (!cacheLibrary(state.library || library)) return;
       if (host.isConnected) {
         const redraw = () => drawDeckMatchups(host, data, m, retry);
         if (typeof keepPlace === "function") keepPlace(redraw); else redraw();
@@ -212,7 +254,8 @@ function drawDeckMatchups(host, data, m, retry = null) {
     m.ai ? el("details", {class: "more deck-mu-ai", open: earlier ? true : null},
       el("summary", {text: "What Forge's AI can't play"}),
       aiLimitsParts(m.ai, s.title, {deckPage: true, otherSaid: !!otherLine, earlier})) : null,
-    deckCardStats(m, version, {otherSaid: !!otherLine, data})]);
+    deckCardStats(m, version, {otherSaid: !!otherLine, data}),
+    deckDevelopmentPart(data)]);
 }
 
 /** This deck's latest head-to-head result against an opponent (any list), from the deck on screen's

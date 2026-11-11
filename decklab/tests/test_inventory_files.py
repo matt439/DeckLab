@@ -175,7 +175,7 @@ class FixtureRoundTripTests(TempRoot):
                                                                 "Zombie,,tdsk,2,,nonfoil,2,2/2,,single-sided verified\n")
         self.assertRoundTrip("magic/watchlist.csv", ",".join(model.QUEUE_FIELDS) + "\n"
                              "Clifftop Retreat,frc,67,nonfoil,2,The Free Peoples,any,0.50,Ronin Games,no,"
-                             "2026-10-05,,waiting_for_stock,magic/buylists/x.md\n")
+                             "2026-10-05,,waiting_for_stock,magic/buylists/x.md,\n")
         inv = self.load()
         self.assertEqual([r.id for r in inv.token_set().rows], [1, 2])
         self.assertEqual(inv.watchlist.rows[0].for_deck, "The Free Peoples")

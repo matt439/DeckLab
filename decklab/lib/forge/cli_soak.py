@@ -103,33 +103,9 @@ def _soak_game_text(path, g, first):
 
 
 def _soak_fresh(setup, folder, result, g):
-    """Play game g of result fresh: one one-shot DeckLabSim v2 request with the chunk's arguments
-    (decks in g's seat order, -n 1, first g, the result's base, stream and pilots). Its output."""
-    record = result["seeds"]
-    names = []
-    for side in result["sides"]:
-        name = f"{side['card_sha']}.dck"
-        (folder / name).write_text(side["dck"], encoding="utf-8")
-        names.append(name)
-    deck1 = shared.seeds.deck1_side(g, record["flip"])
-    order = [deck1, 1 - deck1]
-    seat_pilots = [result["sides"][i].get("pilot") for i in order]
-    launch = dict(setup, decks_dir=folder)
-    v2 = {"stream": record["stream"], "first": g}
-    if all(seat_pilots) and any(p.get("profile", "Default") != "Default" or p.get("switches")
-                                for p in seat_pilots):
-        argv = shared.runner._java(launch) + shared.runner._class_path_launch(launch) + shared.runner.request_args(
-            launch, result["format"], names[order[0]], names[order[1]], 1, record["base"], v2=v2, pilots=seat_pilots)
-    else:       # the default pilots: the command line every v2 batch has
-        argv = shared.runner.build_command(launch, result["format"], names[order[0]], names[order[1]], 1, record["base"], v2)
-    env = shared._prepare_user_dir(setup["user_dir"])
-    proc = shared.processes.start_process(argv, cwd=str(setup["forge_dir"]), env=env)
-    try:
-        out, _ = proc.communicate(timeout=max(600, 4 * setup["clock_s"]))
-    except Exception:
-        shared._end_process(proc)
-        raise
-    return out.decode("utf-8", errors="replace") if isinstance(out, bytes) else (out or "")
+    """Shared one-shot replay, retaining this facade's existing patch point."""
+    from .transcript import replay
+    return replay(setup, folder, result, g)
 
 
 def _soak_lines(text):

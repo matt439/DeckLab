@@ -73,8 +73,9 @@ def other_list_hashes(c, space):
     # Their card cells also cover a current precon with an identical list. Include
     # all referenced product lists conservatively, independent of storage state.
     for columns, rows, beginner in c.execute(
-            "select p.columns, jsonb_agg(i.cells order by i.position), p.stem = 'fdn-beginner-box' "
-            "from product p join product_item i on i.product_stem = p.stem group by p.stem, p.columns"):
+            "select p.columns, jsonb_agg(i.cells order by i.position), p.stem = %s "
+            "from product p join product_item i on i.product_stem = p.stem group by p.stem, p.columns",
+            (decks.BEGINNER_BOX,)):
         groups = {}
         for cells in rows:
             row = dict(zip(columns, cells))

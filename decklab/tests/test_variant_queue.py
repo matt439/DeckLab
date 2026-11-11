@@ -149,6 +149,21 @@ class VariantQueueTests(support.VariantApiCase):
         row = self.box.inventory.load().watchlist.rows[0]
         self.assertEqual((row.set, row.collector_number, row.finish, row.printing), ("war", "162", "foil", "exact"))
 
+    def test_bonus_printing_advisory_is_in_review_and_does_not_refuse_explicit_apply(self):
+        from decklab.lib.inventory import rules
+        from decklab.tests import test_inventory_orders as orders
+        support._write(self.box.magic / "products/bonus.csv",
+                       "section,name,set,collector_number,finish,quantity,notes\n"
+                       "extras,Giant Growth,war,162,foil,1,bonus card in Fixture box\n")
+        support._write(self.box.magic / "products/status.csv", rules.csv_bytes([
+            {"file": "bonus.csv", "status": "ordered"}], rules.STATUS_FIELDS).decode("utf-8"))
+        support._write(self.box.magic / "orders/records/2026-11-11-bonus.json", orders.record_json(
+            "2026-11-11-bonus", "", "", [orders.component("box", "product", "magic/products/bonus.csv")]))
+        shown = self.preview(choice={"printing": "exact", "set": "war", "collector_number": "162", "finish": "foil"})
+        self.assertTrue(any("expected as the bonus card in Bonus" in words for words in shown["warnings"]))
+        self.assertTrue(self.apply(shown)["saved"])
+        self.assertEqual(self.box.inventory.load().watchlist.rows[0].finish, "foil")
+
     def test_exact_printing_finish_is_rechecked_when_the_card_cache_changes_after_review(self):
         preview = self.preview(choice={"printing": "exact", "set": "war", "collector_number": "162", "finish": "foil"})
         before = self.box.inventory.load()

@@ -154,7 +154,7 @@ class HomeListenerTests(unittest.TestCase):
             message = email.message.Message()
             for name, value in headers:
                 message[name] = value
-            return types.SimpleNamespace(server=types.SimpleNamespace(remote=remote), headers=message,
+            return types.SimpleNamespace(server=types.SimpleNamespace(remote=remote, script_secret=None), headers=message,
                                          client_address=(address, 1234))
         is_script = server_http.Handler._is_script
         header = [(access.SCRIPT_HEADER, "1")]

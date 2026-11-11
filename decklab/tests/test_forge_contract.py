@@ -341,7 +341,7 @@ class MaskTests(unittest.TestCase):
 class CommandLineTests(unittest.TestCase):
 
     def test_the_commands(self):
-        self.assertEqual(list(forge.cli.COMMANDS), ["status", "audit", "play", "list", "cards", "cardlog-check",
+        self.assertEqual(list(forge.cli.COMMANDS), ["status", "audit", "play", "game", "list", "cards", "cardlog-check",
                                                     "slots", "replay", "pool", "serve-check", "field", "variant",
                                                     "experiment", "gauntlet", "pilots", "overrides", "staged-move", "soak-probe",
                                                     "engine-check", "decisions", "upgrade-check"])

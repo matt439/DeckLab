@@ -38,8 +38,9 @@ class WorkspaceInteractionTests(unittest.TestCase):
           window.fire('error', {message: 'Unknown app failure'});
           window.fire('unhandledrejection', {reason: new Error('failed save')});
           assert.equal(messages.length, 4, 'actionable errors and rejected operations still show');
-          assert(messages[0].includes('app.js:12'));
-          assert.equal(messages[3], 'failed save');
+          assert.equal(messages[0], undefined, 'browser text and filenames are never passed through');
+          assert.equal(messages[1].message, 'real exception');
+          assert.equal(messages[3].message, 'failed save', 'only the internal error object reaches sanitization');
         """)
 
     def test_arrows_select_and_the_thumbnail_opens_the_viewer_without_adding(self):

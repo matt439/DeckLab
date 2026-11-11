@@ -29,7 +29,7 @@ SETUP = PAGE + r"""
     choices:[{list:data.lists[0],name:'Matt'},{list:data.lists[1],name:'Opponent'}]});assert(game);lifeSourceEnd(game,'a');return game;};
   const reply=(body,saved=false)=>({...(saved?{saved:true,sha256:hashR}:{preview:true,id:body.id||recordId,review_sha256:hashR}),record:{
     ...(saved?{version:1,kind:'games',id:body.id,revision:1,created_on:'2026-10-29T01:00:00+00:00',updated_on:'2026-10-29T01:00:00+00:00',updated_by:'Matt'}:{}),
-    date:body.date,result:body.result,notes:podTrim(body.notes),space:'home',sides:body.sides.map(side=>{
+    date:body.date,result:body.result,notes:podTrim(body.notes),space:'home',...(body.counter?{counter:structuredClone(body.counter)}:{}),sides:body.sides.map(side=>{
       const chosen=currentData.lists.find(value=>value.id===side.id&&value.version===side.version&&value.sha256===side.sha256);
       assert(chosen);const value={...structuredClone(chosen),player:podTrim(side.player),mulligans:side.mulligans};
       if(side.plan_id){const savedPlan=currentData.sideboards.find(item=>item.record.id===side.plan_id);assert(savedPlan);
@@ -51,6 +51,33 @@ SETUP = PAGE + r"""
 
 @unittest.skipUnless(NODE, "Node.js isn't installed")
 class LifeSourceBridgeUiTests(unittest.TestCase):
+    def test_counter_duration_life_and_elimination_defaults_are_optional_reviewed_fields(self):
+        self.run_js(r'''
+          const data=makeData(),game=lifeSourceNewGame({profile:'matt',space:'home',session_id:sessionId,date:data.today,
+            choices:[{list:data.lists[0],name:'Matt'},{list:data.lists[1],name:'Opponent'}]});
+          game.started-=125000;lifeSourceConcede(game,'b');const {edit}=begin(game,data);
+          assert.equal(edit.body.querySelector('[data-counter-duration]').value,'2.08');
+          assert.equal(edit.body.querySelector('[data-counter-life=a]').value,'40');
+          assert.equal(edit.body.querySelector('[data-counter-reason=b]').value,'conceded');
+          assert.equal(edit.body.querySelector('[data-counter-order=b]').value,'1');
+          edit.body.querySelector('[data-counter-life=a]').value='25';
+          const reviewed=await preview(edit);assert.notEqual(reviewed,edit);
+          same(writes[0][1].counter,{duration_seconds:125,seats:[
+            {seat_id:'a',final_life:25,out_reason:null,out_order:null},
+            {seat_id:'b',final_life:40,out_reason:'conceded',out_order:1}]});
+          await save(reviewed);assert.equal(cleanupCalls,1);
+        ''')
+
+    def test_clearing_all_counter_fields_is_allowed_and_unmatched_server_facts_cannot_save(self):
+        self.run_js(r'''
+          let {edit}=begin();for(const input of edit.body.querySelector('.play-counter-fields').querySelectorAll('input'))input.value='';
+          for(const select of edit.body.querySelector('.play-counter-fields').querySelectorAll('select'))select.value='';
+          await preview(edit);assert.equal(writes[0][1].counter,null);edit.close();
+          writes.length=0;apiWrite=async(path,body)=>{writes.push([path,body]);const answer=reply(body);delete answer.record.counter;return answer;};
+          ({edit}=begin());const before=sheets.length;await preview(edit);assert.equal(sheets.length,before);
+          assert(edit.body.textContent.includes("couldn't be checked"));assert.equal(cleanupCalls,0);
+        ''')
+
     def run_js(self, scenario):
         result = subprocess.run([NODE, str(RUNNER)], input=json.dumps([str(WEB), SETUP + "{" + scenario + "}", True]),
                                 capture_output=True, text=True, encoding="utf-8", timeout=30, check=False)

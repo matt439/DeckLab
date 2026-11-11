@@ -340,14 +340,12 @@ anyone may run and stop matchups, field runs and tests. Four rules are about
 reading: a wishlist is its owner's only (permissions.sees_wishlist), so
 GET /api/profiles/<id>/wishlist is 403 for anyone else, an admin included,
 and on the home listener too (the viewer the page's chooser names; none
-named is 403); the sleeves, deck boxes and playmats are the home's, so a visitor
-with their own person space (permissions.sees_accessories) gets 403 from
-/api/accessories and /accessory-img/, and every other answer leaves them out
-(Sleeves and Deck box lines, kits, the packing plan's sleeves: guard.py lists
-where); the inventory is read by space (permissions.sees_inventory): home's
+named is 403). Sleeves, deck boxes, playmats and their pictures follow accessory-owner
+visibility, including a member's own kit; another owner's Public kit is read-only.
+Private kit stays out of deck and packing projections. The inventory is read by space (permissions.sees_inventory): home's
 collection and tokens, and the shopping list, orders, checks and receipts that
 are home's alone, only by the home profiles, and a person's own collection and
-tokens only by that person and an admin, so /api/shopping, /api/receipt (and
+tokens only by that space's people, with no admin override, so /api/shopping, /api/receipt (and
 its preview and apply), /api/assembly (and its preview), and /api/collection,
 /api/collection/rows, /api/tokens, /api/precons/preview and /api/precons/coverage for such a space
 answer 403 to anyone else, the collection's "spaces" lists only the ones the
@@ -355,22 +353,21 @@ viewer sees, and the printing picker's copy counts (/api/cards/printings,
 /api/cards/search with detail) are home's only for the home profiles and a
 person's own otherwise; a deck page and the library show a deck's
 owned-vs-needed, counts, token chips and table only to those who may see its
-space's inventory (the rest of the deck to anyone); and /api/activity shows each viewer only the audit rows its scope
-allows (permissions.activity_scope and lib/api/activity.py: an admin, or a
-script naming nobody, everything but email addresses and other
-people's wishlists; anyone else their own wishlist, their own space's
-settings, inventory, deck and play-record rows and the simulations setting;
-an accessory row only to whoever sees its owner's, admins too; a wishlist row
+space's inventory (the list, prose and stats to permitted deck readers); and /api/activity shows each viewer only the audit rows its scope
+allows (permissions.activity_scope and lib/api/activity.py): named viewers, admins included,
+their own space's permitted rows and any permitted system rows; a script naming nobody
+has the broad system scope with the same row-level privacy filters.
+An accessory row is shown only to whoever sees its owner's, admins too; a wishlist row
 only ever to its owner, with a change set's message and reason hidden from
-anyone who misses one of its rows), each through its table's allow-list of fields; /api/visits
+anyone who misses one of its rows, each through its table's allow-list of fields; /api/visits
 answers only an admin (or a script naming nobody). Visits are recorded (lib/visits.py) for
 the profile a request is from, the login's or the one the chooser names, never for one naming
 nobody: its API requests per day, and the pages its page's beacon reports (the route's path and a
 deck's id, nothing else). On the home listener identity is None and the page's
 chooser names the profile, as before, and that profile has the same rights
 there as through the tunnel: a write acts as the body's "profile" with its
-own rights (User1 picked at home can't change the home collection or
-Matt's decks), and when the X-Deck-Lab-Viewer
+own rights (User1 can edit home's collection and tokens and home decks Played by her,
+but not Matt's decks), and when the X-Deck-Lab-Viewer
 header names a profile the body must name the same one (403 "You can only
 make changes as yourself"); the three reading rules about accessories,
 wishlists and the inventory follow the header's profile (and an accessory
@@ -380,7 +377,8 @@ outside the home (header, ?profile=, ?viewer= or body "profile") gets 403
 "Sign in through decklab.example.com" on every route: members come in
 through the tunnel's login, from the home Wi-Fi too. Only a script naming
 nobody (code outside any request, or a home-listener request from
-loopback, 127.0.0.1 or ::1, that sends X-Deck-Lab-Script: 1; never the
+loopback, 127.0.0.1 or ::1, that sends X-Deck-Lab-Script: 1 and any configured
+off-Linux script-secret proof; never the
 tunnel's listener, though it's on 127.0.0.1 too) may change everything and
 sees all the accessories and the inventory; any other request naming
 nobody (a phone on the Wi-Fi, the PC's browser before a profile is picked)
@@ -603,6 +601,11 @@ def main(argv=None):
         args = _parse_args(argv)
         if args.stop:
             return _stop(args.port)
+        from decklab.lib.db_failures import runtime_problem
+        problem = runtime_problem()
+        if problem:
+            server_http.log(problem)
+            return 1
         settings = config.load()
         port = settings.get("port", 8642) if args.port is None else args.port
         background = not console or args.background
@@ -614,8 +617,14 @@ def main(argv=None):
                 stream.close()
             log_path = os.path.abspath(args.log)
             stream = _log_to(log_path, announce=console)
+        if not config.CONFIG_FILE.exists():
+            server_http.log("decklab/config.json is missing. Copy decklab/config.example.json to "
+                            "decklab/config.json and follow SELF-HOSTING.md step 4.")
         host = settings.get("host", "0.0.0.0") if args.host is None else args.host
         return server_run._serve(host, port, args.no_update, settings, log_path, background=background)
+    except config.InvalidConfig as error:
+        server_http.log(str(error))
+        return 1
     except Exception:
         server_http.log(f"{server_run._stamp()} Deck Lab stopped with an error:\n{traceback.format_exc()}")
         return 1

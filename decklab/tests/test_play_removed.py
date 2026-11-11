@@ -181,13 +181,13 @@ class RemovedPlayTests(MixedFixture, ApiTestCase):
         self.assertEqual(entry["record"]["sides"][0], REMOVED_DECK)
         self.assertTrue(entry["record"]["sides"][1]["hidden"])
         self.assertNotIn("sections", entry["record"]["sides"][1])
-        self.assertEqual(entry["can"], {"sides": [False, False], "result": False})
+        self.assertEqual(entry["can"], {"sides": [False, False], "result": False, "delete": False})
 
     def test_blank_recorder_cannot_be_claimed_by_a_real_space_named_removed(self):
         record = {"space": "", "sides": [REMOVED_DECK, {"id": "removed/casual/remaining"}]}
         profile = {"id": "removed", "space": "removed"}
         with mock.patch.object(play, "_writable_decks", return_value=[]), mock.patch.object(play.guard, "allowed", return_value=True):
-            self.assertEqual(play._rights("games", record, profile), {"sides": [False, True], "result": False})
+            self.assertEqual(play._rights("games", record, profile), {"sides": [False, True], "result": False, "delete": False})
             self.assertTrue(play._rights("games", dict(record, space="removed"), profile)["result"])
 
     def test_plan_with_removed_opponent_round_trips_without_changing_its_deck(self):

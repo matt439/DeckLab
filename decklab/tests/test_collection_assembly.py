@@ -415,7 +415,7 @@ class AssemblyTokenTests(PreparationCase):
              "cards": plain(need["cards"]), "stand_ins": plain(need["stand_ins"])}
             for need in first["tokens"]["needs"]]}
         expected = tokens.deck_tokens(decks.load_deck("casual/a", "target"), inv, inc)
-        expected.pop("counters", None)          # the plan leaves the counters and dice out (E7-S24)
+        # E4-S29 retains counter/dice estimates alongside the selected list's token metadata.
         self.assertEqual(undecorated, expected)
         self.assertTrue(all(len(need["packing_key"]) == 64 for need in first["tokens"]["needs"]))
         self.assertEqual([n["name"] for n in second["tokens"]["needs"]], ["Rabbit"])     # the owned-only list

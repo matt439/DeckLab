@@ -508,6 +508,7 @@ button.edit-card:hover { background: var(--hover); }
 /* On a touch screen with the on-screen keyboard up (editor-cards.js noteKeyboard), the results need the room. */
 @media (pointer: coarse) { .is-searching.keyboard-up .edit-bar { display: none; } }
 .bar-count { display: flex; flex-direction: column; line-height: 1.15; margin-right: auto; min-width: 0; }
+.editor-cuts-link { align-self: flex-start; padding: 0; font-size: var(--fs-sm); text-decoration: underline; }
 .bar-n b { font-size: var(--fs-xl); font-variant-numeric: tabular-nums; }
 .bar-of { color: var(--ink-2); font-weight: var(--fw-semibold); }
 .bar-sub { font-size: var(--fs-sm); color: var(--good-ink); font-weight: var(--fw-semibold); white-space: nowrap; }

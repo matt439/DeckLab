@@ -46,10 +46,19 @@ def review_hint(change, shown, profile):
     """
     rows = change.get("rows") or ()
     total = change.get("total", len(rows))
+    from . import product_kit_undo
+    if (product_kit := product_kit_undo.hint(change, shown, profile)) is not None:
+        return product_kit
+    from . import activity_order_queue_undo
+    if (order := activity_order_queue_undo.hint(change, shown, profile)) is not None:
+        return order
     from . import activity_mixed_undo
     mixed = activity_mixed_undo.hint(change, shown, profile)
     if mixed is not None:
         return mixed
+    from . import activity_collection_undo
+    if (collection := activity_collection_undo.hint(change, shown, profile)) is not None:
+        return collection
     from . import activity_watchlist_undo
     if (queue := activity_watchlist_undo.hint(change, shown, profile)) is not None:
         return queue
@@ -60,6 +69,14 @@ def review_hint(change, shown, profile):
         from . import activity_token_edit_undo
         if (edits := activity_token_edit_undo.hint(change, shown, profile, _space(profile))) is not None:
             return edits
+        if type(total) is int and 2 <= total <= 50 and len(rows) == total and not change.get("groups") \
+                and not change.get("more") and shown.get("id") == change.get("id") \
+                and all(isinstance(row, dict) and row.get("table") == "token_card"
+                        and all(image.get("space_id") == _space(profile) for image in (row.get("before"), row.get("after"))
+                                if isinstance(image, dict)) for row in rows) \
+                and {row.get("op") for row in rows} in ({"INSERT", "UPDATE"}, {"DELETE", "UPDATE"}) \
+                and guard.allowed(profile, "tokens.edit", _space(profile)):
+            return {"review": True}
     if total == 1 and len(rows) == 1 and not change.get("more") and not change.get("groups") and profile \
             and shown.get("id") == change.get("id"):
         row = rows[0]
@@ -140,6 +157,9 @@ def _token_insertion(row):
 
 def _refused(error):
     from decklab.lib.inventory import undo, undo_token_batch
+    from decklab.lib.inventory import undo_collection_changes
+    if isinstance(error, undo_collection_changes.Refused):
+        return ApiError(400, str(error))    # fixed words, after complete original ownership
     if isinstance(error, undo_token_batch.Refused):
         return ApiError(400, str(error))    # counts and fixed reasons only, after the ownership pass
     if isinstance(error, undo.UndoMissing):
@@ -169,6 +189,12 @@ def _review(change_id, profile):
         raise _refused(error) from None
     # The complete source's visibility was checked before any eligibility or receipt.
     kind = plan.get("kind")
+    if kind == "order_queue":
+        from . import activity_order_queue_undo
+        try:
+            return activity_order_queue_undo.check(plan, change_id, space, profile)
+        except (inventory.Invalid, inventory.Conflict, inventory.Unavailable) as error:
+            raise _refused(error) from None
     if kind == "watchlist":
         from . import activity_watchlist_undo
         return activity_watchlist_undo.check(plan, change_id, space, profile)
@@ -201,12 +227,12 @@ def _token_fact(raw):
 def _token_batch_project(plan):
     from decklab.lib.inventory import undo_token_batch as batch
     count, rows = plan.get("row_count"), plan.get("rows")
-    if plan.get("kind") != "tokens" or type(count) is not int or not 2 <= count <= 50 \
+    if plan.get("kind") != "tokens" or type(count) is not int or not 1 <= count <= 50 \
             or not isinstance(rows, list) or len(rows) != count or "current" in plan \
             or plan.get("identity_policy") != batch.IDENTITY_POLICY \
             or plan.get("physical_confirmation_required") is not True or plan.get("packing_restored") is not False \
             or not isinstance(plan.get("expect"), str) or not SHA.fullmatch(plan["expect"]) \
-            or plan.get("label") != f"{count} deleted token-card rows":
+            or plan.get("label") != f"{count} deleted token-card row{'s' if count != 1 else ''}":
         raise ApiError(503, UNCONFIRMED)
     shown, ids = [], set()
     for item in rows:
@@ -238,10 +264,10 @@ def _token_current(raw):
 def _token_batch_remove_project(plan):
     from decklab.lib.inventory import undo_token_batch_remove as batch
     count, rows = plan.get("row_count"), plan.get("rows")
-    if plan.get("kind") != "tokens" or type(count) is not int or not 2 <= count <= 50 \
+    if plan.get("kind") != "tokens" or type(count) is not int or not 1 <= count <= 50 \
             or not isinstance(rows, list) or len(rows) != count or plan.get("reason_required") is not True \
             or not isinstance(plan.get("expect"), str) or not SHA.fullmatch(plan["expect"]) \
-            or plan.get("label") != f"{count} added token-card rows":
+            or plan.get("label") != f"{count} added token-card row{'s' if count != 1 else ''}":
         raise ApiError(503, UNCONFIRMED)
     shown, sources, ids = [], set(), set()
     for item in rows:
@@ -264,6 +290,12 @@ def _token_batch_remove_project(plan):
 
 
 def _project(plan):
+    if plan.get("kind") == "order_queue":
+        from . import activity_order_queue_undo
+        return activity_order_queue_undo.project(plan)
+    if plan.get("action") == "collection_change_restore":
+        from . import activity_collection_undo
+        return activity_collection_undo.project(plan)
     from decklab.lib.inventory import undo_token_batch, undo_token_batch_remove, undo_token_delete
     if plan.get("kind") == "watchlist" or plan.get("action") == "watchlist_update":
         from . import activity_watchlist_undo
@@ -423,9 +455,15 @@ def apply_undo(body):
     profile, change_id = _writer(data), _id(data["id"])
     plan = _review(change_id, profile)  # hidden/missing is resolved before malformed or stale receipt errors
     _project(plan)
+    if plan.get("kind") == "order_queue":
+        from . import activity_order_queue_undo
+        return activity_order_queue_undo.apply(data, plan, profile, change_id, _refused, _changed)
     if plan.get("kind") == "watchlist":
         from . import activity_watchlist_undo
         return activity_watchlist_undo.apply(data, plan, profile, change_id, _refused, _changed)
+    if plan.get("action") == "collection_change_restore":
+        from . import activity_collection_undo
+        return activity_collection_undo.apply(data, plan, profile, change_id, _refused)
     from decklab.lib.inventory import undo_token_batch, undo_token_batch_remove, undo_token_delete
     token_batch = plan.get("action") == undo_token_batch.ACTION
     token_adding = token_batch or plan.get("action") == undo_token_delete.ACTION

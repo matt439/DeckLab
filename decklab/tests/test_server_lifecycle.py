@@ -407,7 +407,9 @@ class MainTests(unittest.TestCase):
         port = httpd.server_address[1]
         argv = ["--host", "127.0.0.1", "--port", str(port), "--no-update"]
         self.assertEqual(server.main(argv), 1)
-        self.assertTrue(self.log[-1].startswith(f"Can't listen on 127.0.0.1:{port}: "), self.log)
+        self.assertIn(f"Port {port} is in use", self.log[-1])
+        self.assertIn("--port", self.log[-1])
+        self.assertIn("config.json", self.log[-1])
         # The state file says a Deck Lab server is there: say which, and how to stop it.
         control.write_state(own_state(version=1, pid=os.getpid(), port=port, started=now_iso()),
                             self.state_file)
@@ -423,7 +425,7 @@ class MainTests(unittest.TestCase):
         control.write_state(own_state(version=1, pid=os.getpid(), port=port + 1, started=now_iso()),
                             self.state_file)
         self.assertEqual(server.main(argv), 1)
-        self.assertTrue(self.log[-1].startswith("Can't listen on"), self.log[-1])
+        self.assertIn("is in use by another program", self.log[-1])
         self.assertTrue(self.state_file.exists())           # never removed by a server that didn't start
 
     def test_a_bad_address_isnt_taken_for_a_running_server(self):
@@ -587,7 +589,10 @@ class MainTests(unittest.TestCase):
             stream = sys.stderr
         stream.close()
         self.assertEqual(code, 1)
-        self.assertIn("JSONDecodeError", (self.dir / "logs" / "server.log").read_text(encoding="utf-8"))
+        text = (self.dir / "logs" / "server.log").read_text(encoding="utf-8")
+        self.assertIn("decklab/config.json isn't valid JSON: line 1, column 2", text)
+        self.assertNotIn("Traceback", text)
+        self.assertNotIn("nope", text)
 
     def test_the_stop_handler(self):
         fake = mock.Mock()
@@ -741,7 +746,8 @@ class DatabaseCheckTests(unittest.TestCase):
     def test_an_unreachable_database_is_one_line_and_no_sync(self):
         server_run._database_check(True)
         self.first(self.snapshot(server_run.dbstatus.NOT_REACHABLE))
-        self.assertEqual(self.lines(), ["Database: not reachable."])
+        self.assertEqual(self.lines(), ["Database: the PostgreSQL connection could not be verified "
+                                       "(decklab/data/logs/db.log says why)."])
         self.sync.assert_not_called()
 
     def test_a_failed_sync_is_one_line(self):

@@ -561,7 +561,7 @@ class ImportTests(CollectionEditTestCase):
                            r["language"], r["line"]) for r in good],
                          [("Llanowar Elves", "fdn", "227", "foil", "3", "NM", "", 2),
                           ("Sol Ring", "ecc", "57", "nonfoil", "1", "MP", "ja", 5)])
-        self.assertIn("differing or unreported language", good[0]["notes"])
+        self.assertEqual(good[0]["notes"], "Copies: language 2 en, 1 ja")
         self.assertEqual(answer["problems"], [{"line": 6, "message": "Scryfall has no card named 'Nonsense Card'"}])
         self.assertEqual(answer["adds"], {"rows": 2, "cards": 4})
 
@@ -637,7 +637,9 @@ class ImportTests(CollectionEditTestCase):
         self.assertTrue(self.apply(preview, "user2", sha256=preview["sha256"])["ok"])
 
     def test_an_unknown_file_is_400(self):
-        self.assertApiError(400, self.preview, "a,b,c\n1,2,3\n", contains="isn't a ManaBox")
+        error = self.assertApiError(400, self.preview, "a,b,c\n1,2,3\n", contains="Accepted:")
+        for layout in ("ManaBox", "Moxfield", "Deckbox", "Deck Lab", "Archidekt", "Dragon Shield", "Delver Lens", "TCGplayer", "plain text"):
+            self.assertIn(layout, error.message)
 
     def test_too_big(self):
         with mock.patch.object(ce, "MAX_IMPORT", 100):

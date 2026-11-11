@@ -3,6 +3,9 @@ space's collection and a built deck made from its list, in one go
 (PLAN.md, "Adding a precon"). Imported when first needed, by
 feature_routes.dispatch.
 
+Secret Lair drops opt into the same source and token review, but import cards
+only: no deck, deck history or reservations are created (E7-S40).
+
     GET  /api/precons?q=<words>                    precons_view(): paper decks MTGJSON lists, newest first
     GET  /api/precons/product?file=<f>             product_list_view(): a sealed product's list, bonus card included
     GET  /api/precons/preview?file=<f>&space=<id>  precon_preview(): what adding it would do
@@ -60,7 +63,7 @@ from decklab.lib.inventory.model import refuse_unreadable_tokens
 from decklab.lib.tokens import ops as token_ops
 
 from . import collection_edit as ce
-from . import common, drafts, guard, saving
+from . import common, drafts, guard, precon_bonus, saving
 from .card_lookup import _pickable
 from .carddata import _require_cards
 from .collection import space_param
@@ -78,11 +81,11 @@ def _added_on():
     return date.today().isoformat()
 
 
-def _entry(file):
+def _entry(file, *, products=False):
     if not isinstance(file, str) or not precons.FILE_RE.fullmatch(file):
         raise ApiError(400, "file must be a deck's file name from /api/precons")
     try:
-        entry = precons.find(file)
+        entry = precons.find(file, products=products)
     except precons.PreconError as e:
         raise ApiError(502, _public(e)) from None
     if entry is None:
@@ -148,7 +151,7 @@ def _short(name):
     return name.split(" // ")[0].split(",")[0].strip()
 
 
-def _build(entry, space):
+def _build(entry, space, *, fetch_bonus=False, bonus_choices=None, bonus_source_sha256=None):
     """Everything a preview shows and an add writes, for a listed deck."""
     _require_cards()
     try:
@@ -158,15 +161,19 @@ def _build(entry, space):
     except LookupError:
         raise ApiError(404, f"MTGJSON lists no paper deck called {entry['file']}") from None
     read = precons.cards_of(data)
+    cards_only = entry["type"] in precons.PRODUCT_TYPES
     lines, left_out = read["lines"], dict(read["left_out"])
     has_commander = any(line["section"] == "Commander" for line in lines)
     kind = "commander" if entry["type"] == "Commander Deck" and has_commander else "casual"
-    note = f"{entry['name']} precon ({entry['set_name'] or entry['code'].upper()})"
+    note = f"{entry['name']} {'drop' if cards_only else 'precon'} ({entry['set_name'] or entry['code'].upper()})"
     # A display commander is a card for the collection when it's one to play with, else only counted.
     display = [line for line in read["display"] if _pickable(cards.printing(line["set"], line["number"]))]
     shown = sum(line["count"] for line in read["display"] if line not in display)
     if shown:
         left_out["display commander"] = shown
+    existing, sha = ce._read(space)
+    bonus, bonus_rows, notes = precon_bonus.offer(entry, data, existing, fetch=fetch_bonus,
+                                               choices=bonus_choices, source_sha256=bonus_source_sha256)
     out = io.StringIO()
     writer = csv.DictWriter(out, fieldnames=ce.FIELDS, lineterminator="\n")
     writer.writeheader()
@@ -175,10 +182,12 @@ def _build(entry, space):
         writer.writerow({"name": line["name"], "set": line["set"], "collector_number": line["number"],
                          "finish": line["finish"], "quantity": line["count"], "condition": "", "language": "",
                          "notes": note + extra + ("; full art" if basic and line["full_art"] else "")})
+    writer.writerows(bonus_rows)
     text = out.getvalue()
-    existing, sha = ce._read(space)
     _, rows, problems, dropped = ce.read_upload(text, {rules.ident(r) for r in existing})
     problems = [{"line": None, "message": m} for m in read["problems"]] + problems
+    if cards_only and not lines and not read["problems"]:
+        problems.append({"line": None, "message": "This drop has no published card list yet. Nothing can be added."})
     good = [r for r in rows if not r["problem"]]
 
     sections = {}
@@ -201,14 +210,15 @@ def _build(entry, space):
             sections[section].append(card)
     sections = {s: sections[s] for s in decks.SECTIONS if sections.get(s)}
     # The checks every new deck's list gets (plan_new_deck's), so a list the add would refuse isn't offered.
-    draft = drafts._read_draft({"lists": {"target": sections}}, kind, space=space)
-    deck_problems = [{"line": None, "message": b["problem"]} for b in draft.blocks]
+    draft = None if cards_only else drafts._read_draft({"lists": {"target": sections}}, kind, space=space)
+    deck_problems = [{"line": None, "message": b["problem"]} for b in draft.blocks] if draft else []
 
     commanders = [c["name"] for c in sections.get("Commander", [])]
     title = f"{' & '.join(_short(n) for n in commanders)}: {entry['name']}" if commanders else entry["name"]
     return {"entry": entry, "kind": kind, "title": title[:saving.MAX_TITLE], "text": text, "rows": rows,
             "good": good, "problems": problems, "deck_problems": deck_problems, "dropped": dropped,
             "sections": sections, "left_out": left_out, "tokens": read["tokens"], "sha256": sha,
+            "bonus_import": bonus, "notes": notes, "cards_only": cards_only,
             "source_tokens": [{"name": item["name"].strip(), "count": precons._count(item)}
                               for item in precons._entries(data, "tokens")
                               if isinstance(item, dict) and precons._text(item.get("name"), 164)
@@ -217,10 +227,10 @@ def _build(entry, space):
             "csv_name": f"{entry['code']}-{ce._safe_stem(entry['name'])}.csv"}
 
 
-def _may_add(space):
+def _may_add(space, cards_only=False):
     profile = guard.viewer()
     return guard.sees_deck({"space": space}, profile) and guard.allowed(profile, "collection.edit", space) and \
-        guard.allowed(profile, "deck.create", {"space": space, "player": None})
+        (cards_only or guard.allowed(profile, "deck.create", {"space": space, "player": None}))
 
 
 def _token_import(built, space, profile):
@@ -229,7 +239,7 @@ def _token_import(built, space, profile):
     infer physical quantity, printing or reverse-face pairing."""
     candidate = built["token_candidates"]
     editable = guard.sees_deck({"space": space}, profile) and guard.allowed(profile, "collection.edit", space) \
-        and guard.allowed(profile, "deck.create", {"space": space, "player": None}) \
+        and (built["cards_only"] or guard.allowed(profile, "deck.create", {"space": space, "player": None})) \
         and guard.allowed(profile, "tokens.edit", space)
     result = {"editable": editable, "ready": False, "rows": precon_tokens.offered_rows(candidate),
         "cards": candidate["cards"], "source_sha256": precon_tokens.source_sha256(candidate),
@@ -291,6 +301,8 @@ def precon_preview(file=None, space=None):
     added), "notes" (sentences on what a box held beyond its fixed list:
     precons.notes), "tokens" ([{"name", "count"}], the token cards it comes with),
     "ready" (neither kind of problem), "sha256" (the collection's now),
+    "bonus_import" ({source_sha256, rows}: fixed bonus cards, their exact printings,
+    owned quantities and default checkboxes; random contents appear by name in notes),
     "editable" (may this visitor add it here: never in a space whose decks
     it can't see)}. 403 for a space whose
     inventory the visitor may not see (guard.require_sees_inventory), and for
@@ -299,20 +311,20 @@ def precon_preview(file=None, space=None):
     probed; guard.require_space_write)."""
     space = space_param(space)
     guard.require_space_write(guard.viewer(), "collection.edit", space)
-    built = _build(_entry(file), space)
-    title = _free_title(built, space)
+    built = _build(_entry(file, products=True), space, fetch_bonus=True)
+    title = built["title"] if built["cards_only"] else _free_title(built, space)
     slug = decks.title_slug(title)
     return {"deck": built["entry"], "kind": built["kind"], "title": title,
             "exists": (decks.existing_deck_id(slug, space)
-                       if decks.valid_slug(slug) and guard.sees_deck({"space": space}) else None),
+                       if not built["cards_only"] and decks.valid_slug(slug) and guard.sees_deck({"space": space}) else None),
             "lists": _lists_with_cards(built["sections"]),
             "counts": {s: sum(c["qty"] for c in lines) for s, lines in built["sections"].items()},
             "rows": built["rows"], "problems": built["problems"], "deck_problems": built["deck_problems"],
             "adds": {"rows": len(built["good"]), "cards": sum(int(r["quantity"]) for r in built["good"])},
             "dropped_basics": built["dropped"], "left_out": built["left_out"], "tokens": built["tokens"],
-            "notes": precons.notes(built["entry"]["type"]),
+            "notes": built["notes"], "bonus_import": built["bonus_import"], "cards_only": built["cards_only"],
             "ready": not built["problems"] and not built["deck_problems"], "sha256": built["sha256"],
-            "editable": _may_add(space), "token_import": _token_import(built, space, guard.viewer())}
+            "editable": _may_add(space, built["cards_only"]), "token_import": _token_import(built, space, guard.viewer())}
 
 
 def _free_title(built, space, profile=False):
@@ -374,7 +386,8 @@ def _notes(built, author, add_tokens=False, confirmed=False):
 
 def add_precon(body):
     """POST /api/precons/add {"profile", "file", "title", "sha256", "space"?,
-    "fields"?, "add_tokens"?, "tokens_sha256"?, "tokens_source_sha256"?, "tokens_choices"?}: add the precon's cards to the space's collection and make
+    "fields"?, "add_tokens"?, "tokens_sha256"?, "tokens_source_sha256"?, "tokens_choices"?,
+    "bonus_choices"?, "bonus_source_sha256"?}: add the precon's cards to the space's collection and make
     its deck (title; fields as POST /api/decks takes them, status built by
     default), in one change (precon.add). sha256 is the collection's, as the
     preview gave it. Returns {"collection": import/apply's answer without
@@ -386,7 +399,8 @@ def add_precon(body):
     and deck.create. Nothing is saved when anything is refused."""
     data = _parse_body(body)
     profile = _writer(data)
-    _keys(data, ("profile", "file", "title", "sha256"), ("space", "fields", "add_tokens", "tokens_sha256", "tokens_source_sha256", "tokens_choices"))
+    _keys(data, ("profile", "file", "title", "sha256"), ("space", "fields", "add_tokens", "tokens_sha256", "tokens_source_sha256", "tokens_choices",
+                                                     "bonus_choices", "bonus_source_sha256"))
     space = space_param(data.get("space"))
     guard.require_space_write(profile, "collection.edit", space)
     add_tokens = data.get("add_tokens", False)
@@ -402,13 +416,20 @@ def add_precon(body):
         if not (isinstance(data.get("tokens_source_sha256"), str) and re.fullmatch(r"[0-9a-f]{64}", data["tokens_source_sha256"])):
             raise ApiError(400, "tokens_source_sha256 must be the source hash from the precon preview")
     sha = ce._request_sha(data["sha256"])
+    if "bonus_choices" in data or "bonus_source_sha256" in data:
+        if not isinstance(data.get("bonus_choices"), list) or not isinstance(data.get("bonus_source_sha256"), str) \
+                or not re.fullmatch(r"[0-9a-f]{64}", data["bonus_source_sha256"]):
+            raise ApiError(400, "bonus_choices and the bonus_source_sha256 from the preview are required together")
     fields = data.get("fields")
     if fields is not None and not isinstance(fields, dict):
         raise ApiError(400, "fields must be a JSON object")
     made = plan_add(space, data["file"], data["title"], fields, profile, profile["name"], sha=sha,
                     add_tokens=add_tokens, tokens_sha256=data.get("tokens_sha256"),
                     tokens_source_sha256=data.get("tokens_source_sha256"),
-                    tokens_choices=data.get("tokens_choices", _NO_TOKEN_CHOICES), capture_filing=True)
+                    tokens_choices=data.get("tokens_choices", _NO_TOKEN_CHOICES), capture_filing=True,
+                    bonus_choices=data.get("bonus_choices"), bonus_source_sha256=data.get("bonus_source_sha256"))
+    if made["built"]["cards_only"] and "bonus_source_sha256" not in data:
+        raise ApiError(400, "Preview this cards-only drop and send its source receipt before adding it.")
     if made["built"]["good"]:
         from . import collection_filing
     try:
@@ -425,20 +446,23 @@ def add_precon(body):
         if added is not None:
             facts, proof = summary.extra.get("added_printings"), summary.extra.get("created_deck")
             try:
-                added["filing"] = collection_filing.after_precon(after, space, profile, facts, counts["cards"], proof)
+                added["filing"] = (collection_filing.after_import(after, space, profile, facts, counts["cards"])
+                                   if made["built"]["cards_only"] else
+                                   collection_filing.after_precon(after, space, profile, facts, counts["cards"], proof))
             except Exception:      # optional advice cannot fail a saved precon or encourage adding it twice
                 added["filing"] = collection_filing.unknown(space, profile, facts, counts["cards"])
                 added["filing"]["message"] = collection_filing.PRECON_UNKNOWN
         from .precon_trial import trials
-        return {"collection": added,
-                "deck": saving.created_answer(made["plan"], made["deck_id"], made["table"], made["text"]),
+        return {"collection": added, "cards_only": made["built"]["cards_only"],
+                "deck": None if made["built"]["cards_only"] else saving.created_answer(made["plan"], made["deck_id"], made["table"], made["text"]),
+                **({"stale_tables": ce._stale_tables(space)} if made["built"]["cards_only"] else {}),
                 "trials": trials(made["built"]["entry"]["file"], space, profile),
                 **({"tokens": {"cards": summary.counts["token_cards"], "rows": summary.counts["token_rows"]}} if add_tokens else {})}
 
 
 def plan_add(space, file, title, fields, profile, author, sha=None, *, add_tokens=False,
              tokens_sha256=_CURRENT_TOKENS, tokens_source_sha256=_CURRENT_TOKENS, tokens_choices=_NO_TOKEN_CHOICES,
-             capture_filing=False):
+             capture_filing=False, bonus_choices=None, bonus_source_sha256=None, preview=False):
     """Everything adding a precon checks and works out before anything is saved, for the page's
     add_precon and the command line's collection add-precon (decklab/db/inv_collection.py):
     {"built" (_build's), "plan" (saving.plan_new_deck's), "whose", "deck_id", "table", "text"
@@ -453,17 +477,27 @@ def plan_add(space, file, title, fields, profile, author, sha=None, *, add_token
     can't be added as it is (400 with "problems"), a taken title (409 with "conflict", naming
     the deck that has it), a changed collection (409). Explicit tokens_choices confirm every
     source row once, with zero skipping it; omission keeps the legacy declared-count opt-in.
+    bonus_choices is an explicit list of one-based bonus source rows (or the CLI's
+    include/skip); saves with fixed bonus cards require it. preview=True permits fetching
+    the set extract and the owned-printing defaults for a CLI dry run. Otherwise only
+    the cached extract is read. Page choices require their preview's source receipt.
     Source receipts are compared before resolving choices and token inventory receipts are
     checked again by precon.add under its write lock. capture_filing opts the page into
     JSON-only addition/new-deck proofs; the command line's default is unchanged. Nothing is written here."""
     if not isinstance(add_tokens, bool):
         raise ApiError(400, "add_tokens must be true or false")
+    guard.require_space_write(profile, "collection.edit", space)
     confirmed = tokens_choices is not _NO_TOKEN_CHOICES
     if confirmed and not add_tokens:
         raise ApiError(400, "tokens_choices needs add_tokens: true; leave both out to skip token cards")
     if add_tokens:
         guard.require_space_write(profile, "tokens.edit", space)
-    built = _build(_entry(file), space)
+    built = _build(_entry(file, products=True), space, fetch_bonus=preview, bonus_choices=bonus_choices,
+                   bonus_source_sha256=bonus_source_sha256)
+    if built["cards_only"] and fields:
+        raise ApiError(400, "Cards-only drops don't have deck details. Nothing was added.")
+    if built["bonus_import"]["rows"] and not preview and bonus_choices is None:
+        raise ApiError(400, "Choose the bonus cards in the preview, or use --bonus-cards include or skip. Nothing was added.")
     name = built["entry"]["name"]
     if built["problems"]:
         raise ApiError(400, f"{name} can't be added yet: Deck Lab can't match "
@@ -491,22 +525,26 @@ def plan_add(space, file, title, fields, profile, author, sha=None, *, add_token
             except ValueError as e:
                 raise ApiError(400, str(e)) from None
         token_params = {"token_rows": [item["row"] for item in built["token_candidates"]["rows"]], "tokens_sha256": expected}
-    title = _free_title(built, space, profile) if title is None else title
-    request = {"title": title, "kind": built["kind"], "space": space,
-               "fields": {"status": "built", **(fields or {})}, "lists": {"target": built["sections"]}}
-    plan = saving.plan_new_deck(request, profile, notes=_notes(built, author, add_tokens, confirmed))
-    saving.check_free(plan)
+    plan = None
+    if not built["cards_only"]:
+        title = _free_title(built, space, profile) if title is None else title
+        request = {"title": title, "kind": built["kind"], "space": space,
+                   "fields": {"status": "built", **(fields or {})}, "lists": {"target": built["sections"]}}
+        plan = saving.plan_new_deck(request, profile, notes=_notes(built, author, add_tokens, confirmed))
+        saving.check_free(plan)
     whose = ce._whose(space)
     record = {"filename": built["csv_name"], "text": built["text"], "format": "collection",
               "good": built["good"], "problems": [], "dropped_basics": built["dropped"]}
     collection = ce.import_params(space, built["sha256"] if sha is None else sha, record,
-                                  message=f"import {{cards}} cards into {whose} from the {name} precon")
+                                  message=f"import {{cards}} cards into {whose} from the {name} {'drop' if built['cards_only'] else 'precon'}")
     with common.state_errors():
         cards_words = ops.message(inventory.current(), "collection.import", collection)
     refused = _precon_refused(space, whose, plan)
     # The deck's table counts the cards this precon adds: worked out against the collection as
     # the import would leave it (nothing is written; precon.add still saves both as one change).
-    if built["good"]:
+    if built["cards_only"]:
+        deck_id, table, text = None, {}, None
+    elif built["good"]:
         try:
             merged, _ = inventory.preview(inventory.Op("collection.import", collection), refresh=False)
         except (inventory.Invalid, inventory.Conflict, inventory.Unavailable) as e:    # as precon.add would be
@@ -517,11 +555,14 @@ def plan_add(space, file, title, fields, profile, author, sha=None, *, add_token
             deck_id, table, text = saving.new_deck_text(plan)
     else:
         deck_id, table, text = saving.new_deck_text(plan)
-    op = inventory.Op("precon.add", {"space": space, "kind": plan["kind"], "slug": plan["slug"], "text": text,
+    op = inventory.Op("precon.add", {"space": space, "kind": plan["kind"] if plan else None,
+                                     "slug": plan["slug"] if plan else None, "text": text,
                                      "collection": collection, "owners": guard.accessory_owners(profile), **token_params,
+                                     **({"cards_only": True} if built["cards_only"] else {}),
                                      **({"capture_filing": True} if capture_filing else {})})
-    message = (f"{cards_words}; new deck {plan['title']}" if built["good"]
-               else f"add the {name} precon's deck {plan['title']} to {whose}")
+    message = (f"{cards_words}; cards only, no deck created" if built["cards_only"] else
+               f"{cards_words}; new deck {plan['title']}" if built["good"] else
+               f"add the {name} precon's deck {plan['title']} to {whose}")
     if add_tokens:
         message += f"; add {built['token_candidates']['cards']} token cards with printing and reverse face unconfirmed"
     from .precon_trial import trials
@@ -540,7 +581,7 @@ def _precon_refused(space, whose, plan):
     """saving.apply_op's refused for precon.add: the collection's refusals as the Collection
     page answers them (a changed collection 409 with its rows, a full imports folder 413), a
     deck name taken meanwhile 409."""
-    taken = saving.new_deck_refused(plan)
+    taken = saving.new_deck_refused(plan) if plan else lambda error: None
 
     def refused(e):
         if isinstance(e, (token_ops.Stale, precon_tokens.TokenConflict)):

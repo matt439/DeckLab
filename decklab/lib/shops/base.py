@@ -5,10 +5,11 @@ to read that page into listings; it never fetches anything itself, so its parsin
 saved pages (decklab/tests/fixtures/shops/<key>/). The package (__init__.py) asks the shop
 through its Session, keeps the snapshot file and matches queue rows, the same for every shop.
 
-A listing is {"set", "number", "finish", "price", "stock", "condition", "url"} (LISTING_FIELDS):
+A listing is {"set", "number", "finish", "price", "stock", "condition", "language", "url"} (LISTING_FIELDS):
 the lowercase set code, the collector number, a FINISHES value (else the shop's own word, or
 "unknown"), the shop's own AUD price as "4.50" or None when it showed none, a whole number in
-stock (0 when it showed none), the shop's condition words and the listing's page.
+stock (0 when it showed none), the shop's condition and language words/codes
+(blank when unreported), and the listing's page. Missing facts never imply NM or English.
 
 A page that was only part of the shop's answer (Games Portal's first page of search results,
 when there are more) comes back as Listings with partial True (E5-S33), so a "not listed" or a
@@ -23,7 +24,7 @@ USER_AGENT = config.USER_AGENT + " purchase-queue price check"
 TIMEOUT = 30
 MAX_PAGE = 5 * 1024 * 1024
 FINISHES = {"nonfoil", "foil", "etched"}
-LISTING_FIELDS = ("set", "number", "finish", "price", "stock", "condition", "url")
+LISTING_FIELDS = ("set", "number", "finish", "price", "stock", "condition", "language", "url")
 
 
 class Listings(list):

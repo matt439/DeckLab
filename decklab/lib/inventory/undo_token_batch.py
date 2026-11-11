@@ -1,12 +1,15 @@
-"""Restore 2-50 deleted token-card rows of one change set, each under a fresh id (E11-S08).
+"""Restore deleted token-card rows of one change set, each under a fresh id (E11-S08).
 
 The single-row restore (undo_token_delete) made whole: the complete source must be own-space
-token-card DELETEs only, every row must pass that restore's checks, and nothing is selected
+token-card DELETEs, optionally with strictly position-only survivor UPDATEs. One target is
+supported when accompanied by those moves; pure DELETE batches have 2-50 targets. Every row
+must pass the restore's checks, and nothing is selected
 partially. A batch with any row that can't be restored is refused whole, naming how many and
 why in counts and fixed words only. Restoration is ordinary Add of every row after one
 whole-count confirmation; before commit, PgInventory.apply proves exactly N own-space INSERTs
 with fresh ids and the reviewed facts, every survivor and the packing unchanged (confirm), or
-the whole change rolls back.
+the whole change rolls back. Source and inverse each touch at most 50 token-card rows. The ordinary
+allocator's exact position UPDATEs are proved too; survivor facts and packing stay unchanged.
 """
 import collections
 import hashlib
@@ -15,7 +18,7 @@ import json
 from decklab.lib import inventory, tokens
 
 from . import Summary, changes, files, rules
-from . import undo_token_delete as single
+from . import undo_token_delete as single, undo_token_layout
 from .undo import BATCH_MAX, TOKEN_FIELDS, TOKENS, UndoConflict, UndoMissing, UndoUnsupported, _cells, _identifier, _ordinary
 from .undo_tokens import _packing, ordered_rows
 
@@ -52,14 +55,13 @@ def _complete(store, change_id, space):
     raw = reader(change_id)
     if not isinstance(raw, list) or not 2 <= len(raw) <= MIXED_MAX:
         raise UndoMissing()
-    # Ownership is its own first pass: a hidden or other row makes the whole source unavailable.
-    if any(not isinstance(row, dict) or row.get("table") != TOKENS or row.get("op") != "DELETE"
-           or not isinstance(row.get("before"), dict) or row["before"].get("space_id") != space
-           or row.get("after") is not None for row in raw):
-        raise UndoMissing()
-    if len(raw) > BATCH_MAX:
-        raise Refused(f"That change deleted {len(raw)} token-card rows; Undo restores at most {BATCH_MAX} at once. "
-                      "Nothing was restored.")
+    try:
+        undo_token_layout.split(raw, space, "DELETE")
+    except UndoUnsupported:
+        if len(raw) > BATCH_MAX:
+            raise Refused(f"That change deleted or moved {len(raw)} token-card rows; Undo restores at most {BATCH_MAX} at once. "
+                          "Nothing was restored.") from None
+        raise
     return raw
 
 
@@ -75,7 +77,8 @@ def _refuse(why, total):
 
 def review(change_id, space, snapshot, store, rows=None):
     _identifier(change_id)
-    raw = _complete(store, change_id, space) if rows is None else rows
+    complete = _complete(store, change_id, space) if rows is None else rows
+    raw, moves = undo_token_layout.split(complete, space, "DELETE")
     total = len(raw)
     why = [[] for _ in raw]
     items = []
@@ -100,7 +103,7 @@ def review(change_id, space, snapshot, store, rows=None):
                 why[i].append(TWIN)
                 why[j].append(TWIN)
     _refuse(why, total)
-    label = f"{total} deleted token-card rows"
+    label = f"{total} deleted token-card row{'s' if total != 1 else ''}"
     if snapshot.stale or not snapshot.persisted or not isinstance(snapshot.revision, str) or not snapshot.revision \
             or not isinstance(snapshot.decks_revision, str) or not snapshot.decks_revision:
         raise UndoConflict("The current token cards cannot be checked. Reload Tokens.", label)
@@ -108,7 +111,7 @@ def review(change_id, space, snapshot, store, rows=None):
     if not callable(latest_reader):
         raise UndoUnsupported("This token review needs a complete current token audit fence.")
     latest = latest_reader(space)
-    if type(latest) is not int or latest != max(item["source"]["id"] for item in items) \
+    if type(latest) is not int or latest != max(row["id"] for row in complete) \
             or any(store.undo_latest(TOKENS, item["source"]["key"]) != item["source"]["id"] for item in items):
         raise UndoConflict("The token cards were touched after that removal. Nothing was restored.", label)
     for index, item in enumerate(items):
@@ -119,6 +122,7 @@ def review(change_id, space, snapshot, store, rows=None):
     _refuse(why, total)
     try:
         stock, layout = single.settled_stock(snapshot, store, space)
+        source_proof = undo_token_layout.source_proof(complete, stock, layout, space, store) if moves else None
         lines = single.packed_lines(snapshot, space)
         if len(lines) * max(len(stock), len(items)) > single.MAX_MATCHES:
             raise ValueError("Too many packed lines to match")
@@ -137,8 +141,13 @@ def review(change_id, space, snapshot, store, rows=None):
                            "packed cards in Tokens.", label) from None
     _refuse(why, total)
     sources = [item["source"] for item in items]
+    try:
+        undo_token_layout.restore_preview(stock, layout,
+            [{"id": item["source"]["before"]["id"], "row": item["restore"]} for item in items], space)
+    except ValueError:
+        raise Refused("Restoring those rows would change more than 50 token-card rows or an unverified layout. Nothing was restored.") from None
     receipt = [change_id, sources, latest, files.rendered_sha256(snapshot.token_set(space)), stock, layout,
-               allocations, capacities, held, snapshot.revision, snapshot.decks_revision, IDENTITY_POLICY, ACTION]
+               allocations, capacities, held, snapshot.revision, snapshot.decks_revision, IDENTITY_POLICY, ACTION, source_proof]
     digest = hashlib.sha256(json.dumps(receipt, ensure_ascii=False, sort_keys=True,
                                        separators=(",", ":")).encode("utf-8")).hexdigest()
     rows = [{"row_change_id": item["source"]["id"], "label": item["label"], "restore": item["restore"]} for item in items]
@@ -212,11 +221,11 @@ def confirm(before, saved, summary, actual, layout):
     proof, space = extra.pop("token_restore"), extra["space"]
     wanted = proof["restore"]
     try:
-        if not isinstance(actual, list) or len(actual) != len(wanted) or not 2 <= len(wanted) <= BATCH_MAX:
+        if not isinstance(actual, list) or not 1 <= len(wanted) <= BATCH_MAX:
             raise ValueError("Not exactly the reviewed audited rows")
         deleted, survivors = set(proof["deleted_ids"]), {item["id"] for item in proof["stock"]}
         matched, positions, open_rows = {}, {}, list(range(len(wanted)))
-        for row in actual:
+        for row in (row for row in actual if row.get("op") == "INSERT"):
             new = row.get("after")
             if not isinstance(row, dict) or row.get("table") != TOKENS or row.get("op") != "INSERT" \
                     or row.get("before") is not None or not isinstance(new, dict) or set(new) != TOKEN_FIELDS \
@@ -232,15 +241,16 @@ def confirm(before, saved, summary, actual, layout):
                 raise ValueError("Changed facts")
             open_rows.remove(index)
             matched[rid], positions[rid] = index, new["position"]
+        if open_rows:
+            raise ValueError("A reviewed insertion is missing")
         stock = ordered_rows(saved.token_set(space))
         if [item for item in stock if item["id"] not in matched] != proof["stock"] \
                 or sorted(item["id"] for item in stock if item["id"] in matched) != sorted(matched) \
                 or any(item["row"] != wanted[matched[item["id"]]] for item in stock if item["id"] in matched):
             raise ValueError("Survivors or the restored rows changed")
-        if not isinstance(layout, list) or [item.get("id") for item in layout] != [item["id"] for item in stock] \
-                or [item for item in layout if item.get("id") not in matched] != proof["layout"] \
-                or any(item.get("position") != positions[item["id"]] for item in layout if item.get("id") in matched):
-            raise ValueError("Persisted positions moved")
+        expected, predicted = undo_token_layout.expected(proof["stock"], proof["layout"], stock, space)
+        if layout != predicted or not undo_token_layout.same_audit(actual, expected):
+            raise ValueError("Persisted positions or audit differ from the ordinary writer")
         allocations, capacities, held = _packing(saved, space, stock)
         if allocations != proof["allocations"] or any(held.get(rid) != 0 for rid in matched) \
                 or {key: value for key, value in capacities.items() if key not in matched} != proof["capacities"]:
@@ -257,11 +267,12 @@ def confirm(before, saved, summary, actual, layout):
 def confirm_in_transaction(cur, change_set, before, saved, summary):
     """PgInventory.apply's hook (through undo_token_delete's): this change set's rows, one more
     than the batch so an extra row refuses, and the space's layout, on its own cursor."""
-    count = len(summary.extra["token_restore"]["restore"])
+    proof = summary.extra["token_restore"]
+    limit = min(BATCH_MAX, len(proof["restore"]) + len(proof.get("stock", ()))) + 1
     actual = [{"id": rid, "table": table, "op": op, "key": key, "before": old, "after": new}
               for rid, table, op, key, old, new in cur.execute(
                   "select id,table_name,op,row_key,before,after from audit.row_change "
-                  "where change_set_id=%s order by id limit %s", (change_set, count + 1)).fetchall()]
+                  "where change_set_id=%s order by id limit %s", (change_set, limit)).fetchall()]
     layout = [{"id": rid, "position": position} for rid, position in cur.execute(
         "select id,position from token_card where space_id=%s order by position,id",
         (summary.extra["space"],)).fetchall()]

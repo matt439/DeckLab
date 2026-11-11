@@ -647,7 +647,7 @@ class _Check:
             self.slot.release()
 
 
-def warm_leg(setup, folder, env, card_log, requests):
+def warm_leg(setup, folder, env, card_log, requests, *, serial=False, require_development=False):
     """Play requests [(fmt, deck1, deck2, games, seed, v2)] (runner.request_args' arguments;
     the .dck files in folder) on one serve worker, in an order of its own and with another
     request between two of the same matchup, and each as a fresh DeckLabSim process, and
@@ -685,8 +685,15 @@ def warm_leg(setup, folder, env, card_log, requests):
     check = _Check(setup, folder, env, card_log)
     findings = []
     try:
-        check.first_start()
-        check.start_fresh(requests)
+        if serial:
+            # Fresh copies finish before the single persistent worker starts. The
+            # repeated/interleaved warm requests and comparisons below are unchanged.
+            for index, request in enumerate(requests):
+                check.play_fresh(index, request)
+            check.first_start()
+        else:
+            check.first_start()
+            check.start_fresh(requests)
         order = _order(requests)
         warm = []
         for index in order:
@@ -700,6 +707,13 @@ def warm_leg(setup, folder, env, card_log, requests):
                 seen.add(index)
                 findings += _card_log_findings(requests[index], fresh, "fresh")
             findings += _card_log_findings(requests[index], copy, "warm")
+            if require_development:
+                from .cli_checks import _development_problem
+                for observed in (fresh, copy):
+                    reader, _ = observed.read()
+                    problem = _development_problem(requests[index][0], len(observed.games), reader)
+                    if problem:
+                        findings.append(("failed", problem))
             findings += _compare(requests[index], fresh, copy, n, len(warm),
                                  lambda i, request=requests[index]: check.replay(request, i))
     finally:

@@ -352,7 +352,7 @@ async function spvTestsFetch(ctx) {
       el("p", { text: item.words || (item.running ? "Playing on the PC." : "No verdict yet.") }),
       el("p", { class: "sub", text: [item.older ? "For an older list" : null,
         item.running && item.total ? `${item.done || 0} of ${item.total} games played` : null,
-        !item.running && item.games ? `${item.games.toLocaleString("en-AU")} games a deck` : null].filter(Boolean).join(" · ") }),
+        !item.running && item.games ? `${item.games.toLocaleString(LOCALE)} games a deck` : null].filter(Boolean).join(" · ") }),
       el("a", { href: item.link, text: "Open the test" })))));
     ctx.retry.textContent = "Refresh";
   } catch (_) {

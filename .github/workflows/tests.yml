@@ -74,6 +74,8 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
+      - name: Pinned static JavaScript audit dependencies (no lifecycle scripts)
+        run: npm ci --ignore-scripts --no-audit --no-fund --prefix decklab/ui_review
       - name: The .venv with psycopg and tzdata, as on the PC (connections stay blocked)
         shell: bash
         run: |

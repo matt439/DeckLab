@@ -178,6 +178,14 @@ details.explain > p, details.explain > .formula { max-width: 72ch; }
 .chance-table td { font-size: var(--fs-sm); }
 .chance-table .colour-name { display: inline-flex; align-items: center; gap: var(--s-2); font-weight: var(--fw-semibold); }
 .practice-table th, .practice-table td { padding: var(--s-2) var(--s-1); }
+.practice-land-result .practice-table { min-width: 42rem; table-layout: auto; }
+.practice-land-result .practice-table th { position: static; }
+.practice-land-result .practice-table th:first-child { min-width: 12rem; }
+.practice-land-result .practice-table td { white-space: nowrap; }
+.practice-land-result .practice-table :is(th, td) { overflow-wrap: normal; word-break: normal; }
+.practice-castability, .practice-land-output, .practice-category, #h-practice-commanders {
+  scroll-margin-top: calc(var(--shell-top) + var(--tap) + var(--s-3));
+}
 
 .fine-print { margin-top: var(--s-5); font-size: var(--fs-sm); color: var(--ink-2); }
 .fine-print p { margin: 0 0 var(--s-2); }

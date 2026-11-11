@@ -151,6 +151,17 @@ def _swap_names(c, name, restoring, previous, exists, say):
 
 
 def run_restore(dump, expect=None, replace=False, force=False, say=print):
+    """Decrypt an optional age copy locally before the existing guarded restore can touch a database."""
+    from decklab.db.backup_crypto import CryptoError, readable_dump
+    try:
+        with readable_dump(dump, db.settings()) as readable:
+            return _run_restore_plain(readable, expect=expect, replace=replace, force=force, say=say)
+    except CryptoError as error:
+        say(f"The encrypted dump could not be opened; nothing was restored: {error}")
+        return 1
+
+
+def _run_restore_plain(dump, expect=None, replace=False, force=False, say=print):
     """The restore command (see the module docstring). Returns 0, or 1 when it refused or failed;
     the settings' database is unchanged unless it returns 0, and the one it replaced is kept as
     <name>_before_restore."""

@@ -118,7 +118,7 @@ async function gbRefresh(view, fresh = null, { force = false } = {}) {
   } catch (error) {
     if (request.cancelled && !request.timedOut) entry.asked = 0;
     if (request.token !== routeToken || request.profile !== state.profile?.id || (request.cancelled && !request.timedOut)) return;
-    entry.error = request.timedOut ? "The PC took too long to answer." : error.message || String(error);
+    entry.error = request.timedOut ? new ApiError(503, "The PC took too long to answer.") : error;
   } finally {
     clearTimeout(deadline);
     entry.loading = false;
@@ -151,7 +151,7 @@ function gbDrawEntry(view, entry) {
   const host = view.gbHost;
   if (!host) return;
   const a = entry.answer, words = gbFormatWords(view.gbFormat);
-  const failed = entry.error ? loadFailed("Popular decks", { message: entry.error },
+  const failed = entry.error ? loadFailed("Popular decks", entry.error,
     () => gbRefresh(view, null, { force: true })) : null;
   const focused = host.contains(document.activeElement) ? document.activeElement.dataset.focus : null;
   const draw = () => {

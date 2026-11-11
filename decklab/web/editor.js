@@ -595,7 +595,8 @@ function showEditor(params, token) {
     }
     openSavedDeckEditor(view, version);
     openSwapsFromRoute(params, view.id);      // editor-swaps.js: the deck page's swap= and tab=notes
-    vtOpenTestFromRoute(params, view.id);     // variant.js: the Matchups tab's Test this swap (test=change)
+    if (params.has("cut")) editorCutFromRoute(params);
+    else vtOpenTestFromRoute(params, view.id);     // variant.js: the Matchups tab's Test this swap (test=change)
   });
 }
 
@@ -605,7 +606,7 @@ function showNewDeck(params, token) {
   // The library says which titles are taken (someone may have made a deck since it was last read);
   // the title's hint and the bar are drawn again when it comes.
   api("/api/decks").then((data) => {
-    state.library = data;
+    if (!cacheLibrary(data)) return;
     if (editor && editor.mode === "new" && editor.dom) {
       drawTitleHint();
       drawBar();
@@ -720,7 +721,9 @@ function newDeckPlayer(space) {
 
 /** The Played by choices the visitor may pick at home: just their own for a member (lib/permissions.py). */
 function allowedPlayers() {
-  const all = [["user", playerWords("user")], ["wife", playerWords("wife")], ["either", "Either"]];
+  const configured = [...new Set(homeProfiles().map(p => p.plays_as).filter(Boolean))];
+  if (configured.filter(p => p !== "either").length > 1 && !configured.includes("either")) configured.push("either");
+  const all = configured.map(value => [value, playerWords(value)]);
   const may = state.may;
   if (!may || may.admin || !may.home_player || (editor && editor.readOnly)) return all;
   return all.filter(([value]) => value === may.home_player);

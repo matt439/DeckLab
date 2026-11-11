@@ -44,7 +44,7 @@ function drawVisibility(data, token) {
             if (token !== routeToken || state.profile !== profile) return;
             drawVisibility(saved, token);
             toast(`Saved as ${value ? "Public" : "Private"}.`);
-            state.library = null;
+            invalidateLibrary();
             // Refresh permissions and the roster after the committed flip. A refresh failure
             // does not misreport a successful save as a failed save.
             const [me, roster] = await Promise.allSettled([loadMe(), api("/api/profiles")]);

@@ -428,7 +428,7 @@ class MemoryStore:
 
     # ------------------------------------------------------------------ the price settings (E11-S53)
 
-    def pricing_setting(self):
+    def pricing_setting(self, *, fresh=False):
         from . import pricing as rules_pricing
         with self._lock:
             self._check()
@@ -704,6 +704,21 @@ class MemoryStore:
             return self._record(row)
 
     # ------------------------------------------------------------------ the audit trail
+
+    def play_delete(self, kind, record_id, expected_sha, actor, message, reason):
+        """One audited compare-and-swap removal; a missing or changed game cannot be removed."""
+        kind, record_id = rules.play_kind(kind), rules.play_id(record_id)
+        reason = rules.play_delete_reason(reason)
+        rules.check_write(actor, message, reason)
+        with self._lock:
+            self._check()
+            key = (kind, record_id)
+            before = self._play.get(key)
+            if before is None or rules.record_sha(self._record(before)) != expected_sha:
+                raise Conflict(rules.CHANGED_MESSAGE)
+            del self._play[key]
+            self._log(actor, message, reason, [("play_record", "DELETE", ("kind", "id"), before, None)])
+            return True
 
     def activity(self, before=None, limit=50, *, visible=None, inventory=None):
         before, limit = rules.page_args(before, limit)

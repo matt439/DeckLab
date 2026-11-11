@@ -329,9 +329,14 @@ def status(name=TASK_NAME):
     if _systemd().supported():
         return status_systemd(wake=wake_wanted())
     if sys.platform != "win32":
-        return ["Nightly task: only Windows' Task Scheduler and Linux's systemd are supported; run "
-                "python -m decklab.db nightly from cron."]
+        return ["Nightly scheduling is unsupported on this platform: configure your own launchd/cron job "
+                "for python -m decklab.db nightly; no installed scheduler was verified."]
     return describe(query_task(name), wake=wake_wanted())
+
+
+def supported(platform=None):
+    selected = sys.platform if platform is None else platform
+    return selected == "win32" or selected.startswith("linux")
 
 
 # ------------------------------------------------------------------ Linux: a systemd user timer

@@ -1,5 +1,5 @@
 {
   "profiles": [
-    {"id": "alex", "name": "Alex", "plays_as": "user", "role": "admin", "space": "home", "emails": []}
+    {"id": "alex", "name": "Alex", "plays_as": "first", "role": "admin", "space": "home", "emails": []}
   ]
 }

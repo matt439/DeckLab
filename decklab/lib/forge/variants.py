@@ -110,7 +110,7 @@ def _counts(lines):
     return out
 
 
-def aligned_dck(base_entry, variant_cards):
+def aligned_dck(base_entry, variant_cards, *, placebo=False):
     """The variant's .dck aligned to the base's lines (section 11.2): (text, changes). The base's
     canonical lines (merged, sorted by name, the Commander section first for a Commander deck) are
     written in order, each with the copies the variant keeps, and right after a line the cards that
@@ -123,7 +123,9 @@ def aligned_dck(base_entry, variant_cards):
     base = _canonical_sections(base_entry["cards"], kind)
     variant = _canonical_sections(variant_cards, kind)
     _, card_sha, _ = lists._list_text(variant_cards, kind)
-    if card_sha == base_entry["card_sha"]:
+    if placebo and card_sha != base_entry["card_sha"]:
+        raise ValueError("A placebo must play the unchanged list")
+    if card_sha == base_entry["card_sha"] and not placebo:
         raise ValueError(NO_CHANGE)
     total_out = total_in = 0
     sections, removed, added = {}, {}, {}
@@ -175,13 +177,15 @@ def _section_lines(base_lines, variant_lines):
     return [(q, n) for q, n in lines], removed, added
 
 
-def variant_entry(base_entry, variant_cards):
+def variant_entry(base_entry, variant_cards, *, placebo=False):
     """The variant's entry (section 11.2): the base's id with "variant:" before it, its version
     and kind, its title with " (your change)", the variant's canonical card_sha, card count and
     cards, the aligned .dck text ("dck") under its own file name ("dck_file", its SHA-256, so it
     never overwrites the list's sorted .dck), the base's pilot, and "aligned_to" (the base's
     card_sha). Also "changes" (aligned_dck's). ValueError as aligned_dck."""
-    text, changes = aligned_dck(base_entry, variant_cards)
+    text, changes = aligned_dck(base_entry, variant_cards, placebo=placebo)
+    if placebo:
+        text = base_entry["dck"]     # preserve even a file's deliberate line order
     cards = {"Commander": [[int(q), n] for q, n in (variant_cards or {}).get("Commander", [])],
              "Main": [[int(q), n] for q, n in (variant_cards or {}).get("Main", [])]}
     _, card_sha, count = lists._list_text(cards, base_entry["kind"])
@@ -708,10 +712,22 @@ def run_test(base_entry, variant_cards, against, mode="ahead", *, results_dir=No
     return _claimed_test(base_entry, variant_cards, against, mode, results_dir=results_dir, **options)
 
 
+def run_placebo(base_entry, against, mode, **options):
+    """An unchanged paired control, isolated from every ordinary result and test."""
+    from .variants_controls import run_placebo as run
+    return run(base_entry, against, mode, **options)
+
+
+def run_unpaired(base_entry, variant_cards, against, games, **options):
+    """An explicitly independent, fixed-count size-change comparison (CLI only)."""
+    from .variants_controls import run_unpaired as run
+    return run(base_entry, variant_cards, against, games, **options)
+
+
 @lifecycle.writing("base_entry", "against", "opponents")
 def _claimed_test(base_entry, variant_cards, against, mode="ahead", *, by, progress=None, results_dir=None,
                   pool=None, local=False, log_dir=None, log_every=1, opponents=None, extend=None,
-                  field_options=None):
+                  field_options=None, _placebo=False):
     """Play a variant test (section 11.4) and return its summary (section 14.3).
 
     base_entry is the list as it is today (lists.entry), variant_cards the changed list's
@@ -730,7 +746,7 @@ def _claimed_test(base_entry, variant_cards, against, mode="ahead", *, by, progr
     job's Stop, Ctrl+C) saves the summary with outcome "stopped" and raises again."""
     if not _deck_order(engine.today()):
         raise ForgeError(NO_DECK_ORDER)
-    variant = variant_entry(base_entry, variant_cards)
+    variant = variant_entry(base_entry, variant_cards, placebo=_placebo)
     field_test = against == "field" or gauntlet_tests.is_gauntlet(against)
     fmt = lists.fmt_for(base_entry["kind"])
     if not field_test and against.get("kind") != base_entry["kind"]:

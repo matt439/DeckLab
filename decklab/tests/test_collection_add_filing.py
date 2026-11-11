@@ -25,8 +25,8 @@ class AddFilingTests(support.CollectionEditTestCase):
         self.assertEqual(answer["added"], {"rows": 0, "cards": 3})
         self.assertEqual(answer["rows"][0]["quantity"], "5")
         self.assertEqual((answer["rows"][0]["condition"], answer["rows"][0]["language"]), ("", ""))
-        self.assertIn("differing or unreported condition", answer["rows"][0]["notes"])
-        self.assertIn("differing or unreported language", answer["rows"][0]["notes"])
+        self.assertIn("Copies: condition 2 NM, 3 LP", answer["rows"][0]["notes"])
+        self.assertIn("Copies: language 2 en, 3 ja", answer["rows"][0]["notes"])
         facts = self.writes[-1][3].extra["added_printings"]
         self.assertEqual(facts, [{**ELVES, "quantity": 3, "before_quantity": 2, "after_quantity": 5}])
         self.assertEqual(set(self.writes[-1][3].extra), {"shown", "added_printings"})

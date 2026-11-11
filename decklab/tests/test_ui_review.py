@@ -14,6 +14,108 @@ from urllib.parse import urlsplit
 
 
 class ReviewRunnerTests(unittest.TestCase):
+    def test_card_and_deck_proof_reads_stay_on_the_owned_origin_and_exact_allowlist(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is needed for the fixture proof guard")
+        script = r'''
+const assert=require('node:assert/strict');const {Review}=require('./decklab/ui_review/common.js');
+(async()=>{
+  const calls=[],review={origin:'http://127.0.0.1:18643',checkCancelled:()=>{}};
+  const context={request:{get:async(url,options)=>{calls.push({url,options});return {ok:()=>true,status:()=>200,json:async()=>({synthetic:true})};}}};
+  for(const path of ['/api/deck?id=commander%2Ffixture','/api/cards/lookup?name=Fixture'])
+    assert.deepEqual(await Review.prototype.readFixture.call(review,context,path),{synthetic:true});
+  for(const path of ['/api/deck/save','/api/collection','//example.com/api/deck','https://example.com/api/deck'])
+    await assert.rejects(()=>Review.prototype.readFixture.call(review,context,path));
+  assert.equal(calls.length,2);assert(calls.every(call=>call.options.maxRedirects===0&&new URL(call.url).origin===review.origin));
+})().catch(error=>{console.error(error);process.exitCode=1;});
+'''
+        result = subprocess.run([node, "-e", script], cwd=Path(__file__).resolve().parents[2],
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_telemetry_is_answered_inside_the_browser_guard_without_permitting_writes(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is needed for the browser guard check")
+        script = r'''
+const assert = require('node:assert/strict');
+const {Review} = require('./decklab/ui_review/common.js');
+(async () => {
+  let handler;
+  const context = {on:() => {}, route:async (pattern, value) => {handler = value;}};
+  const review = {contexts:new Set(), origin:'http://127.0.0.1:18643',
+    report:{network:{blocked:[],allowed_reads:0,dry_checks:0}}, safeUrl:value => new URL(value).pathname};
+  await Review.prototype.guardContext.call(review, context);
+  async function request(method, url) {
+    const events = [];
+    await handler({request:() => ({url:() => url,method:() => method}),
+      fulfill:async response => events.push(['fulfill',response.status]),
+      abort:async reason => events.push(['abort',reason]), continue:async () => events.push(['continue'])});
+    return events;
+  }
+  assert.deepEqual(await request('POST',review.origin+'/api/visit'), [['fulfill',204]]);
+  assert.equal(review.report.network.blocked[0].category,'expected_fixture_telemetry');
+  assert.deepEqual(await request('POST',review.origin+'/api/collection'), [['abort','blockedbyclient']]);
+  assert.deepEqual(await request('POST','https://example.com/api/visit'), [['abort','blockedbyclient']]);
+  assert.deepEqual(await request('GET',review.origin+'/app.js'), [['continue']]);
+  assert.deepEqual(await request('POST',review.origin+'/api/deck/check'), [['continue']]);
+  assert.deepEqual(await request('POST',review.origin+'/api/deck/cuts'), [['continue']]);
+  assert.deepEqual(await request('POST',review.origin+'/api/deck/cuts/save'), [['abort','blockedbyclient']]);
+  assert.deepEqual(await request('POST',review.origin+'/api/deck/bracket-replacements'), [['continue']]);
+  assert.deepEqual(await request('POST',review.origin+'/api/deck/bracket-replacements/save'), [['abort','blockedbyclient']]);
+  assert.deepEqual(await request('POST',review.origin+'/api/goldfish/what-if'), [['continue']]);
+  assert.deepEqual(await request('POST',review.origin+'/api/goldfish/what-if/save'), [['abort','blockedbyclient']]);
+  assert.equal(review.report.network.dry_checks,4);
+  assert.equal(review.report.network.allowed_reads,1);
+})().catch(error => {console.error(error);process.exitCode=1;});
+'''
+        result = subprocess.run([node, "-e", script], cwd=Path(__file__).resolve().parents[2],
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_strict_console_mode_records_errors_without_relaxing_page_errors(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is needed for the browser observer check")
+        script = r'''
+const assert = require('node:assert/strict');
+const {Review, argumentsFor} = require('./decklab/ui_review/common.js');
+for (const strictConsole of [false, true]) {
+  const handlers = {}, errors = [];
+  const page = {on:(name, callback) => {handlers[name] = callback;}};
+  const review = {options:{strictConsole}, safeText: value => value};
+  Review.prototype.observe.call(review, page, errors, []);
+  handlers.pageerror({message:'Uncaught synthetic failure'});
+  assert.deepEqual(errors, ['Uncaught synthetic failure']);
+  if (strictConsole) {
+    handlers.console({type:() => 'warning', text:() => 'Warning'});
+    assert.equal(errors.length, 1);
+    handlers.console({type:() => 'error', text:() => 'Synthetic resource or console failure'});
+    assert.deepEqual(errors, ['Uncaught synthetic failure', 'Console error: Synthetic resource or console failure']);
+  } else assert.equal(handlers.console, undefined);
+}
+const args = ['--runtime','runtime','--output','output','--run-id','a'.repeat(32),'--browser','browser'];
+assert.equal(argumentsFor([...args,'--strict-console']).strictConsole, true);
+assert.throws(() => argumentsFor([...args,'--strict-console','--strict-console']));
+'''
+        result = subprocess.run([node, "-e", script], cwd=Path(__file__).resolve().parents[2],
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_spawn_marks_every_supported_browser_for_cleanup_audit(self):
+        from decklab.ui_review import runner
+
+        with tempfile.TemporaryDirectory() as folder:
+            runtime = Path(folder)
+            with mock.patch.object(runner.subprocess, "Popen") as spawn:
+                for suite in runner.SUITES:
+                    runner._spawn(["unused-node"], runtime, suite)
+                    self.assertTrue((runtime / f"browser-{suite}.started").is_file(), suite)
+                runner._spawn(["unused-python"], runtime, "fixture")
+            self.assertEqual(spawn.call_count, len(runner.SUITES) + 1)
+            self.assertFalse((runtime / "browser-fixture.started").exists())
+
     def test_replaced_zoom_browsers_require_every_cleanup_proof(self):
         node = shutil.which("node")
         if not node:
@@ -138,7 +240,7 @@ const {Review} = require('./decklab/ui_review/common.js');
     def test_started_browser_requires_positive_cleanup_proof(self):
         from decklab.ui_review import runner
 
-        for suite, proof in ((suite, proof) for suite in ("capture", "variant-layout", "shell-layout", "task-layout", "receipt-layout", "families", "zoom") for proof in (None, False, True)):
+        for suite, proof in ((suite, proof) for suite in runner.SUITES for proof in (None, False, True)):
             with self.subTest(suite=suite, browser_closed=proof), tempfile.TemporaryDirectory() as outer:
                 output = runner.prepare_output(Path(outer) / "evidence")
 
@@ -152,9 +254,19 @@ const {Review} = require('./decklab/ui_review/common.js');
                     raise runner.ReviewError("Synthetic browser exit")
 
                 source = {"commit": "synthetic", "dirty": True, "digest": "stable-test-digest", "files": {}}
-                with mock.patch.object(runner, "_run_browser", side_effect=failed_browser), \
+                # This matrix tests cleanup evidence, not fixture startup. Readiness and
+                # real child cleanup have dedicated tests below; no process or socket is
+                # needed to prove missing/negative browser-close receipts fail closed.
+                finished = mock.Mock(pid=123, returncode=0)
+                finished.poll.return_value = 0
+                with mock.patch.object(runner, "_spawn", return_value=finished) as spawn, \
+                        mock.patch.object(runner, "_wait_ready", return_value={}) as ready, \
+                        mock.patch.object(runner, "_run_browser", side_effect=failed_browser) as browser, \
                         mock.patch.object(runner, "_source_state", return_value=source):
                     report = runner.run_review(output, "unused-browser", "unused-node", suite=suite, timeout=15)
+                spawn.assert_called_once()
+                ready.assert_called_once()
+                browser.assert_called_once()
                 self.assertFalse(report["completed"])
                 self.assertEqual(report["cleanup"]["browsers_closed"], proof is True, report)
                 self.assertEqual(report["cleanup"]["complete"], proof is True, report)
@@ -341,6 +453,15 @@ class ReviewFixtureTests(unittest.TestCase):
                 checked = self.request(fixture, "/api/deck/check", method="POST", payload={
                     "profile": "matt", "id": HOME, "sha256": before["sha256"], "lists": before["lists"]})
                 self.assertIn("ok", checked)
+                commander = self.request(fixture, "/api/deck/edit?id=commander/woodland-council")
+                cut_sections = {key: [{name: row[name] for name in ("name", "qty", "set", "number", "finish", "category") if name in row}
+                                      for row in rows] for key, rows in commander["lists"]["target"].items() if key in {"Commander", "Deck", "Companion"}}
+                # An ordinary singleton Commander list exceeds the settings body's 4 KiB bound.
+                cut_sections["Deck"] += [dict(cut_sections["Deck"][0]) for _ in range(100)]
+                self.assertGreater(len(json.dumps(cut_sections)), 4096)
+                cuts = self.request(fixture, "/api/deck/cuts", method="POST", payload={"profile": "matt", "id": "commander/woodland-council", "sections": cut_sections})
+                self.assertTrue(cuts["cuts"] and cuts["source"]["available"])
+                self.assertEqual(self.request(fixture, "/api/deck/edit?id=commander/woodland-council"), commander)
                 for method, path in (("POST", "/api/deck/save"), ("PUT", "/api/deck/draft"),
                                      ("POST", "/api/matchup/run"), ("POST", "/api/variant/run"),
                                      ("DELETE", "/api/decks"), ("PATCH", "/api/profiles/matt/settings"),

@@ -9,7 +9,8 @@ to the household database, reads the private configuration or runs Forge.
 
 ## Setup once
 
-Requirements: the project's Python, Node.js 20 or later with npm, and an installed
+Requirements: the project's Python, Node.js 20.19+ (20.x), 22.13+ (22.x), or 24+
+with npm, and an installed
 Chrome, Chromium or Edge executable. Chrome on the development PC is detected
 automatically; `--browser` can name another compatible executable. No browser
 download or global npm install is performed.
@@ -21,9 +22,16 @@ python scripts/ui_review.py --setup
 ```
 
 This explicitly runs `npm ci --ignore-scripts` in this folder, installing the
-lockfile's `playwright-core` 1.65.0 under the gitignored `node_modules/`. It checks
+lockfile's `playwright-core` 1.65.0, Acorn 8.19.0 and eslint-scope 9.1.2 under
+the gitignored `node_modules/`. The parser/scope tools also power fixture checks
+for undefined JavaScript calls and the global sheet-closer inventory. It checks
 the prerequisites and exits without starting a fixture or browser. Normal review
 runs never install or update dependencies.
+
+For fixture tests alone, no browser is needed: run
+`npm ci --ignore-scripts --prefix decklab/ui_review` before
+`python scripts/test_fixtures.py` when Node is available. The fixture CI jobs do
+this explicitly; production Deck Lab still has no npm dependency or build step.
 
 ## Repeat a review
 
@@ -57,9 +65,25 @@ python scripts/ui_review.py --suite receipt-layout
 python scripts/ui_review.py --suite families
 python scripts/ui_review.py --suite zoom
 python scripts/ui_review.py --suite crosscheck
+python scripts/ui_review.py --suite assembly-counters
+python scripts/ui_review.py --suite precon-bonus
+python scripts/ui_review.py --suite life-counters
+python scripts/ui_review.py --suite first-use --smoke --strict-console
+python scripts/ui_review.py --suite member-tools --smoke --strict-console
+python scripts/ui_review.py --suite card-viewer-details --smoke --strict-console
+python scripts/ui_review.py --suite deck-cuts --strict-console
+python scripts/ui_review.py --smoke --suite capture --strict-console
 python scripts/ui_review.py --output C:/Temp/decklab-ui-review-01
 python scripts/ui_review.py --browser "C:/Program Files/Google/Chrome/Application/chrome.exe"
 ```
+
+The opt-in `precon-bonus` suite exercises six synthetic bonus-card reviews across
+phone, tablet and desktop widths in both themes. Native checkbox clicks, exact
+request receipts and explicit recovery from a source conflict are intercepted
+without writing inventory. `assembly-counters` has 30 counter/dice and take-along
+cases across the same widths/themes: ready/failed/unmigrated reminders and
+ready/failed take-along lists. Optional checks use intercepted in-memory replies;
+the guarded print action uses a stubbed system dialog and actual print CSS.
 
 `--check` does not start any application processes. `--smoke` captures a desktop
 board in light, a narrow coarse-pointer receipt in dark and the ten Wishlist/guide

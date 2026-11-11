@@ -75,7 +75,8 @@ def dump_name(when=None):
 
 def dump_date(name):
     """The day a dump was made, from its file name, or None for a name that isn't a dump's."""
-    m = DUMP_NAME.match(name)
+    from decklab.db.backup_crypto import SUFFIX
+    m = DUMP_NAME.match(name[:-len(SUFFIX)] if name.endswith(SUFFIX) else name)
     if not m:
         return None
     try:
@@ -158,15 +159,15 @@ def latest(kinds, dbname=None, conn=None):
     """The newest run of each kind, worked or not: {kind: {"ok", "started_at", "finished_at",
     "detail"} or None}. conn: read on this open connection (left open)."""
     def read(c):
-        return c.execute("select distinct on (kind) kind, ok, started_at, finished_at, detail from ops.backup_run "
+        return c.execute("select distinct on (kind) kind, ok, started_at, finished_at, detail, path from ops.backup_run "
                          "where kind = any(%s) order by kind, id desc", (list(kinds),)).fetchall()
     if conn is None:
         with db.connect("ro", dbname=dbname, autocommit=True) as c:
             rows = read(c)
     else:
         rows = read(conn)
-    found = {kind: {"ok": ok, "started_at": started, "finished_at": finished, "detail": detail}
-             for kind, ok, started, finished, detail in rows}
+    found = {kind: {"ok": ok, "started_at": started, "finished_at": finished, "detail": detail, "path": path}
+             for kind, ok, started, finished, detail, path in rows}
     return {kind: found.get(kind) for kind in kinds}
 
 
@@ -208,7 +209,7 @@ def recorded(name, dbname=None):
         rows = c.execute("select path, detail, to_jsonb(b) -> 'digests' from ops.backup_run b where kind = 'dump' "
                          "and detail like %s order by id desc limit 500", (_ROWS + "%",)).fetchall()
     for path, detail, digests in rows:
-        if path and dump_basename(path) == name:
+        if path and dump_basename(path).removesuffix(".age") == name.removesuffix(".age"):
             counts = parse_dump_detail(detail)
             if counts is not None:
                 return counts, (digests if isinstance(digests, dict) else None)
@@ -385,6 +386,10 @@ def copy_to(source, folder, staging=None, s=None, stat=os.stat):
         problem = same_device_problem(folder, staging, s, stat=stat)
         if problem:
             raise OSError(problem)
+    from decklab.db import backup_crypto
+    settings = db.settings() if s is None else s
+    if backup_crypto.recipient(settings) is not None:
+        return backup_crypto.encrypt_copy(source, folder, settings)
     folder.mkdir(exist_ok=True)
     target = folder / Path(source).name
     partial = target.with_name(target.name + PARTIAL)
@@ -452,8 +457,9 @@ def run_backup(dest=None, say=say):
         say(f"Backup made ({local}, {size:,} bytes), but it couldn't be copied to {dest}: "
             f"{sentence(e)} The local copy is kept.")
         return 1
-    record("dump", started, True, copy, size, rows, digests=digests)
-    say(f"Backup made: {copy} ({size:,} bytes, {sum(counts.values()):,} rows in {len(counts)} tables).")
+    copied_size = copy.stat().st_size
+    record("dump", started, True, copy, copied_size, rows, digests=digests)
+    say(f"Backup made: {copy} ({copied_size:,} bytes, {sum(counts.values()):,} rows in {len(counts)} tables).")
     return 0
 
 
@@ -587,13 +593,14 @@ def run_restore_check(source=None, say=say):
     try:
         size = newest.stat().st_size
         expected, expected_digests = recorded(newest.name)
-        with db.connect("owner", dbname="postgres", autocommit=True) as c:
+        from decklab.db.backup_crypto import readable_dump
+        with readable_dump(newest, s) as readable, db.connect("owner", dbname="postgres", autocommit=True) as c:
             _scratch_drop(c, scratch)
             c.execute(sql.SQL("create database {} encoding 'UTF8' template template0").format(
                 sql.Identifier(scratch)))
             try:
                 ok, detail = _tool([db.pg_bin("pg_restore"), *_connection_args(s, scratch), "--exit-on-error",
-                                    newest])
+                                    readable])
                 if not ok:
                     return failed(f"pg_restore of {newest.name} didn't work: {detail}", newest, size)
                 with db.connect("owner", dbname=scratch, autocommit=True) as r:
@@ -704,4 +711,7 @@ def status(dbname=None, now=None):
     run = newest["check"]
     if run is not None and not run["ok"]:
         lines.append("  WARNING: the last check found a problem (python -m decklab.db check --history says which).")
+    from decklab.db.backup_crypto import warnings
+    encrypted = any(str((newest.get(kind) or {}).get("path") or "").endswith(".age") for kind in ("dump", "restore_check"))
+    lines.extend("  WARNING: " + warning for warning in warnings(s, encrypted=encrypted))
     return lines

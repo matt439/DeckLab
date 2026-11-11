@@ -56,7 +56,7 @@ def is_key(key):
 
 def _here(row):
     """The copies of one owned-vs-needed row here now and free for this deck, up to its need."""
-    held = sum(qty for _, qty in row["in_use_elsewhere"])
+    held = sum(qty for _, qty in row["in_use_elsewhere"]) + row.get("lent_out", 0)
     return min(row["need"], max(row["owned"] - row["on_the_way"] - held, 0))
 
 

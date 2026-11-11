@@ -79,13 +79,15 @@ def _simulation_edits(fmt, *, trace=None, exclusions=None):
     id>[@version]" names; ([], []) when the file or the section is missing, and when it can't be
     read (logged)."""
     from . import pilots            # pilots names the file; it comes before this part
+    path = pilots.SIMULATION_FILE
     try:
-        with open(pilots.SIMULATION_FILE, encoding="utf-8") as f:
+        path = pilots.simulation_file()
+        with open(path, encoding="utf-8-sig") as f:
             found = json.load(f)
-    except FileNotFoundError:
-        field_exclusions.notify(exclusions, "configuration", [])
-        return [], []
     except (OSError, ValueError) as e:
+        if isinstance(e, FileNotFoundError) and path == pilots.SIMULATION_FILE:
+            field_exclusions.notify(exclusions, "configuration", [])
+            return [], []
         common._log(f"decklab/simulation.json can't be read, so the field has no edits: {e}")
         if trace is not None:
             trace.unavailable()
@@ -1037,8 +1039,8 @@ def _row(entry, o, pair, problem=None):
     """_rows' row of opponent o from its pair (_numbers'), also for a saved result found another way."""
     result, games = pair["result"], _games(pair["result"])
     numbers = lead = None
+    p = views._perspective(result, entry["card_sha"]) if result is not None else 0
     if games:
-        p = views._perspective(result, entry["card_sha"])
         rates = views._winrate(games, p)
         lead = views._lead(games, p, rates["winrate"], views._comparison(games, p))
         try:
@@ -1049,6 +1051,7 @@ def _row(entry, o, pair, problem=None):
                        "low": w["low"] if w.get("balanced") else None,
                        "high": w["high"] if w.get("balanced") else None, "pi": None, "se": None, "d": None}
     return {"opponent": o, "key": pair["key"], "n": pair["n"], "numbers": numbers, "lead": lead,
+            "stalled_all": views.reliability.stalled(games, p),
             "not_meaningful": not pair["meaningful"], "problem": problem,
             "updated": result.get("updated") if games else None}
 
@@ -1096,6 +1099,7 @@ def view(entry, results_dir=None, *, space="home", public=None, visible=None, ke
                               "kind": views.page_kind(o["id"]), "card_sha": o["card_sha"], "key": row["key"],
                               "games": row["n"], "rate": rate, "lead": row["lead"], "pred": _r(pred),
                               "residual": residual, "not_meaningful": row["not_meaningful"],
+                              **({"stalled": row["stalled_all"]} if row.get("stalled_all", {}).get("caution") else {}),
                               "problem": row["problem"]})
     opponents_out.sort(key=lambda o: (o["rate"] is None, -(o["rate"] or {}).get("value", 0) if o["rate"] else 0,
                                       o["title"].casefold()))

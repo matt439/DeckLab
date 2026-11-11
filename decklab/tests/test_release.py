@@ -11,6 +11,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest import mock
 
 from decklab.lib import build
 
@@ -61,6 +62,26 @@ class ReleaseInstallTests(unittest.TestCase):
         (self.root / "decklab" / "lib" / "thing.py").write_bytes(b"X = 1\r\n")     # CRLF is the same source
         self.assertFalse(build._snapshot(self.root).dirty)
 
+    def test_user_config_is_clean_but_changes_still_require_a_restart(self):
+        path = self.root / "decklab" / "config.json"
+        path.write_text('{"port": 8642}\n', encoding="utf-8")
+        with mock.patch.multiple(build, _root=None, _running=None, _latest=None,
+                                 _checked_at=0.0, _started_at=None, CACHE_SECONDS=0.0):
+            build.start(self.root)
+            status = build.status()
+            self.assertIs(status["running_dirty"], False)
+            self.assertIs(status["latest_dirty"], False)
+            self.assertIs(status["restart_required"], False)
+            for contents in ('{"port": 8643}\n', None):
+                with self.subTest(contents=contents):
+                    if contents is None:
+                        path.unlink()
+                    else:
+                        path.write_text(contents, encoding="utf-8")
+                    status = build.status()
+                    self.assertIs(status["latest_dirty"], False)
+                    self.assertIs(status["restart_required"], True)
+
     def test_a_bad_or_missing_manifest_is_unverified(self):
         for text in ("not json", json.dumps({**self.info, "version": "one"}), json.dumps({**self.info, "extra": 1}),
                      json.dumps({**self.info, "web": "x"})):
@@ -96,6 +117,11 @@ class ReleaseInstallTests(unittest.TestCase):
 
 @unittest.skipUnless(_git_works() and shutil.which("git"), "needs this checkout's git")
 class MakeReleaseTests(unittest.TestCase):
+    def test_update_config_backup_is_gitignored(self):
+        for name in ("decklab/config.json.before-forge-update", "decklab/simulation.local.json"):
+            with self.subTest(name=name):
+                self.assertEqual(make_release._git("check-ignore", "--no-index", "--", name), name)
+
     def test_head_makes_a_matching_zip_sha_and_manifest_twice_the_same(self):
         with tempfile.TemporaryDirectory(prefix="decklab-release-out-") as folder:
             first = make_release.make("v0.0.1", out=Path(folder) / "a")
@@ -116,6 +142,11 @@ class MakeReleaseTests(unittest.TestCase):
                 opened.extractall(install)
             found = build._snapshot(install / "decklab-0.0.1")
             self.assertEqual((found.version, found.commit, found.dirty, found.error), ("0.0.1", info["commit"], False, None))
+            config = install / "decklab-0.0.1" / "decklab" / "config.json"
+            config.write_text('{"profiles": [{"id": "user1", "name": "User1"}]}\n', encoding="utf-8")
+            configured = build._snapshot(install / "decklab-0.0.1")
+            self.assertEqual((configured.dirty, configured.error), (False, None))
+            self.assertNotEqual(configured.runtime, found.runtime)
 
 
 if __name__ == "__main__":

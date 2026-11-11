@@ -326,8 +326,8 @@ MASS_LAND_DENIAL_TAG = "mass-land-denial"   # its description is Wizards' defini
 EXTRA_TURN_TAG = "extra-turn"
 BRACKET_NOT_AUTOMATIC = (
     "Two-card combos (game-enders, lockouts or infinites): none in Brackets 1-2, none before "
-    "turn 6 in Bracket 3. Deck Lab looks for Commander Spellbook's two-card combos only: combos "
-    "of three or more cards, combos needing a card that isn't named (\"a creature with power 4 or "
+    "turn 6 in Bracket 3. Deck Lab lists Commander Spellbook's named two- and three-card combos; "
+    "three-card findings never raise this minimum. Combos of four or more cards, combos needing a card that isn't named (\"a creature with power 4 or "
     "more\") and your intent aren't checked, how early a combo can win isn't judged, and the "
     "list can miss combos.",
     "Extra turns in Brackets 2-3 must be few and never chained or looped; no number is published.",

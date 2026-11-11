@@ -33,7 +33,7 @@ def owned(result, p):
         shown = {}
         for title, quantity in items:
             matches = holders.get(title, [])
-            visible = matches and all(named_holder(holder.id, sees, records) for holder in matches)
+            visible = matches and all(holder.why == "lent out" or named_holder(holder.id, sees, records) for holder in matches)
             title = title if visible else guard.hidden_deck(matches[0].id) if matches else "another deck"
             shown[title] = shown.get(title, 0) + quantity
         return list(shown.items())

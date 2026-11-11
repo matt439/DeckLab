@@ -150,8 +150,10 @@ class ProfileSetupSafetyTests(unittest.TestCase):
     def test_valid_setup_syncs_the_exact_preflight_snapshot_without_reloading_profiles(self):
         settings = {"profiles": [home(role="admin")]}
         expected = profiles.read_checked(settings)
+        local_admin = mock.MagicMock()
+        local_admin.__enter__.return_value.execute.return_value.fetchone.return_value = (180000,)
         with mock.patch.object(config, "load", side_effect=[settings, AssertionError("profile config reloaded")]) as load, \
-                mock.patch.object(setup, "_superuser"), mock.patch.object(setup, "ensure_roles"), \
+                mock.patch.object(setup, "_superuser", return_value=local_admin), mock.patch.object(setup, "ensure_roles"), \
                 mock.patch.object(setup, "ensure_database"), mock.patch.object(setup, "secure_database"), \
                 mock.patch.object(migrate, "apply", return_value=[]) as migrations, \
                 mock.patch.object(profiles_sync, "sync", return_value={"added": [], "changed": [], "removed": []}) as sync, \

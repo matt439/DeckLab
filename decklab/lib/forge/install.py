@@ -42,7 +42,10 @@ def _posix_java_roots():
     packages, /opt, SDKMAN's and IntelliJ's downloads."""
     home = Path.home()
     return ((Path("/usr/lib/jvm"), "*"), (Path("/usr/lib64/jvm"), "*"), (Path("/opt/java"), "*"),
-            (Path("/opt"), "jdk*"), (home / ".sdkman" / "candidates" / "java", "*"), (home / ".jdks", "*"))
+            (Path("/opt"), "jdk*"), (home / ".sdkman" / "candidates" / "java", "*"), (home / ".jdks", "*"),
+            (Path("/Library/Java/JavaVirtualMachines"), "*/Contents/Home"),
+            (Path("/opt/homebrew/opt"), "openjdk*/libexec/openjdk.jdk/Contents/Home"),
+            (Path("/usr/local/opt"), "openjdk*/libexec/openjdk.jdk/Contents/Home"))
 
 
 RELEASE_MAX = 64 * 1024             # a JDK's release file is a few hundred bytes
@@ -421,15 +424,16 @@ def status(refresh=False):
             return _with_card_log(cached, forge_jar)
     try:
         setup = _setup()
-        found = {"ready": True, "version": setup["version"], "problem": None}
+        found = {"ready": True, "installed": True, "version": setup["version"], "problem": None}
         forge_jar = setup["forge_dir"] / setup["jar"]
     except ForgeError as e:
-        version = None
+        version, installed = None, None
         try:
-            version = _find_jar(Path(common._settings()["forge_dir"]))[1]
+            jar, version = _find_jar(Path(common._settings()["forge_dir"]))
+            installed = jar is not None
         except Exception:
             pass
-        found = {"ready": False, "version": version, "problem": str(e)}
+        found = {"ready": False, "installed": installed, "version": version, "problem": str(e)}
     except Exception as e:          # a bad config.json, say: status() never raises
         found = {"ready": False, "version": None,
                  "problem": f"Forge's settings couldn't be read ({type(e).__name__})."}

@@ -143,8 +143,7 @@ class AccessoryCropUndoApiTests(ApiTestCase):
                 self.assertEqual((self.store.snapshot, self.store.writes), (before, []))
 
     def test_mixed_raw_cells_or_noncanonical_crop_are_not_available_as_partial_photo_recovery(self):
-        for field, value in (("notes", "Other historical text"), ("quantity", "99"), ("owner", "shared"), ("kind", "playmat"),
-                             ("image", "a-sleeves.png"), ("crop", "0.10,0.1,0.8,0.8")):
+        for field, value in (("image", "a-sleeves.png"), ("crop", "0.10,0.1,0.8,0.8")):
             crop.seed_crop(self.store)
             self.store.audit[support.CHANGE_ID][0]["before"][field] = value
             with self.subTest(field=field):

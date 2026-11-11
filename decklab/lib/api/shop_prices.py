@@ -18,6 +18,17 @@ from . import common
 _NOT_CAPTURED = object()
 
 
+class Captured(dict):
+    """One page's saved snapshots and one household preference, without serializing state."""
+    def __init__(self, values):
+        super().__init__(values)
+        self.listing_preference = shops.listing_preference()
+
+
+def preference(data):
+    return data.listing_preference if isinstance(data, Captured) else shops.listing_preference()
+
+
 def capture():
     """One optional capture of every shop's snapshot; explicit None is an already-captured absence."""
     return _snapshot()
@@ -33,7 +44,7 @@ def _snapshot():
             continue
         if data and (not isinstance(data, dict) or data.get("shop", adapter.name) == adapter.name):
             found[adapter.key] = data
-    return found or None
+    return Captured(found) if found else None
 
 
 def by_shop(data):
@@ -52,14 +63,17 @@ def _present(data):
 
 def for_row(row, data=None):
     """One queue row's MTGMate match, or None when there's no MTGMate snapshot."""
-    first = by_shop(_snapshot() if data is None else data).get(shops.ADAPTER.key)
-    return shops.match(row, first) if first else None
+    data = _snapshot() if data is None else data
+    first = by_shop(data).get(shops.ADAPTER.key)
+    return shops.match(row, first, preference(data)) if first else None
 
 
 def for_row_shops(row, data=None):
     """One queue row's match at every shop with a snapshot, in order, or None when none has one."""
-    present = _present(_snapshot() if data is None else data)
-    return [shops.match(row, snapshot) for _, snapshot in present] or None
+    data = _snapshot() if data is None else data
+    present = _present(data)
+    chosen = preference(data)
+    return [shops.match(row, snapshot, chosen) for _, snapshot in present] or None
 
 
 def enrich(answer, *, data=_NOT_CAPTURED):
@@ -75,7 +89,8 @@ def enrich(answer, *, data=_NOT_CAPTURED):
         return answer
     try:
         summaries = [shops.summary(snapshot) for _, snapshot in present]
-        matches = [[shops.match(row, snapshot) for _, snapshot in present] for row in answer.get("to_buy", [])]
+        chosen = preference(data)
+        matches = [[shops.match(row, snapshot, chosen) for _, snapshot in present] for row in answer.get("to_buy", [])]
     except Exception as error:
         common._log(f"Shop snapshot queue projection failed: {type(error).__name__}")
         return answer
@@ -96,7 +111,8 @@ def enrich_missing(answer, *, data):
     # Missing-card gathering already uses the index. Optional shop evidence must
     # never trigger its load/update on another path or when it is unavailable.
     resolve = _loaded_resolver()
-    shop_missing_prices.enrich_shops(answer.get("missing_cards", {}).get("rows", []), by_shop(data), resolve)
+    shop_missing_prices.enrich_shops(answer.get("missing_cards", {}).get("rows", []), by_shop(data), resolve,
+                                     preference=preference(data))
     return answer
 
 

@@ -26,9 +26,11 @@ def capability():
 
 def _status():
     """A direct loopback read. Only a refused connection proves no listener."""
-    connection = http.client.HTTPConnection("127.0.0.1", config.load()["port"], timeout=TIMEOUT)
+    settings = config.load()
+    connection = http.client.HTTPConnection("127.0.0.1", settings["port"], timeout=TIMEOUT)
     try:
-        connection.request("GET", "/api/status", headers={"X-Deck-Lab-Script": "1"})
+        from decklab.lib.script_secret import local_headers
+        connection.request("GET", "/api/status", headers=local_headers(settings=settings))
         response = connection.getresponse()
         payload = response.read(MAX_STATUS + 1)
         if response.status != 200 or len(payload) > MAX_STATUS:

@@ -190,7 +190,7 @@ def _install_handler(fixture, runtime, run_id):
             split = urlsplit(self.path)
             path, query = split.path, parse_qs(split.query)
             if self.command not in {"GET", "HEAD"}:
-                if self.command != "POST" or path != "/api/deck/check":
+                if self.command != "POST" or path not in {"/api/deck/check", "/api/deck/cuts", "/api/deck/bracket-replacements", "/api/goldfish/what-if"}:
                     raise ApiError(403, "This synthetic review fixture permits only reads and dry-run deck checks.")
                 return super()._route()
             if path == "/_ui_review/ready":
@@ -306,6 +306,17 @@ def review_fixture(runtime, run_id, *, lifecycle=None, _validated=False):
         for deck_id, body in ((HOME, text), (MEMBER, member_text)):
             fixture.inventory._remember(deck_id, body, "matt", "Create synthetic UI fixture", "A")
         composition_data.seed(fixture, text)
+        # Public reduced EDHREC cache inside this disposable runtime; Cuts never fetches it.
+        from decklab.lib import config as app_config, edhrec
+        cached = {"format": edhrec.FORMAT, "slug": "marwyn-the-nurturer", "commander": "Marwyn, the Nurturer",
+                  "url": "https://edhrec.com/commanders/marwyn-the-nurturer", "decks": 1000,
+                  "fetched": "2000-01-01T00:00:00+00:00", "themes": [], "lists": [{"header": "Synthetic cached cards", "cards": [
+                      {"name": "Llanowar Elves", "decks": 800, "of": 1000},
+                      {"name": "Elvish Mystic", "decks": 600, "of": 1000},
+                      {"name": "Beast Whisperer", "decks": 200, "of": 1000}]}]}
+        cache_path = app_config.DATA / "edhrec" / "marwyn-the-nurturer.json"
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text(json.dumps(cached), encoding="utf-8")
         from . import family_data
         family_data.seed(fixture)
         from . import receipt_data

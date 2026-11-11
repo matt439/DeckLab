@@ -12,12 +12,15 @@ The rules:
 - a profile has the same rights wherever it asks from: on the home network
   (the profile the page's chooser names) exactly as through the tunnel (the
   login's), so User1 picked on the shared iPad can't change what she
-  couldn't change from outside, and User2 picked there only his own space;
+  couldn't change from outside. Only home profiles are offered there; members
+  with their own spaces sign in through the tunnel even on the home network;
 - a script naming nobody may do everything: it has no profile whose
   rights could apply. A script is code outside any request (a job thread,
   a test, the command line) or a request on the home listener from
   loopback that sends X-Deck-Lab-Script: 1 (lib/access.py's script(), which
-  lib/api/guard.py passes in as script=). Any other request naming nobody
+  lib/api/guard.py passes in as script=). Linux also checks the socket's user;
+  off Linux an optional configured script_secret adds its exact header proof.
+  Any other request naming nobody
   (a phone on the Wi-Fi, the PC's browser before a profile is picked) gets
   no profile's rights and sees only what's open to everyone;
 - an admin writes only in his own space (E10-S29, private by default): every
@@ -57,9 +60,9 @@ The rules:
   ("simulations.edit") is an admin's, by role.
 
 Two rules are about seeing rather than changing. The sleeves, deck boxes
-and playmats (magic/accessories.csv, its pictures, the decks' Sleeves and
-Deck box lines and status.csv's sleeves and deck_box columns) are the
-home's, and each row has an owner: a home profile's id or "shared"
+and playmats (database accessory rows and pictures, the decks' Sleeves and
+Deck box lines and product status's sleeves and deck_box fields) each have
+an owner: a home profile's id, a member's id or "shared"
 (lib/accessories.py). accessory_owners says which owners a profile sees:
 its own id and shared for a home profile (Matt sees Matt's and shared, an
 admin no more than that), only its own id for a person with their own space
@@ -86,22 +89,21 @@ profiles only, and never anyone else even once E10-S28's switches make
 home's collection public. A script naming nobody sees all of it, as for
 accessories, and any other request naming nobody (the page before anyone is
 chosen, a phone on the Wi-Fi, the tunnel without a profile) none. On the home network the viewer is
-the profile the page's chooser names, so User2 picked there sees only
-his own, as through the tunnel. The Shopping and Receipts pages, the
+the home profile the page's chooser names; members use the tunnel. The Shopping and Receipts pages, the
 collection and tokens pages, the packing plan, a precon's preview and the
 printing picker's copy counts (lib/api/guard.py has the list) and the
 inventory rows on the Activity page all ask this one rule. A deck page
-still shows its owned-vs-needed from its own space's pool, to whoever may
-see the deck, as its deck file's table does.
+shows inventory-derived counts, token packing, availability and tables only to
+that space's inventory readers, even when the deck itself is Public.
 
 The Activity page (lib/api/activity.py) shows the database's audit trail
-by activity_scope: everything to an admin (by role, as for the simulations
-setting) and to a script naming nobody, except wishlist rows,
-which only their owner sees (sees_wishlist); anyone else sees the changes
-in their own space (a home profile the home profiles', a person their own;
-the inventory's rows by sees_inventory), and through the tunnel with no
-profile, or at home a request naming nobody that isn't a script,
-nothing.
+by activity_scope: named viewers, admins included, see their own space's
+rows and any permitted system rows, never another space's private inventory,
+decks or games. Accessory rows additionally follow their owner's visibility;
+wishlist rows only their owner (sees_wishlist). A script naming nobody has
+the broad system scope, with those per-row privacy filters still applied.
+Through the tunnel with no profile, or at home naming nobody without script
+proof, no private activity is shown.
 
 The Game log's records (real games and sideboard plans, GET /api/play and
 the play_record rows on the Activity page) are seen by sees_play_record:
@@ -120,12 +122,13 @@ pairings included, by Matt and User1; User2's only by User2), whatever
 their role: the admin role doesn't open another space's decks. A script
 naming nobody sees every deck; any other request naming nobody sees none.
 A deck that isn't seen answers exactly as a missing one (the routes' 404
-"No deck X"), so nothing confirms it exists. E10-S28's decks switches will
-add the spaces that made their decks public (the public= argument, empty
-until then); an ordered or preordered product's decks never leave home
+"No deck X"), so nothing confirms it exists. E10-S28's owner-controlled
+Public switches add read-only access to published spaces (the public= argument),
+without granting their inventory or write permissions. Ordered/preordered product decks never leave home
 (home_only=).
 
-Everything else is open to read.
+Other reads retain their route-specific policy. Static app files and public card/reference
+data do not grant access to household or member records.
 
 Actions and their targets:
 

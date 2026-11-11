@@ -1057,6 +1057,9 @@ def main(argv=None):
     parser.add_argument("--after", type=float, default=0, help="restart: wait this many seconds first (the "
                         "Settings page's restart, so the server's answer reaches the page before it stops)")
     args = parser.parse_args(argv)
+    if sys.platform == "darwin":
+        from . import darwin
+        return darwin.command(args, args.port if args.port is not None else default_port, say, config_error)
     if args.after > 0 and args.command == "restart":
         time.sleep(min(args.after, 60))
     if args.command == "ensure":

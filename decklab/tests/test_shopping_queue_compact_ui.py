@@ -35,7 +35,7 @@ class ShoppingQueueCompactTests(unittest.TestCase):
           assert.equal(price.querySelector('.shop-snapshot'), null, 'the full snapshot is not in the price cell');
           assert.equal(price.textContent, '6.00\\u2022');
           assert.equal(mark.getAttribute('role'), 'img');
-          assert.equal(mark.getAttribute('aria-label'), 'MTGMate: A$4.50, 2 in stock (40K 249)');
+          assert.equal(mark.getAttribute('aria-label'), 'MTGMate: A$4.50, 2 in stock (40K 249); Condition unknown, language unknown');
           assert.equal(mark.getAttribute('title'), mark.getAttribute('aria-label'));
           const more = entry(1).querySelector('.shop-q-more');
           assert(more, 'a row with only a snapshot still offers the extra row');

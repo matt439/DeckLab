@@ -51,6 +51,11 @@ def _cards_delta(now, before):
                      for side in (0, 1)]
     if "tokens" in now:     # the tokens' peak counts (cardlog.tokens_less)
         out["tokens"] = cardlog.tokens_less(now["tokens"], before.get("tokens"))
+    if "development" in now:
+        from . import development_data
+        difference = development_data.less(now["development"], before.get("development"))
+        if difference is not None:
+            out["development"] = difference
     return out
 
 

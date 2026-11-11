@@ -15,6 +15,18 @@ The files in this folder:
 
 ## The gate's answers
 
+The HTTP server holds at most 32 accepted connections and closes an idle/stalled
+socket after 10 seconds. Extra connections are closed before another handler
+thread is created; closing or timing out releases capacity. These are connection
+limits, not a new wake rate or permission rule.
+
+The wakegate container runs as UID/GID 65534 with a read-only root, every capability
+dropped and no-new-privileges. Python bytecode writes are disabled. Its bind-mounted
+public `wakegate.py` must be readable by that UID; do not widen permissions on `.env`
+or tunnel tokens. Qualify the updated stack on the actual NAS, including a real
+wake packet, before calling that deployment accepted. Source tests use fake WOL
+and disposable loopback sockets; no actual NAS setup was performed by the coding task.
+
 | Request | Answer |
 |---|---|
 | `GET /__status` | `200 {"awake": true/false, "waking": true/false, "since": seconds or null, "pc": "http://DECKLAB_PC_HOST:DECKLAB_PC_PORT"}` (`since` is how long ago this wake attempt's first packet went; `pc` is the exact address the gate redirects to, port included). It carries `Access-Control-Allow-Origin` set to that same address and `Vary: Origin`, so only Deck Lab's own page on the PC can read it from another address |

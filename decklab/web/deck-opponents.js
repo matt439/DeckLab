@@ -110,7 +110,7 @@ function drawDeckOpponents(ctx, answer) {
       const result = await apiWrite("/api/deck/opponents", { id: ctx.id, sha256: answer.sha256,
         opponents: choices.filter(item => chosen.has(item.id)).map(item => item.id) });
       if (!opponentSheetHere(ctx)) return;
-      state.library = null;
+      invalidateLibrary();
       sheet.close();
       if (ctx.onSaved) ctx.onSaved(result);
       toast(result.saved ? "Usual opponents saved." : "Usual opponents are unchanged.");

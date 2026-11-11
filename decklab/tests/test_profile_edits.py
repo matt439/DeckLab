@@ -1,5 +1,7 @@
 """Profile-edit guards only touch temporary config files; no real household data."""
 import copy
+import base64
+import hashlib
 import json
 import os
 import tempfile
@@ -53,6 +55,26 @@ class TemporaryConfig(unittest.TestCase):
 
 
 class ProfileEditValidationTests(TemporaryConfig):
+    def test_bom_snapshot_and_journal_keep_the_original_byte_digests(self):
+        raw = b"\xef\xbb\xbf" + json.dumps(self.raw, indent=2).encode("utf-8")
+        self.path.write_bytes(raw)
+        kept, settings = profile_config.snapshot()
+        self.assertEqual((kept, settings), (raw, self.raw))
+        self.assertEqual(profile_config.digest(kept), hashlib.sha256(raw).hexdigest())
+        self.assertNotEqual(profile_config.digest(kept), profile_config.digest(raw[3:]))
+        after = profile_config.json_bytes(self.raw)
+        journal = {"version": 1, "config_path": str(self.path), "change_set_id": 1,
+                   "operation": "a" * 32, "database": {}, "actor": "matt",
+                   "before": base64.b64encode(raw).decode("ascii"), "before_sha256": profile_config.digest(raw),
+                   "after": base64.b64encode(after).decode("ascii"), "after_sha256": profile_config.digest(after)}
+        profile_config.prepare(journal)
+        self.assertEqual(profile_config.load_journal(), journal)
+        journal["before_sha256"] = profile_config.digest(raw[3:])
+        profile_config.write_bytes(profile_config.control() / "pending.json", profile_config.json_bytes(journal))
+        with self.assertRaises(profile_config.PendingProfileEdit):
+            profile_config.load_journal()
+        self.assertEqual(self.path.read_bytes(), raw)
+
     def test_new_address_validation_rejects_unusable_forms_before_connection(self):
         bad = [None, "", "no-at", "a@", "a@@example.com", "a b@example.com", "é@example.com",
                ".a@example.com", "a..b@example.com", "a.@example.com", "a@-example.com", "a@example..com",

@@ -124,7 +124,8 @@ function colFields(ctx, row) {
   ctx.strip = el("div", { class: "col-strip-area" }, el("p", { class: "sub", text: "Choose the card first." }));
   ctx.picture = el("div", { class: "col-sheet-picture" });
   ctx.inputs = { name, quantity, condition, language,
-    notes: el("input", { id: id("notes"), type: "text", maxlength: COL_NOTES_MAX, value: value("notes"), autocomplete: "off" }) };
+    notes: el("input", { id: id("notes"), type: "text", maxlength: Math.max(COL_NOTES_MAX, value("notes").length),
+      value: value("notes"), autocomplete: "off" }) };
   ctx.printingNote = el("small", { class: "field-hint", "aria-live": "polite" });
   name.addEventListener("input", () => colSuggestNames(ctx));
   name.addEventListener("change", () => loadColPrintings(ctx, name.value));
@@ -411,7 +412,7 @@ async function colSend(ctx, body) {
     const words = answer.merged ? `${what}: added to the row already listed.`
       : `${what} ${body.action === "add" ? "added" : "saved"}.`;
     if (addSave && (location.hash !== requestHash || !colAddHere(ctx))) {
-      cv.rows = null; state.library = null;
+      cv.rows = null; invalidateLibrary();
       if (state.profile?.id === cv.profile) toast(words);
       return;
     }
@@ -421,7 +422,7 @@ async function colSend(ctx, body) {
     colChanged(cv, answer, words, filing);
   } catch (error) {
     if (addSave && (location.hash !== requestHash || !colAddHere(ctx))) {
-      addSave.stale = true; cv.rows = null; state.library = null;
+      addSave.stale = true; cv.rows = null; invalidateLibrary();
       return;
     }
     if (ctx.sheet.closed || !colActive(cv) || !boxCollectionEditorHere(ctx)) return;

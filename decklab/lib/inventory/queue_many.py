@@ -52,4 +52,6 @@ def add_queue_rows(inv, *, rows, repo="."):
     text = f"Added {copies} {'copy' if copies == 1 else 'copies'} to the watchlist: {_plural(added, 'new row')}"
     if raised:
         text += f", {_plural(raised, 'row')} raised"
-    return _done(before, _with_queue(inv, current), Summary(text, {"rows": len(current)}))
+    from . import bonus_warnings
+    warnings = bonus_warnings.messages(inv, rows)
+    return _done(before, _with_queue(inv, current), Summary(text, {"rows": len(current)}, extra={"warnings": warnings} if warnings else None))

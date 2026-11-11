@@ -424,19 +424,19 @@ class TestManaSources(unittest.TestCase):
         casts, _, _, added = goldfish._plan(E, [W, W], cands, [], 2)
         self.assertEqual(added, 0)
 
-    def test_rocks_that_do_not_untap_or_need_charge_counters_make_no_mana(self):
+    def test_rocks_with_untap_or_charge_rules_are_modelled_explicitly(self):
         order = ["Plains"] * 3 + ["Basalt Monolith", "Everflowing Chalice", "Craw Wurm", "Craw Wurm"] + \
                 ["Plains"] * 3 + BLANKS
         trace, _ = script(order, turns=5)
-        self.assertEqual(trace[0]["cast"], ["Everflowing Chalice"])       # {0}: no charge counters
+        self.assertEqual(trace[0]["cast"], [])       # one {2} kicker: smallest producing form
+        self.assertIn("Everflowing Chalice", trace[1]["cast"])
         self.assertEqual(trace[2]["cast"], ["Basalt Monolith"])
-        self.assertEqual([t["mana"] for t in trace], [1, 2, 3, 4, 5])
+        self.assertEqual([t["mana"] for t in trace], [1, 2, 4, 8, 9])
         _, info = goldfish.compile_deck(parse("Deck\n10 Plains\n1 Basalt Monolith\n1 Everflowing Chalice\n"
                                               "1 Wirewood Channeler\n"), "constructed")
         notes = {(c["name"], c["what"]) for c in info["not_modelled"]}
-        self.assertIn(("Basalt Monolith", "it doesn't untap by itself, so its mana isn't counted"), notes)
-        self.assertIn(("Everflowing Chalice", "its mana needs charge counters, which aren't modelled, so it "
-                                              "makes none"), notes)
+        self.assertFalse(any(name in ("Basalt Monolith", "Everflowing Chalice") for name, _ in notes))
+        self.assertTrue({"Basalt Monolith", "Everflowing Chalice"} <= {row["name"] for row in info["special"]})
         self.assertIn(("Wirewood Channeler", "its X mana counts as one mana"), notes)
 
     def test_commander_colour_identity_mana(self):
@@ -449,21 +449,17 @@ class TestManaSources(unittest.TestCase):
         self.assertEqual(trace[1]["cast"], ["Arcane Signet"])
         self.assertEqual(trace[2]["mana"], 2)
 
-    def test_mana_abilities_with_other_costs_make_no_mana(self):
+    def test_sacrifice_and_creature_tap_mana_are_optional_finite_sources(self):
         # Review finding: Lotus Petal ({T}, sacrifice it) made a mana every turn, and so did Springleaf Drum
         # (which needs another creature to tap).
         order = ["Plains", "Lotus Petal", "Springleaf Drum"] + ["Craw Wurm"] * 4 + ["Plains"] * 3 + BLANKS
         trace, _ = script(order, turns=3)
         self.assertEqual(trace[0]["cast"], ["Springleaf Drum", "Lotus Petal"])
-        self.assertEqual([(t["mana"], t["added"]) for t in trace], [(1, 0), (2, 0), (3, 0)])
+        self.assertEqual([(t["mana"], t["added"]) for t in trace], [(1, 0), (3, 0), (4, 0)])
         _, info = goldfish.compile_deck(parse("Deck\n10 Plains\n1 Lotus Petal\n1 Springleaf Drum\n"), "constructed")
-        self.assertEqual(info["special"], [])
-        notes = {(c["name"], c["what"]) for c in info["not_modelled"]}
-        self.assertIn(("Lotus Petal", "its mana ability that also costs \"sacrifice this artifact\" isn't modelled, so "
-                                      "it makes no mana"), notes)
-        self.assertIn(("Springleaf Drum", "its mana ability that also costs \"tap an untapped creature you control\" "
-                                          "isn't modelled, so it makes no mana"), notes)
-        # The Stats page reads them the same way: not mana rocks.
+        self.assertEqual({row["name"] for row in info["special"]}, {"Lotus Petal", "Springleaf Drum"})
+        self.assertEqual(info["not_modelled"], [])
+        # Static Stats keeps its narrower ordinary-tap mana classification.
         self.assertIsNone(stats.mana_ability(cards.card("Lotus Petal")))
         self.assertEqual(stats.mana_ability(cards.card("Sol Ring")), "rock")
 

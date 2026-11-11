@@ -199,6 +199,40 @@ def _empty_printings(value):
             and set(value) == {"recorded", "stale", "cards", "expect", "editable"})
 
 
+def _default_take_along(plan):
+    """Only a new, empty-reminder projection authenticated by the retained physical records.
+
+    Nonempty counter needs, playmats, errors and malformed extra evidence still compare.
+    Dedicated take-along tests cover these additions; old physical and kit facts stay compared.
+    """
+    from decklab.lib.api import assembly_counters, assembly_takealong
+    value = plan.get("take_along")
+    if value is None:
+        return True
+    participants = plan.get("decks")
+    if not isinstance(value, dict) or not isinstance(participants, list) or not participants:
+        return False
+    for deck in participants:
+        physical = deck.get("take_apart") if isinstance(deck, dict) else None
+        if (not isinstance(physical, dict) or physical.get("available") is not True
+                or not isinstance(deck.get("id"), str) or DECK_ID.fullmatch(deck["id"]) is None
+                or deck.get("version") not in ("target", "owned") or not _hash(physical.get("sha256"))
+                or physical.get("version") not in ("target", "owned")):
+            return False
+    if value == {"available": False, "reason": assembly_takealong.PHYSICAL_REQUIRED}:
+        return any(deck["version"] != deck["take_apart"]["version"] for deck in participants)
+    expected = {"available": True, "decks": [], "counters": [], "counter_note": assembly_counters.NOTE,
+                "counter_error": None, "playmats": [], "playmats_error": None}
+    try:
+        for deck in participants:
+            row = assembly_takealong._deck_row(deck)
+            row.pop("receipt")
+            expected["decks"].append(row)
+    except (KeyError, TypeError, ValueError):
+        return False
+    return value == expected
+
+
 def normalise(dump):
     out = copy.deepcopy(dump)
     for viewer, mine in [(None, out), *((out.get("by_viewer") or {}).items())]:
@@ -216,6 +250,8 @@ def normalise(dump):
         for plan in (mine.get("assembly") or {}).values():
             if not isinstance(plan, dict):
                 continue
+            if _default_take_along(plan):
+                plan.pop("take_along", None)
             default_boxes, names, all_default = 0, set(), True
             for deck in plan.get("decks", []):
                 if isinstance(deck, dict):

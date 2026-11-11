@@ -156,7 +156,7 @@ function openProductPackedTokens(ctx) {
       if (typeof answer.saved !== "boolean" || answer.stem !== ctx.evidence.stem || typeof answer.token_cards !== "string"
           || !/^[a-f0-9]{64}$/.test(answer.status_sha256 || "") || answer.tokens_sha256 !== ctx.evidence.tokens_sha256
           || answer.token_cards !== expectedText) throw new Error("The save result could not be confirmed.");
-      state.library = null;
+      invalidateLibrary();
       if (!productTokensOwner(ctx)) return;
       ctx.confirmed = true;
       if (sheet.closed) { productTokensAfterClose(ctx); return; }
@@ -166,7 +166,7 @@ function openProductPackedTokens(ctx) {
       clear(sheet.body).append(confirmation); actions();
       if (here() && focusOwned()) confirmation.focus();
     } catch (failure) {
-      state.library = null; // An uncertain response may follow a committed write.
+      invalidateLibrary(); // An uncertain response may follow a committed write.
       if (!productTokensOwner(ctx)) return;
       ctx.needsRefresh = true;
       if (sheet.closed) { productTokensAfterClose(ctx); return; }

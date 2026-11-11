@@ -83,7 +83,7 @@ from decklab.lib.state import Actor, Conflict, Invalid, Unavailable
 from decklab.lib.state import pg as state_pg
 
 from . import (DECK_SAVES_PAUSED, Summary, changes, files, paths, pg_decks, pg_aliases, pg_check_links,
-               pg_dice, pg_locations)
+               pg_dice, pg_loans, pg_locations, pg_targets)
 from .model import ImageMeta
 # The snapshot-as-rows code is shared with the files backend (table_rows.py); these names stay
 # here for the callers and tests that use them as pg's.
@@ -109,9 +109,9 @@ DECKS_ALREADY = ("the database already holds the decks; import them again only w
 EMPTY_DECKS = files.build({})
 ALREADY = ("the database already holds an inventory; import it again only with "
            "--replace-inventory (which deletes every inventory row first, in the same change set)")
-# Every inventory table, children before parents (the order to delete in; inserts go the other
-# way). collection_import_content goes with its collection_import (on delete cascade) and
-# inventory_revision isn't audited: both are handled on their own.
+# Base inventory tables, children before parents. Later optional dice/loan tables
+# are added by readiness probes. collection_import_content goes with its import
+# (on delete cascade); inventory_revision isn't audited and is handled separately.
 INVENTORY_TABLES = ("order_card_item", "order_token_item", "order_component", "purchase_order",
                     "product_item", "product", "product_status", "collection_card", "collection_import",
                     "token_card", "watchlist_item")
@@ -193,6 +193,7 @@ def _keyed_rows(table, t, status_columns=STATUS_COLUMNS, component_columns=COMPO
     """(key columns, value columns, {key: values}) of one of t's keyed tables (tables()' shape)."""
     return {
         "collection_card": (("space_id", "set_code", "collector_number", "finish"), card_columns),
+        "card_loan": (("space_id", "id"), pg_loans.COLUMNS),
         "product": (("stem",), ("name", "format", "columns")),
         "product_status": (("file",), status_columns),
         "purchase_order": (("id",), ORDER_COLUMNS),
@@ -201,7 +202,7 @@ def _keyed_rows(table, t, status_columns=STATUS_COLUMNS, component_columns=COMPO
 
 
 # The keyed tables, parents before children (product before the components naming it).
-PARENTS_FIRST = ("product", "product_status", "purchase_order", "order_component", "collection_card")
+PARENTS_FIRST = ("product", "product_status", "purchase_order", "order_component", "collection_card", "card_loan")
 
 
 def _plain_key(key):
@@ -217,6 +218,9 @@ def _write_all(cur, t):
     located = pg_locations.ready(cur)
     t, card_columns = pg_locations.compatible(t, located), pg_locations.values(located)
     t = pg_dice.compatible(t, pg_dice.ready(cur))
+    t = pg_loans.compatible(t, pg_loans.ready(cur))
+    targets_ready = pg_targets.ready(cur)
+    t = pg_targets.compatible(t, targets_ready)
     for table in PARENTS_FIRST:
         keys, values, rows = _keyed_rows(table, t, status_columns, component_columns, card_columns)
         _insert(cur, table, keys + values, [(*_plain_key(k), *map(_db, v)) for k, v in rows.items()])
@@ -237,7 +241,7 @@ def _write_all(cur, t):
         numbered[row[1]] += 1
         dice.append((row[1], numbered[row[1]] * STEP, *row[2:]))
     _insert(cur, pg_dice.TABLE, ("space_id", "position", *DICE_COLUMNS), dice)
-    _insert(cur, "watchlist_item", ("position", *WATCH_COLUMNS),
+    _insert(cur, "watchlist_item", ("position", *pg_targets.columns(targets_ready)),
             [((n + 1) * STEP, *row[1:]) for n, row in enumerate(t["watchlist_item"])])
 
 
@@ -255,8 +259,11 @@ def _diff(cur, old, new):
     card_columns = pg_locations.values(located)
     dice_ready = pg_dice.ready(cur)
     new, old = (pg_dice.compatible(t, dice_ready) for t in (new, old))
+    new, old = (pg_loans.compatible(t, pg_loans.ready(cur)) for t in (new, old))
+    targets_ready = pg_targets.ready(cur)
+    new, old = (pg_targets.compatible(t, targets_ready) for t in (new, old))
     # Rows kept by id, positions STEP apart within a space where grouped (dice_counter: migration 0020).
-    by_id = (("token_card", TOKEN_COLUMNS, True), ("watchlist_item", WATCH_COLUMNS, False)) + \
+    by_id = (("token_card", TOKEN_COLUMNS, True), ("watchlist_item", pg_targets.columns(targets_ready), False)) + \
         (((pg_dice.TABLE, DICE_COLUMNS, True),) if dice_ready else ())
     count = 0
     pending = []
@@ -384,6 +391,11 @@ class PgInventory:
 
     def __repr__(self):
         return f"PgInventory({self.dbname or db.settings()['name']!r})"
+
+    def cached_snapshot_available(self):
+        """Whether load() can serve a retained snapshot, without connecting or loading it."""
+        with self._lock:
+            return self._cache is not None and (self._decks is not None or not self._migrated)
 
     # -------------------------------------------------------- plumbing
 
@@ -537,7 +549,8 @@ class PgInventory:
             raise NotImported(NOT_IMPORTED)
         # Whether migration 0016 is there counts too: once it's applied the locations can be read.
         # So does migration 0020's: once it's applied the dice and counters can be read.
-        return (self.dbname or db.settings()["name"], row[1], row[0], pg_locations.ready(c), pg_dice.ready(c))
+        return (self.dbname or db.settings()["name"], row[1], row[0], pg_locations.ready(c), pg_dice.ready(c),
+                pg_loans.ready(c), pg_targets.ready(c))
 
     def _read(self, c, remember=True):
         """The snapshot the connection sees (the cached one while the revision hasn't moved)."""
@@ -629,7 +642,7 @@ class PgInventory:
         """Latest *audit row* touching this key. Change-set IDs are allocated before
         the inventory lock and therefore cannot establish write order. A collection row's
         location-only update (E8-S22) doesn't count: Undo leaves locations alone."""
-        if table not in ("collection_card", "token_card", "accessory", "watchlist_item"):
+        if table not in ("collection_card", "token_card", "accessory", "watchlist_item", "product_status"):
             raise Invalid("That row does not support Undo.")
         def work(c):
             found = c.execute("select id from audit.row_change r where table_name=%s and row_key=%s::jsonb "
@@ -637,6 +650,11 @@ class PgInventory:
             return found[0] if found is not None else None
         applying = getattr(self._applying, "connection", None)
         return work(applying) if applying is not None else self._call(work)
+
+    def undo_collection_changes_review(self, change_id, space):
+        """One fresh whole-collection-change review under the ordinary inventory claim."""
+        from . import undo_collection_changes, undo_token_delete
+        return undo_token_delete.read_review(self, change_id, space, _take_lock, reviewer=undo_collection_changes.review)
 
     def accessory_undo_review(self, change_id, owners):
         """One locked accessory text review, with no audit change for the read."""
@@ -653,6 +671,11 @@ class PgInventory:
                 finally:
                     self._applying.connection = previous
         return self._call(work)
+
+    def product_kit_undo_review(self, change_id, owners):
+        from . import product_kit_undo, undo_token_delete
+        return undo_token_delete.read_review(self, change_id, "home", _take_lock,
+            reviewer=lambda cid, _space, snapshot, store: product_kit_undo.review(cid, owners, snapshot, store))
 
     def accessory_undo_photo(self, name, sha256, size):
         """Target-only current bytes, on Undo's already locked review/save connection."""
@@ -680,8 +703,9 @@ class PgInventory:
             for value, action in ((confirm_stock, "accessory_stock_update"), (confirm_owner, "accessory_owner_update"),
                                   (confirm_kind, "accessory_kind_update"), (confirm_record, "accessory_record_update"),
                                   (confirm_photo, "accessory_crop_update")):
+                actions = (action, "accessory_photo_record_update") if action in ("accessory_record_update", "accessory_crop_update") else (action,)
                 if value is not ... and (source["op"] != "UPDATE" or value is not True
-                        or update_action(source["before"], source["after"]) != action):
+                        or update_action(source["before"], source["after"]) not in actions):
                     raise Invalid("Confirm only the reviewed accessory correction.")
         _, summary = self.apply(MetadataRestore(change_id, owners, expect, store=self,
             reason=canonical if reason is not ... else ..., confirm_restore=confirm_restore, confirm_stock=confirm_stock,
@@ -780,6 +804,16 @@ class PgInventory:
         from .undo_token_delete import read_review
         return read_review(self, change_id, space, _take_lock, reviewer=review)
 
+    def undo_order_queue_review(self, change_id, space):
+        from .undo_order_queue import review
+        from .undo_token_delete import read_review
+        return read_review(self, change_id, space, _take_lock, reviewer=review)
+
+    def undo_order_queue_latest(self, order_id, product_stems):
+        """Latest order/product audit event, including later inserted parts, on this claim."""
+        from . import pg_order_queue
+        return pg_order_queue.latest(self, order_id, product_stems)
+
     def undo_watchlist_rows_review(self, change_id, space):
         from .undo_watchlist_rows import review
         from .undo_token_delete import read_review
@@ -843,6 +877,8 @@ class PgInventory:
                         self._applying.saves = None
                         self._applying.connection = previous_connection
                     after = changes.prepare(before, after)
+                    from . import undo_order_queue_verify
+                    summary = undo_order_queue_verify.prepare(before, after, summary)
                     decks_changed = any(paths.is_deck_part(rel) for rel in changes.changed(before, after))
                     if decks_changed and deck_key is None:
                         raise Unavailable(DECK_SAVES_PAUSED)
@@ -894,7 +930,7 @@ class PgInventory:
                             receipt = op.verify(before, saved, actual)
                         finally:
                             self._applying.connection = previous_verify_connection
-                        if op.plan["action"] in ("accessory_remove", "accessory_add", "accessory_stock_update", "accessory_owner_update", "accessory_kind_update", "accessory_record_update", "accessory_crop_update"):
+                        if op.plan["action"] in ("accessory_remove", "accessory_add", "accessory_stock_update", "accessory_owner_update", "accessory_kind_update", "accessory_record_update", "accessory_crop_update", "accessory_photo_record_update"):
                             recorded_reason = cur.execute("select reason from audit.change_set where id=%s", (change_set,)).fetchone()
                             if recorded_reason is None or recorded_reason[0] != (op.reason if op.plan["action"] == "accessory_remove" else None):
                                 raise Conflict("The accessory Undo reason could not be confirmed.")
@@ -928,14 +964,27 @@ class PgInventory:
                             # 2-50 collection rows removed or restored together: prove the exact
                             # DELETEs or INSERTs, the saved collection and the reason before commit.
                             summary = undo_collection_rows.confirm_in_transaction(cur, change_set, before, saved, summary)
+                        from . import undo_collection_changes
+                        if undo_collection_changes.restoring(summary):
+                            summary = undo_collection_changes.confirm_in_transaction(cur, change_set, before, saved, summary)
                         from . import undo_watchlist_mixed
                         if undo_watchlist_mixed.restoring(summary):
                             # A mixed queue change undone whole: prove the exact UPDATEs, DELETEs and
                             # INSERTs and every other row's position before commit (or roll back).
                             summary = undo_watchlist_mixed.confirm_in_transaction(cur, change_set, before, saved, summary)
+                        if undo_order_queue_verify.restoring(summary):
+                            summary = undo_order_queue_verify.confirm_in_transaction(cur, change_set, before, saved, summary)
+                        from . import product_kit_undo
+                        if isinstance(op, product_kit_undo.Restore):
+                            summary = product_kit_undo.confirm_in_transaction(cur, change_set, before, saved, summary)
+                    # Only the committed SQL readback/proofs establish changed paths;
+                    # op hints may omit real writes or claim changes for a no-op.
+                    summary = Summary(summary.text, summary.counts,
+                                      {rel: ["changed"] for rel in changes.changed_paths(before, saved)}, summary.extra)
                     return saved, summary
             except _Unchanged as u:
-                return u.result
+                unchanged, summary = u.result
+                return unchanged, Summary(summary.text, summary.counts, {}, summary.extra)
         out = self._call(work)
         with self._lock:
             if "key" in result:
@@ -1060,7 +1109,7 @@ def write_model(inv, actor, message, *, contents=None, replace=False, dbname=Non
     if reasons:
         raise Unrepresentable(reasons)
     t = tables(pg_decks.without_deck_parts(inv), strict=True)
-    spaces = set(inv.collections) | set(inv.tokens) | set(inv.imports) | set(inv.dice)
+    spaces = set(inv.collections) | set(inv.tokens) | set(inv.imports) | set(inv.dice) | set(inv.loans)
     own = conn is None
     c = db.connect("app", dbname=dbname) if own else conn
     try:
@@ -1072,15 +1121,14 @@ def write_model(inv, actor, message, *, contents=None, replace=False, dbname=Non
                 raise ValueError(f"the inventory holds space {', '.join(missing)}, which the database doesn't "
                                  f"have: run python -m decklab.db sync-profiles first")
             space_members.admit(cur, space_ids=spaces, actor=actor, lock=False)
+            present_tables = INVENTORY_TABLES + tuple(helper.TABLE for helper in (pg_dice, pg_loans) if helper.ready(cur))
             cur.execute("select exists (select 1 from inventory_revision)" + "".join(
-                f" or exists (select 1 from {table})" for table in INVENTORY_TABLES))
+                f" or exists (select 1 from {table})" for table in present_tables))
             if cur.fetchone()[0]:
                 if not replace:
                     raise ValueError(ALREADY)
-                for table in INVENTORY_TABLES:
+                for table in present_tables:
                     cur.execute(f"delete from {table}")
-                if pg_dice.ready(cur):
-                    cur.execute(f"delete from {pg_dice.TABLE}")
             _write_all(cur, t)
             _add_imports(cur, imports)
             cur.execute("update inventory_revision set revision = revision + 1, imported_at = now() "

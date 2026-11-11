@@ -66,8 +66,8 @@ function historyDraw(data, id, version, token) {
 function historyWhen(rev) {
   const when = new Date(rev.date);
   if (Number.isNaN(when.getTime())) return rev.date.slice(0, 10);
-  const time = when.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }).replace(/\s/g, " ");
-  return `${when.toLocaleDateString("en-AU", HISTORY_MONTH)}, ${time}`;
+  const time = when.toLocaleTimeString(LOCALE, { hour: "numeric", minute: "2-digit" }).replace(/\s/g, " ");
+  return `${when.toLocaleDateString(LOCALE, HISTORY_MONTH)}, ${time}`;
 }
 
 /** The server sends only the subject this viewer may read, or a plain summary for an outside reader. */
@@ -355,6 +355,9 @@ function historySheet(rev, data, id, version, token, trigger) {
     historyCompare(answer, rev, id, version, token);
   });
   if (rev.op !== "D") body.push(compare);
+  if (rev.op !== "D" && !data.retired && change.kind !== "unreadable") body.push(el("a", { class: "btn",
+    href: compareRevisionHref(id, rev.revision, version, (data.versions || [version]).includes(version) ? version : "target"),
+    text: "Compare stats with the deck now" }));
   // Restoring is offered only to someone who may save this deck (the server's may_save, as the editor's), and
   // only where the editor opens; anyone else gets neither the action nor a note about it.
   const restorable = !data.retired && data.may_save !== false && rev.op !== "D" && change.kind !== "unreadable"

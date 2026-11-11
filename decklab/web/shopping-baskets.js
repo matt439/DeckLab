@@ -12,6 +12,7 @@ const SHOP_BASKET_WORDS = {
   in_stock: "in stock", out_of_stock: "out of stock", not_listed: "not listed",
   unknown: "couldn't be read", not_checked: "not checked", unconfirmed: "printing not confirmed",
   unread: "no saved check", not_matched: "listed, but not matched to your printing",
+  not_eligible: "no listing meets the household condition/language preference",
   token: "token cards aren't checked at this shop",
 };
 
@@ -55,7 +56,7 @@ function shopBasketLine(row, basket) {
   const more = Array.isArray(row.more) ? row.more.filter(item => item && item.set) : [];
   const counted = Number.isInteger(row.stock) ? row.stock : listing.stock;
   const stock = basket.counts_stock ? (row.short ? `only ${counted} of ${row.quantity} in stock`
-    : more.length ? `${counted} in stock across ${more.length + 1} printings` : `${listing.stock} in stock`)
+    : more.length ? `${counted} in stock across ${more.length + 1} listings` : `${listing.stock} in stock`)
     : "in stock (count not shown)";
   const total = shopBasketAud(row.line_aud);
   const also = more.map(item => {
@@ -64,7 +65,7 @@ function shopBasketLine(row, basket) {
     const itemPrice = shopBasketAud(item.price_aud);
     return el("span", {class: "shop-basket-more", "data-basket-more": name},
       ` · also ${item.copies} × `, shopSnapshotLink({shop: basket.shop, url: item.url}, name),
-      ` ${itemPrice ? `${itemPrice} each` : "price not shown"}`);
+      ` ${itemPrice ? `${itemPrice} each` : "price not shown"} · ${shopSnapshotQuality(item)}`);
   });
   return el("li", {class: "shop-basket-row", "data-basket-row": row.name, "data-basket-status": row.status},
     row.add_on ? status("outline", "Add-on") : null,
@@ -74,6 +75,8 @@ function shopBasketLine(row, basket) {
       more.length && Number.isInteger(listing.copies) ? `${listing.copies} × ` : null,
       printing ? shopSnapshotLink({shop: basket.shop, url: listing.url}, printing) : null,
       el("span", {text: ` ${each} · ${stock}`}), ...also,
+      el("small", {class: "shop-snapshot-quality", text: ` · ${shopSnapshotQuality(listing)}`}),
+      row.skipped_cheaper ? el("small", {text: " · Cheaper copy skipped by household preference"}) : null,
       total && row.copies > 1 ? el("span", {text: ` · ${total}`}) : null,
       row.printing === "exact" ? el("small", {text: " exact printing"}) : null,
       row.carried ? el("small", {text: " from an earlier run"}) : null,
@@ -145,7 +148,7 @@ function shopBasket(view, basket) {
     rows.length ? shopBasketPostage(basket.postage) : null,
     rows.length ? [shopBasketTotal(basket, "Total"), el("ul", {class: "shop-basket-rows"}, rows.map(row => shopBasketLine(row, basket)))]
       : el("p", {class: "sub", text: "No ready rows in stock here."}),
-    shopBasketGaps(basket), copy,
+    shopBasketGaps(basket), copy, shopReferenceBulkButton(view, basket), shopBasketOrderButton(view, basket),
     addOns.length ? el("div", {class: "shop-basket-addons"}, el("h4", {text: "Add-ons in stock here"}),
       el("p", {class: "sub", text: "Long-term and waiting rows this shop has, to add to the same order if you choose."}),
       shopBasketTotal(basket.add_ons_totals || {}, "Add-ons"), rows.length ? shopBasketReach(basket) : null,

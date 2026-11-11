@@ -19,6 +19,27 @@ Loaded after version.js and before app.js, whose route() calls showSettings(). N
 
 const SIM_MODE_WORDS = [["admins", "Only admins"], ["everyone", "Anyone"], ["paused", "Paused"]];
 
+/** Static help contains no account, inventory or saved-deck reads. */
+function showTerminology() {
+  setTitle("What these words mean");
+  const words = [
+    ["Idea", "A deck plan. It reserves no cards and has no sleeves or deck box."],
+    ["Building", "A deck you are assembling. You can choose its kit, but it reserves no cards yet."],
+    ["Built", "A physical deck put together. Its selected built list reserves cards so other decks cannot also count them as free."],
+    ["Planned list", "The list you want, including cards you may still need to get."],
+    ["Play-now list", "An alternative list using owned cards or cards on the way. Incoming cards are not ready to play until they arrive; check availability."],
+    ["Owned vs needed", "How many copies a deck needs, how many its space owns, what is in use and what is on the way. Counts are shown only when you may see that collection."],
+    ["Tables out of date", "A saved owned-vs-needed table no longer matches the current collection or lists. Review and update it; this does not buy, move or change cards."],
+    ["Simulations", "Optional computer games played by Forge. Collection, deck building and manual practice work without installing it."]
+  ];
+  const main = clear($("#main"));
+  add(main, [pageHead({title: "What these words mean"}),
+    el("section", {class: "panel"}, el("dl", {}, words.map(([term, meaning]) =>
+      [el("dt", {}, el("strong", {text: term})), el("dd", {text: meaning})])),
+    el("p", {}, el("a", {href: "#/library", text: "Back to Decks"})))]);
+  afterRender();
+}
+
 function showSettings(params, token) {
   setTitle("Settings");
   const main = clear($("#main"));
@@ -54,12 +75,14 @@ function showSettings(params, token) {
       typeof settingsPricingPanel === "function" ? settingsPricingPanel() : null,
       settingsMembersPanel(),
       settingsMaintenancePanel(token),
+      settingsErrorReferences(),
       el("section", { class: "panel settings-part", id: "settings-visits", "aria-labelledby": "settings-visits-title" },
         el("h2", { id: "settings-visits-title", text: "Visits" }),
         el("p", { class: "sub", text: `Who has opened Deck Lab, and which pages. The last ${VISIT_DAYS} days unless it says otherwise.` }),
         el("div", { class: "visits-list", id: "visits-list" }, loadingBox("Loading visits…", { small: true }))),
       el("section", { class: "panel settings-part", id: "settings-about", "aria-labelledby": "settings-about-title" },
         el("h2", { id: "settings-about-title", text: "About Deck Lab" }),
+        el("p", {}, el("a", { href: "#/help", text: "What these words mean" })),
         // Not a live region: the version line is rewritten on every check. The spinner goes with the first answer.
         el("div", { class: "build-footer" }, el("span", { id: "build-version" },
           el("span", { class: "spinner spinner-small", "aria-hidden": "true" }), " Checking the version…")),
@@ -187,7 +210,7 @@ function settingsMaintenanceAnswer(data) {
 }
 
 function settingsMaintenanceWhen(value) {
-  return settingsMaintenanceDate(value) ? new Date(value).toLocaleString("en-AU") : "Date unavailable";
+  return settingsMaintenanceDate(value) ? new Date(value).toLocaleString(LOCALE) : "Date unavailable";
 }
 
 /** When a run finished (or started), never an invented date; with both, its start and finish. */

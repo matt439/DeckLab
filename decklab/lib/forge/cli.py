@@ -15,6 +15,7 @@ from . import cli_gauntlet as _gauntlet
 from . import cli_soak as _soak
 from . import cli_engine as _engine
 from . import cli_upgrade as _upgrade
+from . import cli_transcript as _transcript
 
 
 def main(argv=None):
@@ -36,6 +37,7 @@ COMMANDS = {
     "status": (_commands._status_args, _commands._cmd_status),
     "audit": (_commands._audit_args, _commands._cmd_audit),
     "play": (_commands._play_args, _commands._cmd_play),
+    "game": (_transcript.add_parser, _transcript.command),
     "list": (_commands._list_args, _commands._cmd_list),
     "cards": (_commands._cards_args, _commands._cmd_cards),
     "cardlog-check": (_checks._cardlog_check_args, _checks._cmd_cardlog_check),

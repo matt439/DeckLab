@@ -16,6 +16,7 @@ def card_rows(original):
         ("Reclamation Sage", "{2}{G}", 3, "Creature — Elf Shaman", "When this creature enters, you may destroy target artifact or enchantment."),
         ("Harmonize", "{2}{G}{G}", 4, "Sorcery", "Draw three cards."),
         ("Overrun", "{2}{G}{G}{G}", 5, "Sorcery", "Creatures you control get +3/+3 and gain trample until end of turn."),
+        ("Synthetic spare Elf", "{G}", 1, "Creature — Elf Druid", "{T}: Add {G}."),
     ]
     for number, (name, cost, cmc, kind, text) in enumerate(additions, 5):
         row = copy.deepcopy(rows[0])
@@ -97,7 +98,7 @@ An empty local idea for rendered-state qualification.
         fixture.inventory._remember(deck_id, body, "matt", "Seed synthetic composition deck", "A")
     image = fixture.root / "decklab/data/images/normal/sft/1.jpg"
     for size in ("small", "normal", "large", "art_crop"):
-        for number in range(5, 11):
+        for number in range(5, 12):
             target = cards.IMAGES_DIR / size / "sft" / f"{number}.jpg"
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(image, target)

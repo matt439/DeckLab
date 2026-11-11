@@ -199,7 +199,7 @@ async function ptrCreate(body, { alive, failed, done, conflict = null }) {
   const requestHash = location.hash;
   try {
     const answer = await apiWrite("/api/precons/trial", body);
-    state.library = null;
+    invalidateLibrary();
     if (!alive() || requestHash !== location.hash) return;
     done();
     toast(`${answer.title || "The trial deck"} is saved as a trial deck idea.`);
@@ -363,12 +363,12 @@ async function ptrKeep(data, button, ctx) {
   busy(button, "Keeping…");
   try {
     await apiWrite("/api/precons/trial/keep", { id: s.id, expected_sha: sha });
-    state.library = null;
+    invalidateLibrary();
     if (!ptrKeepHere(ctx)) return;
     toast(`${s.title} is kept as a deck idea.`);
     route();
   } catch (error) {
-    state.library = null;
+    invalidateLibrary();
     if (!ptrKeepHere(ctx)) return;
     toast(error.status === 409 ? `${error.message} Reload the deck and try again.` : error.message || String(error));
   } finally {

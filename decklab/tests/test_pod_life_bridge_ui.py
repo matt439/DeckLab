@@ -32,6 +32,26 @@ BRIDGE = r"""
 
 @unittest.skipUnless(NODE, "Node.js isn't installed")
 class PodLifeBridgeUiTests(unittest.TestCase):
+    def test_counter_order_tracks_sequential_same_time_outs_and_facts_are_reviewable(self):
+        self.run_js(r'''
+          const {data}=await startCounter();concede('s2');concede('s3');await settle();const edit=sheets.at(-1);
+          assert.equal(edit.body.querySelector('[data-counter-life=s1]').value,'40');
+          assert.equal(edit.body.querySelector('[data-counter-reason=s2]').value,'conceded');
+          assert.equal(edit.body.querySelector('[data-counter-order=s2]').value,'1');
+          assert.equal(edit.body.querySelector('[data-counter-order=s3]').value,'2');
+          const review=await checkResult(edit);assert.notEqual(review,edit);
+          assert.equal(writes.length,1);same(writes[0][1].counter.seats.map(row=>row.out_order),[null,1,2]);
+          await saveResult(review);assert.equal(writes.length,2);assert.equal(kept(data),null);
+        ''')
+
+    def test_old_packet_equal_timestamps_do_not_invent_a_simultaneous_or_sequential_out_order(self):
+        self.run_js(r'''
+          const {data}=await startCounter();concede('s2');concede('s3');await settle();const packet=kept(data);
+          delete packet.seats[1].out.order;delete packet.seats[2].out.order;
+          assert(podLifeValid(packet,{profile:'matt',space:'home'}));
+          same(playCounterFacts(packet).seats.map(row=>row.out_order),[null,null,null]);
+        ''')
+
     def run_js(self, scenario):
         result = subprocess.run([NODE, str(RUNNER)], input=json.dumps([str(WEB), SETUP + BRIDGE + "{" + scenario + "}", True]),
                                 capture_output=True, text=True, encoding="utf-8", timeout=30, check=False)

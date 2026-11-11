@@ -14,7 +14,7 @@ import os
 import time
 from unittest import mock
 
-from decklab.lib import precons
+from decklab.lib import precons, sealed
 from decklab.lib.api import precons as api
 from decklab.tests.test_api import _write
 from decklab.tests.test_collection_edit import CollectionEditTestCase
@@ -73,6 +73,8 @@ class PreconTestCase(CollectionEditTestCase):
         for file, data in (("TestDinos_TST", DINOS), ("ElfTheme_TST", ELVES), ("Unfinished_TST", UNFINISHED)):
             self.seed(f"decks/{file}.json", data)
         for target, name, value in ((precons, "CACHE", self.cache), (api, "_added_on", lambda: "2026-10-10"),
+                                    (sealed, "contents", mock.Mock(return_value={"products": [], "fixed": [], "varies": [],
+                                                                             "random": [], "other": []})),
                                     (precons, "_fetch", mock.Mock(side_effect=AssertionError("no network"))),
                                     (precons, "_failed", {}), (precons, "_kept", {})):
             patcher = mock.patch.object(target, name, value)
@@ -195,7 +197,7 @@ class ListTests(PreconTestCase):
     def test_bad_input(self):
         self.assertApiError(400, api.precons_view, "x" * 101)
         self.assertApiError(400, api.precon_preview, "../escape", "user2")
-        self.assertApiError(404, api.precon_preview, "SomeDrop_SLD", "user2")     # not a paper deck
+        self.assertApiError(404, api._entry, "SomeDrop_SLD")     # deck-only callers still exclude drops
         self.assertApiError(404, api.precon_preview, "Finkel_WC00", "user2")      # gold-bordered
         self.assertApiError(404, api.precon_preview, "Nothing_TST", "user2")
         self.assertApiError(404, api.precon_preview, "TestDinos_TST", "nobody")

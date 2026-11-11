@@ -68,7 +68,9 @@ def _index_info():
         detail = f"{type(e).__name__}: {e}"
         if _last_index_error[0] != detail:
             _last_index_error[0] = detail
-            common._log(f"The card index can't be loaded: {detail}")
+            common._log("Card data is being downloaded and indexed for this first start."
+                        if isinstance(e, FileNotFoundError) and UPDATE["running"] else
+                        f"The card index can't be loaded: {detail}")
         return None, reason
 
 
@@ -78,15 +80,29 @@ def _require_cards():
     info, reason = _index_info()
     if info is not None:
         return
+    recovery = _card_recovery()
     if UPDATE["running"]:
         raise ApiError(503, "The card data is still being downloaded from Scryfall and indexed "
-                            "(the first start takes a few minutes). Try again shortly.")
+                            "(the first start takes a few minutes). Try again shortly." + recovery)
     if UPDATE["error"]:
         raise ApiError(503, "There's no card data yet: the last download from Scryfall failed. "
                             "Deck Lab tries again by itself; the server log on the PC says what "
-                            "went wrong.")
+                            "went wrong." + recovery)
     raise ApiError(503, f"{reason}. Deck Lab gets it from Scryfall when it starts; the server log "
-                        f"on the PC says more.")
+                        f"on the PC says more." + recovery)
+
+
+def _card_recovery():
+    """Fixed local instructions only to a named admin; never a raw index/update error."""
+    from . import guard
+    try:
+        viewer = guard.viewer()
+    except ApiError:
+        viewer = None
+    if not viewer or viewer.get("role") != "admin":
+        return ""
+    return (" On the server PC run python -m decklab.lib.cards update; see "
+            "decklab/data/logs/server.log (or the configured server log).")
 
 
 def _cached_rate(code=None):
@@ -114,7 +130,8 @@ def status():
     cards.error says why the index can't be loaded (None when it can), and
     update_error why the last background update failed. fx is the cached USD rate in the configured
     currency, and pricing what Settings says about the prices (E11-S53), None while config.json
-    can't be read (the footer still answers, in the default currency)."""
+    can't be read (the footer still answers, in the default currency). config holds only the
+    source file's ready/missing/unreadable state and fixed guidance, never profile diagnostics."""
     info, error = _index_info()
     try:
         settings = pricing_setting.settings()     # config.json with Settings' saved choice over it
@@ -122,11 +139,13 @@ def status():
         settings = None
     code = currency.code(settings) if settings is not None else currency.DEFAULT
     return {
+        "config": config.source_status(),
         "cards": {
             "ready": info is not None,
             "built_at": info["built_at"] if info else None,
             "price_date": (cards.price_date() or None) if info else None,
             "error": error,
+            "help": _card_recovery().strip() if info is None else None,
         },
         "updating": UPDATE["running"],
         "update_error": UPDATE["error"],

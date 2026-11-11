@@ -35,6 +35,11 @@ older code (the committed tests/fixtures/inventory_goldens):
   "cover", "colors", "revision", "cover_card" and "edited" in the library and the deck page, the
   packing plan's "cards", a wishlist entry's "source_deck" and "short_in" (E5-S30) and the wishlist
   view's "short_warnings" (E5-S30) are dropped.
+- "stat-source-defaults": E1-S30 adds per-colour land-source totals for Compare. Only a complete
+  all-zero map in a deck-view stats answer with no land sources is dropped. Nonzero, malformed
+  maps and every existing stat still compare; test_stats checks real counts independently.
+- "card-reference-urls": E1-S31 adds outbound reference URLs to public card projections. Only
+  exact expected URLs in that full card shape are dropped; malformed links and all card data compare.
 - "kit-editability": E10-S33 adds Boolean summary.kit.editable to deck-view answers so public
   kit readers get no Choose controls. Only that exact additive field is dropped; every kit value,
   warning and other editable field still compares. test_golden_kit_editability checks this boundary
@@ -153,6 +158,7 @@ older code (the committed tests/fixtures/inventory_goldens):
 """
 import copy
 import re
+import urllib.parse
 
 from decklab.lib import config
 from decklab.tests import golden_dump as gate
@@ -656,12 +662,21 @@ def departed_defaults(dump):
 
 
 def counter_defaults(dump):
-    """Drop only E7-S24's empty "counters" on deck pages' tokens (with nothing owned)."""
+    """Drop only empty counter defaults with nothing owned, including E4-S29's plan summary."""
+    from decklab.lib.api import assembly_counters
     from decklab.lib.tokens import counters, dice_cover
     empty = dice_cover.cover({"needs": [], "note": counters.NOTE}, [])
+    empty_plan = dice_cover.cover({"needs": [], "note": assembly_counters.NOTE, "details": counters.NOTE}, [])
     for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
         views = mine.get("deck_view") if isinstance(mine, dict) else None
-        for view in views.values() if isinstance(views, dict) else []:
+        entries = list(views.values()) if isinstance(views, dict) else []
+        plans = mine.get("assembly") if isinstance(mine, dict) else None
+        for plan in plans.values() if isinstance(plans, dict) else []:
+            if isinstance(plan, dict):
+                if plan.get("counters") == empty_plan:
+                    plan.pop("counters")
+                entries.extend(plan.get("decks") or [])
+        for view in entries:
             found = view.get("tokens") if isinstance(view, dict) else None
             if isinstance(found, dict) and found.get("counters", 0) in ({"needs": [], "note": counters.NOTE}, empty):
                 found.pop("counters")
@@ -1000,7 +1015,49 @@ def trial_defaults(dump):
 
 EXPECTED_P4 = (("no-git", no_git), ("deck-ids", deck_ids), ("hidden-inventory", hidden_inventory),
                ("per-viewer-accessory-token", per_viewer_accessory_token))
-EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase5_reworded),
+
+
+def stat_source_defaults(dump):
+    """Only the new all-zero map for old fixtures whose lists have no land sources."""
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        if not isinstance(mine, dict) or not isinstance(mine.get("deck_view"), dict):
+            continue
+        for view in mine["deck_view"].values():
+            stats = view.get("stats") if isinstance(view, dict) else None
+            colours = stats.get("colours") if isinstance(stats, dict) else None
+            if not isinstance(colours, dict) or not isinstance(colours.get("sources"), list):
+                continue
+            counts = colours.get("land_sources_by_colour")
+            if (isinstance(counts, dict) and set(counts) == set("WUBRGC")
+                    and all(type(value) in (int, float) and value == 0 for value in counts.values())
+                    and all(isinstance(source, dict) and source.get("kind") not in ("land", "fetch", "special", "mdfc")
+                            for source in colours["sources"])):
+                colours.pop("land_sources_by_colour")
+
+
+def card_reference_urls(value):
+    """Drop only deterministic outbound metadata from the public card JSON shape."""
+    from decklab.lib import edhrec
+    from decklab.lib.api.card_lookup import reference_url
+    if isinstance(value, dict):
+        if all(key in value for key in ("name", "mana_cost", "cmc", "type_line", "colors", "color_identity", "roles", "img", "img_small", "oracle_text")):
+            image = re.fullmatch(r"/img/([^/]+)/([^/]+)/(?:normal|small)", value.get("img") or value.get("img_small") or "")
+            printing = {"set": image[1], "collector_number": urllib.parse.unquote(image[2])} if image else None
+            if value.get("scryfall_url") == reference_url(value["name"], printing):
+                value.pop("scryfall_url")
+            if value.get("edhrec_url") == "https://edhrec.com/cards/" + edhrec.name_slug(value["name"]):
+                value.pop("edhrec_url")
+        for child in value.values():
+            card_reference_urls(child)
+    elif isinstance(value, list):
+        for child in value:
+            card_reference_urls(child)
+
+
+from decklab.tests import golden_card_defaults  # noqa: E402
+
+EXPECTED_P5 = (("intrinsic-card-defaults", golden_card_defaults.normalise),
+               ("deck-id-messages", deck_id_messages), ("phase-5-wording", phase5_reworded),
                ("ui-additions", ui_additions), ("kit-editability", kit_editability), ("shared-sleeves", shared_sleeves),
                ("incoming-sources", incoming_sources), ("assembly-completion", assembly_completion),
                ("assembly-progress", assembly_progress), ("usual-opponents", usual_opponents),
@@ -1015,7 +1072,7 @@ EXPECTED_P5 = (("deck-id-messages", deck_id_messages), ("phase-5-wording", phase
                ("absent-shop-prices", absent_shop_prices), ("role-target-defaults", role_target_defaults),
                ("game-changer-flags", game_changer_flags),
                ("listed-printings", listed_printings), ("owned-printings", owned_printings),
-               ("trial-defaults", trial_defaults),
+               ("trial-defaults", trial_defaults), ("stat-source-defaults", stat_source_defaults), ("card-reference-urls", card_reference_urls),
                ("building-holders", building_holders))
 
 

@@ -8,21 +8,31 @@ import json
 from unittest import mock
 
 from decklab.lib import config, pool
-from decklab.lib.api import (accessories, activity, activity_undo, assembly, assembly_completion, assembly_ticks, collection, compare, cover, editor, history, play_records,
+from decklab.lib.api import card_details
+from decklab.lib.api import deck_cuts, edhrec
+from decklab.lib.api import bracket_fixes
+from decklab.lib.api import (accessories, activity, activity_undo, assembly, assembly_completion, assembly_ticks, collection, compare, comparison_lists, cover, editor, history, play_records,
                              precon_coverage, precon_trial, receipts, shopping, shopping_order_changes, shopping_orders, shopping_queue, tokens)
 from decklab.tests.test_server import ServerTestCase, WRITE
 
 
 GETS = (
+    ("/api/deck/edhrec", edhrec, "edhrec_view", "id=commander%2Felf-commander&view=cuts", {"deck_id": "commander/elf-commander", "view": "cuts"}),
+    ("/api/cards/lookup", card_details, "card_view", "name=Llanowar+Elves&set=fdn&number=227", {"name": "Llanowar Elves", "set": "fdn", "number": "227"}),
+    ("/api/cards/copies", card_details, "copies_view", "name=Llanowar+Elves&space=home", {"name": "Llanowar Elves", "space": "home"}),
     ("/api/collection", collection, "collection_view", "q=elves&color=G&limit=3", {"q": "elves", "color": "G", "limit": "3"}),
     ("/api/assembly", assembly, "assembly_view", "deck=casual%2Fgruul-test&version=owned",
      {"deck": "casual/gruul-test", "version": "owned"}),
     ("/api/compare/shared", compare, "shared_view", "a=casual%2Fgruul-test&av=target&b=commander%2Felf-commander&bv=owned",
      {"a": "casual/gruul-test", "av": "target", "b": "commander/elf-commander", "bv": "owned"}),
+    ("/api/compare/deck", comparison_lists, "current_view", "id=casual%2Fgruul-test&version=owned", {"deck_id": "casual/gruul-test", "version": "owned"}),
+    ("/api/compare/precon", comparison_lists, "precon_view", "file=TestDinos_TST", {"file": "TestDinos_TST"}),
     ("/api/play", play_records, "play_overview", "id=casual%2Fgruul-test", {"deck_id": "casual/gruul-test"}),
     ("/api/deck/history", history, "deck_history", "id=casual%2Fgruul-test", {"deck_id": "casual/gruul-test"}),
     ("/api/deck/revision", history, "deck_revision", "id=casual%2Fgruul-test&version=owned&revision=" + "a" * 40,
      {"deck_id": "casual/gruul-test", "version": "owned", "revision": "a" * 40}),
+    ("/api/deck/revision", history, "deck_revision", "id=casual%2Fgruul-test&version=target&revision=3&stats=1",
+     {"deck_id": "casual/gruul-test", "version": "target", "revision": "3", "stats": "1"}),
     # Two deck reads with near names: the picture picker's cards and the editor's card finder.
     ("/api/deck/cards", cover, "cover_cards", "id=casual%2Fgruul-test", {"deck_id": "casual/gruul-test"}),
     ("/api/deck/find", editor, "find_cards", "q=bolt&scope=all", {"q": "bolt", "scope": "all", "deck_id": None}),
@@ -40,11 +50,14 @@ GETS = (
      {"file": "TestDinos_TST", "space": "user2"}),
 )
 POSTS = (
+    ("/api/deck/bracket-replacements", bracket_fixes, "replacements"),
+    ("/api/deck/cuts", deck_cuts, "preview_cuts"),
     ("/api/activity/undo", activity_undo, "apply_undo"),
     ("/api/assembly/preview", assembly, "assembly_preview"),
     ("/api/assembly/built", assembly_completion, "mark_built"),
     ("/api/assembly/ticks", assembly_ticks, "packing_ticks"),
     ("/api/play/game", play_records, "save_game"),
+    ("/api/play/game/delete", play_records, "delete_game"),
     ("/api/play/sideboard", play_records, "save_sideboard"),
     ("/api/receipt/preview", receipts, "preview_receipt"),
     ("/api/receipt/apply", receipts, "apply_receipt"),

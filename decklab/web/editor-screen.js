@@ -201,6 +201,7 @@ function editorHead() {
       el("div", { class: "segmented" }, ["target", "owned"].map((v) => el("a", {
         href: editHref(ed.id, v), "aria-current": v === ed.version ? "page" : null },
       listName(v), v === "owned" && ed.view.lists.owned == null ? el("span", { class: "none-yet", text: " (none yet)" }) : null)))));
+    head.append(el("p", { class: "sub", text: "Planned is the list you want; Play-now uses cards owned or on the way. Check availability before playing." }));
     if (ed.readOnly) {
       head.append(el("p", { class: "sub edit-read-only", text: ed.space === HOME_SPACE
         ? "Only the people this deck belongs to can save it. Try changes and test them; nothing is saved."
@@ -357,7 +358,8 @@ function mainTabs() {
     ed.tab === "notes" && notes ? null
       : el("h2", { class: ed.quick || notes ? "sr-only" : "edit-cards-title", text: ed.mode === "edit" ? listName(ed.version) : "Cards" }),
     lookOffered ? editorManaSortButton() : null,
-    lookOffered ? ed.dom.look : null);
+    lookOffered ? ed.dom.look : null,
+    typeof editorCategorySuggestButton === "function" ? editorCategorySuggestButton() : null);
 }
 
 /** A tablist's keys (the tabs pattern): Left and Right (wrapping), Home and End pick the tab and focus it. */
@@ -403,6 +405,7 @@ function drawMain() {
     t.setAttribute("tabindex", t.id === `edit-tab-${ed.tab}` ? "0" : "-1");
   });
   if (ed.dom.page) ed.dom.page.classList.toggle("is-notes", ed.tab === "notes");
+  if (typeof updateEditorCategorySuggest === "function") updateEditorCategorySuggest();
   clear(host).setAttribute("id", "edit-main-panel");
   if (document.getElementById(`edit-tab-${ed.tab}`)) {
     host.setAttribute("role", "tabpanel");
@@ -1067,7 +1070,7 @@ function drawBar() {
   const n = mainCount(ed.lists, kind);
   const side = sectionCount(ed.lists, ["Sideboard"]);
   const ok = kind === "commander" ? n === size : n >= size;
-  const state_ = ok ? "OK" : n < size ? `${size - n} short` : `${n - size} over`;
+  const state_ = ok ? "OK" : n < size ? `${size - n} short` : `${n - size} over${kind === "commander" ? " 100" : ""}`;
   const a = ed.check;
   const empty = n === 0;
   const blocks = (a ? a.blocks.length : 0) + (typedTitleProblem() ? 1 : 0);
@@ -1081,6 +1084,7 @@ function drawBar() {
     add(clear(p.count), [
       el("span", { class: "bar-n" }, el("b", { text: String(n) }), el("span", { class: "bar-of", text: ` / ${size}` })),
       empty ? null : el("span", { class: `bar-sub${ok ? "" : " bar-short"}` }, state_, side ? ` · +${side} sideboard` : "")]);
+    if (kind === "commander" && n > 100) p.count.append(editorCutsLink(ed, n));
     p.count.setAttribute("aria-label", `${n} of ${size} cards${kind === "commander" ? " with the commander" : ""}` +
       (empty ? "" : `, ${state_}`) + (side ? `, ${side} in the sideboard` : ""));
   }

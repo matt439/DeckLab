@@ -110,7 +110,7 @@ class RoleCardsTests(RoleCardsTestCase):
         self.assertApiError(400, role_cards.role_cards, None, contains="id is required")
         self.assertApiError(400, role_cards.role_cards, GHALTA_ID, "both")
         self.assertApiError(404, role_cards.role_cards, GHALTA_ID, "owned")
-        self.assertApiError(400, role_cards.role_cards, base.SWAP_ID, contains="for Commander decks")
+        self.assertEqual(role_cards.role_cards(base.SWAP_ID)["kind"], "casual")
         self.write("no-commander", commander_text("Deck\n1 Llanowar Elves (FDN) 227\n98 Forest", "No Commander"),
                    kind="commander")
         self.assertApiError(400, role_cards.role_cards, "commander/no-commander", contains="commander first")

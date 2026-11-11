@@ -370,9 +370,9 @@ class LocalTests(unittest.TestCase):
         self.write("decklab/db/migrations/0001_foundation.sql", b"\xef\xbb\xbfselect 1;\r\n")
         self.assertEqual(self.adapter().probe("database"), "database_ready")
 
-    def test_connect_failure_is_generic_and_never_parses_raw_auth_details(self):
+    def test_connect_failure_classifies_auth_without_publishing_raw_details(self):
         self.connector.side_effect = RuntimeError("password authentication failed for SECRET at private.invalid")
-        self.assertEqual(self.adapter().probe("database"), "database_unavailable")
+        self.assertEqual(self.adapter().probe("database"), "database_signin_failed")
         self.assertEqual(self.connection.calls, [])
 
     def test_unsupported_database_version_does_not_read_schema(self):

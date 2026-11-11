@@ -76,6 +76,26 @@ function comboFindings(br, group, labelled = true, item = (m) => comboItem(m, gr
     el("ul", { class: "commander-combos" }, check.matches.map(item)));
 }
 
+/** Informative complete triples; never folded into the counted floor or an early-game hint. */
+function threeComboFindings(commander, group, { print = false, level = 4 } = {}) {
+  const result = commander?.three_card_combos;
+  const part = el("section", {class: "commander-three-combos"}, el(`h${level}`, {text: "Three-card combos"}),
+    el("p", {class: "sub", text: "These findings never raise the minimum bracket. No early-combo timing is judged."}));
+  if (!result || result.checked !== true || !Array.isArray(result.matches)) {
+    part.append(el("p", {text: "Three-card combos weren't checked (combo data unavailable or incomplete)."}));
+    return part;
+  }
+  const matches = result.matches.slice(0, 25);
+  const total = Number.isSafeInteger(result.total) && result.total >= matches.length ? result.total : matches.length;
+  const date = (result.list_date || "").slice(0, 10) || "date unknown";
+  part.append(el("p", {class: "sub", text: total ? `${num(total)} complete three-card combos found; showing ${matches.length} (cached list: ${date}).`
+    : `No complete three-card combos found in the checked list (cached list: ${date}).`}));
+  if (matches.length) part.append(el("ul", {class: "commander-combos"}, matches.map(match => print
+    ? el("li", {text: `${(match.names || []).join(" + ")}${comboWords({...match, floor: 1, raises_floor: false})}`})
+    : comboItem({...match, floor: 1, raises_floor: false}, group))));
+  return part;
+}
+
 /** The shown list's pregame facts (E9-S05), or null when its Commander checks weren't loaded: the stats'
  * commander part (k) and bracket answer (br), the effect groups, those found, cards without data, the combo
  * check, the combos raising the floor and the lead sentence's words. The page and the printed play sheet
@@ -183,8 +203,8 @@ function commanderTableSentence(facts, name) {
   return sentence;
 }
 
-const COMMANDER_CHECK_LIMITS = "Only two-card combos from Commander Spellbook's list are checked, and the list can miss some. " +
-  "Combos of three or more cards, combos needing a card that isn't named, chained or repeated extra turns, " +
+const COMMANDER_CHECK_LIMITS = "Named two- and three-card combos from Commander Spellbook's list are checked, and the list can miss some. " +
+  "Three-card findings never raise the minimum bracket. Combos of four or more cards, combos needing a card that isn't named, chained or repeated extra turns, " +
   "how quickly the deck wins and your intent aren't checked. " +
   "Agree on the game with the table; these card checks alone don't establish a bracket.";
 
@@ -199,11 +219,13 @@ function commanderReadiness(data) {
     return section;
   }
   const { k, br, groups, found, unknown, combos, target } = facts;
+  const fixes = bracketFixesPart(data);
+  if (fixes) section.append(fixes);
   section.append(commanderTableSentence(facts, (name) => cardLink({ name }, "commander-readiness", { inline: true })));
   if (!k.ok) section.append(el("p", { class: "sub", text: "Deck rules need attention before this list can be played; see Stats." }));
   if (unknown.length) section.append(el("p", { class: "sub", text: `Cards without data: ${unknown.join(", ")}. The checks are incomplete.` }));
   const effects = el("details", { class: "more" }, el("summary", { text: "What opponents will face" }));
-  if (found.length || (combos && combos.matches.length)) effects.open = true;
+  if (found.length || (combos && combos.matches.length) || k.three_card_combos?.matches?.length) effects.open = true;
   for (const [label, list] of groups) {
     effects.append(el("div", {}, el("p", {}, el("b", { text: `${label}: ` }),
       list == null ? "not checked (effect data unavailable)." : list.length ? null : "none found in the checked cards."),
@@ -213,6 +235,7 @@ function commanderReadiness(data) {
   const rules = tutorRulesText(br, target);
   if (rules) effects.append(el("p", { class: "sub tutor-rules", text: rules }));
   effects.append(comboFindings(br, "commander-readiness"));
+  effects.append(threeComboFindings(k, "commander-readiness"));
   effects.append(el("p", { class: "sub", text: "Mass land denial means removing or locking down many lands. " +
     (facts.tutors ? `${TUTOR_NOTE} ` : "") + "Community tags can miss cards or flag effects you don't intend to use." }));
   // The checks' limits and data dates fold away: they're the fine print, not the answer (a phone showed
@@ -252,6 +275,7 @@ function commanderPrintPart(data) {
   if (rules) parts.push(el("p", { class: "tutor-rules", text: rules }));
   // Each combo as text: on paper there's no viewer or link to follow.
   parts.push(comboFindings(facts.br, null, true, (m) => el("li", { text: `${(m.names || []).join(" + ")}${comboWords(m)}` })));
+  parts.push(threeComboFindings(k, null, {print: true, level: 3}));
   parts.push(el("p", { text: COMMANDER_CHECK_LIMITS }), commanderDataNote(facts.br));
   return parts;
 }

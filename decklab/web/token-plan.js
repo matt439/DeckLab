@@ -184,7 +184,7 @@ function tokPlanShow(view, sheet, plan, reload) {
     try {
       const answer = await apiWrite("/api/tokens/plan", tokBody(view, { sha256: plan.sha256 }));
       if (!tokPlanReceipt(answer, evidence)) throw new Error("The save result could not be confirmed.");
-      state.library = null;
+      invalidateLibrary();
       if (!tokPlanOwner(ctx)) return;
       ctx.confirmed = true;
       if (ctx.here()) { toast("Packed token cards saved for " + words); sheet.close(); }
@@ -193,7 +193,7 @@ function tokPlanShow(view, sheet, plan, reload) {
         sheetActions(sheet, [{ text: "Done", kind: "primary", onclick: () => { if (ctx.here()) sheet.close(); } }]);
       }
     } catch (failure) {
-      state.library = null;
+      invalidateLibrary();
       if (!tokPlanOwner(ctx)) return;
       ctx.needsRefresh = true;
       if (ctx.current()) {

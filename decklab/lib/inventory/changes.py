@@ -39,13 +39,14 @@ and 7).
 import copy
 import dataclasses
 
-from . import dice_rules, files, paths, rules, table_rows
+from . import dice_rules, files, loan_rules, paths, rules, table_rows
 from .model import (PREVIEW, AccessoryRow, CardRow, Deck, DiceRow, ImageMeta, LocationRow, Product, Sheet, StatusRow,
-                    TokenRow, WatchRow, refuse_unreadable_tokens)
+                    LoanRow, TokenRow, WatchRow, refuse_unreadable_tokens)
 
 SAVE_REFUSED = "The inventory can't be saved like that: {why}"
 STANDARD = {"collection": CardRow.COLUMNS, "tokens": TokenRow.COLUMNS, "locations": LocationRow.COLUMNS,
             "dice": DiceRow.COLUMNS,
+            "loans": LoanRow.COLUMNS,
             "status": StatusRow.COLUMNS,
             "watchlist": WatchRow.COLUMNS, "accessories": AccessoryRow.COLUMNS}
 PAYLOAD_COLUMNS = {"cards": CardRow.COLUMNS, "tokens": TokenRow.COLUMNS}
@@ -73,6 +74,8 @@ def source_at(inv, rel):
         sheet = inv.locations.get(detail)
     elif what == "dice":
         sheet = inv.dice.get(detail)
+    elif what == "loans":
+        sheet = inv.loans.get(detail)
     elif what == "status":
         sheet = inv.status
     elif what == "watchlist":
@@ -99,8 +102,8 @@ def source_at(inv, rel):
 def with_source(inv, rel, source):
     """inv with source at rel (None: no file there)."""
     what, detail = paths.classify(rel)
-    if what in ("collection", "tokens", "locations", "dice"):
-        attr = {"collection": "collections", "tokens": "tokens", "locations": "locations", "dice": "dice"}[what]
+    if what in ("collection", "tokens", "locations", "dice", "loans"):
+        attr = {"collection": "collections", "tokens": "tokens", "locations": "locations", "dice": "dice", "loans": "loans"}[what]
         mapping = {k: v for k, v in getattr(inv, attr).items() if k != detail}
         if source is not None:
             mapping[detail] = source
@@ -163,7 +166,7 @@ def changed_paths(before, after):
 
 
 # The order changed_labels lists the parts of the inventory in.
-_LABEL_ORDER = ("collection", "locations", "tokens", "dice", "import", "record", "product", "status", "watchlist", "deck",
+_LABEL_ORDER = ("collection", "locations", "tokens", "dice", "loans", "import", "record", "product", "status", "watchlist", "deck",
                 "accessories", "image")
 
 
@@ -211,6 +214,8 @@ def changed_labels(before, after, rels=None):
             words = f"{whose(detail)} storage locations"
         elif what == "dice":
             words = f"{whose(detail)} dice and counters"
+        elif what == "loans":
+            words = f"{whose(detail)} card loans"
         elif what == "import":
             words = f"{whose(detail[0])} raw imports: {detail[1]}"
         elif what == "record":
@@ -260,7 +265,9 @@ def _normal(rel, source):
         rows = tuple(sorted(rows, key=lambda row: rules.accessory_sort_key(row.as_dict())))
     if what == "dice":
         rows = tuple(sorted(rows, key=lambda row: dice_rules.sort_key(row.as_dict())))
-    if what in ("collection", "tokens", "locations", "accessories", "dice") and not rows and not source.problems:
+    if what == "loans":
+        rows = tuple(sorted(rows, key=lambda row: loan_rules.sort_key(row.as_dict())))
+    if what in ("collection", "tokens", "locations", "accessories", "dice", "loans") and not rows and not source.problems:
         return None
     return dataclasses.replace(source, columns=tuple(columns), rows=rows, exists=True)
 
@@ -325,7 +332,7 @@ def check(before, after):
             raise Invalid(SAVE_REFUSED.format(why=f"{rel} can't be read back ({new.error})"))
         if what == "tokens" and new.problems:
             raise Invalid(SAVE_REFUSED.format(why=new.problems[0]))
-        if what in ("collection", "locations", "dice") and new.strict_error:
+        if what in ("collection", "locations", "dice", "loans") and new.strict_error:
             raise Invalid(SAVE_REFUSED.format(why=new.strict_error))
         if what == "accessories" and new.strict_error:
             raise Invalid(SAVE_REFUSED.format(why=new.strict_error))
@@ -344,4 +351,10 @@ def prepare(before, after, revision=None):
     preview shows (see the module docstring). Raises state.Conflict / state.Invalid."""
     settled = reread(before, after, revision)
     check(before, settled)
+    if settled.loans:
+        from . import ops_loans
+        touched = {paths.space_of(rel) for rel in changed(before, settled)}
+        ops_loans.check_invariants(settled, only=touched)
+        if before.decks != settled.decks or before.status != settled.status or before.collections != settled.collections:
+            ops_loans.check_holders(settled, only=touched)
     return settled

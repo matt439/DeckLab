@@ -108,8 +108,11 @@ def start_sideboard_test(body):
         raise ApiError(400, str(error)) from None
     variant_page._ready(forge)
     test = forge.variants.test_id(base, variant, against, mode)
+    request = {"profile": profile["id"], "id": base["id"], "version": base["version"], "mode": mode,
+               "list": seen["post_board"]["sections"],
+               "against": {"id": against["id"], "version": against["version"]}}
     variant_page._submit(_PlanRun(forge, test, base, cards, against, mode, profile["name"], by_id=profile["id"]),
-                         rerun=True)
+                         rerun=True, profile=profile, request=request)
     view = variant_page._view(forge, test, forge_runs._Seen(profile))
     return {"version": 1, "plan": {"id": data["id"], "sha256": data["sha256"]}, "test": test,
             "link": f"#/variant?test={test}", "status": view["status"], "verdict": view["verdict"],

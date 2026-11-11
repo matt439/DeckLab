@@ -239,6 +239,10 @@ _AUTH_METHOD = ("Ident authentication failed", "Peer authentication failed", "no
 def _method_hint(posix=None):
     """The next step when PostgreSQL won't take a password for the superuser on 127.0.0.1."""
     from decklab.lib import pathsetting
+    if posix is None and sys.platform == "darwin":
+        return ("Review the local PostgreSQL pg_hba.conf password method using your installation's psql. "
+                "For Homebrew use brew services restart postgresql@18 after restoring the intended settings; "
+                "see SELF-HOSTING.md's macOS setup instructions")
     posix = pathsetting.on_posix() if posix is None else posix
     if not posix:
         return ("PostgreSQL's pg_hba.conf doesn't allow a password login on 127.0.0.1: in the file (in PostgreSQL's "
@@ -254,10 +258,14 @@ def _method_hint(posix=None):
 def _password_hint(posix=None):
     """The next step when the superuser's password was refused."""
     from decklab.lib import pathsetting
+    if posix is None and sys.platform == "darwin":
+        return ("Use your Homebrew/Postgres.app local admin connection and psql's \\password postgres, then run "
+                "python -m decklab.db setup again; see SELF-HOSTING.md's macOS setup instructions")
     posix = pathsetting.on_posix() if posix is None else posix
     if not posix:
         return (f"Give the {db.SUPERUSER} password set when PostgreSQL was installed, then run "
-                "python -m decklab.db setup again")
+                "python -m decklab.db setup again. If it is forgotten, use SELF-HOSTING.md's "
+                "Windows postgres password reset instructions")
     return (f"If {db.SUPERUSER} has no password yet, or you don't know it, set one with "
             f'sudo -u postgres psql -c "\\password {db.SUPERUSER}", then run python -m decklab.db setup again')
 
@@ -269,6 +277,10 @@ def _superuser(say=print, ask=getpass.getpass, interactive=None):
     try:
         return db.connect("super", dbname="postgres", autocommit=True)
     except db.DbUnavailable as e:
+        if sys.platform == "darwin" and 'role "postgres" does not exist' in str(e):
+            raise db.DbUnavailable(f"{e}. Homebrew may use your macOS account as its initial admin: if the "
+                                   "postgres role is absent, run createuser -s postgres from that local admin "
+                                   "account, then set its password with psql (SELF-HOSTING.md).") from None
         if any(words in str(e) for words in _AUTH_METHOD):
             raise db.DbUnavailable(f"{e}. {_method_hint()}.") from None
         if not any(words in str(e) for words in _PASSWORD_REFUSED):
@@ -329,6 +341,11 @@ def _run(dbname=None, say=print):
     listed = profiles.read_checked()
     name = dbname or db.settings()["name"]
     with _superuser(say) as c:
+        version = c.execute("select current_setting('server_version_num')::integer").fetchone()[0]
+        if type(version) is not int or version < 160000:
+            shown = str(version // 10000) if type(version) is int and version > 0 else "unknown"
+            raise db.DbUnavailable(f"PostgreSQL {shown} is not supported; install PostgreSQL 16 or later "
+                                   "before setup (SELF-HOSTING.md step 2). Nothing was created.")
         ensure_roles(c, say=say)
         ensure_database(c, name, say=say)
     secure_database(name)

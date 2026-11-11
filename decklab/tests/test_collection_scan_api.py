@@ -8,7 +8,6 @@ preview as a collection-columns row previews as one card to add.
 Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_collection_scan_api
 """
 import base64
-import inspect
 from unittest import mock
 
 from decklab.lib import scan
@@ -183,7 +182,7 @@ class ScanApiTests(tce.CollectionEditTestCase):
 
     def test_a_tiny_picture_is_refused(self):
         tiny = scan_image.png([" "], scale=1, margin=1)     # 8 by 12 pixels
-        self.assertApiError(400, self.scan, photo=base64.b64encode(tiny).decode("ascii"), contains="16 to 10,000")
+        self.assertApiError(400, self.scan, photo=base64.b64encode(tiny).decode("ascii"), contains="16 to 4,000")
 
     def test_one_photo_at_a_time(self):
         self.assertTrue(cs._scan_lock.acquire(blocking=False))
@@ -213,6 +212,7 @@ class ScanApiTests(tce.CollectionEditTestCase):
 
     def test_the_route_is_a_write_route_with_its_own_body_limit(self):
         from decklab.lib import feature_routes
-        self.assertIn('("collection", "scan"): (collection_scan.scan_photo, collection_scan.MAX_SCAN_BODY)',
-                      inspect.getsource(feature_routes.dispatch))
+        gets, posts = feature_routes.route_tables()
+        self.assertNotIn(("collection", "scan"), gets)
+        self.assertEqual(posts[("collection", "scan")], (cs.scan_photo, cs.MAX_SCAN_BODY))
         self.assertGreater(cs.MAX_SCAN_BODY, cs.accessory_upload.MAX_BASE64)

@@ -59,6 +59,7 @@ MIN_TERM = 6                 # a shorter configured value would match by chance
 # Second-level labels that are registries under a two-letter country ending (com.au, co.uk), so
 # "shop.com.au" is never searched for as somebody's zone.
 _REGISTRY_LABELS = {"com", "net", "org", "co", "edu", "gov", "id", "ac", "asn", "me", "ne", "or"}
+_AGE_IDENTITY = re.compile(rb"\bAGE-SECRET-KEY-(?:PQ-)?1[A-Z0-9]{20,4096}\b")
 
 
 def tracked_files(root=None):
@@ -250,6 +251,18 @@ def config_terms(config_file=None):
         aud = str(access.get("aud") or "").strip().lower()
         if len(aud) >= 16 and len(set(aud)) > 2:
             add("the configured Cloudflare Access AUD tag", aud)
+    secret = config.get("script_secret")
+    if isinstance(secret, str) and len(secret) >= 32:
+        add("the configured loopback script secret", secret)
+    alerts = config.get("alerts")
+    if isinstance(alerts, str) and alerts.strip():
+        add("the configured operator heartbeat address", alerts)
+    database = config.get("database")
+    if isinstance(database, dict):
+        for key, kind in (("backup_recipient", "the configured backup recipient"),
+                          ("backup_identity", "the configured backup identity path")):
+            if isinstance(database.get(key), str) and database[key].strip():
+                add(kind, database[key])
     return terms
 
 
@@ -289,6 +302,8 @@ def audit(root=None, config_file=None, names=None):
         except OSError:
             continue
         rows = term_findings(data, terms) if terms else []
+        rows += [(data.count(b"\n", 0, match.start()) + 1, "an age private identity (never commit restore keys)")
+                 for match in _AGE_IDENTITY.finditer(data)]
         if b"\0" not in data:
             try:
                 text = data.decode("utf-8-sig")

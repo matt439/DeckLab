@@ -53,6 +53,34 @@ class CollectionBulkUiTests(unittest.TestCase):
           assert(button(s.sheet, 'Save 3 rows'));
         """)
 
+    def test_old_and_counted_merge_notes_both_count_once_but_copy_marks_do_not(self):
+        self.run_js("""
+          rows.push(row('Counted copies', 'fdn', '1', '', '',
+            'Copies: condition 1 NM, 1 not recorded; Copies: language 1 en, 1 ja'));
+          rows.push(row('Signed copies', 'fdn', '2', 'NM', 'en', 'Copies: 1 signed'));
+          draw(); const s = open();
+          assert(s.sheet.querySelector('.col-bulk-merged').textContent.includes('2 rows hold copies whose conditions'));
+          choose(s.language, 'en'); s.condition('NM');
+          const calls = [];
+          apiWrite = async (path, body) => { calls.push(body); return {ok: true, sha256: 's2', rows, changed: 4, stale_tables: []}; };
+          button(s.sheet, 'Save 4 rows').click(); await flush();
+          assert.equal(calls.length, 1);
+          assert(!JSON.stringify(calls[0]).includes('notes'));  // setting a field never rewrites the historical evidence
+          assert(rows[4].notes.includes('Copies: condition 1 NM'));
+        """)
+
+    def test_card_editor_preserves_generated_count_evidence_beyond_the_prose_limit(self):
+        self.run_js("""
+          const cv = draw();
+          const marked = {...rows[0], quantity: 2, notes: 'x'.repeat(500) + '; Copies: condition 1 NM, 1 not recorded'};
+          const ctx = openCollectionSheet(cv, marked);
+          assert.equal(ctx.inputs.notes.value, marked.notes);
+          assert.equal(Number(ctx.inputs.notes.getAttribute('maxlength')), marked.notes.length);
+          ctx.sheet.close();
+          const fresh = openCollectionSheet(cv);
+          assert.equal(Number(fresh.inputs.notes.getAttribute('maxlength')), 500);
+        """)
+
     def test_save_posts_the_rows_it_changes_and_shows_the_answer(self):
         self.run_js("""
           const cv = draw(); tick('#col-unrecorded');

@@ -215,6 +215,7 @@ def catalogue_stamp(cat, now=None):
 def _catalogue_json(cat):
     """A catalogue's public counts: {"built", "sha", "age_days", "old" (catalogue_stamp), "card_data",
     "decks", "playable", "tiers", "colours", "styles", "credit"}."""
+    from decklab.lib.gauntlet.screening import summary
     playable = [d for d in cat.get("decks") or [] if d.get("playable")]
     counts = {"tiers": {}, "colours": {}, "styles": {}}
     for deck in playable:
@@ -223,7 +224,7 @@ def _catalogue_json(cat):
             if isinstance(key, str):
                 counts[name][key] = counts[name].get(key, 0) + 1
     return {**catalogue_stamp(cat), "card_data": cat.get("card_data"), "decks": len(cat.get("decks") or []),
-            "playable": len(playable), **counts, "credit": CREDIT}
+            "playable": len(playable), **counts, "screening": summary(cat), "credit": CREDIT}
 
 
 def _build_command(fmt, seen):
@@ -688,7 +689,8 @@ def run_gauntlet(body):
         if any(j.key != key for j in _active(entry)):
             raise ApiError(409, ALREADY_PLAYING)
         try:
-            forge_runs.COORD_JOBS.submit(key, run, rerun=True)
+            from . import run_recovery
+            run_recovery.submit(forge, "gauntlet", run, profile, data, key, rerun=True)
         except jobs.Busy as e:
             raise ApiError(503, forge_runs.MATCHUP_STOPPING if e.stopping else GAUNTLET_BUSY) from None
     return _answer(forge, g, entry, dict(choices, sample=chosen["id"]), seen, summary)

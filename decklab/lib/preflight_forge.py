@@ -72,6 +72,14 @@ class ForgeFiles:
                     self._config = dict(supplied)
             if self._config is None:
                 return check_id + "_unavailable"
+            if self._config.get("_decklab_simulations_selected") is False and not self._config.get("forge_java"):
+                folder = self._config.get("forge_dir")
+                if not folder:
+                    return "simulations_not_set_up"
+                try:
+                    self._stat(self._path(folder))
+                except FileNotFoundError:
+                    return "simulations_not_set_up"
             return self._java() if check_id == "java" else self._forge()
         except _Linked:
             return check_id + "_linked"

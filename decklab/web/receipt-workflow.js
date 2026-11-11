@@ -373,7 +373,7 @@ async function applyDelivery(view) {
   if (view.applyButton) busy(view.applyButton, "Recording…");
   try {
     const answer = await apiWrite("/api/receipt/apply", { profile: view.profile, preview });
-    state.library = null;
+    invalidateLibrary();
     rcptDropDraft(view);
     if (!receiptActive(view)) return;
     view.received = received;

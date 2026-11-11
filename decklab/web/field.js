@@ -196,7 +196,7 @@ function fvRows(a) {
       const what = `Win rate against ${o.title}`;
       const meta = metaWords(o.not_meaningful ? "the AI never casts a commander, so it's left out of the average"
         : o.lead && FV_VERDICTS[o.lead.verdict] ? capitalise(fvVerdict(o.lead)) : edgeWords(o.rate.value),
-      gamesWords(o.games), o.problem);
+      gamesWords(o.games), o.problem, o.stalled?.words);
       return el("li", { class: o.not_meaningful ? "fv-muted" : null },
         el("a", { class: "fv-row", href: matchupHref(a.deck, o) },
           el("span", { class: "fv-name", text: o.title }),

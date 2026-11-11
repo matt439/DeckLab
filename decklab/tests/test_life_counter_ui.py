@@ -39,8 +39,19 @@ SETUP = """
 
 @unittest.skipUnless(NODE, "Node.js is not installed")
 class LifeCounterUiTests(unittest.TestCase):
+    def test_legacy_undo_is_bounded_and_stops_when_the_game_ends(self):
+        self.run_js("""
+          const game=lifeNewGame([{list:lists[0],name:'Matt'},{list:lists[1],name:'User1'}],'matt');
+          const open=openLifeCounter(data,game);for(let i=0;i<25;i++)press('Matt: 1 more life (hold for 5)').click();
+          assert.equal(game.players[0].life,45);assert.equal(open.history.length,LIFE_UNDO_LIMIT);
+          for(let i=0;i<LIFE_UNDO_LIMIT;i++)named(counter(),'Undo last change').click();
+          assert.equal(game.players[0].life,25);assert(named(counter(),'Undo last change').disabled);
+          named(counter(),'End game').click();named(counter(),'Draw').click();
+          assert(game.ended);assert(named(counter(),'Undo last change').disabled);assert.equal(open.history.length,0);
+        """)
+
     def run_js(self, scenario):
-        sources = "\n".join((WEB / name).read_text(encoding="utf-8") for name in ("hands.js", "play.js", "life-counter.js"))
+        sources = "\n".join((WEB / name).read_text(encoding="utf-8") for name in ("hands.js", "play.js", "life-counter-tools.js", "life-counter.js"))
         result = subprocess.run([NODE, str(RUNNER)], input=json.dumps([str(WEB), sources + "\n" + SETUP + scenario]),
                                 capture_output=True, text=True, encoding="utf-8", timeout=20)
         self.assertEqual(result.returncode, 0, result.stderr)

@@ -1,31 +1,30 @@
 # Running your own Deck Lab
 
-This guide sets up Deck Lab on your own computer, from nothing, for you and your household. It covers the parts every install needs (Python, PostgreSQL, the card data, the first run) and then the optional parts: Forge simulations, starting in the background, and reaching it from outside your home.
+Set up Deck Lab on your own server PC, then use it from phones, tablets and browsers on your home network. Steps 1–7 are the core app; simulations, background running and outside access are optional.
 
-[decklab/README.md](decklab/README.md) is the full reference for every page and command. It was written for one household's PC, so it names that PC's folders (`C:\Projects\...`, `C:\Tools\...`) and people. Wherever it does, use your own.
+## Before you start
 
-## What runs where
+- **Time:** allow about an hour for the core steps, plus card-data downloads/indexing and any prerequisite installation. Slow downloads can take longer.
+- **RAM and disk:** 8 GB RAM and 10 GB free disk are planning allowances, not qualified minimums. The card index uses memory; images, database growth and retained backups need more disk. Forge needs substantially more: its worker guard budgets about 1.5 GB per worker and reserves 6 GB for the OS, database, app and browser.
+- **Access:** use an account that can install Python/PostgreSQL and edit your own files. Keep the PostgreSQL password for step 5; it never belongs in config.json. No domain, Cloudflare account, Forge or NAS is required for the core app.
 
-| | Windows 10 or 11 | Linux | macOS |
-|---|---|---|---|
-| The server, the database, the pages, the command line | Yes | Yes | Yes |
-| Forge simulations | Yes | Yes (the same download, with a JDK 21 or later) | Yes (the same download) |
-| Starting in the background and at logon (`homenet install`) | Yes (Task Scheduler) | Yes (a systemd user service) | No: run the server in a terminal, or under launchd |
-| The firewall script (`decklab/network-setup.ps1`) | Yes | No: a firewall rule of your own (step 7), which `homenet status` checks for firewalld and ufw | No |
-| `homenet status`'s network, address, sleep and wake checks | Yes | Yes | No |
-| The nightly backup task (`python -m decklab.db schedule`) | Yes (Task Scheduler) | Yes (a systemd user timer) | No: run `python -m decklab.db nightly` from cron |
-| Photo scanning (Scan cards, Scan token cards) | Yes (Windows' own OCR engine, nothing to install) | Yes, with the `tesseract-ocr` package | With Tesseract |
-| Keeping the PC awake while in use, and waking on request (step 12) | Yes (a power request) | Yes (`systemd-inhibit`) | No |
+## Contents
 
-Deck Lab is built and used every day on Windows. On Linux the whole test suite passes, and CI runs it there on every change, beside Windows, together with a check that installs, restarts, stops and removes the systemd service and timer under a real systemd. Since 2026-11-01 the live server can run on Linux too (story E11-S58): keeping the PC awake, photo scanning with Tesseract, Forge games and waking from sleep are built and fixture-tested. A full install in WSL's Ubuntu (2026-11-02) has run the database, backups, the services, keeping the PC awake and real Forge games; waking from sleep and scanning real card photos are still to be tried on a real Linux server PC.
+- Required: [1. Install prerequisites](#1-what-to-install), [2. Get the code](#2-get-the-code), [3. Make the venv](#3-install-psycopg-into-a-venv), [4. Configure profiles](#4-write-decklabconfigjson), [5. Set up PostgreSQL](#5-set-up-the-database), [6. Download cards](#6-download-the-card-data), [7. Start and open](#7-start-it-and-open-it).
+- Optional: [8. Simulations](#8-forge-simulations-optional), [9. Background running and backups](#9-keep-it-running-and-backed-up), [10. Outside access](#10-from-outside-your-home-optional), [11. Move to another PC](#11-moving-deck-lab-to-another-pc), [12. Sleep and wake](#12-let-the-server-sleep-optional).
+- Recovery/reference: [Restore a backup](#restoring-from-a-backup), [Platform details](#platform-and-acceptance-reference), [Troubleshooting](#when-something-goes-wrong), [Full command/page reference](decklab/README.md).
 
-Whatever the system, the home listener (port 8642) answers only addresses on a home network: loopback, the private IPv4 ranges (10/8, 172.16/12, 192.168/16), link-local addresses and IPv6's private ranges (fc00::/7, fe80::/10). Anything else gets 403 "This address only takes visits from the home network." A VPN such as Tailscale uses other addresses (100.64.0.0/10): add them to `config.json` as `"home_networks": ["100.64.0.0/10"]`. The tunnel's listener (step 10) isn't affected.
+## Quick start (Windows)
+
+Use **PowerShell** for every command in this guide unless a step explicitly says otherwise. Download [Python 3.14](https://www.python.org/downloads/windows/), [Git for Windows](https://git-scm.com/install/windows) and [PostgreSQL](https://www.postgresql.org/download/windows/). In the classic Python installer tick **Add python.exe to PATH**; install-manager users should select 3.14 using [Python's Windows guide](https://docs.python.org/3.14/using/windows.html). Open a new PowerShell and check `python --version` reports 3.14 before making the venv. If it opens the Microsoft Store, check App execution aliases; with the classic installer, disable obsolete App Installer python aliases and reopen PowerShell.
+
+Keep PostgreSQL's installer defaults for a new local install, and remember its `postgres` password for step 5. Once step 2 has cloned the code, run `python -m decklab.doctor` from that folder after each step. NEEDS SETUP findings are expected until their later steps are complete; the doctor does not install or repair anything.
 
 ## 1. What to install
 
 - **Git**, to get the code.
 - **Python 3.14.** On Windows, the python.org installer. On Linux or macOS, if your system has an older Python, [uv](https://docs.astral.sh/uv/) installs one beside it: `uv python install 3.14`. Use that Python (`uv python find 3.14` prints where it is) wherever this guide says `python`. Ubuntu 26.04 carries Python 3.14 itself (`apt policy python3.14` says so; install `python3.14-venv` too); on older Ubuntu releases, the deadsnakes PPA's `python3.14` and `python3.14-venv` packages work. Ubuntu has no `python` command: wherever this guide says `python`, type `python3` if `python3 --version` says 3.14, else `python3.14` (or uv's path).
-- **PostgreSQL 16 or later.** On Windows, the installer from postgresql.org; it asks you to choose a password for the `postgres` superuser. Remember it for step 4. On Linux, your distribution's `postgresql` package, or for a move from another PC (step 11) the same major version as that PC (or newer). Ubuntu 26.04 carries PostgreSQL 18 (`postgresql-18`); when your distribution's is older than the old PC's, use the PostgreSQL project's own apt repository, [apt.postgresql.org](https://wiki.postgresql.org/wiki/Apt). `apt policy postgresql-18` shows which version a package would install. On macOS, Postgres.app or Homebrew.
+- **PostgreSQL 16 or later.** On Windows, the installer from postgresql.org; it asks you to choose a password for the `postgres` superuser. Remember it for step 5. On Linux, your distribution's `postgresql` package, or for a move from another PC (step 11) the same major version as that PC (or newer). Ubuntu 26.04 carries PostgreSQL 18 (`postgresql-18`); when your distribution's is older than the old PC's, use the PostgreSQL project's own apt repository, [apt.postgresql.org](https://wiki.postgresql.org/wiki/Apt). `apt policy postgresql-18` shows which version a package would install. On macOS, Postgres.app or Homebrew.
 - **For simulations only:** a JDK 21 or later (the full JDK, with `javac` and `jar`, such as Debian's and Ubuntu's `openjdk-21-jdk`) and, to build Forge yourself, Maven. See step 8.
 
 On a Linux server PC, also:
@@ -35,10 +34,44 @@ On a Linux server PC, also:
   - Don't encrypt the disk: it asks for a passphrase at every boot, so the PC can't come back by itself after a power cut.
   - Ubuntu Server sets the disk up with LVM by default and then gives `/` only part of it (often 100 GB), leaving the rest unused until you extend it. Untick "Set up this disk as an LVM group" for one plain partition across the disk, or afterwards `sudo lvextend -r -l +100%FREE <the root volume>` (`df -h /` names it).
   - Installing beside Windows on a disk you shrank in Windows: if the installer's custom layout shows no "free space" row, check what's really there from its shell (Help, Enter shell): `parted /dev/nvme0n1 unit GiB print free` (`lsblk` names the disk). If the free space is there, Ubuntu Desktop's installer, whose "Install alongside Windows Boot Manager" finds it, is the easy way round; if it isn't, the shrink didn't happen (Windows' Disk Management should show it as Unallocated). Never format the existing EFI partition: mount it at `/boot/efi` as it is. Windows also keeps the hardware clock in local time and Linux in UTC; set `RealTimeIsUniversal` (a `DWORD` of 1 in `HKLM\SYSTEM\CurrentControlSet\Control\TimeZoneInformation`) in Windows so the two agree, and turn off Windows' Fast Startup (`powercfg /h off`).
-- **`tesseract-ocr`**, for photo scanning (`sudo apt install tesseract-ocr`, which brings English). Without it the scan sheets ask for each card's name instead.
+- **`tesseract-ocr` and `util-linux`**, for photo scanning (`sudo apt install tesseract-ocr util-linux`, which brings English and the prlimit memory limiter). Linux OCR needs that limiter; without a supported bounded engine the scan sheets ask for each card's name instead. The backend accepts at most4000px a side, and the browser already reduces photos to2000px.
 - **`avahi-daemon`**, so phones find the PC by name (`http://<the PC's name>.local:8642`). Windows answers those names by itself.
 - **`cloudflared`**, only for step 10: from Cloudflare's own apt repository, [pkg.cloudflare.com](https://pkg.cloudflare.com/) (Debian and Ubuntu don't carry it).
 - **The household's time zone.** A fresh Linux install is often on UTC, and Deck Lab dates things by the PC's clock: `timedatectl` shows the zone, and `sudo timedatectl set-timezone Australia/Sydney` (your own; `timedatectl list-timezones` lists them) sets it. Put the same name in `config.json` (step 4) as `"timezone"`.
+
+### Linux packages
+
+On a distribution that provides Python 3.14:
+
+```sh
+sudo apt update
+sudo apt install git python3.14 python3.14-venv postgresql postgresql-client
+python3.14 --version
+psql --version
+```
+
+Use `python3.14` wherever this guide says `python` if that is its installed name. If your distribution does not provide it, use the Python-install choices above. If its PostgreSQL is older than 16, follow the [PostgreSQL project's apt instructions](https://www.postgresql.org/download/linux/ubuntu/):
+
+```sh
+sudo apt install postgresql-common
+sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
+sudo apt update
+sudo apt install postgresql-18
+```
+
+### macOS packages
+
+With Homebrew installed, use the versioned [Python](https://formulae.brew.sh/formula/python@3.14) and [PostgreSQL](https://formulae.brew.sh/formula/postgresql@18) packages:
+
+```sh
+brew install git python@3.14 postgresql@18
+brew services start postgresql@18
+export PATH="$(brew --prefix python@3.14)/libexec/bin:$(brew --prefix postgresql@18)/bin:$PATH"
+python --version
+psql --version
+```
+
+Keep the required versioned paths in your shell profile. The background Deck Lab/nightly features have separate platform limits below; starting PostgreSQL is not installing Deck Lab's scheduler.
 
 ## 2. Get the code
 
@@ -49,7 +82,7 @@ cd DeckLab
 
 Run every command in this guide from that folder, the repo root.
 
-Without git, download a release instead: `decklab-VERSION.zip` from the repository's [Releases](https://github.com/matt439/DeckLab/releases), checked against its `decklab-VERSION.zip.sha256` (`sha256sum -c decklab-VERSION.zip.sha256` on Linux, `Get-FileHash decklab-VERSION.zip` in PowerShell), and unzip it. Optionally, with GitHub's `gh` installed, `gh attestation verify decklab-VERSION.zip --repo matt439/DeckLab` also confirms that the repository's own release workflow built that zip (a fork's releases: its own `owner/repo`); the checksum alone only shows the download wasn't damaged. Its `decklab-VERSION` folder takes the repo root's place in this guide. Deck Lab reads its version from the release's `decklab/release.json`, and Settings shows it. A home admin's Settings also says when a newer release is out: the PC asks GitHub at most once a day (saved in `decklab/data/release-check.json`), downloads nothing, and links to the release's page; `"release_check": false` in `config.json` turns that off, and `"release_check": "owner/repo"` asks another repository (a fork's releases). A git checkout never asks. There's no update command for a release yet: `python -m decklab.update` needs a git checkout, so for now unzip the next release beside it, copy `decklab/config.json` across and run `python -m decklab.db migrate`.
+Until a release is published, use the git checkout above. When a release is available, you can download it instead: `decklab-VERSION.zip` from the repository's [Releases](https://github.com/matt439/DeckLab/releases), checked against its `decklab-VERSION.zip.sha256` (`sha256sum -c decklab-VERSION.zip.sha256` on Linux, `Get-FileHash decklab-VERSION.zip` in PowerShell), and unzip it. Optionally, with GitHub's `gh` installed, `gh attestation verify decklab-VERSION.zip --repo matt439/DeckLab` also confirms that the repository's own release workflow built that zip (a fork's releases: its own `owner/repo`); the checksum alone only shows the download wasn't damaged. Its `decklab-VERSION` folder takes the repo root's place in this guide. Deck Lab reads its version from the release's `decklab/release.json`, and Settings shows it. A home admin's Settings also says when a newer release is out: the PC asks GitHub at most once a day (saved in `decklab/data/release-check.json`), downloads nothing, and links to the release's page; `"release_check": false` in `config.json` turns that off, and `"release_check": "owner/repo"` asks another repository (a fork's releases). A git checkout never asks. There's no update command for a release yet: `python -m decklab.update` needs a git checkout, so for now unzip the next release beside it, copy `decklab/config.json` across and run `python -m decklab.db migrate`.
 
 On Linux, clone it there; don't copy a checkout from a Windows PC (a USB disk, a share or `rsync`). A copied folder usually arrives with every file executable, and sometimes with Windows line endings, so git shows every file changed and `python -m decklab.update` refuses to run.
 
@@ -75,18 +108,19 @@ Make the `.venv` with the same Python you'll run Deck Lab with. After upgrading 
 
 ## 4. Write `decklab/config.json`
 
-Copy the example and change the profile to yours:
+Copy the example, then replace **alex/Alex** with your own lowercase profile id/display name:
 
 ```
 cp decklab/config.example.json decklab/config.json
 ```
 
-(`copy` instead of `cp` in a Windows command prompt.)
+In PowerShell, `Copy-Item decklab/config.example.json decklab/config.json` works too. In a cmd prompt use `copy decklab\config.example.json decklab\config.json`.
 
 ```json
 {
+  "timezone": "Australia/Brisbane",
   "profiles": [
-    {"id": "alex", "name": "Alex", "plays_as": "user", "role": "admin", "space": "home", "emails": []}
+    {"id": "alex", "name": "Alex", "plays_as": "first", "role": "admin", "space": "home", "emails": []}
   ]
 }
 ```
@@ -94,12 +128,16 @@ cp decklab/config.example.json decklab/config.json
 - `id` is lowercase letters, digits and hyphens, and `name` is what the page shows.
 - `role` `admin` may change everything at home. Give the first profile that role.
 - `space` `home` is the household's shared collection and decks.
-- `plays_as` says whose decks are whose at home: `user` for the first home player, `wife` for the second, and a deck's **Played by** can also be `either`. The words are the original household's and only label decks.
+- `plays_as` identifies one of the two supported home player slots: `first` or `second`. They normalize to the older `user`/`wife` values in saved records; existing configs still work. A profile using `either` can edit home decks marked **Played by: either** (an admin can also edit the other home decks). It does not grant both personal slots to a member. Use a separate space for someone with their own collection.
 - `emails` is used only for logins from outside the home (step 10). Leave it empty.
 
-To add a second person who shares your cards, add another profile with `"space": "home"`, `"role": "member"` and `"plays_as": "wife"`. Someone with a collection of their own gets `"space"` set to their own `id` and no `plays_as`. The reference's "People's own collections (spaces)" explains what each can see and change.
+To add a second person who shares your cards, add another profile with `"space": "home"`, `"role": "member"` and `"plays_as": "second"`. Someone with a collection of their own gets `"space"` set to their own `id` and no `plays_as`. The reference’s [People's own collections (spaces)](decklab/README.md#peoples-own-collections-spaces) explains what each can see and change.
 
 `config.json` is gitignored, so your names and addresses never end up in a commit. The other settings all have defaults. [decklab/config.full.example.json](decklab/config.full.example.json) shows the optional blocks for a backup folder, outside access through Cloudflare and a records repo. Its `backup_dir` and `records_repo` are Windows paths; Linux refuses those, so on Linux give absolute paths such as `/mnt/nas-backups/DeckLab` and `/home/<you>/MyCardRecords`.
+
+Choose your own IANA timezone in the example above. Outside Australia, also choose suitable `currency` and `shops` settings below. JSON paths use forward slashes (`C:/Tools/forge-decklab`) or doubled backslashes (`C:\\Tools\\forge-decklab`).
+
+### Linux and macOS config notes
 
 Two optional settings matter most on Linux:
 
@@ -108,7 +146,7 @@ Two optional settings matter most on Linux:
 
 **Price-check shops:** each night Deck Lab looks the purchase queue's cards up at two Australian shops, MTGMate and Games Portal, and shows their prices in AUD. If you can't buy from them, turn the check off with `"shops": []`, or keep one with `"shops": ["mtgmate"]` (the keys are `mtgmate` and `gamesportal`). Without the setting both are checked.
 
-**Currency:** prices are estimates in AUD unless you set `"currency"` to an ISO code the ECB publishes a USD rate for (`"EUR"`, `"GBP"`, `"CAD"`, ...). Once Deck Lab is running, an admin can choose both the currency and the price-check shops on Settings' **Prices** part instead, without editing this file or restarting; a choice made there wins, and this file's values apply to any field left to "Use config.json's". The Prices part needs the database's migration 0022 (`python -m decklab.db migrate`).
+**Currency:** prices are estimates in AUD unless you set `"currency"` to an ISO code the ECB publishes a USD rate for (`"EUR"`, `"GBP"`, `"CAD"`, ...). Once Deck Lab is running, an admin can choose both the currency and the price-check shops on Settings' **Prices** part instead, without editing this file or restarting; a choice made there wins, and this file's values apply to any field left to "Use config.json's".
 
 On Linux and macOS, `chmod 600 decklab/config.json`: it holds the household's emails.
 
@@ -264,7 +302,7 @@ On Linux and macOS:
 
 ## 9. Keep it running and backed up
 
-- **Windows, in the background:** `python -m decklab.lib.homenet install --no-start`, then `python -m decklab.lib.homenet start` (the reference's "Start it" covers starting at logon and the restart watchdog).
+- **Windows, in the background and at logon:** run `python -m decklab.lib.homenet install --at-logon`. The restart watchdog comes with it. Then run the firewall setup from step 7 (`powershell -ExecutionPolicy Bypass -File decklab/network-setup.ps1`). The server and nightly tasks need this same Windows account signed in. Sign in manually after boot, or choose [Microsoft Autologon](https://learn.microsoft.com/en-us/sysinternals/downloads/autologon) for a trusted PC: run its GUI, enter the account details and Enable; Disable reverses it. Local administrators can recover its stored credentials, so make this a deliberate operator choice.
 - **Linux, in the background:** `python -m decklab.lib.homenet install --at-logon` writes a systemd user service, `~/.config/systemd/user/decklab.service`, which runs `python decklab/server.py --background` in the repo with the Python you ran install with, enables it and starts it. `start`, `stop`, `restart`, `remove` and `status` work as on Windows; without `--at-logon` it starts only when you run `homenet start`. If the server stops with an error, systemd starts it again after 10 seconds; `homenet stop` leaves it stopped. Its log is `decklab/data/logs/server.log` (and `journalctl --user -u decklab.service` shows what systemd saw). Give `install` the same `--port` and `--host` you'd give the server.
   - The unit records the PATH (and `JAVA_HOME`, if set) of the shell you run `install` in, since a service doesn't read your shell profile, and keeps the files it writes private to you (`UMask=0077`). Run `install` again after changing the PATH or Java, or after updating from an older Deck Lab: `status` warns "Its unit isn't what install writes now" until you do.
   - After 3 failed starts within 15 minutes systemd gives up, and `status` says so; `start` and `restart` clear that first. They also refuse, before stopping anything, when the unit's Python or `server.py` has gone (say to run `install` again), and when a start doesn't answer they show the end of the server's log.
@@ -272,12 +310,16 @@ On Linux and macOS:
   - `scripts/decklab` runs `homenet` from any folder, on the Python the `.venv` was made from (`DECKLAB_PYTHON` to choose another): `decklab` starts the server, and `decklab stop`, `decklab status` and so on pass through. Link it into your PATH (`ln -s "$PWD/scripts/decklab" ~/.local/bin/decklab`). On Windows it's `scripts\decklab.cmd`.
   - A server run by hand in a terminal stops cleanly when the terminal closes, unless it was started with `nohup`.
 - **Linux, at boot:** systemd runs your own services only while you're logged in. For Deck Lab to start at boot and keep running after you log out, turn on lingering once: `loginctl enable-linger` (on some systems, `sudo loginctl enable-linger $USER`). `install` and `status` remind you while it's off.
-- **macOS:** run `python decklab/server.py` under launchd, from the repo root.
+- **macOS:** use the [foreground/manual-job instructions](#macos-foreground-and-operator-managed-jobs) below. Built-in service/scheduler control is unsupported; no installed job is inferred.
 - **Backups:** `python -m decklab.db backup` writes a dump to `decklab/data/backups/` and copies it to `database.backup_dir` in `config.json`, a folder on another disk or a NAS:
   ```json
   "database": {"backup_dir": "D:\\Backups\\DeckLab"}
   ```
   Without it the dumps stay in `decklab/data/backups/` only, on the same disk as the database, and `backup` says so. `backup` makes only the last folder of `backup_dir`: its parent must already be there, so a missing share fails instead of filling a new folder on the PC's own disk.
+### Optional NAS and remote-export hardening
+
+The export repository is created automatically when export first runs; you do not need to initialize it by hand. NAS mounts, a pushed private export repo and additional remote-copy controls are optional.
+
 - **Backups to a NAS from Linux:** mount the share at boot with a line in `/etc/fstab`, such as `//nas/Backups /mnt/nas-backups cifs credentials=/etc/decklab-nas.cred,uid=<you>,gid=<you>,file_mode=0600,dir_mode=0700,_netdev,nofail,x-systemd.automount 0 0` (`file_mode` and `dir_mode` keep the dumps private to you: on a `cifs` mount a file's permissions come from the mount, not from the umask, and without them every account on the PC can read every dump, which is the whole database; the credentials file holds `username=` and `password=` lines, owned by root, `chmod 600`; `cifs-utils` must be installed; an NFS share works too). On a local disk, `backup`, `export`, `restore-check`, `restore` and `nightly` keep the files they write private to you however they're started (umask 077), from the timer, `update` or your own shell. Then set `"backup_dir": "/mnt/nas-backups/DeckLab"`. Use the NAS's IP address in the line if the PC can't resolve the NAS's Windows-style name. With `x-systemd.automount`, the share mounts on first use: after `sudo umount /mnt/nas-backups`, a manual `sudo mount /mnt/nas-backups` says "Device or resource busy" (the automount point is still there); just `ls /mnt/nas-backups` and systemd mounts it again, with any changed `/etc/fstab` line after `sudo systemctl daemon-reload`. Off Windows, backup, prune, the restore check and the smoke test refuse a `backup_dir` on the same disk as the staging folder ("is the NAS share mounted?"), so an unmounted share never takes the dumps; `"backup_same_device_ok": true` in the `"database"` block allows it when that's what you want. A `backup --dest` folder isn't checked.
 - **Backups the server itself can't destroy.** Whatever can write to the backup folder can also delete from it, so a server that's broken into (it's the PC that answers the internet through step 10's tunnel) could take its backups with it. Three cheap steps limit that:
   - Give the server a NAS user of its own, with read and write on **one share holding only Deck Lab's backups** (NAS permissions are usually per shared folder, not per subfolder), and no access to anything else. Then the credentials file on the server opens nothing more. A NAS administrator's login there would open every share, and could delete snapshots and users. Check it: `sudo mount -t cifs //<nas>/<another share> /mnt/test -o credentials=/etc/decklab-nas.cred,ro` should fail with "Permission denied".
@@ -296,6 +338,103 @@ python -m decklab.db schedule preview-systemd --unit timer --python /usr/bin/pyt
 ```
 
 To check the Linux services on your computer from end to end, `scripts/linux_services_check.sh` installs the timer and the service on port 18642, restarts the server, kills it to see systemd start it again, stops it and removes both (`PYTHON=<your python> scripts/linux_services_check.sh`).
+
+### macOS foreground and operator-managed jobs
+
+The built-in macOS mode is **foreground**. Run `python decklab/server.py` (or `scripts/decklab`) and stop it with Ctrl+C in that terminal. `homenet status` explains the limits; install/start/stop/restart do not pretend to manage a background job. The git updater refuses before fetching and points to the manual sequence below. Linux/Windows service commands are not macOS instructions.
+
+For Homebrew PostgreSQL, `brew services start postgresql@18` starts the database. Its initial admin may be your macOS account rather than a role named postgres. If postgres is absent, use `createuser -s postgres` from that local admin account, then open `psql -d postgres` and enter `\password postgres`. Do not recreate an existing role. See the [Homebrew formula](https://formulae.brew.sh/formula/postgresql@18) for its installed paths. Postgres.app users should use that installation's admin/tools.
+
+Foreground manual update, after stopping the server:
+
+```sh
+python -m decklab.db backup
+git pull --ff-only
+.venv/bin/python -m pip install -r decklab/requirements.txt
+python -m decklab.db migrate
+python -m decklab.lib.forge status
+python decklab/server.py
+```
+
+The Forge check does not install or play anything. If it expects a different build, use step 8 before starting. In a second terminal run `python -m decklab.smoke`; its scheduler warning is honest unless a recent successful whole-nightly receipt is available. Migration 0023 adds those operational receipts; individual dump/check rows do not prove a whole nightly or future schedule. Keep this install's Python/venv consistent when upgrading.
+
+Optional DIY LaunchAgents are operator-managed. They run in the logged-in user's context; use the same account/private config/pgpass as the foreground app. Replace every path and label below, including Intel versus Apple Silicon Homebrew paths, and make the log directory first. Check [Apple's launchd guidance](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html) and your Mac's `man launchctl`/`man launchd.plist` before installing them. Deck Lab installs none of these jobs.
+
+Save the server example as `~/Library/LaunchAgents/com.example.decklab.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>WorkingDirectory</key>
+	<string>/Users/YOUR-ACCOUNT/DeckLab</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/opt/homebrew/opt/postgresql@18/bin:/usr/local/opt/postgresql@18/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+	</dict>
+	<key>Label</key>
+	<string>com.example.decklab</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/opt/homebrew/bin/python3.14</string>
+		<string>/Users/YOUR-ACCOUNT/DeckLab/decklab/server.py</string>
+		<string>--background</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>/Users/YOUR-ACCOUNT/DeckLab/decklab/data/logs/launchd-server.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/YOUR-ACCOUNT/DeckLab/decklab/data/logs/launchd-server.log</string>
+</dict>
+</plist>
+```
+
+Save the calendar example as `~/Library/LaunchAgents/com.example.decklab-nightly.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>WorkingDirectory</key>
+	<string>/Users/YOUR-ACCOUNT/DeckLab</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/opt/homebrew/opt/postgresql@18/bin:/usr/local/opt/postgresql@18/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+	</dict>
+	<key>Label</key>
+	<string>com.example.decklab-nightly</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/opt/homebrew/bin/python3.14</string>
+		<string>-m</string>
+		<string>decklab.db</string>
+		<string>nightly</string>
+	</array>
+	<key>StartCalendarInterval</key>
+	<dict>
+		<key>Hour</key>
+		<integer>3</integer>
+		<key>Minute</key>
+		<integer>30</integer>
+	</dict>
+	<key>StandardOutPath</key>
+	<string>/Users/YOUR-ACCOUNT/DeckLab/decklab/data/logs/launchd-nightly.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/YOUR-ACCOUNT/DeckLab/decklab/data/logs/launchd-nightly.log</string>
+</dict>
+</plist>
+```
+
+Validate edited files with `plutil -lint <file>`. Register each with `launchctl bootstrap "gui/$(id -u)" <file>`. For the loaded server, `launchctl kickstart -k "gui/$(id -u)/com.example.decklab"` restarts it; `launchctl bootout "gui/$(id -u)/com.example.decklab"` unloads/stops it. Boot out your own server job before the manual update, then bootstrap it again afterward; do not assume kickstart can restart an unloaded job. The calendar is Mac-local 03:30: align the system/config timezone, keep the Mac awake, and verify actual nightly receipts. A plist alone proves no backup or device acceptance.
+
+Java discovery includes `/Library/Java/JavaVirtualMachines/*/Contents/Home` and Apple Silicon/Intel Homebrew openjdk layouts, alongside JAVA_HOME/PATH. Choose a full JDK 21+; source tests emulate these paths, not an actual Mac install. Phone/Safari, OCR and native scheduling checks remain separate.
 
 ### Check the whole install: the smoke test
 
@@ -341,9 +480,52 @@ Steps 2 to 6 run in the code just pulled. When a step fails, it says how to go b
 
 ## 10. From outside your home (optional)
 
-Deck Lab can start a Cloudflare Tunnel itself, behind Cloudflare Access's email login. That needs a domain on Cloudflare, `cloudflared`, and `allowed_hosts`, `tunnel` and `access` blocks in `config.json` (see `config.full.example.json`, and the reference's "From outside the home"). Leave those blocks out of `config.json` until you set this up. Without them, Deck Lab serves your home network only.
+This adds a locally managed Cloudflare Tunnel and an email-gated Access application. Deck Lab owns starting/stopping its tunnel process, using the local config file below. Leave these blocks absent until the policy and credentials are ready. Replace every example domain, UUID, path, team and audience with your own; no household values belong in git.
 
-On Linux, install `cloudflared` from [pkg.cloudflare.com](https://pkg.cloudflare.com/) (Deck Lab also finds it in `/usr/bin`, `/usr/local/bin`, `~/.local/bin`, `/snap/bin` and `/opt/cloudflared`) and update it with `sudo apt upgrade cloudflared`, then `homenet restart`. Its files are in `~/.cloudflared`: `chmod 600 ~/.cloudflared/*.json ~/.cloudflared/cert.pem`. The tunnel won't start, and `homenet status` shows a PROBLEM, while `config.yml`'s `credentials-file:` names a file that isn't there, or a Windows path. Under the background service `cloudflared` ends with the server; a server run in a terminal and killed outright can leave it running.
+1. **Prepare the domain and tool.** Add a domain you control to Cloudflare and finish its zone/nameserver setup. Install `cloudflared` on the server PC using [Cloudflare's downloads](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/); Linux packages are at [pkg.cloudflare.com](https://pkg.cloudflare.com/). The app needs no public inbound firewall port. See the [local-tunnel guide](https://developers.cloudflare.com/tunnel/features/locally-managed-tunnels/create-local-tunnel/) for the CLI workflow.
+2. **Create the named tunnel.** From your normal server account, run:
+
+   ```text
+   cloudflared tunnel login
+   cloudflared tunnel create decklab
+   cloudflared tunnel route dns decklab decklab.example.com
+   ```
+
+   Login opens a browser for your Cloudflare account/zone. Creation prints a tunnel UUID and writes its credentials JSON under that account's `.cloudflared` folder. DNS routing creates the hostname's CNAME. Keep the printed UUID/path; do not start a separate tunnel service, since Deck Lab manages this one.
+3. **Protect the full hostname with Access.** In Cloudflare One, go to **Access controls > Applications**, create a **Self-hosted and private** application and add the public hostname `decklab.example.com`. Add an Allow policy limited to the intended email addresses and enable your desired identity provider (email one-time PIN is sufficient for this example). Save it before starting the tunnel. Do not add a Bypass/Everyone policy. The [self-hosted application instructions](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/) describe the dashboard flow.
+4. **Record team and audience.** Your Access login domain is `https://<team>.cloudflareaccess.com`; use just its team prefix below. In the application's **Edit > Additional settings**, copy its **Application Audience (AUD) Tag**. This is the application's audience, not the tunnel UUID. Put the same audience/team in both files below; Cloudflare's [JWT guide](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/) shows where to find it.
+5. **Write `.cloudflared/config.yml`.** Use the credentials path printed in step 2 (forward slashes also work for a Windows path such as `C:/Users/YOUR-ACCOUNT/.cloudflared/TUNNEL-UUID.json`):
+
+   ```yaml
+   tunnel: TUNNEL-UUID
+   credentials-file: /absolute/path/.cloudflared/TUNNEL-UUID.json
+   ingress:
+     - hostname: decklab.example.com
+       service: http://127.0.0.1:8644
+       originRequest:
+         access:
+           required: true
+           teamName: example-team
+           audTag:
+             - ACCESS-APPLICATION-AUD
+     - service: http_status:404
+   ```
+
+   Port 8644 is Deck Lab's loopback Access listener; do not point this hostname at the home listener on 8642. The final 404 is the catch-all. Cloudflared's [origin Access parameters](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/configure-tunnels/origin-parameters/#access) require the same team/audience; Deck Lab independently checks the signed token and maps its email to a configured profile.
+6. **Merge blocks into your existing `decklab/config.json`.** Keep the profiles/timezone from step 4 and add each permitted person's lowercase email to that existing profile's `emails` array. An Access Allow policy does not create a Deck Lab profile or make its space Public.
+
+   ```json
+   {
+     "allowed_hosts": ["decklab.example.com"],
+     "tunnel": {"config": "~/.cloudflared/config.yml", "hostname": "decklab.example.com"},
+     "access": {"team": "example-team", "aud": "ACCESS-APPLICATION-AUD", "port": 8644}
+   }
+   ```
+
+   This snippet is not a replacement for your whole config. Both config files and the credentials/cert stay private. On Linux/macOS use `chmod 600` on their individual files; do not publish a tunnel credential, cert.pem, team policy or real hostname in this public repo.
+7. **Check and start deliberately.** Run `cloudflared tunnel --config /path/to/config.yml ingress validate` (using your actual config path), then `python -m decklab.doctor`. Start/restart the installed Deck Lab service and run `python -m decklab.lib.homenet status`: it checks the credentials/config path, loopback ingress and tunnel state. Deck Lab runs `cloudflared tunnel --config <path> --no-autoupdate run` itself. Test the HTTPS hostname from an outside browser: Access should require your permitted email, and Deck Lab should show only what that profile may read. A tunnel login does not override private deck/inventory/kit permissions.
+
+For port/path/credential diagnostics and updating cloudflared, use the [From outside the home reference](decklab/README.md#from-outside-the-home). On a background install the tunnel ends with Deck Lab. An abruptly killed foreground process can leave a tunnel behind, so use normal stop. The off-page Worker and wake-on-request are separate optional setup, not prerequisites for this tunnel. These instructions do not create a DNS record, policy, tunnel or deployment automatically.
 
 ## 11. Moving Deck Lab to another PC
 
@@ -373,7 +555,7 @@ python -m decklab.db digest -o <that folder>/digest.json
 
 Take the `tunnel` block out of the old PC's `config.json` too. (`homenet stop` alone isn't enough: a server installed `--at-logon` starts again at the next logon, and with it its tunnel.) To go back to the old PC at any point before the switch-over, undo these: `homenet install --at-logon`, `schedule install`, and the `tunnel` block back.
 
-`backup` prints the dump's name (`decklab-YYYY-MM-DD-HHMMSS.dump`). Take the folder to the new PC (a USB stick, or a share both reach), with these folders of `decklab/data` if you want them: `forge/results` (saved matchups), `forge/experiments` (Lab experiments) and `goldfish` (practice-hand results). The rest of `decklab/data` is caches the new PC fills itself, or settings of the old PC's own: after the move, set the Forge worker limit again on the Settings page (it's kept outside the repo, in the forge-slots folder), and measure the time estimates again on the new PC (`rates.json`: the reference's "The overnight run") rather than copying the old one. If a member change made on the Settings page didn't finish (`decklab/data/profile-config/pending.json` is there), run `python -m decklab.db sync-profiles` on the old PC before the dump.
+`backup` prints the dump's name (`decklab-YYYY-MM-DD-HHMMSS.dump`). Take the folder to the new PC (a USB stick, or a share both reach), with these folders of `decklab/data` if you want them: `forge/results` (saved matchups), `forge/experiments` (Lab experiments) and `goldfish` (practice-hand results). The rest of `decklab/data` is caches the new PC fills itself, or settings of the old PC's own: after the move, set the Forge worker limit again on the Settings page (it's kept outside the repo, in the forge-slots folder), and measure the time estimates again on the new PC (`rates.json`: the reference’s [The overnight run](decklab/README.md#the-overnight-run-measuring-on-an-idle-pc)) rather than copying the old one. If a member change made on the Settings page didn't finish (`decklab/data/profile-config/pending.json` is there), run `python -m decklab.db sync-profiles` on the old PC before the dump.
 
 On the new PC:
 
@@ -389,7 +571,7 @@ On the new PC:
 
 1. Put the `tunnel` block back in `config.json`, and copy the tunnel's files from the old PC: its config (`tunnel.config`, such as `~/.cloudflared/config.yml`) and the credentials file it names, fixing that path for this PC.
 2. Bring the export repo up to date with the old PC's last export: `git -C <export_repo> pull --ff-only`.
-3. Install the background server and the nightly task, so they come back by themselves after a restart (step 9, and the reference's "Network setup (once, as administrator)" for the firewall):
+3. Install the background server and the nightly task, so they come back by themselves after a restart (step 9, and the reference’s [Network setup (once, as administrator)](decklab/README.md#network-setup-once-as-administrator) for the firewall):
    ```
    python -m decklab.lib.homenet install --at-logon
    python -m decklab.db schedule install
@@ -430,7 +612,7 @@ The same route, A to C, in order, with what's different for Linux. Nothing Linux
 
 ## 12. Let the server sleep (optional)
 
-A PC that serves Deck Lab all day uses power all day. With an always-on device on the same network that can run a small container (a NAS), the PC can sleep when idle and wake whenever anyone opens Deck Lab, at home or through the tunnel; the visitor waits under a minute, with a page saying so. The reference's "Sleeping and waking on request" explains how it works.
+A PC that serves Deck Lab all day uses power all day. With an always-on device on the same network that can run a small container (a NAS), the PC can sleep when idle and wake whenever anyone opens Deck Lab, at home or through the tunnel; the visitor waits under a minute, with a page saying so. The reference’s [Sleeping and waking on request](decklab/README.md#sleeping-and-waking-on-request) explains how it works.
 
 1. **The PC:** check `powercfg /a` lists "Standby (S3)". Turn on Wake-on-LAN in the BIOS. On the wired network adapter (Device Manager), set "Wake on Magic Packet" and tick "Allow this device to wake the computer" and "Only allow a magic packet to wake the computer". Give the PC a DHCP reservation in the router, and note its MAC address (`getmac /v`). Allow wake timers on mains power, so the nightly backup can wake the PC: Control Panel, Power Options, Change plan settings, Change advanced power settings, Sleep, "Allow wake timers", Plugged in: Enable (or `powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP RTCWAKE 1`, then `powercfg /setactive SCHEME_CURRENT`).
 2. **The wake gate on the NAS:** follow [decklab/wakegate/README.md](decklab/wakegate/README.md). Check `http://<the NAS>:8650/__status` says the PC is awake.
@@ -481,10 +663,48 @@ On a Linux PC, do these in place of steps 1, 3, 4 and 6; the wake gate (step 2) 
 
 Phones and tablets bookmark the gate's address instead of the PC's. A Deck Lab page already open at home hops through the gate when it can't reach the PC only if it was opened at exactly the address the gate sends people to (the wake gate's `DECKLAB_PC_HOST` and port, such as `http://<the PC's address>:8642`), so open Deck Lab at home by that address or the gate's bookmark, not `localhost` or another name for the PC. A save that fails while the PC sleeps never navigates away: it shows the usual can't-be-reached error, and your change stays on the page to try again. On Windows the server and the nightly task run in your signed-in session, so the PC should sign in by itself after a restart. On Linux, lingering (step 9) starts them at boot.
 
+## Restoring from a backup
+
+After completing core steps 1–5 on the replacement PC and restoring your private config to the new checkout, stop Deck Lab before replacing its database. Use the newest known-good dump from your backup folder and the same or a newer PostgreSQL major version:
+
+```sh
+python -m decklab.lib.homenet stop
+python -m decklab.db restore /path/to/decklab-newest.dump --replace --force
+python -m decklab.lib.homenet start
+python -m decklab.smoke
+```
+
+Use your actual dump path (quote paths with spaces). `--replace --force` intentionally replaces the target database, so confirm it is the install you are recovering. A lost disk does not require an old digest.json. On a terminal-only platform stop/restart the foreground server manually; see the platform reference. See the full [Database reference](decklab/README.md#database) for restore checks and backups.
+
+## Platform and acceptance reference
+
+| | Windows 10 or 11 | Linux | macOS |
+|---|---|---|---|
+| The server, the database, the pages, the command line | Yes | Yes | Yes |
+| Forge simulations | Yes | Yes (the same download, with a JDK 21 or later) | Yes (the same download) |
+| Starting in the background and at logon (`homenet install`) | Yes (Task Scheduler) | Yes (a systemd user service) | No: run the server in a terminal, or under launchd |
+| The firewall script (`decklab/network-setup.ps1`) | Yes | No: a firewall rule of your own (step 7), which `homenet status` checks for firewalld and ufw | No |
+| `homenet status`'s network, address, sleep and wake checks | Yes | Yes | No |
+| The nightly backup task (`python -m decklab.db schedule`) | Yes (Task Scheduler) | Yes (a systemd user timer) | No: run `python -m decklab.db nightly` from cron |
+| Photo scanning (Scan cards, Scan token cards) | Yes (Windows' own OCR engine, nothing to install) | Yes, with the `tesseract-ocr` package | With Tesseract |
+| Keeping the PC awake while in use, and waking on request (step 12) | Yes (a power request) | Yes (`systemd-inhibit`) | No |
+
+Deck Lab is built and used every day on Windows. On Linux the whole test suite passes, and CI runs it there on every change, beside Windows, together with a check that installs, restarts, stops and removes the systemd service and timer under a real systemd. Since 2026-11-01 the live server can run on Linux too (story E11-S58): keeping the PC awake, photo scanning with Tesseract, Forge games and waking from sleep are built and fixture-tested. A full install in WSL's Ubuntu (2026-11-02) has run the database, backups, the services, keeping the PC awake and real Forge games; waking from sleep and scanning real card photos are still to be tried on a real Linux server PC.
+
+Whatever the system, the home listener (port 8642) answers only addresses on a home network: loopback, the private IPv4 ranges (10/8, 172.16/12, 192.168/16), link-local addresses and IPv6's private ranges (fc00::/7, fe80::/10). Anything else gets 403 "This address only takes visits from the home network." A VPN such as Tailscale uses other addresses (100.64.0.0/10): add them to `config.json` as `"home_networks": ["100.64.0.0/10"]`. The tunnel's listener (step 10) isn't affected.
+
 ## When something goes wrong
 
+- **Config isn't valid JSON:** use the line/column in the error, check commas and JSON path escaping, then run `python -m decklab.doctor`.
+- **Python version is not 3.14:** reopen the right shell and verify `python --version`; recreate the venv with that interpreter before installing requirements.
+- **Port in use:** choose `--port` or config.json's `port`; an already running Deck Lab names its stop command.
+- **A phone cannot connect:** first open localhost on the server, then run `python -m decklab.lib.homenet status` there and use its home address. Check the same Wi-Fi, private-network firewall rule and selected port.
+- **Forge or Java is unavailable:** simulations are optional. `python -m decklab.lib.forge status` names the expected files/version; see step 8.
+- **Logs:** `decklab/data/logs/server.log` records startup; `decklab/data/logs/db.log` records database causes. Review them locally, since they may contain private configuration details.
+
 - **"no password supplied"** from `setup`: run it in a terminal, so it can ask, or add the pgpass line from step 5.
-- **"can't reach PostgreSQL ... connection refused":** PostgreSQL isn't running, or it isn't on port 5432 (set `database.port` in `config.json`).
+- **"nothing answered", "connection refused" or "connection timeout expired":** check that PostgreSQL is running and `database.host`/`database.port` name its listener. On Windows, `Get-Service postgresql*` in PowerShell lists the service; on Linux, use `systemctl status postgresql`. Start the installed service if stopped, then run `python -m decklab.db status`. An unclassified connection error is not proof the service is down; `decklab/data/logs/db.log` on the PC holds its detail.
+- **PostgreSQL answered but Deck Lab couldn't sign in, or its database/roles don't exist:** run `python -m decklab.db setup` on the PC. A refused `postgres` password on Windows has the reset procedure below. Setup refuses PostgreSQL older than 16 before creating roles or a database.
 - **"Ident authentication failed", "Peer authentication failed" or "no pg_hba.conf entry"** on Linux: PostgreSQL doesn't take a password on `127.0.0.1`. `sudo -u postgres psql -c "show hba_file"` says where its `pg_hba.conf` is: set the `host` lines for `127.0.0.1/32` and `::1/128` to `scram-sha-256`, then `sudo systemctl reload postgresql`. Give `postgres` a password (step 5) and run `python -m decklab.db setup` again as yourself, not with `sudo`.
 - **A locale or encoding error** from `setup`, `restore` or the restore check: the PostgreSQL cluster needs a UTF-8 (or C) locale. Make it again with `initdb --locale=C.UTF-8` (or your own UTF-8 locale, such as `en_AU.UTF-8`).
 - **"Failed to connect to bus"** from `homenet` or `schedule` on Linux: `systemctl --user` can't find your session (after `sudo -u`, `su` or from cron). Log in as that user over SSH, or `export XDG_RUNTIME_DIR=/run/user/$(id -u)`, with lingering on.
@@ -492,3 +712,27 @@ Phones and tablets bookmark the gate's address instead of the PC's. A Deck Lab p
 - **"the database holds no inventory"** or **"the database holds no decks":** run `python -m decklab.db setup` again. It starts the empty collection and deck library on a new database.
 - **The page says the card data isn't ready:** wait for the download, or run `python -m decklab.lib.cards update` and read what it says.
 - **The server's log** is `decklab/data/logs/server.log` when it runs in the background.
+
+### Windows postgres password reset
+
+Use this only for the local PostgreSQL installation you administer when its `postgres` password is forgotten. Stop Deck Lab first and keep this recovery window short: temporary `trust` authentication lets local programs connect as `postgres`. Never enable it for a network range or all users/databases.
+
+1. In an administrator PowerShell, run `Get-Service postgresql*` and note the installed service name (for example `postgresql-x64-18`). Find that installation's data folder and save a copy of `pg_hba.conf` so its original authentication can be restored.
+2. Add these temporary lines **before** other matching host rules:
+
+   ```text
+   host postgres postgres 127.0.0.1/32 trust
+   host postgres postgres ::1/128      trust
+   ```
+
+3. Restart that installed service, for example `Restart-Service postgresql-x64-18`. Open its `psql` from PowerShell (change `18` if another version is installed):
+
+   ```powershell
+   & 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -h 127.0.0.1 -U postgres -d postgres
+   ```
+
+   At the `psql` prompt, enter `\password postgres`, type the new password twice, then `\q`. The password is prompted, never placed in a command line or config.json.
+4. Immediately restore the original `pg_hba.conf` (removing both temporary lines), and restart the same PostgreSQL service again. Keep its original password authentication, normally `scram-sha-256`.
+5. Verify the new password with `psql -h 127.0.0.1 -U postgres -d postgres -W` from the same installation, then `\q`. Run `python -m decklab.db setup` and `python -m decklab.doctor` from the Deck Lab folder.
+
+PostgreSQL uses the [first matching authentication rule](https://www.postgresql.org/docs/current/auth-pg-hba-conf.html); on Windows changes also apply to new connections immediately. The interactive [psql password command](https://www.postgresql.org/docs/current/app-psql.html) avoids putting a new password in shell history. These are recovery instructions, never steps Deck Lab runs automatically.

@@ -125,7 +125,7 @@ FOLLOW_UP_FAILED = 3            # saved, but the deck tables' refresh didn't fin
 QUEUE_FLAGS = {"name": "name", "set": "set_code", "collector_number": "number", "finish": "finish",
                "quantity": "quantity", "for": "for_deck", "printing": "printing", "listed_aud": "listed_aud",
                "listed_at": "listed_at", "in_stock": "in_stock", "checked": "checked", "notes": "notes",
-               "state": "state", "source": "source"}
+               "state": "state", "source": "source", "buy_under_aud": "buy_under_aud"}
 
 
 def register(sub):
@@ -319,6 +319,7 @@ def register(sub):
     sp.add_argument("--for", dest="for_deck", metavar="FOR")
     sp.add_argument("--printing", choices=("any", "exact"))
     sp.add_argument("--listed-aud")
+    sp.add_argument("--buy-under-aud", help="optional AUD unit-price market target; blank clears it (never spending)")
     sp.add_argument("--listed-at")
     sp.add_argument("--in-stock", choices=("", "yes", "no"))
     sp.add_argument("--checked", metavar="YYYY-MM-DD")
@@ -408,7 +409,10 @@ def read_product(path):
 def read_queue_csv(path):
     from decklab.lib.inventory import rules
     try:
-        return rules.parse_csv(io.StringIO(_read_text(path), newline=""), list(QUEUE_FIELDS), path)
+        text = _read_text(path)
+        head = next(csv.reader(io.StringIO(text)), [])
+        columns = list(QUEUE_FIELDS[:-1]) if head == list(QUEUE_FIELDS[:-1]) else list(QUEUE_FIELDS)
+        return rules.parse_csv(io.StringIO(text, newline=""), columns, path)
     except csv.Error as e:
         raise ValueError(f"{path}: {e}") from None
 
@@ -996,7 +1000,7 @@ def watchlist_list(args):
 def watchlist_set(args):
     values = {}
     for column, attr in QUEUE_FLAGS.items():
-        value = getattr(args, attr)
+        value = getattr(args, attr, None)
         if value is not None:
             values[column] = value
     if args.add:
@@ -1009,7 +1013,11 @@ def watchlist_set(args):
         params = {"select": args.select, "values": values, "repo": _repo()}
     if not values:
         raise ValueError("Say what to set (--quantity, --state, --listed-aud, ...)")
-    return _run(args, _ops().Op("watchlist.set", params))
+    operation = _ops().Op("watchlist.set", params)
+    if "buy_under_aud" in values:
+        from decklab.lib.inventory import ops_shop_references
+        operation = ops_shop_references.guard_cli(operation, _ops().current())
+    return _run(args, operation)
 
 
 def watchlist_remove(args):
@@ -1017,4 +1025,7 @@ def watchlist_remove(args):
 
 
 def watchlist_apply(args):
-    return _run(args, _ops().Op("watchlist.replace", {"rows": read_queue_csv(args.csv), "repo": _repo()}))
+    operation = _ops().Op("watchlist.replace", {"rows": read_queue_csv(args.csv), "repo": _repo()})
+    from decklab.lib.inventory import ops_shop_references
+    operation = ops_shop_references.guard_cli(operation, _ops().current())
+    return _run(args, operation)

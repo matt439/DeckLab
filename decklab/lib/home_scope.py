@@ -20,7 +20,8 @@ sees and changes everything. On Linux other users of the PC (and their
 services) reach 127.0.0.1 too, so there it counts only when the connection
 is this user's: same_user() finds the client's socket in /proc/net/tcp (or
 tcp6) by its two ends and compares its owner with os.getuid(). Elsewhere
-(Windows) the header from loopback is enough, as before.
+(Windows/macOS) the header from loopback is enough unless the server's optional
+script_secret is configured; server_http then also checks its exact secret header.
 
 Tests point PROC at canned files and pass byteorder: /proc/net/tcp writes
 each 32-bit word of an address in the machine's byte order.

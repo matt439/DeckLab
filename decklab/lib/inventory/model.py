@@ -18,6 +18,8 @@ accessors that return None when the text isn't valid (CardRow.qty, TokenRow.qty,
                                                    for a row with no location
       dice          {space: Sheet of DiceRow}      a space's dice.csv (E7-S24): its owned dice and
                                                    counters, apart from its token cards
+      loans         {space: Sheet of LoanRow}      private loose-card loans and return records;
+                                                   only counts enter a public inventory pool
       imports       {space: (ImportInfo, ...)}     names and sizes of its raw imports, no content
       status        Sheet of StatusRow             products/status.csv (its own rows: a status
                                                    row needs no product file, nor a file a row)
@@ -82,13 +84,13 @@ from pathlib import PurePosixPath
 from types import MappingProxyType
 from typing import Mapping
 
-from . import dice_rules, paths, rules
+from . import dice_rules, loan_rules, paths, rules
 
 INCOMING = ("preordered", "ordered")         # product statuses not in a collection yet
 PREVIEW = "~preview"                         # the end of a preview's revision (never saved)
 QUEUE_FIELDS = ("name", "set", "collector_number", "finish", "quantity", "for",
                 "printing", "listed_aud", "listed_at", "in_stock", "checked", "notes",
-                "state", "source")                # purchases.QUEUE_FIELDS
+                "state", "source", "buy_under_aud")                # purchases.QUEUE_FIELDS
 
 
 def name_order(name):
@@ -229,6 +231,7 @@ class WatchRow(Row):
     for_deck = property(lambda self: self.get("for"))
     printing = property(lambda self: self.get("printing"))
     listed_aud = property(lambda self: self.get("listed_aud"))
+    buy_under_aud = property(lambda self: self.get("buy_under_aud", ""))
     listed_at = property(lambda self: self.get("listed_at"))
     in_stock = property(lambda self: self.get("in_stock"))
     checked = property(lambda self: self.get("checked"))
@@ -265,6 +268,13 @@ class DiceRow(Row):
     design = property(lambda self: self.get("design"))
     quantity = property(lambda self: self.get("quantity"))
     notes = property(lambda self: self.get("notes"))
+
+
+class LoanRow(Row):
+    """A stable loan record; its public pool projection is counts only."""
+    COLUMNS = loan_rules.FIELDS
+    key = property(lambda self: (self.get("id"),))
+    qty = property(lambda self: _int(self.get("quantity")))
 
 
 class LocationRow(Row):
@@ -632,9 +642,12 @@ class Inventory:
     locations_ready: bool = field(default=True, compare=False)
     dice: Mapping = field(default_factory=dict)
     dice_ready: bool = field(default=True, compare=False)
+    loans: Mapping = field(default_factory=dict)
+    loans_ready: bool = field(default=True, compare=False)
+    targets_ready: bool = field(default=True, compare=False)
 
     MAPPINGS = ("collections", "tokens", "locations", "imports", "payloads", "decks", "deck_aliases", "accessory_images",
-                "dice")
+                "dice", "loans")
 
     def __post_init__(self):
         for name in self.MAPPINGS:
@@ -670,7 +683,7 @@ class Inventory:
 
     def spaces(self):
         """Every space with a collection, tokens or imports: home first, then by id."""
-        found = set(self.collections) | set(self.tokens) | set(self.imports) | set(self.dice) | {paths.HOME}
+        found = set(self.collections) | set(self.tokens) | set(self.imports) | set(self.dice) | set(self.loans) | {paths.HOME}
         return [paths.HOME] + sorted(found - {paths.HOME})
 
     def collection(self, space=paths.HOME):
@@ -683,6 +696,9 @@ class Inventory:
     def dice_set(self, space=paths.HOME):
         """A space's dice and counters Sheet (E7-S24); an empty one (exists False) when it has none."""
         return self.dice.get(space) or Sheet(paths.dice(space))
+
+    def loan_set(self, space=paths.HOME):
+        return self.loans.get(space) or Sheet(paths.loans(space))
 
     def location_sheet(self, space=paths.HOME):
         """A space's locations Sheet; an empty one (exists False) when no row has a location."""
@@ -829,6 +845,13 @@ class Inventory:
         if made:
             dice[space] = Sheet(paths.dice(space), DiceRow.COLUMNS, made, True)
         return self.replace(dice=dict(sorted(dice.items())))
+
+    def with_loans(self, space, rows):
+        made = tuple(sorted((coerce(LoanRow, row) for row in rows), key=lambda row: loan_rules.sort_key(row.as_dict())))
+        loans = {key: value for key, value in self.loans.items() if key != space}
+        if made:
+            loans[space] = Sheet(paths.loans(space), LoanRow.COLUMNS, made, True)
+        return self.replace(loans=dict(sorted(loans.items())))
 
     def with_status_rows(self, rows):
         """products/status.csv holding rows (StatusRow's or mappings), always with the current

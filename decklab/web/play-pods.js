@@ -72,6 +72,7 @@ function podCard(entry, data, editable = true) {
       seat.type === "deck" ? (podList(seat.deck) ? playListWords(seat.deck) : seat.deck?.title || "A deck")
         : seat.commander || "External opponent"))),
     record.notes ? el("p", { class: "play-note", text: record.notes }) : null,
+    typeof playCounterPart === "function" ? playCounterPart(record) : null,
     playSnapshotDetails(record.seats.filter(seat => seat.type === "deck").map(seat => seat.deck).filter(Boolean), headId));
   if (editable && entry.can?.edit === true && podSha(entry.sha256)) {
     const button = el("button", { type: "button", class: "btn btn-quiet", text: "Correct this pod game", "aria-describedby": headId });
@@ -79,6 +80,8 @@ function podCard(entry, data, editable = true) {
     const owner = podOwnerContext(data, button, card, entry);
     button.addEventListener("click", () => { if (podOwner(owner) && !button.disabled) podForm(owner); });
   }
+  const remove = editable && typeof playDeleteButton === "function" ? playDeleteButton(entry, data, card, headId) : null;
+  if (remove) card.append(remove);
   return card;
 }
 
@@ -94,6 +97,8 @@ function playPodSection(data, deckId = "") {
     button.addEventListener("click", () => { if (podOwner(owner) && !button.disabled) podForm(owner); });
   }
   section.append(heading);
+  const summary = deckId ? podResultsPart(data.pod_summary) : null;
+  if (summary) section.append(summary);
   const resume = podCounterResumeAction(data, section);
   if (resume) section.append(resume);
   section.append(el("p", { class: "sub", text: "Three or four players. Pod results stay separate from 1v1 Head to head." }),
@@ -101,6 +106,29 @@ function playPodSection(data, deckId = "") {
       : emptyBox(deckId ? "No pod games with this deck yet." : "No pod games have been recorded yet."));
   if (entries.length) section.append(el("p", { class: "sub play-pod-count", text: `${plural(entries.length, "pod game")} recorded.` }));
   return section;
+}
+
+function podResultsPart(summary) {
+  if (!summary || !Number.isSafeInteger(summary.minimum_games) || summary.minimum_games < 1) return null;
+  if (summary.status === "insufficient") return el("p", { class: "sub play-pod-summary", text:
+    `Not enough pod games yet: at least ${summary.minimum_games} decided pods are needed.` });
+  if (summary.status === "unavailable") return el("p", { class: "sub play-pod-summary", text:
+    "Pod results couldn't be worked out. The records are still listed below." });
+  if (summary.status !== "ready" || !Number.isSafeInteger(summary.wins) || !Number.isSafeInteger(summary.decided)
+      || summary.decided < summary.minimum_games || summary.wins < 0 || summary.wins > summary.decided
+      || !Number.isSafeInteger(summary.draws) || summary.draws < 0
+      || ![summary.fair_share, summary.range?.low, summary.range?.high].every(value => Number.isFinite(value) && value >= 0 && value <= 1)
+      || summary.range.low > summary.range.high) return null;
+  const part = el("div", { class: "play-pod-summary" }, el("p", { text:
+    `Won ${summary.wins} of ${summary.decided} decided pods · ${plural(summary.draws, "draw")} counted separately. `
+    + `Fair share across those table sizes: ${pct(summary.fair_share)}. 95% Wilson range: ${pct(summary.range.low)}–${pct(summary.range.high)}.` }));
+  const winners = (Array.isArray(summary.outside_winners) ? summary.outside_winners : []).filter(row => row && typeof row.commander === "string" && row.commander.trim()
+    && Number.isSafeInteger(row.wins) && row.wins > 0).slice(0, 3);
+  if (winners.length) part.append(el("p", { class: "sub", text: "Most frequent outside winners against this deck: "
+    + winners.map(row => `${row.commander} (${plural(row.wins, "win")})`).join("; ") }));
+  if (Number.isSafeInteger(summary.excluded) && summary.excluded > 0) part.append(el("p", { class: "sub", text:
+    `${plural(summary.excluded, "ambiguous or incomplete pod")} left out.` }));
+  return part;
 }
 
 function podOwnerContext(data, button, host, entry = null, deckId = "") {
@@ -141,12 +169,14 @@ function podFormHere(ctx) {
     (!ctx.counterPreset || ctx.counterPreset.isCurrent()) && podFrameHere(ctx.editFrame) && ctx.form.parentNode === ctx.editFrame.body &&
     ctx.reviewButton.parentNode === ctx.editFrame.foot && ctx.reviewButton.isConnected &&
     ctx.form.contains(ctx.seatsBox) && ctx.form.contains(ctx.count) && ctx.form.contains(ctx.date) &&
-    ctx.form.contains(ctx.result) && ctx.form.contains(ctx.notes) && ctx.controls.every(row =>
+    ctx.form.contains(ctx.result) && ctx.form.contains(ctx.notes) && (!ctx.counterDetails || ctx.counterDetails.here(ctx.form))
+    && ctx.controls.every(row =>
       ctx.seatsBox.contains(row.box) && [row.player, row.type, row.list, row.commander].every(node => row.box.contains(node)));
 }
 function podDraft(ctx) {
   return { profile: ctx.profileId, id: ctx.previewId || ctx.record?.id || null, sha256: ctx.sha256 || null,
     mode: "pod", game_version: 2, date: ctx.date.value, result: ctx.result.value, notes: ctx.notes.value,
+    ...(ctx.counterDetails ? { counter: ctx.counterDetails.read(ctx.active) } : {}),
     seats: ctx.controls.map(row => row.type.value === "deck"
       ? { seat_id: row.seat.seat_id, type: "deck", player: row.player.value, deck: playChoice(podSelectedList(row)) }
       : { seat_id: row.seat.seat_id, type: "external", player: row.player.value, commander: row.commander.value }) };
@@ -238,9 +268,11 @@ function podForm(owner, preset = null, onSaved = null) {
   });
   for (const node of [ctx.date, ctx.result, ctx.notes]) for (const event of ["input", "change"]) node.addEventListener(event, change);
   render();
-  ctx.form.append(el("p", { class: "sub", text: "Choose at least one of your collection's Commander decks. External opponent and commander labels stay private to your collection." }),
+  ctx.counterDetails = playCounterFields(ctx.record?.counter || preset?.counter, ctx.active.map(id => ({ id, name: ctx.seats.get(id).player })));
+  for (const node of ctx.counterDetails?.fields || []) for (const event of ["input", "change"]) node.addEventListener(event, change);
+  add(ctx.form, [el("p", { class: "sub", text: "Choose at least one of your collection's Commander decks. External opponent and commander labels stay private to your collection." }),
     playField("Players", ctx.count), playField("Date played", ctx.date), ctx.seatsBox, playField("Result", ctx.result),
-    playField("Notes (optional)", ctx.notes), ctx.error);
+    playField("Notes (optional)", ctx.notes), ctx.counterDetails?.root, ctx.error]);
   ctx.editFrame.body.append(ctx.form);
   ctx.editFrame.foot.append(el("button", { type: "button", class: "btn", text: "Cancel", onclick: () => {
     if (podFormHere(ctx) && podTop(ctx.sheet) && !ctx.pending) ctx.sheet.close();
@@ -334,7 +366,8 @@ function podCounterInput(ctx) {
       ({ source_id: `c${index + 1}`, label })) };
   });
   return { input: { profile: ctx.profileId, space: ctx.space, session_id: podLifeSessionId(),
-    date: draft.date, notes: draft.notes, seats } };
+    date: draft.date, notes: draft.notes, seats,
+    counter_markers: [...new Set(ctx.controls.flatMap(control => lifeMarkerHints(podSelectedList(control)?.counter_markers)))] } };
 }
 
 function podCounterStart(ctx, owner) {
@@ -356,7 +389,7 @@ function podCounterStart(ctx, owner) {
   } catch (_) { ctx.error.textContent = "Choose valid saved Commander lists and player labels before starting the counter."; }
 }
 
-/** A counter result enters the ordinary explicit review. Counter-only totals never enter the API body. */
+/** A counter result enters explicit review; only the chosen optional facts, never its raw packet, are saved. */
 function podCounterRecord(owner, packet, bridge) {
   if (!podContextOwner(owner) || document.visibilityState === "hidden" || !bridge?.isCurrent?.() ||
       packet.profile !== owner.profileId || packet.space !== owner.space || !packet.ended ||
@@ -369,7 +402,7 @@ function podCounterRecord(owner, packet, bridge) {
   const session = packet.session_id;
   const isCurrent = () => podContextOwner(owner) && document.visibilityState !== "hidden" && bridge.isCurrent() &&
     packet.session_id === session && packet.profile === owner.profileId && packet.space === owner.space;
-  const preset = { date: packet.date, notes: packet.notes, result, seats, isCurrent };
+  const preset = { date: packet.date, notes: packet.notes, result, seats, isCurrent, counter: playCounterFacts(packet) };
   podForm(owner, preset, () => isCurrent() ? bridge.onSaved() : false);
 }
 
@@ -379,7 +412,8 @@ function podReviewed(answer, payload, space, saved = false) {
       !podSha(saved ? answer.sha256 : answer.review_sha256) || (saved ? answer.saved !== true : answer.preview !== true) ||
       saved && (record.version !== 1 || record.kind !== "games" || !Number.isSafeInteger(record.revision) || record.revision < 1) ||
       payload.id && (saved ? record.id : answer.id) !== payload.id || record.space !== space || record.date !== payload.date ||
-      record.result !== payload.result || record.notes !== podTrim(payload.notes) || record.seats.length !== payload.seats.length) return null;
+      record.result !== payload.result || record.notes !== podTrim(payload.notes) || record.seats.length !== payload.seats.length
+      || lifeSourceStable(record.counter ?? null) !== lifeSourceStable(payload.counter ?? null)) return null;
   for (let i = 0; i < payload.seats.length; i++) {
     const seat = record.seats[i], wanted = payload.seats[i];
     if (seat.seat_id !== wanted.seat_id || seat.type !== wanted.type || seat.player !== podTrim(wanted.player)) return null;
@@ -392,6 +426,9 @@ function podReviewed(answer, payload, space, saved = false) {
 async function podPreview(ctx) {
   if (!podFormHere(ctx) || !podTop(ctx.sheet) || ctx.pending || ctx.reviewButton.disabled) return;
   let payload;
+  if (ctx.counterDetails) {
+    try { ctx.counterDetails.read(ctx.active); } catch (error) { ctx.error.textContent = error.message; return; }
+  }
   try { payload = podDraft(ctx); }
   catch (_) { ctx.error.textContent = "Choose a saved Commander deck for each deck seat."; return; }
   if (ctx.counterPreset && !ctx.controls.some(row => row.type.value === "deck" && podSelectedList(row)?.can_record === true)) {

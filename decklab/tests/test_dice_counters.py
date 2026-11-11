@@ -69,12 +69,8 @@ class RulesTests(unittest.TestCase):
         self.assertEqual(dice_rules.identity({**D20, "design": "RED", "quantity": "9"}), dice_rules.identity(D20))
 
 
-class OpsTests(unittest.TestCase):
-
-    def setUp(self):
-        self.root = tree()
-        self.addCleanup(shutil.rmtree, self.root, True)
-        self.addCleanup(inventory.use(FileInventory(self.root)))
+class DiceOperationCases:
+    """Operation rules shared by the files fixture and disposable PostgreSQL backend."""
 
     def sha(self, space="home"):
         sheet = inventory.current().dice_set(space)
@@ -83,22 +79,21 @@ class OpsTests(unittest.TestCase):
     def apply(self, kind, **params):
         return inventory.apply(Op(f"dice.{kind}", params), ACTOR, f"{kind} dice")
 
-    def test_add_edit_and_remove_keep_the_file_sorted_and_apart_from_the_tokens(self):
+    def test_add_edit_and_remove_keep_rows_sorted_and_apart_from_the_tokens(self):
         _, summary = self.apply("add", space="home", sha256=None, row=POISON)
         self.assertEqual(summary.text, "Added poison counter ×5 to the home dice and counters")
         _, summary = self.apply("add", space="home", sha256=self.sha(), row=D20)
         self.assertEqual((summary.extra["index"], summary.counts), (0, {"items": 7}))
-        path = self.root / "magic" / "dice.csv"
-        self.assertEqual(path.read_text(encoding="utf-8"),
+        self.assertEqual(self.dice_text(),
                          "type,size,kind,design,quantity,notes\ndie,d20,,red,2,\ncounter,,poison,,5,\n")
-        self.assertFalse((self.root / "magic" / "tokens.csv").exists())
+        self.assertFalse(inventory.current().token_set("home").exists)
         _, summary = self.apply("edit", space="home", sha256=self.sha(), base=POISON, row={**POISON, "quantity": "0"})
         self.assertEqual(summary.text, "Changed poison counter ×0 in the home dice and counters")
-        self.assertIn("counter,,poison,,0,", path.read_text(encoding="utf-8"))   # 0 keeps the row
+        self.assertIn("counter,,poison,,0,", self.dice_text())   # 0 keeps the row
         after, summary = self.apply("remove", space="home", sha256=self.sha(), base={**POISON, "quantity": "0"})
         self.assertEqual([r.as_dict() for r in after.dice_set("home").rows], [D20])
         self.apply("remove", space="home", sha256=self.sha(), base=D20)
-        self.assertFalse(path.exists())                 # no rows: no file
+        self.assertIsNone(self.dice_text())              # no rows: no stored list
         self.assertEqual(inventory.current().spaces(), ["home"])
 
     def test_refusals(self):
@@ -115,13 +110,24 @@ class OpsTests(unittest.TestCase):
             self.apply("add", space="home", sha256=sha, row={**POISON, "quantity": "lots"})
         # A person's space is its own list.
         self.apply("add", space="user2", sha256=None, row=POISON)
-        self.assertTrue((self.root / "magic" / "people" / "user2" / "dice.csv").exists())
+        self.assertIsNotNone(self.dice_text("user2"))
         self.assertEqual(self.sha(), sha)
 
     def test_nothing_is_recorded_before_migration_0020(self):
         before = inventory.current().replace(dice_ready=False)
         with self.assertRaisesRegex(Invalid, "migration 0020"):
             ops_dice.add(before, space="home", sha256=None, row=D20)
+
+
+class OpsTests(DiceOperationCases, unittest.TestCase):
+    def setUp(self):
+        self.root = tree()
+        self.addCleanup(shutil.rmtree, self.root, True)
+        self.addCleanup(inventory.use(FileInventory(self.root)))
+
+    def dice_text(self, space="home"):
+        path = self.root / paths.dice(space)
+        return path.read_text(encoding="utf-8") if path.exists() else None
 
     def test_a_list_with_rows_it_cant_read_is_not_rewritten(self):
         (self.root / "magic" / "dice.csv").write_text("type,size,kind,design,quantity,notes\ndie,d7,,,1,\n",

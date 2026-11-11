@@ -194,6 +194,7 @@ def merge_record(into, record):
     versions, or a card's tallies of different lengths."""
     if into.get("v") != record.get("v"):
         raise ValueError(f"card records of versions {into.get('v')} and {record.get('v')} can't be merged")
+    before_games = into["games"]
     into["games"] += record["games"]
     into["bad"] += record["bad"]
     for name in ("wins", "first"):
@@ -215,6 +216,17 @@ def merge_record(into, record):
                 _add_peaks(into["tokens"][side].setdefault(name, []), peaks)
     else:
         into.pop("tokens", None)
+    if "development" in into or "development" in record:
+        from . import development_data
+        old = into.get("development")
+        old = old if development_data.valid(old, before_games) else None
+        new = record.get("development")
+        if development_data.valid(new, record["games"]):
+            old = development_data.merge(old, new)
+        if old is not None:
+            into["development"] = old
+        else:
+            into.pop("development", None)
     return into
 
 
@@ -263,6 +275,10 @@ class Game:
         self.tokens = {}            # token id -> [(owner seat or None, logged name), its zone now]
         self.on_field = {}          # (seat, name) -> that token's copies on the battlefield now
         self.peak = {}              # (seat, name) -> the most of them there at once
+        self.development_seen = False
+        self.development_bad = False
+        self.development = None
+        self.last_turn = 0
 
     def fail(self, why):
         if self.problem is None:
@@ -280,6 +296,32 @@ class Game:
     def _line(self, text):
         f = text.split("|")
         kind = f[1]
+        if kind in ("development", "development_error"):
+            # Optional transport must never poison the existing card record.
+            from . import development_data
+            try:
+                if kind == "development_error" or f[2] != "1":
+                    raise ValueError
+                if f[3:] == ["start"]:
+                    if self.development_seen or self.last_turn > 1:
+                        raise ValueError
+                    self.development = {1: {}, 2: {}}
+                else:
+                    if len(f) != 7 or self.development is None:
+                        raise ValueError
+                    round, seat, lands, drawn = map(int, f[3:])
+                    if (seat not in SEATS or not 1 <= round <= development_data.ROUNDS
+                            # Subscribers may log the observation immediately before
+                            # Forge's ordinary Turn line for the next global turn.
+                            or self.last_turn < 2*round
+                            or not 0 <= lands <= development_data.MAX_VALUE or not 0 <= drawn <= development_data.MAX_VALUE
+                            or round in self.development[seat]):
+                        raise ValueError
+                    self.development[seat][round] = (lands, drawn)
+            except (ValueError, TypeError, IndexError):
+                self.development_bad = True
+            self.development_seen = True
+            return
         if kind == "zone":      # the most common line by far: kept short
             if self.version is None:
                 return self.fail("no DL|log line first")
@@ -397,6 +439,7 @@ class Game:
         "in hand by turn 3" (early_games): an extra turn is a turn of its own here, as it
         is in the game. A seat other than 1 or 2 is left alone."""
         if seat in self.own_turns:
+            self.last_turn = turn
             self.own_turns[seat] += 1
             if self.own_turns[seat] == EARLY_TURN:
                 self.early_cut[seat] = turn
@@ -539,4 +582,11 @@ def add(record, game, winner, first, side, name):
                 counts = record["tokens"][s].setdefault(logged, [])
                 counts.extend([0] * (n - len(counts)))
                 counts[n - 1] += 1
+    if game.development_seen:
+        from . import development_data
+        observed = None if game.development_bad else development_data.game(game.development, side)
+        if observed is None:
+            observed = development_data.empty()
+            observed["bad"] = 1
+        record["development"] = development_data.merge(record.get("development"), observed)
     return None

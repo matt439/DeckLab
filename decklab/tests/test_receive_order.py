@@ -284,6 +284,29 @@ class ReceiptTests(support.PoolTestCase):
         row = self.collection()[("Llanowar Elves", "fdn")]
         self.assertEqual((row["condition"], row["language"]), ("", ""))     # never assumed NM or English
 
+    def test_received_copy_checks_keep_the_breakdown_and_a_later_refusal_changes_nothing(self):
+        self.cards_csv("collection.csv", ("Llanowar Elves", "fdn", "227", "nonfoil", 2))
+        existing = cards_in(self.magic / "collection.csv")[0]
+        existing.update(condition="NM", language="en", notes="already in storage")
+        (self.magic / "collection.csv").write_bytes(rules.collection_csv_bytes([existing]))
+        base = cards_in(self.magic / "orders/test.csv")[0]
+        arrived = [dict(base, quantity="1", condition="LP", language="ja", notes="checked corner wear"),
+                   dict(base, quantity="1", condition="", language="", notes="unreported copy")]
+        self.token_component()
+        before = self.tree()
+        with self.assertRaisesRegex(Invalid, "Complete these first"):
+            self.receive({"id": "cards", "verified": True, "rows": arrived}, {"id": "tokens", "verified": False})
+        self.assertEqual(self.tree(), before)       # no partial count notes, archives, deck tables or record changes
+        self.receive({"id": "cards", "verified": True, "rows": arrived})
+        merged = self.collection()[("Llanowar Elves", "fdn")]
+        self.assertEqual((merged["quantity"], merged["condition"], merged["language"]), ("4", "", ""))
+        self.assertIn("Copies: condition 2 NM, 1 LP, 1 not recorded", merged["notes"])
+        self.assertIn("Copies: language 2 en, 1 ja, 1 not recorded", merged["notes"])
+        self.assertIn("already in storage; checked corner wear; unreported copy", merged["notes"])
+        archived = cards_in(self.magic / "orders/received/test.csv")
+        self.assertEqual([(r["condition"], r["language"], r["notes"]) for r in archived],
+                         [("LP", "ja", "checked corner wear"), ("", "", "unreported copy")])
+
     def test_bad_paths_cancelled_components_and_existing_archives_are_refused(self):
         conflicts = "where its contents are kept conflicts"
         for path, words in (("../outside.csv", conflicts), ("magic/collection.csv", conflicts),

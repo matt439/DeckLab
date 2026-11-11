@@ -297,6 +297,16 @@ class TestLandCount(unittest.TestCase):
 
 
 class TestColours(unittest.TestCase):
+    def test_land_source_counts_do_not_depend_on_a_colour_having_spells(self):
+        # Dropping the final green spell removes its casting check, but the
+        # unchanged Forests still provide twelve green land sources to Compare.
+        green = run("Deck\n12 Forest\n12 Mountain\n36 Grizzly Bears\n")
+        red = run("Deck\n12 Forest\n12 Mountain\n36 Fireball\n")
+        self.assertNotIn("G", [row["colours"] for row in red["colours"]["colours"]])
+        expected = {"W": 0, "U": 0, "B": 0, "R": 12, "G": 12, "C": 0}
+        self.assertEqual(green["colours"]["land_sources_by_colour"], expected)
+        self.assertEqual(red["colours"]["land_sources_by_colour"], expected)
+
     def test_hand_checked_mono_colour_requirement(self):
         # Garruk's Companion GG is "CC by turn 2": 21 sources in 60 cards; Grizzly Bears 1G is
         # "1C by turn 2": 13. 12 Forests make 12 green sources: both short, CC the hardest.

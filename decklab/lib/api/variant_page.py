@@ -484,9 +484,11 @@ def _sideboard(sections):
     return sorted((l.quantity, l.name) for l in sections.get("Sideboard", []))
 
 
-def _submit(run, rerun=False):
+def _submit(run, rerun=False, *, profile=None, request=None):
     try:
-        forge_runs.COORD_JOBS.submit(_job_key(run.test), run, rerun=rerun)
+        from . import run_recovery
+        run_recovery.submit(run.forge, "variant_more" if run.extend else "variant", run, profile, request,
+                            _job_key(run.test), rerun=rerun)
     except jobs.Busy as e:
         raise ApiError(503, COORD_STOPPING if e.stopping else COORD_BUSY) from None
 
@@ -558,7 +560,7 @@ def run_variant(body):
                _field_options(forge, base, seen) if against_ == "field" else None)
     test = forge.variants.test_id(base, variant, against_, mode, field_space=(options or {}).get("space"))
     _submit(_VariantRun(forge, test, base, cards, against_, mode, profile["name"], field_options=options,
-                        by_id=profile["id"]), rerun=True)
+                        by_id=profile["id"]), rerun=True, profile=profile, request=data)
     return _view(forge, test, forge_runs._Seen(profile))
 
 
@@ -636,5 +638,6 @@ def more_variant(body):
     else:
         options = _field_options(forge, base, seen) if against_ == "field" else None
     _submit(_VariantRun(forge, test, base, cards, against_, summary.get("mode"), profile["name"], extend=test,
-                        opponents=summary.get("limited"), field_options=options, by_id=profile["id"]), rerun=True)
+                        opponents=summary.get("limited"), field_options=options, by_id=profile["id"]),
+            rerun=True, profile=profile, request=data)
     return _view(forge, test, seen)

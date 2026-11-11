@@ -60,7 +60,7 @@ async function saveConsidering(data, change, onError = null) {
   const id = data.summary.id;
   try {
     const answer = await apiWrite("/api/deck/considering", { id, sha256: data.considering.sha256, ...change });
-    state.library = null;
+    invalidateLibrary();
     const here = parseHash();
     const onDeck = here.path === "deck" && addressDeckId(here.params.get("id") || "") === id;
     if (change.action === "move" || answer?.warnings?.length || answer?.stale_tables?.length) {

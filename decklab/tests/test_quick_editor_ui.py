@@ -123,7 +123,7 @@ class QuickEditorUiTests(unittest.TestCase):
           apiWrite = async (path, body) => {
             requests.push([path,body]);
             return {sections:{Deck:[{qty:2,name:bolt.name,card:bolt}]},
-              count:{lines:1,cards:2},unknown:[],errors:[],warnings:[]};
+              count:{lines:1,cards:2},unknown:[],errors:[],warnings:[],marks:false,availability_error:'Availability is unavailable in this synthetic preview.'};
           };
           main.querySelector('.bar-add').click();
           assert.equal(document.querySelectorAll('dialog').length, 0);
@@ -132,7 +132,7 @@ class QuickEditorUiTests(unittest.TestCase):
           assert(document.querySelector('dialog').textContent.includes('Check the list'));
           input('paste-text', '2 Lightning Bolt');
           button(document.querySelector('dialog'), 'Check the list').click(); await settle();
-          same(requests, [['/api/decklist/parse',{text:'2 Lightning Bolt'}]]);
+          same(requests, [['/api/decklist/parse',{text:'2 Lightning Bolt',context:{id:'casual/sample'}}]]);
           const sheet = document.querySelector('dialog');
           button(sheet, 'Add to the list'); button(sheet, 'Replace the list');
           assert(sheet.querySelector('.paste-diff').textContent.includes('Added 2 Lightning Bolt'));

@@ -1,4 +1,4 @@
-"""Commander Spellbook's two-card combos, for the Commander checks (E9-S23;
+"""Commander Spellbook's named two- and three-card combos, for the Commander checks (E9-S23;
 design in decklab/design/commander-sources.md).
 
 Usage (from the repo root):
@@ -15,9 +15,11 @@ Commander Spellbook's public export (variants.json.gz, about 30 MB) into
 decklab/data/combos/ when it's missing or more than MAX_BULK_AGE old (or with
 --force), asking only for a newer file than the one on the PC (If-None-Match
 and If-Modified-Since). A failed download keeps the old file. The export is
-then reduced once to two_card.json, about 1 MB: the Commander-legal combos of
-exactly two cards (one copy each, no template pieces such as "a creature with
-power 4 or more", no unreleased cards).
+then reduced to separate two_card.json and three_card.json lists. Both keep only
+Commander-legal named pieces (one copy each, no template or unreleased pieces).
+The three-card list loads lazily, never raises the counted bracket and has no
+early-game flag. A held two-card recipe with only a spare piece is not listed twice;
+a third piece producing a new result remains a distinct recipe.
 
 No decklist is ever sent anywhere: the public list is downloaded and matched
 here, on the PC. Spellbook also offers to look up a submitted decklist; Deck
@@ -79,7 +81,12 @@ CLASSES = ("mass_land_denial", "win", "infinite", "lock", "draw", "near_infinite
 
 
 class ComboListError(ValueError):
-    """The two-card combo list is missing, damaged or in an older layout."""
+    """A reduced combo list is missing, damaged or in an older layout."""
+
+
+def three_path(two_card=None):
+    """Separate lazily read sibling, including when a fixture overrides the two-card path."""
+    return Path(two_card or TWO_CARD_FILE).with_name("three_card.json")
 
 
 # --- Reducing the export -----------------------------------------------------
@@ -111,7 +118,7 @@ def _most_serious(classes):
     return min(classes, key=CLASSES.index, default="other")
 
 
-def _reduce_variant(variant):
+def _reduce_variant(variant, pieces_count=2):
     """One export entry as a two-card combo, or None when it isn't one. Raises
     KeyError, TypeError or ValueError for an entry that can't be read."""
     if variant.get("status", "OK") != "OK" or variant.get("spoiler") is True:
@@ -119,11 +126,11 @@ def _reduce_variant(variant):
     uses, requires = variant["uses"], variant["requires"]
     if not isinstance(uses, list) or not isinstance(requires, list):
         raise TypeError("uses and requires must be lists")
-    if len(uses) != 2 or requires or variant["legalities"]["commander"] is not True:
+    if len(uses) != pieces_count or requires or variant["legalities"]["commander"] is not True:
         return None
     pieces = []
     for use in uses:
-        if use["quantity"] != 1:
+        if type(use["quantity"]) is not int or use["quantity"] != 1:
             return None
         card = use["card"]
         oracle_id, name = card["oracleId"], card["name"]
@@ -134,7 +141,7 @@ def _reduce_variant(variant):
         # zones (a hand, the battlefield) means it works from either.
         pieces.append({"oracle_id": oracle_id, "name": name,
                        "must_be_commander": use.get("mustBeCommander") is True or list(zones) == ["C"]})
-    if pieces[0]["oracle_id"] == pieces[1]["oracle_id"]:
+    if len({piece["oracle_id"] for piece in pieces}) != pieces_count:
         return None
     results = []            # (name, status): S standalone, C contextual, H helper
     for produced in variant["produces"]:
@@ -239,11 +246,12 @@ def _stream_export(path, each):
     return top
 
 
-def reduce_export(export=None, dest=None, log=print):
-    """Reduce Spellbook's export to the two-card combo list. Returns the number
-    of combos. Raises ValueError (or OSError) and leaves dest as it was when the
-    export can't be read, has no date or holds no two-card combos."""
-    export, dest = Path(export or EXPORT_FILE), Path(dest or TWO_CARD_FILE)
+def reduce_export(export=None, dest=None, log=print, *, pieces=2):
+    """Reduce the public export to one requested piece count, leaving dest intact on damage.
+    A validated empty triple list is meaningful; the longstanding pair list must be nonempty."""
+    if pieces not in (2, 3):
+        raise ValueError("Reduce two or three named pieces")
+    export, dest = Path(export or EXPORT_FILE), Path(dest or (TWO_CARD_FILE if pieces == 2 else three_path()))
     kept, seen = [], [0, 0]       # combos; [entries, unreadable entries]
 
     def each(variant):
@@ -251,7 +259,7 @@ def reduce_export(export=None, dest=None, log=print):
         try:
             if not isinstance(variant, dict):
                 raise TypeError("an entry that isn't an object")
-            combo = _reduce_variant(variant)
+            combo = _reduce_variant(variant, pieces)
         except (KeyError, TypeError, ValueError, AttributeError):
             seen[1] += 1
             return
@@ -265,7 +273,7 @@ def reduce_export(export=None, dest=None, log=print):
         raise ValueError("the combo export has no timestamp, so its date is unknown")
     if seen[1] > MAX_MALFORMED * max(seen[0], 1):
         raise ValueError(f"{seen[1]:,} of the combo export's {seen[0]:,} entries can't be read")
-    if not kept:
+    if not kept and pieces == 2:
         raise ValueError(f"the combo export's {seen[0]:,} entries hold no two-card combos")
     data = {"format": FORMAT, "source": EXPORT_URL, "timestamp": timestamp,
             "version": version if isinstance(version, str) else None, "count": len(kept),
@@ -276,7 +284,7 @@ def reduce_export(export=None, dest=None, log=print):
     os.replace(tmp, dest)
     standalone = sum(1 for c in kept if c["standalone"])
     commander = sum(1 for c in kept if any(p["must_be_commander"] for p in c["cards"]))
-    log(f"Combo list: {len(kept):,} two-card combos of {seen[0]:,} ({standalone:,} standalone, "
+    log(f"Combo list: {len(kept):,} {'two' if pieces == 2 else 'three'}-card combos of {seen[0]:,} ({standalone:,} standalone, "
         f"{commander:,} needing a commander; list of {timestamp[:10]}, version {version}), "
         f"reduced in {time.monotonic() - started:.0f} s")
     if seen[1]:
@@ -303,7 +311,9 @@ def _needs_reducing(meta):
         return False
     if not TWO_CARD_FILE.exists() or TWO_CARD_FILE.stat().st_mtime < EXPORT_FILE.stat().st_mtime:
         return True
-    return meta.get("format") != FORMAT
+    extra = three_path()
+    return (meta.get("format") != FORMAT or meta.get("three_format") != FORMAT
+            or not extra.exists() or extra.stat().st_mtime < EXPORT_FILE.stat().st_mtime)
 
 
 def update(force=False, log=print):
@@ -351,6 +361,7 @@ def update(force=False, log=print):
         return False
     try:
         reduce_export(EXPORT_FILE, TWO_CARD_FILE, log)
+        reduce_export(EXPORT_FILE, three_path(), log, pieces=3)
     except (OSError, EOFError, ValueError, gzip.BadGzipFile) as e:
         log(f"Combo list: the export can't be reduced ({type(e).__name__}: {e}); "
             f"keeping the old list." if TWO_CARD_FILE.exists() else
@@ -358,7 +369,7 @@ def update(force=False, log=print):
         return False
     try:
         data = load()
-        meta.update(format=FORMAT, timestamp=data["timestamp"], version=data["version"])
+        meta.update(format=FORMAT, three_format=FORMAT, timestamp=data["timestamp"], version=data["version"])
         cards._write_json(META_FILE, meta)
     except ComboListError as e:
         log(f"Combo list: {e}")
@@ -368,10 +379,11 @@ def update(force=False, log=print):
 # --- Reading and matching ----------------------------------------------------
 
 _cache = {"key": None, "data": None}
+_three_cache = {"key": None, "data": None}
 _cache_lock = threading.Lock()
 
 
-def _check(data):
+def _check(data, pieces_count=2):
     """The list, checked, plus "by_oracle": {oracle id: [combo index]}."""
     if not isinstance(data, dict) or data.get("format") != FORMAT:
         raise ValueError("it's in an older or unknown layout; run python -m decklab.lib.cards update")
@@ -381,36 +393,41 @@ def _check(data):
     by_oracle = {}
     for i, combo in enumerate(combos):
         pieces = combo.get("cards") if isinstance(combo, dict) else None
-        if (not isinstance(pieces, list) or len(pieces) != 2
+        if (not isinstance(pieces, list) or len(pieces) != pieces_count
                 or not all(isinstance(p, dict) and isinstance(p.get("oracle_id"), str)
                            and isinstance(p.get("name"), str) for p in pieces)
                 or combo.get("class") not in CLASSES or not isinstance(combo.get("standalone"), bool)
                 or not isinstance(combo.get("results"), list) or not isinstance(combo.get("url"), str)):
             raise ValueError(f"combo {i + 1} can't be read")
+        if pieces_count == 3 and (len({piece["oracle_id"] for piece in pieces}) != 3
+                or any(not piece["oracle_id"] or not piece["name"] or type(piece.get("must_be_commander")) is not bool for piece in pieces)
+                or any(not isinstance(result, str) or not result for result in combo["results"])):
+            raise ValueError(f"three-card combo {i + 1} can't be read")
         for piece in pieces:
             by_oracle.setdefault(piece["oracle_id"], []).append(i)
     return {"timestamp": timestamp, "version": data.get("version"), "combos": combos,
             "by_oracle": by_oracle}
 
 
-def load(path=None):
-    """The two-card combo list (read once, again when the file changes).
+def load(path=None, *, pieces=2):
+    """One reduced piece count (separate lazy caches, refreshed when its file changes).
     Raises ComboListError when it's missing or can't be read."""
-    path = Path(path or TWO_CARD_FILE)
+    path = Path(path or (TWO_CARD_FILE if pieces == 2 else three_path()))
+    cache = _cache if pieces == 2 else _three_cache
     try:
         stat = path.stat()
         key = (str(path), stat.st_mtime_ns, stat.st_size)
         with _cache_lock:
-            if _cache["key"] == key:
-                return _cache["data"]
-        data = _check(json.loads(path.read_text(encoding="utf-8")))
+            if cache["key"] == key:
+                return cache["data"]
+        data = _check(json.loads(path.read_text(encoding="utf-8")), pieces)
     except FileNotFoundError:
         raise ComboListError("Commander Spellbook's combo list isn't on the PC yet "
                              "(python -m decklab.lib.cards update downloads it)") from None
     except (OSError, ValueError) as e:
         raise ComboListError(f"Commander Spellbook's combo list ({path.name}) can't be read: {e}") from None
     with _cache_lock:
-        _cache.update(key=key, data=data)
+        cache.update(key=key, data=data)
     return data
 
 
@@ -421,6 +438,8 @@ def bracket_floor(combo):
     standalone infinite or game-ending one (none in Brackets 1-2), else 1.
     Locks, draws, near-infinites and other combos needing a payoff raise
     nothing."""
+    if len(combo.get("cards", (None, None))) != 2:
+        return 1       # Three-card findings never participate in the counted minimum.
     if combo["class"] == "mass_land_denial":
         return 4
     if not combo["standalone"]:
@@ -432,7 +451,7 @@ def _sort_key(combo):
     return (-bracket_floor(combo), CLASSES.index(combo["class"]), [p["name"] for p in combo["cards"]])
 
 
-def find(commander_ids, deck_ids, path=None, near=False):
+def find(commander_ids, deck_ids, path=None, near=False, *, pieces=2):
     """The two-card combos whose pieces are both among these oracle ids: the
     Commander section's, and the rest of the main deck's (Companion and Deck;
     never the Sideboard). A piece that must be the commander counts only in
@@ -446,7 +465,9 @@ def find(commander_ids, deck_ids, path=None, near=False):
     makes it the commander), and so is one whose card is already in the deck in
     the wrong place (a commander-only piece in the 99). Colour identity and the
     ban list are card data, checked by the caller (stats/commander.py)."""
-    data = load(path)
+    if near and pieces != 2:
+        raise ValueError("One card away is only the two-card list")
+    data = load(path, pieces=pieces)
     commander_ids = set(commander_ids)
     present = commander_ids | set(deck_ids)
     matches, seen = [], set()
@@ -471,6 +492,29 @@ def find(commander_ids, deck_ids, path=None, near=False):
             matches.append(dict(combo, missing=missing))
     matches.sort(key=_sort_key)
     return {"timestamp": data["timestamp"], "version": data["version"], "matches": matches}
+
+
+def find_three(commander_ids, deck_ids, path=None, *, two_card=None):
+    """Complete named triples, leaving out a two-card recipe with only a spare piece.
+
+    Suppress only when the held pair already produces every named result and has
+    the same standalone capability. A payoff creating a new result is not spare.
+    No early-turn flag or counted bracket inference is made for triples.
+    """
+    commander_ids, deck_ids = tuple(commander_ids), tuple(deck_ids)
+    found = find(commander_ids, deck_ids, path or three_path(two_card), pieces=3)
+    if not found["matches"]:
+        return found
+    pairs = find(commander_ids, deck_ids, two_card)["matches"]
+    kept = []
+    for combo in found["matches"]:
+        ids = {piece["oracle_id"] for piece in combo["cards"]}
+        spare = any({piece["oracle_id"] for piece in pair["cards"]} < ids
+                    and set(combo["results"]) <= set(pair["results"])
+                    and (pair["standalone"] or not combo["standalone"]) for pair in pairs)
+        if not spare:
+            kept.append(combo)
+    return {**found, "matches": kept}
 
 
 # --- The command line: combos one card away (E9-S25) -------------------------

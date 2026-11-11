@@ -80,6 +80,7 @@ class ComboTestCase(unittest.TestCase):
         for name, value in (("COMBOS_DIR", self.tmp), ("EXPORT_FILE", self.tmp / "variants.json.gz"),
                             ("META_FILE", self.tmp / "meta.json"), ("TWO_CARD_FILE", self.tmp / "two_card.json"),
                             ("_cache", {"key": None, "data": None}),
+                            ("_three_cache", {"key": None, "data": None}),
                             ("MAX_MALFORMED", 0.1)):       # the fixture's one broken entry of 12
             patcher = mock.patch.object(combos, name, value)
             patcher.start()
@@ -273,10 +274,11 @@ class UpdateTests(ComboTestCase):
 
     def old_files(self, days=8):
         self.reduced()
+        combos.reduce_export(log=self.log.append, pieces=3)
         then = card_index._now() - timedelta(days=days)
         cards._write_json(combos.META_FILE, {"downloaded_at": then.isoformat(timespec="seconds"),
                                              "etag": self.ETAG, "last_modified": self.MODIFIED,
-                                             "format": combos.FORMAT})
+                                             "format": combos.FORMAT, "three_format": combos.FORMAT})
 
     def update(self, download, force=False):
         with mock.patch.object(cards, "_download", side_effect=download) as patched:

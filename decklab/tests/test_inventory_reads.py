@@ -61,12 +61,14 @@ MESSAGES = {
 # every area of phase 3 merged; kept so a reader ported later has its place.
 NOT_YET_PORTED = {}
 # Member export renders this space's database rows into a fresh external directory. These
-# two output keys are the complete exception; source inventory still comes from its snapshot.
+# output keys and archive-member whitelist are exact exceptions; source inventory still comes from its snapshot.
 EXPORT_OUTPUTS = {
     ("decklab/db/space_export.py", 'files = {"collection.csv": rules.csv_bytes(cards, rules.FIELDS),'):
         "member collection export output, not an inventory file read",
     ("decklab/db/space_export.py", '"tokens.csv": rules.csv_bytes(tokens, rules.TOKEN_FIELDS)}'):
         "member token export output, not an inventory file read",
+    ("decklab/lib/api/space_download.py", 'if not (name in {"collection.csv", "tokens.csv", "dice.csv", "locations.csv", "loans.csv"}'):
+        "validates names written into a personal-copy ZIP from database rows, never reads inventory files",
 }
 
 

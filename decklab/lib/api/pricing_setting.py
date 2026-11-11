@@ -21,6 +21,7 @@ from contextlib import contextmanager
 
 from decklab.lib import config, currency, permissions, pricing_setting, shops, state
 from decklab.lib.state import pricing as rules_pricing
+from decklab.lib.shops import listing_preferences
 
 from . import guard
 from .common import ApiError, _load_json, state_errors
@@ -61,6 +62,9 @@ def _answer(saved):
                               for adapter in shops.SNAPSHOT_ADAPTERS],
                   "source": pricing_setting.source(shops.SETTING, base, record)},
         "currencies": [{"code": code, "symbol": currency.symbol(code)} for code in currency.ECB_CODES],
+        "listing_preferences": {"saved": record.get("listing_preferences"),
+                                "effective": record.get("listing_preferences"),
+                                "conditions": [{"code": code, "label": label} for code, label in listing_preferences.CONDITIONS.items()]},
         "can_edit": guard.allowed(guard.viewer(), "pricing.edit"),
     }
 
@@ -72,8 +76,8 @@ def _store_errors():
         try:
             yield
         except state.Unavailable as error:
-            if str(error) == rules_pricing.MIGRATE:
-                raise ApiError(503, rules_pricing.MIGRATE, reason="database") from None
+            if str(error) in (rules_pricing.MIGRATE, rules_pricing.PREFERENCES_MIGRATE):
+                raise ApiError(503, str(error), reason="database") from None
             raise
 
 
@@ -97,11 +101,17 @@ def change(body):
     profile = guard.writer(data, "pricing.edit")
     if not _sees():
         raise ApiError(403, PRIVATE)
-    if set(data) - {"profile", "expect", "currency", "shops"} or not {"currency", "shops"} <= set(data):
-        raise ApiError(400, "The price settings request must have expect, currency and shops, and nothing else")
+    if set(data) - {"profile", "expect", "currency", "shops", "listing_preferences"} or not {"currency", "shops"} <= set(data):
+        raise ApiError(400, "The price settings request needs expect, currency and shops, with optional listing_preferences")
     with _store_errors():
         expect = rules_pricing.expectation(data.get("expect"))
-        record = rules_pricing.normalize({"currency": data["currency"], "shops": data["shops"]})
+        preference = data.get("listing_preferences")
+        if "listing_preferences" not in data:
+            current = state.store().pricing_setting()
+            if current["revision"] != expect:
+                raise state.Conflict(rules_pricing.CHANGED)
+            preference = current["pricing"].get("listing_preferences")
+        record = rules_pricing.normalize({"currency": data["currency"], "shops": data["shops"], "listing_preferences": preference})
         saved = state.store().pricing_setting_put(record, expect, _web_actor(profile), MESSAGE)
         pricing_setting.forget()
         return _answer(saved)

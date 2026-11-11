@@ -10,6 +10,20 @@
 /** What a line says when the shop's page was only part of its results (Games Portal's first page). */
 const SHOP_SNAPSHOT_PARTIAL = "first page only, more results not read";
 
+function shopSnapshotQuality(snap) {
+  const word = value => typeof value === "string" && value.length <= 100 && !/[\u0000-\u001f\u007f]/.test(value) ? value : "";
+  return `${word(snap.condition) || "Condition unknown"}, ${word(snap.language) || "language unknown"}`;
+}
+
+function shopSnapshotPreference(snap) {
+  const preference = snap?.listing_preferences;
+  const conditions = {NM: "Near Mint", LP: "Lightly Played", MP: "Moderately Played", HP: "Heavily Played", DMG: "Damaged"};
+  if (!preference || typeof preference !== "object" || typeof preference.english_only !== "boolean"
+      || preference.minimum_condition != null && !Object.hasOwn(conditions, preference.minimum_condition)) return null;
+  return `${preference.minimum_condition ? `${conditions[preference.minimum_condition]} or better` : "Any condition"}, `
+    + (preference.english_only ? "English only" : "any language");
+}
+
 /** The shop's own set codes for a card it lists in other printings: "C16, CMM", at most 12 named. */
 function shopSnapshotSets(snap) {
   const sets = (Array.isArray(snap.shop_sets) ? snap.shop_sets : [])
@@ -31,7 +45,7 @@ function shopSnapshotWhen(value) {
   const at = typeof value === "string" ? new Date(value) : null;
   if (!at || Number.isNaN(at.getTime())) return null;
   return el("time", {class: "shop-snapshot-when", datetime: value, title: value,
-    text: `fetched ${at.toLocaleString("en-AU", {day: "numeric", month: "short", hour: "numeric", minute: "2-digit"})}`});
+    text: `fetched ${at.toLocaleString(LOCALE, {day: "numeric", month: "short", hour: "numeric", minute: "2-digit"})}`});
 }
 
 /** True when url is one of that shop's own listing pages. */
@@ -68,8 +82,10 @@ function shopSnapshotWords(snap) {
     const sets = shopSnapshotSets(snap);
     return [`${shop}: listed, but not matched to your printing${sets ? ` (the shop's sets: ${sets})` : ""}`, null];
   }
+  if (snap.status === "not_eligible") return [`${shop}: no listing meets the household condition/language preference`, null];
   if (snap.status === "token") return [`${shop}: token cards aren't checked at this shop`, null];
-  if (snap.status === "unknown") return [`${shop}: price unknown, the shop couldn't be read`, null];
+  if (snap.status === "unknown") return [snap.preference_unknown ? `${shop}: household listing preference unavailable`
+    : `${shop}: price unknown, the shop couldn't be read`, null];
   return [`${shop}: not in the last snapshot`, null];
 }
 
@@ -82,28 +98,33 @@ function shopSnapshotList(card) {
 }
 
 /** One shop's snapshot line. */
-function shopSnapshotOne(snap) {
+function shopSnapshotOne(snap, card = null, view = null) {
   const [words, printing] = shopSnapshotWords(snap);
   const chip = snap.back_in_stock ? status("good", "Back in stock")
     : snap.newly_in_stock ? status("info", "Newly in stock") : null;
   return el("span", {class: `shop-snapshot shop-snapshot-${snap.status}`, "data-shop-snapshot": snap.status,
     "data-shop-snapshot-shop": snap.shop || "MTGMate", title: snap.status === "unknown" && snap.error ? snap.error : null},
     chip, el("span", {text: words}),
+    snap.lowest_kept ? status("good", "Lowest in kept 90 days") : null,
+    snap.target_comparison?.at_or_below === true ? status("good", `At or below ${listedAud(Number(snap.target_comparison.amount_aud))} target`) : null,
     printing ? el("small", {}, shopSnapshotLink(snap, printing)) : null,
+    ["in_stock", "out_of_stock"].includes(snap.status) ? el("small", {class: "shop-snapshot-quality", text: shopSnapshotQuality(snap)}) : null,
+    snap.skipped_cheaper ? el("small", {class: "shop-snapshot-skipped", text: "Cheaper copy skipped by household preference"}) : null,
+    snap.status === "not_eligible" && shopSnapshotPreference(snap) ? el("small", {text: shopSnapshotPreference(snap)}) : null,
     snap.partial === true ? el("small", {class: "shop-snapshot-partial", "data-shop-snapshot-partial": "",
       text: SHOP_SNAPSHOT_PARTIAL}) : null,
-    shopSnapshotWhen(snap.fetched_at));
+    shopSnapshotWhen(snap.fetched_at), shopReferenceButton(card, snap, view));
 }
 
 /** The snapshot line under a queued card (one a shop, together when there are several), or null without one. */
-function shopSnapshotLine(card) {
+function shopSnapshotLine(card, view = null) {
   const list = shopSnapshotList(card);
   if (!list.length) return null;
-  if (list.length === 1) return shopSnapshotOne(list[0]);
-  return el("span", {class: "shop-snapshot-list", "data-shop-snapshots": String(list.length)}, list.map(shopSnapshotOne));
+  if (list.length === 1) return shopSnapshotOne(list[0], card, view);
+  return el("span", {class: "shop-snapshot-list", "data-shop-snapshots": String(list.length)}, list.map(snap => shopSnapshotOne(snap, card, view)));
 }
 
-const SHOP_SNAPSHOT_RANK = ["in_stock", "out_of_stock", "not_matched", "not_listed", "unknown", "not_checked", "token"];
+const SHOP_SNAPSHOT_RANK = ["in_stock", "out_of_stock", "not_matched", "not_eligible", "not_listed", "unknown", "not_checked", "token"];
 
 /** The lab table's one-line marker beside the reference price: a dot (or "Back" when a waiting row
  * is back in stock at a shop) whose spoken and hover words give every shop's gist (E5-S26). Its
@@ -117,7 +138,10 @@ function shopSnapshotMarker(card) {
   const gist = list.map(snap => {
     const [words, printing] = shopSnapshotWords(snap);
     const lead = snap.back_in_stock ? "Back in stock. " : snap.newly_in_stock ? "Newly in stock. " : "";
-    return `${lead}${words}${printing ? ` (${printing})` : ""}${snap.partial === true ? `, ${SHOP_SNAPSHOT_PARTIAL}` : ""}`;
+    const quality = ["in_stock", "out_of_stock"].includes(snap.status) ? `; ${shopSnapshotQuality(snap)}` : "";
+    return `${lead}${words}${printing ? ` (${printing})` : ""}${quality}${snap.skipped_cheaper ? "; cheaper copy skipped by household preference" : ""}`
+      + (snap.lowest_kept ? "; lowest in kept 90 days" : "") + (snap.target_comparison?.at_or_below === true ? "; at or below AUD unit-price target" : "")
+      + (snap.partial === true ? `, ${SHOP_SNAPSHOT_PARTIAL}` : "");
   }).join(list.length > 1 ? "; " : "");
   return el("span", {class: `shop-q-snap shop-q-snap-${best}${back ? " shop-q-snap-back" : ""}`,
     "data-shop-snapshot-marker": best, role: "img", "aria-label": gist, title: gist,
@@ -139,10 +163,11 @@ function shopMissingSnapshotOf(snap, expected) {
   const unknown = {shop, status: "unknown", fetched_at: null};
   if (snap == null) return empty;
   if (typeof snap !== "object" || Array.isArray(snap) || snap.shop !== expected || snap.scope !== "nonfoil" ||
-      !["in_stock", "out_of_stock", "not_listed", "unknown", "not_checked"].includes(snap.status)) return unknown;
+      !["in_stock", "out_of_stock", "not_listed", "not_eligible", "unknown", "not_checked"].includes(snap.status)) return unknown;
   if (snap.status === "not_checked") return empty;
   const fetched = shopMissingSnapshotDate(snap.fetched_at);
   if (!fetched) return unknown;
+  if (snap.status === "not_eligible") return {shop, status: snap.status, fetched_at: fetched, preference_applied: true};
   // partial (E5-S33): the shop's page was only the first of its results; never claimed for an unknown.
   const partial = snap.partial === true && snap.status !== "unknown";
   if (["not_listed", "unknown"].includes(snap.status)) return {shop, status: snap.status, fetched_at: fetched, partial};
@@ -159,7 +184,10 @@ function shopMissingSnapshotOf(snap, expected) {
       snap.collector_number !== snap.collector_number.trim() || !shopMissingSnapshotText(snap.collector_number) ||
       /[\u0000-\u001f\u007f/\\?#]/.test(snap.collector_number)) return unknown;
   return {shop, status: snap.status, fetched_at: fetched, price, stock: snap.stock,
-    set: snap.set, collector_number: snap.collector_number, url: shopMissingSnapshotUrl(snap.url, shop), partial};
+    set: snap.set, collector_number: snap.collector_number, url: shopMissingSnapshotUrl(snap.url, shop), partial,
+    ...(Object.hasOwn(snap, "condition") || Object.hasOwn(snap, "language") ? {condition: snap.condition, language: snap.language} : {}),
+    ...(snap.skipped_cheaper === true ? {skipped_cheaper: true} : {}),
+    ...(snap.preference_applied === true ? {preference_applied: true} : {})};
 }
 
 /** No normalized impossible dates or timezone-free machine times become dated price claims. */
@@ -231,25 +259,29 @@ function shopMissingSnapshotOne(snap, short) {
   const words = short ? (stocked ? `${shop} ${listedAud(snap.price)} each, ${counts ? `${snap.stock} in stock` : "in stock"}`
     : snap.status === "out_of_stock" ? (snap.price == null ? `${shop}: out of stock` : `${shop} ${listedAud(snap.price)} each, out of stock`)
     : snap.status === "not_listed" ? `${shop}: no nonfoil listed`
+    : snap.status === "not_eligible" ? `${shop}: no listing meets the household preference`
     : snap.status === "unknown" ? `${shop}: price unknown`
     : `${shop}: not checked`)
     : stocked ? `${shop}: ${listedAud(snap.price)} each; ${counts ? plural(snap.stock, "copy", "copies") : "this printing"}${counts ? " of this printing" : ""} in stock when fetched.`
     : snap.status === "out_of_stock" ? (snap.price == null ? `${shop}: nonfoil out of stock in the saved check, with no price shown.`
       : `${shop}: nonfoil out of stock in the saved check (listed at ${listedAud(snap.price)} each).`)
     : snap.status === "not_listed" ? `${shop}: no nonfoil printing listed in the saved check.`
+    : snap.status === "not_eligible" ? `${shop}: no nonfoil listing meets the household condition/language preference.`
     : snap.status === "unknown" ? `${shop}: nonfoil price unknown in the saved snapshot.`
     : `${shop}: no saved nonfoil check for this card.`;
   const when = snap.fetched_at ? shopSnapshotWhen(snap.fetched_at) : null;
   // Short lines keep the year whenever it isn't this one, so an old check never reads as current.
   const fetched = snap.fetched_at ? new Date(snap.fetched_at) : null;
-  if (when) when.textContent = `fetched ${fetched.toLocaleString("en-AU", !short
+  if (when) when.textContent = `fetched ${fetched.toLocaleString(LOCALE, !short
     ? {day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit"}
     : fetched.getFullYear() === new Date().getFullYear() ? {day: "numeric", month: "short"}
       : {day: "numeric", month: "short", year: "numeric"})}`;
   return el("div", {class: "shop-snapshot shop-missing-snapshot", "data-shop-missing-snapshot": snap.status,
     "data-shop-snapshot-shop": shop},
-    stocked && !short ? el("strong", {text: "Cheapest nonfoil in saved snapshot"}) : null,
+    stocked && !short ? el("strong", {text: snap.preference_applied ? "Cheapest nonfoil meeting the household preference" : "Cheapest nonfoil in saved snapshot"}) : null,
     el("span", {text: words}), listed ? el("small", {}, shopSnapshotLink(snap, `${snap.set.toUpperCase()} ${snap.collector_number} nonfoil`)) : null,
+    listed ? el("small", {class: "shop-snapshot-quality", text: shopSnapshotQuality(snap)}) : null,
+    snap.skipped_cheaper ? el("small", {text: "Cheaper copy skipped by household preference"}) : null,
     snap.partial === true ? el("small", {class: "shop-snapshot-partial", "data-shop-snapshot-partial": "",
       text: SHOP_SNAPSHOT_PARTIAL}) : null,
     when);

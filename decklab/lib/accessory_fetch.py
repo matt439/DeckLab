@@ -5,7 +5,7 @@ picture's own address here. Deck Lab then downloads at most two things from
 the internet: the link itself and, when that's a web page, the picture the
 page names for sharing (og:image and friends). Nothing is written to the repo:
 the picture is staged in decklab/data/accessories/staged/ until a save moves
-it into magic/accessories/images/.
+stores it with the accessory in Deck Lab's database.
 
 Usage:
 
@@ -26,20 +26,22 @@ Safety rules (the page runs on a home network, so a link must never reach it):
   ones are refused. Every redirect (at most 5) is checked the same way, and
   ftp is never followed;
 - no proxies (an environment proxy would hide where the request goes);
-- 10 s per socket operation and 20 s in all: a timer shuts every socket the
+- 10 s per socket operation and a 20 s active socket budget: a timer shuts every socket the
   fetch opened when the 20 s are up, so a server that trickles its headers,
   redirects or body a byte at a time can't hold the request longer; pages up
   to 2 MB and pictures
   up to 4 MB, refused early on a larger Content-Length and cut off at the cap
   otherwise;
+- name lookup follows the system resolver's timeouts; fetch admission remains
+  bounded while it runs;
 - only JPEG, PNG and WebP are kept, recognised by their first bytes (never by
   the name or Content-Type), 16 to 6000 pixels a side. GIF, AVIF, SVG and
   HTML are refused.
 
-Accepted risk: urllib resolves the host again when it connects, so a DNS
-server that answers differently the second time (DNS rebinding) could still
-point a request at the home network. For a page on a home network that only
-its own people use, that window is accepted rather than pinning addresses.
+Connections dial only addresses returned by their own public-address check,
+without another hostname lookup; HTTPS retains the original TLS hostname.
+Fetches have a small shared concurrency limit, and staged pictures have count
+and byte limits as well as their expiry time.
 
 This doesn't use cards._open_url: that one spaces requests for Scryfall.
 """
@@ -74,6 +76,11 @@ CHUNK = 64 * 1024
 
 STAGED = config.DATA / "accessories" / "staged"
 STAGE_MAX_AGE = 3600                # seconds a staged picture stays usable
+STAGE_MAX_COUNT = 64
+STAGE_MAX_BYTES = 64 * 1024 * 1024
+MAX_FETCHES = 4
+_fetch_slots = threading.BoundedSemaphore(MAX_FETCHES)
+_stage_lock = threading.RLock()
 EXTS = ("jpg", "png", "webp")
 TOKEN_RE = re.compile(r"[0-9a-f]{32}")
 STAGED_NAME_RE = re.compile(r"[0-9a-f]{32}\.(?:jpg|png|webp)")
@@ -142,7 +149,7 @@ def _public(address):
 
 
 def check_host(host, port):
-    """Resolve host and refuse it unless every address is on the internet."""
+    """Return checked connect addresses; refuse unless every answer is on the internet."""
     try:
         infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
     except (socket.gaierror, UnicodeError, OSError):
@@ -150,6 +157,7 @@ def check_host(host, port):
     addresses = {info[4][0] for info in infos}
     if not addresses or not all(_public(a) for a in addresses):
         raise ApiError(400, HOME_NETWORK)
+    return infos
 
 
 class SafeRedirect(urllib.request.HTTPRedirectHandler):
@@ -220,17 +228,38 @@ def _shut(sock):
         pass
 
 
+def _connect_checked(address, timeout, source_address=None, *, watch=None):
+    """Dial only the numeric socket addresses checked here; never resolve at connect time."""
+    infos = check_host(*address)
+    last = None
+    for family, kind, protocol, _, target in infos:
+        sock = socket.socket(family, kind, protocol)
+        if watch is not None:
+            watch.add(sock)
+        try:
+            sock.settimeout(watch.socket_timeout() if watch is not None else timeout)
+            if source_address:
+                sock.bind(source_address)
+            sock.connect(target)
+            return sock
+        except (OSError, ApiError) as error:
+            _shut(sock)
+            last = error
+    raise last or OSError("No checked address was available")
+
+
 def _watched(base, watch):
-    """An http.client connection class whose sockets the watch can shut."""
+    """Pin sockets while keeping HTTP Host and HTTPS certificate/SNI names unchanged."""
     class Connection(base):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            create = self._create_connection
-            self._create_connection = lambda *a, **k: watch.add(create(*a, **k))
+            self._create_connection = lambda *a, **k: _connect_checked(*a, **k, watch=watch)
 
         def connect(self):
-            self.timeout = watch.socket_timeout()
+            self.timeout = watch.socket_timeout() if watch is not None else SOCKET_TIMEOUT
             super().connect()
+            if watch is not None:
+                watch.add(self.sock)     # HTTPS now owns a different socket after wrapping the raw one.
     return Connection
 
 
@@ -253,9 +282,7 @@ class _WatchedHttps(urllib.request.HTTPSHandler):
 
 
 def _opener(watch=None):
-    handlers = [urllib.request.ProxyHandler({}), SafeRedirect()]
-    if watch is not None:
-        handlers += [_WatchedHttp(watch), _WatchedHttps(watch)]
+    handlers = [urllib.request.ProxyHandler({}), SafeRedirect(), _WatchedHttp(watch), _WatchedHttps(watch)]
     return urllib.request.build_opener(*handlers)
 
 
@@ -620,38 +647,68 @@ def _kind_quantity(text):
 
 # --- Staging -----------------------------------------------------------------
 
-def prune_staged(max_age=STAGE_MAX_AGE):
-    """Delete staged pictures (and leftover temp files) older than max_age."""
-    try:
-        entries = list(STAGED.iterdir())
-    except OSError:
-        return
-    cutoff = time.time() - max_age
-    for path in entries:
+def prune_staged(max_age=STAGE_MAX_AGE, *, reserve_bytes=0, reserve_count=0):
+    """Prune recognized staging files by age, then oldest first to fit both resource caps."""
+    with _stage_lock:
         try:
-            if path.is_file() and path.stat().st_mtime < cutoff:
-                path.unlink()
+            entries = list(STAGED.iterdir())
+        except FileNotFoundError:
+            return reserve_count <= STAGE_MAX_COUNT and reserve_bytes <= STAGE_MAX_BYTES
         except OSError:
-            pass
+            return False
+        cutoff, kept = time.time() - max_age, []
+        for path in entries:
+            if not (STAGED_NAME_RE.fullmatch(path.name) or path.name.startswith(".") and path.name.endswith(".part")):
+                continue
+            try:
+                if path.is_symlink() or not path.is_file():
+                    continue
+                stat = path.stat()
+                if stat.st_mtime < cutoff:
+                    try:
+                        path.unlink()
+                        continue
+                    except OSError:
+                        pass
+                kept.append((stat.st_mtime, path.name, path, stat.st_size))
+            except FileNotFoundError:
+                continue
+            except OSError:
+                return False
+        count, size = len(kept) + reserve_count, sum(row[3] for row in kept) + reserve_bytes
+        for _, _, path, length in sorted(kept):
+            if count <= STAGE_MAX_COUNT and size <= STAGE_MAX_BYTES:
+                break
+            try:
+                path.unlink()
+            except OSError:
+                continue
+            count, size = count - 1, size - length
+        return count <= STAGE_MAX_COUNT and size <= STAGE_MAX_BYTES
 
 
 def stage(data, ext):
     """Write a checked picture to STAGED; return its token (32 hex digits)."""
     if ext not in EXTS:
         raise ValueError(f"not a picture extension: {ext!r}")
-    STAGED.mkdir(parents=True, exist_ok=True)
-    token = secrets.token_hex(16)
-    fd, tmp = tempfile.mkstemp(dir=STAGED, prefix=".", suffix=".part")
-    try:
-        with os.fdopen(fd, "wb") as out:
-            out.write(data)
-        os.replace(tmp, STAGED / f"{token}.{ext}")
-    except BaseException:
+    if len(data) > MAX_IMAGE:
+        raise ApiError(413, _too_big(MAX_IMAGE))
+    with _stage_lock:
+        if not prune_staged(reserve_bytes=len(data), reserve_count=1):
+            raise ApiError(503, "Picture staging is full. Try again after the old previews can be cleared.")
+        STAGED.mkdir(parents=True, exist_ok=True)
+        token = secrets.token_hex(16)
+        fd, tmp = tempfile.mkstemp(dir=STAGED, prefix=".", suffix=".part")
         try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
+            with os.fdopen(fd, "wb") as out:
+                out.write(data)
+            os.replace(tmp, STAGED / f"{token}.{ext}")
+        except BaseException:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise
     return token
 
 
@@ -676,6 +733,15 @@ def fetch(url):
     """Download the picture behind url (a picture, or a page naming one),
     stage it and return {token, bytes, ext, width, height, final_url,
     image_source, guess}. Raises ApiError with wording for the page."""
+    if not _fetch_slots.acquire(blocking=False):
+        raise ApiError(429, "Pictures are being fetched right now. Try again in a moment.")
+    try:
+        return _fetch(url)
+    finally:
+        _fetch_slots.release()
+
+
+def _fetch(url):
     prune_staged()
     url = url.strip() if isinstance(url, str) else url
     check_url(url)

@@ -92,6 +92,10 @@ def _status(args):
     result = backup.status(dbname=name)
     for line in result.splitlines() if isinstance(result, str) else result:
         print(line)
+    from decklab.lib.shops.health import warning
+    shop_warning = warning()
+    if shop_warning:
+        print("WARNING: " + shop_warning)
     return 0
 
 
@@ -220,7 +224,7 @@ def _schedule(args):
     if isinstance(result, (list, tuple)):
         for line in result:
             print(line)
-        return 0
+        return 0 if schedule.supported() else 2
     return result
 
 
@@ -327,6 +331,11 @@ def _private_files(args, windows=None, umask=None):
 
 def main(argv=None):
     args = parser().parse_args(argv)
+    from decklab.lib.db_failures import runtime_problem
+    problem = runtime_problem()
+    if problem:
+        print(problem, file=sys.stderr)
+        return 1
     _private_files(args)
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):

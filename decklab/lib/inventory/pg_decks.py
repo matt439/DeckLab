@@ -44,7 +44,7 @@ import csv
 import io
 from collections import defaultdict
 
-from . import files, paths, rules, pg_aliases
+from . import files, paths, rules, pg_aliases, pg_categories
 from .model import Deck, DeckRevision, ImageMeta, Sheet
 from .table_rows import ACCESSORY_COLUMNS
 
@@ -205,7 +205,7 @@ def summary(deck_file):
             (deck_file.sleeves, deck_file.deck_box))
 
 
-def lines(deck_id, deck_file):
+def lines(deck_id, deck_file, *, categories=False):
     """The deck_line rows of a parsed text (none when it couldn't be parsed)."""
     if deck_file is None:
         return []
@@ -214,7 +214,7 @@ def lines(deck_id, deck_file):
         for section, found in (sections or {}).items():
             for position, line in enumerate(found):
                 out.append((deck_id, version, section, position, line.quantity, line.name, line.set or "",
-                            line.number or "", line.finish or "nonfoil"))
+                            line.number or "", line.finish or "nonfoil", *((line.category,) if categories else ())))
     return out
 
 
@@ -227,6 +227,7 @@ def put_decks(cur, items):
     every earlier rename_version is at most its saved revision, so old checks cannot revive.
     Ordinary first creations start at zero; updates retain the existing epoch."""
     inserts, updates, texts_new, texts_old, ids, derived = [], [], [], [], [], []
+    categories = pg_categories.ready(cur.connection) if items else False
     for deck_id, text, revision, kit_version, new in items:
         space, kind, slug = split_id(deck_id)
         deck_file = parsed(deck_id, text)
@@ -238,7 +239,7 @@ def put_decks(cur, items):
             updates.append((title, status, played_by, kit_version, revision, deck_id))
             texts_old.append((text, deck_id))
         ids.append((deck_id,))
-        derived += lines(deck_id, deck_file)
+        derived += lines(deck_id, deck_file, categories=categories)
     if ids:
         cur.executemany("delete from deck_line where deck_id = %s", ids)
     if inserts:
@@ -254,8 +255,9 @@ def put_decks(cur, items):
                         "updated_at = now() where id = %s", updates)
         cur.executemany("update deck_text set text = %s where deck_id = %s", texts_old)
     if derived:
+        category_column, category_slot = (", category", ", %s") if categories else ("", "")
         cur.executemany("insert into deck_line (deck_id, version, section, position, quantity, name, set_code, "
-                        "collector_number, finish) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)", derived)
+                        f"collector_number, finish{category_column}) values (%s, %s, %s, %s, %s, %s, %s, %s, %s{category_slot})", derived)
 
 
 def _last_revisions(cur, ids):

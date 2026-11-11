@@ -112,7 +112,7 @@ function packProgressNotice(view) {
       p.activityNode.append(el("span", { class: `avatar pack-activity-avatar ${index >= 0 ? `avatar-${index % 4}` : "is-unknown"}`,
         "aria-hidden": "true", text: index >= 0 ? a.by.trim().slice(0, 1).toUpperCase() : "?" }),
         el("span", {}, el("span", { text: `Last recorded update: ${a.by} · ${plural(a.checks, "check update")}. ` }),
-          el("time", { datetime: a.at, text: date.toLocaleString("en-AU", {
+          el("time", { datetime: a.at, text: date.toLocaleString(LOCALE, {
             day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }) })));
     }
   }

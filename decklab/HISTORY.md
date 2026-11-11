@@ -2,6 +2,443 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Full-CI integration repairs (2026-11-11)
+
+The first complete PR matrix exposed an integration regression: sideboard-plan tests still submitted the pre-recovery launch contract. They now provide the named starter and canonical verified post-board list/opponent request, and a regression replays that request through real recovery preview to prove identical manifest/signature without queuing or sharing another starter's journal. Deleted pod games also retain their existing anonymous three/four-player Activity summary; ordinary duel deletion still omits private identities and notes.
+
+The remaining failures were test-contract and fixture defects: outdated card/quality/count/category/menu/route expectations, fake transports that did not model ApiError or change/recovery polls, missing idle/planning adapters, incomplete product-kit snapshots, a crop recipe that did not actually change its crop, incorrect test transaction imports, and dice omitted from disposable-database reset. Strict photo/kit/packing/privacy guards remain intact. Route tests now inspect the actual route table and method/body limits. The source-path guard keeps exact export-member output exceptions and moves collection row labels behind the inventory boundary. New reset, plain-error privacy and real sideboard-replay regressions cover these integration seams.
+
+Focused groups pass: 104 simulation/API checks, 77 UI checks, 47 inventory/reset/guard checks, 32 accessory/kit checks and corrected platform/schema/shopping/route/Activity checks. Guarded PostgreSQL cases remain CI-only. The initial two PostgreSQL jobs nevertheless observed all 54 registered operation claims as successful changed writes in passing test methods, with zero coverage gaps; that coverage receipt does not substitute for a passing complete matrix. Fresh CI on the repaired head is required.
+
+The next full run qualified the first database shard (1,009 tests, two expected skips) and all 54 operation claims again. It exposed two later product-kit fixture queries because the legacy 0013 test had left its shared database rolled back; that case now schedules migration cleanup before rollback. Unsupported-platform install/status assertions retain their distinct manual-scheduler wording. A pool-cap fixture also assumed a nonblocking foreign lease always acquired three slots; it now establishes and asserts all three under the retirement lock before the exact one-worker check. Five related fixture tests and ten repeated cap cases pass, with the original 10-second timeout and production limits unchanged. These follow-ups change tests only.
+
+## Frozen OPEN queue: source completion and final rendered checks (2026-11-11)
+
+The 49 OPEN rows at `94f6b7c` now resolve to 45 built stories and four partial external acceptance gates: E2-S16 (actual household-device drafts), E7-S32 (real card/token photographs), E3-S23 (saved field policy in a real browser/run), and E11-S75 (NAS container and physical sleep/wake). TODO keeps those four gates explicit as DECISION; their stories remain partial. Pre-existing decision/deferred work stays outside the frozen queue. The continuing branch retains the earlier overnight work. No live migration, household/member record, visibility switch, deployment or operational setting was changed.
+
+Source-stable Chromium qualification covered light/dark themes and phone/tablet/desktop sizes: 90 states from committed source `2cae95f`, plus the 12 order/queue states repeated after the scoped footer fix at `992c258`. All 102 states passed strict console checks with zero page/route/HTTP errors, no source drift, and complete fixture/browser/temporary-data cleanup. Selected phone/desktop screenshots were visually inspected for the changed facts, table headers, acknowledgements, footers and recovery actions. These synthetic intercepted controllers qualify rendering and interaction, not actual physical stock, devices or live writes.
+
+Visual inspection of the initial order/queue capture found the focused reason field's lower edge clipped by the action footer. The controller now reveals the focused input after updating the footer, using the existing Activity pattern and retaining page/profile/control guards. The adapter asserts the entire focused input and computed focus ring remain within the body/header/footer bounds after real input, without scrolling from the harness. All 12 final states pass that geometry assertion; the final focused API/UI regression passes 15. The other five suites are unchanged by this scoped fix. The table records the superseding final order/queue receipt.
+
+| Suite | Cases | Local receipt under `data/ui-review/` |
+|---|---:|---|
+| Shopping reviews | 12 | `20261110T235513Z-ce36b281` |
+| Practice insights | 24 | `20261110T235525Z-460ef672` |
+| Whole collection recovery | 12 | `20261110T235552Z-aebc61a9` |
+| Combined accessory record/crop | 24 | `20261110T235603Z-db2b7d93` |
+| Product-only kit recovery | 18 | `20261110T235630Z-dcf4dcc5` |
+| Coupled order/queue recovery | 12 | `20261111T000131Z-c21f2af6` |
+
+Repeat with `python scripts/ui_review.py --suite <name> --strict-console --timeout 180` using the corresponding suite identifiers in the runner. Ruff, source-length, story-count and public-repository checks pass. The final UI-tool regression passes 26 checks with one expected skip; final PostgreSQL-summary/coverage checks pass 28, with guarded database execution reserved for required CI. Separately authorised fixed-public-deck real Forge qualification passed as recorded below. Full Windows/Linux fixtures, disposable PostgreSQL and Linux services remain PR CI gates; no local fixture result is substituted for them.
+
+## Complete coupled order/queue recovery and authoritative write acknowledgements (2026-11-11; E11-S08/E11-S76/E11-S77)
+
+The last source work in the frozen OPEN queue is implemented. Activity can review and reverse one complete unreceived order lifecycle together with its queue intent: add with fulfilment, cancellation or removal, including card/token/product payloads and proven product-status position shifts. One explicit reason covers the whole inverse. Current authored deck text, handwritten notes and private kit survive; ordinary refresh recomputes availability. Source/current/latest/ABA/context checks run again under the inventory claim, then exact order/item/queue/deck audit effects and unique newer IDs are proved before commit. Unrelated member/private-kit changes do not alter the receipt, while relevant own-space changes still invalidate it. More than 50 total audit rows, invalid or ambiguous facts and mixed unproved sources refuse whole. Locations retain E8-S22's explicit separate filing workflow; historical unaudited photos remain unavailable. No live records changed.
+
+The broader corrected order/queue run passes 271 checks with four guarded PostgreSQL class skips, and the final focused 35 pass. Six new coupled-order database cases cover actual SQL/audit, current-text refresh, rollback and scoped privacy. Direct database cases now exist for every registered inventory operation; the coverage allowance is empty and CI must observe successful changed writes in passing tests. While adding those cases, token/dice writes exposed empty operation hints: PgInventory now derives Summary.changed from the saved SQL snapshot after all proofs, including raw-import-only changes, and clears false no-op claims. This keeps request write acknowledgements tied to actual saves. Guarded database and final rendered qualification receipts follow separately; local fixtures never connect to the household database.
+
+## Whole product-only kit recovery (2026-11-11; E11-S08 slice)
+
+- Complete1–50 product-status kit changes now restore through ordinary kit.set with both-side Shared IDs/types, current owned/intact products/card lists, latest/full-row and box-availability proofs. Selected facts alone fence the receipt; unrelated private accessory/member data and global counters do not. Existing sleeve-shortage warning semantics remain.
+- Exact opposite audit rows, unique newer IDs, absent reason and unchanged survivors/other data are proved before commit. An initially unchecked whole-kit acknowledgement is required; unknown Save/stale UI requires Reload. Mixed deck/product sources have no partial inverse and retain Deck History-to-draft/manual product review. Stale/preview snapshots and unverifiable legacy IDs refuse; the precise0014 blank token-column addition is supported without erasing packing.
+- Validation:88 broader checks pass with one existing platform skip,21 selected-product/focused cases pass, and23 latest pure/API/UI cases pass after root legacy/stale hardening (overlap). Six guarded PostgreSQL cases await CI; diagnostic6 strict Chromium states passed with cleanup at data/ui-review/20261110T231120Z-79114e93. Final18 stable states remain. No actual records, history retention, services or exports changed.
+
+## Combined accessory record and current-photo crop recovery (2026-11-11; E11-S08 slice)
+
+- A distinct combined action restores recorded details, links, capacity, count, owner/kind and crop together with fullRAW13/current-photo proof. Ordinary Edit must reproduce the exact opposite audit row; photo bytes, id/image and all unrelated data stay unchanged. Owner/kind corrections retain unused proof, and current holders may keep text/capacity/count corrections.
+- Both current-photo crop views must decode, then separate initially unchecked photo and whole-record acknowledgements are required. Zero stock, per-side units, literal historical text/URLs, restored-owner visibility and current-versus-historical-photo limits remain explicit. Old standalone flags stay exclusive; no past photo bytes or new retention are invented.
+- Validation:362 broad accessory checks pass with ten expected skips;54 focused and seven latest UI cases pass (overlap). Five guarded PostgreSQL cases await CI, including exact no-reason audit proof; diagnostic8 strict native states passed with cleanup at data/ui-review/20261110T225152Z-d3df8437. Full24 committed-source states remain. No live record, service, archive or export scope changed.
+
+## Whole collection identity and mixed recovery (2026-11-11; E11-S08 slice)
+
+- Complete1–50 own-space collection changes now restore printing identities, name corrections and actual mixed apply/upload-free merge shapes. Review shows every nullable current/restored row and requires one reason/physical confirmation where needed. Ordinary writers reproduce the source and inverse; full holder, Stand-in and aggregate capacity checks precede the whole write.
+- Commit proves unique positive newer actual audit IDs, exact rows/reason and unchanged other data. Own-space receipts exclude global revisions/private other-space facts. Current locations survive same-key changes and unique ordinary-edit replacements; ambiguous nonblank lineage, location-only changes and invalid historical facts refuse explicitly.
+- Validation:319 broader and28 latest feature checks pass (overlap); five guarded PostgreSQL cases and a12-case rendered adapter remain for separate qualification. No actual records changed. E11-S08 remains partial while coupled order/queue and remaining kit protocols finish.
+
+## Commander/category practice and bounded same-seed land trials (2026-11-11; E9-S32/E3-S41)
+
+- Cachev6 adds independent commander cast timing, physical-copy category milestones, and named spell colour-wait opportunities. Fixed integer chunks give identical one/many-worker results; category labels do not change deck identity or play choices. Numbers describe earliest affordability under the fixed model, not play advice.
+- Four explicit finite mana classes now model self-sacrifice, charge counters, helper-creature tap costs and no-normal-untap sources. Cloned plans conserve source/body/tap/charge costs; selected plans alone affect the game. Unsupported modes stay named. Sunburst payment coalesces only equivalent masks, matching exhaustive first-best payment with bounded work rather than truncating results.
+- Explicit intrinsic-only one-basic trials replay a chosen copy and an always-tapped cut, deduplicated, at the baseline seed/settings and up to20,000 games/setup. The existing single queue, current model/list/category key and mounted UI ownership guard every request. Deltas show mana outcomes; a best option needs the declared1pp improvement/no-regression screen and all three risk measures. Unknown short-horizon data makes no best claim. No changed deck is stored.
+- Validation:207 combined goldfish/run/API/UI/route cases pass;26 latest source/metrics/trial/UI cases pass after review fixes (overlap). Diagnostic8 strict Chromium states completed with cleanup and inspected phone captures; final24 stable cases remain. No actual database, household record, Forge game, service or operational setting changed.
+
+## Whole token-row recovery with allocator moves and queue target parity (2026-11-11; E11-S08 slices)
+
+- Complete own-space token INSERT/DELETE sources may include strictly position-only survivor UPDATEs, even when the first rows are only moves. Exact ordinary forward reconstruction, latest own-token fences and complete physical packing checks precede one inverse; actual inverse audit/layout must match the ordinary allocator. A single target uses the same reason/whole-count confirmation and receipt, with fresh restored ids. Survivor facts/packing remain unchanged. Both directions stay bounded at50 total audited rows; pure/noncanonical reorder restoration refuses.
+- Queue Undo accepts the precise additive0026 nullable numeric target difference in legacy/current audit schemas. Canonical cents restore exactly; changed targets require a fresh saved-source/preference receipt. Actual precommit target mismatch rolls back. The UI displays the optional AUD unit market target, with no paid-price or spending semantics.
+- Validation:149 executed token checks pass with two guarded PostgreSQL classes skipped; three new real-PG source cases await CI.93 queue/schema/UI and88 latest combined checks pass (overlap). No live database, private records, physical cards or inventory files changed. E11-S08 remains partial while coupled order and collection source families are completed.
+
+## Reviewed pool-checked bulk card adds (2026-11-11; E2-S31)
+
+- Existing editors choose another same-space deck; its printing/finish/category-preserving list enters the normal tickable Paste review. Independently guarded by-name free/in-use/incoming/to-buy marks never promise an exact printing or expose hidden holders. Public readers without inventory receive no marks; stale snapshots withhold them.
+- Add allocates stock after current draft demand and earlier selected rows, with unchecked rows consuming none. Replace uses selected demand alone; held incoming copies cannot be offered. Marks redraw in place. Commander defaults respect identity, singleton and basic/card-text copy exceptions. Applying is one ordinary Undo; Check/Save remain authoritative, with no new bundle storage.
+- Stale page/person/frame/text/signature/connected callbacks and changed readonly mode refuse local mutations, preserving existing Public Try a change behavior.257 initial regressions,210 revised and17 latest owned cases pass;56 latest import/manifest/reference/order cases pass (overlap). No actual deck/collection write, metadata fetch or URL import occurred.
+
+## Shopping rendered-review corrections (2026-11-11; E5-S35/E6-S28 verification)
+
+- A twelve-case strict Chromium run completed with zero page/route/HTTP errors and confirmed browser/context/fixture cleanup at `data/ui-review/20261110T221501Z-21431520`; source stayed unchanged. Render inspection found the short modal table's first old/new row overlapped by the inherited sticky header offset. The result now scopes its header to static positioning; a native geometry assertion covers the row. Dated-reference copy and basket quality separators now match the actual semantics.
+- Thirty reference/order/Shopping UI and ten basket/quality checks pass, plus the latest56-case import/manifest/reference/order group (overlap). That retained native receipt predates the visual correction; final rendered recapture remains to verify the scoped fix. No actual route write or purchase was made; test writes were intercepted synthetic requests.
+
+## Complete named three-card combos without bracket inference (2026-11-11; E9-S33)
+
+- Explicit card-data update makes separate two- and three-card reductions from the same public export. Triple data loads lazily, matches all three named legal pieces and commander requirements, excludes templates/multiple copies, and never fetches on a page. A held pair producing every triple result suppresses only the spare-piece recipe; a payoff with a new result remains.
+- Overview's What opponents will face, Stats and the printed play sheet have a separate Three-card combos heading, capped25 rows with total/date, unavailable states, and explicit no-minimum/no-early-timing wording. Four or more pieces remain unchecked. No triple enters the counted bracket/cut solver.
+- Validation:164 focused combo/stats/readiness/print/default checks pass, and both complete historical inventory golden tests pass. Exact additive category/missing-triple normalization preserves wrong labels, real triple matches and all existing physical/private/bracket facts. No real cache update, deck save, inventory or simulation was used.
+
+## Explicit starter-private unfinished-run recovery (2026-11-11; E3-S47)
+
+- Updater's existing local named-home-admin busy preview refuses busy/unverified work before stop/restart unless --force, preserving all other guards. Accepted field/group/gauntlet/variant requests persist bounded starter-private metadata before queue admission; no startup or timer resumes work.
+- Play the rest re-enters ordinary handlers with fresh visibility, permissions and simulations policy, exact lists/engine/participants, saved sample and More boundary, then atomically claims the receipt. Canonical side/pilot identities and AI hashes prevent adopting a changed pilot/engine; signatures are checked before completed-plan cleanup. Checkpoints allocate only remaining work. Person Stop/completion removes offers, while interruption retains them; unknown/live lease ownership never grants resume.
+- Explicit scoped UI controls offer resume or Dismiss only to the starter. Polls don't wake/hold the PC or reload drafts. Initial fsync/atomic persistence is required; later bookkeeping failures keep ordinary Stop/job behavior. Metadata is private cache, excluded from exports and public diagnostics.
+- Validation:156 focused fixtures,61 prior coordinator cases and ten latest replay/privacy/AI/pilot/zero-remainder cases pass (overlap). The narrow gauntlet-board error-object preservation also fixes actionable API errors while unexpected errors remain sanitized. No real restart/crash, disk fault, live run, setting or private record was exercised for this source feature.
+
+## Reviewed category suggestions and SQL category projection (2026-11-11; E2-S29)
+
+- Editor role proposals apply only to untagged current-list lines after explicit review, with one Undo and normal categories-only Save. Fixed explained priority selects one label; existing labels remain. Other-deck choices are private to the actual own space, independent of Public switches, and return no source deck identities/counts. Callback ownership includes page/profile/route/sheet/frame/line.
+- Migration0027 adds the optional derived category column. Canonical saved text and every existing line identity are validated before category-only backfill and one maintenance audit inside the migration transaction. Old schema readers/writers remain usable; mismatches and late failures roll back the column, projection, audit and migration receipt without text/history/table changes.
+- Validation:ten latest focused cases pass (one guarded PG class skip),56 category/route/web and74 existing category/core/inventory cases pass (overlap; nine skips in latter). Four disposable-PG save/backfill/check/export/rollback cases are included for CI. A broad sweep's intermediate file-inventory failure was an unregistered peer helper, not category behavior. No actual schema, records or metadata fetch changed.
+
+## Qualified Forge development observer (2026-11-11; E3-S45)
+
+- The compiled Java observer now emits actual lands in play and accumulated actual draws after each two-global-turn block, through round10. Opening hands, tutors/returns and phased-out lands are excluded; missing/early-ended observations are never filled with zero. The existing optional consumer/table/placebo complete this story.
+- With Matt's separate approval and an idle PC, the final `cardlog-check --games 12 --commander-games 3 --require-development --serial` passed game parity, logging parity, and the interleaved/repeated warm-worker comparison, with12/12 Constructed and3/3 Commander development records valid in both cold logged modes and verified fresh/warm copies. The serial schedule has a fixture regression proving no fresh/warm process overlap.
+- Qualified source: `60f69e2f7eedc5cefd6fc1022126e2451f88a224f03c1d558d118617822d81ce`, Forge `2.0.15-decklab-52387e83f`. The source receipt and final log are kept in ignored `data/open-goal/development-java/`; CHECKED_SOURCE changed only after the actual pass. Two earlier attempts found packet ordering before Forge's Turn line and a helper lookup in the new strict warm hook; both have focused regressions.
+- Validation:103 latest fixture checks pass (one existing qualification skip), alongside the bounded native check. Only fixed public check decks were used; no household saved result, database, installation, scheduling or operational setting changed. All qualification JVMs exited.
+
+## Inventory database coverage guard and current storage docs (2026-11-11; E11-S76)
+
+- Every registered production inventory operation must have a real DbTestCase suite owner or an explicit known gap. The initial gap allowance is frozen; dice add/edit/remove now share their operation cases across files and disposable PostgreSQL, with fresh persisted rows and insert/update/delete audit assertions.
+- Database CI checks actual changed PgInventory.apply writes from passing claimed methods. Setup imports, previews, noops, refusals, failed/skipped methods and declarations alone do not satisfy it. Evidence is scoped by module and shard, without changing production readers/writers or CI requirements.
+- Decks, tokens, accessories, pool and purchases now describe PostgreSQL snapshots and identify legacy path-shaped keys as compatibility values. Authored text/field rules remain documented; no live inventory folders are recreated and identifier values remain compatible.
+- Validation:21 focused fixture checks pass (one guarded PostgreSQL class skip), including registry/new-kind failure, real DbTestCase ownership, shrinking allowance, shard evidence, noop/failure exclusion and docs. Actual PostgreSQL execution awaits CI. The five explicit direct-suite gaps are collection.locations, deck.token_cards, tokens.add_many, watchlist.add_many and watchlist.target_edit; no indirect coverage is relabelled as direct proof. No actual database or household records were read.
+
+## Recording an order from a basket or plan (2026-11-11; E6-S28)
+
+- Current baskets and recommended plan shops open the existing order sheet with seller, today's date, counted snapshot printings and matched queue reductions. Cheapest-first stock prefixes conserve every counted copy; identical physical printings merge without guessing condition/language or carrying prices, targets or queue notes. Add-ons remain excluded initially.
+- The sheet asks the buyer to check the snapshot printings against the actual order. Normal edits, preview and explicit token-bound save remain unchanged. Source membership, person/route/connected origin and original queue revision are checked again; stale or uncertain handoffs do not write.
+- Validation:157 broad checks pass (16 guarded DB skips), seven new interaction checks and38 latest order/UI checks pass (16 skips; overlap). No actual order, purchase, inventory change or vendor request was made.
+
+## Isolated variant controls and saved development consumer (2026-11-11; E3-S48, E3-S45 source slices)
+
+- CLI size changes use explicit fixed-count independent arms, one verified engine and the same chosen opponents. Balanced MOVER95% differences retain starter denominators and missing strata, with a separate declared5-point margin, wide-range/more-games wording and no adaptive look. Same-size changes retain the ordinary paired path; invalid Forge sizes and bounded-work limits refuse before launch.
+- New `unpaired` results have an isolated experiments directory, validated test/arm blocks and exact engine/list/pilot identities. Checkpoint reuse avoids duplicate completed games. Normal enumeration and per-card consumers omit them. An unchanged-list placebo uses the actual paired coordinator under its own experiments area, with no ordinary result/test writes. Exact-pair same-install engine-check receipts disclose finite winner/outcome disagreements; missing evidence is unknown and zero observed noise never proves exact equality.
+- Optional versioned development records pool complete round observations from visible current-list/current-engine matchups, including warm cumulative deltas. Testing shows median and observed min/max lands/actual draws with coverage; legacy, malformed and early-ended data are never filled with zeros. Both-side visibility filtering happens before counting, and stale profile/route replies cannot redraw.
+- Validation:195 broad legacy/qualification/engine checks pass,12 control/CLI/math checks and two production-runner/disposable-fake-process checks pass; ten tally/API/renderer checks pass (overlap). The Java observer candidate compiles only; active Java and its qualified hash remain unchanged pending separately authorized real parity/warm/protocol qualification. No household result, live record or actual Forge game was used. E3-S45 remains partial until that gate passes.
+
+## Reviewed shop references and optional market targets (2026-11-11; E5-S35)
+
+- Shopping's explicit one-row and selected-ready-row review shows the four old/new retailer observation fields and confirmed printing/source evidence before one audited save. A reference is a selected dated observation; higher replacements require the same review. Nothing maintains it automatically.
+- Optional AUD per-copy market targets use migration0026, preserving legacy blank reads and refusing nonblank writes before migration. Lowest-kept90-day marks use exact printing/finish, retained complete in-stock readings and the same frozen household preference. These are market observations, never paid prices or spending.
+- Expiring actor-bound reviews recheck queue revision and complete source/preference evidence atomically. Unknown save outcomes offer refresh without retry. Successful refresh preserves filters and expansion; web/CLI/export/check roundtrips retain queue intent.
+- Validation:353 broad checks pass (46 guarded DB/platform skips),17 latest API/UI and27 owned checks pass (overlap); four disposable-PG transaction/schema/fresh-policy cases are included for CI. No actual record, vendor fetch, migration activation, order or purchase was made.
+
+## Minimum counted bracket cuts and checked replacements (2026-11-11; E9-S31)
+
+- Stats and Overview find the fewest named-card cuts from the existing counted minimum, including overlapping two-card combos and compact Game Changer choices. The bounded exact search has exhaustive small-graph coverage; incomplete inputs or exhausted search give no all-clear. It never names the deck's actual bracket.
+- Permitted inventory editors choose an option and check free replacements against every selected cut. Unsafe or unknown candidates remain marked/disabled; commander and companion slots have explicit eligibility and full single-swap checks before Test. Public/read-only answers have no private text receipt. Changed receipts offer scoped reload, preserving drafts and normal Check/Save/Start.
+- Validation:201 focused tests pass (one existing platform qualification skip),66 replacement/privacy/legacy-swap/HTTP checks pass and ten strict Chromium smoke states complete with cleanup. No actual games, save, database, inventory or external fetch was run.
+
+## Privacy-safe save signals and centralized library caches (2026-11-11; E11-S77)
+
+- GET changes and warm JSON headers return only opaque own-space inventory/deck and already-visible library tokens. Fresh visibility is required; stale/unreadable data is unverified, without IDs/counts/actors/global revisions or cached-Public fallback. Private kit/table changes, including unmapped old player slots, cannot move an unauthorized signal. The legacy visible-deck revision uses the same safe projection.
+- Central invalidation clears library/Forge/gauntlet caches, with profile/epoch ownership on cache fills. Deck/editor/own-Collection notices offer explicit Reload; unsaved drafts use the existing reapply workflow, new decks stay local, and an open modal blocks reloading. Other-space Public collections keep normal manual refresh. Polls neither wake nor hold the PC, and no stream or automatic reload/write is introduced.
+- Review found actual nested-write receipt loss and two baseline races. Only committed inventory changes propagate to the outer request; previews/noops never acknowledge. Background headers cannot establish a page baseline, and an old-route save cannot acknowledge a newer page or suppress its initial older read. Optional profile resolution failures remain unverified without extra reads.
+- Validation:119 broad,95 UI/source,78 privacy/library,42 HTTP/access and31 contract/ops groups pass (overlap;three guarded DB skips in the latter);63 latest feature/HTTP/UI/race checks pass after review fixes. No live save, device, database or visibility setting was changed. Browser emulation elsewhere does not qualify real cross-device acceptance.
+
+## Listing condition/language and matching preferences (2026-11-11; E5-S34)
+
+- Listings retain separate condition and language, with explicit unknowns and recovery of older Games Portal comma-language records. Home admins can choose minimum condition and/or English-only in Prices; neutral choices preserve prior picks exactly.
+- Pricing v2/migration0025 stores the optional choice with existing revision checks, preserving v1, currency/shops and old-client preferences. A frozen choice governs lines, deck/missing quotes, eligible exact-printing basket variants, Fewest shops plans and historical lows; skipped cheaper/no-eligible choices are explained. Unknowns fail only their relevant constraint.
+- Outages retain last verified choices, otherwise no qualifying price is claimed. Review verified normal standalone CLI lazy-PgStore behavior and narrowed neutral bootstrap fallback to protected fixtures; explicit malformed version values remain invalid. Generic unit facts disclose only an applied flag; existing settings/history privacy stays in place.
+- Validation:291 broad checks pass (two guarded DB skips),80 focused,61 CLI/bootstrap and33 rules/version checks pass (overlap), plus guarded PG v2/readiness/rollback coverage. Ruff/Node/source guards pass. No actual settings activation, vendor fetch, purchase, database or migration was exercised; live formats/device acceptance are unclaimed.
+
+## Cached Commander cut evidence and reviewed draft moves (2026-11-11; E2-S28)
+
+- Commander EDHREC ideas and Review cuts show Planned nonlands, ordered by known cached inclusion. Absent cards, unquantified entries and unavailable cache remain separate from0%. Optional cited role surpluses and settled visible current-list Forge evidence add countable reasons without selecting a worst card or fetching/running anything.
+- Over100 drafts use their actual Planned lists in a bounded read-only preview. Saved editable rows move into Considering with printings/categories retained in one local Undo step, or choose a free replacement into the existing explicit Test-this-change workflow. Check, Save and Start remain separate; new drafts require a saved identity for those actions.
+- Public readers get intrinsic evidence with no inventory/actions/raw receipt. A review found and removed the readonly raw-SHA leak; whole-response invariance under private kit/table-only edits and positive editor CAS are covered. Tracked sheets close on route/profile changes and reject stale controls/replies.
+- Validation:193 focused tests pass (one guarded DB skip), plus54 latest privacy/route checks. Full30 strict native captures passed with cleanup at data/ui-review/20261110T194741Z-933e7e05; phone light/tablet dark images were inspected. That receipt covers current controls; the subsequent backend-only CAS projection fix has focused tests. No actual deck, database, external fetch or Forge game was changed/run.
+
+## One saved game's debug transcript (2026-11-11; E3-S44)
+
+- forge game A B selects a saved zero-based game number or loss/longest/timeout example, optionally by full matchup key/results folder. It reuses the soak probe's exact one-shot protocol for saved lists, seed, seating and pilots, refusing incompatible/unverified engine or overrides first.
+- Text/JSON output preserve readable turn events, land drops, cast attempts/failures, combat, life changes and both final hands, with explicit not-captured states. A seat map and saved/replayed winner/starter/turn differences accompany the log; Commander is always qualified as outcome-only comparison.
+- The command uses a scratch folder and never calls a normal results, field, Rankings or per-card write pipeline. Existing soak-probe patch points and behavior remain supported.
+- Validation:85 focused transcript/CLI/engine/Forge checks pass (one native qualification skip), with exact fake launch arguments, stored-data immutability, no-writer assertions and a committed native failed-cast log. The final friendly-difference wording recheck passes eight cases. No actual game, replay or engine/device qualification was run.
+
+## Simulation cautions and sample floors (2026-11-11; E3-S46)
+
+- Draws, time limits and errors above a declared10% caution threshold add a descriptive line with going-first/second/unknown-start counts on matchup page/CLI and field/gauntlet rows. Group pooling keeps every denominator, including opponents below the warning threshold; existing estimators and run scheduling are unchanged.
+- Gauntlet groups need3 compared opponents and300 games to avoid a muted too-few label. Tokens made in fewer than20 games retain observed peaks and ambiguity notes but offer no extra-copy suggestion. These are explicit engineering caution floors, not new measurements of human play.
+- Fresh catalogues record known AI-screen rejections, shown by overlapping colour and style; older/unclassified exclusions stay unknown. Hardest wording becomes lowest observed unless the uncertainty range clears50%. No rebuild or rerun is started.
+- Validation:220 focused saved-result/field/gauntlet/source/token/UI checks pass (one qualification skip); Ruff and source limits pass. Tests cover strict threshold boundaries, starter reversal, merged denominators, thin-group/token behavior, source provenance and visibility. One additional old CLI status assertion was aligned with E11-S83's installed flag. No actual Forge games, source fetch, catalogue or private results were used.
+
+## Casual role cards and dated comparable Commander ranges (2026-11-11; E3-S42)
+
+- Free cards by role accepts casual lists through the existing deck/inventory guards. Colours come from the selected list's non-land cards; Commander legality and role targets are not imposed. Existing Commander fit remains the default for callers.
+- Commander Stats offers cached same-tier catalogue bands after the cited targets:25th/50th/75th percentiles from unique complete playable lists, date/count and 'a range, not a recipe'. Target Bracket2 uses core and3 uses upgraded; unsupported/missing/thin/tagless sources show no band. At least10 comparable decks are required; no source is fetched or rebuilt and the range endpoint reads no pool.
+- Both role panels keep asynchronous replies in their original profile, route and connected frame. No deck, target, catalogue, inventory or record is written.
+- Validation:68 focused role/model/API/UI/privacy/route/web tests pass; Ruff and source bounds pass. Tests use synthetic catalogue/card/pool data; no real Forge, collection, source fetch or device acceptance is claimed.
+
+## Card references, own printings and bookmarkable viewer (2026-11-11; E1-S31)
+
+- The existing viewer links the shown printing to Scryfall (an exact-name search without one) and EDHREC in Commander contexts, with safe new-tab relations and no server fetch. Card link gives a bookmarkable address instead of another card page.
+- Your copies unfolds lazily only for an authorized collection, showing owned printings, finishes, quantities and recorded/unset storage locations. It never returns notes, orders, prices or another space's copies. The API guard precedes validation/snapshot reads; Public deck access alone grants no inventory.
+- Card addresses wait for profile choice and open the same modal over the retained page (Library on a fresh opening). Replies and controls belong to the current profile, route, card and connected frame; closing restores the correct underlay.
+- Validation:126 targeted fixtures pass (one qualification skip),13 contract/exact-URL golden checks pass, and193 broader cases pass after four substring assertions were narrowed to actual private IDs. Eight strict synthetic captures passed with cleanup at data/ui-review/20261110T185450Z-96436dce; representative phone views were inspected. No actual cards, member contents, writes, migration or external fetch was used; device acceptance is unclaimed.
+
+## Optional outbound backup privacy (2026-11-11; E11-S69)
+
+- Defaults retain full readable export and existing dump-copy behavior. An opt-in home scope uses explicit table/file projections, excludes all wishlists/emails/member/mixed/audit/global preference data and rejects unreviewed future tables. Fresh scope-marked history and verified remote refs are required; existing archives are never rewritten or deleted.
+- Optional age public-key encryption writes off-PC ciphertext atomically without plaintext fallback, keeping the local dump. Restore/check paths decrypt through bounded native identity input to private temporary files, preserve existing restore guards and row/digest proof, and clean up on failure. Passive status checks warn without opening keys or running age.
+- The feature design documents operator installation/key placement, a fresh private remote, old plaintext/history retention and an authorized matching-key round trip as activation/acceptance work. No settings, keys, dependencies or remote are installed/changed automatically.
+- Validation:157 targeted tests pass with16 guarded DB skips; fake CLI and synthetic dump protocols cover defaults, scope invariance, refusal, encryption/restore cleanup and proof. Primary age docs confirm overwrite behavior for the precreated0600 output. No actual encryption, key, export/push, NAS, live database or service was exercised.
+
+## Audited loose-card loans (2026-11-11; E7-S37)
+
+- Collection More → Loans and collection lend/return/loans record dated exact-printing batches and whole returns. Borrower/notes remain private to the actual space; ownership stays in the same collection. Migration0024 adds audited rows and guarded old-schema behavior without any live application.
+- Lending uses confirmed free physical copies, including conservative unlocated holds. Open loans reduce pool, owned-vs-needed Notes, Spares and arrival availability; returned labels disappear on normal refresh while hand notes stay. Fresh operation guards prevent reducing or allocating away lent copies. Checks are scoped to touched spaces.
+- Public inventory grants no borrower details; ordinary downloads/Activity and public decks without inventory cannot relay them. Snapshot/PG keyed writes, exports, member removal and nightly invariants include the new records. No cross-space transfer, basic allocation, due date, reminder or built-deck loan is introduced.
+- Validation:381 broad,158 parity and111 final integration checks pass (overlap;14/2/1 guarded DB skips), plus34 owned checks with one guarded PG class. CI cases cover actual row-diff rollback, audit/revision/ownership and export/member parity. No real loan, borrower record, migration or live database changed; native-device acceptance is unclaimed.
+
+## Member personal copies and Cards to get (2026-11-11; E10-S44)
+
+- A member's own Collection offers a personal zip; Decks offers a stateless Cards to get sheet with quantity/name Copy. Both are actual-owner-only, with the same collection403 for home, other members, admins and public readers. No queue, order, shop-price or saved-plan behavior is added.
+- One read-only repeatable-read personal projection builds collection/tokens/dice/locations/raw imports/deck text (and own loans) while skipping departure-only identity, wishlist/settings, mixed-game, draft and visit queries. A file-hash manifest explicitly marks a personal copy, never a departure receipt. Temporary streaming artifacts are bounded and closed on send, HEAD and disconnect; admission stays held until cleanup.
+- Needs count each owned copy once across all own ordinary non-trial Planned decks, including the selected built decks' own holdings; incomplete sources yield no partial list. Page/profile ownership guards retain late responses and clipboard/download actions within the original visit.
+- Validation:46 focused backend/UI/route/web/export checks pass (one guarded DB class),11 latest focused pass. Disposable-PG scoped-query/invariance cases are included. Four strict phone captures passed and were inspected: data/ui-review/20261110T185441Z-501a4676. No actual member cards, zip, queue or live database was used.
+
+## One-file text play sheets (2026-11-11; E4-S30)
+
+- Download play sheet and Print play sheet use one builder for the list, stand-ins, Commander pregame facts and every guide/review warning. The download adds a saved date and stale-copy note; it makes no request or stored offline cache.
+- A text-structure whitelist escapes source text and drops active attributes, pictures/scripts and links. Symbol words remain readable; kit, availability and other inventory extras are never added. The menu action remains bound to its original page/profile.
+- Validation:43 focused print/stand-in/web checks pass, including unchanged Commander facts, malicious text, private extras, no requests/writes and stale callbacks. Local-file opening on iOS Safari remains unverified; no household deck was downloaded.
+
+## Contract verification follow-ups (2026-11-11; E1-S30, E4-S31)
+
+- Legacy inventory goldens normalize only the exact additive six-colour zero-land-source map when the list has no land/fetch/special/MDFC sources. Nonzero, malformed and unrelated stats still compare, with direct guard cases and the existing real-count stats tests.
+- A misplaced preexisting save/edit assertion block now remains in its PostgreSQL method, instead of referencing that method's local variables from the new deletion case. Global Ruff exposed this skipped-local-DB defect before publication.
+- Validation:50 focused contract/golden/play tests pass with one disposable-DB qualification skip; targeted Ruff passes. No production behavior or live records changed.
+
+## First-use player choices, terms and collection starts (2026-11-11; E11-S83)
+
+- Played by follows configured home slots, preserves member and player/kit draft restrictions, and uses neutral words for absent old slots. Config first/second aliases normalize to existing user/wife record values without changing permissions or writing configuration; examples explain the two slots and either.
+- Status and Planned/Play-now controls have short hints. About links a static glossary. Empty Collection offers Import, precon, Scan and Add one card to the current editor; stale controls cannot act. Import explicitly requires printing details, names source app export locations and offers a blank eight-column CSV template, with no guessed physical printing.
+- A named admin gets fixed card-data recovery command/log guidance; members retain plain messages. Missing Forge is informational and optional, distinct from an installed but broken setup. Narrow older setup/status test doubles were aligned with the already-shipped PostgreSQL-version and no-retained-snapshot checks.
+- Validation:93 focused backend/UI/player-kit checks and46 overlapping web/version/diagnostic checks pass, plus30 first-use/review-runner checks (one native skip). Six strict synthetic phone captures passed and representative images were inspected: data/ui-review/20261110T183710Z-cbfed045. No actual config, collection, import, Forge installation or device check was performed.
+
+## Bounded operator diagnostics and optional heartbeat hooks (2026-11-11; E11-S68)
+
+- DB logs rotate at2MB with three backups and a64KiB entry cap. Shop-health receipts retain only public shop keys, dates and outcomes; three distinct consecutive unreadable nights warn a named home admin, with retry/success/gap/disabled-shop handling and the last readable date.
+- Unexpected browser/server exceptions use safe references instead of relaying raw messages, filenames or IDs. A same-origin bounded enum-only report endpoint keeps200 events/128KiB at30 per minute; a named home admin explicitly opens the Settings reader. Known API refusals retain their actionable messages; offline/limited reports can remain honestly device-local.
+- Optional alerts remain null/off. Completion and the watchdog's first give-up transition can send only fixed step names and ok/failed, with a five-second socket timeout, no redirects/proxy and no target/error values in failure logs. Existing nightly step exits and whole-run receipts are preserved.
+- Validation:107 DB/nightly/watchdog and108 UI/fixture groups pass (overlap;five guarded DB skips), with additional HTTP, sanitized-error and route probes passing after a narrow old500-shape assertion update. No live monitor, shop, database, private data or service was exercised.
+
+## Declared route boundaries and cross-space probes (2026-11-11; E11-S65)
+
+- Feature routes now declare an access class for each concrete method/path and fail closed without one. A reviewed legacy inventory preserves the older routing aliases/lazy loading. Metadata documents policy; existing handlers remain the permission engine.
+- Table probes use valid private targets for nobody, a tunnel member, another home profile and relevant home-admin cases, asserting hidden-marker omission and unchanged persisted state. A validation-only refusal does not count as proof of a guard; worker/network/native writes are prohibited in the probes.
+- SECURITY.md records both listeners, script proof, trusted home chooser, current /img public-source-cache policy, new-route checks and source migrations. Stale admin-override/Activity/home-chooser/dice statements are corrected without changing permissions.
+- Validation:15 current route/declaration checks pass, plus earlier targeted listener/script/privacy checks. No live access policy, member setting or household record was changed.
+
+## Revision and published-precon comparison baselines (2026-11-11; E1-S30)
+
+- Compare accepts dated same-deck History revisions or an explicitly chosen cached MTGJSON precon without creating a deck/trial. Card differences and directional curve, colour-source, role and bracket deltas use lean intrinsic lists; brackets are qualified by today's data.
+- Baseline sides omit kit, owned/missing, prose, practice/results and the shared-card/head-to-head sections and requests. Unknown cards produce unknown stats; hidden decks retain missing equivalence before other validation. History and swap/version links retain available list choices.
+- Native review caught and fixed the precon route condition and a parent chooser left open. Ten smoke captures completed cleanly with no forbidden private endpoints or overflow; representative phone light/dark images were inspected. Receipt: data/ui-review/20261110T181103Z-02d67f65. These are synthetic Chrome controls, not household device acceptance.
+- Validation:48 final focused checks pass; the earlier236 group had230 passes, five qualification skips and one concurrent migration-inventory mismatch. No actual deck, history, collection, Forge game or saved precon was created/read for this task.
+
+## Counted observations for merged copies (2026-11-11; E7-S38)
+
+- Mixed or partly unknown condition/language is retained as counted notes; positive ManaBox/Deckbox/Moxfield marks become counted observations. Complete matching breakdowns are reusable on later merges and CSV imports; stale/general evidence stays conservative, and explicit fields win.
+- The bulk sheet recognizes both note formats. Valid structured evidence has room beyond the unchanged prose limit without truncation. Row identity, eight CSV columns and reservations remain unchanged; no per-copy records are introduced.
+- Partial order/receipt splits scale uniform evidence, or refuse before writes when a physical allocation cannot be known. Receipt/archive/remainder checks cover conservation and explicit separate-row facts.
+- Validation:360 broad and94 latest focused checks pass (overlap;31 and5 guarded DB skips). Ruff/Node/source checks pass; actual PostgreSQL parity cases remain for disposable CI. No real import, collection, order or receipt was changed.
+
+## Honest macOS foreground operation and nightly evidence (2026-11-11; E11-S82)
+
+- macOS uses the documented foreground/manual mode. Built-in background commands and updater give useful macOS guidance before running Windows/Linux commands or fetching; the wrapper starts the foreground server. Unsupported schedule status exits nonzero.
+- Smoke distinguishes a recent successful complete nightly from individual dump/check receipts and from proof of an installed future timer. Migration0023 admits whole-nightly operational receipts; inability to save the summary does not change existing step outcomes.
+- The guide includes manual updates, Homebrew/Postgres.app role hints and editable server/calendar LaunchAgents with PATH/logs and lifecycle instructions. Java discovery includes system and both Homebrew JDK layouts.
+- Validation:151 focused macOS/nightly/Linux/update/smoke/doctor/preflight/setup checks pass with two guarded/native skips. Both exact plist examples parse. No actual Mac, scheduling job, installation, live backup or migration was executed.
+
+## Lossless deck text and more offline collection layouts (2026-11-11; E2-S32)
+
+- Deck copy/download retains foil/etched and bare-set details; Copy with categories round-trips inline tags. Copy callbacks remain bound to their original profile, route and frame.
+- Offline collection import accepts recognized Archidekt/Dragon Shield/Delver preset/TCGplayer layouts and headerless card lists, with comma/tab/semicolon/preamble support. Original bytes, source groups and line numbers reach the usual reviewed one-change apply. ID-only or conflicting finish rows become explicit review problems; no external identifier/URL lookup is attempted.
+- Spending/location/folder fields are not inventory inputs and are never interpreted or totaled; private raw provenance stays intact. Public firsthand/developer format evidence is linked in the adapter source without copying personal collection rows.
+- Validation:235 broad and33 latest focused checks pass (overlap, one DB skip). Separate disposable-PG cases assert raw/audit/no-deck/problem-selection boundaries for CI. Source/Ruff/Node checks pass; no actual collection/import or new migration ran.
+
+## A conservative Spare list and price-free copy (2026-11-11; E7-S36)
+
+- Collection now shows spare copies with reasons after protecting physical built/intact holds, all non-trial unbuilt Planned lists and Considering, and the signed-in viewer's own wishlist. Incoming copies/basics aren't offered, and stale or incomplete sources withhold the claim.
+- Copy covers every matching page without prices/totals. Proven printing/finish assignments get tags; ambiguous physical allocation stays name/quantity-only with an explicit physical-check note. Existing holds/inventory and trading state are unchanged.
+- Public collection readers outside the space get a fixed unavailable Spare view before private plan/wishlist reads; hidden plan edits do not change that response. No cross-member offers or another person's wishlist are exposed.
+- Validation:104 current focused/integration and327 earlier broad checks pass, including16 new cases (groups overlap). Ruff/Node/source checks pass. No actual pool, collection, wishlist or trading record was read/changed by the coding task.
+
+## Per-deck recorded pod summaries (2026-11-11; E4-S34)
+
+- Deck-filtered Game log summaries use only already-visible pod projections and pinned deck aliases. At least 10 decided games are needed; draws are separate, fair share averages1/table-size, and the existing95% Wilson helper supplies the interval. Invalid/ambiguous results are excluded and smaller samples show no premature rate.
+- The three most frequent external commander winners in losses are recorder-space-only details. Public outsiders receive no private winner ranking, and hidden records contribute no counts. No extra card/inventory/record query or state write is made.
+- Validation:176 broad and67 overlapping focused play/pod/bridge/web tests pass (one separate DB skip), including different table sizes, duplicate targets, renames, private labels, no-extra-read/no-write guards and optional-failure rendering. This is a summary of visible recorded games, not a deck rating.
+
+## A new-install tunnel and Access walkthrough (2026-11-11; E11-S81)
+
+- SELF-HOSTING step10 now walks through domain/tool prerequisites, local tunnel login/create/DNS commands, a restricted Access application/policy, team/AUD lookup, origin-validated loopback8644 ingress and private config merging. It preserves existing profiles/space privacy, and the general reference links back to the how-to.
+- Current primary Cloudflare docs were checked against the app's managed tunnel command/listener. The example revealed that the simple ingress reader counted nested audTag list entries as new routes; it now skips nested lists, with a direct regression for real hostname/catch-all preservation.
+- Validation:32 tunnel fixtures pass; repository parsers accept the exact YAML/JSON examples; public/whitespace checks pass. No Cloudflare command, DNS/policy change or deployment ran. Real outside-browser/worker acceptance remains in its existing operational gates.
+
+## Pinned picture requests and bounded scan/staging resources (2026-11-11; E10-S45)
+
+- Picture fetches connect only to validated numeric addresses while preserving the original HTTP Host and HTTPS certificate/SNI identity. Redirect, private-address and no-proxy checks remain. The wrapped TLS socket is tracked by the deadline watchdog; DNS itself still follows OS resolver timeouts.
+- At most four picture fetches run at once; extras receive429. Staging retains age expiry and locked oldest-pruning at64 files/64MiB. No final accessory records or other permissions are changed by staging admission.
+- Card/token photos over4000px per side are refused before OCR. Linux Tesseract now runs under prlimit's512MiB address-space bound, OMP1 and the existing60-second timeout, refusing safely when the limiter is absent. The existing browser canvas stays2000px; no session-UX or token-format change was needed.
+- Validation:148 transport/scan checks and132 adjacent upload/member/Public/privacy/scanner checks pass (overlap; native/DB skips retained). Changing-resolver and original TLS identity tests pass, as do source/whitespace checks. Actual Linux OCR/photos remain separate qualification; no real URL, photo, collection or setting was touched.
+
+## Canonical product routing and page locale (2026-11-11; E11-S73)
+
+- Product-specific anonymous hashes and goldfish filtering now use the canonical Beginner Box constant, with SQL values still parameterized. One core LOCALE supplies page dates/numbers, preserving en-AU and all existing options; Shopping uses the same number helper for explicit formatting.
+- Syntax/scope-based fixture guards reject duplicated runtime stems, raw locale arguments and shadowed LOCALE bindings, without scanning comments/docstrings/fixtures as executable policy. No household settings, pilot choices, source data or ordering behavior changed; core stays below the line limit.
+- Validation:136 core/guard/Python checks pass; the102-case UI group had only three stale E11-S78 positive phrases in one test, corrected and rechecked. Canonical-stem tests need no database or Forge. Source/whitespace checks pass.
+
+## Scan-session defaults and retained unsure proposals (2026-11-11; E7-S35)
+
+- Scan cards now has explicit Keep/Clear controls for defaults applied only to later additions. A language read from the card wins; finishes apply only when the selected printing supports them. Reopening resets defaults without rewriting resolved card facts.
+- Check these retains unsure proposals until the user chooses, finds by name or skips them. Review is blocked while any remain. At most 50 metadata-only entries are retained, without photos/raw OCR; stale or hidden controls cannot act after sheet/profile/route changes.
+- Validation: 27 current interaction and 95 broader scan/API/token/layout/web checks pass (overlap), plus Ruff/Node/source guards. Import still uses its existing reviewed one-change path. No actual camera, OCR, card or collection data was used; real-photo acceptance remains E7-S32.
+
+## Audited game deletion and reviewed counter facts (2026-11-11; E4-S31)
+
+- Legacy/pod Game-log records can be deleted through one reasoned, confirmed audit change with a current revision receipt. The recording space owns deletion; hidden records remain404 and deletion reasons/notes remain private outside that space, including when deck lists are Public.
+- Ended counters can prefill optional reviewed duration, final-life, elimination reason and order fields. Normal edits preserve absent facts and explicit clearing removes them. New pod packets retain ordering, while older packets remain compatible and ambiguous old ordering stays unknown; deck snapshot hashes/schema are unchanged.
+- Validation:188 comprehensive and132 overlapping state/API/HTTP/bridge/activity/privacy/UI checks pass (one separate DB skip). Disposable Memory/PG-shaped checks cover CAS and audit behavior; real-PG qualification is guarded for CI. Eight synthetic native-control captures passed cleanly, with no record POST, and result/delete layouts were inspected. No actual game was recorded or deleted by this task.
+
+## A newcomer path through self-hosting (2026-11-11; E11-S80)
+
+- SELF-HOSTING now leads with time/resource planning, required/optional contents and a Windows PowerShell quick start covering downloads, interpreter/PATH/Store aliases, password custody and doctor checks. Versioned Linux/macOS package examples and the PostgreSQL apt path are linked to vendor instructions; profile/timezone/path and regional pricing examples are explicit.
+- Windows background setup includes at-logon, its bundled watchdog, firewall and signed-in-account behavior. Optional NAS/remote-export hardening is separated; export initializes its own repo. Lost-disk restore instructions and troubleshooting name the supported commands/logs without requiring an old digest file.
+- The root README correctly distinguishes Windows/Linux services from macOS's manual scheduling and marks outside access optional. The command reference has contents, a neutral opening and a roles/pgpass-first Database section, with historical rollout notes moved below current operations.
+- Validation: local heading/anchor and JSON-example checks pass, restore flags match the fixture-guarded parser, public/whitespace audits pass, and current primary download/package/authentication docs were read. Installation, recovery, Autologon and service examples were not executed; resource figures are planning allowances, not certified minima.
+
+## Shared typed searches and mana-value ranges (2026-11-11; E7-S34)
+
+- Editor and Collection now use one parser for o:/t: terms, aliases, quoted/open/phone phrases, negative rules/type terms and mana-value comparisons (including fractional values). Untyped words retain each page's prior matching scope and the existing identity/free/incoming/location filters.
+- Typed mv=7 is exact, while the old dropdown's7+ behavior is unchanged. Unknown terms get the same known-term sentence; hidden collections are refused before parsing and invalid terms read no pool. Editor compatibility helper names remain available; typed/negative queries suppress irrelevant name-guess suggestions without rewriting the user's query.
+- Validation:11 new checks and95 isolated search tests pass;355 of356 broad editor/collection checks passed, with one unrelated moving-tree play-delete inventory mismatch deferred to its own integration. Ruff/Node syntax/source guards pass. No collection, card index or external source was changed.
+
+## Wake-gate connection bounds and optional local-script proof (2026-11-11; E11-S75 source)
+
+- The gate admits at most 32 HTTP connections before starting threads and gives each socket a 10-second idle timeout; capacity is released on close, failure or timeout. Disposable tests exercise stalled connections, overload rejection and recovery without a real wake packet.
+- The compose wakegate service uses non-root UID/GID 65534, a read-only root, no capabilities/no-new-privileges and disabled bytecode writes. The README covers source-file readability without widening secret-file permissions. Actual updated NAS/WOL acceptance remains pending, not inferred from these tests.
+- An optional script_secret adds exact-key proof off Linux when configured. It preserves existing defaults and every loopback/listener/flag/no-viewer check; Linux still requires the server user's peer UID. Supported loopback clients propagate the key, doctor rejects invalid settings and the public leak audit recognizes configured values. No key, config or deployment was changed by the task.
+- Validation: 107 focused and 55 follow-up fixtures pass (overlap, one existing platform skip); server/access/lifecycle regression found only the corrected old E11-S78 stale-snapshot assertion. Source/whitespace guards pass. E11-S75 stays partial/DECISION for external acceptance; optional activation is an operator choice.
+
+## Pending bonus-printing purchase advisories (2026-11-11; E5-S36)
+
+- Queue/order previews now warn when an exact printing and finish is a pending product's recorded bonus extra, including a product and single in the same order. Display commanders, mismatched/cancelled/received sources and any-printing intent do not falsely claim a duplicate. Shopping and saved-variant reviews show the same advisory before an explicit add.
+- The pool's already-owned hint can name recorded bonus provenance and the explicit order extra-copies command. No purchase is refused, no quantities/exit codes change and nothing is marked automatically. Optional annotation failure cannot stop a valid purchase operation.
+- The catalog is limited to authorized home-record readers and carries only printing/product labels, never raw notes or other-space data. Existing collection/order permissions are unchanged. The broader precon-source conflict message also now names base-list changes as well as bonus-source changes.
+- Validation: 53 focused plus 358 broad regressions pass (overlapping groups; 61 expected DB/platform skips). Tests cover same-order/fulfils/CLI paths, exact identities, home-member versus other-space-admin privacy, reviewed variant application and the no-warning DOM path. No real queue/order was changed.
+
+## JavaScript scope checks and an independent browser CI signal (2026-11-11; E11-S74)
+
+- One closeAllSheets() preserves existing global sheet cleanup order for profile/chooser/route changes. The fixture suite inventories closer definitions and fails if the shared entry point omits a family.
+- Pinned Acorn/eslint-scope tools parse classic scripts with real lexical scopes, checking unresolved bare calls while recognizing local bindings, cross-file globals and protected typeof paths. Fixture CI installs the exact locked dev dependencies with lifecycle scripts disabled; production still has no npm/build requirement.
+- A separate, non-required Linux Chrome workflow runs disposable capture smoke with strict page/console error handling and retained evidence. Synthetic visit telemetry is suppressed with a local 204 reply, avoiding a harness-created abort error without contacting the app/database. Other unapproved/external writes remain blocked; existing required CI gates are unchanged.
+- Validation: 65 targeted fixture checks pass (one platform skip), and the CI-equivalent 12-case strict-console browser run passed with clean cleanup (`data/ui-review/20261110T160223Z-a8403650/`). Hosted CI is followed on the final PR; no workflow or branch protection setting was changed remotely.
+
+## Life-counter wake, Undo and rules-derived markers (2026-11-11; E4-S32)
+
+- The duel/pod counters share guarded wake-lock handling, with visible-return reacquisition and stale-lock release. Unsupported/rejected locks say when the screen may sleep, distinguishing a saved count from storage failure.
+- Counters now keep a bounded 20-step in-memory Undo history while open. Ended or recorded games cannot be reopened through Undo; mid-pod elimination can still be corrected while the game continues. Optional bounded marker fields persist compatibly beside old packets, without rewriting resumed v1 data.
+- Visible chosen lists suggest poison, energy, experience, Monarch and Initiative controls from rules, not collection state. API hints are presentation-only and preserve snapshot hashes and record privacy; the controls can be switched off.
+- Validation: 222 targeted checks pass (one separate DB skip); an 8-case synthetic smoke passed with clean source/cleanup and scoped narrow-screen wrapping fixes. A 24-case `life-counters` matrix adds full rendering coverage; Wake Lock is simulated and no actual record/inventory is written. Physical wake/Safari checks remain separate.
+
+## Actionable first-run diagnostics (2026-11-11; E11-S78)
+
+- Recognized no-answer, sign-in and missing-role/database failures now have distinct doctor/page/local-console guidance. SQLSTATE is preferred, known libpq phrases cover startup errors without it, and unknown failures remain unverified. Raw exception contents never enter doctor/page prose; local db.log retains the cause.
+- Setup refuses PostgreSQL older than 16 before role/database writes. Server/database commands name unsupported Python before work, and server stop still works independently. Missing-driver guidance follows the venv reason; occupied-port errors name --port and config.json.
+- Status uses a passive cache fact instead of assuming a failed database has retained data. First installs get setup guidance, existing installs still get restore guidance, initial card downloads are worded as progress, and optional simulations never configured show one neutral finding.
+- SELF-HOSTING.md covers refused/timed-out connections, service checks and a temporary localhost-only Windows postgres password reset, with original authentication restored immediately. No service, password or real config was changed by this source task.
+- Validation: 146 targeted setup/preflight/runtime/lifecycle/config checks and 112 focused checks pass (groups overlap, three guarded DB skips). Peer review found no blocking issue; new tests exercise no-write setup refusal, sanitizer boundaries and passive-cache/first-use UI truth.
+
+## Secret Lair drops as cards-only imports (2026-11-11; E7-S40)
+
+- Add a precon and `collection add-precon` now offer Secret Lair drops, marked cards only. The ordinary reviewed cards, fixed bonus choices, optional confirmed tokens and raw import save as one change, without making a deck, table/history or deck-revision change.
+- The sheet hides deck-title controls and ends with a cards-only receipt retaining filing/stale-table/trial reminders. Source receipts bind type and normalized base cards as well as bonus contents; stale or uncertain saves require the existing explicit recovery flow. Trial and coverage readers still accept decks only.
+- Validation: 14 new API/CLI/Node UI cases, 193 core/legacy precon checks and 101 secondary checks pass (groups overlap). Two disposable-PostgreSQL cases are added for CI, locally guarded. The 12-case synthetic rendered review is qualified at the stable batch point; no actual cards or decks were imported by this task.
+
+## Overnight TODO validation and handoff (2026-11-10)
+
+- E7-S39 (fixed precon bonus cards) and E4-S29 (counter/dice reminders and the take-along list) are built. E11-S79's remaining timezone-default choice and E11-S84's stable-channel choice are DECISION rows; their locally implementable config/update work is built. No new default or update channel was chosen.
+- All four Windows fixture shards passed with the unchanged 600-second limit: 13,350 discovered cases across 837 modules, with 978 cases in the expanded skip ledgers (database/native/real-Forge qualification, unavailable historical tags and platform prerequisites). Retained final logs/timings are under `data/overnight-todo-2026-11-10/`: `shard-0-final.log`, `shard-1.log`, `shard-2.log`, `shard-3-retry.log` and their timing JSON files. Initial attempts are retained too; the fixture corrections below were followed through to fresh passing shards.
+- Stable-source Chromium reviews passed 36/36 cases on application source `3356869`: `precon-bonus` 6/6 at `data/ui-review/20261110T124702Z-4f27b167/`, and `assembly-counters` 30/30 at `data/ui-review/20261110T124702Z-c055d933/`. Both receipts report unchanged source, complete cooperative fixture/runtime cleanup and closed browsers. Phone/tablet ready and stale layouts, dark mode and corrected white print backgrounds were visually inspected. Optional ticks and bonus saves used intercepted synthetic replies; printing used a stubbed system dialog.
+- Ruff's real-error rules, the source-length guard (1,617 owned files, none over 1,200 lines), public-repo audit (zero findings), story-count audit and whitespace checks pass. Later commits change fixtures/docs only; application source remains the rendered source above.
+- The work is committed on the continuing local `work/overnight-todo` branch, without publishing. No household/member records, config, visibility, live installation or Forge games were changed/run. The development listener on 8642 was absent and left stopped. The timed-out test fixture was identified by its owner/run id, stopped cooperatively and removed; no fixture or shard process remains. PostgreSQL, real Forge, native printing, Safari/touch and household-device acceptance remain separate qualification.
+
+## Fixture follow-through for config diagnostics and UI cleanup (2026-11-10)
+
+- The watchdog's canned status scenario now supplies a usable synthetic admin, so its five watchdog/network warnings remain the facts under test rather than gaining the new missing-admin warning. The config-diagnostic fixtures still test that warning explicitly.
+- The browser-cleanup proof matrix mocks startup/readiness while retaining actual report/runtime cleanup assertions. It covers every supported suite and missing/negative/positive close receipts without repeatedly starting real fixture servers; dedicated readiness and real-child cleanup tests remain separate.
+- Focused validation: 67 watchdog/status/profile-diagnostic fixtures and all 22 UI-harness fixtures pass (one platform skip). Failed full-suite shards are rerun after these test fixes; the ten-minute CI limit is unchanged.
+- The selected-version assembly regression now compares the retained counter/dice estimate with the ordinary token reader, instead of deliberately deleting the field as the old plan did. The rest of its token, printing, packing-key and selected-list checks stay intact.
+
+## Take-along print background in dark mode (2026-11-10; E4-S29)
+
+- Final screenshot inspection found the dark page background extending below the white take-along print sheet. Print media now sets the root/body backgrounds white only while that sheet is present; other print paths are unchanged.
+- The synthetic capture checks both computed backgrounds in every take-along print case. The 45 focused UI/web fixtures pass; the rendered matrix is repeated after this correction.
+
+## A built-deck take-along list (2026-11-10; E4-S29)
+
+- Build decks offers one take-along checklist when every selected ordinary home deck's chosen list matches its saved physical build. It shows permitted sleeves/box details, the packed Token cards record, merged counter/dice kind reminders and only the viewer's own/shared playmats. Unknown/private details remain unavailable, and unrelated hidden accessory errors cannot change the visible answer.
+- The checks use the ordinary optional shared packing ticks, with contexts bound to the physical receipts. They never affect card-building progress or eligibility, reserve cards, or write inventory/decks; failed tick saves leave normal build behavior intact. Counter coverage remains unknown if any participant's estimate is unavailable.
+- Print take-along list prints the same permitted data and current checks through the existing print-sheet styling. Its control must still belong to the current page/profile/plan and connected section. A stubbed system print call qualifies DOM/CSS behavior only, not a native print dialog.
+- Validation: 63 focused backend/UI/web fixtures and the combined counter/take-along/inventory-contract suite pass. The expanded headless `assembly-counters` suite has 30 cases; final stable-source rendering and full-suite results are recorded separately. Household devices remain part of E11-S30's acceptance.
+
+## BOM configs across updates and member edits (2026-11-10; E11-S79 compatibility)
+
+- The Forge updater and strict member-config editor now accept the same BOM-encoded JSON as the main loader and doctor. Update's config backup keeps the original bytes, including BOM and CRLF, and its rewrite avoids newline normalization.
+- Profile-edit snapshots and recovery journals still hash the exact original bytes; accepting a BOM never weakens digest checks. A digest that omits those bytes is refused.
+- Validation: 35 guarded updater/profile-edit/create/admission/config-diagnostic fixtures pass. Only synthetic files and stubbed updater dependencies were used; no Forge download, config update or profile edit ran against this install.
+
+## Missing config guidance and local role warnings (2026-11-10; E11-S79)
+
+- Startup names a missing `decklab/config.json` and the example/setup instructions while retaining existing defaults. Status reports fixed ready/missing/unreadable source state only; no config contents or role/profile diagnostics go to the page.
+- An empty home profile chooser says where profiles are configured. Doctor and local homenet status warn about unknown roles or no usable admin through fixed wording, keeping parser roles, permissions, config readiness and dependent checks unchanged.
+- Validation: 336 guarded fixture tests passed across config, doctor, local status, chooser, roster/privacy, pricing and server lifecycle; four existing native checks skipped for separate qualification. Only E11-S79's timezone-default decision remains; no household config or timezone was changed.
+
+## Counter and dice reminders in Build decks (2026-11-10; E4-S29 first slice)
+
+- Build decks now shows optional counter/dice kind estimates with each kind's selected deck sources, including sideboard-only notes. Coverage is calculated once across the plan, allocating generic cover deterministically across distinct kinds; repeated deck rows don't imply extra stock.
+- The reminders are read-only. They add no required task, tick, card reservation or completion condition, and existing physical-token tick identities remain stable. Failed reads/estimates show unknown coverage; an unapplied dice migration stays explicit. Home-inventory and kit permissions are unchanged.
+- Validation: counter summary/key/UI/privacy fixtures, the inventory contract suite and UI harness checks pass. An opt-in `assembly-counters` headless suite adds 18 ready/failed/unmigrated light/dark phone/tablet/desktop captures; final stable-source rendering and household device acceptance remain separate. The take-along list is the next slice.
+
+## Fixed bonus cards when adding a precon (2026-11-10; E7-S39)
+
+- Add a precon previews fixed bonus cards separately, checked by default unless the space already owns that exact printing and finish. Native per-card checkboxes update the collection total. Selected cards have blank condition/language and the note `bonus card in <precon>`; they stay out of deck lines.
+- The cards and raw import save with the new deck in one existing operation. Page choices are bound to the preview's sealed-source receipt and the collection SHA; a missing/changed source or collection requires a new review. Only previews fetch the sealed extract; saves use the cached source.
+- CLI dry runs show bonus printings/defaults and name random contents without adding them. Saving a precon with fixed bonus cards requires `--bonus-cards include` or `--bonus-cards skip`; dry-run first if the sealed source isn't cached.
+- Validation: 15 new API/CLI/UI fixtures, including a real cached sealed reader and rollback after late deck-create failure; existing precon, token-choice, filing, coverage, sealed and web fixtures pass. Groups overlap. PostgreSQL and household devices remain separate qualification.
+
+## Local simulation settings without changed tracked files (2026-11-10; E11-S84)
+
+- Optional gitignored `decklab/simulation.local.json` replaces the whole shipped settings document for pilot and field readers; the neutral `simulation.example.json` is a starting point. Existing shipped/adopted defaults stay as they were, and no local file is created automatically.
+- Pilot caching notices local file creation, edits and removal, including a replacement whose size/time matches the shipped file. An invalid or unreadable override reports a problem using the existing invalid-settings behavior, without silently restoring shipped choices. README explains how to retain local settings when updating or moving an install.
+- Validation: local-override fixtures and existing pilot, field-membership, field and privacy fixtures. No Forge games or local settings were changed. E11-S84's remaining update-channel choice needs Matt.
+
+## Configuration syntax diagnostics (2026-11-10; E11-S79 first slice)
+
+- Config files saved with a UTF-8 BOM now load in Deck Lab and the doctor. A malformed file is named with its JSON line and column, consistently in the server log, database commands and doctor text/JSON; server startup reports it without a traceback or private file contents.
+- Non-object JSON and invalid UTF-8 get fixed, actionable messages. The doctor's adapter keeps its code-string contract, with only validated location integers permitted as additional output.
+- Validation: 78 targeted guarded config, server, database-CLI, doctor and preflight fixtures. Missing-file/role guidance and the timezone decision remain open; no household configuration was changed.
+
+## Config safety for updates and release installs (2026-11-10; E11-S84 first slice)
+
+- Update's `decklab/config.json.before-forge-update` backup is now gitignored, keeping copied profiles and tunnel settings out of an ordinary `git add .`.
+- An unpacked release stays clean after configuring it. The shipped-file comparison excludes local config, while runtime fingerprints still detect its edits or removal and ask for a restart. Changed application files still count as modified.
+- Running the git updater in a release install stops before Python checks, git or service work and names the release update instructions in SELF-HOSTING.md.
+- Validation: guarded build, release and updater fixtures, including unpack-and-configure and settings-change tests. Simulation defaults/local overrides and the stable-channel decision remain open; nothing was published or installed.
+
 ## A sealed product's bonus card on its list (2026-11-10; E6-S29)
 
 **2026-11-10: A sealed product's bonus card on its list (E6-S29).** Matt's Stardew Valley Secret Lair drops were recorded with lists of only their published cards, so Krobus and Junimo Farmhands, the drops' bonus cards, showed as missing and were bought again as eBay singles while the drops were on their way. MTGJSON records a product's fixed extras only in its set file, never in a deck file: new `lib/sealed.py` reads `data.sealedProduct[].contents` (`card` fixed; `pack`, `sealed`, `variable` random; `other` not a card), joined to a deck file through `sealedProductUuids` (else by deck name), fixed cards being those every one of a deck's products holds. A set file (SLD's 2.4 MB compressed) is fetched only while a list is filled or an order previewed, never by a save or page load, and a small extract (SLD's 384 KB) is kept a week in `decklab/data/mtgjson/sealed/`; an older one is used when MTGJSON can't be reached (Matt's decisions of 2026-11-10).

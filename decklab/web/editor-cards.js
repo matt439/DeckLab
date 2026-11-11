@@ -52,7 +52,14 @@ function addPart(onPaste = editorSearchPaste) {
     el("div", { class: "add-to" }, el("span", { class: "add-to-label", text: "Add to" }), ed.dom.addTo),
     cardSearch(),
     el("div", { class: "add-paste" },
-      el("button", { type: "button", class: "btn btn-quiet", text: "Paste a list…", onclick: onPaste })));
+      el("button", { type: "button", class: "btn btn-quiet", text: "Paste a list…", onclick: onPaste }),
+      ed.mode === "edit" && !ed.readOnly ? el("button", {type: "button", class: "btn btn-quiet", text: "Add cards from another deck…",
+        onclick: event => {
+          if (!event.currentTarget.isConnected || !editorKeyboardCurrent(ed) || ed !== editor) return;
+          const dock = ed.dom.searchDock;
+          if (dock?.open) closeEditorSearchDock(dock, {focus: false});
+          if (ed === editor) openDeckImport();
+        }}) : null));
   drawAddTo();
   return part;
 }
@@ -135,7 +142,7 @@ function cardSearch() {
     "aria-controls": "ac-list", "aria-describedby": "ac-help", autocomplete: "off",
     autocorrect: "off", autocapitalize: "none", spellcheck: "false", enterkeyhint: "search",
     placeholder: "Card name, e.g. 4 bolt", "aria-keyshortcuts": keyboardCharactersEnabled(ed.profile) ? "/ Alt+Enter" : "Alt+Enter",
-    title: "Enter or a click adds 1 copy; Shift adds 4; “4 bolt” adds 4. Alt+Enter shows the card big. o: searches rules text and t: the type line, as on Scryfall: o:treasure t:creature, o:\"draw a card\"." });
+    title: "Enter or a click adds 1 copy; Shift adds 4; “4 bolt” adds 4. Alt+Enter shows the card big. Search o:treasure t:creature, o:\"draw a card\", -o:discard or -t:land; mana value mv<=2, mv>=5 or mv=3." });
   ac.list = el("ul", { id: "ac-list", class: "ac-list", "aria-label": "Cards found", hidden: true });
   ac.live = el("p", { class: "sr-only", role: "status", "aria-live": "polite" });
   ac.more = el("button", { type: "button", class: "btn btn-quiet ac-more", hidden: true, text: "More",
@@ -185,7 +192,7 @@ function cardSearch() {
   ac.note = el("div", { class: "ac-note", hidden: true });     // where EDHREC's ideas came from (editor-edhrec.js)
   ac.wrap = el("div", { class: "ac-wrap" },
     el("div", { class: "ac" }, el("label", { for: "ac-input", class: "sr-only", text: "Card name" }), ac.input),
-    ac.filters, ac.note, addTip(), el("p", { id: "ac-help", class: "sr-only", text: "Arrow keys choose a result. Enter adds it; Shift adds four. Alt+Enter opens the card. Tab reaches each result action. o: searches rules text and t: the type line." }),
+    ac.filters, ac.note, addTip(), el("p", { id: "ac-help", class: "sr-only", text: "Arrow keys choose a result. Enter adds it; Shift adds four. Alt+Enter opens the card. Tab reaches each result action. o: searches rules text, t: the type line; -o: and -t: leave matches out. Mana value: mv<=2, mv>=5 or mv=3." }),
     ac.live, ac.list, ac.moreError, ac.more);
   drawSearchControls(ac);
   showResults(ac);
@@ -372,10 +379,10 @@ async function lookUp(ac, q, more = false) {
   }
 }
 
-/** Whether the search text holds a rules-text or type-line term (o:, t:, E2-S25): its results are cards
+/** Whether the search text holds a typed term or mana comparison: its results are cards
  * that match them, so no close spellings of the text follow. */
 function hasFindTerms(q) {
-  return /(?:^|\s)(?:o|oracle|t|type):/i.test(q);
+  return /(?:^|\s)(?:-?(?:o|oracle|t|type):|mv(?:<=|>=|=|<|>))/i.test(q);
 }
 
 /** Cards the name search can't find but a close spelling can (a typo such as "lightnig bolt", "fire/ice",

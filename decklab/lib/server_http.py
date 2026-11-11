@@ -383,12 +383,12 @@ class Handler(BaseHTTPRequestHandler):
         except OSError:         # the client reset or timed out: nothing more to do
             pass
 
-    def _send(self, status, body, content_type, headers=()):
+    def _send(self, status, body, content_type, headers=(), *, stream=None, length=None):
         if self._unread_body():
             self.close_connection = True
         self.send_response(status)
         self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Content-Length", str(len(body) if stream is None else length))
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header(*ORIGIN_HEADER)
@@ -405,7 +405,16 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Connection", "close")
         self.end_headers()
         if self.command != "HEAD" and status not in (204, 304):
-            self.wfile.write(body)
+            if stream is None:
+                self.wfile.write(body)
+            else:
+                remaining = length
+                while remaining:
+                    chunk = stream.read(min(64 * 1024, remaining))
+                    if not chunk:
+                        raise ConnectionError("The temporary download ended before its declared length")
+                    self.wfile.write(chunk)
+                    remaining -= len(chunk)
 
     def _page_policy(self):
         # The tunnel's page never reads the gate (it has the off page's Worker): the home page's alone may.
@@ -423,6 +432,14 @@ class Handler(BaseHTTPRequestHandler):
         stale = inventory.pinned_stale()
         if stale and isinstance(data, dict):
             data = {**data, "inventory_stale": stale}
+        snapshot = inventory.pinned_committed_snapshot() or inventory.pinned_snapshot()
+        if 200 <= status < 300 and snapshot is not None and self.path.split("?", 1)[0] != "/api/changes":
+            from decklab.lib.api import changes
+            revisions = changes.current(snapshot)
+            if revisions:
+                headers = (*headers, (changes.HEADER, json.dumps(revisions, separators=(",", ":"))))
+                if inventory.pinned_write():
+                    headers = (*headers, (changes.WRITE_HEADER, "1"))
         try:
             body = json.dumps(data, ensure_ascii=False, allow_nan=False).encode("utf-8")
         except UnicodeEncodeError:
@@ -481,11 +498,14 @@ class Handler(BaseHTTPRequestHandler):
             self._fail(api.ApiError(409, str(e)))
         except (ConnectionError, TimeoutError):
             self.close_connection = True        # the phone went away mid-answer
-        except Exception:
-            log(f"Error answering {self._printable(self.command, 40)} {self.path[:300]!r}:\n"
+        except Exception as error:
+            from decklab.lib import error_references
+            reference = error_references.unexpected(error, self.path)
+            log(f"Error reference {reference} answering {self._printable(self.command, 40)} {self.path[:300]!r}:\n"
                 f"{traceback.format_exc()}")
             if self._status is None:            # nothing sent yet
-                self._fail(api.ApiError(500, "Internal server error (the server log has the details)"))
+                self._fail(api.ApiError(500, f"Something went wrong. Reference {reference}; the server log has the details.",
+                                        reference=reference))
             else:
                 self.close_connection = True
 
@@ -530,13 +550,15 @@ class Handler(BaseHTTPRequestHandler):
         """True for a script's request (access.script()): on the home listener, from loopback
         (127.0.0.1 or ::1; the PC asking its own LAN address isn't), with exactly one
         X-Deck-Lab-Script: 1 and no viewer named, and on Linux from this user's own socket
-        (script_peer_ok). The tunnel's listener is on 127.0.0.1 too, so the header gets
-        nothing there."""
+        (script_peer_ok). Off Linux an optional configured script_secret also needs its
+        exact secret header. The tunnel's listener grants neither header anything."""
         if self.server.remote or viewer:
             return False
         if (self.headers.get_all(access.SCRIPT_HEADER) or []) != ["1"]:
             return False
-        return self.client_address[0] in LOOPBACK and script_peer_ok(self)
+        from decklab.lib import script_secret
+        return (self.client_address[0] in LOOPBACK and script_peer_ok(self)
+                and script_secret.accepts(self.headers, self.server.script_secret))
 
     def _home_only(self, profile_id):
         """On the home listener, 403 "Sign in through decklab.example.com" for a request naming a
@@ -1068,12 +1090,15 @@ class Server(ThreadingHTTPServer):
     # silently; elsewhere it only allows a quick restart.
     allow_reuse_address = os.name != "nt"
 
-    def __init__(self, address, web_dir=None, allowed_hosts=(), access=None, tunnel_hosts=(), home_networks=None):
+    def __init__(self, address, web_dir=None, allowed_hosts=(), access=None, tunnel_hosts=(), home_networks=None,
+                 script_secret=None):
         """access: the access.Verifier of the tunnel's listener (every request
         then needs a Cloudflare Access login, for one of tunnel_hosts), or None
         for the home listener (which refuses tunnel_hosts with 421, and
         visits from outside home_networks with 403: home_scope.networks,
         its built-in home networks by default)."""
+        from decklab.lib.script_secret import validate
+        self.script_secret = validate(script_secret)
         self.web_dir = Path(web_dir or WEB_DIR)
         self.home_networks = tuple(home_networks) if home_networks is not None else home_scope.BUILT_IN
         self.refusals = home_scope.Refusals()
@@ -1102,8 +1127,8 @@ class Server(ThreadingHTTPServer):
         log(f"Error with a request from {client_address[0]}:\n{traceback.format_exc()}")
 
 
-def make_server(host, port, web_dir=None, allowed_hosts=(), access=None, tunnel_hosts=(), home_networks=None):
+def make_server(host, port, web_dir=None, allowed_hosts=(), access=None, tunnel_hosts=(), home_networks=None, script_secret=None):
     """A Server bound to (host, port); port 0 picks a free one (server.server_address).
     With access (an access.Verifier) it's the tunnel's listener (Server). home_networks:
     the home listener's networks (home_scope.networks; its built-in ones by default)."""
-    return Server((host, port), web_dir, allowed_hosts, access, tunnel_hosts, home_networks)
+    return Server((host, port), web_dir, allowed_hosts, access, tunnel_hosts, home_networks, script_secret)

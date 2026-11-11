@@ -37,12 +37,15 @@ REFRESH_SECONDS = 60
 TIMEOUT = 2                         # seconds to connect before a check gives up
 
 NOT_REACHABLE = "not reachable"
+NO_ANSWER = "no answer"
+SIGNIN_FAILED = "sign-in refused"
+SETUP_NEEDED = "not set up"
 PSYCOPG_MISSING = "psycopg missing"
 MIGRATIONS_PENDING = "migrations pending"
 DATABASE_NEWER = "database newer"    # it holds migrations this code has no file for (E11-S70)
 CHECK_FAILED = "check failed"
-ERRORS = (NOT_REACHABLE, PSYCOPG_MISSING, MIGRATIONS_PENDING, DATABASE_NEWER, CHECK_FAILED)
-DOWN = (NOT_REACHABLE, PSYCOPG_MISSING)  # the errors meaning the database can't be used
+ERRORS = (NOT_REACHABLE, NO_ANSWER, SIGNIN_FAILED, SETUP_NEEDED, PSYCOPG_MISSING, MIGRATIONS_PENDING, DATABASE_NEWER, CHECK_FAILED)
+DOWN = (NOT_REACHABLE, NO_ANSWER, SIGNIN_FAILED, SETUP_NEEDED, PSYCOPG_MISSING)
 # SQLSTATEs meaning the schema is older than this code (as lib/state/pg.NEEDS_MIGRATING).
 NEEDS_MIGRATING = ("42P01", "42703", "42501")
 # Phase 2's tables, the ones the state store reads: when each can be read, the stores work
@@ -185,7 +188,10 @@ def check(dbname=None, now=None):
             runs = _runs(c)
             inventory = _inventory(c)
     except db.DbUnavailable as e:
-        return _result(NOT_REACHABLE, str(e))
+        from decklab.lib.db_failures import connection_reason
+        error = {"network": NO_ANSWER, "authentication": SIGNIN_FAILED,
+                 "setup": SETUP_NEEDED}.get(connection_reason(e), NOT_REACHABLE)
+        return _result(error, str(e))
     except psycopg.Error as e:
         text = (str(e).strip().splitlines() or ["no detail"])[0]
         state = getattr(e, "sqlstate", None) or ""
@@ -237,6 +243,12 @@ def describe(snapshot):
         n = snapshot["pending_migrations"]
         what = f"{n} migration{'s' if n != 1 else ''} pending" if n else "the migrations need attention"
         return f"reachable, {what} (python -m decklab.db migrate)"
+    if snapshot["error"] in (SIGNIN_FAILED, SETUP_NEEDED):
+        return snapshot["error"] + " (run python -m decklab.db setup; decklab/data/logs/db.log says why)"
+    if snapshot["error"] == NO_ANSWER:
+        return "nothing answered at the configured PostgreSQL host:port (check the service; decklab/data/logs/db.log says why)"
+    if snapshot["error"] == NOT_REACHABLE:
+        return "the PostgreSQL connection could not be verified (decklab/data/logs/db.log says why)"
     return snapshot["error"]
 
 
@@ -307,10 +319,15 @@ def view(viewer, *, script=False):
         return {"ok": None, "checking": True}
     if not _is_admin(viewer, script):
         return {"ok": snapshot["usable"]}
+    warning = snapshot.get("checks_warning")
+    from decklab.lib import permissions
+    if permissions.sees_home_records(viewer, script=script):
+        from decklab.lib.shops import health
+        warning = " ".join(filter(None, (warning, health.warning()))) or None
     return {"ok": snapshot["ok"], "usable": snapshot["usable"], "error": snapshot["error"],
             "pending_migrations": snapshot["pending_migrations"],
             "last_backup": snapshot["last_backup"], "backup_stale": snapshot["backup_stale"],
-            "stale_hours": snapshot["stale_hours"], "checks_warning": snapshot.get("checks_warning"),
+            "stale_hours": snapshot["stale_hours"], "checks_warning": warning,
             "venv": _venv_reason(),
             "inventory": inventory_view(snapshot)}
 
@@ -326,9 +343,11 @@ def inventory_view(snapshot):
     # Migration 0004 not applied (no inventory tables): the database can't serve the inventory
     # even though phase 2's tables leave it usable, and it isn't that nothing was imported.
     no_tables = held is not None and held.get("tables") is False
+    from decklab.lib import inventory
+    unavailable = not snapshot["usable"] or no_tables
     return {"imported": imported,
             "revision": held["revision"] if held else None, "imported_at": held["imported_at"] if held else None,
-            "stale": not snapshot["usable"] or no_tables,
+            "stale": unavailable and inventory.cached_snapshot_available(), "unavailable": unavailable,
             "not_imported": imported is False and not no_tables}
 
 

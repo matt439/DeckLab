@@ -84,6 +84,7 @@ def parse_name_page(text, name):
             "price": _price(entry.get("price")),
             "stock": stock if isinstance(stock, int) and not isinstance(stock, bool) and stock >= 0 else 0,
             "condition": str(entry.get("condition") or ""),
+            "language": str(entry.get("language") or ""),
             "url": SITE + link if isinstance(link, str) and link.startswith("/cards/") else name_url(name)})
     listings.sort(key=lambda item: (item["set"], item["number"], item["finish"], item["condition"]))
     return listings

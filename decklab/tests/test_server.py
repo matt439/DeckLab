@@ -341,7 +341,8 @@ class ApiEndpointTests(ServerTestCase):
                                     "last_backup": None, "backup_stale": None, "stale_hours": 36, "checks_warning": None,
                                     "venv": None,
                                     "inventory": {"imported": None, "imported_at": None,
-                                                  "not_imported": False, "revision": None, "stale": True}})
+                                                  "not_imported": False, "revision": None,
+                                                  "stale": False, "unavailable": True}})
 
     def test_a_member_gets_only_whether_the_database_can_be_used(self):
         # The Sandbox's config has no roles (everyone an admin): give it some for this test.
@@ -509,7 +510,11 @@ class ApiEndpointTests(ServerTestCase):
 
     def test_a_crash_is_a_plain_500_and_the_traceback_is_logged(self):
         with mock.patch.object(api, "decks_index", side_effect=RuntimeError("secret detail")):
-            message = self.assertError("/api/decks", 500)
+            data = self.get_json("/api/decks", 500)
+            self.assertEqual(set(data), {"error", "reference"})
+            self.assertRegex(data["reference"], r"^[0-9a-f]{32}$")
+            message = data["error"]
+            self.assertIn(data["reference"], message)
         self.assertNotIn("secret detail", message)
         self.assertTrue(any("secret detail" in line and "Traceback" in line for line in self.log))
 

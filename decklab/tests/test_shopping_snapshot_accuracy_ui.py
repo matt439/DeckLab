@@ -80,7 +80,9 @@ class SnapshotLineAccuracyTests(unittest.TestCase):
           const days = body.querySelectorAll("tr").map(tr => tr.querySelectorAll("td").map(td => td.textContent)).filter(d => d.length);
           same(days.map(d => d[2]), ["not listed; first page only, more results not read", "listed, but not in this printing",
             "in stock"]);
-          assert.equal(days[2][3], "LTC 12 foil");
+          const printing = body.querySelectorAll("tr").map(tr => tr.querySelectorAll("td")).filter(cells => cells.length).at(-1)[3];
+          assert.equal(printing.querySelector("span").textContent, "LTC 12 foil");
+          assert.equal(printing.querySelector("small").textContent, "Condition unknown, language unknown");
         """)
 
     def test_an_any_printing_history_says_so(self):

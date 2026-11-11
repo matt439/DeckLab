@@ -118,6 +118,26 @@ function assemblyTokenTasks(tokens, rows = [], view = null) {
       el("p", { class: "sub", text: `May make copies or tokens Scryfall doesn't link: ${others.join(", ")}` })) : null];
 }
 
+/** Read-only reminders from one coverage estimate across the selected decks. These never make
+ * ticks: kinds and deck sources describe an estimate, not a quantity to pack for each deck. */
+function assemblyCounterTasks(counters, deckId) {
+  if (!counters) return null;
+  const needs = (counters.needs || []).filter(need => (need.decks || []).some(deck => deck.id === deckId));
+  if (!needs.length && !counters.error) return null;
+  return el("section", { class: "pack-counters" }, el("h4", { text: "Counters and dice (optional)" }),
+    counters.note ? el("p", { class: "sub", text: counters.note }) : null,
+    counters.error ? el("p", { class: "sub assembly-pending", text: counters.error }) : null,
+    needs.length ? el("ul", { class: "token-counters" }, needs.map(need => el("li", { class: "token-counter" },
+      el("b", { text: need.name }), " ", diceCoverChip(need.cover),
+      el("small", { class: "token-need-made", text: `Used by ${need.decks.map(deck =>
+        `${deck.title}${deck.sideboard_only ? " (sideboard only)" : ""}`).join(", ")}` }),
+      need.cover?.words ? el("small", { class: "token-need-cover", text: need.cover.words }) : null))) : null,
+    !counters.error && counters.owned?.ready === false
+      ? el("p", { class: "sub", text: counters.owned.words }) : null,
+    counters.details ? el("details", { class: "pack-fold" }, el("summary", { text: "About this estimate" }),
+      el("p", { class: "sub", text: counters.details })) : null);
+}
+
 /** "Shared tokens": the token cards two or more of these decks want (token_plan), hidden when there are
  * none. One card shows one face at a time; nothing is shared out or reserved. */
 function assemblySharedTokens(data) {

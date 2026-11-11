@@ -130,6 +130,31 @@ class PricingSettingUiTests(unittest.TestCase):
           same(reads, []);
         ''')
 
+    def test_listing_controls_default_to_every_copy_and_save_explicit_independent_restrictions(self):
+        self.run_js(r'''
+          view = answer({listing_preferences: {saved: null, effective: null,
+            conditions: [{code: 'NM', label: 'Near Mint'}, {code: 'LP', label: 'Lightly Played'}]}});
+          await openSettings();
+          assert.equal(byId('pricing-minimum-condition').value, ''); assert(!byId('pricing-english-only').checked);
+          byId('pricing-minimum-condition').value = 'LP'; byId('pricing-english-only').checked = true;
+          await save();
+          same(writes[0].body.listing_preferences, {minimum_condition: 'LP', english_only: true});
+          assert.equal(writes[0].body.currency, null); assert.equal(writes[0].body.shops, null);
+        ''')
+
+    def test_listing_choices_remain_after_stale_refusal_until_explicit_reload(self):
+        self.run_js(r'''
+          view = answer({listing_preferences: {saved: null, effective: null,
+            conditions: [{code: 'NM', label: 'Near Mint'}, {code: 'LP', label: 'Lightly Played'}]}});
+          await openSettings();
+          byId('pricing-minimum-condition').value = 'LP'; byId('pricing-english-only').checked = true;
+          apiWrite = async () => { throw new ApiError(409, 'Changed'); };
+          await save();
+          assert.equal(byId('pricing-minimum-condition').value, 'LP'); assert(byId('pricing-english-only').checked);
+          assert(button('Save price settings').disabled);
+          assert(!button('Load the saved price settings').hidden);
+        ''')
+
     def test_a_stale_answer_after_leaving_is_dropped(self):
         self.run_js(r'''
           let release; hold = new Promise(resolve => { release = resolve; });

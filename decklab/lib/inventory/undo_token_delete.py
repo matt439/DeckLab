@@ -210,6 +210,8 @@ def review(change_id, space, snapshot, store, rows=None):
     _verified_printing(restored)
     try:
         stock, layout = _stock(snapshot, source, restored, store, space)
+        from . import undo_token_layout
+        undo_token_layout.restore_preview(stock, layout, [{"id": source["before"]["id"], "row": restored}], space)
         allocations, capacities, held = _packing_evidence(snapshot, space, stock, _cells(restored))
         receipt = [change_id, source, latest, files.rendered_sha256(snapshot.token_set(space)), stock, layout,
                    allocations, capacities, held, snapshot.revision, snapshot.decks_revision, IDENTITY_POLICY]
@@ -298,9 +300,12 @@ def confirm(before, saved, summary, actual, layout):
     proof, space = extra.pop("token_restore"), extra["space"]
     wanted = proof["restore"]
     try:
-        if not isinstance(actual, list) or len(actual) != 1:
-            raise ValueError("Not exactly one audited row")
-        row = actual[0]
+        if not isinstance(actual, list):
+            raise ValueError("Not audited rows")
+        inserted = [row for row in actual if isinstance(row, dict) and row.get("op") == "INSERT"]
+        if len(inserted) != 1:
+            raise ValueError("Not exactly one inserted row")
+        row = inserted[0]
         new = row.get("after")
         if row.get("table") != TOKENS or row.get("op") != "INSERT" or row.get("before") is not None \
                 or not isinstance(new, dict) or set(new) != TOKEN_FIELDS or new["space_id"] != space:
@@ -314,10 +319,10 @@ def confirm(before, saved, summary, actual, layout):
         if [item for item in stock if item["id"] != rid] != proof["stock"] \
                 or [item["row"] for item in stock if item["id"] == rid] != [wanted]:
             raise ValueError("Survivors or the restored row changed")
-        if not isinstance(layout, list) or [item.get("id") for item in layout] != [item["id"] for item in stock] \
-                or [item for item in layout if item.get("id") != rid] != proof["layout"] \
-                or [item.get("position") for item in layout if item.get("id") == rid] != [new["position"]]:
-            raise ValueError("Persisted positions moved")
+        from . import undo_token_layout
+        expected, predicted = undo_token_layout.expected(proof["stock"], proof["layout"], stock, space)
+        if layout != predicted or not undo_token_layout.same_audit(actual, expected):
+            raise ValueError("Persisted positions or audit differ from the ordinary writer")
         allocations, capacities, held = _packing(saved, space, stock)
         if allocations != proof["allocations"] or held.get(rid) != 0 \
                 or {key: value for key, value in capacities.items() if key != rid} != proof["capacities"]:
@@ -338,10 +343,12 @@ def confirm_in_transaction(cur, change_set, before, saved, summary):
     from . import undo_token_batch_remove
     if summary.extra.get("action") == undo_token_batch_remove.ACTION:
         return undo_token_batch_remove.confirm_in_transaction(cur, change_set, before, saved, summary)
+    from .undo import BATCH_MAX
+    limit = min(BATCH_MAX, 1 + len(summary.extra["token_restore"].get("stock", ()))) + 1
     actual = [{"id": rid, "table": table, "op": op, "key": key, "before": old, "after": new}
               for rid, table, op, key, old, new in cur.execute(
                   "select id,table_name,op,row_key,before,after from audit.row_change "
-                  "where change_set_id=%s order by id limit 2", (change_set,)).fetchall()]
+                  "where change_set_id=%s order by id limit %s", (change_set, limit)).fetchall()]
     layout = [{"id": rid, "position": position} for rid, position in cur.execute(
         "select id,position from token_card where space_id=%s order by position,id",
         (summary.extra["space"],)).fetchall()]

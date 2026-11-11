@@ -62,6 +62,9 @@ compared without case):
     collection  collection.csv's own columns (name, set, collector_number, finish,
                 quantity; condition, language, notes optional)
 
+ManaBox's Misprint/Altered, Deckbox's Signed/Altered Art/Misprint and Moxfield's
+Alter marks become counted copy notes; unfamiliar nonblank marks need review.
+
 Each row is matched to Scryfall: by set and collector number (a card
 printing, not a token or art card, whose card is the row's name), else by
 name and set (when the set has one printing of it), else it is a problem
@@ -116,7 +119,7 @@ from pathlib import Path
 from decklab.lib import cards, config, currency, decks, inventory, pool, spaces
 from decklab.lib.inventory import files as inventory_files
 from decklab.lib.inventory import ops_collection as ops
-from decklab.lib.inventory import rules
+from decklab.lib.inventory import copy_notes, rules
 
 from . import common, guard
 from .carddata import _index_info, _require_cards
@@ -146,7 +149,7 @@ MAX_TEXT = {"condition": 40, "language": 20, "notes": 500}
 MAX_REASON = 200
 IMPORT_TTL = 60 * 60                # seconds a preview can be applied for
 EMPTY_SHA = hashlib.sha256(b"").hexdigest()
-FORMATS = ("manabox", "deckbox", "moxfield", "collection")
+FORMATS = ("manabox", "deckbox", "moxfield", "collection", "archidekt", "dragonshield", "delver", "tcgplayer", "text")
 # What a spreadsheet would run as a formula at the start of a cell.
 FORMULA_STARTS = ("=", "+", "-", "@")
 # One import preview read at a time (the module docstring).
@@ -580,7 +583,9 @@ def _row_input(value):
            "set": _text(value["set"], "set", True).lower(),
            "collector_number": _text(value["collector_number"], "collector_number", True),
            "finish": value["finish"], "quantity": _quantity(value["quantity"]),
-           **{k: _text(value.get(k), k) for k in ("condition", "language", "notes")}}
+           **{k: _text(value.get(k), k) for k in ("condition", "language")},
+           "notes": _text(value.get("notes"), "notes", limit=copy_notes.note_limit(
+               value.get("notes"), value["quantity"], MAX_TEXT["notes"]))}
     if not SET_RE.fullmatch(row["set"]):
         raise ApiError(400, "set must be Scryfall's set code: 2-8 letters and digits")
     if not NUMBER_RE.fullmatch(row["collector_number"]):

@@ -243,15 +243,16 @@ def _texts(c):
 
 def _deck_lines(c):
     def work():
-        from decklab.lib.inventory import pg_decks
+        from decklab.lib.inventory import pg_decks, pg_categories
         stored = {}
+        categories = pg_categories.ready(c)
         for row in c.execute("select deck_id, version, section, position, quantity, name, set_code, "
-                             "collector_number, finish from deck_line"):
+                             f"collector_number, finish{', category' if categories else ''} from deck_line"):
             stored.setdefault(row[0], []).append(tuple(row))
         wrong = []
         texts = _texts(c)
         for deck_id, (_, _, _, text) in texts.items():
-            derived = sorted(pg_decks.lines(deck_id, pg_decks.parsed(deck_id, text)))
+            derived = sorted(pg_decks.lines(deck_id, pg_decks.parsed(deck_id, text), categories=categories))
             if derived != sorted(stored.get(deck_id, [])):
                 wrong.append(deck_id)
         wrong += sorted(set(stored) - set(texts))
@@ -465,6 +466,8 @@ def _space_departures(c):
         )
         if c.execute("select to_regclass('public.dice_counter') is not null").fetchone()[0]:     # migration 0020
             references += (("dice_counter", "t.space_id = d.space_id"),)
+        if c.execute("select to_regclass('public.card_loan') is not null").fetchone()[0]:
+            references += (("card_loan", "t.space_id = d.space_id"),)
         if ids:
             for table, condition in references:
                 count = c.execute(f"select count(*) from {table} t where exists "
@@ -551,6 +554,12 @@ def run(dbname=None, say=backup.say):
                 result.sub("orders and queue", _orders)
                 result.sub("deck tables", _deck_tables)
                 result.sub("printings in box", _printings_in_box)
+                def loans_check():
+                    from decklab.lib.inventory import ops_loans
+                    ops_loans.check_invariants(inv)
+                    ops_loans.check_holders(inv)
+                    return True, False, "Open loans fit the collection and physical holders"
+                result.sub("card loans", loans_check)
         result.sub("deck aliases", _deck_aliases(c), c)
         result.sub("deck revisions", _deck_revisions(c), c)
         result.sub("deck texts", _deck_texts(c), c)

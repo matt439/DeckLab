@@ -37,7 +37,7 @@ STATE_TABLES = PHASE2_TABLES + ("packing_tick", "commander_night", "visibility",
 # then migration 0006's (the decks part: its history and derived rows before the decks, a text
 # with its deck; reset() empties decks_revision too), and migration 0010's rename aliases.
 DECK_TABLES = ("deck_alias", "deck_revision", "deck_line", "deck_text", "deck", "accessory", "accessory_image")
-INVENTORY_TABLES = ("order_card_item", "order_token_item", "order_component", "purchase_order",
+INVENTORY_TABLES = ("card_loan", "dice_counter", "order_card_item", "order_token_item", "order_component", "purchase_order",
                     "product_item", "product", "product_status", "collection_card", "collection_import",
                     "token_card", "watchlist_item") + DECK_TABLES
 _COMMENT = "Deck Lab test database, made at "
@@ -228,6 +228,8 @@ def reset(dbname, tables=STATE_TABLES):
             if cur.execute("select to_regclass('public.space_departure')").fetchone()[0]:
                 cur.execute("delete from space_departure")
             for table in tables:
+                if table in ("card_loan", "dice_counter") and not c.execute("select to_regclass(%s) is not null", ("public." + table,)).fetchone()[0]:
+                    continue
                 cur.execute(sql.SQL("delete from {}").format(sql.Identifier(table)))
             if set(tables) & set(INVENTORY_TABLES) - set(DECK_TABLES):
                 cur.execute("delete from inventory_revision")
@@ -242,6 +244,25 @@ def reset(dbname, tables=STATE_TABLES):
 # What undoes each later migration, for tests that roll a throwaway database back to an older
 # schema and migrate it forward again (roll_back_schema). A new migration needs its entry here.
 UNDO_MIGRATION = {
+    27: ("alter table deck_line drop column category",),
+    26: ("alter table watchlist_item drop column buy_under_aud",),
+    # Disposable schema rollback only: remove the new preference while retaining
+    # the earlier currency/shops and revision. No production migration rewrites it.
+    25: ("alter table pricing_setting disable trigger audit_row",
+         "update pricing_setting set content = (content - 'listing_preferences') || '{\"v\":1}'::jsonb "
+         "where content ->> 'v' = '2'",
+         "alter table pricing_setting enable trigger audit_row",
+         "alter table pricing_setting drop constraint pricing_listing_preferences_check",
+         "alter table pricing_setting add constraint pricing_setting_content_check check ("
+         "jsonb_typeof(content) = 'object' and content ?& array['v', 'currency', 'shops'] "
+         "and content - array['v', 'currency', 'shops'] = '{}'::jsonb and content ->> 'v' = '1' "
+         "and (jsonb_typeof(content -> 'currency') = 'null' or (jsonb_typeof(content -> 'currency') = 'string' "
+         "and content ->> 'currency' ~ '^[A-Z]{3}$')) and jsonb_typeof(content -> 'shops') in ('null', 'array'))"),
+    24: ("drop table public.card_loan",),
+    23: ("delete from ops.backup_run where kind = 'nightly'",
+         "alter table ops.backup_run drop constraint backup_run_kind_check",
+         "alter table ops.backup_run add constraint backup_run_kind_check check "
+         "(kind in ('dump', 'export', 'restore_check', 'gate', 'check'))"),
     14: ("alter table product_status drop column token_cards",),
     15: ("alter table order_component drop column check_links",),
     16: ("alter table collection_card drop column location",),
@@ -307,6 +328,11 @@ class DbTestCase(unittest.TestCase):
     """A test class with its own throwaway database, named by cls.dbname and by
     DECKLAB_DB_NAME while the class runs."""
     dbname = None
+
+    def _callTestMethod(self, method):
+        from decklab.tests.inventory_backend_coverage import observe
+        with observe(type(self).__module__, self.dbname):
+            return super()._callTestMethod(method)
 
     @classmethod
     def setUpClass(cls):

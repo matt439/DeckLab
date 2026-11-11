@@ -67,6 +67,10 @@ def _overview():
         common._log(f"Shopping overview: {error}")
         raise common.ApiError(500, f"The shopping records couldn't be read: {common._public(error)}") from None
     answer["queue_revision"] = inventory.current().revision
+    from decklab.lib.inventory import bonus_warnings
+    bonus = bonus_warnings.public_rows(inventory.current())
+    if bonus:
+        answer["bonus_printings"] = bonus
     for number, row in enumerate(answer.get("to_buy", []), 1):
         row["queue_row"] = number
     answer["warnings"] = common._scrub(answer.get("warnings", []))
@@ -85,6 +89,8 @@ def _overview():
     if cards_ready:
         _flag_tokens(answer)        # before the shops' lines: a token row's says tokens aren't checked (E5-S33)
     shop_prices.enrich(answer, data=shop_data)
+    from . import shop_reference_annotations
+    shop_reference_annotations.enrich(answer, shop_data)
     if cards_ready:
         _add_pictures(answer)
         # A trial deck (E3-S39) is a precon not bought: its cards aren't missing from anything.

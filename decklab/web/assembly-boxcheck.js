@@ -305,7 +305,7 @@ function packReviewBoxCheck(view, deck) {
       const answer = await apiWrite("/api/deck/box-check", { id: deck.id, expect: evidence.meta.expect,
         recipe_sha256: evidence.meta.recipe_sha256, rows: review.rows, extras: review.extras,
         ...(review.printings ? { printings: review.printings } : {}) });
-      state.library = null;
+      invalidateLibrary();
       if (!packBoxReceipt(answer, deck, evidence, review)) throw new Error("The box check result could not be confirmed.");
       if (!owner()) return;
       saved = true; stage = "saved"; view.boxCheckRefresh = { data };
@@ -318,7 +318,7 @@ function packReviewBoxCheck(view, deck) {
         reviewing.append(confirmation); actions(); if (here() && focusOwned()) confirmation.focus();
       }
     } catch (failure) {
-      state.library = null;
+      invalidateLibrary();
       if (!owner()) return;
       if (failure.status === 400 && current()) {
         stage = "edit"; editing.hidden = false; reviewing.hidden = true;

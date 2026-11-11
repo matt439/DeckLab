@@ -87,13 +87,13 @@ class EditorRowInteractionTests(unittest.TestCase):
           const line=ed.lists.Deck[0], before=JSON.stringify(ed.lists), calls=[];
           let items;openMenu=(anchor,list)=>{items=list.filter(Boolean);};
           let offered=true;swapsAvailableFor=()=>offered;
-          openSwapSheet=uid=>calls.push(['swap',uid]);openPrintings=uid=>calls.push(['print',uid]);
+          openSwapSheet=uid=>calls.push(['swap',uid]);openPrintings=uid=>calls.push(['print',uid]);openCategorySheet=uid=>calls.push(['category',uid]);
           moveLine=(uid,section)=>calls.push(['move',uid,section]);removeLine=uid=>calls.push(['remove',uid]);
           const button=rowMenuButton(line);button.click();
           same(items.filter(item=>typeof item==='object').map(item=>item.text.replace(/\u2026/g,'.')),
-            ['Stand-ins.','Change printing.','Move to the Commander section','Move to the sideboard','Move to the companion','Remove']);
+            ['Stand-ins.','Change printing.','Category.','Move to the Commander section','Move to the sideboard','Move to the companion','Remove']);
           for (const item of items) if(typeof item==='object') item.onclick();
-          same(calls,[['swap',line.uid],['print',line.uid],['move',line.uid,'Commander'],
+          same(calls,[['swap',line.uid],['print',line.uid],['category',line.uid],['move',line.uid,'Commander'],
             ['move',line.uid,'Sideboard'],['move',line.uid,'Companion'],['remove',line.uid]]);
           assert.equal(JSON.stringify(ed.lists),before);
           // Existing menu buttons resolve the live section, rather than captured placement.

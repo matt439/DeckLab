@@ -26,6 +26,18 @@ def selector(snapshot):
 
 
 class PodApiTests(ApiTestCase):
+    def test_pod_counter_details_are_optional_recorded_once_and_deleted_as_a_game(self):
+        from decklab.tests.test_play_counter_facts import details
+        payload = {**self.pod(), "counter": details(("s1", "s2", "s3"))}
+        saved = self.save(payload)
+        self.assertEqual(saved["record"]["counter"], payload["counter"])
+        correction = self.correction(saved)
+        self.assertEqual(self.save(correction)["record"]["counter"], payload["counter"])
+        latest = self.box.state.play_get("games", saved["record"]["id"])
+        self.assertEqual(play.delete_game(encoded({"profile": "matt", "id": latest["id"],
+            "sha256": rules.record_sha(latest), "reason": "Duplicate fixture pod", "confirmed": True})),
+            {"deleted": True, "id": latest["id"]})
+
     def setUp(self):
         super().setUp()
         household_config.use(self)
@@ -232,7 +244,7 @@ class PodApiTests(ApiTestCase):
         saved = self.save(self.pod())
         overview = play.play_overview()
         self.assertEqual(overview["games"], [])
-        self.assertEqual(overview["pods"], [{"record": saved["record"], "sha256": saved["sha256"], "can": {"edit": True}}])
+        self.assertEqual(overview["pods"], [{"record": saved["record"], "sha256": saved["sha256"], "can": {"edit": True, "delete": True}}])
         self.assertTrue(overview["pod_lists"])
         self.assertTrue(all(play._deck_space(item["id"]) == "home" and type(item["can_record"]) is bool
                             for item in overview["pod_lists"]))
@@ -255,7 +267,7 @@ class PodApiTests(ApiTestCase):
         record = entry["record"]
         self.assertEqual(record["result"], "s1")
         self.assertEqual(record["date"], "2026-10-27")
-        self.assertEqual(entry["can"], {"edit": False})
+        self.assertEqual(entry["can"], {"edit": False, "delete": False})
         self.assertEqual([seat["player"] for seat in record["seats"]], ["Player 1", "Player 2", "Player 3"])
         self.assertTrue(record["seats"][0]["deck"]["hidden"])
         self.assertEqual(record["seats"][1]["commander"], "")

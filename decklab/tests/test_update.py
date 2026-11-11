@@ -17,6 +17,16 @@ from decklab.db import move
 
 
 class ForgeConfigTests(unittest.TestCase):
+    def test_release_update_explains_the_supported_route_before_any_git_or_service_work(self):
+        from decklab.lib import build
+        with mock.patch.object(build, "is_release", return_value=True), \
+                mock.patch.object(update, "git") as git, \
+                mock.patch.object(update, "interpreter_problem") as interpreter:
+            with self.assertRaisesRegex(update.Failed, "release install.*SELF-HOSTING"):
+                update.before_pull(types.SimpleNamespace(dry_run=False))
+        git.assert_not_called()
+        interpreter.assert_not_called()
+
     def test_expected_release(self):
         text = 'import x\n\nV = "2.0.15-decklab-52387e83f"\nRELEASE = V\n'
         self.assertEqual(update.expected_release(text), "2.0.15-decklab-52387e83f")
@@ -32,6 +42,38 @@ class ForgeConfigTests(unittest.TestCase):
     def test_set_forge_dir_adds_the_key(self):
         out = update.set_forge_dir('{"profiles": []}', "/srv/forge-new")
         self.assertEqual(json.loads(out), {"forge_dir": "/srv/forge-new", "profiles": []})
+
+    def test_set_forge_dir_accepts_and_preserves_a_utf8_bom(self):
+        for text in ('{"forge_dir": "/old", "profiles": []}', '{"profiles": []}'):
+            with self.subTest(text=text):
+                out = update.set_forge_dir("\ufeff" + text, "/srv/forge-new")
+                self.assertTrue(out.startswith("\ufeff"))
+                self.assertEqual(json.loads(out.encode("utf-8")), {"forge_dir": "/srv/forge-new", "profiles": []})
+
+    def test_forge_update_keeps_original_bom_and_crlf_backup_bytes(self):
+        from decklab.lib import config
+        from decklab.lib.forge import install, simjar
+        with tempfile.TemporaryDirectory(prefix="decklab-forge-config-bom-") as temporary:
+            root = Path(temporary)
+            current, updated = root / "forge-old", root / "forge-new"
+            current.mkdir()
+            updated.mkdir()
+            path = root / "config.json"
+            raw = ("\ufeff" + json.dumps({"forge_dir": str(current), "profiles": []}, indent=2)
+                   .replace("\n", "\r\n") + "\r\n").encode("utf-8")
+            path.write_bytes(raw)
+            with mock.patch.object(update, "CONFIG", path), \
+                    mock.patch.object(config, "load", return_value={"forge_dir": str(current)}), \
+                    mock.patch.object(install, "_find_jar", return_value=("forge.jar", None)), \
+                    mock.patch.object(simjar, "forge_build", side_effect=lambda jar: "old" if jar.parent == current else "new"), \
+                    mock.patch.object(update, "download") as download, mock.patch.object(update, "say"):
+                update.update_forge(release="new")
+            download.assert_not_called()
+            self.assertEqual(path.with_name("config.json.before-forge-update").read_bytes(), raw)
+            rewritten = path.read_bytes()
+            self.assertTrue(rewritten.startswith(b"\xef\xbb\xbf"))
+            self.assertEqual(json.loads(rewritten)["forge_dir"], str(updated))
+            self.assertEqual(rewritten.count(b"\r\n"), raw.count(b"\r\n"))
 
     def test_set_forge_dir_refuses_what_it_cant_place(self):
         with self.assertRaises(ValueError):
@@ -105,7 +147,7 @@ class StopBeforeBackupTests(unittest.TestCase):
     PENDING = ({"name": "0021_x"},)
 
     def run_update(self, pending=PENDING, running=True, needs_stop=False, files=(), no_restart=False, fail=None,
-                   done=None):
+                   done=None, busy=(), force=False):
         """(the steps run, the done set, the Failed raised or None) of _after_pull with everything
         outside it stubbed; fail names the step that exits non-zero."""
         steps, done = [], set() if done is None else done
@@ -116,7 +158,7 @@ class StopBeforeBackupTests(unittest.TestCase):
             if what == fail:
                 raise update.Failed(f"{what} failed (exit 1)")
 
-        args = types.SimpleNamespace(no_forge=True, no_restart=no_restart, no_smoke=True)
+        args = types.SimpleNamespace(no_forge=True, no_restart=no_restart, no_smoke=True, force=force)
         raised = None
         with mock.patch.object(update, "PIP_NEEDS_STOP", needs_stop), \
                 mock.patch.object(update, "changed_files", return_value=list(files)), \
@@ -124,6 +166,8 @@ class StopBeforeBackupTests(unittest.TestCase):
                 mock.patch.object(update, "server_answers", return_value=running), \
                 mock.patch.object(update, "psycopg_mismatch", return_value=False), \
                 mock.patch.object(update, "server_restart_required", return_value=False), \
+                mock.patch.object(update, "busy_work", return_value=list(busy) if not isinstance(busy, Exception) else [],
+                                  side_effect=busy if isinstance(busy, Exception) else None), \
                 mock.patch.object(update, "venv_python", return_value=Path("/srv/.venv/bin/python")), \
                 mock.patch.object(update, "step", side_effect=step), \
                 mock.patch("decklab.lib.venv.activate", return_value=None), \
@@ -134,6 +178,27 @@ class StopBeforeBackupTests(unittest.TestCase):
             except update.Failed as e:
                 raised = e
         return steps, done, raised
+
+    def test_busy_refuses_before_migration_stop_or_restart_and_force_only_overrides_that_guard(self):
+        for options in ({}, {"pending": (), "done": {"pulled"}},
+                        {"needs_stop": True, "files": (update.REQUIREMENTS,)}):
+            with self.subTest(options=options):
+                steps, done, raised = self.run_update(busy=("1 field run or variant test",), **options)
+                self.assertEqual(steps, [])
+                self.assertIsInstance(raised, update.Failed)
+                self.assertIn("--force", str(raised))
+                self.assertNotIn("server-stopped", done)
+        steps, _, raised = self.run_update(force=True, busy=update.Failed("Busy status unknown"))
+        self.assertIsNone(raised)
+        self.assertEqual(steps, [self.STOP, self.BACKUP, self.MIGRATE, self.RESTART])
+
+    def test_unknown_busy_status_refuses_without_stop_and_no_restart_no_work_needs_no_busy_read(self):
+        steps, _, raised = self.run_update(busy=update.Failed("Busy status unknown"))
+        self.assertEqual(steps, [])
+        self.assertIsInstance(raised, update.Failed)
+        steps, _, raised = self.run_update(pending=(), no_restart=True, busy=update.Failed("Must not be asked"))
+        self.assertEqual(steps, [])
+        self.assertIsNone(raised)
 
     def test_the_server_is_stopped_before_the_backup_on_linux_as_on_windows(self):
         for needs_stop in (False, True):            # Linux and macOS, then Windows

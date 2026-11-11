@@ -122,10 +122,11 @@ RULES = (
     "Mana creatures make mana from the turn after they're cast (at once with haste); mana rocks from "
     "the turn they're cast, unless they enter tapped. 'For each' mana abilities count as one mana.",
     "A rock whose ability costs mana too (a Signet: pay {1} for {W}{B}) counts as one more mana, and "
-    "on the turn it's cast only if there's mana left to pay for it. Rocks that don't untap by themselves "
-    "(Basalt Monolith), mana from charge counters (Everflowing Chalice), mana abilities that also need a "
-    "sacrifice or another cost besides mana (Lotus Petal), and ones a card gives other permanents "
-    "(Goldspan Dragon's Treasures) aren't counted.",
+    "on the turn it's cast only if there's mana left to pay for it. Explicit self-sacrifice, charge-counter, "
+    "tap-creature and doesn't-untap mana sources track their finite costs (see each card's special rule). "
+    "A new mana source may be prepared first when it enables a more expensive spell. Ready ordinary mana "
+    "creatures keep their own ability instead of also paying another tap cost. Unsupported costs and "
+    "abilities given to other permanents (Goldspan Dragon's Treasures) aren't counted.",
     "Land ramp (Rampant Growth, Cultivate, Sakura-Tribe Elder) puts a basic land of a colour you need "
     "onto the battlefield tapped. A ramp ability that costs mana is used with mana left over after "
     "spells.",
@@ -158,6 +159,13 @@ DEFINITIONS = {
                  "mana) where you spent all of it.",
     "first_big": "The turn your first spell with mana value 4 or more was cast (the commander "
                  "counts), and the chance it was on turn 4 or earlier.",
+    "commander_cast": "First cast by turn, average first turn among games with a cast, and not cast by "
+                      "the last turn. The earliest affordable turn under this model's casting choices, not advice.",
+    "castability": "Per spell name: turns held with enough total mana but unpayable colours, divided by "
+                   "turns held with enough mana. Average blocked turns among games with at least one such wait. "
+                   "Multiple copies count once per turn; commanders in the command zone aren't hand spells.",
+    "category_casts": "Games with at least N physical cards in the chosen category cast by turn T. Only "
+                      "Commander and Deck cards count; lands played aren't spells cast.",
 }
 
 

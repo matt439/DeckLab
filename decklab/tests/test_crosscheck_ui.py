@@ -106,10 +106,18 @@ class CrosscheckUiTests(unittest.TestCase):
 
     def test_failed_loading_offers_retry_and_never_an_empty_success(self):
         self.run_js("""
-          const node=await load(new Error('fixture server unavailable'));
+          const node=await load(new ApiError(503,'fixture server unavailable'));
           assert(node.textContent.includes('fixture server unavailable'));assert(buttonText(node,'Try again'));
           assert(!node.querySelector('#cc-opponent'));answers=[base()];
           buttonText(node,'Try again').click();await settle();assert(node.querySelector('#cc-opponent'));same(writes,[]);
+        """)
+
+    def test_unexpected_read_failure_keeps_its_private_message_out_of_the_page(self):
+        self.run_js("""
+          const node=await load(new Error('PRIVATE fixture diagnostic'));
+          assert(!node.textContent.includes('PRIVATE'));assert(/Reference [a-f0-9]{32}/.test(node.textContent));
+          assert(buttonText(node,'Try again'));assert(!node.querySelector('#cc-opponent'));
+          answers=[base()];buttonText(node,'Try again').click();await settle();assert(node.querySelector('#cc-opponent'));same(writes,[]);
         """)
 
     def test_late_reads_do_not_attach_after_page_profile_hash_or_connection_changes(self):

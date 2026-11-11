@@ -155,7 +155,7 @@ function gtDraw(ctx, a) {
         el("p", { class: "sub", text: `Play ${plural((a.sample || {}).decks || 0, "popular deck")} to see how this ` +
           "list does by colour and by style." }),
         gtPlayBox(ctx, a, { inEmpty: true })),
-    gtCredit(a), gtBuiltLine(a.catalogue)]);
+    gtCredit(a), gtBuiltLine(a.catalogue), gtScreening(a.catalogue?.screening)]);
 }
 
 /** The choices the server drew its sample from, as the controls hold them. */
@@ -325,15 +325,23 @@ function gtGroups(ctx, a) {
 
 function gtRate(value, low, high) { return value == null ? null : { value, low, high }; }
 
+function gtScreening(screen) {
+  if (!screen) return null;
+  const counts = rows => Object.entries(rows || {}).map(([name,n])=>`${name}: ${n}`).join(", ") || "none recorded";
+  return el("p", {class:"gt-small",text:`Known AI-screen exclusions: ${screen.ai_excluded}. By colour (overlapping): ${counts(screen.colour)}. ` +
+    `By style: ${counts(screen.style)}. Other checks excluded ${screen.other_excluded || 0}; ${screen.unclassified || 0} exclusions have unclassified provenance. These samples reflect what the AI can play.`});
+}
+
 function gtGroupRow(g) {
   const rate = gtRate(g.rate, g.low, g.high);
   const what = `Win rate against ${g.label}`;
   const spread = Array.isArray(g.spread) && g.spread[0] != null
     ? `from ${Math.round(g.spread[0] * 100)}% to ${Math.round(g.spread[1] * 100)}% by opponent` : null;
-  return el("li", { class: g.opponents < 2 ? "gt-group gt-muted" : "gt-group" },
+  const thin = g.thin || g.opponents < 2;
+  return el("li", { class: thin ? "gt-group gt-muted" : "gt-group" },
     el("span", { class: "gt-name", text: g.label }),
     el("span", { class: "gt-barline" },
-      rangeBar(rate, { compact: true, muted: g.opponents < 2, decorative: true }),
+      rangeBar(rate, { compact: true, muted: thin, decorative: true }),
       el("span", { class: "gt-pct" }, winRateFigure(rate, { what, barred: true }))),
     el("span", { class: "gt-meta", text: metaWords(plural(g.opponents, "opponent"), gamesWords(g.games), spread, g.note) }));
 }
@@ -343,10 +351,11 @@ function gtRows(a) {
   const played = (a.opponents || []).filter((o) => o.games && o.rate && o.rate.value != null);
   const waiting = (a.opponents || []).filter((o) => !played.includes(o));
   return [
-    el("h3", { text: "Against each deck, hardest first" }),
+    el("h3", { text: "Against each deck, lowest observed first" }),
     el("ul", { class: "gt-rows" }, played.map((o) => {
       const what = `Win rate against ${o.title}`;
       const chips = [o.not_meaningful ? status("crit", "Not meaningful") : null,
+        o.stalled?.words ? el("span", {class:"note note-warn",text:o.stalled.words}) : null,
         o.moved ? status("info", "Moved") : null].filter(Boolean);
       const before = gtFigureWords(o.before);
       return el("li", { class: o.not_meaningful ? "gt-row gt-muted" : "gt-row" },

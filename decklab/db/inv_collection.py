@@ -9,7 +9,7 @@
     collection apply FILE [--space S] --expect SHA -m MESSAGE [--reason R] [--allow-in-use]
                      [--remove-missing] [--dry-run]    many rows changed or removed, as one change
     collection precons [QUERY ...]                     published precons' CODEs (MTGJSON's paper decks)
-    collection add-precon CODE [--space S] [--title T] [--played-by P] -m MESSAGE [--dry-run]
+    collection add-precon CODE [--space S] [--title T] [--played-by P] [--bonus-cards include|skip] -m MESSAGE [--dry-run]
     collection trade --out FILE --in FILE [--space S] [--with T] -m MESSAGE [--dry-run]
                                                        a trade as one change (collection_trade.py)
 
@@ -80,6 +80,8 @@ def register(sub):
     p = sub.add_parser("collection", help="List or merge cards into a space's collection.",
                        description="List a space's collection, or merge card files into it.")
     verbs = p.add_subparsers(dest="verb", required=True, metavar="verb")
+    from . import inv_loans
+    inv_loans.register(verbs)
     sp = verbs.add_parser("list", help="Print a space's collection as CSV, in the collection's columns.")
     sp.add_argument("--space", default=paths.HOME, help="the space (home by default)")
     sp.set_defaults(func=_list)
@@ -139,12 +141,12 @@ def register(sub):
     sp = verbs.add_parser("precons", help="Find a published precon's CODE for add-precon (MTGJSON's paper decks).")
     sp.add_argument("query", nargs="*", help="words in its name, set or type (default: the newest)")
     sp.add_argument("--products", action="store_true",
-                    help="list Secret Lair drops too, for order add --from-mtgjson (they can't be added as precons)")
+                    help="list Secret Lair drops too; add-precon imports their cards without creating a deck")
     sp.set_defaults(func=_precons)
-    sp = verbs.add_parser("add-precon", help="Add a published precon's cards to a space and make its built deck.",
+    sp = verbs.add_parser("add-precon", help="Add a precon and its built deck, or a Secret Lair drop's cards only.",
                           description="Add a published precon (MTGJSON's list) to a space: its cards into the "
                                       "collection and its built deck, in one change, as the Collection page's "
-                                      "Add a precon does.")
+                                      "Add a precon does. Secret Lair drops add cards only, without a deck.")
     sp.add_argument("code", metavar="CODE", help="the precon's MTGJSON file name, as collection precons lists it "
                                                  "(such as KeenEngineering_FDC)")
     sp.add_argument("--space", default=paths.HOME, help="the space (home by default)")
@@ -155,6 +157,8 @@ def register(sub):
     sp.add_argument("--dry-run", action="store_true", help="show what it would add and make; save nothing")
     sp.add_argument("--add-tokens", action="store_true",
                     help="also add token entries with explicit source counts; printing and reverse face stay unconfirmed")
+    sp.add_argument("--bonus-cards", choices=("include", "skip"),
+                    help="confirm whether the fixed bonus cards are present; required to save a precon that has them")
     sp.add_argument("--token-rows", metavar="FILE",
                     help="confirmed physical token choices as CSV: source_row,front,quantity (0 skips an entry)")
     sp.add_argument("--tokens-source-sha256", metavar="SHA",
@@ -861,9 +865,15 @@ def _add_precon(args):
     if player is None and args.space == spaces.HOME and getattr(args, "actor", None):
         player = (profiles.find(args.actor) or {}).get("plays_as")
     try:
+        cards_only = page._entry(args.code, products=True)["type"] in page.precons.PRODUCT_TYPES
+        if cards_only and (args.title is not None or args.played_by is not None):
+            raise ValueError("A cards-only drop has no deck title or Played by; leave out --title and --played-by")
+        if cards_only:
+            player = None
         # Checked with no profile: a script naming nobody may write every space, as the command line does.
         made = page.plan_add(args.space, args.code, args.title, {"player": player} if player else None, None,
-                             actor.name, add_tokens=args.add_tokens, **token_params)
+                             actor.name, add_tokens=args.add_tokens, bonus_choices=args.bonus_cards,
+                             preview=args.dry_run, capture_filing=cards_only and not args.dry_run, **token_params)
     except common.ApiError as e:
         return _api_refusal(e)
     built, plan, whose = made["built"], made["plan"], made["whose"]
@@ -874,14 +884,22 @@ def _add_precon(args):
     left += [f"{n} {what}" for what, n in built["left_out"].items()]
     tokens = page._token_words(built)
     if args.dry_run:
-        print(f"Would add the {entry['name']} precon ({entry['set_name'] or entry['code'].upper()}, {entry['type']}) "
+        print(f"Would add the {entry['name']} {'drop' if cards_only else 'precon'} ({entry['set_name'] or entry['code'].upper()}, {entry['type']}) "
               f"to {whose}: {_plural(cards, 'card')} in {_plural(len(good), 'row')}.")
         for row in sorted(good, key=rules.sort_key):
             print(f"  {row['quantity']} {row['name']} ({row['set']} {row['collector_number']} {row['finish']})")
         if left:
             print(f"Left out: {', '.join(left)}.")
-        print(f"Would make {made['deck_id']} ({plan['title']}), a built {plan['kind']} deck: {sections}.")
-        for note in page.precons.notes(entry["type"]):
+        print("Cards only; no deck would be created." if cards_only else
+              f"Would make {made['deck_id']} ({plan['title']}), a built {plan['kind']} deck: {sections}.")
+        bonus = built["bonus_import"]
+        if bonus["rows"]:
+            print("Fixed bonus cards (collection only, not deck lines):")
+            for row in bonus["rows"]:
+                print(f"  [{'x' if row['selected'] else ' '}] {row['qty']} {row['words']}"
+                      + (f" ({row['owned']} already owned)" if row["owned"] else ""))
+            print("To save, choose --bonus-cards include or --bonus-cards skip after checking the box's contents.")
+        for note in built["notes"]:
             print(note)
         if made["table"].get("note"):
             print(made["table"]["note"])
@@ -893,7 +911,7 @@ def _add_precon(args):
             for item in candidate["rows"]:
                 print(f"  {item['row']['quantity']} {item['row']['front']} (source token entry {item['source_row']}; check physical pairing)")
         elif tokens:
-            print(f"Its token cards (in its Notes, not added to the token cards): {tokens}.")
+            print(f"Its token cards ({'not added' if cards_only else 'in its Notes, not added to the token cards'}): {tokens}.")
         _precon_token_offer(candidate)
         print("Nothing saved (--dry-run).")
         return 0
@@ -910,13 +928,13 @@ def _add_precon(args):
     for rel in (summary.extra or {}).get("raw", ()):
         print(f"Kept {rel}.")
     from decklab.db import inv_decks
-    inv_decks.stale_notes(args.space, exclude=(made["deck_id"],), other=True)
+    inv_decks.stale_notes(args.space, exclude=(made["deck_id"],) if made["deck_id"] else (), other=True)
     added = counts.get("cards", 0) if good else 0
     if args.add_tokens:
         print(f"Added {_plural(counts['token_cards'], 'token card')} in {_plural(counts['token_rows'], 'separate row')}; "
               "printing and reverse face unconfirmed.")
     print(f"Added {_plural(added, 'card')} ({counts.get('added_rows', 0) if good else 0} new rows) to {whose} "
-          f"and made {made['deck_id']}.")
+          + ("as cards only. No deck was created." if cards_only else f"and made {made['deck_id']}."))
     for trial in made.get("trials") or []:      # E3-S39: it's bought now, so its trial can go
         print(f"The trial deck {trial['id']} of this precon is still in the library: retire it on its deck page.")
     return 0

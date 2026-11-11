@@ -113,29 +113,33 @@ function oddsCategoryButtons(lines, setAll) {
 function openCategorySheet(uid) {
   const ed = editor;
   const found = findLine(uid);
-  if (!ed || ed.readOnly || !found) return null;
+  if (!ed || ed.readOnly || !found || !editorKeyboardCurrent(ed) || ed.saving || ed.asking || ed.leaving) return null;
   const line = found.line;
   const listId = `category-names-${uid}`;
   const others = categoryNames(allSectionLines(ed.lists));
   const input = el("input", { type: "text", maxlength: String(CATEGORY_MAX + 1), autocomplete: "off",
     autocapitalize: "sentences", enterkeyhint: "done", list: listId, placeholder: "e.g. Ramp, Draw, Removal",
-    onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); save(); } } });
+    onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); save(e.currentTarget); } } });
   input.value = line.category || "";
   const error = el("p", { class: "form-error", role: "alert" });
   const sheet = openSheet(`Category for ${line.name}`);
+  const owner = editorCategoryOwner(ed, sheet);
+  const datalist = el("datalist", { id: listId }, others.map((name) => el("option", { value: name })));
+  const remembered = el("p", {class: "field-hint", "aria-live": "polite"});
   sheet.body.append(
     el("p", { class: "sub", text: "Your own label for what the card does in this deck. The Cards tab can group the " +
       "list by it and the Stats tab counts it." }),
     el("label", { class: "field" }, el("span", { text: "Category" }), input),
-    el("datalist", { id: listId }, others.map((name) => el("option", { value: name }))),
-    error);
-  function apply(value) {
+    datalist, remembered, error);
+  function apply(value, control) {
+    if (!editorCategoryHere(owner, control) || findLine(uid)?.line !== line) return;
     line.category = value || null;
     sheet.close();
     changed();
     toast(value ? `${line.name}: ${value}.` : `${line.name} has no category now.`);
   }
-  function save() {
+  function save(control) {
+    if (!editorCategoryHere(owner, control) || findLine(uid)?.line !== line) return;
     const value = cleanCategory(input.value);
     if (!validCategory(value)) {
       error.textContent = `A category is 1 to ${CATEGORY_MAX} letters, digits and spaces (and - ' & / + .), ` +
@@ -144,12 +148,13 @@ function openCategorySheet(uid) {
       return;
     }
     // The deck's own spelling of a category it already has, so "ramp" joins "Ramp".
-    apply(others.find((name) => name.toLowerCase() === value.toLowerCase()) || value);
+    apply(others.find((name) => name.toLowerCase() === value.toLowerCase()) || value, control);
   }
   sheetActions(sheet, [
     { text: "Cancel", onclick: () => sheet.close() },
-    line.category ? { text: "Clear", kind: "danger btn-quiet", onclick: () => apply("") } : null,
-    { text: "Set category", kind: "primary", onclick: save }]);
+    line.category ? { text: "Clear", kind: "danger btn-quiet", onclick: event => apply("", event.currentTarget) } : null,
+    { text: "Set category", kind: "primary", onclick: event => save(event.currentTarget) }]);
   input.focus();
+  loadRememberedCategories(owner, line, others, datalist, remembered);
   return sheet;
 }

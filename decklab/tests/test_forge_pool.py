@@ -796,8 +796,11 @@ class PoolTests(PoolCase):
         own = self.pool_(workers=4)
         self.drain(own.submit(self.job(100)))
         self.assertEqual(own.status()["idle"], 4)
-        self.hold(3, 4)                                         # another run computes in 3 slots
+        # status() briefly locks free slots while probing. Establish the complete foreign
+        # lease under the retirement lock so a nonblocking claim cannot skip those probes.
         with own._lock:
+            other = self.hold(3, 4)                             # another run computes in 3 slots
+            self.assertEqual(len(other), 3)
             own._cap_at = 0.0
             own._wake.notify_all()
         self.assertTrue(wait_for(lambda: len(own.status()["workers"]) == 1, 10))

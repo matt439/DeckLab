@@ -112,7 +112,10 @@ class SummaryPrivacyTests(SummaryTestCase):
     def test_playing_never_names_who_started_it(self):
         self.set_mode("everyone")
         self.playing()
-        self.assertIsInstance(self.run_as("matt", GRUUL), dict)
+        # Only the explicit start plans its recovery manifest; the read below must not plan.
+        with mock.patch.object(self.g, "plan", wraps=FakeGauntlet.plan.__get__(self.g)) as plan:
+            self.assertIsInstance(self.run_as("matt", GRUUL), dict)
+        plan.assert_called_once()
         self.assertTrue(self.g.started.wait(WAIT))
         found = self.summary("user1")
         self.assertEqual(found["playing"], {"status": "running", "done": 50, "total": 200, "standard": True})

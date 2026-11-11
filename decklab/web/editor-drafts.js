@@ -185,10 +185,10 @@ function removeDraft(ed) {
 /** "2:31 pm today", "9:05 am yesterday" or "28 Sep, 2:31 pm". */
 function timeWords(ms) {
   const d = new Date(ms);
-  const clock = d.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }).replace(/\s/g, " ");
+  const clock = d.toLocaleTimeString(LOCALE, { hour: "numeric", minute: "2-digit" }).replace(/\s/g, " ");
   const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   const days = Math.round((day(new Date()) - day(d)) / 86400000);
   if (days === 0) return `${clock} today`;
   if (days === 1) return `${clock} yesterday`;
-  return `${d.getDate()} ${d.toLocaleDateString("en-AU", { month: "short" })}, ${clock}`;
+  return `${d.getDate()} ${d.toLocaleDateString(LOCALE, { month: "short" })}, ${clock}`;
 }

@@ -29,63 +29,78 @@ function replacedLists(sections) {
   return mergedLists({}, sections);
 }
 
-function openPaste() {
+function openPaste(seed = null) {
   const ed = editor;
-  const sheet = openSheet("Paste a list", { wide: true });
+  if (!editorKeyboardCurrent(ed) || ed.saving || ed.asking || ed.leaving) return null;
+  const seeded = seed && typeof seed.text === "string" ? seed : null;
+  const sheet = openSheet(seeded?.title || "Paste a list", { wide: true });
+  const owner = editorImportOwner(ed, sheet);
   const area = el("textarea", { id: "paste-text", class: "paste-area", rows: 9, spellcheck: "false",
     autocapitalize: "off", autocomplete: "off",
     placeholder: "Deck\n4 Llanowar Elves (FDN) 227\n2 Lightning Bolt\n9 Forest\n\nSideboard\n2 Negate (FDN) 47" });
-  const result = el("div", { class: "paste-result", "aria-live": "polite" });
-  let parsed = null;
+  const result = el("div", { class: "paste-result", "aria-live": "polite" }), choiceHost = el("div", {class: "paste-choices"});
+  let parsed = null, choices = null, parseSequence = 0;
   let mode = "add";
   const has = Object.values(ed.lists).some((lines) => lines.length);
   sheet.body.append(el("label", { class: "field", for: "paste-text" },
-    el("span", { text: "Text from Arena, MTGO, Moxfield or ManaBox" }), area), result);
+    el("span", { text: "Text from Arena, MTGO, Moxfield or ManaBox" }), area), choiceHost, result);
   const checkButton = el("button", { type: "button", class: "btn btn-primary", text: "Check the list" });
   const applyButton = el("button", { type: "button", class: "btn btn-primary", hidden: true });
   sheet.foot.append(el("button", { type: "button", class: "btn", text: "Cancel", onclick: () => sheet.close() }),
     checkButton, applyButton);
   area.addEventListener("input", () => {
+    parseSequence += 1;
     if (!parsed) return;
-    parsed = null;
+    parsed = null; choices = null; clear(choiceHost);
     applyButton.hidden = true;
     checkButton.hidden = false;
     clear(result);
   });
 
   async function check() {
+    if (!editorImportHere(owner, checkButton)) return;
     if (!area.value.trim()) {
       clear(result).append(el("p", { class: "form-error", text: "Paste or type a list first." }));
       return;
     }
     busy(checkButton, "Checking…");
+    const written = area.value, request = ++parseSequence;
     try {
-      parsed = await apiWrite("/api/decklist/parse", { text: area.value });
+      const answer = await apiWrite("/api/decklist/parse", { text: written, context: editorImportContext(ed) });
+      if (!editorImportHere(owner) || request !== parseSequence || written !== area.value) return;
+      parsed = answer; choices = editorImportChoices(ed, parsed.sections, parsed);
+      drawEditorImportChoices(choiceHost, choices, () => {if (editorImportHere(owner)) drawParsed();});
       drawParsed();
     } catch (e) {
       if (!(e instanceof ApiError)) throw e;
-      clear(result).append(el("div", { class: "box box-crit" }, el("p", { text: `The list couldn't be read: ${e.message}` })));
+      if (editorImportHere(owner) && request === parseSequence)
+        clear(result).append(el("div", { class: "box box-crit" }, el("p", { text: `The list couldn't be read: ${e.message}` })));
     } finally {
       unbusy(checkButton);
     }
   }
 
-  function fixLine(u, name) {
+  function fixLine(u, name, control) {
+    if (!editorImportHere(owner, control)) return;
     const rows = area.value.replace(/\r\n?/g, "\n").split("\n");
     const row = rows[u.line - 1] || "";
     rows[u.line - 1] = row.includes(u.name) ? row.replace(u.name, name) : `${u.qty} ${name}`;
     area.value = rows.join("\n");
-    parsed = null;
+    parsed = null; choices = null; clear(choiceHost);
     check();
   }
 
   function drawParsed() {
+    if (!editorImportHere(owner) || !parsed) return;
     const p = parsed;
-    const after = mode === "replace" ? replacedLists(p.sections || {}) : mergedLists(ed.lists, p.sections || {});
+    updateEditorImportMarks(choices, mode);
+    const selected = editorImportSections(choices);
+    const selectedCards = Object.values(selected).flat().reduce((n, line) => n + line.qty, 0);
+    const after = mode === "replace" ? replacedLists(selected) : mergedLists(ed.lists, selected);
     const diff = listChanges(ed.lists, after);
     const modeSwitch = has && p.count.lines ? el("div", { class: "segmented", role: "group", "aria-label": "What to do with the list" },
       [["add", "Add to the list"], ["replace", "Replace the list"]].map(([key, label]) => el("button", { type: "button",
-        "aria-pressed": String(mode === key), onclick: () => { mode = key; drawParsed(); } }, label))) : null;
+        "aria-pressed": String(mode === key), onclick: event => { if (editorImportHere(owner, event.currentTarget)) {mode = key; drawParsed();} } }, label))) : null;
     const shown = diff.slice(0, 40);
     const kinds = diff.reduce((m, c) => { m[changeKind(c)] = (m[changeKind(c)] || 0) + 1; return m; }, {});
     const summary = [kinds.added ? `${kinds.added} added` : "", kinds.removed ? `${kinds.removed} taken out` : "",
@@ -98,7 +113,7 @@ function openPaste() {
           el("span", { text: `Line ${u.line}: ${u.text}. ` }),
           u.suggestions.length
             ? ["Did you mean ", u.suggestions.map((s, i) => [i ? " or " : "",
-              el("button", { type: "button", class: "chip-btn", text: s, onclick: () => fixLine(u, s) })]), "?"]
+              el("button", { type: "button", class: "chip-btn", text: s, onclick: event => fixLine(u, s, event.currentTarget) })]), "?"]
             : "No close match: check the spelling.")))) : null,
       p.errors.length ? el("div", { class: "box box-warn" },
         el("h3", { text: `Lines that aren't cards (${p.errors.length}): skipped` }),
@@ -110,19 +125,21 @@ function openPaste() {
         el("span", { class: "review-mark", "aria-hidden": "true", text: { added: "+", removed: "−", changed: "~" }[changeKind(c)] }),
         changeWords(c)))) : p.count.lines ? el("p", { class: "sub", text: "The list already has these cards." }) : null,
       diff.length > shown.length ? el("p", { class: "sub", text: `and ${diff.length - shown.length} more changes` }) : null]);
-    applyButton.hidden = !p.count.lines || (!diff.length && mode === "add");
+    applyButton.hidden = !selectedCards || (!diff.length && mode === "add");
     checkButton.hidden = !!p.count.lines;
-    applyButton.textContent = mode === "replace" ? "Replace the list" : `Add ${plural(p.count.cards, "card")}`;
+    applyButton.textContent = mode === "replace" ? "Replace the list" : `Add ${plural(selectedCards, "card")}`;
     applyButton.className = "btn btn-primary" + (mode === "replace" ? " btn-danger" : "");
   }
 
   checkButton.addEventListener("click", check);
-  applyButton.addEventListener("click", () => {
-    if (!parsed) return;
+  applyButton.addEventListener("click", event => {
+    if (!parsed || !choices || !editorImportHere(owner, event.currentTarget)) return;
+    const selected = editorImportSections(choices);
     const left = parsed.unknown.length;
-    const n = parsed.count.cards;
-    if (mode === "replace") replaceLines(parsed.sections || {});
-    else mergeLines(parsed.sections || {});
+    const n = Object.values(selected).flat().reduce((total, line) => total + line.qty, 0);
+    if (!n) return;
+    if (mode === "replace") replaceLines(selected);
+    else mergeLines(selected);
     sheet.close();
     // The toast's Undo takes back this paste only: after any later change it would undo that instead.
     const before = ed.history[ed.history.length - 1];
@@ -133,7 +150,10 @@ function openPaste() {
       else toast("Other changes came after the paste, so it can't be undone on its own: Ctrl+Z takes changes back one at a time.");
     } });
   });
+  if (seeded) area.value = seeded.text;
   area.focus();
+  if (seeded?.check) check();
+  return sheet;
 }
 
 /** Add lines to the list: the same printing in the same section goes on one line. */
@@ -302,7 +322,8 @@ function openDeckStart() {
   const ed = editor;
   choiceSheet("Start from another deck", "Search decks", { looking: "Looking for decks…", what: "The decks",
     none: "No decks yet.", noMatch: (q) => `No decks have “${q}” in their title.` }, async (q) => {
-    if (!state.library) state.library = await api("/api/decks");
+    if (!state.library) cacheLibrary(await api("/api/decks"));
+    if (!state.library) return [];
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     return state.library.decks.filter((d) => words.every((w) => d.title.toLowerCase().includes(w)))
       .slice(0, 40).map((d) => ({ label: d.title, sub: d.format || FORMAT_WORDS[d.kind] || "", value: d }));

@@ -90,7 +90,7 @@ async function changeTheme(theme) {
 function playerWords(player) {
   if (player === "either") return state.profiles.filter((p) => p.plays_as).map((p) => p.name).join(" or ") || "Either";
   const profile = state.profiles.find((p) => p.plays_as && p.plays_as === player);
-  return profile ? profile.name : (player || "Not set");
+  return profile ? profile.name : ({user: "First player", wife: "Second player"}[player] || player || "Not set");
 }
 
 /** Who plays a deck, in words: a person's deck is theirs (it has no Played by of its own unless written). */
@@ -111,7 +111,8 @@ function homeProfiles() {
   return state.profiles.filter((p) => (p.space || HOME_SPACE) === HOME_SPACE);
 }
 
-async function chooseProfile(profile) {
+/** Every global sheet family closes before leaving its page or profile, in the existing order. */
+function closeAllSheets() {
   shopCloseQueueSheets();
   closeReprintSheets();
   colCloseSheets();
@@ -125,6 +126,11 @@ async function chooseProfile(profile) {
   closeAccessorySheets();
   closeReceiptSheets();
   closeWishlistSheets();
+  closeEdhrecSheets();
+}
+
+async function chooseProfile(profile) {
+  closeAllSheets();
   state.profile = profile;
   session.set("profile", profile.id);
   local.set("lastProfile", profile.id);
@@ -135,7 +141,7 @@ async function chooseProfile(profile) {
     // it sees. /api/me, asked again now the header names them, answers for them; deriveMay works the same
     // out only if it can't be had (an older server, or a moment's error).
     state.may = deriveMay(profile, false);
-    state.library = null;           // its decks' sleeves are shown only to whoever's they are
+    invalidateLibrary();           // its decks' sleeves are shown only to whoever's they are
     try {
       const me = await loadMe();
       if (state.profile === profile && me.profile === profile.id && me.may) state.may = me.may;
@@ -209,19 +215,7 @@ function backFromAway() {
 }
 
 function drawWho() {
-  shopCloseQueueSheets();
-  closeReprintSheets();
-  colCloseSheets();
-  closeDeckOpponentSheets();
-  closeDeckRetirementSheets();
-  closeAssemblySheets();
-  closeProductStorageSheets();
-  closeTokenPlanSheets();
-  if (typeof closeLifeCounter === "function") closeLifeCounter();     // life-counter.js: its game stays kept
-  if (typeof closePodLifeCounter === "function") closePodLifeCounter();
-  closeAccessorySheets();
-  closeReceiptSheets();
-  closeWishlistSheets();
+  closeAllSheets();
   stopMatchupRefresh();
   routeToken += 1;
   setTitle("Who are you?");
@@ -240,7 +234,8 @@ function drawWho() {
       el("span", {},
         el("span", { class: "who-name", text: p.name }),
         el("span", { class: "who-sub", text: p.id === last ? "Last time on this device" : "Tap to continue" }))))),
-    ordered.length ? null : emptyBox("No one has been added to Deck Lab yet.")));
+    ordered.length ? null : emptyBox("No one has been added to Deck Lab yet. Profiles come from "
+      + "decklab/config.json on the server PC; copy decklab/config.example.json and follow SELF-HOSTING.md step 4.")));
   afterRender();
 }
 
@@ -258,19 +253,7 @@ function parseHash() {
 }
 
 function route() {
-  shopCloseQueueSheets();
-  closeReprintSheets();
-  colCloseSheets();
-  closeDeckOpponentSheets();
-  closeDeckRetirementSheets();
-  closeAssemblySheets();
-  closeProductStorageSheets();
-  closeTokenPlanSheets();
-  if (typeof closeLifeCounter === "function") closeLifeCounter();     // life-counter.js: its game stays kept
-  if (typeof closePodLifeCounter === "function") closePodLifeCounter();
-  closeAccessorySheets();
-  closeReceiptSheets();
-  closeWishlistSheets();
+  closeAllSheets();
   stopMatchupRefresh();
   const token = ++routeToken;
   const { path, params, alias } = parseHash();
@@ -279,6 +262,11 @@ function route() {
     history.replaceState(history.state, "", `#/matchups${query ? `?${query}` : ""}`);
   }
   boxCollectionRoute(path, token);
+  if (path === "card") {
+    if (!state.profile) { closeCardAddress(); return drawWho(); }
+    return showCardAddress(params, token);
+  }
+  closeCardAddress();
   boxEditorRoute(path, token);
   closeEditor(path);                // editor.js: the editor on screen is left (its draft stays)
   if (!state.profile) return drawWho();
@@ -291,6 +279,7 @@ function route() {
   setTitle(routeFor(path).title);
   syncShell(path);
   if (path === "wishlist") return showWishlist(token);
+  if (path === "help") return showTerminology();
   if (path === "shopping") return seesHomeInventory(state.may) ? showShopping(token) : showNoInventory(routeH1("shopping"));
   if (path === "accessories") return mayDo("see_accessories") ? showAccessories(token) : showNoAccessories();
   if (path === "tokens") return showTokens(token, params);
@@ -298,7 +287,7 @@ function route() {
   if (path === "assembly") return seesHomeInventory(state.may) ? showAssembly(params, token) : showNoInventory(routeH1("assembly"));
   if (path === "play") return showPlay(params, token);
   if (path === "history" && params.get("id")) return showHistory(params, token);
-  if (path === "compare" && params.get("a") && params.get("b")) return showCompare(params, token);
+  if (path === "compare" && (params.get("a") || params.get("ap")) && (params.get("b") || params.get("bp"))) return showCompare(params, token);
   if (path === "activity") return showActivity(params, token);
   if (path === "receipt" && params.get("order")) {
     return seesHomeInventory(state.may) ? showReceipt(params, token) : showNoInventory(routeH1("receipt"));
@@ -339,6 +328,8 @@ function noteVisit(path, params) {
 }
 
 function afterRender() {
+  if (typeof renderRevisionNotice === "function") renderRevisionNotice();
+  rememberCardUnderlay();
   const remembered = state.scroll.get(location.hash);
   if (!state.firstRender) {
     window.scrollTo(0, remembered ? remembered.y : 0);

@@ -24,6 +24,30 @@ class CardlogCheckTests(ForgeCase):
     check = test_forge.CommandLineTests.check
     made_up_jdk = test_forge.CommandLineTests.made_up_jdk
 
+    def test_serial_check_never_overlaps_fresh_or_warm_processes(self):
+        real_start = forge.processes.start_process
+        active, peaks = [], []
+
+        def start(*args, **kwargs):
+            active[:] = [process for process in active if process.poll() is None]
+            process = real_start(*args, **kwargs)
+            active.append(process)
+            peaks.append(len(active))
+            return process
+
+        with mock.patch.object(forge.processes, "start_process", start):
+            code, out, err = self.check("--games", "2", "--commander-games", "1", "--serial")
+        self.assertEqual(code, 0, (out, err))
+        self.assertEqual(max(peaks), 1)
+        self.assertTrue(all(process.poll() is not None for process in active))
+
+    def test_development_qualification_reaches_fresh_and_warm_observations(self):
+        from decklab.lib.forge import cli_checks
+        with mock.patch.object(cli_checks, "_development_problem", return_value=None) as observe:
+            code, out, err = self.check("--games", "2", "--commander-games", "1", "--require-development", "--serial")
+        self.assertEqual(code, 0, (out, err))
+        self.assertGreater(observe.call_count, 4)    # four cold legs plus every fresh/warm copy
+
     def setUp(self):
         # The same decks as CommandLineTests, whose setUp these cases ran under before the split.
         super().setUp()

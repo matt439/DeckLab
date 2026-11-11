@@ -52,8 +52,10 @@ function lifeSourceNewGame(input, now = Date.now()) {
     list: { id: choice.list.id, version: choice.list.version, sha256: choice.list.sha256, title: choice.list.title },
     sources: lifeSourceSources(choice.list) }));
   const commander = players.some(player => player.sources.length > 0);
+  const hints = [...new Set(input.choices.flatMap(choice => lifeMarkerHints(choice.list.counter_markers)))];
   return { v: 2, profile: input.profile, space: input.space, session_id: input.session_id,
-    started: now, updated: now, date: input.date, commander, poison: false, ended: null,
+    started: now, updated: now, date: input.date, commander, poison: hints.includes("poison"), ended: null,
+    markers: lifeMarkerNew(players.map(player => player.seat_id), hints),
     players: players.map(player => ({ ...player, life: commander ? 40 : 20, poison: 0,
       damage: players.flatMap(source => source.sources.map(card =>
         ({ seat_id: source.seat_id, source_id: card.source_id, value: 0 }))) })) };
@@ -68,7 +70,9 @@ function lifeSourceOutWhy(game, seatId) {
 }
 function lifeSourceValid(game, owner, now = Date.now()) {
   try {
-    if (!podLifeObject(game, ["v", "profile", "space", "session_id", "started", "updated", "date", "commander", "poison", "ended", "players"]) ||
+    if (!podLifeObject(game, ["v", "profile", "space", "session_id", "started", "updated", "date", "commander", "poison", "ended", "players",
+        ...(Object.hasOwn(game || {}, "markers") ? ["markers"] : [])]) ||
+        Object.hasOwn(game, "markers") && !lifeMarkerValid(game.markers, (game.players || []).map(player => player?.seat_id)) ||
         game.v !== 2 || !podLifeProfile(game.profile) || game.profile !== owner?.profile || game.space !== owner?.space ||
         !(game.space === "home" || game.space === game.profile) || !podLifeSession(game.session_id) ||
         !podLifeInteger(now, 0, Number.MAX_SAFE_INTEGER - 86400000) || !podLifeTime(game.started, now) ||
@@ -123,6 +127,8 @@ function lifeSourceChange(game, seatId, field, delta, source = null, now = Date.
     if (before === next) return false;
     entry.value = next;
     player.life = Math.max(-999, Math.min(999, player.life - (next - before)));
+  } else if (source === null && lifeMarkerAmount(game, game.players.map(row => row.seat_id), seatId, field, delta)) {
+    // Optional player counters have no elimination threshold.
   } else return false;
   lifeSourceFinish(game, now);
   return true;
@@ -145,11 +151,19 @@ function lifeSourcePoison(game, enabled, now = Date.now()) {
   lifeSourceFinish(game, now);
   return true;
 }
+function lifeSourceMarker(game, kind, value, seatId = null, now = Date.now()) {
+  if (!lifeSourceMutable(game, now)) return false;
+  const ids = game.players.map(player => player.seat_id);
+  if (!(seatId === null ? lifeMarkerEnable(game, ids, kind, value) : lifeMarkerClaim(game, ids, seatId, kind))) return false;
+  game.updated = now; return true;
+}
 /** Same selectors and literal sources again; never reconstruct from today's lists or a v1 aggregate. */
 function lifeSourceAgain(game, sessionId, now = Date.now()) {
   if (!lifeSourceValid(game, { profile: game?.profile, space: game?.space }, now) || !podLifeSession(sessionId) || sessionId === game.session_id) return null;
   const next = podLifeClone(game);
   Object.assign(next, { session_id: sessionId, started: now, updated: now, poison: false, ended: null });
+  if (next.markers) next.markers = lifeMarkerNew(next.players.map(player => player.seat_id),
+    LIFE_MARKER_KINDS.filter(kind => next.markers.enabled[kind]));
   for (const player of next.players) {
     player.life = next.commander ? 40 : 20;
     player.poison = 0;
@@ -159,12 +173,13 @@ function lifeSourceAgain(game, sessionId, now = Date.now()) {
 }
 function lifeSourceUndo(game, previous, now = Date.now()) {
   const owner = { profile: game?.profile, space: game?.space };
-  if (!lifeSourceValid(game, owner, now) || !lifeSourceValid(previous, owner, now) || game.session_id !== previous.session_id ||
+  if (!lifeSourceValid(game, owner, now) || game.ended || previous?.ended || !lifeSourceValid(previous, owner, now) || game.session_id !== previous.session_id ||
       game.started !== previous.started || game.date !== previous.date || game.commander !== previous.commander ||
       previous.updated > game.updated || now < game.updated) return false;
   const binding = packet => JSON.stringify(packet.players.map(player =>
     ({ seat_id: player.seat_id, name: player.name, list: player.list, sources: player.sources })));
   if (binding(game) !== binding(previous)) return false;
+  if (!Object.hasOwn(previous, "markers")) delete game.markers;
   Object.assign(game, podLifeClone(previous), { updated: now });
   return true;
 }

@@ -1,20 +1,20 @@
-"""The accessories inventory: sleeves, deck boxes and playmats (magic/accessories.csv).
+"""Sleeves, deck boxes and playmats in Deck Lab's PostgreSQL accessories inventory.
 
 Data only: reading and checking the rows, resolving the ids that deck headers
-and products/status.csv hold, who holds what, and the enough-sleeves rule with
+and product status records hold, who holds what, and the enough-sleeves rule with
 its wording. Everything is read from the inventory's snapshot
 (decklab.lib.inventory.current(): its accessories sheet, its pictures' metas
-and its decks), whichever backend holds it (the files under magic/, or the
-database); this module never writes. The writes are the inventory operations
+and its decks), read from PostgreSQL in normal use. The files backend is only an
+isolated fixture/export adapter; this module never writes. The writes are the inventory operations
 accessory.add, accessory.edit, accessory.remove, image.put, image.remove and
 kit.set (lib/inventory/ops_accessories.py), which the Accessories page's API
 (lib/api/accessories.py) and the command line run.
 
-The CSV has the columns FIELDS, one row per accessory:
+The database rows and their export use FIELDS, one row per accessory:
 
 - id: a slug (ID_RE, at most 40 characters), made once from brand, name and
-  colour by new_id() and never changed. Deck files' "Sleeves" and "Deck box"
-  lines and status.csv's sleeves and deck_box columns hold it;
+  colour by new_id() and never changed. Saved deck text's "Sleeves" and "Deck box"
+  lines and product status's sleeves and deck_box columns hold it;
 - kind: sleeves, deck_box or playmat;
 - owner: whose it is: a profile's id (matt, user1, or a member such as user5,
   E8-S25) or "shared". Deck Lab shows a row only to its owner, and a shared
@@ -29,11 +29,11 @@ The CSV has the columns FIELDS, one row per accessory:
   loose ones too; otherwise items;
 - capacity: for a deck box, how many sleeved cards one box holds (1-9999),
   or blank when not known; always blank for other kinds;
-- image: blank, or "<id>.<jpg|png|webp>" in magic/accessories/images/;
+- image: blank, or "<id>.<jpg|png|webp>" as a database picture record;
 - crop: blank (the whole picture), or "x,y,w,h", the part of the picture
   shown: its left and top edges and its width and height as fractions of
   the picture's (0-1, at most 4 decimals). Only a row with a picture has
-  one; the file itself is never changed;
+  one; the stored picture bytes are never changed;
 - link (the product page the user pasted) and image_source (where the picture
   was downloaded from): blank or http(s) URLs.
 
@@ -42,7 +42,7 @@ columns blank, and owner "shared"), and the next save writes FIELDS.
 
 A holder is a building or built deck (its Sleeves and Deck box header lines;
 a building deck's need is its Planned list) or an owned product kept intact
-(its status.csv columns). A value that isn't an id is older free text, shown
+(its product status columns). A value that isn't an id is older free text, shown
 as written and never matched by name. Only kit.set changes either.
 
 The list's concurrency token is per viewer (view_sha256): the sha256 of the

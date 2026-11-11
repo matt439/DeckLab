@@ -5,9 +5,11 @@
   "type": "commonjs",
   "description": "Headless rendered review of disposable Deck Lab fixtures",
   "engines": {
-    "node": ">=20"
+    "node": "^20.19.0 || ^22.13.0 || >=24"
   },
   "dependencies": {
+    "acorn": "8.19.0",
+    "eslint-scope": "9.1.2",
     "playwright-core": "1.65.0"
   }
 }

@@ -10,7 +10,6 @@ the space's own people may scan or add to its tokens, as they edit them.
 Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_tokens_scan_api
 """
 import base64
-import inspect
 from unittest import mock
 
 from decklab.lib import cards, inventory, scan, tokens
@@ -186,9 +185,11 @@ class ScanTests(TokenScanTestCase):
 
     def test_the_routes_are_write_routes_with_their_own_body_limits(self):
         from decklab.lib import feature_routes
-        source = inspect.getsource(feature_routes.dispatch)
-        self.assertIn('("tokens", "scan"): (tokens_scan.scan_token, collection_scan.MAX_SCAN_BODY)', source)
-        self.assertIn('("tokens", "scan", "add"): (tokens_scan.add_scanned, tokens_scan.MAX_ADD_BODY)', source)
+        gets, posts = feature_routes.route_tables()
+        self.assertNotIn(("tokens", "scan"), gets)
+        self.assertNotIn(("tokens", "scan", "add"), gets)
+        self.assertEqual(posts[("tokens", "scan")], (ts.scan_token, cs.MAX_SCAN_BODY))
+        self.assertEqual(posts[("tokens", "scan", "add")], (ts.add_scanned, ts.MAX_ADD_BODY))
 
 
 class AddTests(TokenScanTestCase):

@@ -108,6 +108,8 @@ def set_forge_dir(text, folder):
     """config.json's text with "forge_dir" set to folder: the existing value replaced in place
     (keeping the file's layout), or the key added as the object's first. ValueError when the text
     isn't a JSON object, or the result wouldn't parse."""
+    prefix = "\ufeff" if text.startswith("\ufeff") else ""
+    text = text.removeprefix(prefix) if prefix else text
     data = json.loads(text)
     if not isinstance(data, dict):
         raise ValueError("config.json isn't a JSON object")
@@ -122,7 +124,7 @@ def set_forge_dir(text, folder):
         out = text[:brace + 1] + f'\n  "forge_dir": {value},' + text[brace + 1:]
     if json.loads(out).get("forge_dir") != str(folder):
         raise ValueError("config.json's forge_dir couldn't be set")
-    return out
+    return prefix + out
 
 
 def safe_extract(archive, target):
@@ -233,10 +235,11 @@ def _update_forge(dry_run, release):
                     raise Failed(f"The download doesn't hold Forge {release}: not installed")
                 os.replace(top, folder)
         say(f"Unzipped Forge {release} into {folder}.")
-    text = CONFIG.read_text(encoding="utf-8")
+    raw = CONFIG.read_bytes()
+    text = raw.decode("utf-8")
     backup = CONFIG.with_name("config.json.before-forge-update")
-    backup.write_text(text, encoding="utf-8")
-    CONFIG.write_text(set_forge_dir(text, folder), encoding="utf-8")
+    backup.write_bytes(raw)
+    CONFIG.write_bytes(set_forge_dir(text, folder).encode("utf-8"))
     say(f"config.json's forge_dir is now {folder} (the old file is {backup.name}; the old Forge, {current}, "
         "is left in place: delete it once the smoke test passes).")
 
@@ -339,6 +342,10 @@ def interpreter_problem(executable=None, activate=None, venv=None, units=None, p
 
 def before_pull(args):
     """Steps 1-2, in the code as it was. Returns the exit code of the rest (or 0 for a dry run)."""
+    from decklab.lib import build
+    if build.is_release(ROOT):
+        raise Failed("This is a release install, so git update cannot update it. Follow SELF-HOSTING.md's "
+                     "release update steps; keep your config.json and database settings.")
     problem = interpreter_problem()
     if problem:
         raise Failed(problem)
@@ -389,7 +396,7 @@ def before_pull(args):
         git("merge", "--ff-only", new)
     rest = [sys.executable, "-m", "decklab.update", "--after-pull", old]
     rest += [flag for flag, on in (("--no-forge", args.no_forge), ("--no-restart", args.no_restart),
-                                   ("--no-smoke", args.no_smoke)) if on]
+                                   ("--no-smoke", args.no_smoke), ("--force", getattr(args, "force", False))) if on]
     return subprocess.run(rest, cwd=ROOT, stdin=subprocess.DEVNULL).returncode
 
 
@@ -456,6 +463,7 @@ def _after_pull(args, old, done):
             raise Failed("There's no .venv to install psycopg into: SELF-HOSTING.md step 3")
         stop = running and PIP_NEEDS_STOP
         if stop:
+            require_idle(args)
             step([python, "-m", "decklab.lib.homenet", "stop"], "Stop Deck Lab to replace psycopg", timeout=120)
             done.add("server-stopped")
         try:
@@ -477,6 +485,7 @@ def _after_pull(args, old, done):
         # The old server is stopped before the backup, on every system (E11-S70): a write it took
         # after the dump would be lost by restoring that dump, and it shouldn't answer mid-migration.
         if running and "server-stopped" not in done:
+            require_idle(args)
             step([python, "-m", "decklab.lib.homenet", "stop"], "Stop Deck Lab before the backup", timeout=120)
             done.add("server-stopped")
         if "server-stopped" in done:
@@ -494,6 +503,8 @@ def _after_pull(args, old, done):
         say("Forge: skipped (--no-forge).")
     else:
         say("\n== Forge")
+        if running and "server-stopped" not in done:
+            require_idle(args)
         before = CONFIG.read_bytes() if CONFIG.exists() else None
         try:
             update_forge()
@@ -513,6 +524,8 @@ def _after_pull(args, old, done):
     elif (running or server_answers()) and not changed and not server_restart_required():
         say("\nNothing changed, so the background server keeps running (any Forge games it's playing go on).")
     elif running or server_answers() or "server-stopped" in done:
+        if "server-stopped" not in done:
+            require_idle(args)
         step([python, "-m", "decklab.lib.homenet", "restart"], "Restart the background server", timeout=300)
         done.discard("server-stopped")
     else:
@@ -522,6 +535,22 @@ def _after_pull(args, old, done):
     else:
         step([python, "-m", "decklab.smoke"], "Smoke test", timeout=1200)
     return warnings
+
+
+def busy_work():
+    from decklab.lib.update_busy import BusyUnverified, busy_work as read
+    try:
+        return read()
+    except BusyUnverified as error:
+        raise Failed(str(error)) from None
+
+
+def require_idle(args):
+    if getattr(args, "force", False):
+        return
+    busy = busy_work()
+    if busy:
+        raise Failed("Deck Lab is busy: " + "; ".join(busy) + ". Let these finish, or use --force to interrupt them; saved games are kept.")
 
 
 def psycopg_mismatch():
@@ -570,8 +599,13 @@ def main(argv=None):
     parser.add_argument("--no-forge", action="store_true", help="leave Forge as it is")
     parser.add_argument("--no-restart", action="store_true", help="don't restart the background server")
     parser.add_argument("--no-smoke", action="store_true", help="don't run the smoke test at the end")
+    parser.add_argument("--force", action="store_true", help="allow stopping/restarting while runs are busy or cannot be checked")
     parser.add_argument("--after-pull", metavar="COMMIT", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
+    if sys.platform == "darwin":
+        say("macOS uses a manual foreground update: stop the server (Ctrl+C, or boot out your own LaunchAgent), "
+            "then follow SELF-HOSTING.md's macOS update steps. Nothing was fetched, stopped or restarted.")
+        return 1
     if args.after_pull is not None:
         return after_pull(args)
     try:

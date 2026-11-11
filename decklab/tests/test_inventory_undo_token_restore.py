@@ -46,18 +46,21 @@ class TokenRestoreFixture(TokenDeleteFixture):
                 continue
             ids = [row.id for row in after.token_set(space).rows]
             known = {item["id"]: item["position"] for item in layout}
-            layout = []
-            for index, rid in enumerate(ids):
-                if rid not in known:
-                    low = layout[-1]["position"] if layout else 0
-                    high = next((known[other] for other in ids[index + 1:] if other in known), low + 2048)
-                    known[rid] = (low + high) // 2
+            from decklab.lib.inventory.pg import _positions
+            layout = [{"id": rid, "position": position} for rid, position in zip(ids, _positions(ids, known))]
+            before_rows = {row.id: row for row in before.token_set(space).rows}
+            for index, item in enumerate(layout):
+                rid, position = item["id"], item["position"]
+                if rid not in known or position != known[rid]:
                     raw = {"set_code" if key == "set" else key: value
                            for key, value in after.token_set(space).rows[index].as_dict().items()}
-                    raw.update(quantity=int(raw["quantity"]), space_id=space, id=rid, position=known[rid])
-                    actual.append({"id": self.store.latest + 1, "table": "token_card", "op": "INSERT",
-                                   "key": {"id": rid}, "before": None, "after": raw})
-                layout.append({"id": rid, "position": known[rid]})
+                    raw.update(quantity=int(raw["quantity"]), space_id=space, id=rid, position=position)
+                    old = None
+                    if rid in before_rows:
+                        old = {**raw, "position": known[rid]}
+                    actual.append({"id": self.store.latest + 1 + len(actual), "table": "token_card",
+                                   "op": "INSERT" if old is None else "UPDATE", "key": {"id": rid},
+                                   "before": old, "after": raw})
         if deleted.restoring(summary):
             summary = self.prove(before, after, summary, actual, layout)
         self.store.snapshot, self.layout = after, layout
@@ -252,7 +255,7 @@ class TokenRestoreProofTests(TokenRestoreFixture):
                                                     "token_restore": {"restore": {}, "label": "x"}})
         with mock.patch.object(deleted, "confirm", return_value="proved") as proved:
             self.assertEqual(deleted.confirm_in_transaction(SimpleNamespace(execute=execute), 55, "before", "saved", summary), "proved")
-        self.assertEqual([params for _, params in calls], [(55,), ("user2",)])
+        self.assertEqual([params for _, params in calls], [(55, 2), ("user2",)])
         self.assertTrue(all(sql.startswith("select ") for sql, _ in calls))
         self.assertIn("change_set_id=%s", calls[0][0])
         self.assertIn("where space_id=%s", calls[1][0])

@@ -24,7 +24,9 @@ const LIB_GT_STALE = "before the last change";
 function libLoadGauntlet(data, refresh) {
   if (!data.decks.some((d) => libGauntletFormat(d))) return;
   const profile = state.profile ? state.profile.id : null;
+  const epoch = state.libraryEpoch || 0;
   api("/api/library/gauntlet").then((answer) => {
+    if (epoch !== (state.libraryEpoch || 0) || profile !== state.profile?.id) return;
     if (!answer || typeof answer !== "object" || !answer.decks || !answer.formats) return;
     state.libraryGauntlet = { profile, decks: answer.decks, formats: answer.formats };
     refresh();

@@ -332,6 +332,7 @@ table.shop-queue-table .shop-queue-lab-row > td { border-bottom: 0; box-shadow: 
   width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
 .shop-queue-table .group-row[data-queue-group="ready"] > th { color: var(--accent-strong); }
 .shop-queue-table .group-row[data-queue-group="waiting"] > th { color: var(--building-ink); }
+.shop-price-result table.data thead th { position: static; } /* A short modal review has no page-header offset. */
 .shop-q-extra[hidden] { display: none; }
 .shop-queue-table .shop-q-extra > td { height: auto; padding: var(--s-3); background: var(--surface-2); }
 .shop-q-extra-body { display: grid; gap: var(--s-3); min-width: 0; overflow-wrap: anywhere; }

@@ -9,9 +9,10 @@ from collections import Counter
 import csv
 import math
 
-from decklab.lib import cards, decks, inventory, pool, spaces
+from decklab.lib import cards, decks, inventory, pool, spaces, state
 from decklab.lib.inventory import unreadable
 from .carddata import _require_cards
+from . import card_terms, collection_spares
 from .card_lookup import _card_json, _shown_printing
 from .common import ApiError, _CONTROL_RE, _public, _scrub
 
@@ -131,6 +132,9 @@ def collection_view(q=None, color=None, type=None, role=None, mv=None,
                     availability=None, page=None, limit=None, space=None):
     """GET /api/collection. All filters optional; name and Oracle text share q.
 
+    q also accepts the editor's shared o:/t:, -o:/-t: and mv comparisons;
+    ordinary words keep the existing name-and-rules substring search.
+
     color matches colour identity (E11-S30 question 6, Matt 2026-10-31): one to five of
     W/U/B/R/G in any order is "within those colours" (the card's identity is a subset, so
     colourless cards fit every choice, as in a Commander deck's colours), and C is colourless
@@ -154,9 +158,17 @@ def collection_view(q=None, color=None, type=None, role=None, mv=None,
                            ((q, "q"), (color, "color"), (type, "type"), (role, "role")))
     color = _identity_choice(color)
     availability = availability or "all"
-    if availability not in ("all", "free", "incoming", "held"):
-        raise ApiError(400, "availability must be all, free, incoming or held")
+    if availability not in ("all", "free", "incoming", "held", "spare"):
+        raise ApiError(400, "availability must be all, free, incoming, held or spare")
     page, limit = _integer(page, "page", 1, 10000), _integer(limit, "limit", 24, 100)
+    viewer = guard.viewer() if availability == "spare" else None
+    same_space = viewer is not None and viewer.get("space", spaces.HOME) == space
+    if availability == "spare" and not (same_space or guard.script() and viewer is None):
+        # Publishing a collection does not publish private unbuilt plans or wishlist demand.
+        # Do not load a pool, protected deck or state-store row before returning this invariant view.
+        return {"cards": [], "total": 0, "page": 1, "pages": 1, "limit": limit, "roles": [], "types": [],
+                "warnings": [], "note": "", "space": space, "spaces": space_choices(), "editable": False,
+                "spares": {"ready": False, "message": collection_spares.PRIVATE, "copy": None}}
     if mv not in (None, ""):
         try:
             mv = float(mv)
@@ -167,12 +179,24 @@ def collection_view(q=None, color=None, type=None, role=None, mv=None,
     else:
         mv = None
     _require_cards()
+    q, terms = card_terms.parse(q)
     try:
         # One inventory snapshot: the request's (server_http pins one per request).
         p = pool.load_pool() if space == spaces.HOME else pool.load_pool(space)
         special, special_incoming = _special_basics(space)
+        spares = None
+        if availability == "spare":
+            try:
+                wishlist = []
+                if same_space:
+                    guard.require_sees_wishlist(viewer["id"])
+                    wishlist = [{"name": row["name"]} for row in state.store().wishlist(viewer["id"])]
+                spares = collection_spares.analyze(inventory.current(), p, space, wishlist)
+                spares["wishlist_checked"] = same_space
+            except Exception:
+                spares = collection_spares.unavailable("Your wishlist couldn't be checked, so spare copies aren't confirmed.")
         answer = _collection(p, special, special_incoming, q, color, type, role, mv,
-                             availability, page, limit, guard.deck_reader(), recorded_printings(space))
+                             availability, page, limit, guard.deck_reader(), recorded_printings(space), terms, spares)
     except (ValueError, OSError, csv.Error) as error:
         if space == spaces.HOME and not guard.sees_home_records():
             raise ApiError(409, "The collection couldn't be read.") from None
@@ -207,6 +231,8 @@ def _holder(deck, quantity, sees):
     (guard.hidden_deck), so no holder names a deck the viewer can't see (E10-S29)."""
     from . import guard
     from .inventory_views import named_holder
+    if deck.why == "lent out":
+        return {"id": None, "title": "lent out", "quantity": quantity}
     if named_holder(deck.id, sees):
         return {"id": deck.id, "title": deck.title, "quantity": quantity}
     return {"id": None, "title": guard.hidden_deck(deck.id), "quantity": quantity}
@@ -230,9 +256,11 @@ def _holders(p, name, sees):
 
 
 def _collection(p, special, special_incoming, q, color, type, role, mv, availability, page, limit,
-                sees=lambda deck_id: True, recorded=None):
+                sees=lambda deck_id: True, recorded=None, terms=(), spares=None):
     from .library import visible_unresolved, visible_warnings
     names = set(p.owned) | set(special) | set(special_incoming)
+    if availability == "spare" and (spares is None or not spares["ready"]):
+        names = set()
     rows, roles, types = [], set(), set()
     for name in sorted(names, key=str.casefold):
         card = cards.card(name)
@@ -247,6 +275,8 @@ def _collection(p, special, special_incoming, q, color, type, role, mv, availabi
             types.update(card.get("type_line", "").split(" — ")[0].split())
         if q.casefold() not in (name + " " + (card or {}).get("oracle_text", "")).casefold():
             continue
+        if not card_terms.matches(card, terms):
+            continue
         if color and (not card or not _within_identity(card, color)):
             continue
         if type and (not card or type.casefold() not in card["type_line"].casefold()):
@@ -258,9 +288,12 @@ def _collection(p, special, special_incoming, q, color, type, role, mv, availabi
         if availability == "free" and not free or availability == "incoming" and not incoming \
                 or availability == "held" and not held:
             continue
+        spare = spares["rows"].get(name) if availability == "spare" else None
+        if availability == "spare" and not spare:
+            continue
         rows.append({"name": name, "owned": owned, "incoming": incoming, "held": held,
                      "free_now": free, "holders": holders, "basic": basic,
-                     "resolved": card is not None, "card": card})
+                     "resolved": card is not None, "card": card, **({"spares": spare} if spare else {})})
     total = len(rows)
     # A page past the end (an old address, a smaller page size, a shrunken collection) shows the last one.
     pages = max(1, math.ceil(total / limit))
@@ -277,7 +310,15 @@ def _collection(p, special, special_incoming, q, color, type, role, mv, availabi
     unresolved = visible_unresolved(p.unresolved, sees)
     if unresolved:
         warnings.append("Some inventory names are unresolved: " + ", ".join(sorted(unresolved)))
+    spare_export = collection_spares.export(rows) if spares is not None and spares["ready"] else None
     return {"cards": shown, "total": total, "page": page, "limit": limit,
             "pages": pages, "roles": sorted(roles), "types": sorted(types),
             "warnings": _scrub(warnings),
-            "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked."}
+            "note": "Ordinary basics are assumed plentiful. Tracked special basics are shown, but their deck allocation isn't tracked.",
+            **({"spares": {"ready": spares["ready"], "message": spares["message"] or (
+                                "This list is too large to copy at once. Narrow the filters." if spares["ready"] and spare_export is None else None),
+                            "copy": spare_export, "wishlist_checked": bool(spares.get("wishlist_checked")),
+                            "note": "Owned copies only. Building and idea plans and Considering are protected. "
+                              + ("At least one copy of your own wishlist cards is kept. " if spares.get("wishlist_checked") else "No personal wishlist was checked in this script view. ")
+                              + "Basics aren't listed because their deck allocations aren't tracked. Untagged copy lines have unconfirmed printing assignments."}}
+               if spares is not None else {})}

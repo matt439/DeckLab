@@ -231,7 +231,7 @@ class CollectionFindLayoutUiTests(unittest.TestCase):
           assert.equal(cv.query.get('q'), 'exact'); const count = paths.length; flushTimers(); assert.equal(paths.length, count);
           const availability = main.querySelector('[aria-label=Show]');
           assert(availability.classList.contains('col-availability'));
-          same(availability.querySelectorAll('button').map(node => node.dataset.value), ['all', 'free', 'incoming', 'held']);
+          same(availability.querySelectorAll('button').map(node => node.dataset.value), ['all', 'free', 'incoming', 'held', 'spare']);
           for (const [index, value] of ['all', 'free', 'incoming', 'held'].entries()) {
             const choice = availability.querySelectorAll('button')[index]; choice.click();
             assert.equal(cv.query.get('availability'), value === 'all' ? null : value);

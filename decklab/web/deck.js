@@ -387,9 +387,13 @@ function deckMoreItems(data) {
       if (token === routeToken && profile === state.profile?.id) openCompareChooser(data);
     } } : null,
     "sep",
-    { label: "Copy decklist", onclick: () => copyDeck(data) },
-    { label: "Download decklist", onclick: () => downloadDeck(data) },
+    { label: "Copy decklist", onclick: () => { if (token === routeToken && profile === state.profile?.id) copyDeck(data); } },
+    { label: "Copy with categories", onclick: () => { if (token === routeToken && profile === state.profile?.id) copyDeck(data, {categories: true}); } },
+    { label: "Download decklist", onclick: () => { if (token === routeToken && profile === state.profile?.id) downloadDeck(data); } },
     { label: "Print play sheet", onclick: () => printDeck(data) },
+    { label: "Download play sheet", onclick: () => {
+      if (token === routeToken && profile === state.profile?.id) downloadPlaySheet(data);
+    } },
     typeof offersProxies === "function" && offersProxies(data)
       ? { label: "Print proxies", onclick: () => printProxies(data) } : null,
     typeof offersBoxLabel === "function" && offersBoxLabel(data)
@@ -398,7 +402,7 @@ function deckMoreItems(data) {
     // The library package's cover picker (cover.js), when it's there. A save (or its Undo) draws the page
     // again, so the head shows the new picture; the library is read again when it next opens.
     cover ? { label: "Change library picture…", onclick: () => openCoverPicker(s.id, () => {
-      state.library = null;
+      invalidateLibrary();
       const here = parseHash();
       if (here.path === "deck" && addressDeckId(here.params.get("id") || "") === s.id) route();
     }) } : null,
@@ -1078,7 +1082,7 @@ function pairingLinks(halfId, label = "Shuffle it with another half:", marks = n
   // Without the library yet: a small loader in the list, and on a failure the reason and Try again.
   const fetchHalves = () => {
     add(clear(list), [el("li", {}, loadingBox("Getting the other halves…", { small: true }))]);
-    api("/api/decks").then((data) => { state.library = data; clear(list); fill(data.halves); })
+    api("/api/decks").then((data) => { if (!cacheLibrary(data)) return; clear(list); fill(data.halves); })
       .catch((e) => { add(clear(list), [el("li", {}, loadFailed("The other halves", e, fetchHalves))]); });
   };
   if (state.library) fill(state.library.halves);

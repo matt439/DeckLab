@@ -120,7 +120,7 @@ class ShoppingBasketsTests(unittest.TestCase):
           const text = shopNode('mtgmate').textContent;
           assert(text.includes('4 × Elves'), text);
           assert(text.includes('1 × FDN 227'), text);
-          assert(text.includes('4 in stock across 2 printings'), text);
+          assert(text.includes('4 in stock across 2 listings'), text);
           assert(text.includes('also 3 × M19 314 A$0.50 each'), text);
           assert(text.includes('A$1.90'), text);
           assert(!text.includes('only'), text);

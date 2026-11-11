@@ -72,7 +72,9 @@ function openCardViewer(items, start = 0, opts = {}) {
     items: list, index: Math.max(0, Math.min(list.length - 1, Number(start) || 0)), face: 0,
     caption: typeof opts.caption === "function" ? opts.caption : null,
     trigger: open ? viewerState.trigger : opts.trigger || document.activeElement,
-    history: open ? viewerState.history : false, token: open ? viewerState.token : 0,
+    history: !opts.address && open ? viewerState.history : false, token: open ? viewerState.token : 0,
+    commander: opts.commander ?? viewerCommanderContext(), address: opts.address || null,
+    profile: state.profile,
     fromHistory: false, drag: null, settling: false, dragEnded: 0, pressTarget: null,
   };
   dom.dialog.classList.toggle("show-text", viewerTextOpen);
@@ -82,7 +84,7 @@ function openCardViewer(items, start = 0, opts = {}) {
     if (typeof dom.dialog.showModal === "function") dom.dialog.showModal();
     else dom.dialog.setAttribute("open", "");
     document.body.classList.add("has-card-dialog");
-    pushViewerEntry();
+    if (!opts.address) pushViewerEntry();
   }
   dom.close.focus({ preventScroll: true });
   return viewerState;
@@ -205,7 +207,7 @@ function drawViewer() {
   d.flip.setAttribute("aria-label", s.face === 1 ? "Show the front" : "Show the back");
   [-1, 0, 1].forEach((at, k) => fillSlide(d.slides[k], s.items[s.index + at], at === 0 ? s.face : 0, at === 0));
   add(clear(d.text), [cardTextParts(card, s.face, item.caption || (s.caption ? s.caption(card, s.index) : null)),
-    viewerRulingsPart(card)]);
+    viewerReferencePart(card), viewerCopiesPart(card), viewerRulingsPart(card)]);
   // A control in the marks keeps the focus from card to card when it's still there, else Close takes it.
   const held = d.marks.contains(document.activeElement) ? document.activeElement : null;
   const marks = typeof item.status === "function" ? item.status() || [] : [];
@@ -593,4 +595,5 @@ function viewerClosed() {
   for (const slide of viewerDom.slides) clear(slide);       // stop any picture still loading
   if (s.history && !s.fromHistory && history.state && history.state.cardViewer === s.token) history.back();
   if (s.trigger && s.trigger.isConnected && typeof s.trigger.focus === "function") s.trigger.focus({ preventScroll: true });
+  finishCardAddress(s);
 }

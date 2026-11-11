@@ -46,7 +46,7 @@ class RecordTests(unittest.TestCase):
         readings = again["history"]["Sol Ring"]
         self.assertEqual([item["on"] for item in readings], ["2026-11-01", "2026-11-02"])
         self.assertEqual(readings[1]["listings"], [{"set": "40k", "number": "249", "finish": "nonfoil",
-                                                    "condition": "Regular", "price": "3.50", "stock": 1}])
+                                                "condition": "Regular", "language": "", "price": "3.50", "stock": 1}])
         self.assertNotIn("url", readings[0]["listings"][0], "only what a trend needs")
 
     def test_not_listed_is_a_reading_but_an_error_or_a_carried_name_adds_nothing(self):
@@ -165,11 +165,11 @@ class CommandTests(TwoShopTestCase):
         self.write(gamesportal.ADAPTER, [reading("2026-11-01", "3.00", 1), reading("2026-11-02", "3.50", 0)])
         lines = self.run_command("sol ring").splitlines()
         self.assertEqual(lines[0], "MTGMate: 2 days")
-        self.assertEqual(lines[1], "  2026-11-01  A$4.00, 3 in stock (40K 249 nonfoil)  lowest in stock")
-        self.assertEqual(lines[2], "  2026-11-02  A$4.50, 2 in stock (40K 249 nonfoil)")
-        self.assertEqual(lines[4], "  2026-11-01  A$3.00, in stock (40K 249 nonfoil)  lowest in stock",
+        self.assertEqual(lines[1], "  2026-11-01  A$4.00, 3 in stock (40K 249 nonfoil; Condition unknown, language unknown)  lowest in stock")
+        self.assertEqual(lines[2], "  2026-11-02  A$4.50, 2 in stock (40K 249 nonfoil; Condition unknown, language unknown)")
+        self.assertEqual(lines[4], "  2026-11-01  A$3.00, in stock (40K 249 nonfoil; Condition unknown, language unknown)  lowest in stock",
                          "Games Portal says only in stock or not")
-        self.assertEqual(lines[5], "  2026-11-02  A$3.50, out of stock (40K 249 nonfoil)")
+        self.assertEqual(lines[5], "  2026-11-02  A$3.50, out of stock (40K 249 nonfoil; Condition unknown, language unknown)")
 
     def test_json_and_one_shop_and_no_history(self):
         self.write(mtgmate.ADAPTER, [reading("2026-11-01", "4.00", 3)])

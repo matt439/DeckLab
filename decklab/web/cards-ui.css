@@ -370,6 +370,13 @@ dialog.viewer.show-text[open] {
 @media (hover: hover) and (pointer: fine) { .viewer-text .btn:not(.btn-primary):hover { background: var(--viewer-line); } }
 .viewer-text .btn:not(.btn-primary):active { background: var(--viewer-line); }
 .viewer-text:focus { outline: none; }
+.viewer-reference { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); margin: var(--s-4) 0; }
+.viewer-reference a, .viewer-copies summary { min-height: 44px; display: inline-flex; align-items: center; }
+.viewer-copies { border-top: 1px solid var(--viewer-line); margin-top: var(--s-3); }
+.viewer-copies summary { cursor: pointer; font-weight: var(--fw-semibold); }
+.viewer-copies-body ul { margin: var(--s-2) 0; padding-left: var(--s-5); }
+.viewer-copies-body li { margin-bottom: var(--s-3); overflow-wrap: anywhere; }
+.viewer-copy-location { display: block; color: var(--on-scrim-2); }
 .viewer-face + .viewer-face { margin-top: var(--s-4); padding-top: var(--s-4); border-top: 1px solid var(--border); }
 /* A double-faced card: the face the picture shows is marked, an accent bar and a "Shown" tag. */
 .viewer-face.is-shown { margin-left: calc(-1 * var(--s-3)); padding-left: calc(var(--s-3) - 4px); border-left: 4px solid var(--accent); }

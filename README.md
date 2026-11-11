@@ -2,7 +2,7 @@
 
 Deck Lab is a self-hosted web app for a household's Magic: The Gathering cards. It keeps the collection, decks, orders and deliveries, sleeves and deck boxes, token cards and wishlists in PostgreSQL, and it plays decks against each other thousands of times with [Forge](https://github.com/Card-Forge/forge)'s computer players to show how a deck does against the rest of its format.
 
-It runs on one Windows PC and is used from phones, tablets and the PC's browser on the home network. Members sign in from outside through a Cloudflare Tunnel behind Cloudflare Access, and each person's collection, decks and games stay private to their own space.
+It runs on a Windows or Linux server PC and is used from phones, tablets and browsers on the home network. Outside access is optional. Members sign in from outside through a Cloudflare Tunnel behind Cloudflare Access, and each person's collection, decks and games stay private to their own space.
 
 ## What's in it
 
@@ -22,7 +22,7 @@ It runs on one Windows PC and is used from phones, tablets and the PC's browser 
 
 ## Setup in short
 
-**[SELF-HOSTING.md](SELF-HOSTING.md) sets up your own Deck Lab, step by step.** In short: Deck Lab needs Python 3.14 and PostgreSQL, and, for simulations, a JDK 21 or later and a build of its Forge fork. Make a `.venv` with psycopg, copy `decklab/config.example.json` to `decklab/config.json` and put your own profile in it (that file is gitignored, so real names and email addresses never enter the repo), run `python -m decklab.db setup`, then `python decklab/server.py`, and open http://localhost:8642. Windows gets the most help (a background task, the firewall script, the nightly backup task); on Linux and macOS the server runs in a terminal or under your own service manager.
+**[SELF-HOSTING.md](SELF-HOSTING.md) sets up your own Deck Lab, step by step.** In short: Deck Lab needs Python 3.14 and PostgreSQL, and, for simulations, a JDK 21 or later and a build of its Forge fork. Make a `.venv` with psycopg, copy `decklab/config.example.json` to `decklab/config.json` and put your own profile in it (that file is gitignored, so real names and email addresses never enter the repo), run `python -m decklab.db setup`, then `python decklab/server.py`, and open http://localhost:8642. Windows and Linux both have Deck Lab background-service and nightly-task commands (Task Scheduler or systemd); only macOS needs its own foreground/service scheduling. Git is required until a release is published; outside access is optional.
 
 A household's own buylists and reports (`magic/buylists/`, `magic/reports/`, which orders' and the watchlist's `source` fields name) can live in a private repo of its own: set `records_repo` to that checkout's folder (see `decklab/config.full.example.json`). The people and decks named in the docs and tests are made up.
 

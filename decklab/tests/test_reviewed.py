@@ -187,9 +187,9 @@ class ViewTests(unittest.TestCase):
             self.assertEqual(reference_facts.reference_facts_view()["due"], [])
 
     def test_the_route_is_registered(self):
-        import inspect
-        self.assertIn('("settings", "reference-facts"): (reference_facts.reference_facts_view, ())',
-                      inspect.getsource(feature_routes.dispatch))
+        gets, posts = feature_routes.route_tables()
+        self.assertEqual(gets[("settings", "reference-facts")], (reference_facts.reference_facts_view, ()))
+        self.assertNotIn(("settings", "reference-facts"), posts)
 
 
 SETUP = SHELL + r'''

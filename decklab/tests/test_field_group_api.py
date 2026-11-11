@@ -105,7 +105,7 @@ class GroupApiTestCase(PermissionTestCase):
             plans.append(options)
             opps = options.get("opponent_entries") or []
             return {"per_opponent": 200, "new_games": 200 * len(opps),
-                    "pairs": [{"opponent": o, "games": 200} for o in opps]}
+                    "pairs": [{"opponent": o, "key": self.forge.matchup_key(entry, o), "games": 200} for o in opps]}
         old_field = getattr(self.forge, "field", None)
         self.forge.field = types.SimpleNamespace(BUDGETS=("quick", "standard", "thorough"), plan=plan)
         self.addCleanup(lambda: setattr(self.forge, "field", old_field) if old_field is not None

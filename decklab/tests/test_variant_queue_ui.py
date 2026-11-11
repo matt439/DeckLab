@@ -43,6 +43,7 @@ class VariantQueueUiTests(unittest.TestCase):
           assert.equal(calls[0].path, '/api/variant/queue/preview');
           assert.deepEqual(calls[0].body.choice, {printing:'any', set:'', collector_number:'', finish:'nonfoil'});
           const text = sheet.body.textContent;
+          assert(!text.includes('null'));assert(!text.includes('Before buying this printing'));
           for (const words of ['1 copy of New Card', 'any printing, nonfoil', 'Ready to buy', 'Example', 'this saved test',
             'Current supply checked.', "Check a shop's current price"]) assert(text.includes(words));
           const button = find(sheet.foot, 'Add to Shopping'); button.fire('click'); button.fire('click'); await settle();
@@ -51,6 +52,17 @@ class VariantQueueUiTests(unittest.TestCase):
           assert(sheet.body.textContent.includes('1 copy of New Card added to Shopping'));
           assert.equal(trigger.disabled, true); assert.equal(page.refreshed, 1);
           assert(!find(sheet.foot, 'Add to Shopping')); find(sheet.foot, 'Done').fire('click'); assert(sheet.closed);
+        """)
+
+    def test_bonus_warning_is_visible_in_review_but_does_not_disable_explicit_save(self):
+        self.run_js("""
+          apiWrite=async(path,body)=>{calls.push({path,body});return path.endsWith('/preview')
+            ? reviewed({warnings:['New Card: expected as the bonus card in Fixture box']}) : saved();};
+          const {sheet}=opened();await reviewNow(sheet);
+          assert(sheet.body.textContent.includes('expected as the bonus card in Fixture box'));
+          assert.equal(calls.length,1);const button=find(sheet.foot,'Add to Shopping');assert(button);assert(!button.disabled);
+          button.fire('click');await settle();assert.equal(calls.length,2);
+          assert(sheet.body.textContent.includes('1 copy of New Card added to Shopping'));
         """)
 
     def test_exact_printing_and_finish_are_reviewed_and_can_reset_to_default(self):

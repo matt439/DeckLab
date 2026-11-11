@@ -63,23 +63,23 @@ Each epic has a journey in [journeys.md](journeys.md) and its stories in [storie
 
 | Epic | Title | What it covers | Built | Partial | Missing | Not wanted |
 |---|---|---|---|---|---|---|
-| E1 | Find, plan and choose decks | The library (`#/library`), deck ideas, cover pictures, the deck page's banner and Overview, choosing what to play | 18 | 0 | 2 | 0 |
-| E2 | Build and edit a deck | New deck, the editor and the phone Quick edit, Planned and Play-now lists, owned vs needed, history; `deck pull/push/new/tables` | 19 | 2 | 4 | 1 |
-| E3 | Test a deck | Stats, Practice, Forge matchups (`#/matchups`, `#/matchup`), field rank, Test this change (`#/variant`), the simulations setting | 29 | 3 | 7 | 0 |
-| E4 | Get ready, play and learn | The Packing plan (`#/assembly`), tokens to grab, How to play, practice hands, the Game log (`#/play`) and sideboard plans | 20 | 1 | 7 | 2 |
-| E5 | Decide what to buy | Missing cards and estimated costs, the purchase queue on `#/shopping`, AU shop checks, buylists, `watchlist` and `order add --fulfils` | 28 | 0 | 4 | 2 |
-| E6 | Record orders and receive cards | `order add\|edit\|checks\|split\|cancel`, products, on the way, Receive delivery (`#/receipt`), follow-ups, keeping a product intact | 22 | 0 | 1 | 2 |
-| E7 | Keep the collection accurate | The Collection page (`#/collection`), imports and Add a precon, `collection merge`, Tokens (`#/tokens`), removals, stale tables, `db check` | 28 | 1 | 7 | 0 |
+| E1 | Find, plan and choose decks | The library (`#/library`), deck ideas, cover pictures, the deck page's banner and Overview, choosing what to play | 20 | 0 | 0 | 0 |
+| E2 | Build and edit a deck | New deck, the editor and the phone Quick edit, Planned and Play-now lists, owned vs needed, history; `deck pull/push/new/tables` | 23 | 2 | 0 | 1 |
+| E3 | Test a deck | Stats, Practice, Forge matchups (`#/matchups`, `#/matchup`), field rank, Test this change (`#/variant`), the simulations setting | 36 | 3 | 0 | 0 |
+| E4 | Get ready, play and learn | The Packing plan (`#/assembly`), tokens to grab, How to play, practice hands, the Game log (`#/play`) and sideboard plans | 25 | 1 | 2 | 2 |
+| E5 | Decide what to buy | Missing cards and estimated costs, the purchase queue on `#/shopping`, AU shop checks, buylists, `watchlist` and `order add --fulfils` | 31 | 0 | 1 | 2 |
+| E6 | Record orders and receive cards | `order add\|edit\|checks\|split\|cancel`, products, on the way, Receive delivery (`#/receipt`), follow-ups, keeping a product intact | 23 | 0 | 0 | 2 |
+| E7 | Keep the collection accurate | The Collection page (`#/collection`), imports and Add a precon, `collection merge`, Tokens (`#/tokens`), removals, stale tables, `db check` | 35 | 1 | 0 | 0 |
 | E8 | Sleeves, boxes and storage | Sleeves & boxes (`#/accessories`), Sleeves and Deck box lines, the Choose… picker, kit warnings, put-back steps, the storage box | 18 | 0 | 2 | 2 |
-| E9 | Commander nights | Commander checks and the minimum bracket, multiplayer practice, Forge's Commander field, getting ready for the social Commander night | 21 | 0 | 6 | 1 |
-| E10 | Members, access and privacy | Roles and spaces, the read and write rules, "Who are you?", decklab.example.com behind Cloudflare Access, Activity (`#/activity`), Visits on Settings, private by default | 31 | 1 | 3 | 2 |
-| E11 | Run and trust the system | The server and tunnel, database maintenance, audit trail, typed commands, Forge upkeep, Settings, Safari regressions, visual design and code hygiene | 44 | 11 | 20 | 4 |
+| E9 | Commander nights | Commander checks and the minimum bracket, multiplayer practice, Forge's Commander field, getting ready for the social Commander night | 24 | 0 | 3 | 1 |
+| E10 | Members, access and privacy | Roles and spaces, the read and write rules, "Who are you?", decklab.example.com behind Cloudflare Access, Activity (`#/activity`), Visits on Settings, private by default | 33 | 1 | 1 | 2 |
+| E11 | Run and trust the system | The server and tunnel, database maintenance, audit trail, typed commands, Forge upkeep, Settings, Safari regressions, visual design and code hygiene | 57 | 13 | 5 | 4 |
 
 ## Headline counts
 
 - **10 personas:** two primary, three secondary (User5, the space members and the self-hoster), one supplementary, one non-human actor and three anti-personas.
-- **11 epics, 376 stories:** 278 built, 19 partial, 63 missing and 16 not wanted (generated, with the epic rows above, from the story headers by `python scripts/audit_stories.py --write`; the lint workflow checks them).
-- **Must and should stories:** Matt has 123 built, 4 partial (E11-S02, E11-S28, E11-S30, E11-S62) and 4 missing (E8-S25, the bonus-card E7-S39, and the product review's E5-S34 and E11-S69); User1 has 33 built, 1 partial (E2-S22) and 1 missing (E5-S15, deferred); Claude Code has 25 built; User5 4 built and the space members 5; the Commander table 1 built. The self-hoster has 4 should stories missing (the first-run review's E11-S78, E11-S79, E11-S80 and E11-S84); the rest are could. (Recounted from the story headers on 2026-11-10.)
+- **11 epics, 376 stories:** 325 built, 21 partial, 14 missing and 16 not wanted (generated, with the epic rows above, from the story headers by `python scripts/audit_stories.py --write`; the lint workflow checks them).
+- **Must and should stories:** Matt has 126 built, 4 partial (E11-S02, E11-S28, E11-S30, E11-S62) and 1 missing (E8-S25); User1 has 33 built, 1 partial (E2-S22) and 1 missing (E5-S15, deferred); Claude Code has 25 built; User5 4 built and the space members 5; the Commander table 1 built. The self-hoster has 2 should stories built and 2 partial (E11-S79 and E11-S84, with their external gates retained); the rest are could. (Recounted from the story headers on 2026-11-11.)
 
 Deck Lab already does most of what Matt and User1 need. Private by default and guarded member departure are built and live since 2026-10-19. The visual redesign (E11-S30) stays first, followed by the expanded reserve of deck-building, collection, buying, play and self-hosting work reviewed on 2026-10-28. [TODO.md](../../TODO.md) owns their order and readiness; each story owns its first slice and later gates. The other must and should gaps are the physical-device follow-up (E2-S22), the signed-in off-page check (E11-S02) and User2's testing session (E11-S28), which need the people involved; and User1's purchase requests (E5-S15), which are deferred. Stand-in suggestions, combo detection, official-list change detection, the Forge upgrade check, the prebuilt Forge release and Linux support are already built.
 

@@ -161,13 +161,13 @@ async function sendRenameDeck(ctx) {
     const answer = await apiWrite("/api/deck/rename", { profile: ctx.profile, id: r.id, title: r.title,
       new_id: r.new_id, sha256: r.sha256, revision: r.revision, decks_revision: r.decks_revision });
     if (answer.id !== r.new_id || answer.title !== r.title) throw new Error("The saved rename could not be verified. Open the deck to check its current address.");
-    state.library = null; ctx.done = true;
+    invalidateLibrary(); ctx.done = true;
     if (!retirementPageHere(ctx)) return;
     if (retirementHere(ctx)) ctx.sheet.close();
     location.hash = renamedDeckAddress(answer.id, ctx.hash);
     toast(`Renamed to ${answer.title}.`);
   } catch (error) {
-    state.library = null;
+    invalidateLibrary();
     if (retirementHere(ctx)) renameFailure(ctx, error, true);
   } finally {
     ctx.sending = false;

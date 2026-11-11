@@ -29,6 +29,25 @@ const change=(game,id,field,delta,source=null)=>podLifeChange(game,id,field,delt
 
 @unittest.skipUnless(NODE, "Node.js is not installed")
 class PodLifeModelTests(unittest.TestCase):
+    def test_player_marker_defaults_and_claims_are_local_bounded_and_disableable(self):
+        self.run_js("""
+          const choices=input();choices.counter_markers=['poison','energy','experience','monarch','initiative'];
+          const game=podLifeNew(choices,NOW);valid(game);assert(game.poison);
+          assert(podLifeChange(game,'s1','energy',3,null,NOW+10));
+          assert(podLifeChange(game,'s2','experience',2,null,NOW+20));
+          assert(podLifeMarker(game,'initiative',null,'s1',NOW+30));
+          assert(podLifeMarker(game,'initiative',null,'s2',NOW+40));
+          assert.deepEqual(game.markers.values.map(row=>row.initiative),[false,true,false]);
+          assert(podLifeMarker(game,'initiative',false,null,NOW+50));
+          assert.equal(podLifeMarker(game,'initiative',null,'s1',NOW+60),false);
+          assert(podLifeConcede(game,'s2',NOW+60));
+          assert.equal(podLifeChange(game,'s2','energy',1,null,NOW+70),false);valid(game);
+          const old=fresh();delete old.markers;valid(old);const before=copy(old);
+          assert(podLifeMarker(old,'energy',true,null,NOW+10));assert(podLifeUndo(old,before,NOW+20));
+          assert.equal(Object.hasOwn(old,'markers'),false);valid(old);
+          podLifeEnd(old,'draw',NOW+30);assert.equal(podLifeUndo(old,before,NOW+40),false);
+        """)
+
     def run_js(self, scenario):
         sources = "\n".join((WEB / name).read_text(encoding="utf-8")
                             for name in ("play-pods.js", "pod-life-model.js"))

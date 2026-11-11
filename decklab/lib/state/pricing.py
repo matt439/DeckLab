@@ -4,6 +4,10 @@ shops' postage is (migration 0022):
 
     {"v": 1, "currency": "EUR" | None, "shops": ["mtgmate", ...] | None}
 
+Version 2 additionally keeps listing_preferences (E5-S34): a minimum condition
+and English-only switch. Neutral choices remain version 1; no config field is
+added. The nullable choice means every listing, including unreported facts.
+
 None means "use config.json's" (and then the default): lib/pricing_setting.py lays a saved field
 over config.json. A currency is one of lib/currency.ECB_CODES, upper case; shops are lib/shops'
 adapter keys in its order, without repeats, [] turning the nightly shop check off. The rules are
@@ -12,10 +16,11 @@ readers.
 """
 from . import Invalid
 
-FIELDS = ("currency", "shops")
+FIELDS = ("currency", "shops", "listing_preferences")
 EMPTY = {"v": 1, "currency": None, "shops": None}
 CHANGED = "The price settings changed. Reload them before saving."
 MIGRATE = "Price settings need the database migration 0022: python -m decklab.db migrate"
+PREFERENCES_MIGRATE = "Listing preferences need the database migration 0025: python -m decklab.db migrate"
 BAD_CURRENCY = "Choose a currency the ECB publishes a USD rate for"
 
 
@@ -51,15 +56,28 @@ def _shops(value):
 
 
 def normalize(value):
-    """{"v": 1, "currency", "shops"} from the record, or from an object of currency and shops alone
-    (either may be left out, meaning None). Invalid for anything else."""
+    """Canonical v1/v2 record. Legacy currency/shops-only objects stay v1;
+    a non-neutral listing preference needs v2. Invalid for unknown fields."""
     if not isinstance(value, dict):
         raise Invalid("The price settings must be an object of currency and shops")
     fields = dict(value)
+    version = None
     if "v" in fields:
         version = fields.pop("v")
-        if type(version) is not int or version != 1:
+        if type(version) is not int or version not in (1, 2):
             raise Invalid("Unknown price settings record version")
+        if version == 1 and "listing_preferences" in fields:
+            raise Invalid("Listing preferences need a version 2 price settings record")
+        if version == 2 and "listing_preferences" not in fields:
+            raise Invalid("Version 2 price settings need listing_preferences")
     if set(fields) - set(FIELDS):
-        raise Invalid("The price settings have only currency and shops")
-    return {"v": 1, "currency": _currency(fields.get("currency")), "shops": _shops(fields.get("shops"))}
+        raise Invalid("The price settings have only currency, shops and listing_preferences")
+    from decklab.lib.shops import listing_preferences
+    try:
+        preference = listing_preferences.normalize(fields.get("listing_preferences"))
+    except ValueError as error:
+        raise Invalid(str(error)) from None
+    record = {"v": 1, "currency": _currency(fields.get("currency")), "shops": _shops(fields.get("shops"))}
+    if preference is not None or version == 2:
+        record.update(v=2, listing_preferences=preference)
+    return record

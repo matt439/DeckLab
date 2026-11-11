@@ -167,7 +167,7 @@ function vtDraw(page, data) {
   setTitle(`Test of a change to ${base.title || "a deck"}`);
   const started = t.created ? new Date(t.created) : null;
   const when = started && !Number.isNaN(started.getTime())
-    ? started.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", hour12: false }) : null;
+    ? started.toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit", hour12: false }) : null;
   clear(page.host);
   add(page.host, [
     crumb(deckHref(base.id, base.version), base.title || "The deck"),
@@ -403,12 +403,13 @@ function vtQueueSheet(page, data, section, row, trigger) {
         throw new Error("The request could not be reviewed. Check again before saving.");
       review = Object.freeze({token: answer.preview, expires: Date.now() + Math.min(answer.expires_in, 600) * 1000,
         proposal: Object.freeze({...p})});
-      details.append(el("h3", {text: "Add this request?"}),
+      add(details, [el("h3", {text: "Add this request?"}),
         el("p", {text: `${plural(quantity, "copy", "copies")} of ${p.name}; ${vtBuyingPrinting(p)}; Ready to buy.`}),
         el("p", {}, "For ", el("a", {href: deckHref(answer.deck.id, answer.deck.version), text: answer.deck.title || p.for})),
         el("p", {}, "From ", el("a", {href: `#/variant?test=${page.test}`, text: "this saved test"})),
         el("p", {text: answer.basis || "Current collection, incoming copies and existing queue requests checked."}),
-        el("p", {class: "sub", text: "The request keeps this printing choice. Check a shop's current price and stock before buying."}));
+        warningsBox(answer.warnings, "Before buying this printing"),
+        el("p", {class: "sub", text: "The request keeps this printing choice. Check a shop's current price and stock before buying."})]);
     } catch (error) { if (current()) {review = null; showProblem(error.message);} }
     finally { pending = false; if (current()) actions(); }
   }
@@ -876,7 +877,10 @@ async function vtOpenTestSheet() {
     howHost, problem, runsAllowed() ? null : el("p", { class: "run-blocked", text: runGate().why })]);
   let library = state.library;
   if (!library) {
-    try { library = state.library = await api("/api/decks"); } catch (e) {
+    try {
+      library = cacheLibrary(await api("/api/decks"));
+      if (!library) return;
+    } catch (e) {
       // Not an empty library: say so, with Try again (the sheet opened afresh), and no Start.
       if (sheet.closed) return;
       clear(sheet.body).append(loadFailed("The decks to test against", e, () => { sheet.close(); vtOpenTestSheet(); }));

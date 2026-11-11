@@ -230,7 +230,8 @@ class PageSourceTests(unittest.TestCase):
         # A search typed just before a pick doesn't cover the preview; an add leaves the deck page's box about
         # the new deck (its warnings and stale tables), and never offers to add again once the cards may be in.
         self.assertIn("clearTimeout(ctx.timer)", _function(script, "previewPrecon"))
-        self.assertIn("onClose: () => clearTimeout(ctx.timer)", _function(script, "openPreconSheet"))
+        self.assertIn("onClose: () => {", _function(script, "openPreconSheet"))
+        self.assertIn("clearTimeout(ctx.timer)", _function(script, "openPreconSheet"))
         add = _function(script, "addPrecon")
         self.assertIn("state.saved = { hash", add)
         self.assertIn("error.status >= 500 || !error.data", add)

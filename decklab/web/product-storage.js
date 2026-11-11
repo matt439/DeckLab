@@ -114,7 +114,7 @@ function openProductStorage(ctx, intact) {
     review.sending = true; error.textContent = ""; actions();
     try {
       const answer = await apiWrite("/api/product/intact/apply", { preview: preview.preview });
-      state.library = null;
+      invalidateLibrary();
       if (!here()) return;
       review.saved = true;
       clear(sheet.body);

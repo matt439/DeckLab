@@ -8,7 +8,7 @@ a recorded one whose file now differs is refused, as is a recorded one whose fil
 Write a new migration instead.
 
 Migrations run without decklab.change_set, so the audit trigger refuses any data they write;
-one that writes data has to make its own change set (none does yet).
+0027's canonical category projection hook creates its own audited change inside that transaction.
 
 The rule for a schema change: add in one release, remove in a later one. A migration only adds
 (a table, a column that allows null or has a default, an index, a grant) unless every release
@@ -168,6 +168,14 @@ def apply(dbname=None, directory=None, say=None):
                         continue
                     with c.transaction():
                         cur.execute(f["sql"])
+                        if f["version"] == 27 and f["name"] == "deck_line_categories":
+                            from . import migration_categories
+                            try:
+                                migration_categories.backfill(cur)
+                            except migration_categories.ProjectionError as error:
+                                raise MigrationError("Migration0027 could not confirm the saved deck projection. "
+                                    "Run python -m decklab.db check, repair the reported deck text/derived rows, "
+                                    "and retry migrate. Nothing in this migration was saved.") from error
                         cur.execute("insert into public.schema_migration (version, name, checksum) "
                                     "values (%s, %s, %s)", (f["version"], f["name"], f["checksum"]))
                     done.append(f["path"].name)

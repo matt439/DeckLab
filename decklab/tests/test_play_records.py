@@ -84,6 +84,17 @@ class PlayRecordsTests(PlayFixture, ApiTestCase):
     def stored(self, kind="games"):
         return self.box.state.play_list(kind)
 
+    def test_counter_marker_defaults_are_presentation_only_and_do_not_change_snapshot_hashes(self):
+        before = play._snapshot("casual/gruul-test", "target")
+        with mock.patch("decklab.lib.api.play_markers.suggestions", return_value=["energy", "monarch"]):
+            overview = play.play_overview()
+        self.assertTrue(overview["lists"])
+        self.assertTrue(all(item["counter_markers"] == ["energy", "monarch"] for item in overview["lists"]))
+        self.assertEqual(play._snapshot("casual/gruul-test", "target"), before)
+        checked = play.save_game(encoded(self.game()))
+        self.assertTrue(all("counter_markers" not in side for side in checked["record"]["sides"]))
+        self.assertEqual(self.stored(), [])
+
     def test_preview_never_writes_and_confirmation_is_required(self):
         payload = self.game()
         preview = play.save_game(encoded(payload))
@@ -114,7 +125,7 @@ class PlayRecordsTests(PlayFixture, ApiTestCase):
         self.assertEqual(play._read("games", answer["record"]["id"]), (answer["record"], answer["sha256"]))
         overview = play.play_overview()
         self.assertEqual(overview["games"], [{"record": answer["record"], "sha256": answer["sha256"],
-                                              "can": {"sides": [True, True], "result": True}}])
+                                          "can": {"sides": [True, True], "result": True, "delete": False}}])
         self.assertEqual(answer["record"]["space"], "home")     # the space that recorded it (E10-S32)
         # Each list's deck says who plays it and how far it's got, for the quick record's starting decks.
         self.assertEqual(set(overview["decks"]), {item["id"] for item in overview["lists"]})
@@ -573,14 +584,14 @@ class PlayMemberRulesTests(MixedFixture, ApiTestCase):
         self.assertEqual(entry["record"]["sides"][1], {"hidden": True, "title": "one of the home decks",
                                                        "player": "Matt", "mulligans": 0})
         self.assertEqual((entry["record"]["notes"], entry["record"]["updated_by"]), ("", "someone"))
-        self.assertEqual(entry["can"], {"sides": [True, False], "result": False})
+        self.assertEqual(entry["can"], {"sides": [True, False], "result": False, "delete": False})
         # The same game to home: User2's side by his space's name, home's notes kept.
         with access.viewing("matt"):
             entry = self.entry("games", self.mixed)
         self.assertEqual(entry["record"]["sides"][0]["title"], "one of User2's decks")
         self.assertNotIn("r-elves", json.dumps(entry))
         self.assertEqual(entry["record"]["notes"], "A private note.")
-        self.assertEqual(entry["can"], {"sides": [False, True], "result": True})
+        self.assertEqual(entry["can"], {"sides": [False, True], "result": True, "delete": True})
 
     def test_a_member_changes_only_his_own_side(self):
         with access.viewing("user2"):
@@ -631,7 +642,7 @@ class PlayMemberRulesTests(MixedFixture, ApiTestCase):
         older = self.stored_game("user2/casual/r-elves", "casual/gruul-test")     # no "space"
         with access.viewing("user2"):
             entry = self.entry("games", older)
-            self.assertEqual(entry["can"], {"sides": [True, False], "result": False})
+            self.assertEqual(entry["can"], {"sides": [True, False], "result": False, "delete": False})
             self.assertApiError(403, play.save_game, encoded(self.body(entry, "user2", result="b")))
         with access.viewing("matt"):
             self.assertTrue(self.entry("games", older)["can"]["result"])
@@ -750,3 +761,17 @@ class PlayPgStoreTests(PlayFixture, db_support.DbTestCase):
                              "order by s.id").fetchall()
         self.assertEqual(rows, [("matt", "web", "home", "Save sideboard plan Practice deck vs Other deck")] * 2
                          + [("matt", "web", "home", "Save game Practice deck vs Other deck")] * 2)
+
+    def test_game_delete_is_audited_and_checks_the_expected_record(self):
+        from decklab.tests.test_play_counter_facts import details
+        saved = self.save({**self.game(), "counter": details()})
+        self.assertEqual(self.store.play_get("games", saved["record"]["id"])["counter"], details())
+        record_id = saved["record"]["id"]
+        with self.assertRaises(state.Conflict):
+            self.store.play_delete("games", record_id, "0" * 64, state.Actor("matt", "Matt"), "Delete fixture game", "Duplicate")
+        self.assertTrue(self.store.play_delete("games", record_id, saved["sha256"], state.Actor("matt", "Matt"),
+                                                "Delete fixture game", "Duplicate"))
+        self.assertIsNone(self.store.play_get("games", record_id))
+        latest = self.store.activity(limit=1)["changes"][0]
+        self.assertEqual(latest["reason"], "Duplicate")
+        self.assertEqual([(row["table"], row["op"]) for row in latest["rows"]], [("play_record", "DELETE")])

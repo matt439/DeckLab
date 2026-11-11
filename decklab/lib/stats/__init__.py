@@ -28,7 +28,7 @@ MAX_BULK_AGE old. bracket.unknown_cards names unresolved main-deck/commander/
 companion cards. bracket.combos holds the two-card combos from Commander
 Spellbook's list (decklab.lib.combos, matched on the PC: no decklist is sent
 anywhere) whose pieces are both in the main deck. These checks do not certify
-a bracket or detect combos of three or more cards, speed, intent or chained
+a bracket or detect combos of four or more cards, speed, intent or chained
 extra turns. They fetch nothing: bracket.data also compares the date of
 Wizards' latest Commander announcement, as the card data update last found it
 (decklab.lib.official_lists), with the card data's and the bracket rules'
@@ -153,7 +153,7 @@ AGENTS.md says to ignore ban lists and legality for casual decks)
     (the tutor tag's branches apart from tutor-land, cards.tag_branches;
     counted only), and the
     minimum bracket they allow. Two-card combos come from Commander
-    Spellbook's list (bracket.combos); combos of three or more cards, intent
+    Spellbook's list (bracket.combos); combos of four or more cards, intent
     and whether extra turns chain can't be judged from a list; the result
     says so.
 

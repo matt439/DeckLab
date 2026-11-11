@@ -37,6 +37,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 CLOUDFLARE_HEADERS = ("cf-ray", "cf-connecting-ip", "cf-access-jwt-assertion")
 CHECK_TIMEOUT = 2.0
 CHECK_CACHE = 1.0
+CONNECTION_TIMEOUT = 10.0          # a stalled HTTP/1.1 connection cannot hold a worker forever
+MAX_CONNECTIONS = 32
 MAX_BODY = 64 * 1024
 # The MAC .env.example and the README use as an example: refused, so a copied example never
 # leaves the gate broadcasting to nobody.
@@ -453,10 +455,48 @@ def make_handler(gate):
     return Handler
 
 
-def make_server(gate, host="0.0.0.0", port=None):
-    server = ThreadingHTTPServer((host, gate.config.gate_port if port is None else port), make_handler(gate))
-    server.daemon_threads = True
-    return server
+class BoundedServer(ThreadingHTTPServer):
+    """Bound accepted connections before creating threads, including idle keep-alive sockets."""
+    daemon_threads = True
+
+    def __init__(self, address, handler, connection_timeout=CONNECTION_TIMEOUT, max_connections=MAX_CONNECTIONS):
+        if type(max_connections) is not int or max_connections < 1:
+            raise ValueError("max_connections must be a positive integer")
+        if not isinstance(connection_timeout, (int, float)) or not math.isfinite(connection_timeout) or connection_timeout <= 0:
+            raise ValueError("connection_timeout must be positive and finite")
+        self.connection_timeout = connection_timeout
+        self._slots = threading.BoundedSemaphore(max_connections)
+        super().__init__(address, handler)
+
+    def get_request(self):
+        request, address = super().get_request()
+        try:
+            request.settimeout(self.connection_timeout)
+        except BaseException:
+            self.shutdown_request(request)
+            raise
+        return request, address
+
+    def process_request(self, request, client_address):
+        if not self._slots.acquire(blocking=False):
+            self.shutdown_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            self._slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._slots.release()
+
+
+def make_server(gate, host="0.0.0.0", port=None, *, connection_timeout=CONNECTION_TIMEOUT, max_connections=MAX_CONNECTIONS):
+    return BoundedServer((host, gate.config.gate_port if port is None else port), make_handler(gate),
+                         connection_timeout, max_connections)
 
 
 def main(env=None):

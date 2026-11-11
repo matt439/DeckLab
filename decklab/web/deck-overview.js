@@ -122,7 +122,8 @@ function deckOverviewGauntletBody(a, button) {
     o.verdict ? `, ${o.verdict}` : ""));
   return [gtHeadline(a, { cls: "gt-headline-panel" }), gtBeforeLine(a), gtOlderLine(a, { note: true }), playing,
     hardest.length ? el("div", { class: "deck-overview-hardest" },
-      el("p", { class: "sub", text: "Hardest here:" }), el("ul", {}, hardest)) : null,
+      el("p", { class: "sub", text: (a.hardest || []).every(o => o.high != null && o.high < .5)
+        ? "Hardest here:" : "Lowest observed here:" }), el("ul", {}, hardest)) : null,
     el("p", { class: "sub", text: `These ${a.of} sampled opponents only, not every deck of that colour or style. ` +
       "Forge's AI, best of one, 1v1." })];
 }

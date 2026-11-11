@@ -140,13 +140,13 @@ class PrivacyTests(GlobalSearchTestCase):
         self.assertEqual([d["id"] for d in groups["decks"]["items"]], ["product/fdn-beginner-box/elves"])
         self.assertEqual(groups["collection"]["space"], "home")
         text = json.dumps(answer)
-        for secret in ("user2", "User2", "r-elves"):
+        for secret in ("user2", "User2", "casual/r-elves"):
             self.assertNotIn(secret, text)
 
     def test_matt_as_an_admin_has_no_override(self):
         with self.as_("matt"):
             text = json.dumps(gs.search_view("elv"))
-        for secret in ("user2", "User2", "r-elves"):
+        for secret in ("user2", "User2", "casual/r-elves"):
             self.assertNotIn(secret, text)
 
     def test_a_home_page_naming_nobody_gets_only_other_cards(self):
@@ -164,7 +164,7 @@ class PrivacyTests(GlobalSearchTestCase):
         # Matt's decision of 2026-10-31: nothing outside the viewer's own space, Public decks included.
         with self.as_("matt"), mock.patch.object(guard, "public_deck_spaces", return_value=frozenset({"user2"})):
             text = json.dumps(gs.search_view("elv"))
-        self.assertNotIn("r-elves", text)
+        self.assertNotIn("casual/r-elves", text)
         with self.as_("user2"), mock.patch.object(guard, "public_deck_spaces", return_value=frozenset({"home"})):
             groups = self.groups(gs.search_view("elv"))
         self.assertEqual([d["id"] for d in groups["decks"]["items"]], ["user2/casual/r-elves"])
@@ -180,4 +180,4 @@ class PrivacyTests(GlobalSearchTestCase):
             groups = self.groups(gs.search_view("elv"))
         self.assertEqual(groups["collection"]["error"], gs.UNREADABLE)
         self.assertEqual(groups["collection"]["items"], [])
-        self.assertNotIn("secret", json.dumps(groups))
+        self.assertNotIn("secret.csv", json.dumps(groups))

@@ -651,6 +651,8 @@ def deck_view(deck_id, version="target", omit=()):
     lines = {name: [_line_json(line, name, warnings, deck_sets) for line in section]
              for name, section in sections.items()}
     stats = _deck_stats(sections, decks.engine_kind(summary), warnings)
+    from . import bracket_fixes
+    bracket_fixes.annotate(stats, summary, deck_file, sees)
     if stats and isinstance(stats.get("warnings"), list):
         stats["warnings"] = _scrub(stats["warnings"])
     p = owned = None

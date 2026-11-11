@@ -33,6 +33,37 @@ card's numbers across the row under it, so they fit a 390 px phone.
 "use strict";
 
 const CARD_STATS_GAMES = 800;           // games the verdicts are on before per-card numbers stop being early (cardstats.MIN_CARD_GAMES)
+
+/** Descriptive resource development from visible saved matchups; never starts a game. */
+function deckDevelopmentPart(data) {
+  const body=el("div",{}),profile=state.profile,token=routeToken,hash=location.hash;
+  const part=el("section",{class:"deck-mu-part", "aria-labelledby":"h-development"},
+    el("h2",{id:"h-development",text:"Simulated development"}),body);
+  const current=()=>part.isConnected&&profile===state.profile&&token===routeToken&&hash===location.hash;
+  const read=async()=>{
+    if(!current())return;
+    clear(body).append(loadingBox("Reading saved development…",{small:true}));
+    try{
+      const answer=await api(`/api/deck/development?${new URLSearchParams({id:data.summary.id,version:data.version||"target"})}`);
+      if(!current())return;
+      clear(body);
+      if(answer.why)body.append(el("p",{class:"sub",text:answer.why}));
+      if(!answer.games)return;
+      body.append(el("p",{class:"sub",text:`${thousands(answer.games)} tallied list appearances; ${thousands(answer.untallied||0)} untallied and ${thousands(answer.bad||0)} invalid tallies excluded. ${answer.note||""}`}),
+        el("div",{class:"table-wrap"},el("table",{class:"data"},
+          el("thead",{},el("tr",{},["Round","Observed","Lands in play: median (range)","Cards drawn: median (range)"].map(text=>el("th",{scope:"col",text})))),
+          el("tbody",{},(answer.rounds||[]).map(row=>{
+            const words=value=>value?`${num(value.median)} (${num(value.low)}–${num(value.high)})`:"—";
+            return el("tr",{},el("th",{scope:"row",text:String(row.round)}),
+              el("td",{class:"num",text:num(row.games)}),el("td",{class:"num",text:words(row.lands)}),
+              el("td",{class:"num",text:words(row.drawn)}));
+          })))));
+    }catch(error){if(current())clear(body).append(loadFailed("Simulated development",error,read));}
+  };
+  // Called while a larger tab is built: wait until this exact section has been attached.
+  setTimeout(read,0);
+  return part;
+}
 const CARD_SPLIT_GAMES = 30;            // games drawn, and not drawn, before a card's win-rate difference gets a verdict (MIN_SPLIT_GAMES)
 const NEARLY_EVERY_GAME = 0.95;         // drawn in this share of games or more: too few games without the card to compare with
 const STUCK_NOTED = 0.2;                // the deck page calls out a spell still in hand at the end in this share of its drawn copies...

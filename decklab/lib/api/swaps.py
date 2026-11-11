@@ -32,12 +32,12 @@ def _deck(deck_id):
     if deck_id is None:
         raise ApiError(400, "id is required: the deck's id")
     check_deck_id(deck_id)
-    _require_cards()
     summary = _find_summary(deck_id)
     space, kind, slug = spaces.split_deck_id(summary["id"])
     if kind not in decks.KINDS:
         raise ApiError(400, NOT_A_DECK)
     guard.require_sees_inventory(space)
+    _require_cards()
     try:
         deck = decks.read_deck_file(decks.find_deck_file(kind, slug, space), space=space)
     except (decks.DeckNotFound, FileNotFoundError):

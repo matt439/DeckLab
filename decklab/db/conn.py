@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import sys
+import threading
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -33,11 +34,15 @@ DEFAULTS = {
     # Where backup copies each dump (the household's NAS share, set in its config.json). None
     # (the default, E11-S48): no copy, the dumps stay in staging_dir only.
     "backup_dir": None,
+    "backup_recipient": None,     # opt-in native age public key; only the remote copy is encrypted
+    "backup_identity": None,      # local unencrypted age identity file, used only by restores
+    "age_bin": None,              # optional absolute CLI path; None looks on PATH, never installs it
     # Off Windows a backup_dir on the staging folder's own disk is refused, since an unmounted
     # NAS share is an empty local folder (backup.same_device_problem); true allows it.
     "backup_same_device_ok": False,
     "staging_dir": str(config.DATA / "backups"),
     "export_repo": str(config.REPO.parent / "DeckLabData"),
+    "export_remote_scope": None,  # None: legacy full export; home: a fresh, home-only readable repo
     "keep_daily": 14,
     "keep_weekly": 8,
     "restore_check_days": 28,
@@ -53,6 +58,10 @@ VIAS = ("home", "tunnel")
 
 LOG_ENV = "DECKLAB_DB_LOG"        # replaces LOG_FILE (the tests' own log, so no test writes the real one)
 LOG_FILE = Path(os.environ[LOG_ENV]) if os.environ.get(LOG_ENV) else config.DATA / "logs" / "db.log"
+LOG_MAX_BYTES = 2_000_000
+LOG_BACKUPS = 3
+LOG_ENTRY_BYTES = 64 * 1024
+_log_lock = threading.RLock()
 CONNECT_TIMEOUT = 10              # seconds
 LOCALHOST_ADDR = "127.0.0.1"      # the one address connect() uses for host localhost
 
@@ -60,6 +69,11 @@ LOCALHOST_ADDR = "127.0.0.1"      # the one address connect() uses for host loca
 class DbUnavailable(Exception):
     """The database can't be used from here: psycopg isn't installed for this Python, or the
     server can't be reached (or refused the login). The message says which, in plain English."""
+
+    def __init__(self, message, *, reason=None):
+        from decklab.lib.db_failures import REASONS, connection_reason
+        super().__init__(message)
+        self.reason = reason if isinstance(reason, str) and reason in REASONS else connection_reason(message)
 
 
 def settings():
@@ -81,8 +95,11 @@ def _psycopg():
     try:
         import psycopg
     except ImportError:
-        raise DbUnavailable(f"psycopg isn't installed for this Python ({sys.executable}); install it "
-                            f"with {venv.pip_hint()}") from None
+        why = venv.reason()
+        repair = (f"{why}. First create or re-create .venv with this Python using python -m venv .venv "
+                  "(SELF-HOSTING.md step 3). " if why else "")
+        raise DbUnavailable(f"psycopg isn't installed for this Python ({sys.executable}). "
+                            f"{repair}Install its packages with {venv.pip_hint()}.", reason="driver") from None
     return psycopg
 
 
@@ -122,9 +139,16 @@ def connect(role="app", dbname=None, autocommit=False, timeout=None, options=Non
                                connect_timeout=timeout or CONNECT_TIMEOUT,
                                application_name="decklab.db", **extra)
     except psycopg.OperationalError as e:
+        from decklab.lib.db_failures import connection_reason
         detail = (str(e).strip().splitlines() or ["no detail"])[-1]
-        raise DbUnavailable(f"can't reach PostgreSQL at {s['host']}:{s['port']} as {user} "
-                            f"(database {dbname}): {detail}") from None
+        reason = connection_reason(e)
+        if reason == "network":
+            detail = "nothing answered; check the PostgreSQL service and database.host/port. " + detail
+        elif reason in ("authentication", "setup"):
+            detail = "PostgreSQL answered; run python -m decklab.db setup. " + detail
+        prefix = "couldn't sign in to PostgreSQL" if reason == "authentication" else "can't reach PostgreSQL"
+        raise DbUnavailable(f"{prefix} at {s['host']}:{s['port']} as {user} "
+                            f"(database {dbname}): {detail}", reason=reason) from None
 
 
 @contextmanager
@@ -281,9 +305,15 @@ def log(text):
     when that's set), and show it on stderr when that is a terminal (the nightly task runs under
     pythonw, which has none)."""
     line = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {str(text).rstrip()}"
-    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(LOG_FILE, "a", encoding="utf-8", newline="\n") as f:
-        f.write(line + "\n")
+    from decklab.lib import control
+    cap = min(LOG_ENTRY_BYTES, max(1, LOG_MAX_BYTES - 1))
+    encoded = line.encode("utf-8", "backslashreplace")
+    if len(encoded) > cap:
+        suffix = b" [log entry truncated]"
+        encoded = encoded[:max(0, cap - len(suffix))] + suffix[:cap]
+        line = encoded.decode("utf-8", "ignore")
+    with _log_lock, control.open_log(LOG_FILE, max_bytes=LOG_MAX_BYTES, backups=LOG_BACKUPS) as stream:
+        stream.write(line + "\n")
     stream = sys.stderr
     if stream is not None and getattr(stream, "isatty", lambda: False)():
         stream.write(line + "\n")

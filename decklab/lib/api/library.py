@@ -86,19 +86,35 @@ def _find_summary(deck_id):
 
 def viewer_decks_revision(summaries, snapshot=None):
     """decks_revision for one viewer (GET /api/decks and GET /api/matchups, which the
-    Matchups page compares): a sha256 over the ids, titles and text sha256s of the
-    library summaries it may see (guard.visible_decks, already filtered), so a save of a
-    deck it can't see doesn't move it. snapshot is the inventory's (current() by default)."""
-    import hashlib
-    import json
+    Matchups page compares): a digest of the ids, titles and authorized deck projections
+    it may see (guard.visible_decks, already filtered). Private kit and a Public deck's
+    private inventory prose/table cannot move it. snapshot is current() by default."""
+    from decklab.lib import change_signal, permissions, profiles
     snapshot = inventory.current() if snapshot is None else snapshot
+    profile = guard.viewer()
+    own = permissions._space_of(profile) if profile else None
+    readers = guard.accessory_readers()
+    try:
+        listed = profiles.read()
+    except (OSError, ValueError):
+        listed = []
+    home_players = {}
+    for person in listed:
+        if permissions._space_of(person) == spaces.HOME and person.get("plays_as"):
+            home_players.setdefault(person["plays_as"], person["id"])
     parts = []
     for summary in summaries:
         stored = snapshot.deck(summary["id"])
-        parts.append([summary["id"], summary.get("title"), stored.sha256 if stored is not None else None])
+        value = None
+        if stored is not None:
+            try:
+                value = change_signal._deck(stored, own=stored.space == own or guard.script(),
+                                            readers=readers, home_players=home_players)
+            except change_signal.Unverified:
+                value = None              # no raw error, path or concurrency token enters this signal
+        parts.append([summary["id"], summary.get("title"), value])
     parts.sort(key=lambda part: part[0])
-    text = json.dumps(parts, separators=(",", ":"), ensure_ascii=False)
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return change_signal._digest(parts)
 
 
 def _load_pool(warnings, space=spaces.HOME):

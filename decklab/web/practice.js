@@ -86,7 +86,7 @@ async function runPractice(body, data, token, retry) {
   }
 }
 
-function practiceProgress() {
+function practiceProgress(landTrials = false) {
   const title = el("h3", { text: "Getting the practice games ready…" });
   const bar = progressBar("Practice games played");
   const setBar = bar.set;
@@ -97,7 +97,7 @@ function practiceProgress() {
   const node = el("div", { class: "box box-info practice-running" },
     el("div", { class: "practice-running-head" }, el("span", { class: "spinner", "aria-hidden": "true" }), title),
     phase, bar.node, text,
-    el("p", { class: "sub", text: "It takes a second or two on the PC, once for each list. After that the " +
+    el("p", { class: "sub", text: landTrials ? "The baseline and each change share the practice queue. These bounded replays may take a little longer; their results are cached on the PC." : "It takes a second or two on the PC, once for each list. After that the " +
       "results are saved and show at once." }));
   return {
     node,
@@ -153,7 +153,7 @@ function drawPractice(body, result, data) {
     buttons.forEach((b, i) => b.setAttribute("aria-pressed", String(ids[i] === id)));
     // The rule numbers (CR 103.8a) are in the sources at the bottom.
     setupText.textContent = setups.find((s) => s.id === id).text.replace(/\s*\(CR [^)]*\)/g, "");
-    clear(panels).append(...setupPanels(result, result.results[id]));
+    clear(panels).append(...setupPanels(result, result.results[id], data, id));
     // Drawn with the deck page (drawDeck draws the charts once the page is in place), the charts
     // wait for that; afterwards they're drawn now.
     if (body.isConnected) drawCharts();
@@ -191,9 +191,10 @@ function practiceIntro(result, data, ...more) {
     ...more);
 }
 
-function setupPanels(result, r) {
+function setupPanels(result, r, data, setup) {
   return [mulliganPanel(r), landDropPanel(r), stuckPanel(r), practiceColourPanel(r), manaUsedPanel(r),
-    firstBigPanel(r, result)];
+    firstBigPanel(r, result), practiceCommanderPanel(result, r), practiceCategoryPanel(result, r, data),
+    practiceLandTrials(result, data, setup)].filter(Boolean);
 }
 
 /** A figure with a short unit, a name and one sentence saying what it means. */
@@ -387,7 +388,7 @@ function practiceColourPanel(r) {
   const how = explain("What's colour screw?", "A source of a colour is a land, mana creature or mana rock that makes " +
     "that colour of mana. Colour screw is having enough mana for a spell but not the right colours.");
   if (!c.by_turn.length) {
-    panel.append(el("p", { class: "sub", text: "This deck's spells need no coloured mana." }), how);
+    panel.append(el("p", { class: "sub", text: "This deck's spells need no coloured mana." }), practiceCastability(r), how);
     return panel;
   }
   const turns = c.by_turn[0].chances.map((_, i) => i + 1);
@@ -417,7 +418,7 @@ function practiceColourPanel(r) {
         "cast something else)."),
       statRow(pct(c.screw_wasted_turns), "of turns", "Colour screw with mana left over",
         "The same, on turns where you also couldn't spend all your mana.")),
-    how);
+    practiceCastability(r), how);
   return panel;
 }
 

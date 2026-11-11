@@ -10,6 +10,8 @@ import sys
 import threading
 from pathlib import Path
 
+from decklab.lib.config_errors import ConfigSyntaxError, InvalidConfig
+
 REPO = Path(__file__).resolve().parents[2]
 CHECKOUT = REPO                  # this checkout, even while a test points REPO at a temporary one
 DECKLAB = REPO / "decklab"
@@ -124,11 +126,34 @@ def load():
     file DECKLAB_CONFIG_EXTRA names, if set (_extra)."""
     settings = dict(DEFAULTS)
     if CONFIG_FILE.exists():
-        settings.update(json.loads(CONFIG_FILE.read_text(encoding="utf-8")))
+        try:
+            configured = json.loads(CONFIG_FILE.read_text(encoding="utf-8-sig"))
+        except json.JSONDecodeError as error:
+            raise ConfigSyntaxError(error.lineno, error.colno) from None
+        except UnicodeError:
+            raise InvalidConfig("decklab/config.json isn't readable UTF-8; save it as UTF-8 and try again.") from None
+        if not isinstance(configured, dict):
+            raise InvalidConfig("decklab/config.json must contain a JSON object; see decklab/config.example.json.")
+        settings.update(configured)
     extra = os.environ.get(EXTRA_ENV)
     if extra:
         settings.update(_extra(extra))
     return settings
+
+
+def source_status():
+    """Only whether the local file is a readable JSON object; never its contents or an error."""
+    try:
+        value = json.loads(CONFIG_FILE.read_text(encoding="utf-8-sig"))
+        if not isinstance(value, dict):
+            raise ValueError
+    except FileNotFoundError:
+        return {"state": "missing", "message": "decklab/config.json is missing. Copy decklab/config.example.json "
+                "to decklab/config.json and follow SELF-HOSTING.md step 4."}
+    except (OSError, ValueError, RecursionError):
+        return {"state": "unreadable", "message": "decklab/config.json couldn't be read. Run python -m "
+                "decklab.doctor on the server PC and check SELF-HOSTING.md step 4."}
+    return {"state": "ready", "message": None}
 
 
 def records_dir(root=None):

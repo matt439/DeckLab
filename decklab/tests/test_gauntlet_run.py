@@ -221,12 +221,17 @@ class ViewTests(GauntletCase):
         self.assertEqual({k: g["opponents"] for k, g in groups["identity_size"].items()}, {"mono": 3, "two": 1})
         self.assertEqual(list(groups["style"]), ["aggro", "control", "ramp"])
         self.assertEqual(groups["style"]["control"]["opponents"], 2)
-        self.assertEqual(groups["style"]["aggro"]["note"], gauntlet.ONE)
+        self.assertTrue(groups["style"]["aggro"]["note"].startswith(gauntlet.ONE))
+        self.assertTrue(groups["style"]["aggro"]["thin"])
+        self.assertIn("3 opponents and 300 games", groups["style"]["aggro"]["note"])
         self.assertEqual({k: g["opponents"] for k, g in groups["tier"].items()}, {"medium": 2, "hard": 2})
         for rows in found["groups"].values():
             for g in rows:
                 self.assertEqual(set(g), {"key", "label", "opponents", "games", "rate", "low", "high", "spread",
-                                          "note"})
+                                          "note"} | ({"thin"} if "thin" in g else set()))
+                if "thin" in g:
+                    self.assertTrue(g["thin"])
+                    self.assertIn("Too few compared opponents/games", g["note"])
         json.dumps(found, allow_nan=False)
 
     def test_overall_tally_verdicts_and_dates(self):

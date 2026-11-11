@@ -93,8 +93,10 @@ class TokenPackingKeysTests(unittest.TestCase):
         for answer in ({"unavailable": "Not ready"}, {"error": "Cannot read"}):
             self.assertEqual(token_packing_keys(answer, []), answer)
 
-    def test_the_decks_counters_stay_off_the_plan(self):
-        # E7-S24: deck_tokens' counters and dice are the deck page's; the packing plan doesn't show them yet.
+    def test_read_only_counters_are_preserved_without_changing_token_tick_identities(self):
         answer = {"needs": [], "counters": {"needs": [{"key": "d20"}], "note": "x"}}
-        self.assertEqual(token_packing_keys(answer, []), {"needs": []})
-        self.assertIn("counters", answer)
+        self.assertEqual(token_packing_keys(answer, []), answer)
+        needs, rows = result(1), [row(1)]
+        before = self.key(needs, rows)
+        needs["counters"] = answer["counters"]
+        self.assertEqual(self.key(needs, rows), before)

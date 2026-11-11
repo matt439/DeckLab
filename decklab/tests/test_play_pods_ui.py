@@ -25,7 +25,7 @@ SETUP = PAGE + """
   const packet=(extra={})=>({today:'2026-10-28',pod_lists:[snapshot()],pods:[],games:[],sideboards:[],lists:[],decks:{},warnings:[],...extra});
   const response=(body,saved=false)=>({...(saved?{saved:true,sha256:shaR}:{preview:true,id:body.id||podId,review_sha256:reviewSha}),
     record:{...(saved?{version:1,kind:'games',id:body.id,revision:3}:{}),space:'home',
-      mode:'pod',game_version:2,date:body.date,result:body.result,notes:podTrim(body.notes),
+      mode:'pod',game_version:2,date:body.date,result:body.result,notes:podTrim(body.notes),...(body.counter?{counter:structuredClone(body.counter)}:{}),
       seats:body.seats.map(seat=>seat.type==='external'?{...seat,player:podTrim(seat.player),commander:podTrim(seat.commander)}
         :{...seat,player:podTrim(seat.player),deck:recordedSnapshot({id:seat.deck.id,version:seat.deck.version,sha256:seat.deck.sha256})})}});
   apiWrite=async(path,body)=>{writes.push([path,structuredClone(body)]);return response(body,body.preview===false);};

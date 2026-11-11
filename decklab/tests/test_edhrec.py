@@ -345,7 +345,7 @@ class IdeasTests(IdeasCase):
 
     def test_the_route_is_registered(self):
         from decklab.lib import feature_routes
-        self.assertIn('("deck", "edhrec"): (edhrec.edhrec_view, ("id", "commander", "commander2", "space", "page"))',
+        self.assertIn('("deck", "edhrec"): (edhrec.edhrec_view, ("id", "commander", "commander2", "space", "page", "view"))',
                       Path(feature_routes.__file__).read_text(encoding="utf-8"))
 
 

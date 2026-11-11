@@ -101,7 +101,7 @@ class OpsContract:
         self.assertTrue(summary.counts["merged"])
         row = self.rows()[0]
         self.assertEqual((row["quantity"], row["condition"], row["language"]), ("3", "NM", ""))
-        self.assertEqual(row["notes"], "from Japan; Merged copies have differing or unreported language")
+        self.assertEqual(row["notes"], "from Japan; Copies: language 2 en, 1 ja")
 
     def test_ordinary_basics_only_when_tracked(self):
         forest = elves(name="Forest", collector_number="280")
@@ -202,6 +202,27 @@ class OpsContract:
                        uploads=[["2026-10-10-a", "y" * 200]], limit=1000)
         self.assertEqual((caught.exception.held, caught.exception.size, caught.exception.limit), (900, 200, 1000))
         self.assertEqual(self.rows("user2"), before)
+
+    def test_counted_import_refusal_is_atomic_and_saved_counts_roundtrip(self):
+        contribution = elves(condition="LP", language="ja", notes="Copies: 1 signed")
+        before = self.rows()
+        imports = inventory.current().imports
+        with self.assertRaises(inventory.Conflict):
+            self.apply("collection.import", space="home", sources=[["counted.csv", [contribution,
+                       elves(name="Sol Ring")]]], uploads=[["counted", "synthetic source"]])
+        self.assertEqual(self.rows(), before)
+        self.assertEqual(inventory.current().imports, imports)
+        self.apply("collection.import", space="home", sources=[["counted.csv", [contribution]]],
+                   uploads=[["counted", "synthetic source"]])
+        actual = next(row for row in self.rows() if row["set"] == "fdn")
+        self.assertEqual(actual["notes"], "Copies: condition 2 NM, 1 LP; Copies: language 2 en, 1 ja; Copies: 1 signed")
+        exported = rules.collection_csv_bytes([actual]).decode()
+        parsed = rules.parse_cards(io.StringIO(exported), "counted export")
+        self.apply("collection.import", space="home", sources=[["export.csv", parsed]], uploads=[["export", exported]])
+        actual = next(row for row in self.rows() if row["set"] == "fdn")
+        self.assertEqual(actual["notes"], "Copies: condition 4 NM, 2 LP; Copies: language 4 en, 2 ja; Copies: 2 signed")
+        self.assertEqual(actual["quantity"], "6")
+        self.assertEqual(self.imported("home", "export.csv"), exported.encode())
 
     def test_repeat_imports_match_exact_content_within_one_space_and_guard_the_reviewed_set(self):
         text = "raw export\r\n"

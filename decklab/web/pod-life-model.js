@@ -4,6 +4,48 @@
 
 const POD_LIFE_KEEP_MS = 2 * 24 * 60 * 60 * 1000;
 const POD_LIFE_PACKET_KEYS = ["v", "profile", "space", "session_id", "started", "updated", "date", "notes", "poison", "ended", "seats"];
+const LIFE_MARKER_KINDS = ["energy", "experience", "monarch", "initiative"];
+
+function lifeMarkerHints(values) {
+  return podLifeArray(values, 0, 5) && values.every(value => ["poison", ...LIFE_MARKER_KINDS].includes(value))
+    ? [...new Set(values)] : [];
+}
+function lifeMarkerNew(ids, hints = []) {
+  return { enabled: Object.fromEntries(LIFE_MARKER_KINDS.map(kind => [kind, hints.includes(kind)])),
+    values: ids.map(seat_id => ({ seat_id, energy: 0, experience: 0, monarch: false, initiative: false })) };
+}
+function lifeMarkerValid(markers, ids) {
+  return podLifeObject(markers, ["enabled", "values"]) && podLifeObject(markers.enabled, LIFE_MARKER_KINDS)
+    && LIFE_MARKER_KINDS.every(kind => typeof markers.enabled[kind] === "boolean")
+    && podLifeArray(markers.values, ids.length, ids.length) && markers.values.every((row, index) =>
+      podLifeObject(row, ["seat_id", ...LIFE_MARKER_KINDS]) && row.seat_id === ids[index]
+      && podLifeInteger(row.energy, 0, 999) && podLifeInteger(row.experience, 0, 999)
+      && typeof row.monarch === "boolean" && typeof row.initiative === "boolean")
+    && ["monarch", "initiative"].every(kind => markers.values.filter(row => row[kind]).length <= 1);
+}
+function lifeMarkerState(game, ids) { return game.markers || lifeMarkerNew(ids); }
+function lifeMarkerEnable(game, ids, kind, enabled) {
+  if (!LIFE_MARKER_KINDS.includes(kind) || typeof enabled !== "boolean") return false;
+  const markers = lifeMarkerState(game, ids);
+  if (markers.enabled[kind] === enabled) return false;
+  markers.enabled[kind] = enabled; game.markers = markers; return true;
+}
+function lifeMarkerAmount(game, ids, seatId, kind, delta) {
+  if (!["energy", "experience"].includes(kind)) return false;
+  const markers = lifeMarkerState(game, ids), row = markers.values.find(row => row.seat_id === seatId);
+  if (!row || !markers.enabled[kind]) return false;
+  const next = Math.max(0, Math.min(999, row[kind] + delta));
+  if (next === row[kind]) return false;
+  row[kind] = next; game.markers = markers; return true;
+}
+function lifeMarkerClaim(game, ids, seatId, kind) {
+  if (!["monarch", "initiative"].includes(kind)) return false;
+  const markers = lifeMarkerState(game, ids), row = markers.values.find(row => row.seat_id === seatId);
+  if (!row || !markers.enabled[kind]) return false;
+  const enabled = !row[kind];
+  for (const value of markers.values) value[kind] = value === row && enabled;
+  game.markers = markers; return true;
+}
 
 function podLifeObject(value, keys) {
   return !!value && typeof value === "object" && !Array.isArray(value) &&
@@ -53,7 +95,8 @@ function podLifeClone(value) { return JSON.parse(JSON.stringify(value)); }
 /** Fixed constructor error, never an echoed packet value. Blank source labels get numbered names. */
 function podLifeNewError(input, now = Date.now()) {
   try {
-    if (!podLifeObject(input, ["profile", "space", "session_id", "date", "notes", "seats"]) ||
+    if (!podLifeObject(input, ["profile", "space", "session_id", "date", "notes", "seats",
+        ...(Object.hasOwn(input || {}, "counter_markers") ? ["counter_markers"] : [])]) ||
         !podLifeInteger(now, 0, Number.MAX_SAFE_INTEGER - 86400000) || !podLifeProfile(input.profile) ||
         !(input.space === "home" || input.space === input.profile) || !podLifeSession(input.session_id) ||
         !podLifeDate(input.date, now) || !podNotes(input.notes) ||
@@ -80,7 +123,9 @@ function podLifeNew(input, now = Date.now()) {
   const seats = input.seats.map(seat => podLifeChoice({ ...seat, sources: seat.sources.map((source, i) =>
     ({ ...source, label: source.label === "" ? `Commander ${i + 1}` : source.label })) }));
   return { v: 1, profile: input.profile, space: input.space, session_id: input.session_id,
-    started: now, updated: now, date: input.date, notes: input.notes, poison: false, ended: null,
+    started: now, updated: now, date: input.date, notes: input.notes,
+    poison: lifeMarkerHints(input.counter_markers).includes("poison"), ended: null,
+    markers: lifeMarkerNew(seats.map(seat => seat.seat_id), lifeMarkerHints(input.counter_markers)),
     seats: seats.map(seat => ({ ...seat, life: 40, poison: 0, out: null,
       damage: seats.flatMap(other => other.sources.map(source =>
         ({ seat_id: other.seat_id, source_id: source.source_id, value: 0 }))) })) };
@@ -102,7 +147,9 @@ function podLifeEnded(game) { return game?.ended || null; }
 /** Strict local packet validation. Stale selectors remain intact; this grants no recording permission. */
 function podLifeValid(game, owner, now = Date.now()) {
   try {
-    if (!podLifeObject(game, POD_LIFE_PACKET_KEYS) || game.v !== 1 || !podLifeProfile(game.profile) ||
+    if (!podLifeObject(game, [...POD_LIFE_PACKET_KEYS, ...(Object.hasOwn(game || {}, "markers") ? ["markers"] : [])]) ||
+        Object.hasOwn(game, "markers") && !lifeMarkerValid(game.markers, (game.seats || []).map(seat => seat?.seat_id)) ||
+        game.v !== 1 || !podLifeProfile(game.profile) ||
         game.profile !== owner?.profile || game.space !== owner?.space || !(game.space === "home" || game.space === game.profile) ||
         !podLifeSession(game.session_id) || !podLifeInteger(now, 0, Number.MAX_SAFE_INTEGER - 86400000) ||
         !podLifeTime(game.started, now) || !podLifeTime(game.updated, now) || game.updated < game.started ||
@@ -122,7 +169,9 @@ function podLifeValid(game, owner, now = Date.now()) {
             expected.includes(`${entry.seat_id}/${entry.source_id}`) && podLifeInteger(entry.value, 0, 99))) return false;
       const threshold = podLifeThreshold(game, seat);
       if (seat.out === null) { if (threshold) return false; }
-      else if (!podLifeObject(seat.out, ["why", "at"]) || !["life", "poison", "commander", "conceded", "chosen"].includes(seat.out.why) ||
+      else if (!podLifeObject(seat.out, ["why", "at", ...(Object.hasOwn(seat.out, "order") ? ["order"] : [])])
+          || Object.hasOwn(seat.out, "order") && !podLifeInteger(seat.out.order, 1, game.seats.length)
+          || !["life", "poison", "commander", "conceded", "chosen"].includes(seat.out.why) ||
           !podLifeTime(seat.out.at, game.updated) || seat.out.at < game.started ||
           seat.out.why === "life" && seat.life > 0 || seat.out.why === "poison" && seat.poison < 10 ||
           seat.out.why === "commander" && !seat.damage.some(entry => entry.value >= 21)) return false;
@@ -139,11 +188,15 @@ function podLifeValid(game, owner, now = Date.now()) {
 function podLifeMutable(game, now) {
   return podLifeValid(game, { profile: game?.profile, space: game?.space }, now) && now >= game.updated && !game.ended;
 }
+function podLifeNextOutOrder(game) {
+  return 1 + Math.max(game.seats.filter(seat => seat.out).length, ...game.seats.map(seat => seat.out?.order || 0));
+}
 function podLifeFinish(game, now) {
   game.updated = now;
+  const order = podLifeNextOutOrder(game);
   for (const seat of game.seats) {
     const why = podLifeThreshold(game, seat);
-    if (!seat.out && why) seat.out = { why, at: now };
+    if (!seat.out && why) seat.out = { why, at: now, order };
   }
   const active = game.seats.filter(seat => !seat.out);
   if (active.length <= 1) game.ended = { result: active[0]?.seat_id || "draw", why: "last", at: now };
@@ -165,6 +218,8 @@ function podLifeChange(game, seatId, field, delta, source = null, now = Date.now
     if (next === before) return false;
     entry.value = next;
     seat.life = Math.max(-999, Math.min(999, seat.life - (next - before)));
+  } else if (source === null && lifeMarkerAmount(game, game.seats.map(row => row.seat_id), seatId, field, delta)) {
+    // Optional player counters have no elimination threshold.
   } else return false;
   podLifeFinish(game, now);
   return true;
@@ -174,7 +229,7 @@ function podLifeConcede(game, seatId, now = Date.now()) {
   if (!podLifeMutable(game, now)) return false;
   const seat = game.seats.find(row => row.seat_id === seatId);
   if (!seat || seat.out) return false;
-  seat.out = { why: "conceded", at: now };
+  seat.out = { why: "conceded", at: now, order: podLifeNextOutOrder(game) };
   podLifeFinish(game, now);
   return true;
 }
@@ -189,6 +244,12 @@ function podLifePoison(game, enabled, now = Date.now()) {
   game.poison = enabled;
   podLifeFinish(game, now);
   return true;
+}
+function podLifeMarker(game, kind, value, seatId = null, now = Date.now()) {
+  if (!podLifeMutable(game, now) || seatId !== null && podLifeOut(game, seatId)) return false;
+  const ids = game.seats.map(seat => seat.seat_id);
+  if (!(seatId === null ? lifeMarkerEnable(game, ids, kind, value) : lifeMarkerClaim(game, ids, seatId, kind))) return false;
+  game.updated = now; return true;
 }
 function podLifeAddSource(game, seatId, label, now = Date.now()) {
   if (!podLifeMutable(game, now) || !podText(label, 300, true)) return false;
@@ -206,11 +267,12 @@ function podLifeAddSource(game, seatId, label, now = Date.now()) {
 function podLifeReset(game, sessionId, now = Date.now()) {
   if (!podLifeValid(game, { profile: game?.profile, space: game?.space }, now) || !podLifeSession(sessionId) || sessionId === game.session_id) return null;
   return podLifeNew({ profile: game.profile, space: game.space, session_id: sessionId,
-    date: game.date, notes: game.notes, seats: game.seats.map(podLifeChoice) }, now);
+    date: game.date, notes: game.notes, seats: game.seats.map(podLifeChoice),
+    counter_markers: game.markers ? LIFE_MARKER_KINDS.filter(kind => game.markers.enabled[kind]) : [] }, now);
 }
 function podLifeUndo(game, previous, now = Date.now()) {
   const owner = { profile: game?.profile, space: game?.space };
-  if (!podLifeValid(game, owner, now) || !podLifeValid(previous, owner, now) || game.session_id !== previous.session_id ||
+  if (!podLifeValid(game, owner, now) || game.ended || previous?.ended || !podLifeValid(previous, owner, now) || game.session_id !== previous.session_id ||
       game.started !== previous.started || previous.updated > game.updated || now < game.updated) return false;
   const binding = packet => JSON.stringify(packet.seats.map(seat => ({ ...podLifeChoice(seat), sources: undefined })));
   if (binding(game) !== binding(previous) || game.date !== previous.date || game.notes !== previous.notes) return false;
@@ -219,6 +281,7 @@ function podLifeUndo(game, previous, now = Date.now()) {
     return seat.sources.length <= sources.length && seat.sources.every(source => sources.some(current =>
       current.source_id === source.source_id && current.label === source.label));
   })) return false;
+  if (!Object.hasOwn(previous, "markers")) delete game.markers;
   Object.assign(game, podLifeClone(previous), { updated: now });
   return true;
 }

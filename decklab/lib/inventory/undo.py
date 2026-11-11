@@ -691,6 +691,21 @@ def review(change_id, space, snapshot=None):
     supplied_snapshot = snapshot is not None
     snapshot = current() if snapshot is None else snapshot
     raw = store.undo_audit(change_id)
+    from . import undo_collection_changes
+    if undo_collection_changes.classify(store, change_id, raw):
+        reader = getattr(store, "undo_collection_changes_review", None)
+        if not supplied_snapshot and callable(reader):
+            return reader(change_id, space)
+        return undo_collection_changes.review(change_id, space, snapshot, store)
+    from . import undo_token_layout
+    position_source = undo_token_layout.looks_like(store, change_id, space, raw)
+    if position_source is not None:
+        from . import undo_token_batch, undo_token_batch_remove
+        module = undo_token_batch_remove if position_source == "INSERT" else undo_token_batch
+        reader = getattr(store, "undo_token_batch_remove_review" if position_source == "INSERT" else "undo_token_batch_review", None)
+        if not supplied_snapshot and callable(reader):
+            return reader(change_id, space)
+        return module.review(change_id, space, snapshot, store)
     from . import undo_token_delete
     if undo_token_delete.is_delete(raw):
         undo_token_delete.source_record(raw, space)
@@ -716,6 +731,12 @@ def review(change_id, space, snapshot=None):
         if not supplied_snapshot and callable(reader):
             return reader(change_id, space)
         return undo_token_edit.review(change_id, space, snapshot, store)
+    from . import undo_order_queue
+    if undo_order_queue.looks_like(store, change_id, space, raw):
+        reader = getattr(store, "undo_order_queue_review", None)
+        if not supplied_snapshot and callable(reader):
+            return reader(change_id, space)
+        return undo_order_queue.review(change_id, space, snapshot, store)
     from . import undo_watchlist, undo_watchlist_mixed
     if undo_watchlist_mixed.queue_rows(raw):
         if space != undo_watchlist.HOME:
@@ -785,6 +806,11 @@ def apply_undo(snapshot, *, change_id, space, expect, reason=None, confirm_owned
     plan = review(change_id, space, snapshot)
     if plan["expect"] != expect:
         raise UndoConflict("The inventory or decks changed after the Undo preview. Review it again.", plan["label"])
+    from . import undo_collection_changes
+    if plan.get("action") == undo_collection_changes.ACTION:
+        if plan["physical_confirmation_required"] != confirm_owned:
+            raise Invalid("Confirm only every historical identity and deleted copy shown in this complete collection review.")
+        return undo_collection_changes.apply(snapshot, plan, change_id, space, reason)
     from . import undo_token_delete
     if plan.get("action") == undo_token_delete.ACTION:
         if confirm_owned is not True or reason is not None:

@@ -1,4 +1,4 @@
-"""Free pool cards for each of a Commander deck's roles (E9-S26): the cards the space owns, with a copy free
+"""Free pool cards for each of a deck's roles (E9-S26, E3-S42): the cards the space owns, with a copy free
 for the deck, that carry a role's Scryfall oracle tag and fit the commander's colour identity, so a thin role
 on the Stats tab can be topped up from what's already owned.
 
@@ -16,18 +16,23 @@ A candidate:
 Each role lists at most MAX_PER_ROLE, most-printed first (a stand-in for how much a card is played, as the
 editor's finder ranks), then by name; the rest are counted. Nothing here reads the inventory or the card
 data itself: the caller passes the free copies and a card lookup, so the rules are tested on their own.
+Casual lists use the chosen list's non-land colours and castable colour fit, with no Commander
+legality filter or role target. The default remains the Commander fit for existing callers.
 """
 
 MAX_PER_ROLE = 10       # candidates listed for one role (the rest are counted)
 
 
-def fits(card, identity):
+def fits(card, identity, kind="commander"):
     """Whether card may join a Commander deck of this colour identity (a set of WUBRG letters)."""
+    if kind == "casual":
+        from .swaps import castable
+        return card is not None and castable(card, identity, kind)
     return (card is not None and card.get("commander_legality") == "legal"
             and set(card.get("color_identity") or ()) <= identity)
 
 
-def free_by_role(roles, identity, in_deck, free, card_of, limit=MAX_PER_ROLE):
+def free_by_role(roles, identity, in_deck, free, card_of, limit=MAX_PER_ROLE, *, kind="commander"):
     """{role: (candidates, more)} for each of roles, in that order: candidates [(name, free copies)], at
     most limit of them, and more the count of the rest.
 
@@ -39,7 +44,7 @@ def free_by_role(roles, identity, in_deck, free, card_of, limit=MAX_PER_ROLE):
         if spare <= 0 or name in in_deck:
             continue
         card = card_of(name)
-        if not fits(card, identity):
+        if not fits(card, identity, kind):
             continue
         for role in card.get("roles") or ():
             if role in found:

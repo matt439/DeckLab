@@ -45,6 +45,7 @@ def view(record, profile, script=False):
             shown["deck"] = {"hidden": True, "title": guard.hidden_deck(seat["deck"]["id"])}
     if not private:
         out["notes"] = ""
+        out.pop("counter", None)
         out.pop("space", None)
         if "updated_by" in out:
             out["updated_by"] = play.SOMEONE
@@ -53,8 +54,19 @@ def view(record, profile, script=False):
 
 def rights(record, profile):
     own = permissions._space_of(profile) if profile else None
+    from .play_deletion import may_delete
     return {"edit": bool(profile and own == record["space"] and guard.allowed(
-        profile, "play.record", play._writable_decks("games", record, profile)))}
+        profile, "play.record", play._writable_decks("games", record, profile))), "delete": may_delete(record, profile)}
+
+
+def summary(entries, deck_id, snapshot, profile):
+    """One deck's existing visible projection, without another store or inventory read."""
+    from . import pod_results
+    try:
+        return pod_results.summarise(entries, lambda candidate: inventory.same_deck_id(deck_id, candidate, snapshot),
+                                    permissions._space_of(profile) if profile else None)
+    except Exception:
+        return {"status": "unavailable", "minimum_games": pod_results.MINIMUM_GAMES}
 
 
 def choice(summary, snapshot, profile):
@@ -163,7 +175,8 @@ def _content(data, previous, profile, identities):
             raise ApiError(409, "A selected deck changed. Reload the play page and review the current list.")
         seat["deck"] = snapshot
     pods.record_deck_ids(content)
-    return content
+    from .play_counter_facts import apply
+    return apply(content, data, previous, profile, [seat["seat_id"] for seat in content["seats"]])
 
 
 def save_pod(body):
@@ -171,7 +184,7 @@ def save_pod(body):
     data = _parse_body(body, MAX_BODY)
     profile = _writer(data)
     _keys(data, ("profile", "id", "sha256", "mode", "game_version", "date", "seats", "result", "notes", "preview"),
-          ("review_sha256",))
+          ("review_sha256", "counter"))
     with state_errors():
         if pods.mode(data) != "pod":
             raise ApiError(400, "Choose a pod game")

@@ -10,7 +10,7 @@ import unittest
 from decklab.tests.test_web import NODE, PLAY_SCRIPTS, WEB, _run_page, _text
 
 MOVED = ("openPreconSheet", "backToPrecons", "fromWizards", "searchPrecons", "previewPrecon", "preconLine",
-         "drawPreconPreview", "preconAddHere", "addPrecon")
+         "drawPreconPreview", "preconAddHere", "addPrecon", "preconBonusOwner", "preconBonusChoice")
 
 
 def _defined(script):

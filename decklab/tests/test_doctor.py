@@ -209,6 +209,10 @@ class DoctorCliTests(unittest.TestCase):
                 self.calls = []
                 locals_created.append(self)
 
+            @property
+            def optional_settings(self):
+                return self.settings
+
             def probe(self, ident):
                 self.calls.append(ident)
                 if ident == "config":

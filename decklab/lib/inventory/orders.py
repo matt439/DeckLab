@@ -65,6 +65,7 @@ from decklab.lib.state import Invalid
 
 from . import Summary, paths, register, rules
 from .model import QUEUE_FIELDS, Component, Order, Product, ProductItem
+from . import watchlist_targets
 
 PAYLOAD_FIELDS = {"cards": list(rules.FIELDS), "tokens": list(rules.TOKEN_FIELDS)}
 INCOMING = ("ordered", "preordered")
@@ -410,9 +411,12 @@ def queue_row(row, repo, inv=None):
     words; the row with every value text. A source naming a deck file is looked for among inv's
     decks (purchases.source_exists; inventory.current() when inv is None)."""
     try:
-        if not isinstance(row, dict) or set(row) != set(QUEUE_FIELDS):
+        if not isinstance(row, dict) or set(row) not in (set(QUEUE_FIELDS), set(QUEUE_FIELDS) - {watchlist_targets.FIELD}):
             raise ValueError(f"watchlist: a row needs exactly the columns {','.join(QUEUE_FIELDS)}")
-        row = {k: "" if row[k] is None else str(row[k]) for k in QUEUE_FIELDS}
+        row = {k: "" if row.get(k) is None else str(row[k]) for k in QUEUE_FIELDS}
+        row[watchlist_targets.FIELD] = watchlist_targets.normalize(row[watchlist_targets.FIELD]) or ""
+        if row[watchlist_targets.FIELD] and inv is not None and not inv.targets_ready:
+            raise Invalid(watchlist_targets.MIGRATE)
         where = f"watchlist: {row['name']}"
         for value in row.values():
             purchases._text(value, where)
@@ -624,6 +628,10 @@ def add_order(inv, *, record, cards=None, tokens=None, product=None, fulfils=(),
         inv = inv.set_component_rows(oid, cid, rows)
     if made is not None:
         inv = _with_status_row(inv.with_product(made), status_row)
+    from . import bonus_warnings
+    singles = [row for cid, rows in payloads for row in rows
+               if next(component for component in components if component.id == cid).kind == "cards"]
+    warnings += [words for words in bonus_warnings.messages(inv, singles) if words not in warnings]
     from . import order_fulfilment
     inv, reduced = _fulfil(inv, fulfils, ordered, exact)
     inv = inv.with_order(order_fulfilment.record(before, inv, order, fulfils))
@@ -774,7 +782,15 @@ def split_order(inv, *, order, component, new_id, take, move_checks=(), copy_che
         qty = have if item.get("quantity") is None else _quantity(item["quantity"], paths.row_of(c.path, n, owners))
         if qty > have:
             raise Invalid(f"{paths.row_of(c.path, n, owners)} has {have}, not {qty}")
-        moved.append({**row, "quantity": str(qty)})
+        moved_row = {**row, "quantity": str(qty)}
+        if c.kind == "cards" and qty < have:
+            from . import copy_notes
+            try:
+                moved_row["notes"] = copy_notes.split_notes(row, qty)
+                row["notes"] = copy_notes.split_notes(row, have - qty)
+            except ValueError as e:
+                raise Invalid(str(e)) from None
+        moved.append(moved_row)
         row["quantity"] = str(have - qty)
     kept = [row for row in rows if row["quantity"] != "0"]
     if not kept:
@@ -948,7 +964,9 @@ def set_queue(inv, *, select=None, values, add=False, repo="."):
         text = f"Changed the watchlist's {row['name']}" + (f" for {row['for']}" if row["for"] else "") + \
             ": " + ", ".join(sorted(values))
     _no_duplicates(rows)
-    return _done(before, _with_queue(inv, rows), Summary(text, {"rows": len(rows)}))
+    from . import bonus_warnings
+    warnings = bonus_warnings.messages(inv, [row]) if add or {"set", "collector_number", "finish", "printing"}.intersection(values) else []
+    return _done(before, _with_queue(inv, rows), Summary(text, {"rows": len(rows)}, extra={"warnings": warnings} if warnings else None))
 
 
 @register("watchlist.remove")
@@ -972,9 +990,13 @@ def replace_queue(inv, *, rows, repo="."):
     before = inv
     if not isinstance(rows, (list, tuple)):
         raise Invalid("Give the watchlist's rows")
+    old = _queue_dicts(inv)
+    previous = {queue_key(row): row for row in old}
+    # A pre-target CSV cannot silently erase a newer explicit market target.
+    rows = [{**row, watchlist_targets.FIELD: previous.get(queue_key(row), {}).get(watchlist_targets.FIELD, "")}
+            if isinstance(row, dict) and watchlist_targets.FIELD not in row else row for row in rows]
     made = [queue_row(row, repo, inv) for row in rows]
     _no_duplicates(made)
-    old = _queue_dicts(inv)
     if made == old:
         return inv, Summary("The watchlist is already like that")
     old_keys = {queue_key(r) for r in old}

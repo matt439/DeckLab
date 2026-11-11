@@ -438,6 +438,32 @@ def paired_diff(base_games, paired_games_, base_side, variant_side):
     return out
 
 
+def unpaired_diff(base_games, variant_games, base_side, variant_side):
+    """Independent balanced win-rate difference, variant minus base (MOVER 95% range).
+
+    Game numbers and seeds are never matched. Each arm needs both known starter
+    strata. Unknown starters remain disclosed and are not guessed.
+    """
+    arms = []
+    for games, side in ((base_games, base_side), (variant_games, variant_side)):
+        strata = []
+        for first in (True, False):
+            selected = [game for game in games if type(game.get("first")) is int and game["first"] in (0, 1)
+                        and (game["first"] == side) == first]
+            strata.append((sum(game.get("w") == side for game in selected), len(selected)))
+        rate = views.balanced(strata[0][0], strata[0][1], strata[1][0], strata[1][1])
+        arms.append({"games": len(games), "unknown_starter": len(games) - sum(n for _, n in strata),
+                     "strata": strata, "rate": rate if all(n for _, n in strata) else None})
+    out = {"paired": False, "delta": None, "low": None, "high": None, "base": arms[0], "variant": arms[1]}
+    if all(arm["rate"] is not None for arm in arms):
+        b, lb, ub = arms[0]["rate"]
+        v, lv, uv = arms[1]["rate"]
+        delta = v - b
+        out.update(delta=delta, low=max(-1, delta - math.hypot(v - lv, ub - b)),
+                   high=min(1, delta + math.hypot(uv - v, b - lb)))
+    return out
+
+
 def _center_var(diff):
     """(center, var) of a paired_diff() or paired_field() answer: its own when it has them, else
     worked out from its strata, else from z and var; None when it has no difference."""

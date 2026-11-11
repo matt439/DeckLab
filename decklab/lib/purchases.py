@@ -1,18 +1,19 @@
-"""Current shopping state, read from the queue and per-order records.
+"""Current shopping state from PostgreSQL queue, order and product records.
 
-No card cache, network request, inventory mutation or price refresh is needed.
-Personal wishlists and dated buying research are deliberately not purchase orders.
-Run ``python -m decklab.lib.purchases --check`` to validate the records and queue.
+One inventory.current() snapshot supplies every row and relation. No card cache,
+network request, mutation or price refresh is needed. Personal wishlists and dated
+buying research are separate from purchase orders. Run
+``python -m decklab.lib.purchases --check`` to validate the records and queue.
 
-Everything comes from one inventory snapshot (decklab/lib/inventory: inventory.current()),
-whichever backend holds it. The paths in records (a component's "path") are where each piece
-is as a file, worked out from what it is, so both backends say the same; messages name each piece
-in the database's words instead (E11-S12: "Row 3 of the purchase queue: wrong number of columns",
-"Order x's cards: missing order record", "Product x: missing product status", never an old file:
-paths.describe). The buylist files a record or the watchlist names as
-its source are still checked on disk; a deck file's path there is checked against the
-snapshot's decks, or a retired deck's durable saved history (source_exists: the phase 4
-design's R9). Retirement never discards recorded purchasing intent.
+Components retain path-shaped keys for compatibility with the fixture/export
+formats. These are logical identifiers, not locations of live inventory files.
+Human-facing messages use paths.describe()'s database record words (purchase queue
+row, order component or product). The file backend exists only for isolated tests.
+
+Dated buylist/report sources are still real research files and may be checked on
+disk. A deck source is checked against saved database text or its durable retired
+history: retiring a deck never discards recorded purchasing intent. Changing these
+compatibility keys to new id types is outside these reader/coverage changes.
 """
 import argparse
 import contextlib
@@ -31,7 +32,7 @@ STATES = ("ready", "waiting_for_stock", "waiting_for_reprint", "deferred", "long
 STATUSES = ("pending", "received", "cancelled")
 QUEUE_FIELDS = ("name", "set", "collector_number", "finish", "quantity", "for",
                 "printing", "listed_aud", "listed_at", "in_stock", "checked", "notes",
-                "state", "source")
+                "state", "source", "buy_under_aud")
 ID_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
 
 
@@ -172,11 +173,14 @@ def _csv(path, required, inv=None):
     if source.csv_error is not None:
         raise csv.Error(source.csv_error)
     fields = list(source.columns or ())
-    if len(fields) != len(set(fields)) or not set(required) <= set(fields):
+    needed = set(required) - ({"buy_under_aud"} if path == paths.WATCHLIST else set())
+    if len(fields) != len(set(fields)) or not needed <= set(fields):
         raise ValueError(f"{name}: missing or duplicate columns")
     rows = []
     for number, row in enumerate(source.items if isinstance(source, Product) else source.rows, 1):
         found = row.as_dict()
+        if path == paths.WATCHLIST and "buy_under_aud" not in fields:
+            found["buy_under_aud"] = ""
         if None in found or None in found.values():
             raise ValueError(f"{paths.row_of(path, number, owners)}: wrong number of columns")
         rows.append(found)
@@ -218,6 +222,11 @@ def read_queue(*, missing=None):
         if row["in_stock"] not in ("", "yes", "no"):
             raise ValueError(f"{where}: stock must be yes, no or blank")
         _date(row["checked"], where)
+        from decklab.lib.inventory import watchlist_targets
+        try:
+            row[watchlist_targets.FIELD] = watchlist_targets.normalize(row.get(watchlist_targets.FIELD)) or ""
+        except ValueError as error:
+            raise ValueError(f"{where}: {error}") from None
         if row["listed_aud"]:
             try:
                 price = Decimal(row["listed_aud"])
@@ -414,6 +423,9 @@ def overview(*, strict=True):
                                   for check in component["checks"])
         orders.sort(key=lambda order: (order["ordered_on"], order["id"]), reverse=True)
         to_buy = read_queue(**lenient)
+        for row in to_buy:
+            if not row.get("buy_under_aud"):
+                row.pop("buy_under_aud", None)   # optional default keeps the existing page/JSON shape
         return {"to_buy": to_buy, "orders": orders, "checks": checks, "warnings": missing or []}
 
 

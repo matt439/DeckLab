@@ -258,7 +258,7 @@ class NightlyTimerTests(SystemdCase):
             said, say = self.say()
             self.assertEqual(schedule.install(say=say), 1)
             self.assertIn("from cron", said[0])
-            self.assertIn("from cron", schedule.status()[0])
+            self.assertIn("launchd/cron job", schedule.status()[0])
         self.assertEqual(self.systemctl.calls, [])
 
 

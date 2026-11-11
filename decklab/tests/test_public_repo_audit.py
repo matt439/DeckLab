@@ -111,6 +111,9 @@ class RuleTests(unittest.TestCase):
                 "profiles": [{"id": "kim", "emails": [REAL_EMAIL.upper(), "kim@example.com"]}, {"id": "sam"}],
                 "allowed_hosts": ["www." + REAL_HOST, REAL_HOST, "decklab.example.com", "localhost", "192.168.0.2"],
                 "access": {"team": "lantern", "aud": "ab12" * 16, "port": 8644},
+                "script_secret": "SyntheticLoopbackSecret0123456789abcdef",
+                "alerts": "https://monitor.example.com/operator-token",
+                "database": {"backup_recipient": "age1" + "q" * 58, "backup_identity": "/private/synthetic-restore.key"},
             }), encoding="utf-8")
             terms = audit.config_terms(path)
             self.assertEqual(audit.config_terms(Path(tmp) / "absent.json"), {})
@@ -120,6 +123,10 @@ class RuleTests(unittest.TestCase):
         self.assertEqual(terms["the configured domain"], {REAL_HOST, REAL_HOST.split(".", 1)[1]})
         self.assertEqual(terms["the configured Cloudflare Access team"], {"lantern.cloudflareaccess.com"})
         self.assertEqual(terms["the configured Cloudflare Access AUD tag"], {"ab12" * 16})
+        self.assertEqual(terms["the configured loopback script secret"], {"syntheticloopbacksecret0123456789abcdef"})
+        self.assertEqual(terms["the configured operator heartbeat address"], {"https://monitor.example.com/operator-token"})
+        self.assertEqual(terms["the configured backup recipient"], {"age1" + "q" * 58})
+        self.assertEqual(terms["the configured backup identity path"], {"/private/synthetic-restore.key"})
 
     def test_term_findings_never_print_the_value(self):
         data = ("one\nsee https://WWW." + REAL_HOST.upper() + "/x\n\x00\xff " + REAL_HOST + "\n").encode("latin-1")
@@ -157,6 +164,14 @@ class RepositoryTests(unittest.TestCase):
         self.write("icon.png", b"\x89PNG\x00\x01 " + REAL_EMAIL.encode("ascii"))      # binary: emails not read
         self.git("add", "-A")
         self.assertEqual(self.found(), [])
+
+    def test_restore_private_identities_fail_without_printing_the_key_or_reading_any_local_key(self):
+        synthetic = "AGE-SECRET-KEY-1" + "A" * 59
+        self.write("accidental-key.txt", "# synthetic fixture only\n" + synthetic + "\n")
+        found = self.found()
+        self.assertEqual([(name, line) for name, line, _ in found], [("accidental-key.txt", 2)])
+        self.assertIn("private identity", found[0][2])
+        self.assertNotIn(synthetic, str(found))
 
     def test_a_real_email_fails_naming_the_file(self):
         self.write("docs/a.md", "ok\nMail " + REAL_EMAIL + "\n")

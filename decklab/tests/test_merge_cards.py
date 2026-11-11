@@ -210,7 +210,7 @@ class MergeCardsTests(unittest.TestCase):
         self.merge()
         row = self.rows()[0]
         self.assertEqual((row["quantity"], row["condition"], row["language"]), ("3", "", ""))
-        self.assertIn("differing or unreported condition", row["notes"])
+        self.assertIn("Copies: condition 2 NM, 1 not recorded", row["notes"])
 
     def test_existing_identity_preserves_and_deduplicates_incoming_card_notes(self):
         self.write(self.collection, [card(notes="Original copy; signed by artist")])
@@ -221,8 +221,8 @@ class MergeCardsTests(unittest.TestCase):
         row = self.rows()[0]
         self.assertEqual(row["quantity"], "4")
         self.assertEqual(row["notes"], "Original copy; signed by artist; new copy has corner wear; "
-                         "Merged copies have differing or unreported condition; "
-                         "Merged copies have differing or unreported language")
+                         "Copies: condition 2 NM, 2 LP; "
+                         "Copies: language 2 en, 2 not recorded")
 
     def test_note_deduplication_compares_whole_observations_not_substrings(self):
         self.write(self.collection, [card(notes="Unsigned copy")])
