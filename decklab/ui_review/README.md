@@ -65,6 +65,7 @@ python scripts/ui_review.py --suite receipt-layout
 python scripts/ui_review.py --suite families
 python scripts/ui_review.py --suite shopping-navigation
 python scripts/ui_review.py --suite shopping-card-links
+python scripts/ui_review.py --suite shopping-queue-cards
 python scripts/ui_review.py --suite zoom
 python scripts/ui_review.py --suite crosscheck
 python scripts/ui_review.py --suite assembly-counters
@@ -105,6 +106,17 @@ check the same deck-link treatment there. Keyboard/pointer activations are
 intercepted before navigation while preserving original destinations and external
 target/rel attributes. No external page or app write is allowed. Phone and
 enlarged-text captures require visual inspection; Safari remains separate.
+
+The opt-in `shopping-queue-cards` suite renders four invented queue rows with
+unchecked, priced, exact, deferred, unknown, partial and back-in-stock facts. It
+checks the casual cards and reference/shop/action bounds at 320, 393, 430, 600,
+820 and 999px, 200% CSS root-font stress at 320 and 600px, and the existing lab
+tables at 1000 and 1440px, in both themes. Native Move/Escape, cancelled Details,
+intercepted read-only Price history and card-viewer controls keep their original
+focus targets. By state/By shop and density round trips must retain the same
+viewer, reference, shop snapshots, history and write-control nodes. Lab columns
+retain local horizontal scrolling. No app write or retailer fetch is allowed;
+phone and enlarged-text captures still require visual inspection.
 
 `--check` does not start any application processes. `--smoke` captures a desktop
 board in light, a narrow coarse-pointer receipt in dark and the ten Wishlist/guide

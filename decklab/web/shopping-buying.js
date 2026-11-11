@@ -3,11 +3,15 @@
 "use strict";
 
 /** Reference research belongs on the row even when there is no card image. */
-function shopReference(row) {
+function shopReference(row, {queue = false} = {}) {
   const price = shopPrice(row);
   if (!price) return null;
   return el("span", {class: "shop-reference"},
-    el("span", {text: `Reference price ${price}`}),
+    queue ? el("span", {class: "shop-reference-summary"},
+      el("span", {class: "shop-reference-title", text: "Reference price "}),
+      el("strong", {class: "shop-reference-amount", text: listedAud(Number(row.listed_aud))}),
+      row.listed_at ? el("span", {class: "shop-reference-shop", text: ` at ${row.listed_at}`}) : null)
+      : el("span", {text: `Reference price ${price}`}),
     shopChecked(row.checked));
 }
 
@@ -87,7 +91,7 @@ function shopQueueGroups(rows, view) {
 
 /** Every recorded stock/date fact stays on its canonical queue row, even without an image or price. */
 function shopQueueResearch(row) {
-  const price = shopReference(row), shop = shopQueueShop(row);
+  const price = shopReference(row, {queue: true}), shop = shopQueueShop(row);
   const target = shopMarketTargetLabel(row);
   // Nothing recorded at all: one line, not three "not recorded"s.
   if (!price && !shop && !String(row.checked || "").trim() && !["yes", "no"].includes(row.in_stock)) {
