@@ -64,6 +64,7 @@ python scripts/ui_review.py --suite task-layout
 python scripts/ui_review.py --suite receipt-layout
 python scripts/ui_review.py --suite families
 python scripts/ui_review.py --suite shopping-navigation
+python scripts/ui_review.py --suite shopping-card-links
 python scripts/ui_review.py --suite zoom
 python scripts/ui_review.py --suite crosscheck
 python scripts/ui_review.py --suite assembly-counters
@@ -94,6 +95,16 @@ without a route change or write. The 393px top/expanded and enlarged-text captur
 are retained for visual inspection. Enlarged-text checks require navigation
 containment and retain broader page overflow as a diagnostic; ordinary cases
 also require no document overflow. This does not qualify Safari or physical touch.
+
+The opt-in `shopping-card-links` suite uses invented missing-card rows with long
+deck names, saved nonfoil shop evidence and an upcoming paper printing. It checks
+grouped deck-link/count targets and contained source links at 320, 393, 430, 600,
+820, 1280 and 1440px in both themes, plus CSS root-font stress at 320 and 600px.
+Native Choose decks controls load an intercepted read-only combined answer to
+check the same deck-link treatment there. Keyboard/pointer activations are
+intercepted before navigation while preserving original destinations and external
+target/rel attributes. No external page or app write is allowed. Phone and
+enlarged-text captures require visual inspection; Safari remains separate.
 
 `--check` does not start any application processes. `--smoke` captures a desktop
 board in light, a narrow coarse-pointer receipt in dark and the ten Wishlist/guide

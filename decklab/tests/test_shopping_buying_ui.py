@@ -65,6 +65,9 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
             "#/deck?id=casual%2Fotters&v=target&tab=cards&filter=missing",
             "#/deck?id=casual%2Felves&v=target&tab=cards&filter=missing"]);
           assert(links.every(link => link.closest("button") === null));
+          assert(rows[0].querySelectorAll('.shop-missing-count').every(count => count.closest('a')),
+            'each deck count belongs to the same link as its title');
+          assert.equal(rows[0].querySelector('.shop-missing-decks').getAttribute('aria-label'),'Decks needing this card');
           assert.equal(rows[0].querySelector(".card-row").querySelector("a"), null);
           rows[0].querySelector(".card-row").click();
           assert.equal(inspections.at(-1).card.name, "Alpha");

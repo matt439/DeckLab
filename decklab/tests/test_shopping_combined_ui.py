@@ -64,6 +64,8 @@ class ShoppingCombinedTests(unittest.TestCase):
           assert.equal(card.getAttribute("data-combined-card"), "Llanowar Elves");
           same(card.querySelector(".shop-missing-decks").querySelectorAll("li").map(li => li.textContent),
                ["Alpha ×5", "Beta ×3"]);
+          assert(card.querySelectorAll('.shop-missing-count').every(count => count.closest('a')),
+            'combined per-deck demand stays inside its deck link');
           assert(card.textContent.includes("1 more because the decks share it"));
           assert(card.textContent.includes("1 on the way (order incoming)"));
           assert(card.textContent.includes("Held by Holding ×1"));

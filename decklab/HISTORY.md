@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Group missing-card deck and source links (2026-11-11; E11-S30)
+
+Missing cards and Build together replace comma-separated deck links with one bordered list of full-width navigation rows. Each wrapping title and copy count shares one anchor and tap target, with a decorative chevron. The ordinary shortfall count and combined per-deck demand keep their existing meanings and destination filters. Missing-card shop evidence and upcoming printings also group their existing facts, source links and dates into compact blocks. Styling is scoped to missing-card articles; other queue and deck-price source views retain their presentation.
+
+Saved facts, validated external URLs, date/provenance caveats, queue intent and card-viewer controls remain unchanged. All 181 focused fixture checks pass with one platform skip. The disposable shopping-card-links browser suite passes 18 cases across 320–1440px, both themes and enlarged text: wrapping, count containment, 44px targets, native activation, original destinations, external-link attributes and combined chooser behavior all pass without document overflow or writes. Source stays stable and owned processes clean up. Checks use invented data; no live records or source fetches are used. Physical Safari and household touch acceptance remain separate.
+
 ## Group Shopping shortcuts and their counts (2026-11-11; E11-S30)
 
 Shopping's stacked layout replaces the spread of underlined links and separate count pills with one neutral bordered navigation panel. The four main destinations use a two-column grid, with each label and inline count inside one full-cell link. Other destinations sit under the native More sections disclosure; secondary-only pages show those links directly. Enlarged text can reflow to one column, and an odd final item fills its row.

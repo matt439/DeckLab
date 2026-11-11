@@ -210,9 +210,10 @@ function shopCombinedRow(item, queue = []) {
   const row = cardRow(item.card || null, {name: item.name, qty: item.missing, aside: null,
     meta: `${plural(item.missing, "copy", "copies")} to buy · ${item.need} wanted, ${item.available} free`,
     unknownMeta: "Missing from the chosen Planned lists", viewerGroup: "shopping-combined"});
-  const wants = el("ul", {class: "shop-missing-decks"}, (item.decks || []).map(deck => el("li", {},
-    el("a", {href: shopCombinedDeckHref(deck), text: deck.title}),
-    el("span", {class: "shop-missing-count", text: ` ×${deck.need}`}))));
+  const wants = el("ul", {class: "shop-missing-decks", "aria-label": "Decks needing this card"},
+    (item.decks || []).map(deck => el("li", {},
+      el("a", {href: shopCombinedDeckHref(deck)}, el("span", {class: "shop-missing-deck-label"}, deck.title,
+        el("span", {class: "shop-missing-count", text: ` ×${deck.need}`}))))));
   const chips = [shopQueuedChip(queued), competing > 0 ? status("warn", `${competing} more because the decks share it`) : null,
     ...(item.on_the_way || []).map(way => status("info", `${way.copies} on the way (${way.source})`))].filter(Boolean);
   const held = (item.held_elsewhere || []).length ? el("small", {class: "shop-combined-held",
