@@ -2,6 +2,12 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Structure Baskets and the Fewest shops plan (2026-11-11; E11-S30, E5-S27)
+
+Baskets now group each quantity/name and saved row total, with individual printing links, unit prices, stock, quality and dates below. Optional same-answer queue art is decorative and falls back to text when identity or freshness is uncertain. Shortages remain warnings, add-ons stay separate, and original Copy, reference-review and order controls sit together. Fewest shops and the card-by-card comparison use separate cards/postage/total figures, with unknown-postage/unpriced caveats beside Known total; unavailable names and other combinations use native disclosures.
+
+Calculations and backend projections are unchanged. Plan rows keep their own allocated-prefix totals and never borrow a basket's full-line price or stock facts. Existing queue revisions, permissions, object identities and price-free order reviews remain intact. The focused fixture group passes 229 checks with one platform skip. All 22 shopping-baskets-layout browser cases pass across both themes, enlarged text, read-only and stale states: figures and controls fit, native disclosures work, exact copies exclude add-ons, and order previews are cancelled without a final save. Source stays stable and owned processes clean up. Checks use synthetic data; no live records, retailer refresh, final order save or deployment is used. Physical Safari/touch acceptance remains separate.
+
 ## Give purchase-queue cards a reading hierarchy (2026-11-11; E11-S30)
 
 Below 1000px, each purchase-queue entry has one neutral card surface: the original artwork, quantity and printing header; an inset recorded-reference block; separate dated shop checks with emphasized prices and contained printing links; and aligned action controls. The saved reference remains distinct from each shop's snapshot. Price history stays attached to its original snapshot so it remains reachable in the lab's extra row. Canonical words, zero prices, unknown/mismatch/partial caveats and dates remain unchanged.

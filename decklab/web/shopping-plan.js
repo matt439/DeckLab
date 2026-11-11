@@ -13,12 +13,28 @@ function shopPlanNames(shops) {
 
 /** "A$3.70 cards + A$8.00 postage = A$11.70", with unknown postage and rows without a price named. The shops'
  * prices and postage are AUD, whatever the configured currency (E11-S53). */
-function shopPlanSum(plan) {
+function shopPlanAmounts(plan) {
   const cards = shopBasketAud(plan.cards_aud) || "A$0.00", postage = shopBasketAud(plan.postage_aud) || "A$0.00";
   const total = shopBasketAud(plan.total_aud) || cards;
   const unknown = (plan.postage_unknown || []).length ? `, plus postage not known at ${plan.postage_unknown.join(" and ")}` : "";
   const unpriced = plan.unpriced ? `, plus ${plural(plan.unpriced, "row")} without a price` : "";
-  return `${cards} cards + ${postage} postage = ${total}${unknown}${unpriced}`;
+  return {cards, postage, total, caveats: `${unknown}${unpriced}`};
+}
+
+function shopPlanSum(plan) {
+  const amounts = shopPlanAmounts(plan);
+  return `${amounts.cards} cards + ${amounts.postage} postage = ${amounts.total}${amounts.caveats}`;
+}
+
+/** The same saved amounts as shopPlanSum, separated into scan-friendly figures, with uncertainty adjacent. */
+function shopPlanFigures(plan) {
+  const amounts = shopPlanAmounts(plan);
+  const figure = (label, value, total = false) => el("div", {class: `shop-plan-figure${total ? " shop-plan-figure-total" : ""}`},
+    el("span", {text: label}), el("strong", {text: value}));
+  return el("div", {class: "shop-plan-cost-summary"},
+    el("div", {class: "shop-plan-figures"}, figure("Cards", amounts.cards), figure("Postage counted", amounts.postage),
+      figure(amounts.caveats ? "Known total" : "Total", amounts.total, true)),
+    amounts.caveats ? el("p", {class: "shop-plan-caveats", text: amounts.caveats.replace(/^, /, "")}) : null);
 }
 
 function shopPlanCopyList(view, rows) {
@@ -37,14 +53,15 @@ function shopPlanShop(view, shop, basket) {
       note: "in this plan's list for the shop (add-ons not included)", selector: ".shop-plan-copy"})});
   if (!shopBasketsCurrent(view)) copy.disabled = true;
   return el("div", {class: "shop-plan-shop", "data-plan-shop": shop.key},
-    el("h4", {text: `${shop.shop}: ${plural(shop.cards, "card")}, ${shopBasketAud(shop.subtotal_aud) || "A$0.00"}`}),
+    el("div", {class: "shop-plan-shop-head"}, el("h4", {text: shop.shop}),
+      el("span", {class: "sub", text: `${plural(shop.cards, "card")}, `}),
+      el("strong", {text: shopBasketAud(shop.subtotal_aud) || "A$0.00"})),
     el("ul", {class: "shop-basket-rows"}, rows.map(row => el("li", {class: "shop-basket-row", "data-plan-row": row.name},
-      el("span", {class: "shop-basket-name", text: `${row.copies} × ${row.name}`}),
-      el("span", {class: "shop-basket-facts", text: shopBasketAud(row.line_aud) || "price not shown"})))),
+      shopBasketItemHead(row, view)))),
     shopBasketPostage(shop.postage),
     addOns.length ? el("p", {class: "shop-basket-reach", "data-plan-reach": shop.key,
       text: `Free postage if you bring forward ${addOns.map(row => row.name).join(", ")} (${shopBasketAud(shop.postage.reach.total_aud)}).`}) : null,
-    copy, shopBasketOrderButton(view, shop, basket));
+    shopBasketActions(copy, shopBasketOrderButton(view, shop, basket)));
 }
 
 /** The plan part of Baskets, or null without a plan (no ready row in stock at a read shop). */
@@ -54,22 +71,26 @@ function shopBasketPlan(view) {
   const best = plan.recommended, cheapest = plan.by_price;
   const baskets = new Map((view.data.baskets.shops || []).filter(Boolean).map(basket => [basket.key, basket]));
   const same = cheapest && (cheapest.keys || []).join() === (best.keys || []).join();
-  const lines = [el("p", {class: "shop-plan-best", "data-plan-total": best.total_aud || "",
-    text: `Buy from ${shopPlanNames(best.shops)}: ${shopPlanSum(best)}, for ${best.cards} of ${plural(plan.wanted, "card")} in stock.`})];
-  if (cheapest && !same) lines.push(el("p", {class: "sub", "data-plan-by-price": cheapest.total_aud || "",
-    text: plan.saves_aud ? `That's ${shopBasketAud(plan.saves_aud)} less than buying each card where it's cheapest (${shopPlanNames(cheapest.shops)}: ${shopPlanSum(cheapest)}).`
-      : `Each card where it's cheapest: ${shopPlanNames(cheapest.shops)}, ${shopPlanSum(cheapest)}.`}));
+  const lines = [el("div", {class: "shop-plan-best", "data-plan-total": best.total_aud || ""},
+    el("p", {class: "shop-plan-destination", text: `Buy from ${shopPlanNames(best.shops)}`}), shopPlanFigures(best),
+    el("p", {class: "shop-plan-coverage", text: `${best.cards} of ${plural(plan.wanted, "card")} in stock.`}))];
+  if (cheapest && !same) lines.push(el("div", {class: "shop-plan-comparison", "data-plan-by-price": cheapest.total_aud || ""},
+    el("h4", {text: "Each card where it's cheapest"}), el("p", {class: "sub", text: shopPlanNames(cheapest.shops)}),
+    shopPlanFigures(cheapest), plan.saves_aud ? el("p", {class: "shop-plan-savings",
+      text: `The fewest-shops plan is ${shopBasketAud(plan.saves_aud)} less.`}) : null));
   else if (same && best.shops.length > 1 && plan.weighed) lines.push(el("p", {class: "sub",
     text: "Splitting the order costs less than any fewer shops, postage included."}));
   if (!plan.weighed) lines.push(el("p", {class: "note", "data-plan-unweighed": "true",
     text: "Some shops' postage isn't set, so this takes the fewest shops without weighing postage. Set each shop's postage in Settings."}));
-  if ((best.uncovered || []).length) lines.push(el("p", {class: "sub",
-    text: `Not in stock at these shops together: ${best.uncovered.map(row => row.name).join(", ")}.`}));
+  if ((best.uncovered || []).length) lines.push(el("details", {class: "shop-plan-uncovered"},
+    el("summary", {text: `Not in stock at these shops together · ${plural(best.uncovered.length, "row")}`}),
+    el("ul", {}, best.uncovered.map(row => el("li", {text: row.name})))));
   const others = (plan.options || []).filter(option => (option.keys || []).join() !== (best.keys || []).join());
   return el("div", {class: "shop-plan", "data-plan": (best.keys || []).join(",")},
     el("h3", {text: "Fewest shops"}), lines,
     el("div", {class: "shop-plan-shops"}, best.shops.map(shop => shopPlanShop(view, shop, baskets.get(shop.key)))),
     others.length ? el("details", {class: "more shop-plan-others"}, el("summary", {text: `Other ways (${others.length})`}),
-      el("ul", {class: "shop-basket-rows"}, others.map(option => el("li", {"data-plan-option": (option.keys || []).join(",")},
-        `${shopPlanNames(option.shops)}: ${shopPlanSum(option)}, ${option.cards} of ${plural(plan.wanted, "card")}.`)))) : null);
+      el("ul", {class: "shop-basket-rows"}, others.map(option => el("li", {class: "shop-plan-option", "data-plan-option": (option.keys || []).join(",")},
+        el("strong", {text: shopPlanNames(option.shops)}), shopPlanFigures(option),
+        el("span", {class: "sub", text: `${option.cards} of ${plural(plan.wanted, "card")}.`}))))) : null);
 }

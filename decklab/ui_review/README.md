@@ -66,6 +66,7 @@ python scripts/ui_review.py --suite families
 python scripts/ui_review.py --suite shopping-navigation
 python scripts/ui_review.py --suite shopping-card-links
 python scripts/ui_review.py --suite shopping-queue-cards
+python scripts/ui_review.py --suite shopping-baskets-layout
 python scripts/ui_review.py --suite zoom
 python scripts/ui_review.py --suite crosscheck
 python scripts/ui_review.py --suite assembly-counters
@@ -117,6 +118,16 @@ focus targets. By state/By shop and density round trips must retain the same
 viewer, reference, shop snapshots, history and write-control nodes. Lab columns
 retain local horizontal scrolling. No app write or retailer fetch is allowed;
 phone and enlarged-text captures still require visual inspection.
+
+The opt-in `shopping-baskets-layout` suite checks invented Baskets/Fewest shops
+at 320, 393, 430, 600, 820, 1280 and 1440px in both themes, with CSS root-font
+stress at 320/600px and read-only/stale 393px states. It covers partial stock,
+alternate printings, zero and unknown prices, unknown postage, add-ons, unread
+shops and a recommendation differing from the cheapest-card split. Native
+Other ways controls, intercepted exact clipboard contents and a cancelled order
+preview retain their existing guards and price-free hand-off. Preview replies
+are synthetic; no final order, queue change or retailer fetch is allowed. Phone
+and enlarged-text screenshots require visual inspection.
 
 `--check` does not start any application processes. `--smoke` captures a desktop
 board in light, a narrow coarse-pointer receipt in dark and the ten Wishlist/guide

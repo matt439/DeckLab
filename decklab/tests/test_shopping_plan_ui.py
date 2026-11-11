@@ -37,8 +37,16 @@ class ShoppingPlanTests(unittest.TestCase):
           drawShopping(answer({shops: [basket('mtgmate', 'MTGMate', {rows: [line('Sol Ring', 1)], total_aud: '1.00', priced: 1})],
             plan: {recommended: best, by_price: split, options: [best, split], wanted: 3, weighed: true, saves_aud: '6.70'}}));
           const plan = main.querySelector('.shop-plan');
-          assert(plan.textContent.includes('Buy from MTGMate: A$3.70 cards + A$8.00 postage = A$11.70, for 3 of 3 cards in stock.'));
-          assert(plan.textContent.includes("That's A$6.70 less than buying each card where it's cheapest (MTGMate and Games Portal: A$3.40 cards + A$15.00 postage = A$18.40)."));
+          assert.equal(plan.querySelector('.shop-plan-destination').textContent,'Buy from MTGMate');
+          same(plan.querySelector('.shop-plan-best').querySelectorAll('.shop-plan-figure').map(node=>node.textContent),
+            ['CardsA$3.70','Postage countedA$8.00','TotalA$11.70']);
+          assert.equal(plan.querySelector('.shop-plan-coverage').textContent,'3 of 3 cards in stock.');
+          assert.equal(shopPlanSum(best),'A$3.70 cards + A$8.00 postage = A$11.70');
+          const comparison=plan.querySelector('[data-plan-by-price]');
+          assert(comparison.textContent.includes('Each card where it\'s cheapest'));
+          assert(comparison.textContent.includes('MTGMate and Games Portal'));
+          same(comparison.querySelectorAll('.shop-plan-figure').map(node=>node.querySelector('strong').textContent),['A$3.40','A$15.00','A$18.40']);
+          assert.equal(comparison.querySelector('.shop-plan-savings').textContent,'The fewest-shops plan is A$6.70 less.');
           assert(plan.querySelector('[data-plan-row="Counterspell"]'));
           assert(plan.querySelector('.shop-plan-others').textContent.includes('Other ways (1)'));
           assert(!plan.querySelector('[data-plan-unweighed]'));
@@ -58,7 +66,26 @@ class ShoppingPlanTests(unittest.TestCase):
           assert(plan.querySelector('[data-plan-unweighed]').textContent.includes("postage isn't set"));
           assert(plan.textContent.includes('plus postage not known at MTGMate'));
           assert(plan.textContent.includes('Postage not known.'));
+          assert.equal(plan.querySelector('.shop-plan-figure-total').querySelector('span').textContent,'Known total');
+          assert(plan.querySelector('.shop-plan-caveats').textContent.includes('postage not known at MTGMate'));
           assert(!plan.querySelector('.shop-plan-others'));
+        """)
+
+    def test_plan_row_uses_its_allocated_prefix_total_rather_than_the_full_shop_basket(self):
+        self.run_baskets_js(PLAN + r"""
+          const source=line('Elves',1,{copies:4,line_aud:'1.90'});
+          const chosen=planRow('Elves',1,2,'0.90');
+          const best=option([planShop('mtgmate','MTGMate',[chosen])]);
+          const packet=answer({shops:[basket('mtgmate','MTGMate',{rows:[source]})],
+            plan:{recommended:best,by_price:best,options:[best],wanted:2,weighed:true}}),before=JSON.stringify(packet);
+          drawShopping(packet);
+          const planned=main.querySelector('[data-plan-row="Elves"]'),stocked=main.querySelector('[data-basket-row="Elves"]');
+          assert.equal(planned.querySelector('.shop-basket-name').textContent,'2 × Elves');
+          assert.equal(planned.querySelector('.shop-basket-line-total').textContent,'Row totalA$0.90');
+          assert.equal(stocked.querySelector('.shop-basket-line-total').textContent,'Row totalA$1.90');
+          assert.equal(planned.querySelector('.shop-basket-stock'),null,'a plan row has no stock observation');
+          assert.equal(planned.querySelector('time'),null,'a plan row has no shop fetch timestamp');
+          assert.equal(JSON.stringify(packet),before);
         """)
 
     def test_basket_postage_and_add_ons_that_reach_free_postage(self):
