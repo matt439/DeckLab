@@ -189,6 +189,39 @@ class ActivityUndoApiTests(ApiTestCase):
         self.assertEqual(error.extra, {"conflicts": [{"label": preview["label"], "reason": activity_undo.CHANGED}]})
         self.assertEqual(len(self.backend.writes), 1)
 
+    def test_edit_after_api_review_refuses_undo_and_preserves_later_and_other_space_rows(self):
+        original_apply = self.backend.apply
+        for kind in ("collection", "tokens"):
+            with self.subTest(kind=kind):
+                current, _ = self.seed(kind)
+                self.backend.latest = ROW_ID
+                foreign = {**current, "notes": "Another space's fixture row"}
+                if kind == "collection":
+                    self.backend.snapshot = self.backend.snapshot.with_collection("user2", [foreign])
+                else:
+                    self.backend.snapshot = self.backend.snapshot.with_tokens("user2", [model.TokenRow.make(foreign, id=8)])
+                preview = self.view()
+                history = copy.deepcopy(self.backend.audit)
+                later = {**current, "notes": "Later edit after API review"}
+                raced = []
+
+                def edit_then_apply(*args, **kwargs):
+                    # The POST has accepted its receipt; a writer wins before op.run.
+                    before = self.backend.snapshot
+                    after = (before.with_collection("home", [later]) if kind == "collection" else
+                             before.with_tokens("home", [model.TokenRow.make(later, id=7)]))
+                    self.backend.snapshot = after.replace(revision=before.revision + "-later")
+                    self.backend.latest += 1
+                    raced.append(self.backend.snapshot)
+                    return original_apply(*args, **kwargs)
+
+                with mock.patch.object(self.backend, "apply", side_effect=edit_then_apply) as applying:
+                    self.refused(409, self.apply, expect=preview["expect"])
+                applying.assert_called_once()
+                self.assertEqual(self.backend.snapshot, raced[0])
+                self.assertEqual(self.backend.audit, history)
+                self.assertEqual(self.backend.writes, [])
+
     def test_conflict_names_only_the_authorized_row_without_backend_holder_details(self):
         label = self.view()["label"]
         with mock.patch.object(self.backend, "undo_latest", side_effect=undo.UndoConflict("Fixture hidden holder detail", label)):
