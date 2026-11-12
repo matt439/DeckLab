@@ -8,7 +8,7 @@ import json
 from unittest import mock
 
 from decklab.lib import config, pool
-from decklab.lib.api import card_details
+from decklab.lib.api import card_combos, card_details
 from decklab.lib.api import deck_cuts, edhrec
 from decklab.lib.api import bracket_fixes
 from decklab.lib.api import (accessories, activity, activity_undo, assembly, assembly_completion, assembly_ticks, collection, compare, comparison_lists, cover, editor, history, play_records,
@@ -19,6 +19,7 @@ from decklab.tests.test_server import ServerTestCase, WRITE
 GETS = (
     ("/api/deck/edhrec", edhrec, "edhrec_view", "id=commander%2Felf-commander&view=cuts", {"deck_id": "commander/elf-commander", "view": "cuts"}),
     ("/api/cards/lookup", card_details, "card_view", "name=Llanowar+Elves&set=fdn&number=227", {"name": "Llanowar Elves", "set": "fdn", "number": "227"}),
+    ("/api/cards/combos", card_combos, "card_combos", "name=Rhystic+Study", {"name": "Rhystic Study"}),
     ("/api/cards/copies", card_details, "copies_view", "name=Llanowar+Elves&space=home", {"name": "Llanowar Elves", "space": "home"}),
     ("/api/collection", collection, "collection_view", "q=elves&color=G&limit=3", {"q": "elves", "color": "G", "limit": "3"}),
     ("/api/assembly", assembly, "assembly_view", "deck=casual%2Fgruul-test&version=owned",

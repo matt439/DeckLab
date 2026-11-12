@@ -7,7 +7,9 @@ of the width, or a flick) goes to the next or previous card, with "3 / 15" under
 card is in the middle with Previous and Next beside it, and the arrow keys (Home and End too) do the same;
 Escape closes. A double-faced card has Flip, which shows its back's picture. The card's rules text is a
 panel: beside the picture from 1,000 px, behind the Text button on smaller screens. Under the words are the
-card's Scryfall rulings, dated and folded away (GET /api/cards/rulings).
+card's Scryfall rulings, dated and folded away (GET /api/cards/rulings). Above its links, a Game Changer chip and
+a fold of the known two-card combos it is a piece of (E9-S37, card-viewer-details.js viewerCombosPart, GET
+/api/cards/combos: public card data, no deck or space).
 Wherever it's opened, a line under the list's own chips names the decks of the page's space (the deck page's or
 editor's deck's, the Collection page's, else the viewer's own) which hold or want the card, built decks first,
 and its free copies there (E1-S29, GET /api/cards/decks),
@@ -207,7 +209,7 @@ function drawViewer() {
   d.flip.setAttribute("aria-label", s.face === 1 ? "Show the front" : "Show the back");
   [-1, 0, 1].forEach((at, k) => fillSlide(d.slides[k], s.items[s.index + at], at === 0 ? s.face : 0, at === 0));
   add(clear(d.text), [cardTextParts(card, s.face, item.caption || (s.caption ? s.caption(card, s.index) : null)),
-    viewerReferencePart(card), viewerCopiesPart(card), viewerRulingsPart(card)]);
+    viewerCombosPart(card), viewerReferencePart(card), viewerCopiesPart(card), viewerRulingsPart(card)]);
   // A control in the marks keeps the focus from card to card when it's still there, else Close takes it.
   const held = d.marks.contains(document.activeElement) ? document.activeElement : null;
   const marks = typeof item.status === "function" ? item.status() || [] : [];

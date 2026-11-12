@@ -2103,6 +2103,8 @@ The CLI equivalents are `python -m decklab.db collection loans [--space S] [--al
 
 A card viewer's **Open on Scryfall** uses the shown printing, or an exact-name search when none is known. Commander contexts also offer **Open on EDHREC**. **Your copies** unfolds recorded printings/finishes/counts and storage locations only where you may see that collection. **Card link** bookmarks the same viewer over the current page; a fresh opening uses Decks underneath and waits for profile choice. These reference links do not submit your collection to either site.
 
+Above those links, every card the viewer shows gets a **Game Changer** chip when Scryfall flags it as one, and a folded **Known two-card combos with this card (N)** (E9-S37): for a commander across the table, each other piece (and whether it or this card must be the commander), what the combo does, its bracket floor ("Bracket 3 or higher", or "Any bracket") and an **Open on Commander Spellbook** link, the 25 most serious shown with the total, under the list's date and credit. It reads only the combo list already on the PC (`decklab/data/combos/two_card.json`, from `python -m decklab.lib.cards update`) through GET `/api/cards/combos?name=` (`lib/api/card_combos.py`, open to every viewer as the rulings are): no deck, space or network fetch. While the list is missing or unreadable it says combos weren't checked, never that there are none.
+
 
 ### Read one saved Forge game
 
