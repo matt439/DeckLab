@@ -12,6 +12,7 @@ from decklab.lib.api import space_download as member
 from decklab.lib.api.common import ApiError, Download
 from decklab.tests.test_api import _write
 from decklab.tests.test_api_permissions import PermissionTestCase, R_DECK
+from decklab.tests.test_control import wait_until
 from decklab.tests.test_server import ServerTestCase
 
 
@@ -130,7 +131,9 @@ class MemberDownloadHttpTests(ServerTestCase):
             self.assertEqual(headers["Cache-Control"], "no-store, private")
             self.assertIn('attachment; filename="decklab-user2-personal.zip"', headers["Content-Disposition"])
             self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
-            self.assertTrue(artifact.stream.closed)
+            # The server thread closes the stream once the answer has gone, so the client may
+            # have it all a moment before: wait for the close, with a deadline.
+            self.assertTrue(wait_until(lambda: artifact.stream.closed, timeout=5, step=0.01))
 
     def test_disconnected_receiver_closes_artifact_and_releases_admission(self):
         from types import SimpleNamespace
