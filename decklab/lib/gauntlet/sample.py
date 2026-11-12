@@ -201,6 +201,13 @@ def commanders_of(deck):
     return [str(n) for _, n in ((deck.get("cards") or {}).get("Commander") or ())]
 
 
+def is_own_sample(found, commanders):
+    """False when found, a saved sample, is a Same commander one (its "commander") of commanders other
+    than commanders, the asking deck's (by commander_key); True for any other sample."""
+    named = found.get("commander") if isinstance(found, dict) else None
+    return not named or commander_key(named) == commander_key(commanders)
+
+
 def same_commander(decks, commanders, seed=""):
     """"Same commander" (E3-S49): every playable Commander deck whose commanders are commanders (by
     commander_key), whatever its tier, most popular first; [] when commanders is empty or no deck has

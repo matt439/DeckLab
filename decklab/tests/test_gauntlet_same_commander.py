@@ -30,6 +30,9 @@ PRECON = "gauntlet:precon/GhaltaTrial_TST"
 TRIAL = "commander/ghalta-trial"
 TRIAL_TEXT = (ELF_COMMANDER.replace("# Elf Commander", "# Ghalta Trial")
               .replace("- **Status:** idea", "- **Status:** idea\n- **Trial:** precon GhaltaTrial_TST"))
+KODAMA = "commander/kodama-deck"
+KODAMA_TEXT = ELF_COMMANDER.replace("# Elf Commander", "# Kodama Deck").replace(
+    "1 Ghalta, Primal Hunger (RIX) 130", "1 Kodama of the East Tree (CMR) 239")
 NO_COMMANDER = "commander/no-commander"
 NO_COMMANDER_TEXT = ELF_COMMANDER.replace("# Elf Commander", "# No Commander").replace(
     "Commander\n1 Ghalta, Primal Hunger (RIX) 130\n\n", "")
@@ -149,6 +152,7 @@ class SameCommanderApiTests(GauntletApiTestCase):
         self.forge.gauntlet = self.g
         _write(self.box.magic / "decks" / "commander" / "ghalta-trial.md", TRIAL_TEXT)
         _write(self.box.magic / "decks" / "commander" / "no-commander.md", NO_COMMANDER_TEXT)
+        _write(self.box.magic / "decks" / "commander" / "kodama-deck.md", KODAMA_TEXT)
 
     def view(self, deck_id, who="matt", **choices):
         return self.call(who, gauntlet_page.gauntlet_view, deck_id, "target", **choices)
@@ -218,6 +222,26 @@ class SameCommanderApiTests(GauntletApiTestCase):
         # The same choice asked again finds that run's sample by the same id.
         self.assertEqual(self.view(ELVES, commander="same")["sample"]["id"], sid)
 
+    def test_another_commanders_saved_sample_answers_as_an_unsaved_one(self):
+        self.set_mode("everyone")
+        self.assertIsInstance(self.run_as("matt", ELVES, commander="same"), dict)
+        self.finish()
+        sid = self.g.runs[-1][1]
+        self.assertEqual(self.view(ELVES, sample=sid)["sample"]["commander"], [GHALTA])   # its own deck's
+        unsaved = "sample:0123456789ab"
+        for deck_id in (KODAMA, NO_COMMANDER, GRUUL):           # another commander, none, a 60-card deck
+            with self.subTest(deck=deck_id):
+                for asked in (sid, unsaved):
+                    with self.as_("matt"), self.assertRaises(gauntlet_page.ApiError) as caught:
+                        gauntlet_page.gauntlet_view(deck_id, "target", sample=asked)
+                    self.assertEqual((caught.exception.status, caught.exception.message),
+                                     (404, gauntlet_page.NOT_SAVED))
+                    with self.as_("matt"), self.assertRaises(gauntlet_page.ApiError) as caught:
+                        api_run(body("matt", id=deck_id, sample=asked))
+                    self.assertEqual((caught.exception.status, caught.exception.message),
+                                     (404, gauntlet_page.NOT_SAVED))
+        self.assertEqual(len(self.g.runs), 1)
+
     def test_a_trial_never_meets_its_own_precon(self):
         self.set_mode("everyone")
         answer = self.view(TRIAL, commander="same")
@@ -281,6 +305,21 @@ class SameCommanderCliTests(unittest.TestCase):
             fake.format_of.return_value = "constructed"
             with self.assertRaisesRegex(cli_gauntlet.shared._CliError, "only for Commander"):
                 cli_gauntlet._house_sample(self.args(), a)
+
+    def test_sample_refuses_another_commanders_same_commander_sample(self):
+        from decklab import lib
+        from decklab.lib.forge import cli_gauntlet
+        saved = {"id": "sample:0123456789ab", "format": "commander", "decks": ["a"], "commander": [GHALTA]}
+        fake = mock.Mock(format_of=mock.Mock(return_value="commander"), sample=mock.Mock(return_value=saved))
+        parser = cli_gauntlet.shared.argparse.ArgumentParser()
+        cli_gauntlet._gauntlet_args(parser.add_subparsers(dest="command"))
+        args = parser.parse_args(["gauntlet", "view", ELVES, "--sample", saved["id"]])
+        own = {"id": ELVES, "kind": "commander", "cards": {"Commander": [[1, GHALTA]], "Main": []}}
+        other = {"id": KODAMA, "kind": "commander", "cards": {"Commander": [[1, "Kodama of the East Tree"]], "Main": []}}
+        with mock.patch.object(cli_gauntlet, "_g", return_value=fake),                 mock.patch.object(lib.decks, "find_summary", return_value=None):
+            self.assertEqual(cli_gauntlet._house_sample(args, own)["decks"], ["a"])
+            with self.assertRaisesRegex(cli_gauntlet.shared._CliError, "another commander"):
+                cli_gauntlet._house_sample(args, other)
 
 
 from decklab.tests.test_gauntlet_ui import NODE, RUNNER, SETUP, WEB  # noqa: E402  (after the API tests' imports)

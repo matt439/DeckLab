@@ -193,9 +193,10 @@ def _show(args):
     return 0
 
 
-def _draw(args, fmt):
+def _draw(args, fmt, deck=None):
     """The sample a command names (--sample), the standard one (--standard), or one drawn now with its
-    filters (and saved)."""
+    filters (and saved). deck: the house deck it's for, whose commanders a saved Same commander
+    sample (E3-S49) must have."""
     if getattr(args, "standard", False):
         given = [flag for flag, value in (("--sample", args.sample), ("--size", args.size),
                                           ("--colours", args.colours), ("--styles", args.styles),
@@ -205,6 +206,11 @@ def _draw(args, fmt):
         return _g().standard(fmt, save=True)
     if args.sample:
         found = _g().sample(args.sample)
+        if deck is not None:
+            from decklab.lib.gauntlet.sample import commanders_of, is_own_sample
+            if not is_own_sample(found, commanders_of(deck)):
+                raise shared._CliError(f"{args.sample} is the Same commander sample of another commander: "
+                                       f"use --same-commander for this deck's own.")
         if found.get("format") != fmt:
             raise shared._CliError(f"{args.sample} is a {found.get('format')} sample, not {fmt}.")
         return found
@@ -256,7 +262,7 @@ def _house_sample(args, a):
     from decklab.lib import decks
     from decklab.lib.gauntlet import trial_excluded, without
     same = getattr(args, "same_commander", False) is True
-    found = without(_same_commander(args, a) if same else _draw(args, _g().format_of(a)),
+    found = without(_same_commander(args, a) if same else _draw(args, _g().format_of(a), a),
                     trial_excluded(decks.find_summary(a["id"])))
     if same and not found.get("decks"):
         raise shared._CliError("The popular decks list has no other deck with this deck's commander.")

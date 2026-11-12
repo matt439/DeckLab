@@ -48,7 +48,7 @@ from urllib.parse import quote
 
 from decklab.lib import jobs, permissions
 from decklab.lib.gauntlet import is_gauntlet_id, trial_excluded, without
-from decklab.lib.gauntlet.sample import STANDARD
+from decklab.lib.gauntlet.sample import STANDARD, is_own_sample
 
 from . import common, field_page, forge_runs, gauntlet_before, guard
 from .common import MAX_BODY, MAX_EDIT_BODY, ApiError, _keys, _parse_body, _public, _SHA_RE
@@ -209,17 +209,25 @@ def _same_count(fmt, cat, commanders, exclude):
     return {"commanders": list(commanders), "decks": len(left)}
 
 
-def _draw(g, fmt, choices, save, cat=None):
+NOT_SAVED = "There's no saved gauntlet sample with that id."
+
+
+def _draw(g, fmt, choices, save, cat=None, own=()):
     """The sample the choices name (a saved one, or one drawn now from cat, the catalogue already
     loaded, when given); ApiError 404 for a sample id that isn't saved, 400 for one of the other
-    format; forge's ForgeError when there's no catalogue."""
+    format; forge's ForgeError when there's no catalogue. own: the asking deck's commanders
+    (_commanders). A saved Same commander sample (E3-S49) of other commanders answers exactly as an
+    unsaved one, before any other check, so its id never tells whether a deck (perhaps one of a
+    hidden space's) played that commander."""
     if choices.get("commander"):
         return g.same_commander(fmt, choices["commanders"], save=save, cat=cat)
     if choices["sample"]:
         try:
             found = g.sample(choices["sample"])
         except ValueError:
-            raise ApiError(404, "There's no saved gauntlet sample with that id.") from None
+            raise ApiError(404, NOT_SAVED) from None
+        if not is_own_sample(found, own):
+            raise ApiError(404, NOT_SAVED)
         if found.get("format") != fmt:
             raise ApiError(400, f"That sample is of {found.get('format')} decks, but this deck plays {fmt}.")
         return found
@@ -456,7 +464,7 @@ def _answer(forge, g, entry, choices, seen, summary=None, commanders=()):
     try:
         cat = g.catalogue(fmt)
         # A run's whole sample (a trial's run plays it without its precon): this deck's own exclusion.
-        chosen = without(_full(job) if playing else _draw(g, fmt, choices, save=False, cat=cat), exclude)
+        chosen = without(_full(job) if playing else _draw(g, fmt, choices, save=False, cat=cat, own=commanders), exclude)
         standard = without(_standard(g, fmt, cat, chosen, choices, playing), exclude)
     except forge.ForgeError:
         return out                      # no catalogue yet: the page shows build_command (to an admin)
@@ -736,7 +744,7 @@ def run_gauntlet(body):
     if not state.get("ready"):
         raise ApiError(503, state.get("problem") or "Forge isn't ready to play games on the PC.")
     try:
-        drawn = _draw(g, fmt, choices, save=True)
+        drawn = _draw(g, fmt, choices, save=True, own=_commanders(sections))
         exclude = trial_excluded(summary)
         chosen = without(drawn, exclude)
         if not chosen.get("decks"):
