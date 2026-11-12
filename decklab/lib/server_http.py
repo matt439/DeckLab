@@ -654,6 +654,11 @@ class Handler(BaseHTTPRequestHandler):
                 if self.command == "PUT":
                     return self._send_json(200, visibility_api.change(self._write_body(api.MAX_BODY)))
                 return self._send_json(200, visibility_api.view())
+            if route == ["visibility", "preview"]:
+                from decklab.lib.api import visibility_preview
+                self._allow(*GET)
+                params = self._query(query, ("owner", "thing"))
+                return self._send_json(200, visibility_preview.preview(params.get("owner"), params.get("thing")))
             if route == ["simulations"]:
                 self._allow(*GET, "PUT")
                 self._no_query(query)

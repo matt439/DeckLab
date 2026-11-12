@@ -199,6 +199,8 @@ class RouteAccessTests(PermissionTestCase):
             params.pop("space")
         if route == ("rankings",):
             params["format"] = "Constructed"
+        if route == ("visibility", "preview"):
+            params.update(owner="user3", thing="collection")
         return params
 
     def value(self, key, who):
