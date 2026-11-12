@@ -96,6 +96,7 @@ ACCESS = MappingProxyType({
     ('GET', 'cards/categories'): 'inventory',
     ('GET', 'gauntlet'): 'deck',
     ('GET', 'gauntlet/summary'): 'deck',
+    ('GET', 'gauntlet/history'): 'deck',
     ('GET', 'gauntlet/catalogue'): 'open',
     ('GET', 'gauntlet/board'): 'viewer-filtered',
     ('GET', 'shopping/combined'): 'home-records',
@@ -337,6 +338,12 @@ def _gauntlet_summary(**params):
     return gauntlet_summary(**params)
 
 
+def _gauntlet_history(**params):
+    """A deck's figure across its saved lists (api/gauntlet_history.py, E3-S50), saved games only."""
+    from decklab.lib.api.gauntlet_history import history_view
+    return history_view(**params)
+
+
 def _gauntlet_board(**params):
     """The Testing page's Popular decks board (api/gauntlet_board.py, E3-S35): saved games only."""
     from decklab.lib.api.gauntlet_board import board_view
@@ -500,6 +507,7 @@ def route_tables():
         ("cards", "categories"): (category_suggestions.choices_view, ("name", "space", "exclude")),
         ("gauntlet",): (_gauntlet_view, ("id", "version", "sample", "size", "colours", "styles", "tiers", "profile")),
         ("gauntlet", "summary"): (_gauntlet_summary, ("id", "version", "profile")),
+        ("gauntlet", "history"): (_gauntlet_history, ("id", "version", "profile")),
         ("gauntlet", "catalogue"): (_gauntlet_catalogue, ("format",)),
         ("gauntlet", "board"): (_gauntlet_board, ("format", "profile")),
         ("shopping", "combined"): (_shopping_combined, ("decks",)),

@@ -155,7 +155,7 @@ function gtDraw(ctx, a) {
         el("p", { class: "sub", text: `Play ${plural((a.sample || {}).decks || 0, "popular deck")} to see how this ` +
           "list does by colour and by style." }),
         gtPlayBox(ctx, a, { inEmpty: true })),
-    gtCredit(a), gtBuiltLine(a.catalogue), gtScreening(a.catalogue?.screening)]);
+    gtHistory(ctx, a), gtCredit(a), gtBuiltLine(a.catalogue), gtScreening(a.catalogue?.screening)]);
 }
 
 /** The choices the server drew its sample from, as the controls hold them. */
@@ -299,6 +299,110 @@ function gtOlderLine(a, { note = false } = {}) {
     figure ? el("p", {}, simNumbers(`${label}: ${figure}, ${n} of ${o.of || n} opponents` +
       `${when ? ` (${when})` : ""}.`)) : null,
     figure ? gtBeforeBar(o.overall) : null);
+}
+
+// ------------------------------------------------------------------ E3-S50: the figure across saved lists
+
+// A list tested only under keys today's don't find (its older.reason): muted, without a figure.
+const GT_HISTORY_OLDER = { forge: "Tested only with an older Forge, so no figure today.",
+  settings: "Tested only with other Forge settings, so no figure today.",
+  pilot: "Tested only with another AI pilot, so no figure today.",
+  catalogue: "Tested only against popular decks since rebuilt, so no figure today.",
+  unknown: "Forge's version on the PC can't be confirmed now, so no figure." };
+
+/** The standard sample's Earlier lists (GET /api/gauntlet/history, asked for only when Show earlier lists is
+ * pressed, then kept in ctx.history across the view's redraws): today's list, then up to eight earlier lists with
+ * standard-sample results, newest first, each with when it was saved, its figure, range and opponents, and between
+ * neighbours the cards added and taken out and both figures over the opponents both were tested against. Null for
+ * another sample. */
+function gtHistory(ctx, a) {
+  if (!a.is_standard) return null;
+  const box = el("div", { class: "gt-history" });
+  const h = ctx.history;
+  if (!h) {
+    box.append(el("button", { type: "button", class: "btn btn-quiet", text: "Show earlier lists",
+      onclick: () => gtHistoryLoad(ctx) }));
+  } else if (h.loading) {
+    box.append(loadingBox("Loading this deck's earlier lists…", { small: true }));
+  } else if (h.error) {
+    box.append(loadFailed("The earlier lists", h.error, () => gtHistoryLoad(ctx)));
+  } else {
+    add(box, gtHistoryBody(h.answer));
+  }
+  return box;
+}
+
+async function gtHistoryLoad(ctx) {
+  const q = new URLSearchParams({ id: ctx.id, version: ctx.version });
+  if (state.profile) q.set("profile", state.profile.id);
+  const token = ctx.token;
+  ctx.history = { loading: true };
+  const redraw = () => { if (gtHere(ctx) && ctx.token === token && ctx.answer) gtKeepPlace(() => gtDraw(ctx, ctx.answer)); };
+  redraw();
+  try {
+    ctx.history = { answer: await api(`/api/gauntlet/history?${q}`) };
+  } catch (e) {
+    ctx.history = { error: e };
+  }
+  redraw();
+}
+
+function gtHistoryBody(h) {
+  const lists = h.lists || [], steps = h.steps || [];
+  const earlier = lists.filter((r) => !r.current);
+  const out = [el("h3", { text: "Earlier lists" })];
+  if (h.state === "no_catalogue" || !earlier.length) {
+    out.push(el("p", { class: "gt-small", text: "No earlier list of this deck has results against the standard sample." }));
+  } else {
+    out.push(el("p", { class: "gt-small", text: `Each list's figure against the standard sample, newest first ` +
+      `(up to ${h.max_lists || 8} earlier lists). A step compares only the opponents both lists were tested against.` }));
+    const list = el("ol", { class: "gt-history-list" });
+    lists.forEach((row, i) => {
+      list.append(gtHistoryRow(row));
+      if (steps[i]) list.append(gtHistoryStep(steps[i]));
+    });
+    out.push(list);
+  }
+  for (const note of h.notes || []) out.push(el("p", { class: "gt-small gt-history-note", text: note }));
+  return out;
+}
+
+/** One list: "This list" or "Saved 2 Nov", its figure, range and opponents counted (a muted line without a
+ * figure when only older results exist). */
+function gtHistoryRow(row) {
+  const saved = gtWhen(row.saved);
+  const label = row.current ? "This list" : saved ? `Saved ${saved}` : "An earlier list";
+  const figure = row.state === "tested" ? gtFigureWords(row) : null;
+  const tested = gtWhen(row.updated);
+  const words = figure
+    ? `${figure} against ${row.played} of ${plural(row.of || 0, "opponent")}${tested ? `, tested ${tested}` : ""}.`
+    : row.state === "older" ? (GT_HISTORY_OLDER[(row.older || {}).reason] || GT_HISTORY_OLDER.unknown)
+      : "Not tested against the standard sample with today's Forge yet.";
+  return el("li", { class: `gt-history-row${figure ? "" : " gt-muted"}` },
+    el("p", {}, el("strong", { text: `${label}${row.current && saved ? ` (saved ${saved})` : ""}: ` }), ...simNumbers(words)),
+    figure ? gtBeforeBar(row) : null);
+}
+
+/** "1 Sol Ring, 3 Forest" with "and 2 more". */
+function gtCardWords(cards, more) {
+  const words = (cards || []).map(([n, name]) => `${n} ${name}`).join(", ");
+  return more ? `${words} and ${more} more` : words;
+}
+
+/** The step between two neighbouring lists: the cards added and taken out, then both figures over the same
+ * opponents (and how many moved), or why they aren't compared. */
+function gtHistoryStep(step) {
+  const added = gtCardWords(step.added, step.more_added), removed = gtCardWords(step.removed, step.more_removed);
+  const cards = [added ? `Added ${added}` : null, removed ? `Taken out ${removed}` : null].filter(Boolean);
+  const c = step.compare;
+  const then = c && gtFigureWords(c.before), now = c && gtFigureWords(c.now);
+  const compared = then && now
+    ? `Same ${plural(c.same, "opponent")}: ${then} before, ${now} after.` +
+      (c.moved ? ` ${plural(c.moved, "opponent")} moved (the two ranges don't overlap).` : "")
+    : step.uncompared === "no_shared" ? "No opponent tested against both lists, so they aren't compared." : null;
+  return el("li", { class: "gt-history-step" },
+    el("p", { class: "gt-small", text: cards.length ? cards.join(" · ") : "No played card changed." }),
+    compared ? el("p", { class: "gt-small" }, ...simNumbers(compared)) : null);
 }
 
 // ------------------------------------------------------------------ the results
