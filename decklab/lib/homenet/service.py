@@ -478,6 +478,8 @@ def status(name, port):
     jobs["disk"] = lambda: commands.disk_report(settings)
     if public:
         jobs["public"] = lambda: tunnel.check_public(public)
+    if public is not None:
+        jobs["cloudflared"] = lambda: tunnel.version_check(settings)
     if access_port:
         jobs["listener"] = lambda: tunnel.check_listener(access_port, public, PROBE_TIMEOUT)
     helpers = [threading.Thread(target=lambda k=k, job=job: found.update({k: job()}), daemon=True)
@@ -504,7 +506,8 @@ def status(name, port):
     lines += addresses
     lines += found.get("power") or [line(WARN, "Sleep", "Couldn't check sleep and wake: the check didn't finish.")]
     lines += commands.check_tunnel(settings, found.get("public"), tunnel.ingress_problems(settings, port),
-                                   found.get("listener"), tunnel.credentials_problem(settings))
+                                   found.get("listener"), tunnel.credentials_problem(settings),
+                                   found.get("cloudflared"))
     lines += card_data_lines()
     lines += commands.check_disk(found.get("disk"))
     header = f"Deck Lab status, {datetime.now().strftime('%Y-%m-%d %H:%M')} (port {port})"

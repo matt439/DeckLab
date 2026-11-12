@@ -612,6 +612,10 @@ def step_tunnel(r, ctx):
         raise Skip("no tunnel in config.json")
     program = tunnel.find_cloudflared(settings)
     r.note(PASS if program else FAIL, f"cloudflared {'at ' + str(program) if program else 'is not installed'}")
+    version = tunnel.version_check(settings) if program else None
+    if version is not None:     # E11-S88: an old or unknown version is a note, never a failure
+        text = version["text"] + (f" {version['fix']}" if version["fix"] else "")
+        r.note(PASS if version["state"] == "current" else WARN, text)
     if not found["config"].is_file():
         r.note(FAIL, f"The tunnel's config {found['config']} is missing")
         return

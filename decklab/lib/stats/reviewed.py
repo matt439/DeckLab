@@ -39,6 +39,7 @@ _ROLE_TARGETS = "decklab.lib.stats.role_targets"
 _EDHREC = "decklab.lib.edhrec"
 _AVERAGE_DECKS = "decklab.lib.gauntlet.edhrec_source"
 _ANSWERS = "decklab.lib.stats.answers"
+_TUNNEL = "decklab.lib.tunnel"
 
 HALF_YEAR = 182
 YEAR = 365
@@ -76,6 +77,10 @@ FACTS = (
      "source": "Scryfall Tagger's removal, graveyard-hate and counterspell tag trees (the oracle_tags bulk file)",
      "where": (f"{_ANSWERS}.KINDS", f"{_ANSWERS}.SPLITS", f"{_ANSWERS}.REMOVAL_TAG"),
      "reviewed": (_ANSWERS, "TAGS_CHECKED"), "interval": HALF_YEAR, "through": None},
+    {"id": "cloudflared-support", "label": "Cloudflare's cloudflared support window",
+     "source": "Cloudflare's cloudflared downloads page (its Updates part)",
+     "where": (f"{_TUNNEL}.SUPPORT_DAYS", f"{_TUNNEL}.SUPPORT_SOURCE"),
+     "reviewed": (_TUNNEL, "SUPPORT_POLICY_CHECKED"), "interval": HALF_YEAR, "through": None},
 )
 
 

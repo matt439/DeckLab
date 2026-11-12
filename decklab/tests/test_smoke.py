@@ -226,6 +226,31 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(lines[0][0], smoke.FAIL)
         self.assertIn("Tesseract has no English language data", lines[0][1])
 
+    def tunnel_lines(self, judged):
+        from unittest import mock
+        settings = {"tunnel": {"config": "/nowhere/config.yml", "hostname": "decklab.example.com"}}
+        r = smoke.Result("tunnel", "From outside the home")
+        with mock.patch("decklab.lib.config.load", return_value=settings), \
+                mock.patch("decklab.lib.tunnel.find_cloudflared", return_value="/usr/bin/cloudflared"), \
+                mock.patch("decklab.lib.tunnel.version_check", return_value=judged) as check:
+            smoke.step_tunnel(r, {"args": _args(), "doctor": {"config": "ready"}})
+        check.assert_called_once_with(settings)
+        return r
+
+    def test_tunnel_notes_cloudflareds_version_and_never_fails_for_it(self):
+        # E11-S88: an old or unknown version is a WARN note; only the missing config fails here.
+        current = {"state": "current", "text": "cloudflared 2026.10.0 (at /usr/bin/cloudflared).", "fix": None}
+        old = {"state": "old", "text": "cloudflared 2024.6.1 is from June 2024.", "fix": "Upgrade it: apt."}
+        unknown = {"state": "unknown", "text": "cloudflared's version is unknown.", "fix": None}
+        for judged, status in ((current, smoke.PASS), (old, smoke.WARN), (unknown, smoke.WARN)):
+            with self.subTest(state=judged["state"]):
+                r = self.tunnel_lines(judged)
+                self.assertEqual(r.lines[1][0], status)
+                self.assertIn(judged["text"], r.lines[1][1])
+                self.assertEqual(r.lines[2][0], smoke.FAIL)          # the config file is missing
+        self.assertTrue(self.tunnel_lines(old).lines[1][1].endswith("Upgrade it: apt."))
+        self.assertEqual(len(self.tunnel_lines(None).lines), 2)     # no answer: no line
+
     def test_bad_usage_exits_2(self):
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as caught:
             smoke.main(["--nope"], steps=())
