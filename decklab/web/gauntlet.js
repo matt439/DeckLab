@@ -259,23 +259,25 @@ function gtLeftOutWords(c) {
   return `Left out: ${parts.length ? `${parts.join(", ")} and ${last}` : last}.`;
 }
 
-/** A clock's line under a group or an opponent, or null. */
+/** A clock's line under a group or an opponent, with what it left out: "Wins on turn 7. Left out: 1 draw.";
+ * null when it has neither. */
 function gtClockLine(c) {
-  const words = gtClockWords(c);
-  return words ? el("span", { class: "gt-small gt-clock-line", text: words }) : null;
+  const text = [gtClockWords(c), gtLeftOutWords(c)].filter(Boolean).map(t => t.endsWith(".") ? t : `${t}.`);
+  return text.length ? el("span", { class: "gt-small gt-clock-line", text: text.join(" ") }) : null;
 }
 
 /** The overall clock under the headline (E3-S51): the typical turn of games won and of games lost against every
  * sampled opponent, what it counts (the answer's clock_label: "simulated Forge games, 1v1, turns each" for
- * Commander), what was left out and, for Commander, that the gauntlet isn't a four-player pod (clock_note). Null
- * without a game won or lost. */
+ * Commander), what was left out and, for Commander, that the gauntlet isn't a four-player pod (clock_note). With
+ * every game left out (draws, timeouts, errors) it says no game was won or lost and counts them; null without a
+ * game won, lost or left out. */
 function gtClock(a) {
   const c = (a.overall || {}).clock;
-  const words = gtClockWords(c);
-  if (!words) return null;
-  const about = [a.clock_label ? `Median and middle half: ${a.clock_label}.` : null, gtLeftOutWords(c)];
+  const words = gtClockWords(c), left = gtLeftOutWords(c);
+  if (!words && !left) return null;
+  const about = [words && a.clock_label ? `Median and middle half: ${a.clock_label}.` : null, left];
   return el("div", { class: "gt-clock" },
-    el("p", { class: "gt-clock-what", text: `${words}.` }),
+    el("p", { class: "gt-clock-what", text: words ? `${words}.` : "No game was won or lost, so there's no typical turn." }),
     el("p", { class: "gt-small", text: about.filter(Boolean).join(" ") }),
     a.clock_note ? el("p", { class: "gt-small", text: a.clock_note }) : null);
 }

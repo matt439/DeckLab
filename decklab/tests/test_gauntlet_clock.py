@@ -188,7 +188,8 @@ class GauntletClockUiTests(unittest.TestCase):
             clock_label:'simulated Forge games, 1v1, turns each',clock_note:'The gauntlet plays 1v1, not a four-player pod.'});
           a.groups.colour[0].clock=clock(side(40,9,8,9),side(3,null,null,null));
           a.opponents[0].clock=clock(side(0,null,null,null),side(4,null,null,null));
-          a.opponents[1].clock=clock(side(6,7,7,7),side(0,null,null,null));
+          a.opponents[1].clock=clock(side(6,7,7,7),side(0,null,null,null),{draws:1});
+          a.opponents[2].clock=clock(side(0,null,null,null),side(0,null,null,null),{timeouts:2});
           answers=[a];
           const node=await draw();
           const box=node.querySelector('.gt-clock');
@@ -198,12 +199,12 @@ class GauntletClockUiTests(unittest.TestCase):
           assert(box.textContent.includes('Left out: 2 draws, 1 timeout and 3 games without a round count.'),box.textContent);
           assert(box.textContent.includes('not a four-player pod'));
           const group=node.querySelector('.gt-groups').querySelector('.gt-clock-line');
-          assert.equal(group.textContent,'Wins on turn 9 (8–9), 3 losses, too few for a typical turn');
+          assert.equal(group.textContent,'Wins on turn 9 (8–9), 3 losses, too few for a typical turn.');
           const lines=node.querySelector('.gt-rows').querySelectorAll('.gt-clock-line').map(n=>n.textContent);
-          same(lines,['4 losses, too few for a typical turn','Wins on turn 7']);
+          same(lines,['4 losses, too few for a typical turn.','Wins on turn 7. Left out: 1 draw.','Left out: 2 timeouts.']);
         """)
 
-    def test_no_clock_without_a_game_won_or_lost(self):
+    def test_every_game_left_out_still_counts_them(self):
         self.run_js("""
           const a=played();
           Object.assign(a,{overall:{key:'all',label:'All these opponents',opponents:3,games:300,rate:.47,low:.39,high:.55,
@@ -212,8 +213,24 @@ class GauntletClockUiTests(unittest.TestCase):
             tally:{ahead:0,even:0,behind:0,unsettled:3},clock_label:'simulated Forge games, turns each',clock_note:null});
           answers=[a];
           const node=await draw();
-          assert.equal(node.querySelector('.gt-clock'),null);
+          const box=node.querySelector('.gt-clock');
+          assert(box,'no overall clock for an all-draws gauntlet');
+          assert.equal(box.querySelector('.gt-clock-what').textContent,"No game was won or lost, so there's no typical turn.");
+          assert(box.textContent.includes('Left out: 5 draws.'),box.textContent);
+          assert(!box.textContent.includes('Median and middle half'),box.textContent);
           assert.equal(node.querySelector('.gt-clock-line'),null);
+        """)
+
+    def test_no_clock_without_any_game(self):
+        self.run_js("""
+          const a=played();
+          const none={games:0,median:null,low:null,high:null};
+          Object.assign(a,{overall:{key:'all',label:'All these opponents',opponents:3,games:0,rate:null,low:null,high:null,
+            clock:{won:none,lost:none,left_out:{draws:0,timeouts:0,errors:0,no_rounds:0}}},played:3,of:3,
+            tally:{ahead:0,even:0,behind:0,unsettled:3},clock_label:'simulated Forge games, turns each',clock_note:null});
+          answers=[a];
+          const node=await draw();
+          assert.equal(node.querySelector('.gt-clock'),null);
         """)
 
 
