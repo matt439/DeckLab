@@ -55,6 +55,7 @@ ACCESS = MappingProxyType({
     ('GET', 'play/sideboard-preview'): 'play',
     ('GET', 'play/sideboard-tests'): 'play',
     ('GET', 'play/pairs'): 'profile',
+    ('GET', 'commander-night/lineup'): 'home-records',
     ('GET', 'deck/history'): 'deck',
     ('GET', 'deck/retire'): 'deck',
     ('GET', 'deck/rename'): 'deck',
@@ -425,6 +426,7 @@ def route_tables():
     from decklab.lib.api import collection_loans
     from decklab.lib.api import practice
     from decklab.lib.api import product_kit_undo
+    from decklab.lib.api import commander_lineup
 
     gets = {
         ("activity", "product-kit-undo"): (product_kit_undo.view, ("id",)),
@@ -460,6 +462,7 @@ def route_tables():
         ("play", "sideboard-preview"): (_sideboard_preview, ("id", "sha256")),
         ("play", "sideboard-tests"): (_sideboard_tests, ("id", "sha256")),
         ("play", "pairs"): (play_tonight.pairs_view, ()),
+        ("commander-night", "lineup"): (commander_lineup.lineup_view, ()),
         ("deck", "history"): (history.deck_history, ("id",)),
         ("deck", "retire"): (retirement.retirement_view, ("id",)),
         ("deck", "rename"): (rename.rename_view, ("id",)),
