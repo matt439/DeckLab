@@ -13,8 +13,12 @@ the comparison is proven, so silence never means "covered":
     whose deck can't be found (or is a trial, or wasn't counted) get nothing,
     and their copies don't count towards the queued total either.
 
-The decks share one pool, so the comparison is per card, across every eligible
-queued row of it: "covered" when no counted home deck misses the card now,
+Each deck's shortfall is counted against the whole free pool (buying_needs: not a
+simultaneous allocation), so two decks needing one card may each see the same free
+copy and miss none between them. A card is therefore compared only when at most one
+counted deck's planned list needs it (players, from shopping_missing.gather); with
+two or more, or without players, it says nothing. The comparison is per card,
+across every eligible queued row of it: "covered" when no counted home deck misses the card now,
 "fewer" when the decks miss fewer copies than those rows queue. Every state is
 compared, long-term rows included. Each marked row (and its copy in the missing
 card's "queue" list) gets "queue_need": {"state", "card", "missing", "queued",
@@ -42,17 +46,21 @@ def _eligible(row, counted):
     return _quantity(row) is not None
 
 
-def annotate(to_buy, missing_cards, counted_decks, *, canonical=None):
+def annotate(to_buy, missing_cards, counted_decks, *, players=None, canonical=None):
     """Mark to_buy's rows in place; return {queue_row: mark} for the rows marked.
 
     to_buy: Shopping's queue rows (each with "deck" linked and "queue_row" numbered).
     missing_cards: shopping_missing.gather's first value. counted_decks: the ids of
-    the home decks whose planned lists were counted. canonical: the card-name
+    the home decks whose planned lists were counted. players: card name -> the
+    counted decks needing it (gather's players); None marks nothing. canonical: the card-name
     resolver (shopping_missing's by default). Nothing is marked when the count
     isn't proven complete, and nothing is ever written anywhere.
     """
     if not isinstance(missing_cards, dict) or missing_cards.get("ready") is not True or missing_cards.get("errors"):
         return {}
+    if not isinstance(players, dict):
+        return {}
+    shared = {name.casefold(): len(set(ids)) for name, ids in players.items()}
     resolve = canonical or shopping_missing._canonical
     counted = set(counted_decks)
     missing = {}
@@ -65,6 +73,8 @@ def annotate(to_buy, missing_cards, counted_decks, *, canonical=None):
             groups.setdefault(key.casefold(), (key, []))[1].append(row)
     marks = {}
     for folded, (name, rows) in groups.items():
+        if shared.get(folded, 0) > 1:
+            continue        # two decks' counts may share one free copy: unproven
         queued = sum(_quantity(row) for row in rows)
         wanted = missing.get(folded, 0)
         if wanted >= queued:
