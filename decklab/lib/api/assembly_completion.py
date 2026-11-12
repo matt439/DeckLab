@@ -23,6 +23,16 @@ def _fingerprint(snapshot, selected):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def _parsed(stored):
+    """ops_decks.parsed_deck(stored), sharing the library's one parse of the snapshot (E11-S90)."""
+    if stored is None or stored.text is None:
+        return None
+    try:
+        return decks.parsed_stored(stored)
+    except decks.DeckFileError:
+        return None
+
+
 def decorate(plan, selected, profile=False):
     """Add per-deck state and the whole-plan completion action, without writing."""
     snapshot = inventory.current()
@@ -30,7 +40,7 @@ def decorate(plan, selected, profile=False):
     changed, denied = [], []
     for item in plan["decks"]:
         stored = snapshot.deck(item["id"])
-        parsed = ops_decks.parsed_deck(stored)
+        parsed = _parsed(stored)
         mutable = parsed is not None and parsed.space == spaces.HOME
         effective = assembled.version(parsed) if parsed else None
         desired = assembly_sections.selected_sections(plan, item["id"]) if mutable else None

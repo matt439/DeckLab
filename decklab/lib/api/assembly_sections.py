@@ -69,6 +69,6 @@ def selected_sections(plan, deck_id):
     """Recompute from the verified plan's selection, never trust browser card lines."""
     choice = next(choice for choice in plan["selections"] if choice["id"] == deck_id)
     stored = inventory.current().deck(deck_id)
-    parsed = decks.parse_deck(stored.data, stored.slug, stored.kind, space=stored.space)
+    parsed = decks.parsed_stored(stored)
     intended = parsed.owned if choice["version"] == "owned" else parsed.target
     return recipe(choice, {"id": deck_id}, intended)

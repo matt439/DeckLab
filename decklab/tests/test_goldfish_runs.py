@@ -28,6 +28,7 @@ from pathlib import Path
 from unittest import mock
 
 from decklab.lib import decks, goldfish
+from decklab.tests import library_stand_in
 from decklab.tests import test_goldfish
 # setUpModule and tearDownModule load and unload test_goldfish's card index for these tests too.
 from decklab.tests.test_goldfish import deck_text, parse, setUpModule, tearDownModule, tolerance, walk  # noqa: F401
@@ -381,9 +382,8 @@ class TestCommandLine(unittest.TestCase):
         # Review finding: "pairing/elves+cats" (the page's own links use it) gave "No deck".
         pairing = {"id": "pairing/cats+elves", "kind": "casual", "versions": ["target"]}
         small = goldfish.simulate(parse(SMALL_DECK), "constructed", games=20, turns=4, seed=1, workers=1)
-        with mock.patch.object(decks, "list_decks", return_value=[]), \
-                mock.patch.object(decks, "beginner_box_pairings", return_value=[pairing]), \
-                mock.patch.object(decks, "load_deck", return_value=parse(SMALL_DECK)) as load, \
+        library_stand_in.start(self, [], [pairing])
+        with mock.patch.object(decks, "load_deck", return_value=parse(SMALL_DECK)) as load, \
                 mock.patch.object(goldfish.runs, "get_or_simulate", return_value=small):
             code, out, _ = self.run_main(["pairing/elves+cats"])
             self.assertEqual(code, 0)

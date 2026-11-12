@@ -319,7 +319,7 @@ def _preview(selected, profile=False):
         current_basics = Counter()
         if stored is not None:
             from decklab.lib.decks import assembled
-            parsed = decks.parse_deck(stored.data, stored.slug, stored.kind, space=stored.space)
+            parsed = decks.parsed_stored(stored)
             for lines in assembled.sections(parsed).values():
                 for line in lines:
                     if decks.is_basic_land(line.name):
@@ -375,7 +375,7 @@ def _preview(selected, profile=False):
         item["build_scope"]["return_count"] = sum(row["quantity"] for row in item["returns"])
         stored = inventory.current().deck(item["id"])
         if stored is not None:
-            parsed = decks.parse_deck(stored.data, stored.slug, stored.kind, space=stored.space)
+            parsed = decks.parsed_stored(stored)
             intent = project(parsed, p, version=item["version"], sections=recipes[item["id"]],
                              standins=item.get("standins", {}).get("rows", []))
             item["remaining_intent"] = intent["remaining"] if intent else []

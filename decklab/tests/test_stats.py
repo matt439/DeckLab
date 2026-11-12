@@ -35,6 +35,7 @@ from unittest import mock
 from decklab.lib import cards, decks, stats
 from decklab.lib.stats import commander as stats_commander     # where TAG_FILE, COMBO_FILE and OFFICIAL_FILE are read
 from decklab.lib.stats import tutors as stats_tutors
+from decklab.tests import library_stand_in
 
 FIXTURES = Path(__file__).parent / "fixtures"
 CARDS_FILE = FIXTURES / "stats_cards.jsonl"
@@ -879,9 +880,8 @@ class TestCommandLine(unittest.TestCase):
         # Milestone 7: the command line finds a deck through decks.find_summary, as
         # goldfish's and forge's do, so "pairing/elves+cats" no longer gives "No deck".
         pairing = {"id": "pairing/cats+elves", "kind": "casual", "versions": ["target"]}
-        with mock.patch.object(decks, "list_decks", return_value=[]), \
-                mock.patch.object(decks, "beginner_box_pairings", return_value=[pairing]), \
-                mock.patch.object(decks, "load_deck", return_value={"Deck": []}) as load, \
+        library_stand_in.start(self, [], [pairing])
+        with mock.patch.object(decks, "load_deck", return_value={"Deck": []}) as load, \
                 mock.patch.object(stats, "deck_stats", return_value={"cards": 0}) as deck_stats:
             code, out, _ = self.run_main(["pairing/elves+cats", "--json"])
             self.assertEqual(code, 0)

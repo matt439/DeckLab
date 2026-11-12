@@ -30,7 +30,7 @@ def _declared(summary):
     if stored is None or stored.error is not None:
         return []
     try:
-        parsed = decks.parse_deck(stored.data, stored.slug, stored.kind, space=stored.space)
+        parsed = decks.parsed_stored(stored, own_copy=False)
     except decks.DeckFileError:
         return []
     return list(dict.fromkeys(inventory.resolve_deck_id(other)
