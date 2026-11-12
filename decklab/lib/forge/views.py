@@ -149,6 +149,88 @@ def _noise_points(winrate):
     return round(100 * (winrate["high"] - winrate["low"]) / math.sqrt(2), 1)
 
 
+# ============================================================ the clock (E3-S51)
+
+CLOCK_MIN_GAMES = 5         # fewer games won (or lost) than this: that side's count, no median
+CLOCK_LABEL = {"commander": "simulated Forge games, 1v1, turns each",
+               "constructed": "simulated Forge games, turns each"}
+CLOCK_POD_NOTE = ("The gauntlet plays 1v1, not a four-player pod: a pod's games run longer, so read these "
+                  "turns as how fast the deck is, not how long a game at the table takes.")
+
+
+def turns(games, side):
+    """The round counts ("turns each") of side's games won and lost, sorted, with what was left out:
+    {"won": [rounds], "lost": [rounds], "draws", "timeouts", "errors", "no_rounds"}. A draw, a
+    timeout or an error is never a win or a loss here; a game won or lost without a round count is
+    left out as "no_rounds". Tallies of several matchups pool with pool_turns."""
+    out = {"won": [], "lost": [], "draws": 0, "timeouts": 0, "errors": 0, "no_rounds": 0}
+    for g in games:
+        result = g.get("r")
+        if result == "draw":
+            out["draws"] += 1
+        elif result == "timeout":
+            out["timeouts"] += 1
+        elif result == "error":
+            out["errors"] += 1
+        elif g.get("w") not in (0, 1):
+            out["draws"] += 1                   # no winner recorded: never a win or a loss
+        else:
+            rounds = g.get("rounds")
+            if isinstance(rounds, bool) or not isinstance(rounds, int) or rounds < 1:
+                out["no_rounds"] += 1
+            else:
+                out["won" if g["w"] == side else "lost"].append(rounds)
+    out["won"].sort()
+    out["lost"].sort()
+    return out
+
+
+def pool_turns(tallies):
+    """Several turns() tallies as one: the games themselves pooled, never their medians averaged."""
+    out = {"won": [], "lost": [], "draws": 0, "timeouts": 0, "errors": 0, "no_rounds": 0}
+    for t in tallies:
+        if not t:
+            continue
+        out["won"] += t["won"]
+        out["lost"] += t["lost"]
+        for k in ("draws", "timeouts", "errors", "no_rounds"):
+            out[k] += t[k]
+    out["won"].sort()
+    out["lost"].sort()
+    return out
+
+
+def _quartile(values, q):
+    """The q-th quantile of sorted values, by linear interpolation between the closest ranks (the
+    "inclusive" method: the median of an even count is the mean of the middle two)."""
+    at = (len(values) - 1) * q
+    low = math.floor(at)
+    high = min(low + 1, len(values) - 1)
+    return values[low] + (values[high] - values[low]) * (at - low)
+
+
+def _clock_side(rounds):
+    """{"games", "median", "low", "high"}: the median round and the middle half (the quartiles),
+    each to one decimal; all three None below CLOCK_MIN_GAMES games."""
+    if len(rounds) < CLOCK_MIN_GAMES:
+        return {"games": len(rounds), "median": None, "low": None, "high": None}
+    return {"games": len(rounds), "median": round(_quartile(rounds, 0.5), 1),
+            "low": round(_quartile(rounds, 0.25), 1), "high": round(_quartile(rounds, 0.75), 1)}
+
+
+def clock_of(tally):
+    """A turns() tally (or pool_turns') as the page reads it: {"won": _clock_side, "lost":
+    _clock_side, "left_out": {"draws", "timeouts", "errors", "no_rounds"}}."""
+    tally = tally or pool_turns([])
+    return {"won": _clock_side(tally["won"]), "lost": _clock_side(tally["lost"]),
+            "left_out": {k: tally[k] for k in ("draws", "timeouts", "errors", "no_rounds")}}
+
+
+def clock(games, side):
+    """The typical round side wins in and loses in over games: clock_of(turns(games, side))."""
+    return clock_of(turns(games, side))
+
+
 def _games(result):
     return [g for b in result.get("batches", []) for g in b["games"]]
 

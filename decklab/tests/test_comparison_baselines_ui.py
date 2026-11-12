@@ -77,7 +77,7 @@ class ComparisonBaselineUiTests(unittest.TestCase):
           answers={'/api/compare/deck?':current,'/api/deck/revision?':old};await show(compareRevisionHref('casual/test',3));
           assert(main.textContent.includes('Stat changes are unknown'));assert(main.textContent.includes('Unknown mana curve'));
           assert(main.textContent.includes("today's card data and Commander lists"));assert(!main.textContent.includes('PRIVATE_KIT'));
-          same(rows('The two lists in brief').find(row=>row[0]==='Bracket'),['Bracket','Bracket 2','Unknown']);
+          same(rows('The two lists in brief').find(row=>row[0]==="Bracket (today's lists)"),["Bracket (today's lists)",'Bracket 2','Unknown']);
           assert(!asked.some(path=>path.includes('/api/compare/shared')||path.startsWith('/api/play')));
         ''')
 

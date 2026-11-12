@@ -554,7 +554,9 @@ class VisitsDbTests(db_support.DbTestCase):
         self.assertFalse(any("visit" in name for name, _ in export.TABLES))
 
     def test_the_servers_read(self):
-        self.write({("user1", AT.date(), "home"): (AT, AT, 2)}, {("user1", AT.date(), "home", "tokens", ""): (1, AT)})
+        # Today's date, not AT's: the server's read is a window ending today (a fixed day ages out of it).
+        today = date.today()
+        self.write({("user1", today, "home"): (AT, AT, 2)}, {("user1", today, "home", "tokens", ""): (1, AT)})
         people = visits_api._read(30, "user1")
         self.assertEqual([(p["profile"], p["requests"]) for p in people], [("user1", 2)])
 

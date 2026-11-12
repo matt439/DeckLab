@@ -8,6 +8,7 @@ from collections import Counter
 from datetime import date, datetime, timezone
 
 from decklab.lib import cards, combos, decks, official_lists
+from decklab.lib.card_freshness import parse_date as _source_date    # an index date, or None
 
 from .constants import (
     BANNED_AS_COMPANION, BRACKETS, BRACKET_LABELS, BRACKET_NOT_AUTOMATIC, BRACKET_RULES_DATE,
@@ -25,17 +26,6 @@ TAG_FILE = None     # None: cards' downloaded oracle_tags file; the tests point 
 COMBO_FILE = None   # None: combos' two_card.json; the tests point it at a fixture
 THREE_COMBO_FILE = None   # override, otherwise the two-card file's separate sibling
 OFFICIAL_FILE = None    # None: official_lists' official_lists.json; the tests point it at a fixture
-
-
-def _source_date(value):
-    """An index bulk date as an ISO calendar date, or None for unknown metadata."""
-    if not isinstance(value, str):
-        return None
-    try:
-        parsed = date.fromisoformat(value) if len(value) == 10 else datetime.fromisoformat(value).date()
-    except ValueError:
-        return None
-    return parsed
 
 
 def _official(today, cards_date, max_age):

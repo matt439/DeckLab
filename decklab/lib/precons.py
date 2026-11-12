@@ -34,7 +34,7 @@ import time
 import urllib.error
 import urllib.request
 
-from decklab.lib import cards, config
+from decklab.lib import cards, config, source_health
 
 LIST_URL = "https://mtgjson.com/api/v5/DeckList.json"
 SETS_URL = "https://mtgjson.com/api/v5/SetList.json"
@@ -104,11 +104,23 @@ def _cache_dir():
 
 
 def _fetch(url, limit):
+    """MTGJSON's file at url, at most limit bytes; each attempt is a Data sources receipt, except a
+    4xx answer, which is about that one file, so it records neither outcome."""
     request = urllib.request.Request(url, headers={"User-Agent": config.USER_AGENT, "Accept": "application/json"})
-    with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
-        data = response.read(limit + 1)
-    if len(data) > limit:
-        raise PreconError(f"{url} is bigger than {limit // (1024 * 1024)} MB")
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+            data = response.read(limit + 1)
+        if len(data) > limit:
+            raise PreconError(f"{url} is bigger than {limit // (1024 * 1024)} MB")
+    except urllib.error.HTTPError as error:
+        if error.code < 500:        # one file MTGJSON doesn't have (precon_coverage._down): not MTGJSON down
+            raise
+        source_health.record("mtgjson", False)
+        raise
+    except Exception:
+        source_health.record("mtgjson", False)
+        raise
+    source_health.record("mtgjson", True)
     return data
 
 

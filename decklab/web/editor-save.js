@@ -379,15 +379,21 @@ function markRows() {
   }
 }
 
+/** The Checks panel's bracket box (E9-S38): each thing said once, in its own sentence. The label may end in
+ * its own brackets ("Bracket 1 or 2 (theme and intent decide)"), so the target is a sentence of its own, and
+ * "No Game Changers." is left to the server's reason when that already says it. */
 function bracketBox(b) {
   const gcs = b.game_changers || [];
+  const reasons = b.reasons || [];
+  const label = String(b.label || "").replace(/\.$/, "");
+  const saysNone = reasons.some((r) => /^no game changers\b/i.test(String(r)));
   return el("div", { class: "box" },
     el("h3", { text: "Commander bracket" }),
-    el("p", {}, el("b", { text: "The list fits: " }), b.label,
-      b.target ? ` (the target is Bracket ${b.target})` : ""),
+    el("p", {}, el("b", { text: "The list fits: " }), `${label || "Unknown"}.`,
+      b.target ? ` Target bracket: ${b.target}.` : ""),
     gcs.length ? el("p", { class: "sub" }, `Game Changers (${gcs.length}): `, gcs.map((g) => g.name).join(", "), ".")
-      : el("p", { class: "sub", text: "No Game Changers." }),
-    (b.reasons || []).map((r) => el("p", { class: "sub", text: r })));
+      : saysNone ? null : el("p", { class: "sub", text: "No Game Changers." }),
+    reasons.map((r) => el("p", { class: "sub", text: r })));
 }
 
 function ownedPreview(o, version = "target") {

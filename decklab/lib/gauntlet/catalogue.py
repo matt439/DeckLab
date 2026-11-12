@@ -17,7 +17,7 @@ import tempfile
 from collections import Counter
 from datetime import datetime, timezone
 
-from decklab.lib import cards
+from decklab.lib import cards, source_health
 
 from . import CATALOGUE_FORMAT, FORMATS, catalogue_path, edhrec_source, fixing, forge_source, precon_source, tags
 
@@ -320,6 +320,8 @@ def build(fmt, sources=SOURCES, top=100, refresh=False, dry_run=False, log=print
     for line in summary(catalogue):
         log(line)
     if failed:
+        if not dry_run:
+            source_health.record("gauntlet", False)
         raise GauntletError(f"{', '.join(failed)} gave no {fmt} decks (see above), so nothing was saved: "
                             f"{catalogue_path(fmt)} is kept as it was.")
     for line in difference(load(fmt), catalogue, fmt):
@@ -328,5 +330,6 @@ def build(fmt, sources=SOURCES, top=100, refresh=False, dry_run=False, log=print
         log(f"Dry run: nothing saved (the catalogue would be {catalogue_path(fmt)}).")
     else:
         save(fmt, catalogue)
+        source_health.record("gauntlet", True)
         log(f"Saved {catalogue_path(fmt)}.")
     return catalogue

@@ -30,6 +30,7 @@ From code:
     from decklab.lib import combos
     combos.find(commander_ids, deck_ids)   # {"timestamp", "version", "matches": [combo]}
     combos.find(commander_ids, deck_ids, near=True)  # one card away: each match + "missing" (E9-S25)
+    combos.with_card(oracle_id)            # one card's two-card combos, no deck (E9-S37): each + "piece"
     combos.bracket_floor(combo)            # 1, 3 or 4: what the combo means for the bracket
 
 A combo is {"id", "url", "cards": [{"oracle_id", "name", "must_be_commander"}],
@@ -58,7 +59,7 @@ import urllib.error
 from datetime import datetime
 from pathlib import Path
 
-from decklab.lib import card_index, cards, currency
+from decklab.lib import card_index, cards, currency, source_health
 from decklab.lib.config import DATA
 
 COMBOS_DIR = DATA / "combos"
@@ -340,6 +341,7 @@ def update(force=False, log=print):
                                    timeout=DOWNLOAD_TIMEOUT, headers=headers, response_headers=got)
         except urllib.error.HTTPError as e:
             e.close()
+            source_health.record("spellbook", e.code == 304)
             if e.code != 304:
                 log(f"combos: download failed ({e}); keeping the local file.")
             else:
@@ -347,9 +349,11 @@ def update(force=False, log=print):
                 cards._write_json(META_FILE, meta)
                 log("combos: unchanged on Commander Spellbook")
         except cards.NETWORK_ERRORS as e:
+            source_health.record("spellbook", False)
             log(f"combos: download failed ({e}); keeping the local file." if EXPORT_FILE.exists()
                 else f"combos: download failed ({e}); combos can't be checked until it works.")
         else:
+            source_health.record("spellbook", True)
             got = {k.lower(): v for k, v in got.items()}
             meta = {"uri": EXPORT_URL, "downloaded_at": _now().isoformat(timespec="seconds"),
                     "etag": got.get("etag"), "last_modified": got.get("last-modified"), "size": size}
@@ -490,6 +494,22 @@ def find(commander_ids, deck_ids, path=None, near=False, *, pieces=2):
             if piece["must_be_commander"] or piece["oracle_id"] in present:
                 continue
             matches.append(dict(combo, missing=missing))
+    matches.sort(key=_sort_key)
+    return {"timestamp": data["timestamp"], "version": data["version"], "matches": matches}
+
+
+def with_card(oracle_id, path=None):
+    """The two-card combos one card is a piece of (E9-S37: the card viewer's part, for a commander
+    across the table), from the two-card list alone: no deck, space or network. Returns {"timestamp",
+    "version", "matches": [combo + "piece" (the index, 0 or 1, of this card in combo["cards"])]}, most
+    serious first, as find() orders them. Raises ComboListError when the list can't be read, so a
+    caller says combos weren't checked, never that there are none."""
+    data = load(path)
+    matches = []
+    for i in data["by_oracle"].get(oracle_id, ()) if isinstance(oracle_id, str) else ():
+        combo = data["combos"][i]
+        piece = next(k for k, p in enumerate(combo["cards"]) if p["oracle_id"] == oracle_id)
+        matches.append(dict(combo, piece=piece))
     matches.sort(key=_sort_key)
     return {"timestamp": data["timestamp"], "version": data["version"], "matches": matches}
 

@@ -107,6 +107,9 @@ older code (the committed tests/fixtures/inventory_goldens):
   ({"last": None, "games": 0}) or the unread one (None) is dropped from decks_index summaries;
   a recorded game still compares. test_library_played checks its values. Its second slice adds
   deck_view's "played" too, dropped only as {"last": None, "games": 0, "since": None} or None.
+- "keep-rule-defaults": E4-S09 adds deck_view's "keep_rule" (the practice games' keep rule, the
+  same constant for every deck and viewer) and each Deck line's "keep_land"; both are dropped
+  (test_keep_rule checks their values).
 - "departed-defaults": E2-S27 adds deck_view's guide "departed", the cards its How to play guide
   names that have left the deck. No golden deck's guide names a former card, so only the empty
   answer ({"names": [], "count": 0}) or the unread one (None) is dropped; a departed card still
@@ -133,7 +136,9 @@ older code (the committed tests/fixtures/inventory_goldens):
 - "role-target-defaults": E9-S26 adds deck_view's stats "role_targets", the Command Zone
   template's Commander role targets beside the list's counts. Constructed decks answer None,
   and no golden deck is a Commander deck, so only None is dropped; a Commander deck's targets
-  still compare. test_role_targets checks its values.
+  still compare. test_role_targets checks its values. E9-S35's stats "answers" (what a Commander
+  deck can answer) is None for constructed decks the same way and dropped only then
+  (test_stats_answers checks it).
 - "absent-shop-prices": E5-S08 adds an explicit missing-card shop check to deck Prices. Only
   the exact typed 15-field not-checked default is dropped from positive integer shortfalls
   in synthetic home deck_view answers: the raw script, the exact local-script sentinel and
@@ -651,6 +656,19 @@ def played_defaults(dump):
                 view.pop("played")
 
 
+def keep_rule_defaults(dump):
+    """Drop E4-S09's deck_view "keep_rule" and its Deck lines' "keep_land"."""
+    for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
+        views = mine.get("deck_view") if isinstance(mine, dict) else None
+        for view in views.values() if isinstance(views, dict) else []:
+            if not isinstance(view, dict):
+                continue
+            view.pop("keep_rule", None)
+            for line in ((view.get("sections") or {}).get("Deck") or []) if isinstance(view.get("sections"), dict) else []:
+                if isinstance(line, dict):
+                    line.pop("keep_land", None)
+
+
 def departed_defaults(dump):
     """Drop only E2-S27's empty (or unread) "departed" on deck pages' guides."""
     for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
@@ -688,8 +706,9 @@ def role_target_defaults(dump):
         views = mine.get("deck_view") if isinstance(mine, dict) else None
         for view in views.values() if isinstance(views, dict) else []:
             stats = view.get("stats") if isinstance(view, dict) else None
-            if isinstance(stats, dict) and "role_targets" in stats and stats["role_targets"] is None:
-                stats.pop("role_targets")
+            for key in ("role_targets", "answers"):         # E9-S35's "answers" is None for them too
+                if isinstance(stats, dict) and key in stats and stats[key] is None:
+                    stats.pop(key)
 
 
 def opponent_token_defaults(dump):
@@ -1073,7 +1092,7 @@ EXPECTED_P5 = (("intrinsic-card-defaults", golden_card_defaults.normalise),
                ("game-changer-flags", game_changer_flags),
                ("listed-printings", listed_printings), ("owned-printings", owned_printings),
                ("trial-defaults", trial_defaults), ("stat-source-defaults", stat_source_defaults), ("card-reference-urls", card_reference_urls),
-               ("building-holders", building_holders))
+               ("building-holders", building_holders), ("keep-rule-defaults", keep_rule_defaults))
 
 
 def normalise(dump):

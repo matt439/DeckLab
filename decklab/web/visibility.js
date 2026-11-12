@@ -9,6 +9,49 @@ const VISIBILITY_WORDS = {
   accessories: ["Sleeves, deck boxes and playmats", "Shows these accessories and their pictures. A private holder deck stays anonymous."],
 };
 
+const PREVIEW_UNKNOWN = "Deck Lab couldn't work out what this would show just now. You can still make it Public.";
+
+/** What signed-in readers would get, in the owner's own counts (GET /api/visibility/preview). */
+function visibilityPreviewLines(thing, data) {
+  const counts = data && data.available && data.counts;
+  if (!counts) return [(data && data.message) || PREVIEW_UNKNOWN];
+  const n = (key) => (Number.isInteger(counts[key]) ? counts[key] : 0);
+  if (thing === "collection") {
+    return [`${plural(n("collection_rows"), "collection row")} (${plural(n("collection_cards"), "card")}) and ` +
+      `${plural(n("token_rows"), "token card row")} (${plural(n("token_cards"), "token card")}).`];
+  }
+  if (thing === "games") return [`${plural(n("games"), "game")} involving your decks.`];
+  if (thing === "accessories") {
+    return [`${plural(n("kit_rows"), "sleeve, deck box or playmat row", "sleeve, deck box and playmat rows")}, ` +
+      `${num(n("kit_pictures"))} with pictures.`];
+  }
+  const lines = [`${plural(n("decks"), "deck")}, each write-up as written.`];
+  const mentions = Array.isArray(data.mentions) ? data.mentions : [];
+  if (mentions.length) {
+    const more = Number.isInteger(data.more_mentions) && data.more_mentions > 0 ? ` and ${num(data.more_mentions)} more` : "";
+    lines.push(`These write-ups mention orders or purchases: ${mentions.map((d) => d.title).join(", ")}${more}.`);
+  } else {
+    lines.push("No deck's write-up mentions orders or purchases.");
+  }
+  return lines;
+}
+
+/** The confirm sheet before a switch turns Public; true only on Confirm. A failed preview still offers it. */
+async function confirmPublic(row, label) {
+  let data = null;
+  try {
+    data = await api(`/api/visibility/preview?owner=${encodeURIComponent(row.owner)}&thing=${encodeURIComponent(row.thing)}`);
+  } catch (error) {
+    data = null;
+  }
+  const words = VISIBILITY_WORDS[row.thing];
+  const choice = await ask(`Make ${label.toLowerCase()} Public?`, [
+    "Everyone signed in would see, read-only:", ...visibilityPreviewLines(row.thing, data),
+    words ? words[1] : "", "Nothing changes until you confirm. Making it Private again is one tap."].filter(Boolean),
+  [{ text: "Keep private", value: "cancel" }, { text: "Make public", kind: "primary", value: "confirm" }]);
+  return choice === "confirm";
+}
+
 function showVisibility(params, token) {
   setTitle("Who sees what");
   return load("/api/visibility", token, (data) => drawVisibility(data, token), { title: "Who sees what couldn't be loaded" });
@@ -36,6 +79,19 @@ function drawVisibility(data, token) {
         "aria-pressed": String(Boolean(row.public) === value), onclick: async () => {
           if (Boolean(row.public) === value) return;
           const profile = state.profile, buttons = group.querySelectorAll("button");
+          // Public asks first with what it would show (E10-S46); Private stays one tap.
+          if (value) {
+            for (const button of buttons) button.disabled = true;
+            status.textContent = "Working out what this would show...";
+            let confirmed = false;
+            try {
+              confirmed = await confirmPublic(row, label);
+            } finally {
+              for (const button of buttons) button.disabled = false;
+              status.textContent = "";
+            }
+            if (!confirmed || token !== routeToken || state.profile !== profile) return;
+          }
           for (const button of buttons) button.disabled = true;
           status.textContent = "Saving...";
           try {

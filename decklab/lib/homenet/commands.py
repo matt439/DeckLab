@@ -31,8 +31,8 @@ from decklab.lib import access, config, control, profiles, tunnel
 
 from . import gather, profile_config, watchdog
 from . import mdns as multicast         # not "mdns": cmd_status has a variable of that name
-from .checks import (check_addresses, check_firewall, check_network, check_sleep, check_wake, exit_code, format_report,
-                     lan_of)
+from .checks import (card_data_lines, check_addresses, check_firewall, check_network, check_sleep, check_wake, exit_code,
+                     format_report, lan_of)
 from .common import (
     LOG_TAIL, OK, PROBE_TIMEOUT, PROBLEM, RERUN_AFTER, SCHTASKS, SCHTASKS_TIMEOUT, SERVER_SCRIPT, START_WAIT,
     STOP_WAIT, TASK_DELAY, TASK_NAME, TASK_NOT_RUN_YET, TASK_RUNNING, TASK_TERMINATED, TCP_MAXRT, WARN, WATCHDOG_EVERY,
@@ -887,7 +887,23 @@ def _last_run_line(info, at_logon=False):
                 f"Its log may say why: {control.LOG_FILE}")
 
 
-def check_tunnel(settings, result, ingress=None, listener=None, credentials=None):
+def disk_report(settings):
+    """lib/disk_space.report(settings): imported here so a status that never gets that far doesn't."""
+    from decklab.lib import disk_space
+    return disk_space.report(settings)
+
+
+def check_disk(entries):
+    """The Disk lines from disk_space.report()'s entries (None: the check didn't finish): free
+    space per disk, WARN under config.json's disk_space.warn_below_gb, and the data folders' sizes."""
+    if entries is None:
+        return [line(WARN, "Disk", "Couldn't check free space: the check didn't finish.")]
+    return [line(WARN, "Disk", entry["text"], "Make room on this disk: the Data folders line shows what "
+                 "Deck Lab's own folders use (old Forge results and backups are the usual).")
+            if entry["level"] == "warn" else line(OK, "Disk", entry["text"]) for entry in entries]
+
+
+def check_tunnel(settings, result, ingress=None, listener=None, credentials=None, version=None):
     """The Tunnel lines: whether the public address (config.json's "tunnel")
     shows Cloudflare Access's login; result is tunnel.check_public's answer
     (None when there's no tunnel set up, or the check didn't finish). With
@@ -895,12 +911,15 @@ def check_tunnel(settings, result, ingress=None, listener=None, credentials=None
     hostnames (ingress: tunnel.ingress_problems' list) and whether the
     tunnel's listener refuses a visit without a login (listener:
     tunnel.check_listener's answer, None when it wasn't asked). credentials
-    is tunnel.credentials_problem's answer (None: fine, or not named)."""
+    is tunnel.credentials_problem's answer (None: fine, or not named).
+    version is tunnel.version_check's answer (E11-S88; None: no line)."""
     setup = tunnel.settings_of(settings)
     if setup is None:
         return []
     area = "Tunnel"
     lines = []
+    if version is not None:
+        lines.append(line(OK if version["state"] == "current" else WARN, area, version["text"], version["fix"]))
     if credentials:
         lines.append(line(PROBLEM, area, f"{credentials}, so Deck Lab doesn't start the tunnel.",
                           f"Fix credentials-file in {setup['config']} (cloudflared tunnel list names the tunnel), "
@@ -973,9 +992,13 @@ def cmd_status(name, port):
     helpers = [threading.Thread(target=lambda: found.update(answer=probe(port, _probe_host(mine))), daemon=True),
                threading.Thread(target=lambda: found.update(mdns=multicast.mdns_lookup(f"{hostname}.local",
                                                                                        local_ipv4())),
-                                daemon=True)]
+                                daemon=True),
+               threading.Thread(target=lambda: found.update(disk=disk_report(settings)), daemon=True)]
     if public:
         helpers.append(threading.Thread(target=lambda: found.update(public=tunnel.check_public(public)),
+                                        daemon=True))
+    if public is not None:
+        helpers.append(threading.Thread(target=lambda: found.update(cloudflared=tunnel.version_check(settings)),
                                         daemon=True))
     if access_port:
         helpers.append(threading.Thread(target=lambda: found.update(
@@ -1021,7 +1044,9 @@ def cmd_status(name, port):
     if wake is not None and sys.platform == "win32":
         lines += check_wake(facts, wake["gate"], found.get("gate"))
     lines += check_tunnel(settings, found.get("public"), tunnel.ingress_problems(settings, port),
-                          found.get("listener"), tunnel.credentials_problem(settings))
+                          found.get("listener"), tunnel.credentials_problem(settings), found.get("cloudflared"))
+    lines += card_data_lines()
+    lines += check_disk(found.get("disk"))
     seconds = time.monotonic() - started
     header = (f"Deck Lab status, {datetime.now().strftime('%Y-%m-%d %H:%M')} (port {port}; checked in "
               f"{seconds:.1f} s, of which PowerShell {facts.get('seconds', 0):.1f} s)")

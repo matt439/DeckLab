@@ -62,7 +62,7 @@ import urllib.request
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 
-from decklab.lib import cards, config, currency, decks, pool, spaces
+from decklab.lib import cards, config, currency, decks, pool, source_health, spaces
 
 # When the page shapes the docstring describes (the commander page's JSON, a pair's redirect) were last
 # compared with EDHREC's live answers by hand. decklab.lib.stats.reviewed says when that's due again
@@ -177,16 +177,22 @@ def _request(url, what):
         e.close()
         if e.code in (403, 404):
             raise NoPage(f"EDHREC has no page for {what}") from None
+        source_health.record("edhrec", False)
         raise EdhrecError(f"EDHREC answered {e.code}") from None
     except (urllib.error.URLError, OSError) as e:
+        source_health.record("edhrec", False)
         reason = getattr(e, "reason", None) or e
         raise EdhrecError(f"EDHREC couldn't be reached ({reason})") from None
     if len(data) > MAX_BYTES:
+        source_health.record("edhrec", False)
         raise EdhrecError("EDHREC's page was too big to read")
     try:
-        return json.loads(data)
+        parsed = json.loads(data)
     except ValueError:
+        source_health.record("edhrec", False)
         raise EdhrecError("EDHREC sent a page Deck Lab can't read") from None
+    source_health.record("edhrec", True)
+    return parsed
 
 
 _SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")

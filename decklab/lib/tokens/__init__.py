@@ -424,6 +424,30 @@ def gaps(inv, incoming_rows, warnings, space=spaces.HOME):
     return sorted(out.values(), key=lambda g: (STATES.index(g["state"]), cards.fold(g["name"]), g["key"]))
 
 
+def built_gaps(inv, incoming_rows, warnings, space=spaces.HOME):
+    """[{key, name, kind, decks: [{id, title}]}]: the tokens space's built holders (built_ids,
+    and at home owned products kept intact) make with no card at all for them: state none, so
+    nothing owned fits or stands in and nothing is on the way. A token only the opponent gets
+    (sides.side "opponent", E7-S23) is left out; one that may be either player's stays. Shopping's
+    token add-ons (E5-S38) read it; decks being built don't count. Raises RuntimeError when the
+    card index isn't ready."""
+    built, out = built_ids(space), {}
+    all_holds = reserve.holds(inv, space, warnings)
+    for deck_id, title, version, sections, _link in _holders(warnings, space):
+        if not _is_built(deck_id, built):
+            continue
+        result = _held_tokens(deck_id, version, sections, inv, incoming_rows,
+                              reserve.held_elsewhere(all_holds, deck_id))
+        for need in result["needs"]:
+            if need["state"] != "none" or need.get("side") == "opponent":
+                continue
+            gap = out.setdefault(need["key"], {"key": need["key"], "name": need["name"],
+                                               "kind": need["kind"], "decks": []})
+            if all(d["id"] != deck_id for d in gap["decks"]):
+                gap["decks"].append({"id": deck_id, "title": title})
+    return sorted(out.values(), key=lambda g: (cards.fold(g["name"]), g["key"]))
+
+
 def plan_token_cards(space=spaces.HOME, warnings=None):
     """Plan built decks and home's eligible intact products from one snapshot.
 
@@ -718,7 +742,11 @@ def main(argv=None):
     parser.add_argument("--space", default=spaces.HOME, help="with --check: whose token cards (default home)")
     args = parser.parse_args(argv)
     with inventory.pinned():    # one snapshot for the whole command
-        code = _main(parser, args)
+        try:
+            code = _main(parser, args)
+        except inventory.Unavailable as e:  # the database can't be used: python -m decklab.db's exit 2
+            print(e, file=sys.stderr)
+            return 2
         stale = inventory.pinned_stale()
     if stale:                   # the database's last good snapshot, as python -m decklab.db says
         print(f"Note: {stale}.", file=sys.stderr)
@@ -746,6 +774,6 @@ def _main(parser, args):
     except RuntimeError as e:
         print(f"The card data isn't ready: {e}")
         return 1
-    except (decks.DeckNotFound, decks.DeckFileError) as e:
+    except (decks.DeckNotFound, decks.DeckFileError, spaces.SpaceNotFound) as e:
         print(e)
         return 1

@@ -353,6 +353,7 @@ class ServiceCommandTests(SystemdCase, Guarded):
         self.probe = self.patch("decklab.lib.homenet.commands.probe", side_effect=lambda *a, **k: self.answer)
         self.patch("decklab.lib.homenet.commands.local_ipv4", return_value="192.168.1.20")
         self.patch("decklab.lib.homenet.commands.newest_code_mtime", return_value=None)
+        self.patch("decklab.lib.homenet.commands.disk_report", return_value=[{"level": "ok", "text": "Disk: 100.0 GB free of 500.0 GB (20%)."}])
         # status's network reads and the .local lookup (linux_facts and mdns have tests of their own).
         self.facts = {"network": NETWORK, "firewall": {"active": [], "zone": None, "port": None, "mdns": None},
                       "errors": {}}
@@ -498,6 +499,15 @@ class ServiceCommandTests(SystemdCase, Guarded):
         self.assertNotIn("the address above", text)
         self.assertIn("http://decklab-pc.local:18642/ (or the PC's IP address)", text)
 
+    def test_status_has_the_disk_lines(self):
+        self.main("install", "--at-logon")
+        code, text = self.main("status")
+        self.assertIn("Disk: 100.0 GB free of 500.0 GB (20%).", " ".join(text.split()))
+        self.patch("decklab.lib.homenet.commands.disk_report", return_value=[
+            {"level": "warn", "text": "Disk: only 1.0 GB free of 500.0 GB (0%)."}])
+        code, text = self.main("status")
+        self.assertRegex(" ".join(text.split()), r"WARN\s+Disk: Disk: only 1\.0 GB free")
+
     def test_status_checks_the_tunnels_listener(self):
         self.main("install", "--at-logon")
         settings = {"tunnel": {"config": str(self.home / "config.yml"), "hostname": "decklab.example.com"},
@@ -509,9 +519,16 @@ class ServiceCommandTests(SystemdCase, Guarded):
                                                                              "with Cloudflare Access's login"))
         listener = self.patch("decklab.lib.tunnel.check_listener", return_value=(
             "refuses", "The tunnel's listener (127.0.0.1:18644) refuses visits without a Cloudflare Access login"))
+        version = self.patch("decklab.lib.tunnel.version_check", return_value={
+            "state": "old", "text": "cloudflared 2024.6.1 is from June 2024.",
+            "fix": "Upgrade it: sudo snap refresh cloudflared, then python -m decklab.lib.homenet restart."})
         code, text = self.main("status")
         listener.assert_called_once_with(18644, "decklab.example.com", commands.PROBE_TIMEOUT)
-        self.assertIn("refuses visits without a Cloudflare Access login", " ".join(text.split()))
+        version.assert_called_once_with(settings)
+        text = " ".join(text.split())
+        self.assertIn("refuses visits without a Cloudflare Access login", text)
+        self.assertIn("WARN Tunnel: cloudflared 2024.6.1 is from June 2024.", text)    # E11-S88
+        self.assertIn("sudo snap refresh cloudflared", text)
 
     def test_status_has_the_sleep_lines(self):
         self.main("install", "--at-logon")

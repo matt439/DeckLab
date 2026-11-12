@@ -868,6 +868,7 @@ class StatusCommandTests(Guarded):
         self.patch("decklab.lib.homenet.commands.pythonw_path", return_value=Path(PYTHONW))
         self.patch("decklab.lib.homenet.commands.this_pythons", return_value=[Path(PYTHON), Path(PYTHONW)])
         self.patch("decklab.lib.homenet.commands.newest_code_mtime", return_value=None)
+        self.patch("decklab.lib.homenet.commands.disk_report", return_value=[{"level": "ok", "text": "Disk: 100.0 GB free of 500.0 GB (20%)."}])
         with Quiet() as q:
             code = homenet.commands.cmd_status("Deck Lab", PORT)
         return code, " ".join(q.out.getvalue().split())     # the report's wrapping undone
@@ -927,7 +928,19 @@ class StatusCommandTests(Guarded):
                                      {"answered": True, "deck_lab": True, "cards_ready": True})
         self.assertEqual(code, 0, text)
         self.assertIn("OK Start at logon: Off: Deck Lab starts only with python -m decklab.lib.homenet start", text)
+        self.assertIn("OK Card data: Refreshing: Scryfall's data of 2026-10-01", text)     # E11-S85
         self.assertIn("0 problems, 0 warnings.", text)
+
+    def test_the_disk_lines_are_shown_and_a_low_disk_warns(self):
+        _, text = self.run_status(REAL_FACTS)
+        self.assertIn("OK Disk: Disk: 100.0 GB free of 500.0 GB (20%).", text)
+        self.patch("decklab.lib.homenet.commands.disk_report", return_value=[
+            {"level": "warn", "text": "Disk: only 1.0 GB free of 500.0 GB (0%)."}])
+        with Quiet() as q:
+            homenet.commands.cmd_status("Deck Lab", PORT)
+        text = " ".join(q.out.getvalue().split())
+        self.assertIn("WARN Disk: Disk: only 1.0 GB free of 500.0 GB (0%).", text)
+        self.assertIn("1 problem, 5 warnings.", text)
 
     def test_public_network_and_block_rule(self):
         facts = json.loads(json.dumps(REAL_FACTS))
@@ -938,6 +951,19 @@ class StatusCommandTests(Guarded):
         self.assertEqual(code, 1)
         self.assertIn("PROBLEM Network", text)
         self.assertIn("PROBLEM Firewall: Rule 'pythonw.exe' blocks pythonw.exe", text)
+
+    def test_tunnel_shows_cloudflareds_version(self):
+        # E11-S88: no hostname, so the public address isn't asked; the version is.
+        settings = {"tunnel": {"config": "c.yml"}}
+        self.patch("decklab.lib.config.load", return_value=settings)
+        self.patch("decklab.lib.tunnel.settings_of", return_value={"config": Path("c.yml"), "hostname": ""})
+        version = self.patch("decklab.lib.tunnel.version_check", return_value={
+            "state": "old", "text": "cloudflared 2024.6.1 is from June 2024.",
+            "fix": "Upgrade it: winget upgrade Cloudflare.cloudflared, then python -m decklab.lib.homenet restart."})
+        code, text = self.run_status(REAL_FACTS)
+        version.assert_called_once_with(settings)
+        self.assertIn("WARN Tunnel: cloudflared 2024.6.1 is from June 2024.", text)
+        self.assertIn("winget upgrade Cloudflare.cloudflared", text)
 
     def test_powershell_failed(self):
         facts = {"errors": [], "error": "PowerShell didn't finish within 30 seconds", "seconds": 30.0}
@@ -960,7 +986,7 @@ class PatchTargetTests(unittest.TestCase):
     REPLACED = {
         "commands": ("control", "_schtasks", "_start_task", "find_server", "probe", "local_ipv4", "file_exists",
                      "pythonw_path", "task_user", "pc_name", "this_pythons", "newest_code_mtime", "cmd_status",
-                     "cmd_stop", "cmd_start", "cmd_remove", "time", "uses_systemd"),
+                     "cmd_stop", "cmd_start", "cmd_remove", "time", "uses_systemd", "disk_report"),
         "gather": ("run_powershell", "gather_facts"),
         "linux_facts": ("read_facts",),
         "mdns": ("MDNS_GROUP", "mdns_lookup"),

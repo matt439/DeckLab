@@ -30,6 +30,7 @@ from unittest import mock
 from decklab import tests as test_package
 from decklab.lib import config, forge, goldfish, jobs
 from decklab.lib.forge import cli, slots
+from decklab.tests import library_stand_in
 from decklab.tests import test_forge
 from decklab.tests.test_forge import GREEN, RED, entry, sections
 
@@ -657,9 +658,8 @@ class CommandLineSlotTests(SlotFolder, test_forge.ForgeCase):
         timer.start()
         self.addCleanup(timer.cancel)
         self.fake("delay=0.01")
-        with mock.patch.object(test_forge.decks, "list_decks", return_value=summaries), \
-                mock.patch.object(test_forge.decks, "beginner_box_pairings", return_value=[]), \
-                mock.patch.object(test_forge.decks, "load_deck",
+        library_stand_in.start(self, summaries, module=test_forge.decks)
+        with mock.patch.object(test_forge.decks, "load_deck",
                                   side_effect=lambda deck_id, version: sections(lists[deck_id])):
             code, _, err = self.run_main("play", "casual/green", "casual/red", "--games", "200",
                                          "--results-dir", str(self.results))

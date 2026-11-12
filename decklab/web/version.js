@@ -113,15 +113,18 @@ function reloadDeckLab() {
   window.location.assign(url.href);
 }
 
-/** restart: a home admin may restart Deck Lab from Settings (settings-restart.js), so the box links there. */
-function showVersionWarning(messages, reload = false, database = [], restart = false) {
-  const signature = JSON.stringify([messages, reload, database, restart]);
+/** restart: a home admin may restart Deck Lab from Settings (settings-restart.js), so the box links there.
+ * cardData: the server's one sentence when the card data or the rate stopped refreshing (an admin's only). */
+function showVersionWarning(messages, reload = false, database = [], restart = false, cardData = []) {
+  const signature = JSON.stringify([messages, reload, database, restart, cardData]);
   if (signature === versionWarning) return;
   versionWarning = signature;
   const host = clear($("#build-warning"));
-  host.hidden = !messages.length && !database.length;
+  host.hidden = !messages.length && !database.length && !cardData.length;
   if (database.length) host.append(el("h2", { class: "box-head", text: "Deck Lab's database" }),
     ...database.map((text) => el("p", { text })));
+  if (cardData.length) host.append(el("h2", { class: "box-head", text: "Card data" }),
+    ...cardData.map((text) => el("p", { text })));
   if (!messages.length) return;
   host.append(el("h2", { class: "box-head", text: "Deck Lab version" }),
     ...messages.map((text) => el("p", { text })));
@@ -152,7 +155,8 @@ function renderVersionStatus(s) {
   }
   if (version) version.textContent = view.label;
   showVersionWarning(buildLine ? view.messages : view.forEveryone, view.reload, databaseMessages(s.database),
-    s.build?.restart_required === true && typeof mayRestartServer === "function" && mayRestartServer());
+    s.build?.restart_required === true && typeof mayRestartServer === "function" && mayRestartServer(),
+    cardFreshnessMessages(s.cards));
   const cards = $("#settings-cards");
   const cardWords = s.cards?.ready
     ? `Card data from Scryfall, index built ${(s.cards.built_at || "").slice(0, 10)}` +
@@ -166,6 +170,12 @@ function renderVersionStatus(s) {
   if (pricing && pricing.textContent !== pricingText) pricing.textContent = pricingText;
   const footer = $("#footer-data");
   if (footer) footer.textContent = footerLine(s);
+}
+
+/** E11-S85: the server words the warning (lib/card_freshness.py) and sends it only to a named admin. */
+function cardFreshnessMessages(cards) {
+  const warning = cards?.freshness?.stale === true ? cards.freshness.warning : null;
+  return typeof warning === "string" && warning && warning.length <= 400 ? [warning] : [];
 }
 
 /** Settings' About line about the prices (E11-S53): the currency and the price-check shops, chosen in the Prices

@@ -47,10 +47,15 @@ def shopping_overview():
         answer and on each queued card, each shop's with its own fetch time; left out without any;
       - "baskets": a proposed basket for each snapshot shop (shop_baskets.py, E5-S27): the ready rows in stock
         there with prices and a total, add-ons in stock, and the ready rows no read shop has; left out without any;
+      - "token_addons" beside the baskets: [{name, kind, decks}], the token cards home's built decks make
+        with no card and none on order, never the opponent's only (shopping_token_addons.py, E5-S38);
+        left out when the token reader fails or the card data isn't ready;
       - "decks_missing": the home decks whose planned list still misses cards;
       - "missing_cards": {ready, rows, warnings, errors, totals}, one canonical card
         per row with summed individual deck shortfalls, wanting decks and every matching
         queued intent. An incomplete calculation is explicit, including absent card data.
+      - each queued card the counted home decks miss fewer copies of than are queued (or
+        none at all) gets "queue_need" (shopping_queue_need.py, E5-S37); left out otherwise.
     Pictures remain best effort; purchase/receipt records still show without card data."""
     guard.require_sees_home_records()
     # One inventory snapshot for the records, the product statuses and the payload rows (the HTTP
@@ -94,8 +99,19 @@ def _overview():
     if cards_ready:
         _add_pictures(answer)
         # A trial deck (E3-S39) is a precon not bought: its cards aren't missing from anything.
+        counted = [s for s in summaries if not s.get("trial")]
+        players = {}
         answer["missing_cards"], answer["decks_missing"] = shopping_missing.gather(
-            [s for s in summaries if not s.get("trial")], answer.get("to_buy", []), _card_for, errors=deck_errors)
+            counted, answer.get("to_buy", []), _card_for, errors=deck_errors, players=players)
+        # E5-S37: queued cards no counted home deck misses any more (read-only, proven counts only).
+        from . import shopping_queue_need
+        try:
+            shopping_queue_need.annotate(answer.get("to_buy", []), answer["missing_cards"],
+                                         [s["id"] for s in counted if "target" in s.get("versions", [])],
+                                         players=players)
+        except Exception as error:  # noqa: BLE001 - an optional mark never fails Shopping
+            common._log(f"Shopping queue need: the marks could not be worked out: {error}")
+            _drop_queue_need(answer)
     else:
         answer["decks_missing"] = []
         answer["missing_cards"] = shopping_missing.unavailable(
@@ -105,6 +121,8 @@ def _overview():
     shop_prices.enrich_missing(answer, data=shop_data)
     from . import shop_baskets
     shop_baskets.enrich(answer, data=shop_data)
+    from . import shopping_token_addons
+    shopping_token_addons.enrich(answer, cards_ready=cards_ready)
     return answer
 
 
@@ -241,6 +259,15 @@ def _compact_decks(summaries, *, colors=True):
                 item["colors"] = list(identities[item["id"]])
         out.append(item)
     return out
+
+
+def _drop_queue_need(answer):
+    """Leave every row unmarked after a failed E5-S37 pass (a partial mark proves nothing)."""
+    for row in answer.get("to_buy", []):
+        row.pop("queue_need", None)
+    for row in (answer.get("missing_cards") or {}).get("rows") or ():
+        for copy in row.get("queue") or ():
+            copy.pop("queue_need", None)
 
 
 def _link_decks(queue, summaries):

@@ -407,6 +407,11 @@ dialog.viewer.show-text[open] {
 .viewer-ruling-meta, .viewer-rulings-note { margin: 0; color: var(--on-scrim-2); font-size: var(--fs-sm); }
 .viewer-ruling-text { margin: var(--s-1) 0 0; }
 .viewer-rulings-fold .viewer-rulings-note { margin-top: var(--s-3); }
+/* A card's Game Changer chip and its known two-card combos (E9-S37): the rulings' fold, above the links. */
+.viewer-gc-slot:empty, .viewer-combos-body:empty { display: none; }
+.viewer-gc-slot { margin: var(--s-3) 0 0; }
+.viewer-combos-body { margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px solid var(--viewer-line); }
+.viewer-combo a { min-height: 44px; display: inline-flex; align-items: center; }
 
 /* A wide screen: the card, Previous and Next right either side of it, and the text beside them, the group
    centred. The card's column is as wide as the card can be drawn (the stage's height decides, as .viewer-frame

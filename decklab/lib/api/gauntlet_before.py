@@ -106,15 +106,19 @@ def _lists_of(text):
     return None if text is None else "\n".join(m.group(0) for m in _LISTS.finditer(text))
 
 
-def _earlier(forge, summary, entry):
+def _earlier(forge, summary, entry, dates=None):
     """([(card_sha, sections)] of the deck's earlier lists, newest first, each sha once and never
-    today's; a note or None; True when a bound ended the search)."""
+    today's; a note or None; True when a bound ended the search: MAX_REVISIONS read, or a list
+    after MAX_LISTS). dates, a dict when given, gets {card_sha: when it was saved} for today's list
+    and each one returned: the time of the oldest revision of its newest unbroken run (E3-S50)."""
     try:
         space, kind, slug = decks.split_id(summary["id"])
     except ValueError:
         return [], None, False  # a product's or pairing's list has no saved revisions
     engine_kind = decks.engine_kind(summary)
     seen, out, newer, last, deleted = {entry["card_sha"]}, [], None, None, False
+    run, first = entry["card_sha"], True    # the run's list, and whether it's that list's newest run
+    live = True                             # whether last's lists are run's: an unparsed list ends the run
     try:
         for rev in _revisions(summary["id"]):
             if rev is True:
@@ -129,8 +133,10 @@ def _earlier(forge, summary, entry):
             newer = rev
             lists = _lists_of(rev.text)
             if lists is not None and lists == last:
+                if live and first and dates is not None:
+                    dates[run] = rev.at
                 continue                # the newer revision's lists: the same sha
-            last = lists
+            broken, last, live = not live, lists, False
             sections = _sections(rev, kind, slug, space, entry["version"])
             if sections is None:
                 continue
@@ -138,11 +144,16 @@ def _earlier(forge, summary, entry):
                 sha = forge.card_sha(sections, engine_kind)
             except Exception:
                 continue
-            if sha not in seen:
-                seen.add(sha)
-                out.append((sha, sections))
-                if len(out) >= MAX_LISTS:
+            live = True
+            if sha != run or broken:     # after an unparsed list, even run's own list starts a new run
+                if sha not in seen and len(out) >= MAX_LISTS:
                     return out, None, True
+                run, first = sha, sha not in seen
+                if first:
+                    seen.add(sha)
+                    out.append((sha, sections))
+            if first and dates is not None:
+                dates[sha] = rev.at
     except (inventory.StateError, inventory.Unavailable):
         return out, NO_HISTORY, False
     return out, None, False

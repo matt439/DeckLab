@@ -366,10 +366,13 @@ def _merge_filing_lines(guide):
             lines.append(f"  Deck {deck['id']} ({deck['title']}):")
         else:
             lines.append("  Storage:" if kind == "storage" else "  Destination unknown:")
+        if kind == "storage" and (guide.get("storage_locations") or {}).get("ready") is False:
+            lines.append("    Storage locations aren't available yet: the database needs migration 0016.")
         for item in items[:MAX_FILING_LINES - shown]:
             row = guide["added"][item["row"]]
+            place = _merge_place(guide, row["name"]) if kind == "storage" else ""
             lines.append(f"    {item['quantity']} x {row['name']} "
-                         f"({row['set'].upper()} {row['collector_number']}, {row['finish']})")
+                         f"({row['set'].upper()} {row['collector_number']}, {row['finish']}){place}")
             shown += 1
     total = len(guide["destinations"])
     if shown < total:
@@ -378,6 +381,18 @@ def _merge_filing_lines(guide):
         raise ValueError("Missing filing destinations")
     lines.append("  Based on deck lists at this saved merge. Check as you file; no cards were packed or reserved.")
     return lines
+
+
+def _merge_place(guide, name):
+    """E8-S27: ": usually in Row 2, B", ": no location recorded yet", or "" without the lookup."""
+    found = guide.get("storage_locations")
+    entry = found.get("cards", {}).get(name) if isinstance(found, dict) and found.get("ready") is True else None
+    if not isinstance(entry, dict):
+        return ""
+    if not entry["places"]:
+        return ": no location recorded yet"
+    more = f" and {entry['more']} more" if entry["more"] else ""
+    return f": usually in {'; '.join(entry['places'])}{more}"
 
 
 def _merge_preview(before, after, summary, space, whose):

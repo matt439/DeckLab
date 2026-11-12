@@ -15,6 +15,10 @@ E3-S34: results are never deleted. When the list changed since its last test, it
 (gtBeforeLine, muted), then once re-tested both over the same opponents, an opponent marked Moved only when its two
 ranges don't overlap; saved results an older Forge, other settings, another pilot or a rebuilt catalogue played
 are said plainly (gtOlderLine). Play stays the usual button: nothing plays by itself.
+E3-S49: a Commander deck's choices also offer Same commander (gtSameCommander): every popular deck with the deck's
+own commanders (&commander=same; the server reads them from the deck), or a plain line when there's none.
+E3-S51: the typical turn the list wins in and loses in (median and middle half), overall under the headline (gtClock,
+with what was left out and, for Commander, that the gauntlet isn't a four-player pod) and on each group and opponent.
 Every class this file and gauntlet.css add starts with "gt-"; it also uses the page's shared ones (deck-section,
 segmented, filter-chips, box, btn, sub, empty, more). Uses core.js's helpers, sim-ui.js's winRateFigure and
 rangeBar, matchups.js's runChoiceControl, runsAllowed, metaWords and gamesWords, editor.js's ask() and app.js's
@@ -60,6 +64,7 @@ function gtUrl(ctx) {
   const q = new URLSearchParams({ id: ctx.id, version: ctx.version });
   const c = ctx.choice;
   if (ctx.sample) q.set("sample", ctx.sample);
+  else if (c && c.commander) q.set("commander", "same");
   else if (c) {
     q.set("size", String(c.size));
     if (c.colours) q.set("colours", c.colours);
@@ -142,8 +147,8 @@ function gtDraw(ctx, a) {
     // Results first at every width (E3-S33); from 1,600 px the play box sits to their right.
     played || gtPlaying(a)
       ? el("div", { class: "gt-layout" },
-        played ? el("div", { class: "gt-main" }, gtHeadline(a), gtBeforeLine(a), gtOlderLine(a, { note: true }),
-          gtGroups(ctx, a), gtRows(a)) : null,
+        played ? el("div", { class: "gt-main" }, gtHeadline(a), gtClock(a), gtBeforeLine(a),
+          gtOlderLine(a, { note: true }), gtGroups(ctx, a), gtRows(a)) : null,
         el("div", { class: "gt-side" }, stale ? [gtBeforeLine(a), gtOlderLine(a)] : null, gtPlayBox(ctx, a)))
       // E3-S34: the list changed, or its results are from an older Forge: the old figure muted, then Play as usual.
       : stale ? el("div", { class: "gt-empty gt-stale" }, gtBeforeLine(a), gtOlderLine(a),
@@ -155,7 +160,7 @@ function gtDraw(ctx, a) {
         el("p", { class: "sub", text: `Play ${plural((a.sample || {}).decks || 0, "popular deck")} to see how this ` +
           "list does by colour and by style." }),
         gtPlayBox(ctx, a, { inEmpty: true })),
-    gtCredit(a), gtBuiltLine(a.catalogue), gtScreening(a.catalogue?.screening)]);
+    gtHistory(ctx, a), gtCredit(a), gtBuiltLine(a.catalogue), gtScreening(a.catalogue?.screening)]);
 }
 
 /** The choices the server drew its sample from, as the controls hold them. */
@@ -167,8 +172,10 @@ function gtTiersAsked(c, a) {
 
 function gtChoiceOf(a) {
   const f = (a.sample || {}).filters || {};
-  const size = (a.sample || {}).all ? "all" : (a.sample || {}).size || a.default_size || 20;
-  return { size, colours: f.colours || "",
+  const commander = Array.isArray((a.sample || {}).commander) && (a.sample || {}).commander.length > 0;
+  const size = commander ? a.default_size || 20
+    : (a.sample || {}).all ? "all" : (a.sample || {}).size || a.default_size || 20;
+  return { size, commander, colours: f.colours || "",
     styles: Array.isArray(f.styles) ? [...f.styles] : [], tiers: Array.isArray(f.tiers) ? [...f.tiers] : [] };
 }
 
@@ -221,6 +228,63 @@ function gtHeadline(a, { cls = "gt-headline" } = {}) {
     rangeBar(rate, { axis: true, decorative: true }),
     tally ? el("p", { class: "gt-tally", text: tally }) : null,
     a.played < a.of ? el("p", { class: "gt-small", text: `${a.played} of ${a.of} opponents tested so far.` }) : null);
+}
+
+// ------------------------------------------------------------------ E3-S51: the clock
+
+/** A turn as said: 8, or 8.5 for a median between two. */
+function gtTurn(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); }
+
+/** One side of a clock ({games, median, low, high}): "wins on turn 8 (7–10)", the middle half in brackets; with
+ * fewer games than the server's minimum (median null) its count only, "3 wins, too few for a typical turn". */
+function gtClockSide(side, verb, one, many) {
+  if (!side || !side.games) return null;
+  if (side.median == null) return `${plural(side.games, one, many)}, too few for a typical turn`;
+  const middle = side.low != null && side.high != null && side.low !== side.high
+    ? ` (${gtTurn(side.low)}–${gtTurn(side.high)})` : "";
+  return `${verb} on turn ${gtTurn(side.median)}${middle}`;
+}
+
+/** A clock ({won, lost, left_out}) in words: "Wins on turn 8 (7–10), loses on turn 11 (9–12)"; null without a
+ * game won or lost. */
+function gtClockWords(c) {
+  if (!c) return null;
+  const parts = [gtClockSide(c.won, "wins", "win"), gtClockSide(c.lost, "loses", "loss", "losses")].filter(Boolean);
+  return parts.length ? capitalise(parts.join(", ")) : null;
+}
+
+/** What a clock left out: "Left out: 2 draws, 1 timeout and 3 games without a round count."; null for none. */
+function gtLeftOutWords(c) {
+  const n = (c && c.left_out) || {};
+  const parts = [n.draws ? plural(n.draws, "draw") : null, n.timeouts ? plural(n.timeouts, "timeout") : null,
+    n.errors ? plural(n.errors, "error") : null,
+    n.no_rounds ? `${plural(n.no_rounds, "game")} without a round count` : null].filter(Boolean);
+  if (!parts.length) return null;
+  const last = parts.pop();
+  return `Left out: ${parts.length ? `${parts.join(", ")} and ${last}` : last}.`;
+}
+
+/** A clock's line under a group or an opponent, with what it left out: "Wins on turn 7. Left out: 1 draw.";
+ * null when it has neither. */
+function gtClockLine(c) {
+  const text = [gtClockWords(c), gtLeftOutWords(c)].filter(Boolean).map(t => t.endsWith(".") ? t : `${t}.`);
+  return text.length ? el("span", { class: "gt-small gt-clock-line", text: text.join(" ") }) : null;
+}
+
+/** The overall clock under the headline (E3-S51): the typical turn of games won and of games lost against every
+ * sampled opponent, what it counts (the answer's clock_label: "simulated Forge games, 1v1, turns each" for
+ * Commander), what was left out and, for Commander, that the gauntlet isn't a four-player pod (clock_note). With
+ * every game left out (draws, timeouts, errors) it says no game was won or lost and counts them; null without a
+ * game won, lost or left out. */
+function gtClock(a) {
+  const c = (a.overall || {}).clock;
+  const words = gtClockWords(c), left = gtLeftOutWords(c);
+  if (!words && !left) return null;
+  const about = [words && a.clock_label ? `Median and middle half: ${a.clock_label}.` : null, left];
+  return el("div", { class: "gt-clock" },
+    el("p", { class: "gt-clock-what", text: words ? `${words}.` : "No game was won or lost, so there's no typical turn." }),
+    el("p", { class: "gt-small", text: about.filter(Boolean).join(" ") }),
+    a.clock_note ? el("p", { class: "gt-small", text: a.clock_note }) : null);
 }
 
 // ------------------------------------------------------------------ E3-S34: kept through a change
@@ -301,6 +365,110 @@ function gtOlderLine(a, { note = false } = {}) {
     figure ? gtBeforeBar(o.overall) : null);
 }
 
+// ------------------------------------------------------------------ E3-S50: the figure across saved lists
+
+// A list tested only under keys today's don't find (its older.reason): muted, without a figure.
+const GT_HISTORY_OLDER = { forge: "Tested only with an older Forge, so no figure today.",
+  settings: "Tested only with other Forge settings, so no figure today.",
+  pilot: "Tested only with another AI pilot, so no figure today.",
+  catalogue: "Tested only against popular decks since rebuilt, so no figure today.",
+  unknown: "Forge's version on the PC can't be confirmed now, so no figure." };
+
+/** The standard sample's Earlier lists (GET /api/gauntlet/history, asked for only when Show earlier lists is
+ * pressed, then kept in ctx.history across the view's redraws): today's list, then up to eight earlier lists with
+ * standard-sample results, newest first, each with when it was saved, its figure, range and opponents, and between
+ * neighbours the cards added and taken out and both figures over the opponents both were tested against. Null for
+ * another sample. */
+function gtHistory(ctx, a) {
+  if (!a.is_standard) return null;
+  const box = el("div", { class: "gt-history" });
+  const h = ctx.history;
+  if (!h) {
+    box.append(el("button", { type: "button", class: "btn btn-quiet", text: "Show earlier lists",
+      onclick: () => gtHistoryLoad(ctx) }));
+  } else if (h.loading) {
+    box.append(loadingBox("Loading this deck's earlier lists…", { small: true }));
+  } else if (h.error) {
+    box.append(loadFailed("The earlier lists", h.error, () => gtHistoryLoad(ctx)));
+  } else {
+    add(box, gtHistoryBody(h.answer));
+  }
+  return box;
+}
+
+async function gtHistoryLoad(ctx) {
+  const q = new URLSearchParams({ id: ctx.id, version: ctx.version });
+  if (state.profile) q.set("profile", state.profile.id);
+  const token = ctx.token;
+  ctx.history = { loading: true };
+  const redraw = () => { if (gtHere(ctx) && ctx.token === token && ctx.answer) gtKeepPlace(() => gtDraw(ctx, ctx.answer)); };
+  redraw();
+  try {
+    ctx.history = { answer: await api(`/api/gauntlet/history?${q}`) };
+  } catch (e) {
+    ctx.history = { error: e };
+  }
+  redraw();
+}
+
+function gtHistoryBody(h) {
+  const lists = h.lists || [], steps = h.steps || [];
+  const earlier = lists.filter((r) => !r.current);
+  const out = [el("h3", { text: "Earlier lists" })];
+  if (h.state === "no_catalogue" || !earlier.length) {
+    out.push(el("p", { class: "gt-small", text: "No earlier list of this deck has results against the standard sample." }));
+  } else {
+    out.push(el("p", { class: "gt-small", text: `Each list's figure against the standard sample, newest first ` +
+      `(up to ${h.max_lists || 8} earlier lists). A step compares only the opponents both lists were tested against.` }));
+    const list = el("ol", { class: "gt-history-list" });
+    lists.forEach((row, i) => {
+      list.append(gtHistoryRow(row));
+      if (steps[i]) list.append(gtHistoryStep(steps[i]));
+    });
+    out.push(list);
+  }
+  for (const note of h.notes || []) out.push(el("p", { class: "gt-small gt-history-note", text: note }));
+  return out;
+}
+
+/** One list: "This list" or "Saved 2 Nov", its figure, range and opponents counted (a muted line without a
+ * figure when only older results exist). */
+function gtHistoryRow(row) {
+  const saved = gtWhen(row.saved);
+  const label = row.current ? "This list" : saved ? `Saved ${saved}` : "An earlier list";
+  const figure = row.state === "tested" ? gtFigureWords(row) : null;
+  const tested = gtWhen(row.updated);
+  const words = figure
+    ? `${figure} against ${row.played} of ${plural(row.of || 0, "opponent")}${tested ? `, tested ${tested}` : ""}.`
+    : row.state === "older" ? (GT_HISTORY_OLDER[(row.older || {}).reason] || GT_HISTORY_OLDER.unknown)
+      : "Not tested against the standard sample with today's Forge yet.";
+  return el("li", { class: `gt-history-row${figure ? "" : " gt-muted"}` },
+    el("p", {}, el("strong", { text: `${label}${row.current && saved ? ` (saved ${saved})` : ""}: ` }), ...simNumbers(words)),
+    figure ? gtBeforeBar(row) : null);
+}
+
+/** "1 Sol Ring, 3 Forest" with "and 2 more". */
+function gtCardWords(cards, more) {
+  const words = (cards || []).map(([n, name]) => `${n} ${name}`).join(", ");
+  return more ? `${words} and ${more} more` : words;
+}
+
+/** The step between two neighbouring lists: the cards added and taken out, then both figures over the same
+ * opponents (and how many moved), or why they aren't compared. */
+function gtHistoryStep(step) {
+  const added = gtCardWords(step.added, step.more_added), removed = gtCardWords(step.removed, step.more_removed);
+  const cards = [added ? `Added ${added}` : null, removed ? `Taken out ${removed}` : null].filter(Boolean);
+  const c = step.compare;
+  const then = c && gtFigureWords(c.before), now = c && gtFigureWords(c.now);
+  const compared = then && now
+    ? `Same ${plural(c.same, "opponent")}: ${then} before, ${now} after.` +
+      (c.moved ? ` ${plural(c.moved, "opponent")} moved (the two ranges don't overlap).` : "")
+    : step.uncompared === "no_shared" ? "No opponent tested against both lists, so they aren't compared." : null;
+  return el("li", { class: "gt-history-step" },
+    el("p", { class: "gt-small", text: cards.length ? cards.join(" · ") : "No played card changed." }),
+    compared ? el("p", { class: "gt-small" }, ...simNumbers(compared)) : null);
+}
+
 // ------------------------------------------------------------------ the results
 
 /** One group kind at a time (Colour, Colours, Style or Tier), each group's equal-weight rate over its opponents,
@@ -343,7 +511,8 @@ function gtGroupRow(g) {
     el("span", { class: "gt-barline" },
       rangeBar(rate, { compact: true, muted: thin, decorative: true }),
       el("span", { class: "gt-pct" }, winRateFigure(rate, { what, barred: true }))),
-    el("span", { class: "gt-meta", text: metaWords(plural(g.opponents, "opponent"), gamesWords(g.games), spread, g.note) }));
+    el("span", { class: "gt-meta", text: metaWords(plural(g.opponents, "opponent"), gamesWords(g.games), spread, g.note) }),
+    gtClockLine(g.clock));
 }
 
 /** One row per sampled opponent, hardest first (the server's order: the lowest range first), with where it's from. */
@@ -368,7 +537,7 @@ function gtRows(a) {
           el("span", { text: metaWords(o.verdict ? capitalise(o.verdict) : null, GT_STYLES[o.style] || o.style,
             GT_TIERS[o.tier] || o.tier, gamesWords(o.games), before ? `Before: ${before}` : null, o.problem) }), chips,
           freshnessBadge(o.updated, { size: "row" })),
-        gtSource(o.source));
+        gtClockLine(o.clock), gtSource(o.source));
     })),
     waiting.length ? el("p", { class: "gt-small", text: `Not played yet: ${waiting.slice(0, 12).map((o) => o.title)
       .join(", ")}${waiting.length > 12 ? ` and ${thousands(waiting.length - 12)} more` : ""}.` }) : null];
@@ -430,7 +599,8 @@ function gtPlayBox(ctx, a, { inEmpty = false } = {}) {
   showTime();
   add(box, [inEmpty ? null : el("h3", { text: "Play popular decks" }),
     gtChoices(ctx, a), choice.node,
-    none ? el("p", { class: "gt-small", text: "No popular deck matches these choices: choose fewer." }) : time,
+    none ? el("p", { class: "gt-small", text: ctx.choice && ctx.choice.commander ? GT_NO_SAME
+      : "No popular deck matches these choices: choose fewer." }) : time,
     ready ? null : el("p", { class: "gt-small", text: (a.forge && a.forge.problem) || "Forge isn't ready on the PC." }),
     el("div", { class: "actions" }, el("button", { type: "button", class: "btn", text: "Play them",
       disabled: !ready || !state.profile || none, "data-run": true, onclick: () => gtPlay(ctx) }))]);
@@ -443,7 +613,9 @@ function gtChoices(ctx, a) {
   const c = ctx.choice, opts = a.options || {};
   const pick = (change) => { change(); Object.assign(ctx, { sample: null, lost: false }); gtRefresh(ctx); };
   const toggle = (list, value) => (list.includes(value) ? list.filter((x) => x !== value) : [...list, value].sort());
-  const details = el("details", { class: "more gt-choices" }, el("summary", { text: gtChoiceWords(c, a) }),
+  const same = gtSameCommander(c, a, pick);
+  // Same commander (E3-S49) takes no size, colours, styles or tiers: only its own choice shows then.
+  const sampled = c.commander ? [] : [
     gtSegmented("Opponents", (opts.sizes || []).map((n) => [n, n === "all" ? "All" : String(n)]), c.size,
       (n) => pick(() => { c.size = n; })),
     c.size === "all" ? el("p", { class: "gt-small", text: "All: every playable deck of the chosen tiers, colours " +
@@ -453,14 +625,41 @@ function gtChoices(ctx, a) {
     gtChips("Styles", (opts.styles || []).map((x) => [x, GT_STYLES[x] || x]), c.styles,
       (x) => pick(() => { c.styles = toggle(c.styles, x); })),
     gtChips("Tiers", (opts.tiers || []).map((x) => [x, GT_TIERS[x] || x]), c.tiers,
-      (x) => pick(() => { c.tiers = toggle(c.tiers, x); })));
+      (x) => pick(() => { c.tiers = toggle(c.tiers, x); }))];
+  const details = el("details", { class: "more gt-choices" }, el("summary", { text: gtChoiceWords(c, a) }),
+    ...sampled, ...same);
   details.open = ctx.open;
   details.addEventListener("toggle", () => { ctx.open = details.open; });
   return details;
 }
 
-/** "12 opponents · Core · any colours · any style". */
+const GT_NO_SAME = "The popular decks list has no other deck with this deck's commander, so there's nothing to play.";
+
+/** E3-S49: a Commander deck's "Same commander" choice (options.same_commander: the deck's commanders and how many
+ * playable popular decks share them): every one of them, core, upgraded and precon alike, instead of a sample. With
+ * none it says so and can't be chosen. [] for a 60-card deck. Chosen, it replaces the sample's own choices. */
+function gtSameCommander(c, a, pick) {
+  const same = ((a || {}).options || {}).same_commander;
+  if (!same) return [];
+  const n = Number(same.decks) || 0;
+  const names = (same.commanders || []).join(" and ");
+  const id = "gt-label-which";
+  const button = (on, title, disabled = false) => el("button", { type: "button", text: title, disabled,
+    "aria-pressed": String(!!c.commander === on),
+    onclick: () => { if (!!c.commander !== on) pick(() => { c.commander = on; }); } });
+  return [el("div", { class: "gt-control gt-which" }, el("span", { class: "games-label", id, text: "Which decks" }),
+    el("div", { class: "segmented", role: "group", "aria-labelledby": id },
+      button(false, "A balanced sample"), button(true, "Same commander", !n && !c.commander))),
+  el("p", { class: "gt-small gt-same-note", text: n
+    ? `Same commander: all ${plural(n, "popular deck")} with ${names} as commander (EDHREC's core and upgraded ` +
+      "average decks and Wizards precons the list has), to see whether this take plays better than the common one. " +
+      "They're sparring partners, not advice."
+    : `The popular decks list has no other deck with ${names} as commander.` })];
+}
+
+/** "12 opponents · Core · any colours · any style", or "3 opponents · same commander". */
 function gtChoiceWords(c, a) {
+  if (c.commander) return metaWords(plural((a.sample || {}).decks || 0, "opponent"), "same commander");
   const colours = c.colours ? [...c.colours].map((x) => COLOUR_WORDS[x]).join(", ") : "any colours";
   const styles = c.styles.length ? c.styles.map((x) => GT_STYLES[x] || x).join(", ") : "any style";
   const tiers = c.tiers.length ? c.tiers.map((x) => GT_TIERS[x] || x).join(", ") : "every tier";
@@ -572,7 +771,8 @@ async function gtWrite(ctx, path, body) {
 function gtPlay(ctx) {
   const a = ctx.answer || {}, c = ctx.choice || gtChoiceOf(a);
   // A saved sample the address names plays by its id: the same decks, even if today's catalogue would draw others.
-  const body = ctx.sample ? { budget: ctx.budget, sample: ctx.sample } : { budget: ctx.budget, size: c.size,
+  const body = ctx.sample ? { budget: ctx.budget, sample: ctx.sample }
+    : c.commander ? { budget: ctx.budget, commander: "same" } : { budget: ctx.budget, size: c.size,
     colours: c.colours, styles: c.styles.join(","), tiers: gtTiersAsked(c, a).join(",") };
   if (a.deck && a.deck.card_sha) body.expected_card_sha = a.deck.card_sha;
   return gtWrite(ctx, "/api/gauntlet/run", body);

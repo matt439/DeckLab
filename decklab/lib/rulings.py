@@ -30,7 +30,7 @@ import threading
 import zlib
 from datetime import datetime
 
-from decklab.lib import card_index, cards
+from decklab.lib import card_index, cards, source_health
 
 KIND = "rulings"            # Scryfall's bulk type, and its key in cards.BULK_META_FILE
 FORMAT = 1                  # rulings.json.gz's layout; a file of another one counts as missing
@@ -127,6 +127,7 @@ def update(force=False, log=print):
     try:
         listing = {entry["type"]: entry for entry in cards._get_json(cards.BULK_LIST_URL)["data"]}
     except cards.NETWORK_ERRORS + (KeyError, TypeError) as e:
+        source_health.record("rulings", False)
         log(f"{KIND}: couldn't reach Scryfall ({e}); keeping the rulings on the PC.")
         return False
     entry = listing.get(KIND) or {}
@@ -137,10 +138,12 @@ def update(force=False, log=print):
         old["downloaded_at"] = now      # Scryfall hasn't published anything newer: restart the clock
         meta[KIND] = old
         cards._write_json(cards.BULK_META_FILE, meta)
+        source_health.record("rulings", True)
         log(f"{KIND}: unchanged on Scryfall since {entry['updated_at'][:10]}")
         return False
     uri = entry.get("jsonl_download_uri") or entry.get("download_uri")
     if not uri or not entry.get("updated_at"):
+        source_health.record("rulings", False)
         log(f"{KIND}: {cards.BULK_LIST_URL} doesn't list a rulings file; keeping the rulings on the PC.")
         return False
     download = _download_path()
@@ -150,6 +153,7 @@ def update(force=False, log=print):
         by_card = reduce(download)
         _write(by_card, entry["updated_at"], index_path())
     except cards.NETWORK_ERRORS + READ_ERRORS as e:
+        source_health.record("rulings", False)
         log(f"{KIND}: not updated ({type(e).__name__}: {e}); keeping the rulings on the PC.")
         return False
     finally:
@@ -157,6 +161,7 @@ def update(force=False, log=print):
     meta = cards._read_json(cards.BULK_META_FILE, {})     # the card files' own steps may have written it
     meta[KIND] = {"updated_at": entry["updated_at"], "uri": uri, "downloaded_at": now}
     cards._write_json(cards.BULK_META_FILE, meta)
+    source_health.record("rulings", True)
     log(f"  rulings for {len(by_card):,} cards")
     return True
 

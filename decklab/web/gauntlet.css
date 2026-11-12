@@ -58,6 +58,11 @@ empty state keep to the widths of the matchup controls (.mu-run-buttons, .card-g
 .gt-headline, .gt-headline-panel { display: grid; gap: var(--s-2); min-width: 0; max-width: 46rem; }
 .gt-headline > p, .gt-headline-panel > p { margin: 0; }
 .gt-headline-what { font-size: var(--fs-md); }
+
+/* E3-S51: the typical turn of games won and lost, under the headline and on each group and opponent. */
+.gt-clock { display: grid; gap: var(--s-1); min-width: 0; max-width: 46rem; }
+.gt-clock > p { margin: 0; }
+.gt-clock-what { font-size: var(--fs-md); }
 .gt-figure { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); min-width: 0; }
 .gt-tally { font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
 .gt-standard { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--s-1); }
@@ -74,6 +79,15 @@ muted range bar (no band). */
   max-width: 30rem; }
 .gt-stale { display: grid; gap: var(--s-2); }
 .gt-stale > .sub { margin: 0; }
+
+/* E3-S50: the figure across the list's saved versions, a short timeline with the step between each two. */
+.gt-history { display: grid; gap: var(--s-2); min-width: 0; max-width: 46rem; margin-top: var(--s-3); }
+.gt-history > h3 { margin: 0; }
+.gt-history-list { display: grid; gap: var(--s-2); margin: 0; padding: 0; list-style: none; }
+.gt-history-row { display: grid; gap: var(--s-1); min-width: 0; }
+.gt-history-row > p { margin: 0; overflow-wrap: anywhere; }
+.gt-history-step { display: grid; gap: var(--s-1); min-width: 0; padding-left: var(--s-3);
+  border-left: 2px solid var(--border); }
 
 @media (min-width: 1000px) {
   .gt-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }

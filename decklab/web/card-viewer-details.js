@@ -1,4 +1,5 @@
-/* Public references, independently guarded own copies, and card addresses over the current page. */
+/* Public references, a Game Changer chip and known two-card combos (E9-S37), independently guarded own copies,
+   and card addresses over the current page. */
 "use strict";
 
 let cardAddressUnderlay = null;
@@ -96,4 +97,75 @@ async function showCardAddress(params, token) {
     openCardViewer([{ name: params.get("name") || "Card", no_image: "This card couldn't be opened. Close and open the link again to retry.",
       oracle_text: "This card couldn't be opened from the current card data." }], 0, { address: { profile, hash, base: underlay } });
   }
+}
+
+// ------------------------------------------------- Game Changer and combos (E9-S37)
+
+const viewerCombos = new Map(); // card name -> the promise of its combos' answer, for one opening of the page
+const VIEWER_COMBO_URL = /^https:\/\/commanderspellbook\.com\/combo\/[A-Za-z0-9-]+\/$/;
+const VIEWER_COMBO_SOURCE = /^https:\/\/commanderspellbook\.com\/$/;
+
+function viewerGameChangerChip() {
+  return el("span", { class: "chip chip-outline chip-gc viewer-gc", text: "Game Changer",
+    title: "Scryfall flags this card as a Commander Game Changer" });
+}
+/** A card's Game Changer chip and its known two-card combos (E9-S37: a commander across the table), public card
+ * data from the PC (GET /api/cards/combos): no deck, space or network fetch. The chip shows at once from the card's
+ * own flag, else when the answer says so; the combos are a fold, its count in its summary. Each name is asked
+ * once an opening of the page (a failure is asked again next time). */
+function viewerCombosPart(card) {
+  const name = card && card.name;
+  const slot = el("div", { class: "viewer-gc-slot" }, card && card.game_changer === true ? viewerGameChangerChip() : null);
+  const body = el("div", { class: "viewer-combos-body" });
+  const box = el("div", { class: "viewer-combos" }, slot, body);
+  if (!name) return box;
+  let answer = viewerCombos.get(name);
+  if (!answer) {
+    answer = api(`/api/cards/combos?${new URLSearchParams({ name })}`).catch((error) => {
+      viewerCombos.delete(name);
+      return { error };
+    });
+    viewerCombos.set(name, answer);
+  }
+  answer.then((data) => {
+    if (!box.isConnected || !data || typeof data !== "object") return;
+    if (data.game_changer === true && !slot.children.length) slot.append(viewerGameChangerChip());
+    add(clear(body), [viewerCombosParts(data)]);
+  });
+  return box;
+}
+/** The words for viewerCombosPart's answer (or {error}): a list that couldn't be read says combos weren't checked,
+ * never that there are none. */
+function viewerCombosParts(data) {
+  const note = (text) => el("p", { class: "viewer-rulings-note", text });
+  if (data.error) return data.error.status === 404 ? null : note("Combos couldn't load. Open the card again to retry.");
+  if (data.checked !== true || !Array.isArray(data.combos)) {
+    return note(data.checked === false && typeof data.reason === "string" && data.reason
+      ? data.reason : "Combos weren't checked.");
+  }
+  const list = data.combos;
+  const total = Number.isInteger(data.total) && data.total >= list.length ? data.total : list.length;
+  const floor = (n) => (Number.isInteger(n) && n > 1 ? `Bracket ${n} or higher` : "Any bracket");
+  const piece = (p, i) => [i ? " and " : "", String((p && p.name) || "Unknown card"),
+    p && p.must_be_commander === true ? " (must be the commander)" : ""];
+  const credit = el("p", { class: "viewer-rulings-note" }, "From ",
+    VIEWER_COMBO_SOURCE.test(data.source_url || "")
+      ? el("a", { href: data.source_url, target: "_blank", rel: "noopener noreferrer",
+        text: data.credit || "Commander Spellbook's combo list" })
+      : data.credit || "Commander Spellbook's combo list",
+    data.date ? `, its list of ${data.date}` : "", ".");
+  return el("details", { class: "viewer-rulings-fold viewer-combos-fold" },
+    el("summary", {}, `Known two-card combos with this card (${total})`),
+    list.length ? el("ol", { class: "viewer-rulings-list" }, list.map((c) => el("li", { class: "viewer-ruling viewer-combo" },
+      el("p", { class: "viewer-ruling-text" }, "With ", (Array.isArray(c.others) ? c.others : []).map(piece),
+        c.must_be_commander === true ? "; this card must be the commander" : ""),
+      el("p", { class: "viewer-ruling-meta", text: [
+        ...(Array.isArray(c.results) ? c.results.map(String) : []),
+        Number.isInteger(c.more_results) && c.more_results > 0 ? `${c.more_results} more` : null,
+        c.standalone === false ? "needs a payoff" : null, floor(c.bracket_floor)].filter(Boolean).join(" · ") }),
+      VIEWER_COMBO_URL.test(c.url || "")
+        ? el("a", { href: c.url, target: "_blank", rel: "noopener noreferrer", text: "Open on Commander Spellbook" }) : null)))
+      : note("None in the list."),
+    list.length < total ? note(`The ${list.length} most serious shown, of ${total}.`) : null,
+    credit);
 }

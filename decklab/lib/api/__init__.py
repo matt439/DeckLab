@@ -136,6 +136,7 @@ called as before (from decklab.lib import api; api.<name>). Each part:
     card_lookup.py   card and line JSON, which printing, search(), printings(), image_file();
                      _pool_counts, the copies the viewer may see (home's, or their own space's)
     card_rulings.py  GET /api/cards/rulings: a card's Scryfall rulings for the card viewer (E1-S25)
+    card_combos.py   GET /api/cards/combos: a card's Game Changer flag and two-card combos for the card viewer (E9-S37)
     card_decks.py    GET /api/cards/decks: one card's decks and free copies in a space, for the card viewer (E1-S29)
     deck_page.py     decks_index(), deck_view() (the space's inventory only for those who may
                      see it)
@@ -229,6 +230,9 @@ called as before (from decklab.lib import api; api.<name>). Each part:
                      save_game(), save_sideboard(). Imported when first asked, as tokens.py
     play_tonight.py  tonight's pairs (E1-S28): pairs_view(), GET /api/play/pairs, over
                      lib/play_pairs.py's suggest(). Imported when first asked, as tokens.py
+    commander_lineup.py  a Commander night line-up (E9-S34): lineup_view(), GET
+                     /api/commander-night/lineup, over lib/commander_lineup.py's lineup(). Imported
+                     when first asked, as tokens.py
     activity.py      the Activity page: activity_view(), the audit trail filtered for each
                      viewer (visible_change). Imported when first asked, as tokens.py. Its rows'
                      words are activity_summaries.py's, its headlines activity_headlines.py's

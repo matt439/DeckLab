@@ -215,16 +215,20 @@ class HeartbeatTests(unittest.TestCase):
                 mock.patch.object(check, "run", step("check")), \
                 mock.patch.object(nightly, "_restore_check_if_due", step("restore check")), \
                 mock.patch.object(nightly, "_shop_prices", step("shop prices")), \
+                mock.patch.object(nightly, "_disk_space", return_value=False), \
                 mock.patch.object(db, "log"), mock.patch.object(health, "heartbeat_steps", return_value={"shop_mtgmate": False}), \
+                mock.patch.object(nightly, "_card_data", return_value=True), \
                 mock.patch.object(alerts, "notify", return_value=False) as notify:
             self.assertEqual(nightly._run(), 1)
         self.assertEqual(ran, ["backup", "prune", "visits", "export", "check", "restore check", "shop prices"])
         self.assertEqual(notify.call_args.args[0], {**dict.fromkeys(ran, True), "backup": False,
-                                                  "shop_mtgmate": False, "nightly": False})
+                                                  "shop_mtgmate": False, "card data": True, "disk space": False, "nightly": False})
 
     def test_shop_failures_remain_separate_from_successful_database_nightly(self):
         with mock.patch.object(nightly, "_step", return_value=True), mock.patch.object(db, "log"), \
+                mock.patch.object(nightly, "_disk_space", return_value=True), \
                 mock.patch.object(health, "heartbeat_steps", return_value={"shop_mtgmate": False}), \
+                mock.patch.object(nightly, "_card_data", return_value=True), \
                 mock.patch.object(alerts, "notify") as notify:
             self.assertEqual(nightly._run(), 0)
         self.assertTrue(notify.call_args.args[0]["nightly"])

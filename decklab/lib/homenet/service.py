@@ -39,7 +39,7 @@ from decklab.lib import access, config, systemd, tunnel
 
 from . import commands, linux_facts, linux_power, profile_config
 from . import mdns as multicast
-from .checks import (check_addresses, check_firewall_linux, check_network, exit_code, format_report,
+from .checks import (card_data_lines, check_addresses, check_firewall_linux, check_network, exit_code, format_report,
                      lan_of)
 from .common import (OK, PROBE_TIMEOUT, PROBLEM, SERVER_SCRIPT, START_WAIT, TASK_NAME, WARN, WATCHDOG_GIVE_UP,
                      WATCHDOG_STABLE, _int, line, log, loopback, say)
@@ -475,8 +475,11 @@ def status(name, port):
     jobs = {"answer": lambda: commands.probe(port, commands._probe_host(mine)),
             "mdns": lambda: multicast.mdns_lookup(f"{hostname}.local", commands.local_ipv4())}
     jobs["power"] = lambda: _power_lines(settings)
+    jobs["disk"] = lambda: commands.disk_report(settings)
     if public:
         jobs["public"] = lambda: tunnel.check_public(public)
+    if public is not None:
+        jobs["cloudflared"] = lambda: tunnel.version_check(settings)
     if access_port:
         jobs["listener"] = lambda: tunnel.check_listener(access_port, public, PROBE_TIMEOUT)
     helpers = [threading.Thread(target=lambda k=k, job=job: found.update({k: job()}), daemon=True)
@@ -503,7 +506,10 @@ def status(name, port):
     lines += addresses
     lines += found.get("power") or [line(WARN, "Sleep", "Couldn't check sleep and wake: the check didn't finish.")]
     lines += commands.check_tunnel(settings, found.get("public"), tunnel.ingress_problems(settings, port),
-                                   found.get("listener"), tunnel.credentials_problem(settings))
+                                   found.get("listener"), tunnel.credentials_problem(settings),
+                                   found.get("cloudflared"))
+    lines += card_data_lines()
+    lines += commands.check_disk(found.get("disk"))
     header = f"Deck Lab status, {datetime.now().strftime('%Y-%m-%d %H:%M')} (port {port})"
     shown = any(entry["level"] == OK and "http://" in entry["text"] for entry in addresses)
     footer = ("These checks run on this computer, so they can't prove a phone gets through: the real test "

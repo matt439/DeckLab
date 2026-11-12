@@ -41,7 +41,15 @@ dashboard; nothing in this repo can open the page to the internet without it.
 homenet status checks that the address answers with Access's login and not
 with Deck Lab (check_public), that cloudflared's config sends it to the
 tunnel's listener (ingress_problems), and that the listener refuses a visit
-with no login (check_listener)."""
+with no login (check_listener).
+
+cloudflared runs with --no-autoupdate, so it never updates itself, and Cloudflare supports only
+versions within SUPPORT_DAYS of its newest release (E11-S88). version_check asks the installed
+cloudflared for its version (cloudflared_version, parse_version) and judges its age against that
+limit (judge_version); homenet status shows the answer and warns, with the platform's upgrade
+command (upgrade_hint), and the smoke test notes it, never failing for it. The limit is a reviewed
+fact (lib/stats/reviewed.py's "cloudflared-support"): change SUPPORT_POLICY_CHECKED when it's
+compared with Cloudflare's page again."""
 import http.client
 import ipaddress
 import os
@@ -49,9 +57,11 @@ import re
 import shutil
 import socket
 import ssl
+import subprocess
 import sys
 import threading
 import urllib.parse
+from datetime import date
 from pathlib import Path
 
 from decklab.lib import access
@@ -64,6 +74,17 @@ INSTALL_PLACES = (r"C:\Program Files (x86)\cloudflared\cloudflared.exe",
 POSIX_INSTALL_PLACES = ("/usr/bin/cloudflared", "/usr/local/bin/cloudflared", "~/.local/bin/cloudflared",
                         "/snap/bin/cloudflared", "/opt/cloudflared/cloudflared")
 WINDOWS_HINT = "winget install Cloudflare.cloudflared"
+# Cloudflare's support policy for cloudflared, from SUPPORT_SOURCE (the "Updates" part of its downloads
+# page), as read on SUPPORT_POLICY_CHECKED: "Cloudflare supports versions of cloudflared that are within
+# one year of the most recent release." The newest release isn't known without a fetch, so a version's
+# build date is judged against today, which warns early by at most the time since Cloudflare's newest
+# release (a version without a build date is dated from the first of its month, up to a month earlier
+# still). Proposed until Matt confirms it.
+SUPPORT_DAYS = 365
+SUPPORT_POLICY_CHECKED = "2026-11-12"
+SUPPORT_SOURCE = "https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/"
+VERSION_TIMEOUT = 10        # seconds for `cloudflared --version`
+_SPAWN = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
 POSIX_HINT = ("install Cloudflare's cloudflared package (pkg.cloudflare.com), or set \"cloudflared\" in "
               "config.json to its path")
 
@@ -271,6 +292,104 @@ def find_cloudflared(settings=None):
         if path and Path(path).is_file():
             return Path(path)
     return None
+
+
+# "cloudflared version 2025.8.1 (built 2025-08-21-1528 UTC)", the same on Windows (cloudflared.exe)
+# and Linux; a release is numbered by the year and month it was made in.
+_VERSION_RE = re.compile(r"\bcloudflared(?:\.exe)?\s+version\s+(\d{4})\.(\d{1,2})\.(\d{1,4})\b"
+                         r"(?:[^\n(]*\(built\s+(\d{4}-\d{2}-\d{2}))?", re.I)
+
+
+def parse_version(text):
+    """`cloudflared --version`'s output as {"version": "2025.8.1", "released": date (the build date, or
+    the first of the version's month without a readable one), "built": "2025-08-21" or None}, or None
+    when it can't be read (a DEV build, an error, nothing)."""
+    match = _VERSION_RE.search(text or "")
+    if not match:
+        return None
+    year, month, patch = (int(part) for part in match.group(1, 2, 3))
+    if not 1 <= month <= 12:
+        return None
+    built = match.group(4)
+    try:
+        released = date.fromisoformat(built) if built else None
+    except ValueError:
+        built = released = None
+    return {"version": f"{year}.{month}.{patch}", "released": released or date(year, month, 1), "built": built}
+
+
+def cloudflared_version(program, run=None, timeout=VERSION_TIMEOUT):
+    """Ask cloudflared at program for its version: ("ok", parse_version's dict) or ("unknown", why).
+    run is subprocess.run (tests pass their own); a timeout, a failure to start or output that can't
+    be read is unknown, never raised."""
+    run = run or subprocess.run
+    try:
+        proc = run([str(program), "--version"], capture_output=True, text=True, encoding="utf-8",
+                   errors="replace", timeout=timeout, stdin=subprocess.DEVNULL, **_SPAWN)
+    except subprocess.TimeoutExpired:
+        return "unknown", f"it didn't answer within {timeout} seconds"
+    except OSError as e:
+        return "unknown", f"it couldn't be run ({e})"
+    found = parse_version(f"{proc.stdout or ''}\n{proc.stderr or ''}")
+    if found is None:
+        return "unknown", ("its answer couldn't be read" if proc.returncode == 0
+                           else f"it exited with code {proc.returncode}")
+    return "ok", found
+
+
+def upgrade_hint(program, platform=None):
+    """How to upgrade cloudflared at program on this system, then restart Deck Lab."""
+    platform = platform or sys.platform
+    path = str(program or "").replace("\\", "/")
+    if platform == "win32":
+        how = "winget upgrade Cloudflare.cloudflared (or install the newest .msi from Cloudflare's downloads page)"
+    elif platform == "darwin":
+        how = "brew upgrade cloudflared"
+    elif path.startswith("/snap/"):
+        how = "sudo snap refresh cloudflared"
+    elif path in ("/usr/bin/cloudflared", "/bin/cloudflared"):
+        how = ("sudo apt-get update && sudo apt-get install --only-upgrade cloudflared (Cloudflare's package, "
+               "pkg.cloudflare.com)")
+    else:
+        how = (f"replace {path or 'cloudflared'} with the newest release from "
+               "github.com/cloudflare/cloudflared/releases")
+    return f"Upgrade it: {how}, then python -m decklab.lib.homenet restart."
+
+
+def judge_version(answer, today, program=None, platform=None):
+    """cloudflared_version's answer judged on `today` (a date) against SUPPORT_DAYS: {"state": "current",
+    "old" or "unknown", "version", "age_days", "limit_days", "text", "fix" (the upgrade command, for an
+    old one, else None)}. Its age runs from parse_version's "released" (the build date when it has one); a
+    version dated after today (a wrong clock) is current."""
+    kind, found = answer
+    where = f" (at {program})" if program else ""
+    if kind != "ok":
+        return {"state": "unknown", "version": None, "age_days": None, "limit_days": SUPPORT_DAYS,
+                "text": f"cloudflared's version is unknown{where}: {found}.", "fix": None}
+    age = (today - found["released"]).days
+    if age > SUPPORT_DAYS:
+        when = (f"was built on {found['built']}" if found["built"] else f"is from {found['released']:%B %Y}")
+        return {"state": "old", "version": found["version"], "age_days": age, "limit_days": SUPPORT_DAYS,
+                "text": (f"cloudflared {found['version']}{where} {when}, more than {SUPPORT_DAYS} days ago: "
+                         f"Cloudflare supports only versions within a year of its newest release, and this one never updates itself (--no-autoupdate), so the tunnel "
+                         f"may stop when Cloudflare drops it."),
+                "fix": upgrade_hint(program, platform)}
+    facts = [f"at {program}"] * bool(program) + [f"built {found['built']}"] * bool(found["built"])
+    where = f" ({'; '.join(facts)})" if facts else ""
+    return {"state": "current", "version": found["version"], "age_days": max(age, 0), "limit_days": SUPPORT_DAYS,
+            "text": f"cloudflared {found['version']}{where}, within Cloudflare's {SUPPORT_DAYS}-day support.",
+            "fix": None}
+
+
+def version_check(settings, today=None, run=None, platform=None):
+    """judge_version for the cloudflared config.json's tunnel uses, or None with no tunnel set up or
+    no cloudflared found (nothing to show)."""
+    if settings_of(settings) is None:
+        return None
+    program = find_cloudflared(settings)
+    if program is None:
+        return None
+    return judge_version(cloudflared_version(program, run), today or date.today(), program, platform)
 
 
 def top_level(text, key):

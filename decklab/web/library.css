@@ -46,6 +46,12 @@
 .lib-tables > .stale-part { margin-top: 0; padding-top: 0; border-top: 0; }
 .lib-tables h2 { margin-top: 0; }
 .lib-tables .sources-list li { overflow-wrap: anywhere; }
+/* Game Changer and ban changes (library-official.js, E9-S36): a quiet box, its cards a plain list. */
+.lib-official { margin: var(--s-2) 0; }
+.lib-official summary h2 { display: inline; margin: 0; font-size: inherit; }
+.lib-official-cards { margin: var(--s-2) 0 0; padding-left: var(--s-4); }
+.lib-official-card p { margin: var(--s-1) 0; overflow-wrap: anywhere; }
+.lib-official .sources-list li { overflow-wrap: anywhere; }
 
 /* While choosing deck pictures: the decks that can change get an accent outline and a "Change picture"
    badge on their banner; the others are dimmed. */

@@ -5,7 +5,9 @@
  * long-term and waiting rows in stock there are add-ons, those that reach the free-postage threshold
  * marked. The fewest-shops plan comes first (shopping-plan.js). A shop that couldn't be read, or a row
  * it didn't check, claims no stock. Copy this shop's list (E5-S24's copy) copies exactly the basket's
- * rows. Read only: nothing here changes the queue, records an order or stores a price. */
+ * rows. Each read basket also has a collapsed note of the token cards the built decks make but have none of
+ * (E5-S38, "token_addons"), names only, with Copy names. Read only: nothing here changes the queue, records an
+ * order or stores a price. */
 "use strict";
 
 const SHOP_BASKET_WORDS = {
@@ -160,6 +162,61 @@ function shopBasketReach(basket) {
     text: `Adding the add-ons marked Reaches free postage (${total}) gets this order free postage${flat ? `, saving ${flat}` : ""}. They're on the queue already, so only bring them forward if you want them now.`});
 }
 
+/** The token add-ons (E5-S38): GET /api/shopping's "token_addons", checked, or [] (left out, or a viewer outside home's records). */
+function shopTokenAddons(view) {
+  const list = view?.data?.token_addons;
+  if (!Array.isArray(list) || !seesHomeInventory(state.may)) return [];
+  return list.filter(item => item && typeof item.name === "string" && item.name.trim()
+    && !/[\u0000-\u001f\u007f]/.test(item.name) && Number.isSafeInteger(item.decks) && item.decks > 0);
+}
+
+/** The token names as copy text, one a line. */
+function shopTokenAddonsText(view) {
+  const names = shopTokenAddons(view).map(item => item.name.trim());
+  return names.length ? names.join("\n") + "\n" : "";
+}
+
+/** Copy names: the clipboard, else a sheet to select them in. Read only: nothing is queued or added to an order. */
+async function shopCopyTokenAddons(view, button) {
+  const text = shopTokenAddonsText(view);
+  if (!text || !button?.isConnected || button.disabled) return;
+  const count = text.trim().split("\n").length;
+  button.disabled = true;
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+    await navigator.clipboard.writeText(text);
+    toast(`${plural(count, "token name")} copied.`);
+  } catch (error) {
+    if (!button.isConnected) return;
+    const sheet = shopTrackQueueSheet(openSheet({title: "Copy token card names",
+      onClose: () => { if (button.isConnected) button.focus({preventScroll: true}); }}), view);
+    const area = el("textarea", {readonly: "", rows: Math.min(12, count + 1), class: "export-copy shop-copy-text",
+      "aria-label": "Token card names", spellcheck: "false"});
+    area.value = text;
+    sheet.body.append(el("p", {text: "Select and copy the names below."}), area);
+    sheetActions(sheet, [{text: "Close", onclick: () => sheet.close()}]);
+    area.focus(); area.select();
+  } finally {
+    if (button.isConnected) button.disabled = false;
+  }
+}
+
+/** A basket's collapsed note of the token cards the built decks make but have none of: names and how many decks
+ * want each, never a price or stock (tokens aren't looked up at shops), with Copy names. Null when there are none. */
+function shopBasketTokenAddons(view, basket) {
+  const list = shopTokenAddons(view);
+  if (!list.length) return null;
+  return el("details", {class: "shop-basket-tokens", "data-basket-tokens": basket.key},
+    el("summary", {text: `Token cards your decks make but you don't have (not checked at this shop) (${list.length})`}),
+    el("p", {class: "sub", text: "Suggestions to look for here, not requirements: nothing is queued or added to this order, and no price or stock is claimed."}),
+    el("ul", {class: "shop-basket-gaps"}, list.map(item => el("li", {"data-token-addon": item.name},
+      el("strong", {text: item.name}),
+      el("span", {text: `${item.kind && item.kind !== "token" ? `${item.kind}; ` : ""}wanted by ${plural(item.decks, "built deck")}`})))),
+    el("button", {type: "button", class: "btn btn-quiet shop-basket-token-copy", text: "Copy names",
+      "aria-label": `Copy the token card names for ${basket.shop}`,
+      onclick: event => shopCopyTokenAddons(view, event.currentTarget)}));
+}
+
 function shopBasket(view, basket) {
   const head = el("div", {class: "shop-basket-head"}, el("h3", {text: basket.shop}), shopSnapshotWhen(basket.fetched_at));
   if (!basket.read) return el("article", {class: "shop-basket", "data-basket": basket.key, "data-basket-read": "false"}, head,
@@ -179,7 +236,8 @@ function shopBasket(view, basket) {
     addOns.length ? el("div", {class: "shop-basket-addons"}, el("h4", {text: "Add-ons in stock here"}),
       el("p", {class: "sub", text: "Long-term and waiting rows this shop has, to add to the same order if you choose."}),
       shopBasketTotal(basket.add_ons_totals || {}, "Add-ons"), rows.length ? shopBasketReach(basket) : null,
-      el("ul", {class: "shop-basket-rows"}, addOns.map(row => shopBasketLine(row, basket, view)))) : null);
+      el("ul", {class: "shop-basket-rows"}, addOns.map(row => shopBasketLine(row, basket, view)))) : null,
+    shopBasketTokenAddons(view, basket));
 }
 
 /** The ready rows no checked shop has in stock, with each shop's reason. */

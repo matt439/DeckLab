@@ -33,6 +33,9 @@ ACCESS = MappingProxyType({
     ('GET', 'settings/errors'): 'home-admin',
     ('GET', 'settings/maintenance'): 'admin',
     ('GET', 'settings/reference-facts'): 'admin',
+    # Public card data; the decks named are only those the viewer may see (api/official_changes.py, E9-S36).
+    ('GET', 'official-changes'): 'viewer-filtered',
+    ('GET', 'settings/data-sources'): 'admin',
     ('GET', 'server/restart'): 'home-admin',
     ('GET', 'collection'): 'inventory',
     ('GET', 'collection/rows'): 'inventory',
@@ -55,6 +58,7 @@ ACCESS = MappingProxyType({
     ('GET', 'play/sideboard-preview'): 'play',
     ('GET', 'play/sideboard-tests'): 'play',
     ('GET', 'play/pairs'): 'profile',
+    ('GET', 'commander-night/lineup'): 'home-records',
     ('GET', 'deck/history'): 'deck',
     ('GET', 'deck/retire'): 'deck',
     ('GET', 'deck/rename'): 'deck',
@@ -92,10 +96,12 @@ ACCESS = MappingProxyType({
     ('GET', 'search'): 'viewer-filtered',
     ('GET', 'cards/decks'): 'inventory',
     ('GET', 'cards/lookup'): 'open',
+    ('GET', 'cards/combos'): 'open',
     ('GET', 'cards/copies'): 'inventory',
     ('GET', 'cards/categories'): 'inventory',
     ('GET', 'gauntlet'): 'deck',
     ('GET', 'gauntlet/summary'): 'deck',
+    ('GET', 'gauntlet/history'): 'deck',
     ('GET', 'gauntlet/catalogue'): 'open',
     ('GET', 'gauntlet/board'): 'viewer-filtered',
     ('GET', 'shopping/combined'): 'home-records',
@@ -187,6 +193,7 @@ LEGACY_ACCESS = MappingProxyType({
     ('GET', '/api/me'): 'open',
     ('GET', '/api/visibility'): 'profile',
     ('PUT', '/api/visibility'): 'profile',
+    ('GET', '/api/visibility/preview'): 'profile',
     ('GET', '/api/simulations'): 'viewer-filtered',
     ('PUT', '/api/simulations'): 'admin',
     ('GET', '/api/shop-postage'): 'home-records',
@@ -337,6 +344,12 @@ def _gauntlet_summary(**params):
     return gauntlet_summary(**params)
 
 
+def _gauntlet_history(**params):
+    """A deck's figure across its saved lists (api/gauntlet_history.py, E3-S50), saved games only."""
+    from decklab.lib.api.gauntlet_history import history_view
+    return history_view(**params)
+
+
 def _gauntlet_board(**params):
     """The Testing page's Popular decks board (api/gauntlet_board.py, E3-S35): saved games only."""
     from decklab.lib.api.gauntlet_board import board_view
@@ -414,9 +427,11 @@ def route_tables():
                                  library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, reference_facts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_combined, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_ideas, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
     from decklab.lib.api import changes
+    from decklab.lib.api import data_sources
     from decklab.lib.api import run_recovery
     from decklab.lib.api import development
     from decklab.lib.api import card_details
+    from decklab.lib.api import card_combos
     from decklab.lib.api import category_suggestions
     from decklab.lib.api import deck_cuts
     from decklab.lib.api import bracket_fixes
@@ -424,6 +439,8 @@ def route_tables():
     from decklab.lib.api import collection_loans
     from decklab.lib.api import practice
     from decklab.lib.api import product_kit_undo
+    from decklab.lib.api import commander_lineup
+    from decklab.lib.api import official_changes
 
     gets = {
         ("activity", "product-kit-undo"): (product_kit_undo.view, ("id",)),
@@ -436,6 +453,8 @@ def route_tables():
         ("settings", "errors"): (error_reports.view, ()),
         ("settings", "maintenance"): (maintenance.maintenance_view, ()),
         ("settings", "reference-facts"): (reference_facts.reference_facts_view, ()),
+        ("official-changes",): (official_changes.view, ()),
+        ("settings", "data-sources"): (data_sources.data_sources_view, ()),
         ("server", "restart"): (server_restart.view, ()),
         ("collection",): (collection.collection_view,
                          ("q", "color", "type", "role", "mv", "availability", "page", "limit", "space")),
@@ -459,6 +478,7 @@ def route_tables():
         ("play", "sideboard-preview"): (_sideboard_preview, ("id", "sha256")),
         ("play", "sideboard-tests"): (_sideboard_tests, ("id", "sha256")),
         ("play", "pairs"): (play_tonight.pairs_view, ()),
+        ("commander-night", "lineup"): (commander_lineup.lineup_view, ()),
         ("deck", "history"): (history.deck_history, ("id",)),
         ("deck", "retire"): (retirement.retirement_view, ("id",)),
         ("deck", "rename"): (rename.rename_view, ("id",)),
@@ -496,10 +516,13 @@ def route_tables():
         ("search",): (_global_search, ("q", "group", "limit")),
         ("cards", "decks"): (_card_decks, ("name", "space")),
         ("cards", "lookup"): (card_details.card_view, ("name", "set", "number")),
+        ("cards", "combos"): (card_combos.card_combos, ("name",)),
         ("cards", "copies"): (card_details.copies_view, ("name", "space")),
         ("cards", "categories"): (category_suggestions.choices_view, ("name", "space", "exclude")),
-        ("gauntlet",): (_gauntlet_view, ("id", "version", "sample", "size", "colours", "styles", "tiers", "profile")),
+        ("gauntlet",): (_gauntlet_view, ("id", "version", "sample", "size", "colours", "styles", "tiers", "commander",
+                                           "profile")),
         ("gauntlet", "summary"): (_gauntlet_summary, ("id", "version", "profile")),
+        ("gauntlet", "history"): (_gauntlet_history, ("id", "version", "profile")),
         ("gauntlet", "catalogue"): (_gauntlet_catalogue, ("format",)),
         ("gauntlet", "board"): (_gauntlet_board, ("format", "profile")),
         ("shopping", "combined"): (_shopping_combined, ("decks",)),

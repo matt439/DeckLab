@@ -214,6 +214,9 @@ inventory writes answer 503 with "reason": "database":
     GET  /api/cards/printings?name=<name>   the printing picker: owned counts, prices
     GET  /api/cards/rulings?name=<name>    the card viewer's: {"name", "available", "updated", "rulings":
                                          [{"date", "source", "text"}]} (lib/api/card_rulings.py)
+    GET  /api/cards/combos?name=<name>     the card viewer's (E9-S37): {"name", "game_changer", "checked", "date",
+                                         "total", "combos" (at most 25), "credit"} or "reason"; public card data,
+                                         no deck, space or network (lib/api/card_combos.py)
     GET  /api/cards/decks?name=<name>[&space=<id>]   the card viewer's line (E1-S29): the space's decks that
                                          hold or want the card and its free copies (lib/api/card_decks.py;
                                          403 as /api/collection)
@@ -264,6 +267,10 @@ inventory writes answer 503 with "reason": "database":
                                          (each {"record", "sha256"}), with "warnings" and "today"
     GET  /api/play/pairs                 tonight's pairs: up to 3 ready home pairs, evenest and least lately
                                          played first, with reasons (home profiles only; lib/api/play_tonight.py)
+    GET  /api/commander-night/lineup     home's Commander decks sorted into fits, above the aim (naming the
+                                         cards that decide it) and unknown against the recorded Commander
+                                         night, each with built, stand-ins, box checked and last played (home
+                                         profiles only; E9-S34, lib/api/commander_lineup.py)
     POST /api/play/game, /api/play/sideboard   body {"profile", "id", "sha256", <the record's fields>,
                                          "preview", "review_sha256"?}: preview, then save a game or a
                                          sideboard plan (409 when it changed since it was read)

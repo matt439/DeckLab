@@ -14,6 +14,9 @@ range covers those sampled opponents only.
     entries(fmt, ids)       the catalogue decks with those ids as Forge entries (lists.entry_from_cards)
     draw(fmt, ...)          a sample chosen and saved (lib/gauntlet/sample); size "all" is every
                             playable deck the filters allow (sample.every)
+    same_commander(fmt, commanders, save=True)
+                            every playable deck of these commanders (lib/gauntlet/sample.same_commander,
+                            E3-S49), saved unless save is False
     standard(fmt, save=False)
                             the format's standard sample (lib/gauntlet/sample.STANDARD, E3-S33): the
                             default draw, the one every deck's headline figure is against
@@ -42,7 +45,7 @@ from pathlib import Path
 
 from decklab.lib.gauntlet import without
 
-from . import common, engine, field, lists, saved, seqstats, reliability
+from . import common, engine, field, lists, saved, seqstats, reliability, views
 from .common import ForgeError
 
 RESULTS_DIR = common.DATA_DIR / "gauntlet" / "results"
@@ -86,7 +89,7 @@ def _choose(decks, size, **filters):
 
 def _sample_id(catalogue_sha, filters, size, seed, **every):
     from decklab.lib.gauntlet import sample
-    return sample.sample_id(catalogue_sha, filters, size, seed, **every)
+    return sample.sample_id(catalogue_sha, filters, size, seed, **every)      # every= or commander=
 
 
 def _save_sample(fmt, found):
@@ -102,6 +105,11 @@ def _load_sample(sample_id):
 def _every(decks, **filters):
     from decklab.lib.gauntlet import sample
     return sample.every(decks, **filters)
+
+
+def _same_commander(decks, commanders, **options):
+    from decklab.lib.gauntlet import sample
+    return sample.same_commander(decks, commanders, **options), sample.commander_key(commanders)
 
 
 def _default_size(fmt):
@@ -211,6 +219,29 @@ def draw(fmt, size=None, colours=None, styles=None, tiers=None, seed="", save=Tr
     return found
 
 
+def same_commander(fmt, commanders, save=True, cat=None):
+    """"Same commander" (E3-S49): every playable Commander deck of the catalogue whose commanders are
+    commanders (a partner pair in either order), core, upgraded and precon alike, most popular first,
+    as the contract's sample dict with "commander": the names, sorted. Its id hashes the commanders,
+    so it's never a balanced or All sample's. Saved unless save is False (an empty one never is);
+    cat as draw's. ValueError for a format other than commander or no commander; ForgeError when
+    there's no catalogue."""
+    if _fmt(fmt) != "commander":
+        raise ValueError("Same commander is only for Commander decks.")
+    names = sorted({str(n).strip() for n in commanders or () if str(n).strip()})
+    if not names:
+        raise ValueError("This deck has no commander yet, so there's none to match.")
+    cat = cat if cat is not None else catalogue(fmt)
+    chosen, key = _same_commander(cat.get("decks") or [], names)
+    chosen_filters = {"colours": None, "styles": None, "tiers": None}
+    found = {"id": _sample_id(cat.get("sha"), chosen_filters, len(chosen), "", commander=key), "format": fmt,
+             "catalogue_sha": cat.get("sha"), "filters": chosen_filters, "size": len(chosen), "seed": "",
+             "decks": [d["id"] for d in chosen], "commander": names}
+    if save and chosen:
+        _save_sample(fmt, found)
+    return found
+
+
 def standard(fmt, save=False, cat=None):
     """The format's standard sample: the default draw (DEFAULT_TIERS, the default size, no colour or
     style filter, seed ""), the same deck set as lib/gauntlet/sample.standard_sample. Not saved
@@ -291,6 +322,7 @@ def _opponent(deck, row):
             "rate": _rate(row["numbers"]), "lead": row["lead"], "verdict": verdict(row["lead"]),
             "not_meaningful": row["not_meaningful"], "problem": row["problem"], "updated": row.get("updated"),
             **({"stalled": row["stalled_all"]} if row.get("stalled_all", {}).get("caution") else {}),
+            "clock": views.clock_of(None if row["not_meaningful"] else row.get("turns")),
             "source": deck.get("source")}
 
 
@@ -311,7 +343,9 @@ def _tally(opponents):
 
 def _group(key, label, members, extra=None):
     """One group's row: {"key", "label", "opponents", "games", "rate", "low", "high", "spread",
-    "note"} over members [(catalogue entry, field._rows row)]."""
+    "note", "clock"} over members [(catalogue entry, field._rows row)]. "clock" (E3-S51) is
+    views.clock_of over the members' games pooled (never their medians averaged), leaving out the
+    opponents whose results don't mean something, as the rate does."""
     counted = [r["numbers"] for _, r in members if r["numbers"] and not r["not_meaningful"]]
     of = sum(1 for _, r in members if not r["not_meaningful"])
     try:
@@ -337,7 +371,9 @@ def _group(key, label, members, extra=None):
             "rate": field._r((average or {}).get("value")), "low": field._r((average or {}).get("low")),
             "high": field._r((average or {}).get("high")),
             "spread": [field._r(min(values)), field._r(max(values))] if values else None,
-            "note": "; ".join(notes)}
+            "note": "; ".join(notes),
+            "clock": views.clock_of(views.pool_turns(row.get("turns") for _, row in members
+                                                     if not row["not_meaningful"]))}
 
 
 def _in_order(found, order):
@@ -376,7 +412,9 @@ def view(deck_entry, chosen, keep=None, cat=None, exclude_ids=()):
     row over every opponent: the equal-weight average), "played" (opponents with games), "of" (the
     sample's opponents in the catalogue now), "tally" (_tally), "updated" (the newest opponent's
     "updated", or None), "games", "note" (the caveat: these sampled opponents only), "notes" (decks
-    gone from the catalogue, a rebuilt catalogue)}. cat as draw's (the sample's format's). ValueError
+    gone from the catalogue, a rebuilt catalogue), "clock_label" and "clock_note" (E3-S51: what
+    the opponents', groups' and overall "clock" (views.clock_of) count, and for Commander that the
+    gauntlet isn't a pod, else None)}. cat as draw's (the sample's format's). ValueError
     for a sample of the other format, ForgeError with no catalogue. exclude_ids as plan's; a sample
     deck with deck_entry's own list (a mirror) is left out too (_members)."""
     _check(deck_entry, chosen)
@@ -398,7 +436,9 @@ def view(deck_entry, chosen, keep=None, cat=None, exclude_ids=()):
             "groups": _groups(members), "overall": _group("all", "All these opponents", members),
             "played": sum(1 for r in rows if r["n"]), "of": len(members), "tally": _tally(opponents),
             "updated": max(dates) if dates else None, "games": sum(r["n"] for r in rows),
-            "note": CAVEAT.format(m=len(members)), "notes": notes}
+            "note": CAVEAT.format(m=len(members)), "notes": notes,
+            "clock_label": views.CLOCK_LABEL[fmt],
+            "clock_note": views.CLOCK_POD_NOTE if fmt == "commander" else None}
 
 
 def _unmirrored(deck_entry, pairs):

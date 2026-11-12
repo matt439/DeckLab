@@ -171,7 +171,7 @@ class DeckViewTests(ApiTestCase):
         view = api.deck_view("casual/gruul-test")
         self.assertEqual(set(view), {"summary", "version", "versions", "sections", "stats", "owned", "practice",
                                      "matchups", "guide", "tokens", "table", "warnings", "info", "usual_opponents", "standins", "swaps",
-                                     "box_checked_on", "considering", "played"})
+                                     "box_checked_on", "considering", "played", "keep_rule"})
         self.assertIsNone(view["box_checked_on"])
         self.assertEqual(view["considering"]["lines"], [])        # E2-S23: none written in this deck
         self.assertEqual(view["usual_opponents"], [])
@@ -191,7 +191,8 @@ class DeckViewTests(ApiTestCase):
                      "oracle_text": "{T}: Add {G}.", "game_changer": False,
                      "scryfall_url": "https://scryfall.com/card/fdn/227",
                      "edhrec_url": "https://edhrec.com/cards/llanowar-elves", "category_suggestion": "Ramp",
-                 "power": "1", "toughness": "1", "loyalty": None, "defense": None}})
+                 "power": "1", "toughness": "1", "loyalty": None, "defense": None},
+            "keep_land": False})
         self.assertEqual(self.lines(view, "Sideboard")[0]["card"]["name"], "Pick Your Poison")
         json.dumps(view, allow_nan=False)
 

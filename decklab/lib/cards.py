@@ -13,7 +13,8 @@ It also refreshes Scryfall's rulings (decklab.lib.rulings) and Commander
 Spellbook's combo list (decklab.lib.combos) on the same schedule, and once a
 day checks Wizards' sitemap for the newest Commander announcement
 (decklab.lib.official_lists), each a separate step whose failure never fails
-the update.
+the update. Rebuilding the index keeps any change in Game Changer flags or
+Commander bans since the old index (official_lists.record_changes, E9-S36).
 When Scryfall can't be reached or a download is cut off, the local files are
 kept and used; it only fails when there's no local copy at all. The index
 itself is built from the bulk files by decklab.lib.card_index.
@@ -74,7 +75,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from decklab.lib import card_index
+from decklab.lib import card_index, source_health
 # Owned by card_index and re-exported (cards.fold, cards.ROLES, cards.build_index...).
 from decklab.lib.card_index import FACE_FIELDS, INDEX_VERSION, ROLE_TAGS, ROLES, build_index, fold
 from decklab.lib import currency
@@ -230,12 +231,13 @@ def download_bulk(force=False, log=print):
     try:
         listing = {entry["type"]: entry for entry in _get_json(BULK_LIST_URL)["data"]}
     except NETWORK_ERRORS + (KeyError, TypeError) as e:
+        source_health.record("scryfall", False)
         if not all(bulk_path(kind).exists() for kind in BULK_TYPES):
             raise _no_data_error(BULK_LIST_URL, e) from e
         log(f"Couldn't reach Scryfall ({e}); keeping the local bulk files.")
         return []
 
-    downloaded = []
+    downloaded, good = [], True
     for kind in wanted:
         entry = listing.get(kind) or {}
         old = meta.get(kind, {})
@@ -253,7 +255,9 @@ def download_bulk(force=False, log=print):
             started = time.monotonic()
             size = _download(uri, bulk_path(kind))
         except NETWORK_ERRORS as e:
+            good = False
             if not bulk_path(kind).exists():
+                source_health.record("scryfall", False)
                 raise _no_data_error(uri or BULK_LIST_URL, e) from e
             log(f"{kind}: download failed ({e}); keeping the local file.")
             continue
@@ -263,6 +267,7 @@ def download_bulk(force=False, log=print):
         log(f"  {size / 1e6:.1f} MB in {time.monotonic() - started:.0f} s")
         downloaded.append(kind)
     _write_json(BULK_META_FILE, meta)
+    source_health.record("scryfall", good)
     return downloaded
 
 
@@ -296,6 +301,33 @@ def _update_official_lists(force, log):
         official_lists.update(force=force, log=log)
     except Exception as e:      # noqa: BLE001 (the card index matters more)
         log(f"Official lists: not checked ({type(e).__name__}: {e}); keeping the last result.")
+
+
+def _official_before(log):
+    """The Game Changer flags and Commander bans of the index about to be replaced (official_lists.snapshot),
+    or None when there's none or it can't be read: then no change is claimed (E9-S36)."""
+    if not INDEX_FILE.exists():
+        return None
+    try:
+        from decklab.lib import official_lists
+        return official_lists.read_snapshot(INDEX_FILE)
+    except Exception as e:      # noqa: BLE001 (the new index matters more)
+        log(f"Game Changers and Commander bans: the old index can't be read ({type(e).__name__}), "
+            f"so no change is claimed.")
+        return None
+
+
+def _record_official_changes(old_flags, index, log):
+    """Keep what changed in the Game Changer flags and Commander bans (official_lists.record_changes). A
+    failure is logged and never fails the update."""
+    if old_flags is None:
+        return
+    try:
+        from decklab.lib import official_lists
+        official_lists.record_changes(old_flags, index, log)
+    except Exception as e:      # noqa: BLE001 (the update itself has succeeded)
+        log(f"Game Changers and Commander bans: the change wasn't kept ({type(e).__name__}: {e}); "
+            f"the card data update still succeeded.")
 
 
 def write_index(index, path=INDEX_FILE):
@@ -338,11 +370,13 @@ def _update_index(force, downloaded, log):
 
     log("Building the index...")
     started = time.monotonic()
+    old_flags = _official_before(log)       # read before the index is overwritten (E9-S36)
     index = build_index(bulk_path("default_cards"), bulk_path("oracle_tags"), bulk_dates, log)
     write_index(index, INDEX_FILE)
     meta["index"] = stamp
     _write_json(BULK_META_FILE, meta)
     _index = None     # the next lookup loads the new index
+    _record_official_changes(old_flags, index, log)
 
     n_printings = sum(len(numbers) for numbers in index["printings"].values())
     log(f"Index: {len(index['cards']):,} cards, {n_printings:,} printings, "
@@ -633,15 +667,17 @@ _tag_cache = {}         # (path, mtime_ns, size) -> {slug: frozenset of oracle i
 _tag_lock = threading.Lock()
 
 
-def tag_members(slugs, path=None):
+def tag_members(slugs, path=None, missing_ok=False):
     """{slug: frozenset of oracle ids} for any Scryfall oracle tags, each
     with the cards of every tag below it, as the roles are counted.
 
     Compare the ids with a card's "oracle_id". Reads the oracle_tags bulk file
     (path, by default the downloaded one) once for all the slugs asked for,
-    and keeps the answers in memory until the file changes. Raises KeyError
-    for a slug the file doesn't have, and OSError (FileNotFoundError) when
-    there's no tag file."""
+    and keeps the answers in memory until the file changes, a slug the file
+    doesn't have included (so asking for it again doesn't read the file
+    again). Raises KeyError for a slug the file doesn't have, unless
+    missing_ok, which leaves it out of the answer instead; and OSError
+    (FileNotFoundError) when there's no tag file."""
     path = Path(path) if path is not None else bulk_path("oracle_tags")
     stat = path.stat()
     key = (str(path.resolve()), stat.st_mtime_ns, stat.st_size)
@@ -651,15 +687,16 @@ def tag_members(slugs, path=None):
         missing = [slug for slug in slugs if slug not in known]
         if missing:
             tags, by_slug = card_index._read_tag_tree(path)
-            unknown = [slug for slug in missing if slug not in by_slug]
-            if unknown:
-                raise KeyError(f"No oracle tag {', '.join(map(repr, unknown))} in {path}")
             known = dict(known)
-            for slug in missing:
-                known[slug] = frozenset(card_index._tag_closure(tags, by_slug[slug]))
+            for slug in missing:        # None: the file has no such tag
+                known[slug] = (frozenset(card_index._tag_closure(tags, by_slug[slug]))
+                               if slug in by_slug else None)
             _tag_cache.clear()          # an older version of the file isn't needed again
             _tag_cache[key] = known
-    return {slug: known[slug] for slug in slugs}
+    unknown = [slug for slug in slugs if known[slug] is None]
+    if unknown and not missing_ok:
+        raise KeyError(f"No oracle tag {', '.join(map(repr, unknown))} in {path}")
+    return {slug: known[slug] for slug in slugs if known[slug] is not None}
 
 
 def tag_branches(slug, path=None):
@@ -774,7 +811,9 @@ def usd_to_aud(code=None):
                 if code != "AUD":
                     cached["to"] = code
                 _write_json(path, cached)
+                source_health.record("fx", True)
             except NETWORK_ERRORS + (KeyError, TypeError) as e:
+                source_health.record("fx", False)
                 if cached is None:
                     raise RuntimeError(f"No USD->{code} rate: {e}, and nothing cached in {path}") from e
         if cached is None:
@@ -1026,6 +1065,11 @@ def main(argv=None):
     try:
         if args.command == "update":
             update(force=args.force)
+            try:        # the rate too, so the stopped-refreshing warning's one command fixes both (E11-S85)
+                rate, rate_date = usd_to_aud()
+                print(f"Exchange rate: 1 USD = {rate} {currency.code()} (ECB rate of {rate_date}).")
+            except RuntimeError as e:
+                print(f"No exchange rate yet: {e}", file=sys.stderr)
             return 0
         if args.command == "show":
             return _show(args.name)
