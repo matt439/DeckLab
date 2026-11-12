@@ -31,8 +31,8 @@ from decklab.lib import access, config, control, profiles, tunnel
 
 from . import gather, profile_config, watchdog
 from . import mdns as multicast         # not "mdns": cmd_status has a variable of that name
-from .checks import (check_addresses, check_firewall, check_network, check_sleep, check_wake, exit_code, format_report,
-                     lan_of)
+from .checks import (card_data_lines, check_addresses, check_firewall, check_network, check_sleep, check_wake, exit_code,
+                     format_report, lan_of)
 from .common import (
     LOG_TAIL, OK, PROBE_TIMEOUT, PROBLEM, RERUN_AFTER, SCHTASKS, SCHTASKS_TIMEOUT, SERVER_SCRIPT, START_WAIT,
     STOP_WAIT, TASK_DELAY, TASK_NAME, TASK_NOT_RUN_YET, TASK_RUNNING, TASK_TERMINATED, TCP_MAXRT, WARN, WATCHDOG_EVERY,
@@ -1022,6 +1022,7 @@ def cmd_status(name, port):
         lines += check_wake(facts, wake["gate"], found.get("gate"))
     lines += check_tunnel(settings, found.get("public"), tunnel.ingress_problems(settings, port),
                           found.get("listener"), tunnel.credentials_problem(settings))
+    lines += card_data_lines()
     seconds = time.monotonic() - started
     header = (f"Deck Lab status, {datetime.now().strftime('%Y-%m-%d %H:%M')} (port {port}; checked in "
               f"{seconds:.1f} s, of which PowerShell {facts.get('seconds', 0):.1f} s)")

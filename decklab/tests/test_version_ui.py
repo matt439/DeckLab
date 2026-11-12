@@ -426,6 +426,26 @@ class VersionInteractionTests(unittest.TestCase):
           assert.match(host.textContent, /couldn't verify a database connection.*server code has changed/);
         """)
 
+    def test_card_data_that_stopped_refreshing_is_the_servers_one_sentence(self):
+        # E11-S85: the server sends the sentence to a named admin only; the page shows what it gets.
+        self.run_js("""
+          const host = document.querySelector("#build-warning");
+          const words = "Card data may have stopped refreshing: the card data is 20 days old; on the server PC run python -m decklab.lib.cards update.";
+          renderVersionStatus({...answer(), cards: {ready: true, built_at: "2026-10-01", freshness: {stale: false, warning: null}}});
+          assert.equal(host.hidden, true);
+          renderVersionStatus({...answer(), cards: {ready: true, built_at: "2026-10-01", freshness: {stale: true, warning: words}}});
+          assert.equal(host.hidden, false);
+          assert.match(host.textContent, /^Card data/);
+          assert.match(host.textContent, /20 days old; on the server PC run python -m decklab\\.lib\\.cards update\\./);
+          renderVersionStatus({...answer(), cards: {ready: true, built_at: "2026-10-01", freshness: null}});
+          assert.equal(host.hidden, true);
+          renderVersionStatus({...answer(), cards: {ready: true, freshness: {stale: true, warning: "x".repeat(401)}}});
+          assert.equal(host.hidden, true);
+          // Beside a database warning, both show.
+          renderVersionStatus({...answer(), database: {ok: false}, cards: {ready: true, freshness: {stale: true, warning: words}}});
+          assert.match(host.textContent, /couldn't verify a database connection.*Card data may have stopped/);
+        """)
+
     def test_a_database_outage_is_an_error_box_not_the_card_data_wait(self):
         self.run_js("""
           const main = new Node("main"); main.setAttribute("id", "main"); document.body.append(main);

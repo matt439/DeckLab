@@ -75,7 +75,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from decklab.lib import card_index
+from decklab.lib import card_index, source_health
 # Owned by card_index and re-exported (cards.fold, cards.ROLES, cards.build_index...).
 from decklab.lib.card_index import FACE_FIELDS, INDEX_VERSION, ROLE_TAGS, ROLES, build_index, fold
 from decklab.lib import currency
@@ -231,12 +231,13 @@ def download_bulk(force=False, log=print):
     try:
         listing = {entry["type"]: entry for entry in _get_json(BULK_LIST_URL)["data"]}
     except NETWORK_ERRORS + (KeyError, TypeError) as e:
+        source_health.record("scryfall", False)
         if not all(bulk_path(kind).exists() for kind in BULK_TYPES):
             raise _no_data_error(BULK_LIST_URL, e) from e
         log(f"Couldn't reach Scryfall ({e}); keeping the local bulk files.")
         return []
 
-    downloaded = []
+    downloaded, good = [], True
     for kind in wanted:
         entry = listing.get(kind) or {}
         old = meta.get(kind, {})
@@ -254,7 +255,9 @@ def download_bulk(force=False, log=print):
             started = time.monotonic()
             size = _download(uri, bulk_path(kind))
         except NETWORK_ERRORS as e:
+            good = False
             if not bulk_path(kind).exists():
+                source_health.record("scryfall", False)
                 raise _no_data_error(uri or BULK_LIST_URL, e) from e
             log(f"{kind}: download failed ({e}); keeping the local file.")
             continue
@@ -264,6 +267,7 @@ def download_bulk(force=False, log=print):
         log(f"  {size / 1e6:.1f} MB in {time.monotonic() - started:.0f} s")
         downloaded.append(kind)
     _write_json(BULK_META_FILE, meta)
+    source_health.record("scryfall", good)
     return downloaded
 
 
@@ -807,7 +811,9 @@ def usd_to_aud(code=None):
                 if code != "AUD":
                     cached["to"] = code
                 _write_json(path, cached)
+                source_health.record("fx", True)
             except NETWORK_ERRORS + (KeyError, TypeError) as e:
+                source_health.record("fx", False)
                 if cached is None:
                     raise RuntimeError(f"No USD->{code} rate: {e}, and nothing cached in {path}") from e
         if cached is None:
@@ -1059,6 +1065,11 @@ def main(argv=None):
     try:
         if args.command == "update":
             update(force=args.force)
+            try:        # the rate too, so the stopped-refreshing warning's one command fixes both (E11-S85)
+                rate, rate_date = usd_to_aud()
+                print(f"Exchange rate: 1 USD = {rate} {currency.code()} (ECB rate of {rate_date}).")
+            except RuntimeError as e:
+                print(f"No exchange rate yet: {e}", file=sys.stderr)
             return 0
         if args.command == "show":
             return _show(args.name)

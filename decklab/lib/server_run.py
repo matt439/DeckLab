@@ -16,9 +16,10 @@ import time
 import traceback
 from datetime import datetime
 
-from decklab.lib import access, api, cards, control, dbstatus, home_scope, keepawake, server_http, tunnel, venv, visits
+from decklab.lib import access, api, card_freshness, cards, control, dbstatus, home_scope, keepawake, server_http, tunnel, venv, visits
 
-UPDATE_EVERY = 24 * 60 * 60         # seconds between background card-data checks
+# seconds between background card-data checks (card_freshness judges staleness from the same interval)
+UPDATE_EVERY = int(card_freshness.CHECK_EVERY.total_seconds())
 RETRY_AFTER = 10 * 60               # ... and after one that failed (e.g. no network yet)
 FORGE_STOP_WAIT = 15                # seconds a stopping server waits for its matchups to save their games
 CLOSE_WAIT = 4                      # ... when its window closes (Windows ends it about 5 s after)

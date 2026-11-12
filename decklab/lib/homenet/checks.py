@@ -1,4 +1,4 @@
-"""The status checklist's Network, Firewall, Addresses, Sleep and Wake lines, and
+"""The status checklist's Network, Firewall, Addresses, Card data, Sleep and Wake lines, and
 the report: pure functions that judge the facts gather_facts found, so
 they're tested with canned facts. (The Server and Start at logon lines are
 in commands.py, beside the control module they read.)"""
@@ -531,6 +531,36 @@ def parse_powercfg(text):
     if len(numbers) < 2:
         return None
     return int(numbers[-2], 16), int(numbers[-1], 16)
+
+
+def check_card_data(found):
+    """The Card data line (E11-S85): found is card_freshness.check()'s answer, or None when it
+    couldn't be worked out. A warning is the judge's one fixed sentence, never an error's words."""
+    if not isinstance(found, dict):
+        return [line(WARN, "Card data", "Couldn't check whether the card data and the exchange rate are "
+                                        "refreshing.", "python -m decklab.lib.cards update")]
+    if found.get("warning"):
+        return [line(WARN, "Card data", found["warning"])]
+    cards = found.get("cards") or {}
+    words = f"Scryfall's data of {cards.get('date')} ({_days_old(cards.get('age_days'))})"
+    fx = found.get("fx")
+    if fx:
+        words += f"; the exchange rate fetched {fx.get('date')}"
+    return [line(OK, "Card data", f"Refreshing: {words}.")]
+
+
+def card_data_lines():
+    """check_card_data from the files on this PC (card_freshness.check: small files, no fetch)."""
+    from decklab.lib import card_freshness
+    try:
+        found = card_freshness.check()
+    except Exception:       # noqa: BLE001 (status carries on with its other checks)
+        found = None
+    return check_card_data(found)
+
+
+def _days_old(age):
+    return "today's" if age == 0 else ("1 day old" if age == 1 else f"{age} days old")
 
 
 def check_sleep(power_text, error=None, wake=False):

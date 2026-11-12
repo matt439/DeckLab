@@ -35,6 +35,7 @@ ACCESS = MappingProxyType({
     ('GET', 'settings/reference-facts'): 'admin',
     # Public card data; the decks named are only those the viewer may see (api/official_changes.py, E9-S36).
     ('GET', 'official-changes'): 'viewer-filtered',
+    ('GET', 'settings/data-sources'): 'admin',
     ('GET', 'server/restart'): 'home-admin',
     ('GET', 'collection'): 'inventory',
     ('GET', 'collection/rows'): 'inventory',
@@ -426,6 +427,7 @@ def route_tables():
                                  library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, reference_facts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_combined, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_ideas, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
     from decklab.lib.api import changes
+    from decklab.lib.api import data_sources
     from decklab.lib.api import run_recovery
     from decklab.lib.api import development
     from decklab.lib.api import card_details
@@ -452,6 +454,7 @@ def route_tables():
         ("settings", "maintenance"): (maintenance.maintenance_view, ()),
         ("settings", "reference-facts"): (reference_facts.reference_facts_view, ()),
         ("official-changes",): (official_changes.view, ()),
+        ("settings", "data-sources"): (data_sources.data_sources_view, ()),
         ("server", "restart"): (server_restart.view, ()),
         ("collection",): (collection.collection_view,
                          ("q", "color", "type", "role", "mv", "availability", "page", "limit", "space")),

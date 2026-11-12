@@ -6,7 +6,9 @@ MTGMate and Games Portal (lib/shops/: one request a card name at each shop, a mi
 its robots.txt asks, the two shops side by side, each for at most NIGHTLY_BUDGET (45
 minutes), so together they still take at most 45 minutes and the task's two-hour limit never
 cuts them off; never a failed night, since a shop that can't be reached is nothing wrong with
-the database, and one shop's failure never stops the other's).
+the database, and one shop's failure never stops the other's). After the steps the heartbeat also
+says whether the card data and the exchange rate are still refreshing (_card_data, E11-S85), again
+never a failed night.
 
 Every step runs even when an earlier one failed (an unreachable NAS is no reason to skip the
 export), and each one's outcome goes into decklab/data/logs/db.log. The check comes after the
@@ -108,6 +110,18 @@ def _shop_prices():
     return shops.nightly(db.log)
 
 
+def _card_data():
+    """The "card data" heartbeat step (E11-S85): True while Scryfall's card data and the exchange
+    rate on the PC are still refreshing (lib/card_freshness.py, small files only, no fetch). Its one
+    fixed warning sentence goes to the log. Like the shop health, it never fails the night: the
+    database steps are what the night's result is about."""
+    from decklab.lib import card_freshness
+    found = card_freshness.check()
+    if found["warning"]:
+        db.log("Nightly: " + found["warning"])
+    return not found["stale"]
+
+
 def run():
     """The nightly job. Returns 0, or 1 when any step failed."""
     from decklab.lib import keepawake
@@ -155,5 +169,10 @@ def _run():
         outcomes.update(heartbeat_steps(datetime.now().astimezone().date()))
     except Exception:
         outcomes["shop health"] = False
+    try:
+        outcomes["card data"] = _card_data()
+    except Exception:
+        db.log("Nightly: whether the card data is refreshing couldn't be checked.")
+        outcomes["card data"] = False
     notify({**outcomes, "nightly": not failed}, log=db.log)
     return 1 if failed else 0

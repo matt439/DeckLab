@@ -6,7 +6,8 @@ history (GET /api/settings/maintenance, lib/api/maintenance.py; reading runs no 
 the running server's version, Check for updates, the card data and Restart Deck Lab (settings-restart.js). These used to sit in every page's footer;
 the footer is now one quiet line (version.js). About also gets one "Reference facts to review" line when a
 hand-maintained fact group (bracket rules, Karsten's figures, EDHREC's page layout...) is due a review
-(GET /api/settings/reference-facts, lib/api/reference_facts.py, E11-S71); nothing shows when none is.
+(GET /api/settings/reference-facts, lib/api/reference_facts.py, E11-S71); nothing shows when none is. Data sources
+(settings-observability.js, GET /api/settings/data-sources, E11-S85) lists each download's last good fetch and failure.
 
 The parts carry the ids version.js fills (renderSimulations, renderVersionStatus): #sim-settings, #sim-mode
 (a segmented switch of [data-mode] buttons), #sim-workers, #sim-since; #visits-list (renderVisits); .build-footer
@@ -76,6 +77,7 @@ function showSettings(params, token) {
       settingsMembersPanel(),
       settingsMaintenancePanel(token),
       settingsErrorReferences(),
+      typeof settingsDataSources === "function" ? settingsDataSources() : null,
       el("section", { class: "panel settings-part", id: "settings-visits", "aria-labelledby": "settings-visits-title" },
         el("h2", { id: "settings-visits-title", text: "Visits" }),
         el("p", { class: "sub", text: `Who has opened Deck Lab, and which pages. The last ${VISIT_DAYS} days unless it says otherwise.` }),

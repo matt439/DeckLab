@@ -236,6 +236,11 @@ class Guarded(unittest.TestCase):
         # config.json's tunnel stays out of status: it would reach the internet.
         self.patch("decklab.lib.tunnel.settings_of", return_value=None)
         self.patch("decklab.lib.tunnel.check_public", side_effect=AssertionError("public address reached"))
+        # The Card data line reads only this PC's small files; keep it fresh and off the real ones.
+        from datetime import date
+        from decklab.lib import card_freshness
+        self.patch("decklab.lib.card_freshness.check", return_value=card_freshness.judge(
+            date(2026, 10, 1), date(2026, 10, 1), date(2026, 10, 1)))
 
     def patch(self, target, new=mock.DEFAULT, **kwargs):
         patcher = mock.patch(target, new, **kwargs)
