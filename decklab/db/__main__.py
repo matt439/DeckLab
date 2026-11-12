@@ -57,6 +57,15 @@ def _migrate(args):
 
 
 def _status(args):
+    """The database's state, then the disk lines, which print whatever happened to the database
+    part (a full disk is a usual reason PostgreSQL can't be reached)."""
+    try:
+        return _status_database(args)
+    finally:
+        _disk_lines()
+
+
+def _status_database(args):
     from decklab.db import migrate
     s = db.settings()
     name = args.dbname or s["name"]
@@ -97,6 +106,15 @@ def _status(args):
     if shop_warning:
         print("WARNING: " + shop_warning)
     return 0
+
+
+def _disk_lines(report=None):
+    """Free disk space and the data folders' sizes (lib/disk_space.py, E11-S86), a warning
+    prefixed as the others are."""
+    if report is None:
+        from decklab.lib.disk_space import report
+    for entry in report():
+        print(("WARNING: " if entry["level"] == "warn" else "") + entry["text"])
 
 
 def _personal_state(name):

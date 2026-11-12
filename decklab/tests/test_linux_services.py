@@ -353,6 +353,7 @@ class ServiceCommandTests(SystemdCase, Guarded):
         self.probe = self.patch("decklab.lib.homenet.commands.probe", side_effect=lambda *a, **k: self.answer)
         self.patch("decklab.lib.homenet.commands.local_ipv4", return_value="192.168.1.20")
         self.patch("decklab.lib.homenet.commands.newest_code_mtime", return_value=None)
+        self.patch("decklab.lib.homenet.commands.disk_report", return_value=[{"level": "ok", "text": "Disk: 100.0 GB free of 500.0 GB (20%)."}])
         # status's network reads and the .local lookup (linux_facts and mdns have tests of their own).
         self.facts = {"network": NETWORK, "firewall": {"active": [], "zone": None, "port": None, "mdns": None},
                       "errors": {}}
@@ -497,6 +498,15 @@ class ServiceCommandTests(SystemdCase, Guarded):
         self.assertIn("Couldn't check the firewall: systemctl isn't installed", text)
         self.assertNotIn("the address above", text)
         self.assertIn("http://decklab-pc.local:18642/ (or the PC's IP address)", text)
+
+    def test_status_has_the_disk_lines(self):
+        self.main("install", "--at-logon")
+        code, text = self.main("status")
+        self.assertIn("Disk: 100.0 GB free of 500.0 GB (20%).", " ".join(text.split()))
+        self.patch("decklab.lib.homenet.commands.disk_report", return_value=[
+            {"level": "warn", "text": "Disk: only 1.0 GB free of 500.0 GB (0%)."}])
+        code, text = self.main("status")
+        self.assertRegex(" ".join(text.split()), r"WARN\s+Disk: Disk: only 1\.0 GB free")
 
     def test_status_checks_the_tunnels_listener(self):
         self.main("install", "--at-logon")

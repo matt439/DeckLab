@@ -868,6 +868,7 @@ class StatusCommandTests(Guarded):
         self.patch("decklab.lib.homenet.commands.pythonw_path", return_value=Path(PYTHONW))
         self.patch("decklab.lib.homenet.commands.this_pythons", return_value=[Path(PYTHON), Path(PYTHONW)])
         self.patch("decklab.lib.homenet.commands.newest_code_mtime", return_value=None)
+        self.patch("decklab.lib.homenet.commands.disk_report", return_value=[{"level": "ok", "text": "Disk: 100.0 GB free of 500.0 GB (20%)."}])
         with Quiet() as q:
             code = homenet.commands.cmd_status("Deck Lab", PORT)
         return code, " ".join(q.out.getvalue().split())     # the report's wrapping undone
@@ -930,6 +931,17 @@ class StatusCommandTests(Guarded):
         self.assertIn("OK Card data: Refreshing: Scryfall's data of 2026-10-01", text)     # E11-S85
         self.assertIn("0 problems, 0 warnings.", text)
 
+    def test_the_disk_lines_are_shown_and_a_low_disk_warns(self):
+        _, text = self.run_status(REAL_FACTS)
+        self.assertIn("OK Disk: Disk: 100.0 GB free of 500.0 GB (20%).", text)
+        self.patch("decklab.lib.homenet.commands.disk_report", return_value=[
+            {"level": "warn", "text": "Disk: only 1.0 GB free of 500.0 GB (0%)."}])
+        with Quiet() as q:
+            homenet.commands.cmd_status("Deck Lab", PORT)
+        text = " ".join(q.out.getvalue().split())
+        self.assertIn("WARN Disk: Disk: only 1.0 GB free of 500.0 GB (0%).", text)
+        self.assertIn("1 problem, 5 warnings.", text)
+
     def test_public_network_and_block_rule(self):
         facts = json.loads(json.dumps(REAL_FACTS))
         facts["network"] = network(category="Public")
@@ -961,7 +973,7 @@ class PatchTargetTests(unittest.TestCase):
     REPLACED = {
         "commands": ("control", "_schtasks", "_start_task", "find_server", "probe", "local_ipv4", "file_exists",
                      "pythonw_path", "task_user", "pc_name", "this_pythons", "newest_code_mtime", "cmd_status",
-                     "cmd_stop", "cmd_start", "cmd_remove", "time", "uses_systemd"),
+                     "cmd_stop", "cmd_start", "cmd_remove", "time", "uses_systemd", "disk_report"),
         "gather": ("run_powershell", "gather_facts"),
         "linux_facts": ("read_facts",),
         "mdns": ("MDNS_GROUP", "mdns_lookup"),

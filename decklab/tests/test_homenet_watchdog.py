@@ -657,6 +657,7 @@ class StatusTests(Guarded):
         self.patch("decklab.lib.homenet.commands.task_user", return_value="HOMEPC\\player")
         self.patch("decklab.lib.homenet.commands.file_exists", return_value=True)
         self.control.read_state.return_value = running_state()
+        self.patch("decklab.lib.homenet.commands.disk_report", return_value=[{"level": "ok", "text": "Disk: 100.0 GB free of 500.0 GB (20%)."}])
         with Quiet() as q:
             code = homenet.commands.cmd_status("Deck Lab", 8642)
         return code, " ".join(q.out.getvalue().split())

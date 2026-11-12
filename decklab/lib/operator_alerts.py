@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 TIMEOUT = 5
 MAX_URL = 2048
 STEPS = frozenset({"nightly", "watchdog", "backup", "prune", "visits", "export", "check", "restore check",
-                   "shop prices", "shop health", "shop_mtgmate", "shop_gamesportal", "card data"})
+                   "shop prices", "shop health", "shop_mtgmate", "shop_gamesportal", "card data", "disk space"})
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
