@@ -71,6 +71,14 @@ class VisibilityPreviewTests(PermissionTestCase):
     def test_mention_rules(self):
         self.assertTrue(preview.mentions_purchases("# T\n\nPreordered the precon.\n"))
         self.assertTrue(preview.mentions_purchases("# T\n\nWorth buying a second copy.\n"))
+        # A purchase written as "the order" or "in order ..." is still one.
+        self.assertTrue(preview.mentions_purchases("# T\n\nTwo Elves came with the order from the shop.\n"))
+        self.assertTrue(preview.mentions_purchases("# T\n\nSwap in once the order arrives.\n"))
+        self.assertTrue(preview.mentions_purchases("# T\n\nWaiting on the order.\n"))
+        self.assertTrue(preview.mentions_purchases("# T\n\nThe Forest came in order 2026-10-01-shop-a.\n"))
+        # Play sequencing isn't.
+        self.assertFalse(preview.mentions_purchases("# T\n\nMind the turn order and casting order.\n"))
+        self.assertFalse(preview.mentions_purchases("# T\n\nMana order matters; the order of plays too.\n"))
         self.assertFalse(preview.mentions_purchases("# T\n\n```\nDeck\n4 Shop Card (X) 1\n```\n"))
         self.assertFalse(preview.mentions_purchases(None))
 

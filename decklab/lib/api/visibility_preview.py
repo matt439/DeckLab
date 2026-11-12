@@ -20,10 +20,11 @@ UNAVAILABLE = "Deck Lab couldn't work out what this would show just now. You can
 MENTION_LIMIT = 50
 _FENCE = re.compile(r"^```.*?^```[^\n]*$", re.M | re.S)
 _SECTION = re.compile(r"^(#{2,3})\s+(.*)$")
-# Words a write-up uses for cards on order or bought; "in order to" and "order of" aren't orders.
+# Words a write-up uses for cards on order or bought. Only play sequencing is left out ("in order
+# to", "order of", "turn order", ...): "the order arrives" and "in order 2026-..." are purchases.
 _MENTION = re.compile(r"\b(?:pre-?order\w*|orders?|ordered|purchas\w*|bought|buy(?:ing|s)?|on the way|shop(?:s|ping)?)\b",
                       re.I)
-_NOT_ORDERS = re.compile(r"\b(?:in order to|in order|order of|turn order|play order|the order)\b", re.I)
+_NOT_ORDERS = re.compile(r"\b(?:in order to|order of|(?:turn|play|casting|mana) order)\b", re.I)
 
 
 def _owned(profile, owner, thing):
