@@ -88,9 +88,9 @@ def _mulligan_figure(h, result):
     """The --all table's mull% for a headline: in a setup with a free first mulligan (a
     Commander deck's multiplayer games) the page's "Kept fewer than 7", since about half of
     all sevens go back for the free one by design; otherwise the mulligan rate, as today."""
-    setup = result["results"][h["setup"]]
-    free = setup["mulligans"].get("free_rate") is not None
-    return h["kept_fewer_than_7"] if free else h["mulligan_rate"]
+    setup = (result.get("results") or {}).get(h.get("setup")) or {}
+    free = (setup.get("mulligans") or {}).get("free_rate") is not None
+    return h.get("kept_fewer_than_7", h["mulligan_rate"]) if free else h["mulligan_rate"]
 
 
 def _run(args):

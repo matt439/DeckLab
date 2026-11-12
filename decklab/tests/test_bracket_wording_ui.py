@@ -48,15 +48,15 @@ class BracketWordingUiTests(unittest.TestCase):
     def test_the_target_is_its_own_sentence_without_nested_brackets(self):
         self.run_js(r"""
           let first = lines(box())[0];
-          assert.equal(first, `The list fits: ${LABEL}. Target: Bracket 2.`);
+          assert.equal(first, `The list fits: ${LABEL}. Target bracket: 2.`);
           assert.equal(first.includes(') ('), false);
           assert.equal(first.includes('(the target'), false);
           // A label without its own brackets, or one ending in a full stop, still reads as one sentence each.
           assert.equal(lines(box({label: 'Bracket 3 or higher', target: 3}))[0],
-            'The list fits: Bracket 3 or higher. Target: Bracket 3.');
+            'The list fits: Bracket 3 or higher. Target bracket: 3.');
           assert.equal(lines(box({label: 'Bracket 2 or higher.', target: null}))[0],
             'The list fits: Bracket 2 or higher.');
-          assert.equal(lines(box({label: '', target: 4}))[0], 'The list fits: Unknown. Target: Bracket 4.');
+          assert.equal(lines(box({label: '', target: 4}))[0], 'The list fits: Unknown. Target bracket: 4.');
         """)
 
     def test_compares_bracket_row_heading_says_todays_lists(self):

@@ -78,7 +78,7 @@ New tests `test_card_combos` and `test_card_viewer_combos_ui` pass, with the car
 
 ## Say each bracket fact once in the editor and Compare (2026-11-12; E9-S38)
 
-The editor's Commander bracket box no longer repeats "No Game Changers": it drops its own sentence when the server's reason already starts with it. The target bracket is now its own sentence ("Target: Bracket 2."), not text added inside the label's parentheses, so no label shows ") (". On Compare, the In brief bracket heading says "Bracket (today's lists)" when any side is a saved revision or a precon, instead of adding that to each side's label, and `ui_review/compare-baselines.js` still finds the phrase.
+The editor's Commander bracket box no longer repeats "No Game Changers": it drops its own sentence when the server's reason already starts with it. The target bracket is now its own sentence ("Target bracket: 2."), not text added inside the label's parentheses, so no label shows ") (". On Compare, the In brief bracket heading says "Bracket (today's lists)" when any side is a saved revision or a precon, instead of adding that to each side's label, and `ui_review/compare-baselines.js` still finds the phrase.
 
 A Node fixture test (`decklab/tests/test_bracket_wording_ui.py`) covers all three. This fixes the bracket-box half of a known low issue recorded below; the renamed-deck message is the half left.
 

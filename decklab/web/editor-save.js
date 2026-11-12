@@ -390,7 +390,7 @@ function bracketBox(b) {
   return el("div", { class: "box" },
     el("h3", { text: "Commander bracket" }),
     el("p", {}, el("b", { text: "The list fits: " }), `${label || "Unknown"}.`,
-      b.target ? ` Target: Bracket ${b.target}.` : ""),
+      b.target ? ` Target bracket: ${b.target}.` : ""),
     gcs.length ? el("p", { class: "sub" }, `Game Changers (${gcs.length}): `, gcs.map((g) => g.name).join(", "), ".")
       : saysNone ? null : el("p", { class: "sub", text: "No Game Changers." }),
     reasons.map((r) => el("p", { class: "sub", text: r })));

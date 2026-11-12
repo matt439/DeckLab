@@ -4581,10 +4581,10 @@ Built (2026-11-12): `combos.with_card(oracle_id)` gives the two-card combos a ca
 As a Commander builder checking a list in the editor, I want the bracket box to say each thing once in clean sentences, so that I can read the verdict at a glance before a shop night.
 
 - Given a list with no Game Changers, then "No Game Changers" appears once.
-- Given a target bracket, then it's its own sentence ("Target: Bracket 2."), and no label shows nested brackets such as ") (".
+- Given a target bracket, then it's its own sentence ("Target bracket: 2."), and no label shows nested brackets such as ") (".
 - Given Compare's bracket row, then "today's lists" is in the row's heading, not appended to the label.
 
-Built (2026-11-12): the editor's bracket box drops its own "No Game Changers." when the server's reason already starts with it, and the target is its own sentence ("Target: Bracket 2."), so no label shows ") (". Compare's In brief heading reads "Bracket (today's lists)" when any side is a saved revision or a precon, and `ui_review/compare-baselines.js` still finds that text. Test: `decklab/tests/test_bracket_wording_ui.py` (Node).
+Built (2026-11-12): the editor's bracket box drops its own "No Game Changers." when the server's reason already starts with it, and the target is its own sentence ("Target bracket: 2."), so no label shows ") (". Compare's In brief heading reads "Bracket (today's lists)" when any side is a saved revision or a precon, and `ui_review/compare-baselines.js` still finds that text. Test: `decklab/tests/test_bracket_wording_ui.py` (Node).
 
 ---
 
