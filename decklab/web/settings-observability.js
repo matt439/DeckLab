@@ -67,7 +67,7 @@ function settingsDataSources() {
       if (!here()) return;
       clear(list);
       if (!dataSourcesAnswer(data)) { list.append(el("p", {class: "note note-crit", text: "The data-sources answer couldn't be read."})); return; }
-      if (!data.readable) list.append(el("p", {class: "note note-crit", text: "The record of fetches on the PC can't be read, so no fetch is shown."}));
+      if (!data.readable) list.append(el("p", {class: "note note-crit", text: "The record of fetches on the PC can't be read, so no fetch is shown. The next fetch starts it afresh."}));
       if (data.card_data?.warning) list.append(el("p", {class: "note note-warn", text: data.card_data.warning}));
       list.append(el("ul", {class: "plain-list"}, data.sources.map(row => el("li", {"data-source": row.key},
         el("strong", {text: row.label}), " ", el("span", {class: "sub", text: `· ${DATA_SOURCE_STATES[row.state]}`}),

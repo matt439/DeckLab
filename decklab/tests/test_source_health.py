@@ -56,15 +56,25 @@ class ReceiptTests(Folder):
         self.assertEqual(found["sources"][0]["state"], "ok")
         self.assertEqual({row["state"] for row in found["sources"][1:]}, {"never"})
 
-    def test_a_damaged_or_oversized_file_is_unreadable_and_left_alone(self):
+    def test_a_damaged_oversized_or_foreign_file_is_unreadable_until_the_next_fetch_starts_it_afresh(self):
         target = self.root / "sources.json"
         for text in ("{broken", json.dumps({"version": 2, "sources": {}}), json.dumps({"version": 1, "sources": {"edhrec": 3}}),
                      " " * (source_health.MAX_BYTES + 1)):
             with self.subTest(text=text[:20]):
                 target.write_text(text, encoding="utf-8")
                 self.assertFalse(source_health.view()["readable"])
-                self.assertFalse(source_health.record("edhrec", True))
-                self.assertEqual(target.read_text(encoding="utf-8"), text)
+                self.assertTrue(source_health.record("edhrec", True, EARLY))
+                self.assertTrue(source_health.view()["readable"])
+                self.assertEqual(source_health.read(), {"edhrec": {"last_ok": "2026-11-10T03:00:00+00:00",
+                                                                   "last_failure": None}})
+
+    def test_a_file_the_pc_wont_let_be_read_is_left_alone(self):
+        target = self.root / "sources.json"
+        target.write_text(json.dumps({"version": 1, "sources": {}}), encoding="utf-8")
+        with mock.patch.object(Path, "open", side_effect=PermissionError("denied")):
+            self.assertFalse(source_health.view()["readable"])
+            self.assertFalse(source_health.record("edhrec", True))
+        self.assertEqual(json.loads(target.read_text(encoding="utf-8")), {"version": 1, "sources": {}})
 
     def test_naive_or_malformed_times_are_dropped(self):
         (self.root / "sources.json").write_text(json.dumps({"version": 1, "sources": {
@@ -89,6 +99,16 @@ class FetcherTests(Folder):
                 self.assertRaises(urllib.error.URLError):
             precons._fetch("https://mtgjson.example.com/x", 100)
         self.assertEqual(source_health.state(self.entry("mtgjson")), "failing")
+        before = self.entry("mtgjson")
+        missing = urllib.error.HTTPError("https://mtgjson.example.com/x", 404, "Not Found", None, io.BytesIO(b""))
+        with mock.patch.object(precons.urllib.request, "urlopen", side_effect=missing),                 self.assertRaises(urllib.error.HTTPError):
+            precons._fetch("https://mtgjson.example.com/x", 100)
+        self.assertEqual(self.entry("mtgjson"), before)
+        server = urllib.error.HTTPError("https://mtgjson.example.com/x", 503, "Unavailable", None, io.BytesIO(b""))
+        source_health.record("mtgjson", True, LATE)
+        with mock.patch.object(precons.urllib.request, "urlopen", side_effect=server),                 self.assertRaises(urllib.error.HTTPError):
+            precons._fetch("https://mtgjson.example.com/x", 100)
+        self.assertNotEqual(self.entry("mtgjson")["last_failure"], before["last_failure"])
 
     def test_edhrec_answers_count_and_a_missing_page_is_neither(self):
         response = mock.MagicMock()

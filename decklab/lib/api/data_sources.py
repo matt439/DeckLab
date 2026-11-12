@@ -3,7 +3,7 @@ failure, for an admin.
 
     GET /api/settings/data-sources
 
-    {"readable": bool (False: the receipt file is damaged, so nothing in it is shown),
+    {"readable": bool (False: the receipt file is damaged, so nothing in it is shown until the next fetch starts it afresh),
      "sources": [{"key", "label", "last_ok", "last_failure" (UTC ISO times or None),
                   "state": "ok" | "failing" | "never" | "stale"}],
      "card_data": {"stale", "warning"} (card_freshness's judgement, or None when it couldn't be read)}

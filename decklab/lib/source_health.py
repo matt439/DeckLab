@@ -51,34 +51,42 @@ def _time(value):
     return parsed.astimezone(timezone.utc)
 
 
-def _read():
-    """({key: {"last_ok", "last_failure"}}, readable). A missing file is readable and empty; a
-    damaged, oversized or foreign one is unreadable (nothing in it is trusted)."""
+def _load():
+    """({key: {"last_ok", "last_failure"}}, status): status "ok" (a missing file too: empty),
+    "damaged" (oversized, not JSON, another version or the wrong shape: nothing in it is trusted)
+    or "blocked" (the file is there but the PC won't let it be read)."""
     try:
         with path().open("rb") as stream:
             raw = stream.read(MAX_BYTES + 1)
     except FileNotFoundError:
-        return {}, True
+        return {}, "ok"
     except OSError:
-        return {}, False
+        return {}, "blocked"
     if len(raw) > MAX_BYTES:
-        return {}, False
+        return {}, "damaged"
     try:
         found = json.loads(raw)
     except (ValueError, RecursionError):
-        return {}, False
+        return {}, "damaged"
     if not isinstance(found, dict) or found.get("version") != VERSION or not isinstance(found.get("sources"), dict):
-        return {}, False
+        return {}, "damaged"
     out = {}
     for key, value in found["sources"].items():
         if key not in KEYS:
             continue
         if not isinstance(value, dict):
-            return {}, False
+            return {}, "damaged"
         ok, failed = _time(value.get("last_ok")), _time(value.get("last_failure"))
         out[key] = {"last_ok": ok.isoformat(timespec="seconds") if ok else None,
                     "last_failure": failed.isoformat(timespec="seconds") if failed else None}
-    return out, True
+    return out, "ok"
+
+
+def _read():
+    """({key: {"last_ok", "last_failure"}}, readable). A missing file is readable and empty; a
+    damaged, oversized or foreign one is unreadable (nothing in it is trusted)."""
+    found, status = _load()
+    return found, status == "ok"
 
 
 def read():
@@ -87,15 +95,17 @@ def read():
 
 def record(key, ok, at=None):
     """Note one fetch of a source: ok True for a good answer, False for a failure. Never raises;
-    an unknown key or a non-bool outcome is ignored, and an unreadable receipt file is left as it is."""
+    an unknown key or a non-bool outcome is ignored. A damaged, oversized or foreign receipt file is
+    started afresh with only this receipt (its old times can't be trusted anyway), so the panel
+    recovers at the next fetch; one the PC won't let be read is left as it is."""
     try:
         if key not in KEYS or type(ok) is not bool:
             return False
         when = (at or _now()).astimezone(timezone.utc).isoformat(timespec="seconds")
         target = path()
         with _lock:
-            sources, readable = _read()
-            if not readable:
+            sources, status = _load()
+            if status == "blocked":
                 return False
             entry = dict(sources.get(key) or {"last_ok": None, "last_failure": None})
             entry["last_ok" if ok else "last_failure"] = when
