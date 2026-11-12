@@ -66,7 +66,8 @@ Parts: decklist.py parses card blocks; deckfile.py parses stored Markdown; edit.
 owns permitted fields and table labels; render.py preserves/rebuilds the text;
 tokencards.py and printings.py describe packed tokens and physical printings;
 considering.py keeps optional ideas outside playable lists; cover.py owns cover
-metadata. This module retains the public library/read bindings and the logical
+metadata; library_cache.py keeps the library's reads on their inventory snapshot (E11-S90),
+handing each caller a copy. This module retains the public library/read bindings and the logical
 path/slug compatibility adapters. Tests patch these bindings here.
 
 This module never computes table quantities or prices: pool.py supplies TableRows.
@@ -85,7 +86,7 @@ from decklab.lib.config import MAGIC, REPO
 
 # The parts in their own files. Their names are all here too, so callers
 # keep using decks.<name>.
-from . import cover, deckfile, decklist, edit, printings, render, tokencards, trial
+from . import cover, deckfile, decklist, edit, library_cache, printings, render, tokencards, trial
 from .cover import (COVER_FIELD, COVER_SECTIONS, auto_cover_line, cover_field, format_cover, parse_cover, set_cover)
 from .tokencards import (TOKEN_CARDS_FIELD, TokenCardLine, format_token_cards, has_token_cards,
                          parse_token_cards, set_token_cards, token_cards)
@@ -310,7 +311,8 @@ def _product_lines(product):
 
 def _product_decks():
     """Every deck in the products' card lists (the inventory's products, by
-    file name: decklab/lib/inventory), as dicts with their sections.
+    file name: decklab/lib/inventory), as dicts with their sections: the caller's own copy of
+    what the snapshot keeps (library_cache, E11-S90).
 
     A product that can't be read is listed once, with an "error" and no
     sections, like a deck file that can't be parsed, so one bad row doesn't
@@ -318,8 +320,16 @@ def _product_decks():
     (model.Product.name and format), else its title-cased stem and
     "Product deck"; source is where its file is, or would be
     ("magic/products/<file>")."""
-    from decklab.lib import inventory
-    snapshot = inventory.current()
+    return library_cache.copied(_kept_product_decks())
+
+
+def _kept_product_decks():
+    """_product_decks()'s list as the snapshot keeps it: never hand it out or change it."""
+    snapshot = _snapshot()
+    return library_cache.kept(snapshot, "product_decks", lambda: _read_product_decks(snapshot))
+
+
+def _read_product_decks(snapshot):
     cancelled = {row.text("file") for row in snapshot.status.rows
                  if row.text("status").strip().lower() == "cancelled"}
     products = [product for product in snapshot.products if product.file not in cancelled]
@@ -373,7 +383,12 @@ def _merge(*decklists):
 
 
 def _pairings():
-    halves = [d for d in _product_decks() if d["product"] == BEGINNER_BOX and not d.get("error")]
+    """The Beginner Box pairings as the snapshot keeps them: never hand them out or change them."""
+    return library_cache.kept(_snapshot(), "pairings", _read_pairings)
+
+
+def _read_pairings():
+    halves = [d for d in _kept_product_decks() if d["product"] == BEGINNER_BOX and not d.get("error")]
     pairs = []
     for a, b in combinations(halves, 2):
         pair_id = f"pairing/{_slugify(a['deck'])}+{_slugify(b['deck'])}"
@@ -494,7 +509,41 @@ def list_decks(only_space=None):
     fenced block under a "## Decklist" heading, whose target list can't be
     found. A deck file whose name isn't a valid slug (Gruul_Ramp.md) is
     read_only: it can be opened but not saved.
+
+    The summaries are worked out once per inventory snapshot (library_cache, E11-S90), each deck's
+    text parsed at most once; each call returns its own copy.
     """
+    return library_cache.copied(_kept_library(only_space))
+
+
+def _kept_library(only_space=None):
+    """list_decks()'s summaries as the snapshot keeps them: never hand them out or change them."""
+    from decklab.lib import inventory
+    snapshot = _snapshot()
+    key = ("library", only_space, tuple(spaces.space_ids()))
+    with inventory.pinned(snapshot):
+        return library_cache.kept(snapshot, key, lambda: _read_library(only_space))
+
+
+def _kept_summaries():
+    """{id: summary} of every deck list_decks() lists (the first, for an id listed twice), as the
+    snapshot keeps them."""
+    def index():
+        found = {}
+        for summary in _kept_library():
+            found.setdefault(summary["id"], summary)
+        return found
+    return library_cache.kept(_snapshot(), ("summaries", tuple(spaces.space_ids())), index)
+
+
+def _parsed(path, space):
+    """read_deck_file(path, space=space), kept on the snapshot: never hand it out or change it
+    (a DeckFile is mutable). Only for a path in a space's deck folder, which the snapshot holds."""
+    return library_cache.kept(_snapshot(), ("deck", str(path), space),
+                              lambda: read_deck_file(path, space=space))
+
+
+def _read_library(only_space):
     out = []
     for space, path in _space_files():
         if only_space is not None and space != only_space:
@@ -510,7 +559,7 @@ def list_decks(only_space=None):
             "versions": [],
         }
         try:
-            deck = read_deck_file(path, space=space)
+            deck = _parsed(path, space)
         except (DeckFileError, OSError) as e:
             summary["error"] = str(e)
         else:
@@ -529,7 +578,7 @@ def list_decks(only_space=None):
             else:
                 summary["error"] = NO_DECKLIST
         out.append(summary)
-    for deck in _product_decks() if only_space in (None, spaces.HOME) else ():
+    for deck in _kept_product_decks() if only_space in (None, spaces.HOME) else ():
         out.append(_summary(deck))
     return out
 
@@ -537,8 +586,13 @@ def list_decks(only_space=None):
 def beginner_box_pairings():
     """Summaries of all 45 two-half Beginner Box decks (read-only, 40 cards).
 
-    Each also lists its two "halves" (product deck ids)."""
-    return [_summary(p, halves=p["halves"]) for p in _pairings()]
+    Each also lists its two "halves" (product deck ids). Each call returns its own copy."""
+    return library_cache.copied(_kept_pairing_summaries())
+
+
+def _kept_pairing_summaries():
+    return library_cache.kept(_snapshot(), "pairing_summaries",
+                              lambda: [_summary(p, halves=p["halves"]) for p in _pairings()])
 
 
 def find_deck_file(kind, slug, space=spaces.HOME):
@@ -597,28 +651,30 @@ def load_deck(deck_id, version="target"):
     if version not in ("target", "owned"):
         raise DeckNotFound(f"unknown version {version!r}")
     if kind in KINDS:
-        deck = read_deck_file(find_deck_file(kind, rest, space), space=space)
+        from decklab.lib import inventory
+        with inventory.pinned(_snapshot()):
+            deck = _parsed(find_deck_file(kind, rest, space), space)
         if version == "owned":
             if deck.owned is None:
                 raise DeckNotFound(f"{deck_id} has no Play-now list")
-            return deck.owned
+            return library_cache.sections(deck.owned)
         if not deck.has_decklist:
             raise DeckFileError(f"{deck_id}: {NO_DECKLIST}")
-        return deck.target
+        return library_cache.sections(deck.target)
     if version != "target":
         raise DeckNotFound(f"{deck_id} only has a Planned list")
     if kind == "product":
-        for deck in _product_decks():
+        for deck in _kept_product_decks():
             if deck["id"] == deck_id:
                 if deck.get("error"):
                     raise DeckFileError(deck["error"])
-                return deck["sections"]
+                return library_cache.sections(deck["sections"])
     elif kind == "pairing":
         halves = rest.split("+")
         for pair in _pairings():
             a, b = pair["id"].split("/", 1)[1].split("+")
             if sorted(halves) == sorted([a, b]):
-                return pair["sections"]
+                return library_cache.sections(pair["sections"])
     raise DeckNotFound(f"no deck {deck_id!r}")
 
 
@@ -633,15 +689,29 @@ def find_summary(deck_id):
     A deck file or product deck is looked up in list_decks() (one that can't
     be read is found too, with its "error"); "pairing/<half>+<half>" in
     beginner_box_pairings(), its halves in either order. The summary's id is
-    the library's (a pairing's halves in its order)."""
-    if deck_id.startswith("pairing/"):
+    the library's (a pairing's halves in its order). Every lookup on one inventory snapshot
+    shares its one reading of the library (library_cache, E11-S90) and gets its own copy.
+    A test's stand-in for list_decks or beginner_box_pairings (PATCHED in test_decks) is
+    still the one asked."""
+    from decklab.lib import inventory
+    pairing = deck_id.startswith("pairing/")
+    if pairing and beginner_box_pairings is not _OWN_READERS[1]:
         wanted = _pairing_halves(deck_id)
         return next((s for s in beginner_box_pairings() if _pairing_halves(s["id"]) == wanted), None)
-    from decklab.lib import inventory
     snapshot = _snapshot()
-    deck_id = inventory.resolve_deck_id(deck_id, snapshot)
     with inventory.pinned(snapshot):
-        return next((s for s in list_decks() if s["id"] == deck_id), None)
+        if pairing:
+            wanted = _pairing_halves(deck_id)
+            found = next((s for s in _kept_pairing_summaries() if _pairing_halves(s["id"]) == wanted), None)
+        elif list_decks is not _OWN_READERS[0]:
+            deck_id = inventory.resolve_deck_id(deck_id, snapshot)
+            return next((s for s in list_decks() if s["id"] == deck_id), None)
+        else:
+            found = _kept_summaries().get(inventory.resolve_deck_id(deck_id, snapshot))
+    return None if found is None else library_cache.copied(found)
+
+
+_OWN_READERS = (list_decks, beginner_box_pairings)      # find_summary's check for a test's stand-in
 
 
 def engine_kind(summary):

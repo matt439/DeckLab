@@ -64,7 +64,8 @@ expected_revision fingerprint), and an inventory change moves decks_revision onl
 changed a deck too (the deck-table refresh). A Deck holds its file's exact text (the bytes
 decoded as UTF-8, line endings and a byte order mark kept), so its sha256 (the pages'
 concurrency token) is the sha256 of the bytes, as today; never a parse (readers call
-decks.parse_deck on the text each time: a DeckFile is mutable). A picture is its ImageMeta
+decks.parse_deck on the text: a DeckFile is mutable; the library keeps its own parse on the snapshot
+object, decks/library_cache.py, and hands out copies). A picture is its ImageMeta
 (size, sha256): the bytes are fetched from the backend by name (backend.image(name)), never held
 in a snapshot, except the bytes an operation is writing (with_image).
 
