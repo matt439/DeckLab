@@ -45,7 +45,7 @@ from pathlib import Path
 
 from decklab.lib.gauntlet import without
 
-from . import common, engine, field, lists, saved, seqstats, reliability
+from . import common, engine, field, lists, saved, seqstats, reliability, views
 from .common import ForgeError
 
 RESULTS_DIR = common.DATA_DIR / "gauntlet" / "results"
@@ -322,6 +322,7 @@ def _opponent(deck, row):
             "rate": _rate(row["numbers"]), "lead": row["lead"], "verdict": verdict(row["lead"]),
             "not_meaningful": row["not_meaningful"], "problem": row["problem"], "updated": row.get("updated"),
             **({"stalled": row["stalled_all"]} if row.get("stalled_all", {}).get("caution") else {}),
+            "clock": views.clock_of(None if row["not_meaningful"] else row.get("turns")),
             "source": deck.get("source")}
 
 
@@ -342,7 +343,9 @@ def _tally(opponents):
 
 def _group(key, label, members, extra=None):
     """One group's row: {"key", "label", "opponents", "games", "rate", "low", "high", "spread",
-    "note"} over members [(catalogue entry, field._rows row)]."""
+    "note", "clock"} over members [(catalogue entry, field._rows row)]. "clock" (E3-S51) is
+    views.clock_of over the members' games pooled (never their medians averaged), leaving out the
+    opponents whose results don't mean something, as the rate does."""
     counted = [r["numbers"] for _, r in members if r["numbers"] and not r["not_meaningful"]]
     of = sum(1 for _, r in members if not r["not_meaningful"])
     try:
@@ -368,7 +371,9 @@ def _group(key, label, members, extra=None):
             "rate": field._r((average or {}).get("value")), "low": field._r((average or {}).get("low")),
             "high": field._r((average or {}).get("high")),
             "spread": [field._r(min(values)), field._r(max(values))] if values else None,
-            "note": "; ".join(notes)}
+            "note": "; ".join(notes),
+            "clock": views.clock_of(views.pool_turns(row.get("turns") for _, row in members
+                                                     if not row["not_meaningful"]))}
 
 
 def _in_order(found, order):
@@ -407,7 +412,9 @@ def view(deck_entry, chosen, keep=None, cat=None, exclude_ids=()):
     row over every opponent: the equal-weight average), "played" (opponents with games), "of" (the
     sample's opponents in the catalogue now), "tally" (_tally), "updated" (the newest opponent's
     "updated", or None), "games", "note" (the caveat: these sampled opponents only), "notes" (decks
-    gone from the catalogue, a rebuilt catalogue)}. cat as draw's (the sample's format's). ValueError
+    gone from the catalogue, a rebuilt catalogue), "clock_label" and "clock_note" (E3-S51: what
+    the opponents', groups' and overall "clock" (views.clock_of) count, and for Commander that the
+    gauntlet isn't a pod, else None)}. cat as draw's (the sample's format's). ValueError
     for a sample of the other format, ForgeError with no catalogue. exclude_ids as plan's; a sample
     deck with deck_entry's own list (a mirror) is left out too (_members)."""
     _check(deck_entry, chosen)
@@ -429,7 +436,9 @@ def view(deck_entry, chosen, keep=None, cat=None, exclude_ids=()):
             "groups": _groups(members), "overall": _group("all", "All these opponents", members),
             "played": sum(1 for r in rows if r["n"]), "of": len(members), "tally": _tally(opponents),
             "updated": max(dates) if dates else None, "games": sum(r["n"] for r in rows),
-            "note": CAVEAT.format(m=len(members)), "notes": notes}
+            "note": CAVEAT.format(m=len(members)), "notes": notes,
+            "clock_label": views.CLOCK_LABEL[fmt],
+            "clock_note": views.CLOCK_POD_NOTE if fmt == "commander" else None}
 
 
 def _unmirrored(deck_entry, pairs):

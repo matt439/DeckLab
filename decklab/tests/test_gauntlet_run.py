@@ -212,7 +212,7 @@ class ViewTests(GauntletCase):
             self.gfake.add_games(self.alpha, self.opponent(deck_id), 100, rate=rate)
         found = gauntlet.view(self.alpha, self.sample)
         self.assertEqual(set(found), {"deck", "sample", "format", "opponents", "groups", "overall", "played", "of",
-                                      "tally", "updated", "games", "note", "notes"})
+                                      "tally", "updated", "games", "note", "notes", "clock_label", "clock_note"})
         self.assertEqual((found["deck"], found["sample"], found["games"]), ("casual/alpha", self.sample["id"], 400))
         self.assertEqual(found["notes"], [])
         self.assertIn("these 4 sampled opponents only", found["note"])
@@ -241,7 +241,7 @@ class ViewTests(GauntletCase):
         for rows in found["groups"].values():
             for g in rows:
                 self.assertEqual(set(g), {"key", "label", "opponents", "games", "rate", "low", "high", "spread",
-                                          "note"} | ({"thin"} if "thin" in g else set()))
+                                          "note", "clock"} | ({"thin"} if "thin" in g else set()))
                 if "thin" in g:
                     self.assertTrue(g["thin"])
                     self.assertIn("Too few compared opponents/games", g["note"])

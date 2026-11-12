@@ -15,7 +15,10 @@ own results folder, so Rankings and the ratings never see its games).
                         "error", "catalogue" (None until one is built: "build_command" says how),
                         "sample", "standard" (the standard sample: {"id", "size", "tiers"}),
                         "is_standard", "options", "budgets", "default_budget", "default_size" and
-                        "forge". With no choices it's the standard sample (E3-S33). For the standard
+                        "forge". Each opponent, group and "overall" carries its "clock" (E3-S51:
+                        the median and middle half of the rounds of games won and lost, with what
+                        was left out), labelled by "clock_label" and, for Commander, "clock_note".
+                        With no choices it's the standard sample (E3-S33). For the standard
                         sample, "before", "compare" and "older" (E3-S34, gauntlet_summary's) and each
                         opponent's "before" and "moved"; None and False for any other sample.
                         commander="same" (E3-S49, Commander decks only): every playable catalogue
@@ -446,7 +449,7 @@ def _base(forge, entry, fmt, seen):
             "default_budget": DEFAULT_BUDGET, "default_size": DEFAULT_SIZE[fmt], "forge": forge.status(),
             "catalogue": None, "sample": None, "standard": None, "is_standard": False, "opponents": [], "groups": {},
             "games": 0, "note": None, "notes": [], "status": "none", "job": None, "notice": None, "error": None,
-            "budgets": {}, "overall": None, "played": 0, "of": 0,
+            "budgets": {}, "overall": None, "played": 0, "of": 0, "clock_label": None, "clock_note": None,
             "tally": {"ahead": 0, "even": 0, "behind": 0, "unsettled": 0}, "updated": None,
             "before": None, "compare": None, "older": None}
 
@@ -496,6 +499,7 @@ def _answer(forge, g, entry, choices, seen, summary=None, commanders=()):
                                    moved=bool((rows.get(o.get("id")) or {}).get("moved")))
                               for o in found.get("opponents") or []],
                    groups=found.get("groups") or {}, games=found.get("games") or 0, note=found.get("note"),
+                   clock_label=found.get("clock_label"), clock_note=found.get("clock_note"),
                    notes=list(found.get("notes") or []) + list((kept or {}).get("notes") or []))
         if kept:
             out.update(before=kept["before"], compare=kept["compare"], older=kept["older"])
