@@ -55,11 +55,12 @@ An index of open work, one row per item; each row points to the doc that owns th
 - **`E3-S49`: Same commander's real results.** Built and fixture-tested (2026-11-12). With `FG#4`, once the server's Commander catalogue is built, play a first Same commander run for a Commander deck and read its results.
 - **`E3-S50`: earlier lists on live data.** Built and fixture-tested (2026-11-12). On the server, open a deck with several saved lists that have standard-sample runs and check the Testing tab's Show earlier lists against them.
 - **`E11-S87`: the shrink warning's tables and thresholds.** Built, off by default (2026-11-12). Agree the watched tables (collection, decks, token cards, orders, wishlists, accessories) and thresholds (more than 25% and at least 5 rows), then set config.json's `database.shrink_warn` to true.
+- **`FG#2`: Forge 2.0.16 on the server.** Built, checked and installed on this PC (2026-11-13). Check and publish the fork's draft release `2.0.16-decklab-029c9518f`, run `python -m decklab.update` on the server, then on an idle PC there `python -m decklab.lib.forge replay`. The side-build speed A/B (PLAN.md, Later) waits for an idle PC too.
 - **`E11-S88`: cloudflared's support limit.** Built (2026-11-12). Confirm the 365-day limit (`tunnel.SUPPORT_DAYS`, from Cloudflare's downloads page), then check `homenet status` and the smoke test with the real cloudflared on the server PCs.
 
 **Activation:** migrations `0012` and `0013` were applied and the server restarted on committed code on 2026-10-19, so the privacy code and guarded member removal are live. No visibility choice or real member removal has been made.
 
-**Date and PC gates:** `FG#2` waits for Forge's next release (the existing estimate is mid-November). Forge games (`FG#2`, `FG#3`) run one at a time in the main session, on an idle PC, with Matt's OK. Their pause doesn't prevent fixture-based development above.
+**Date and PC gates:** `FG#2`'s server replay and side-build speed A/B wait for an idle PC. Forge games (`FG#2`, `FG#3`) run one at a time in the main session, on an idle PC, with Matt's OK. Their pause doesn't prevent fixture-based development above.
 
 ## Deck Lab: access and privacy
 
@@ -109,7 +110,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E3-S23` | DECISION | could | M | Field membership, saved choices, home-admin preview/save and fail-closed selection built. Left: a real-browser saved choice used by a real run; this needs a separately authorised live policy/run acceptance session. |
 | `FG#4` | DECISION | should | M+pc | The gauntlet on the Linux spare PC: build both catalogues, measure parallel Commander throughput (dev PC: about 40 games a minute, 4 opponents), a first standard run per Commander deck; with Matt's OK. |
 | `E11-S28` | DECISION | should | M | Run the user-testing session with User2 from the prepared [checklist](decklab/design/user-testing-user2.md) (confirm his device first), then the follow-up review and stories. |
-| `FG#2` | WAITING | should | L+pc | Forge 2.0.16 (about mid-November 2026): rebase the fork, build, check the overrides, replay every matchup. The post-build checks are one command, built 2026-10-21: `python -m decklab.lib.forge upgrade-check` (`--plan forge-2.0.16` prints the rebase and build steps; `E11-S15`), and `upgrade-check --dir <scratch folder>` checks the scratch build before it's installed (`E11-S45`). |
+| `FG#2` | DECISION | should | L+pc | Forge 2.0.16 built, checked and installed here (`2.0.16-decklab-029c9518f`, 2026-11-13). Left: publish the fork's draft release, update the server and replay its matchups on an idle PC, and the side-build speed A/B (2.0.16 left out #11314/#11981). |
 | `FG#3` | DEFERRED | could | M+pc | More experiment games (AI profiles, team-pump fix, override sets), decided with `FG#2`'s replay; the clean `fiery` test ran 2026-10-21 (C4 does what `fiery` does). |
 | `E3-S43` | DECISION | could | S | Left: `gauntlet export FILE` / `gauntlet import FILE` (catalogues and saved samples with a verified sha, playable decks screened again, no house deck's results). Waits for Matt's decision on `FG#4`: copy the development PC's catalogue to the server, or build its own there. |
 
