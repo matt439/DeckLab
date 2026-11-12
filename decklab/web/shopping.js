@@ -361,13 +361,13 @@ function shopQueueRow(card, group, showFor = true, view = null, showLongTerm = f
   if (row.matches("button")) row.setAttribute("aria-label", `${card.name}, ${plural(card.quantity, "copy", "copies")}`);
   const move = view && mayDo("orders") && view.data.queue_revision && card.queue_row
     ? shopQueueMove(card, view) : null;
-  const reprints = reprintInfo(card), snapshot = shopSnapshotLine(card, view);
+  const reprints = reprintInfo(card), snapshot = shopSnapshotLine(card, view), need = shopQueueNeedNote(card, view);
   const history = snapshot ? shopHistoryButton(card, view) : null;   // E5-S29, shopping-history.js
   if (history) snapshot.append(history);
-  return view || deck || move || price || reprints || snapshot ? el("div", { class: `shop-queue-row${shopSnapshotBack(card) ? " shop-queue-back" : ""}`,
+  return view || deck || move || price || reprints || snapshot || need ? el("div", { class: `shop-queue-row${shopSnapshotBack(card) ? " shop-queue-back" : ""}`,
     "data-shop-queue": view ? String(card.queue_row || "") : null, "data-shop-name": view ? shopQueueShop(card) : null,
     "data-shop-match": view && shopMatches(view, card) ? "true" : null }, row,
-    view ? shopQueueResearch(card) : price ? shopReference(card) : null, snapshot,
+    need, view ? shopQueueResearch(card) : price ? shopReference(card) : null, snapshot,
     view ? el("span", { class: "sr-only shop-match-words", text: shopMatches(view, card) ? "Matches selected shop." : "" }) : null,
     deck ? el("a", { class: "shop-queue-deck", href: deckHref(deck.id) }, shopDeckSwatch(deck), deck.title) : null, reprints, move) : row;
 }
@@ -543,7 +543,7 @@ function shopRemoveQueueSheet(view, card, parentSheet) {
       const saved = await shopSaveQueue(view, sheet, error,
         { action: "remove", row: card.queue_row, reason: reason.value.trim() }, card);
       if (saved) {
-        parentSheet.close();
+        parentSheet?.close();
         const addButton = view.root.querySelector(".shop-queue-add");
         if (addButton && shopQueueActive(view)) addButton.focus({ preventScroll: true });
       }
@@ -568,6 +568,7 @@ async function shopSaveQueue(view, sheet, error, body, card) {
     const answer = await apiWrite("/api/shopping/queue", { ...body, expect });
     if (!shopQueueActive(view)) { shopCloseQueueSheets(view); return false; }
     const queue = view.data.to_buy;
+    shopQueueNeedForget(queue, card);              // E5-S37: a changed card's marks wait for the next read
     if (body.action === "remove") queue.splice(row - 1, 1);
     else if (body.action === "edit") {
       // A corrected identity may change token/playable classification. Metadata-only
@@ -575,6 +576,7 @@ async function shopSaveQueue(view, sheet, error, body, card) {
       if (["name", "set", "collector_number", "finish"].some(key => (card[key] || "") !== (answer.item[key] || "")))
         delete card.is_token;
       Object.assign(card, answer.item);
+      shopQueueNeedForget(queue, card);
       if (Object.hasOwn(answer, "reprints")) card.reprints = answer.reprints;
       if (Object.hasOwn(answer, "shop_snapshot")) card.shop_snapshot = answer.shop_snapshot;
       if (Object.hasOwn(answer, "shop_snapshots")) card.shop_snapshots = answer.shop_snapshots;
@@ -583,6 +585,7 @@ async function shopSaveQueue(view, sheet, error, body, card) {
       const item = { ...answer.item, card: answer.item.card || null, deck: (view.data.queue_decks || []).find((deck) =>
         answer.item.source === `magic/decks/${deck.id}.md`) || null };
       if (Object.hasOwn(answer, "reprints")) item.reprints = answer.reprints;
+      shopQueueNeedForget(queue, item);
       queue.push(item);
       if (item.state === "long_term") view.expanded.add(item.deck ? item.deck.id : item.for || "");
     }
