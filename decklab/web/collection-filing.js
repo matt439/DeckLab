@@ -48,7 +48,8 @@ function colFilingSnapshot(answer, cv, source = "import") {
   }
   if (accounted.some((quantity, index) => quantity !== added[index].quantity)) return unknown(added);
   return Object.freeze({ space: cv.space, profile: cv.profile, source, status: "ready", total,
-    added: Object.freeze(added), destinations: Object.freeze(destinations) });
+    added: Object.freeze(added), destinations: Object.freeze(destinations),
+    places: storageAdviceLocations(raw.storage_locations) }); // E8-S27: null without a lookup
 }
 
 function colFilingHere(cv, guide, root = null) {
@@ -91,7 +92,8 @@ function colFilingGuide(cv, guide) {
     const heading = group.kind === "deck" ? el("h3", {}, el("a", { href: deckHref(group.deck.id, "target"), text: group.deck.title }))
       : el("h3", { text: group.kind === "storage" ? "To storage" : "Destination unknown" });
     const panel = el("section", { class: "panel col-filing-panel" }, heading,
-      group.kind === "storage" ? el("p", { class: "sub", text: "Copies left after the waiting decks: keep them with your unsleeved cards." }) : null);
+      group.kind === "storage" ? el("p", { class: "sub", text: "Copies left after the waiting decks: keep them with your unsleeved cards." }) : null,
+      group.kind === "storage" ? storageAdviceNote(guide.places) : null);
     const list = el("ul", { class: "col-filing-lines", tabindex: 0,
       "aria-label": group.kind === "deck" ? `Printing copies suggested for ${group.deck.title}`
         : adding ? "Added printing copies" : "Imported printing copies" });
@@ -101,7 +103,9 @@ function colFilingGuide(cv, guide) {
       const next = group.items.slice(shown, shown + limit);
       for (const item of next) {
         const row = guide.added[item.row];
-        list.append(el("li", { text: `${item.quantity} \u00d7 ${row.name} (${colPrinting(row)})` }));
+        const where = item.kind === "storage" ? storageAdviceWords(guide.places, row.name) : null;
+        list.append(el("li", {}, `${item.quantity} \u00d7 ${row.name} (${colPrinting(row)})`,
+          where ? el("span", { class: "sub col-filing-place", text: ` \u00b7 ${where}` }) : null));
       }
       shown += next.length;
       count.textContent = `${shown} of ${plural(group.items.length, "printing line")}`;

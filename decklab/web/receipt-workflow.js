@@ -438,7 +438,7 @@ function rcptSuccess(view, answer) {
     description: `${view.data.seller || view.data.order} · arrived ${rcptDate(view.date.value)}` }),
   el("div", { class: "box box-good rcpt-recorded", role: "status" },
     el("h2", { text: rcptAddedWords(answer.totals) }), rcptOutcome(answer.totals)),
-  rcptWhereTheyGo(view, received, answer.readiness), rcptAssignments(answer, true),
+  rcptWhereTheyGo(view, received, answer.readiness, storageAdviceLocations(answer.storage_locations)), rcptAssignments(answer, true),
   answer.remaining?.length ? el("p", { text: `Still on the way: ${answer.remaining.map(part => `${part.id} (${part.quantity})`).join(", ")}. Unticked cards are still pending.` }) : null,
   tables,
   el("div", { class: "actions rcpt-after" },
@@ -460,8 +460,9 @@ function rcptAddedWords(totals) {
 
 /** "Where these go": the decks that count on these cards (by deck, with its sleeves when you see them), then the
  * rest to storage; token cards to the token box; a product as its own deck(s) or into storage. readiness is
- * apply's {deck id: {missing, coming}} after the receipt (E6-S26): each deck's Ready to build or Still N to get. */
-function rcptWhereTheyGo(view, received, readiness) {
+ * apply's {deck id: {missing, coming}} after the receipt (E6-S26): each deck's Ready to build or Still N to get.
+ * places is apply's checked storage_locations (E8-S27): each To storage line says where its card's copies are filed. */
+function rcptWhereTheyGo(view, received, readiness, places = null) {
   const decks = new Map(), storage = [], unknown = [], basics = [], parts = [];
   const kits = view.data.kits || {};
   for (const item of rcptDestinationAdvice(view, received)) {
@@ -501,7 +502,11 @@ function rcptWhereTheyGo(view, received, readiness) {
   }
   if (storage.length) {
     out.push(el("div", { class: "panel rcpt-where" }, el("h3", { text: "To storage" }),
-      el("p", { class: "sub", text: "No deck is waiting for these: they go unsleeved into the storage box." }), lines(storage)));
+      el("p", { class: "sub", text: "No deck is waiting for these: they go unsleeved into the storage box." }), storageAdviceNote(places),
+      el("ul", { class: "rcpt-where-cards" }, storage.map(([n, name]) => {
+        const where = storageAdviceWords(places, name);
+        return el("li", {}, `${n} × ${name}`, where ? el("span", { class: "sub rcpt-where-place", text: ` · ${where}` }) : null);
+      }))));
   }
   if (unknown.length) out.push(el("div", { class: "panel rcpt-where rcpt-where-unknown" },
     el("h3", { text: "Destination not known" }),
