@@ -1065,6 +1065,8 @@ def _row(entry, o, pair, problem=None):
                        "high": w["high"] if w.get("balanced") else None, "pi": None, "se": None, "d": None}
     return {"opponent": o, "key": pair["key"], "n": pair["n"], "numbers": numbers, "lead": lead,
             "stalled_all": views.reliability.stalled(games, p),
+            # E3-S51: the round counts of games won and lost, which the gauntlet's groups pool.
+            "turns": views.turns(games, p),
             "not_meaningful": not pair["meaningful"], "problem": problem,
             "updated": result.get("updated") if games else None}
 

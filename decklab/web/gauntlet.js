@@ -15,6 +15,8 @@ E3-S34: results are never deleted. When the list changed since its last test, it
 (gtBeforeLine, muted), then once re-tested both over the same opponents, an opponent marked Moved only when its two
 ranges don't overlap; saved results an older Forge, other settings, another pilot or a rebuilt catalogue played
 are said plainly (gtOlderLine). Play stays the usual button: nothing plays by itself.
+E3-S51: the typical turn the list wins in and loses in (median and middle half), overall under the headline (gtClock,
+with what was left out and, for Commander, that the gauntlet isn't a four-player pod) and on each group and opponent.
 Every class this file and gauntlet.css add starts with "gt-"; it also uses the page's shared ones (deck-section,
 segmented, filter-chips, box, btn, sub, empty, more). Uses core.js's helpers, sim-ui.js's winRateFigure and
 rangeBar, matchups.js's runChoiceControl, runsAllowed, metaWords and gamesWords, editor.js's ask() and app.js's
@@ -142,8 +144,8 @@ function gtDraw(ctx, a) {
     // Results first at every width (E3-S33); from 1,600 px the play box sits to their right.
     played || gtPlaying(a)
       ? el("div", { class: "gt-layout" },
-        played ? el("div", { class: "gt-main" }, gtHeadline(a), gtBeforeLine(a), gtOlderLine(a, { note: true }),
-          gtGroups(ctx, a), gtRows(a)) : null,
+        played ? el("div", { class: "gt-main" }, gtHeadline(a), gtClock(a), gtBeforeLine(a),
+          gtOlderLine(a, { note: true }), gtGroups(ctx, a), gtRows(a)) : null,
         el("div", { class: "gt-side" }, stale ? [gtBeforeLine(a), gtOlderLine(a)] : null, gtPlayBox(ctx, a)))
       // E3-S34: the list changed, or its results are from an older Forge: the old figure muted, then Play as usual.
       : stale ? el("div", { class: "gt-empty gt-stale" }, gtBeforeLine(a), gtOlderLine(a),
@@ -221,6 +223,61 @@ function gtHeadline(a, { cls = "gt-headline" } = {}) {
     rangeBar(rate, { axis: true, decorative: true }),
     tally ? el("p", { class: "gt-tally", text: tally }) : null,
     a.played < a.of ? el("p", { class: "gt-small", text: `${a.played} of ${a.of} opponents tested so far.` }) : null);
+}
+
+// ------------------------------------------------------------------ E3-S51: the clock
+
+/** A turn as said: 8, or 8.5 for a median between two. */
+function gtTurn(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); }
+
+/** One side of a clock ({games, median, low, high}): "wins on turn 8 (7–10)", the middle half in brackets; with
+ * fewer games than the server's minimum (median null) its count only, "3 wins, too few for a typical turn". */
+function gtClockSide(side, verb, one, many) {
+  if (!side || !side.games) return null;
+  if (side.median == null) return `${plural(side.games, one, many)}, too few for a typical turn`;
+  const middle = side.low != null && side.high != null && side.low !== side.high
+    ? ` (${gtTurn(side.low)}–${gtTurn(side.high)})` : "";
+  return `${verb} on turn ${gtTurn(side.median)}${middle}`;
+}
+
+/** A clock ({won, lost, left_out}) in words: "Wins on turn 8 (7–10), loses on turn 11 (9–12)"; null without a
+ * game won or lost. */
+function gtClockWords(c) {
+  if (!c) return null;
+  const parts = [gtClockSide(c.won, "wins", "win"), gtClockSide(c.lost, "loses", "loss", "losses")].filter(Boolean);
+  return parts.length ? capitalise(parts.join(", ")) : null;
+}
+
+/** What a clock left out: "Left out: 2 draws, 1 timeout and 3 games without a round count."; null for none. */
+function gtLeftOutWords(c) {
+  const n = (c && c.left_out) || {};
+  const parts = [n.draws ? plural(n.draws, "draw") : null, n.timeouts ? plural(n.timeouts, "timeout") : null,
+    n.errors ? plural(n.errors, "error") : null,
+    n.no_rounds ? `${plural(n.no_rounds, "game")} without a round count` : null].filter(Boolean);
+  if (!parts.length) return null;
+  const last = parts.pop();
+  return `Left out: ${parts.length ? `${parts.join(", ")} and ${last}` : last}.`;
+}
+
+/** A clock's line under a group or an opponent, or null. */
+function gtClockLine(c) {
+  const words = gtClockWords(c);
+  return words ? el("span", { class: "gt-small gt-clock-line", text: words }) : null;
+}
+
+/** The overall clock under the headline (E3-S51): the typical turn of games won and of games lost against every
+ * sampled opponent, what it counts (the answer's clock_label: "simulated Forge games, 1v1, turns each" for
+ * Commander), what was left out and, for Commander, that the gauntlet isn't a four-player pod (clock_note). Null
+ * without a game won or lost. */
+function gtClock(a) {
+  const c = (a.overall || {}).clock;
+  const words = gtClockWords(c);
+  if (!words) return null;
+  const about = [a.clock_label ? `Median and middle half: ${a.clock_label}.` : null, gtLeftOutWords(c)];
+  return el("div", { class: "gt-clock" },
+    el("p", { class: "gt-clock-what", text: `${words}.` }),
+    el("p", { class: "gt-small", text: about.filter(Boolean).join(" ") }),
+    a.clock_note ? el("p", { class: "gt-small", text: a.clock_note }) : null);
 }
 
 // ------------------------------------------------------------------ E3-S34: kept through a change
@@ -343,7 +400,8 @@ function gtGroupRow(g) {
     el("span", { class: "gt-barline" },
       rangeBar(rate, { compact: true, muted: thin, decorative: true }),
       el("span", { class: "gt-pct" }, winRateFigure(rate, { what, barred: true }))),
-    el("span", { class: "gt-meta", text: metaWords(plural(g.opponents, "opponent"), gamesWords(g.games), spread, g.note) }));
+    el("span", { class: "gt-meta", text: metaWords(plural(g.opponents, "opponent"), gamesWords(g.games), spread, g.note) }),
+    gtClockLine(g.clock));
 }
 
 /** One row per sampled opponent, hardest first (the server's order: the lowest range first), with where it's from. */
@@ -368,7 +426,7 @@ function gtRows(a) {
           el("span", { text: metaWords(o.verdict ? capitalise(o.verdict) : null, GT_STYLES[o.style] || o.style,
             GT_TIERS[o.tier] || o.tier, gamesWords(o.games), before ? `Before: ${before}` : null, o.problem) }), chips,
           freshnessBadge(o.updated, { size: "row" })),
-        gtSource(o.source));
+        gtClockLine(o.clock), gtSource(o.source));
     })),
     waiting.length ? el("p", { class: "gt-small", text: `Not played yet: ${waiting.slice(0, 12).map((o) => o.title)
       .join(", ")}${waiting.length > 12 ? ` and ${thousands(waiting.length - 12)} more` : ""}.` }) : null];

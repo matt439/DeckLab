@@ -58,6 +58,11 @@ empty state keep to the widths of the matchup controls (.mu-run-buttons, .card-g
 .gt-headline, .gt-headline-panel { display: grid; gap: var(--s-2); min-width: 0; max-width: 46rem; }
 .gt-headline > p, .gt-headline-panel > p { margin: 0; }
 .gt-headline-what { font-size: var(--fs-md); }
+
+/* E3-S51: the typical turn of games won and lost, under the headline and on each group and opponent. */
+.gt-clock { display: grid; gap: var(--s-1); min-width: 0; max-width: 46rem; }
+.gt-clock > p { margin: 0; }
+.gt-clock-what { font-size: var(--fs-md); }
 .gt-figure { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); min-width: 0; }
 .gt-tally { font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
 .gt-standard { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--s-1); }
