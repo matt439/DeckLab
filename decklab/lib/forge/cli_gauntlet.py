@@ -84,6 +84,10 @@ def _gauntlet_args(sub):
         part.add_argument("deck", help="deck id")
         part.add_argument("--owned", action="store_true", help="the deck's owned-only list")
         _sample_args(part)
+        part.add_argument("--same-commander", action="store_true",
+                          help="every popular deck with the deck's own commander (core, upgraded and precon; "
+                               "Commander decks only, E3-S49) instead of a sample; no other sample option goes "
+                               "with it")
         if name != "view":
             part.add_argument("--budget", type=_budget, default="fixed:100", help="fixed:N games an opponent "
                                                                                   "(default fixed:100)")
@@ -189,9 +193,10 @@ def _show(args):
     return 0
 
 
-def _draw(args, fmt):
+def _draw(args, fmt, deck=None):
     """The sample a command names (--sample), the standard one (--standard), or one drawn now with its
-    filters (and saved)."""
+    filters (and saved). deck: the house deck it's for, whose commanders a saved Same commander
+    sample (E3-S49) must have."""
     if getattr(args, "standard", False):
         given = [flag for flag, value in (("--sample", args.sample), ("--size", args.size),
                                           ("--colours", args.colours), ("--styles", args.styles),
@@ -201,6 +206,11 @@ def _draw(args, fmt):
         return _g().standard(fmt, save=True)
     if args.sample:
         found = _g().sample(args.sample)
+        if deck is not None:
+            from decklab.lib.gauntlet.sample import commanders_of, is_own_sample
+            if not is_own_sample(found, commanders_of(deck)):
+                raise shared._CliError(f"{args.sample} is the Same commander sample of another commander: "
+                                       f"use --same-commander for this deck's own.")
         if found.get("format") != fmt:
             raise shared._CliError(f"{args.sample} is a {found.get('format')} sample, not {fmt}.")
         return found
@@ -233,11 +243,30 @@ def _deck(args):
     return shared._cli_entry(args.deck, args.owned)
 
 
+def _same_commander(args, a):
+    """--same-commander's opponents (E3-S49): every playable catalogue deck with a's own commanders."""
+    from decklab.lib.gauntlet.sample import commanders_of
+    given = [flag for flag, value in (("--sample", args.sample), ("--standard", args.standard), ("--size", args.size),
+                                      ("--colours", args.colours), ("--styles", args.styles), ("--tier", args.tier),
+                                      ("--seed", args.seed)) if value]
+    if given:
+        raise shared._CliError(f"--same-commander plays every deck with the deck's commander: leave out "
+                               f"{', '.join(given)}.")
+    if _g().format_of(a) != "commander":
+        raise shared._CliError("--same-commander is only for Commander decks.")
+    return _g().same_commander("commander", commanders_of(a))
+
+
 def _house_sample(args, a):
     """The sample args choose for the deck a, without a trial deck's own precon (E3-S39)."""
     from decklab.lib import decks
     from decklab.lib.gauntlet import trial_excluded, without
-    return without(_draw(args, _g().format_of(a)), trial_excluded(decks.find_summary(a["id"])))
+    same = getattr(args, "same_commander", False) is True
+    found = without(_same_commander(args, a) if same else _draw(args, _g().format_of(a), a),
+                    trial_excluded(decks.find_summary(a["id"])))
+    if same and not found.get("decks"):
+        raise shared._CliError("The popular decks list has no other deck with this deck's commander.")
+    return found
 
 
 def _plan(args):

@@ -14,6 +14,9 @@ range covers those sampled opponents only.
     entries(fmt, ids)       the catalogue decks with those ids as Forge entries (lists.entry_from_cards)
     draw(fmt, ...)          a sample chosen and saved (lib/gauntlet/sample); size "all" is every
                             playable deck the filters allow (sample.every)
+    same_commander(fmt, commanders, save=True)
+                            every playable deck of these commanders (lib/gauntlet/sample.same_commander,
+                            E3-S49), saved unless save is False
     standard(fmt, save=False)
                             the format's standard sample (lib/gauntlet/sample.STANDARD, E3-S33): the
                             default draw, the one every deck's headline figure is against
@@ -86,7 +89,7 @@ def _choose(decks, size, **filters):
 
 def _sample_id(catalogue_sha, filters, size, seed, **every):
     from decklab.lib.gauntlet import sample
-    return sample.sample_id(catalogue_sha, filters, size, seed, **every)
+    return sample.sample_id(catalogue_sha, filters, size, seed, **every)      # every= or commander=
 
 
 def _save_sample(fmt, found):
@@ -102,6 +105,11 @@ def _load_sample(sample_id):
 def _every(decks, **filters):
     from decklab.lib.gauntlet import sample
     return sample.every(decks, **filters)
+
+
+def _same_commander(decks, commanders, **options):
+    from decklab.lib.gauntlet import sample
+    return sample.same_commander(decks, commanders, **options), sample.commander_key(commanders)
 
 
 def _default_size(fmt):
@@ -207,6 +215,29 @@ def draw(fmt, size=None, colours=None, styles=None, tiers=None, seed="", save=Tr
     if every:
         found["all"] = True
     if save:
+        _save_sample(fmt, found)
+    return found
+
+
+def same_commander(fmt, commanders, save=True, cat=None):
+    """"Same commander" (E3-S49): every playable Commander deck of the catalogue whose commanders are
+    commanders (a partner pair in either order), core, upgraded and precon alike, most popular first,
+    as the contract's sample dict with "commander": the names, sorted. Its id hashes the commanders,
+    so it's never a balanced or All sample's. Saved unless save is False (an empty one never is);
+    cat as draw's. ValueError for a format other than commander or no commander; ForgeError when
+    there's no catalogue."""
+    if _fmt(fmt) != "commander":
+        raise ValueError("Same commander is only for Commander decks.")
+    names = sorted({str(n).strip() for n in commanders or () if str(n).strip()})
+    if not names:
+        raise ValueError("This deck has no commander yet, so there's none to match.")
+    cat = cat if cat is not None else catalogue(fmt)
+    chosen, key = _same_commander(cat.get("decks") or [], names)
+    chosen_filters = {"colours": None, "styles": None, "tiers": None}
+    found = {"id": _sample_id(cat.get("sha"), chosen_filters, len(chosen), "", commander=key), "format": fmt,
+             "catalogue_sha": cat.get("sha"), "filters": chosen_filters, "size": len(chosen), "seed": "",
+             "decks": [d["id"] for d in chosen], "commander": names}
+    if save and chosen:
         _save_sample(fmt, found)
     return found
 

@@ -15,6 +15,8 @@ E3-S34: results are never deleted. When the list changed since its last test, it
 (gtBeforeLine, muted), then once re-tested both over the same opponents, an opponent marked Moved only when its two
 ranges don't overlap; saved results an older Forge, other settings, another pilot or a rebuilt catalogue played
 are said plainly (gtOlderLine). Play stays the usual button: nothing plays by itself.
+E3-S49: a Commander deck's choices also offer Same commander (gtSameCommander): every popular deck with the deck's
+own commanders (&commander=same; the server reads them from the deck), or a plain line when there's none.
 Every class this file and gauntlet.css add starts with "gt-"; it also uses the page's shared ones (deck-section,
 segmented, filter-chips, box, btn, sub, empty, more). Uses core.js's helpers, sim-ui.js's winRateFigure and
 rangeBar, matchups.js's runChoiceControl, runsAllowed, metaWords and gamesWords, editor.js's ask() and app.js's
@@ -60,6 +62,7 @@ function gtUrl(ctx) {
   const q = new URLSearchParams({ id: ctx.id, version: ctx.version });
   const c = ctx.choice;
   if (ctx.sample) q.set("sample", ctx.sample);
+  else if (c && c.commander) q.set("commander", "same");
   else if (c) {
     q.set("size", String(c.size));
     if (c.colours) q.set("colours", c.colours);
@@ -167,8 +170,10 @@ function gtTiersAsked(c, a) {
 
 function gtChoiceOf(a) {
   const f = (a.sample || {}).filters || {};
-  const size = (a.sample || {}).all ? "all" : (a.sample || {}).size || a.default_size || 20;
-  return { size, colours: f.colours || "",
+  const commander = Array.isArray((a.sample || {}).commander) && (a.sample || {}).commander.length > 0;
+  const size = commander ? a.default_size || 20
+    : (a.sample || {}).all ? "all" : (a.sample || {}).size || a.default_size || 20;
+  return { size, commander, colours: f.colours || "",
     styles: Array.isArray(f.styles) ? [...f.styles] : [], tiers: Array.isArray(f.tiers) ? [...f.tiers] : [] };
 }
 
@@ -430,7 +435,8 @@ function gtPlayBox(ctx, a, { inEmpty = false } = {}) {
   showTime();
   add(box, [inEmpty ? null : el("h3", { text: "Play popular decks" }),
     gtChoices(ctx, a), choice.node,
-    none ? el("p", { class: "gt-small", text: "No popular deck matches these choices: choose fewer." }) : time,
+    none ? el("p", { class: "gt-small", text: ctx.choice && ctx.choice.commander ? GT_NO_SAME
+      : "No popular deck matches these choices: choose fewer." }) : time,
     ready ? null : el("p", { class: "gt-small", text: (a.forge && a.forge.problem) || "Forge isn't ready on the PC." }),
     el("div", { class: "actions" }, el("button", { type: "button", class: "btn", text: "Play them",
       disabled: !ready || !state.profile || none, "data-run": true, onclick: () => gtPlay(ctx) }))]);
@@ -443,7 +449,9 @@ function gtChoices(ctx, a) {
   const c = ctx.choice, opts = a.options || {};
   const pick = (change) => { change(); Object.assign(ctx, { sample: null, lost: false }); gtRefresh(ctx); };
   const toggle = (list, value) => (list.includes(value) ? list.filter((x) => x !== value) : [...list, value].sort());
-  const details = el("details", { class: "more gt-choices" }, el("summary", { text: gtChoiceWords(c, a) }),
+  const same = gtSameCommander(c, a, pick);
+  // Same commander (E3-S49) takes no size, colours, styles or tiers: only its own choice shows then.
+  const sampled = c.commander ? [] : [
     gtSegmented("Opponents", (opts.sizes || []).map((n) => [n, n === "all" ? "All" : String(n)]), c.size,
       (n) => pick(() => { c.size = n; })),
     c.size === "all" ? el("p", { class: "gt-small", text: "All: every playable deck of the chosen tiers, colours " +
@@ -453,14 +461,41 @@ function gtChoices(ctx, a) {
     gtChips("Styles", (opts.styles || []).map((x) => [x, GT_STYLES[x] || x]), c.styles,
       (x) => pick(() => { c.styles = toggle(c.styles, x); })),
     gtChips("Tiers", (opts.tiers || []).map((x) => [x, GT_TIERS[x] || x]), c.tiers,
-      (x) => pick(() => { c.tiers = toggle(c.tiers, x); })));
+      (x) => pick(() => { c.tiers = toggle(c.tiers, x); }))];
+  const details = el("details", { class: "more gt-choices" }, el("summary", { text: gtChoiceWords(c, a) }),
+    ...sampled, ...same);
   details.open = ctx.open;
   details.addEventListener("toggle", () => { ctx.open = details.open; });
   return details;
 }
 
-/** "12 opponents · Core · any colours · any style". */
+const GT_NO_SAME = "The popular decks list has no other deck with this deck's commander, so there's nothing to play.";
+
+/** E3-S49: a Commander deck's "Same commander" choice (options.same_commander: the deck's commanders and how many
+ * playable popular decks share them): every one of them, core, upgraded and precon alike, instead of a sample. With
+ * none it says so and can't be chosen. [] for a 60-card deck. Chosen, it replaces the sample's own choices. */
+function gtSameCommander(c, a, pick) {
+  const same = ((a || {}).options || {}).same_commander;
+  if (!same) return [];
+  const n = Number(same.decks) || 0;
+  const names = (same.commanders || []).join(" and ");
+  const id = "gt-label-which";
+  const button = (on, title, disabled = false) => el("button", { type: "button", text: title, disabled,
+    "aria-pressed": String(!!c.commander === on),
+    onclick: () => { if (!!c.commander !== on) pick(() => { c.commander = on; }); } });
+  return [el("div", { class: "gt-control gt-which" }, el("span", { class: "games-label", id, text: "Which decks" }),
+    el("div", { class: "segmented", role: "group", "aria-labelledby": id },
+      button(false, "A balanced sample"), button(true, "Same commander", !n && !c.commander))),
+  el("p", { class: "gt-small gt-same-note", text: n
+    ? `Same commander: all ${plural(n, "popular deck")} with ${names} as commander (EDHREC's core and upgraded ` +
+      "average decks and Wizards precons the list has), to see whether this take plays better than the common one. " +
+      "They're sparring partners, not advice."
+    : `The popular decks list has no other deck with ${names} as commander.` })];
+}
+
+/** "12 opponents · Core · any colours · any style", or "3 opponents · same commander". */
 function gtChoiceWords(c, a) {
+  if (c.commander) return metaWords(plural((a.sample || {}).decks || 0, "opponent"), "same commander");
   const colours = c.colours ? [...c.colours].map((x) => COLOUR_WORDS[x]).join(", ") : "any colours";
   const styles = c.styles.length ? c.styles.map((x) => GT_STYLES[x] || x).join(", ") : "any style";
   const tiers = c.tiers.length ? c.tiers.map((x) => GT_TIERS[x] || x).join(", ") : "every tier";
@@ -572,7 +607,8 @@ async function gtWrite(ctx, path, body) {
 function gtPlay(ctx) {
   const a = ctx.answer || {}, c = ctx.choice || gtChoiceOf(a);
   // A saved sample the address names plays by its id: the same decks, even if today's catalogue would draw others.
-  const body = ctx.sample ? { budget: ctx.budget, sample: ctx.sample } : { budget: ctx.budget, size: c.size,
+  const body = ctx.sample ? { budget: ctx.budget, sample: ctx.sample }
+    : c.commander ? { budget: ctx.budget, commander: "same" } : { budget: ctx.budget, size: c.size,
     colours: c.colours, styles: c.styles.join(","), tiers: gtTiersAsked(c, a).join(",") };
   if (a.deck && a.deck.card_sha) body.expected_card_sha = a.deck.card_sha;
   return gtWrite(ctx, "/api/gauntlet/run", body);

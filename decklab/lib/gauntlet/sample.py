@@ -8,6 +8,7 @@ From code:
     sample.save_sample("commander", drawn); sample.load_sample(drawn["id"])   # drawn: forge/gauntlet.draw's
     sample.standard_sample(catalogue, "commander")      # the standard sample (STANDARD), not saved
     sample.every(catalogue["decks"], tiers=["core"])    # "All": every playable deck of the filters
+    sample.same_commander(catalogue["decks"], ["Ghalta, Primal Hunger"])   # E3-S49: every deck of a commander
 
 (lib/forge/gauntlet.draw chooses, names and saves a sample with the format's defaults.)
 
@@ -26,12 +27,18 @@ sample, in the same order.
 "All" (every(), E3-S38) is no sample: every playable deck the filters allow, near-duplicates
 included (a commander's core and upgraded decks are both played), most popular first. Its id
 says so (sample_id's every), so it never shares an id with a balanced sample of the same size.
+"Same commander" (same_commander(), E3-S49) is no sample either: every playable Commander deck whose
+commanders are the house deck's (a partner pair in either order; commander_key), core, upgraded and
+precon alike, most popular first, with no tier, colour, style or size filter. Its id hashes the
+commander key (sample_id's commander), so it never shares an id with a balanced or All sample, and
+the saved sample keeps the commanders' names ("commander"). These decks are sparring partners for a
+head-to-head, never advice on what to play.
 Ties go to popularity (EDHREC rank, then deck count, then tier: for Forge's decks the duels by
 difficulty, then the precons), then to sha256(seed + id).
 
 A saved sample is decklab/data/gauntlet/samples/sample-<12 hex>.json (the id's colon can't be
 in a Windows file name): {"id", "format", "catalogue_sha", "filters": {"colours", "styles",
-"tiers"}, "size", "seed", "decks": [ids]}, so the page and the command line play the same set.
+"tiers"}, "size", "seed", "decks": [ids]} (and "commander": [names] for a same-commander one), so the page and the command line play the same set.
 """
 import hashlib
 import json
@@ -177,6 +184,41 @@ def every(decks, colours=None, styles=None, tiers=None, seed=""):
     return sorted(candidates(decks, colours, styles, tiers), key=lambda d: popularity(d, seed))
 
 
+def _front(name):
+    """A card name's front face, folded for matching ("Esika, God of the Tree // The Prismatic Bridge"
+    and "Esika, God of the Tree" are one commander)."""
+    return str(name).split(" // ", 1)[0].strip().casefold()
+
+
+def commander_key(names):
+    """The commanders as one key: their front faces folded and sorted, joined by "|" (a partner pair
+    in either order is one key); "" for none."""
+    return "|".join(sorted(_front(n) for n in names or () if str(n).strip()))
+
+
+def commanders_of(deck):
+    """A catalogue deck's (or a Forge entry's) commander names, from its "cards" Commander section."""
+    return [str(n) for _, n in ((deck.get("cards") or {}).get("Commander") or ())]
+
+
+def is_own_sample(found, commanders):
+    """False when found, a saved sample, is a Same commander one (its "commander") of commanders other
+    than commanders, the asking deck's (by commander_key); True for any other sample."""
+    named = found.get("commander") if isinstance(found, dict) else None
+    return not named or commander_key(named) == commander_key(commanders)
+
+
+def same_commander(decks, commanders, seed=""):
+    """"Same commander" (E3-S49): every playable Commander deck whose commanders are commanders (by
+    commander_key), whatever its tier, most popular first; [] when commanders is empty or no deck has
+    them."""
+    key = commander_key(commanders)
+    if not key:
+        return []
+    found = [d for d in candidates(decks) if d.get("kind") == "commander" and commander_key(commanders_of(d)) == key]
+    return sorted(found, key=lambda d: popularity(d, seed))
+
+
 def standard_sample(catalogue, fmt):
     """The format's standard sample of a catalogue (STANDARD), as forge/gauntlet.draw makes it:
     {"id", "format", "catalogue_sha", "filters", "size", "seed": "", "decks": [ids]}. Not saved
@@ -191,15 +233,18 @@ def standard_sample(catalogue, fmt):
             "decks": [d["id"] for d in chosen]}
 
 
-def sample_id(catalogue_sha, filters, size, seed, every=False):
+def sample_id(catalogue_sha, filters, size, seed, every=False, commander=None):
     """"sample:<12 hex>", a sha256 of the catalogue's version, the filters, the size and the seed
-    (and, for "All", every: True; a balanced sample's id is as it always was)."""
+    (and, for "All", every: True; for "Same commander", commander: its commander_key; a balanced
+    sample's id is as it always was)."""
     if not isinstance(filters, dict):
         filters = {}
     normal = normalise_filters(filters.get("colours"), filters.get("styles"), filters.get("tiers"))
     named = {"catalogue_sha": catalogue_sha, "filters": normal, "size": int(size), "seed": str(seed)}
     if every:
         named["every"] = True
+    if commander:
+        named["commander"] = str(commander)
     text = json.dumps(named, sort_keys=True, separators=(",", ":"))
     return "sample:" + hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
 
