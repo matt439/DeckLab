@@ -220,6 +220,18 @@ independently of inventory access. They do not certify a bracket: combos of thre
 or more cards, chained extra turns, speed and intent still need a conversation
 with the other players.
 
+When `cards update` rebuilds the card index it first reads the old index's Game
+Changer flags and Commander bans, then keeps any change (cards that became or
+stopped being Game Changers, or were banned or unbanned) with both card data
+dates in `decklab/data/scryfall/official_changes.json` (E9-S36). Only the last
+change that wasn't empty is kept; an old index that can't be read claims no
+change, and a failure to save it never fails the update. The Decks page's
+**Game Changer and ban changes** panel (`GET /api/official-changes`, read-only)
+lists those cards and, under each, the Commander decks you may see that hold it
+(a built deck's Built version, else its Planned list), each with its counted
+minimum bracket on today's card data and its aim, so you know which decks to
+re-check before the next night. Decks you can't see are never named or counted.
+
 The Stats tab's **One card away** panel (E9-S25) lists the two-card combos the
 list holds one piece of, from the same downloaded list: the missing piece must
 fit the commander's colour identity and be legal in Commander (ban list from the
