@@ -39,7 +39,7 @@ PENDING = "A member update needs recovery. Run python -m decklab.db sync-profile
 
 def ordinary(path):
     path = Path(path).absolute()
-    if any(part.is_symlink() or part.is_junction() for part in (path, *path.parents)):
+    if any(_linked(part) for part in (path, *path.parents)):
         raise InvalidProfileEdit("Member updates cannot use linked configuration paths.")
     return path
 
@@ -57,11 +57,36 @@ def require_ready():
         raise PendingProfileEdit(PENDING)
 
 
+def _linked(part):
+    return part.is_symlink() or part.is_junction()
+
+
+def _guarded_pending():
+    """The pending journal's path, with the config file, the control folder and the
+    journal (and every folder above them) each checked for links once (E11-S89).
+
+    `require_ready()` walks the shared ancestors three times; a read only needs one walk."""
+    config_file = Path(config.CONFIG_FILE).absolute()
+    folder = config_file.parent / "data" / "profile-config"
+    journal = folder / "pending.json"
+    parts = dict.fromkeys((journal, folder, config_file, *journal.parents, *config_file.parents))
+    if any(_linked(part) for part in parts):
+        raise InvalidProfileEdit("Member updates cannot use linked configuration paths.")
+    return journal
+
+
 def read_settings():
-    """Profile-specific reader; DB connection settings remain readable for recovery."""
-    require_ready()
+    """Profile-specific reader; DB connection settings remain readable for recovery.
+
+    The guarded paths are checked for links once per call (no cache across calls); the
+    pending journal is still looked for before and after the load, so an edit published
+    meanwhile is refused."""
+    journal = _guarded_pending()
+    if journal.exists():
+        raise PendingProfileEdit(PENDING)
     settings = config.load()
-    require_ready()
+    if journal.exists():
+        raise PendingProfileEdit(PENDING)
     return settings
 
 
