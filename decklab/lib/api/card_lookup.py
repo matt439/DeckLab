@@ -139,9 +139,11 @@ def reference_url(name, printing=None):
     return "https://scryfall.com/search?" + urllib.parse.urlencode({"q": f'!"{quoted}"'})
 
 
-def _line_json(line, section, warnings, deck_sets=()):
+def _line_json(line, section, warnings, deck_sets=(), keep_land=False):
     """One decklist line for the page, with its card's data and image.
-    deck_sets: the sets the deck's lines name, most used first, for lines that name none."""
+    deck_sets: the sets the deck's lines name, most used first, for lines that name none.
+    keep_land: also say whether the practice-hand keep rule counts the card as a land
+    ("keep_land", keep_rule.keep_land; absent for a name that isn't a Scryfall card)."""
     out = {"qty": line.quantity, "name": line.name, "set": line.set, "number": line.number,
            "finish": line.finish, "card": None}
     category = getattr(line, "category", None)      # activity.row_cards passes a plain namespace
@@ -167,6 +169,9 @@ def _line_json(line, section, warnings, deck_sets=()):
     if shown is None:
         shown = _shown_printing(card, (line.set, *deck_sets))
     out["card"] = _card_json(card, shown)
+    if keep_land:
+        from .keep_rule import keep_land as _keep_land
+        out["keep_land"] = _keep_land(card)
     return out
 
 

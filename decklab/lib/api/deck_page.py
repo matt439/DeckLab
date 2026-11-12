@@ -25,6 +25,7 @@ from .deck_aliases import metadata
 from .common import _jsonable, _public, _scrub, _unique
 from .forge_runs import _deck_matchups
 from .guide import departed_cards, playing_guide
+from .keep_rule import view as keep_rule_view
 from .library_played import deck_played, played_extras
 from .library import (_deck_sections, _half_title, _load_pool, _named_by_id, _scrub_summary, edited_at, shelf_extras,
                       viewer_decks_revision)
@@ -556,6 +557,11 @@ def deck_view(deck_id, version="target", omit=()):
     paired with its Substitutes line; None for a deck with no Play-now list, a product or a
     pairing. It comes from the lists and the prose alone, so every viewer of the deck gets it.
 
+    keep_rule is Deal a hand's keep rule (keep_rule.view: the practice games' land ranges by hand
+    size, the free multiplayer seven's, and their sources), read-only and the same for every
+    viewer; None when it can't be loaded. Each Deck line also has "keep_land" (the rule counts it
+    as a land: a land, or a spell // land card), absent for a name that isn't a Scryfall card.
+
     practice is what goldfish() would answer when that needs no run: a saved
     result ({"status": "done", "result"}) or a deck too small to deal from
     ({"status": "error", "error"}), so the page shows the practice-hand part
@@ -648,7 +654,8 @@ def deck_view(deck_id, version="target", omit=()):
             if line.set:
                 sets[line.set] += line.quantity
     deck_sets = [s for s, _ in sets.most_common()]
-    lines = {name: [_line_json(line, name, warnings, deck_sets) for line in section]
+    # The main deck's lines say whether the practice-hand keep rule counts them as lands (E4-S09).
+    lines = {name: [_line_json(line, name, warnings, deck_sets, keep_land=name == "Deck") for line in section]
              for name, section in sections.items()}
     stats = _deck_stats(sections, decks.engine_kind(summary), warnings)
     from . import bracket_fixes
@@ -686,6 +693,8 @@ def deck_view(deck_id, version="target", omit=()):
     answer = {
         "summary": _named_by_id(summary), "version": version, "versions": list(summary["versions"]),
         "sections": lines, "stats": stats, "practice": _deck_practice(summary, sections),
+        # Deal a hand's keep rule (E4-S09): the practice games' land ranges and their source.
+        "keep_rule": keep_rule_view(),
         "guide": playing_guide(deck_file),
         "usual_opponents": usual_opponents(deck_id),
         # When it was last played at home and what its list changed since (E1-S27): the Game log's games.
