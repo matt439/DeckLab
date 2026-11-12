@@ -708,6 +708,8 @@ def status(dbname=None, now=None):
         age = (now - last["dump"]).total_seconds() / 3600
         lines.append(f"  WARNING: the last dump that worked is {age:.0f} hours old (more than {hours:g}); "
                      "check decklab/data/logs/db.log and the nightly task (python -m decklab.db schedule status).")
+    from decklab.db import shrink
+    lines.extend(shrink.status_lines(dbname, s=s))
     run = newest["check"]
     if run is not None and not run["ok"]:
         lines.append("  WARNING: the last check found a problem (python -m decklab.db check --history says which).")

@@ -10,6 +10,12 @@ the database, and one shop's failure never stops the other's). After the steps t
 says whether the card data and the exchange rate are still refreshing (_card_data, E11-S85), again
 never a failed night.
 
+After a backup that worked, the shrink check (shrink.py, E11-S87), when config.json's
+"database" block turns it on ("shrink_warn": true; off until Matt agrees its tables and
+thresholds), compares the watched tables' counts with those of the newest good dump at least 20
+hours older and logs a WARNING for each that shrank sharply; it never fails the night, but the
+operator heartbeat gets "shrink" as failed. Off, it sends no "shrink" step.
+
 Every step runs even when an earlier one failed (an unreachable NAS is no reason to skip the
 export), and each one's outcome goes into decklab/data/logs/db.log. The check comes after the
 backup and the export, so a problem it finds never stops either. It runs under pythonw, with no
@@ -105,6 +111,17 @@ def _restore_check_if_due():
     return backup.run_restore_check()
 
 
+def _shrink_check():
+    """E11-S87: whether no watched table shrank sharply since the night before's good dump
+    (shrink.py); None when it couldn't be read or is off. Its lines go to db.log; it never fails the night."""
+    from decklab.db import shrink
+    try:
+        return shrink.nightly(db.log)
+    except Exception as e:                # noqa: BLE001 (a warning's check never stops the night)
+        db.log(f"Nightly: the shrink check failed: {type(e).__name__}.")
+        return None
+
+
 def _shop_prices():
     from decklab.lib import shops
     return shops.nightly(db.log)
@@ -175,6 +192,7 @@ def _run():
              ("check", check.run), ("restore check", _restore_check_if_due), ("shop prices", _shop_prices)]
     outcomes = {label: _step(label, func) for label, func in steps}
     failed = [label for label, ok in outcomes.items() if not ok]
+    shrunk = _shrink_check() if outcomes["backup"] else None
     if failed:
         db.log(f"Nightly: finished; failed: {', '.join(failed)}.")
     else:
@@ -191,5 +209,7 @@ def _run():
         db.log("Nightly: whether the card data is refreshing couldn't be checked.")
         outcomes["card data"] = False
     outcomes["disk space"] = _disk_space()      # a warning, apart from the steps' result
+    if shrunk is not None:
+        outcomes["shrink"] = shrunk        # a warning for the heartbeat, never a failed night
     notify({**outcomes, "nightly": not failed}, log=db.log)
     return 1 if failed else 0
