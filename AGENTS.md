@@ -459,6 +459,7 @@ To read anything else in the database, use `python -m decklab.db sql "select ...
 - They're catalogue files under the gitignored `decklab/data/gauntlet/`, never a deck or inventory: they never reach the pool, the tables, the audit trail or the privacy switches. Their games go to their own results folder, so they never join the field, Rankings, the ratings or per-card stats.
 - The catalogue is built only by hand, from the command line (`gauntlet build`), politely (one EDHREC request a second) and cached (average decks 30 days). No page fetches. The server reads the catalogue on its own PC, so on the live server PC build it there too.
 - A `core` deck or precon whose minimum bracket is above 2 is re-tiered to `upgraded`, with the reason in its `fixes`.
+- **Same commander** (E3-S49): a Commander deck can instead play every catalogue deck of its own commander (core, upgraded and precon; the Testing tab's **Which decks**, or `gauntlet plan|play|view <deck-id> --same-commander`). Those lists are sparring partners for a head-to-head, not advice on what to play.
 - Results describe the sampled opponents only, never a whole colour or style, and Commander games are 1v1 only. When relaying a member's deck's results, the member limits under "Spaces" still apply.
 
 ## Conventions

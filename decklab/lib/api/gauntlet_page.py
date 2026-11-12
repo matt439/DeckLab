@@ -8,7 +8,7 @@ outside sparring decks through forge.gauntlet.run (a field run over the sample, 
 own results folder, so Rankings and the ratings never see its games).
 
     gauntlet_view(deck_id, version, sample=None, size=None, colours=None, styles=None, tiers=None,
-                  profile=None)
+                  commander=None, profile=None)
                         the deck against a sample (a saved one by id, else one drawn now with these
                         filters and not saved): forge.gauntlet.view's opponents and groups with
                         "status" ("none", "queued", "running", "done" or "error"), "job", "notice",
@@ -18,6 +18,9 @@ own results folder, so Rankings and the ratings never see its games).
                         "forge". With no choices it's the standard sample (E3-S33). For the standard
                         sample, "before", "compare" and "older" (E3-S34, gauntlet_summary's) and each
                         opponent's "before" and "moved"; None and False for any other sample.
+                        commander="same" (E3-S49, Commander decks only): every playable catalogue
+                        deck with the deck's own commanders instead of a sample (options'
+                        "same_commander" says how many there are; the sample's "commander" names them)
     gauntlet_summary(deck_id, version="target", profile=None)
                         the deck's headline against the standard sample, from saved games only (no
                         estimate, no sample saved, nothing played; its docstring has the answer);
@@ -25,7 +28,7 @@ own results folder, so Rankings and the ratings never see its games).
     catalogue_view(format)
                         a catalogue's public counts and credit, or "built": None
     run_gauntlet(body)  body {"profile", "id", "version"?, "budget"?, "expected_card_sha"?, "sample"?,
-                        "size"?, "colours"?, "styles"?, "tiers"?}: start (or join) a run; the answer
+                        "size"?, "colours"?, "styles"?, "tiers"?, "commander"?}: start (or join) a run; the answer
                         as gauntlet_view's
     stop_gauntlet(body) body {"profile", "id", "version"?, "sample"?}: Stop; the answer as gauntlet_view's
 
@@ -78,6 +81,13 @@ GAUNTLET_FAILED = ("Something went wrong on the PC while Forge was playing the g
                    "happening, the server window says why.")
 NO_VIEW = "The gauntlet's results can't be worked out on the PC now (the server log says why)."
 NO_DECKS = "No popular deck matches those choices: choose fewer filters."
+# E3-S49's "Same commander": the commanders always come from the deck itself, never the request.
+SAME = "same"
+NOT_COMMANDER = "Same commander is only for Commander decks."
+NO_COMMANDER = "This deck has no commander yet, so there's no commander to match."
+SAME_ALONE = ("Same commander plays every popular deck with this deck's commander: it takes no size, colours, "
+              "styles, tiers or saved sample.")
+NO_SAME_COMMANDER = "The popular decks list has no other deck with this deck's commander."
 CHANGED = "The saved list changed before its gauntlet run could start. Reload the saved deck before testing it again."
 
 
@@ -128,8 +138,27 @@ def _words(value, allowed, what):
     return tuple(found) or None
 
 
-def _choices(fmt, sample=None, size=None, colours=None, styles=None, tiers=None):
-    """The request's sample choices, checked: {"sample", "size", "colours", "styles", "tiers"}."""
+def _same(fmt, commander, sample, size, colours, styles, tiers):
+    """True when the request asks for "Same commander" (commander="same", E3-S49); ApiError 400 for
+    another value, a deck that isn't a Commander deck or another choice given with it."""
+    if commander is None or commander == "" or commander is False:
+        return False
+    if not isinstance(commander, str) or commander.strip().lower() != SAME:
+        raise ApiError(400, f"commander must be {SAME}")
+    if fmt != "commander":
+        raise ApiError(400, NOT_COMMANDER)
+    if any(value not in (None, "", []) for value in (sample, size, colours, styles, tiers)):
+        raise ApiError(400, SAME_ALONE)
+    return True
+
+
+def _choices(fmt, sample=None, size=None, colours=None, styles=None, tiers=None, commander=None):
+    """The request's sample choices, checked: {"sample", "size", "colours", "styles", "tiers",
+    "commander" (True for E3-S49's Same commander, whose "commanders" the caller fills in from the
+    deck: _with_commanders), "commanders"}."""
+    if _same(fmt, commander, sample, size, colours, styles, tiers):
+        return {"sample": None, "size": None, "colours": None, "styles": None, "tiers": None, "commander": True,
+                "commanders": None}
     if sample is not None and (not isinstance(sample, str) or not SAMPLE_RE.fullmatch(sample)):
         raise ApiError(400, "sample must be a saved sample's id (sample: and 12 hexadecimal characters)")
     every = ALL in SIZES[fmt]
@@ -149,13 +178,43 @@ def _choices(fmt, sample=None, size=None, colours=None, styles=None, tiers=None)
     if any(letter not in "WUBRG" for letter in letters):
         raise ApiError(400, "colours must be colour letters, such as WU")
     return {"sample": sample, "size": size, "colours": "".join(c for c in "WUBRG" if c in letters) or None,
-            "styles": _words(styles, STYLES, "styles"), "tiers": _words(tiers, TIERS[fmt], "tiers")}
+            "styles": _words(styles, STYLES, "styles"), "tiers": _words(tiers, TIERS[fmt], "tiers"),
+            "commander": False, "commanders": None}
+
+
+def _commanders(sections):
+    """The deck's own commander names (its Commander section), never the request's."""
+    return sorted({line.name for line in (sections or {}).get("Commander") or () if getattr(line, "name", "")})
+
+
+def _with_commanders(choices, sections):
+    """choices with "commanders" from the deck when it asks for Same commander; ApiError 400 for a
+    Commander deck without one."""
+    if not choices.get("commander"):
+        return choices
+    names = _commanders(sections)
+    if not names:
+        raise ApiError(400, NO_COMMANDER)
+    return dict(choices, commanders=names)
+
+
+def _same_count(fmt, cat, commanders, exclude):
+    """options' "same_commander" (E3-S49): {"commanders": the deck's names, "decks": how many playable
+    catalogue decks share them, a trial's own precon left out}; None for a 60-card deck or one
+    without a commander."""
+    if fmt != "commander" or not commanders:
+        return None
+    from decklab.lib.gauntlet.sample import same_commander
+    left = [d for d in same_commander((cat or {}).get("decks") or [], commanders) if d.get("id") not in set(exclude)]
+    return {"commanders": list(commanders), "decks": len(left)}
 
 
 def _draw(g, fmt, choices, save, cat=None):
     """The sample the choices name (a saved one, or one drawn now from cat, the catalogue already
     loaded, when given); ApiError 404 for a sample id that isn't saved, 400 for one of the other
     format; forge's ForgeError when there's no catalogue."""
+    if choices.get("commander"):
+        return g.same_commander(fmt, choices["commanders"], save=save, cat=cat)
     if choices["sample"]:
         try:
             found = g.sample(choices["sample"])
@@ -172,7 +231,7 @@ def _is_standard_draw(fmt, choices):
     """True when the choices draw the standard sample (lib/gauntlet/sample.STANDARD: its size and
     tiers, no colour, style or saved sample), so the answer needn't draw it twice."""
     std = STANDARD[fmt]
-    return (not choices["sample"] and choices["size"] == std["size"] and not choices["colours"]
+    return (not choices.get("commander") and not choices["sample"] and choices["size"] == std["size"] and not choices["colours"]
             and not choices["styles"] and sorted(choices["tiers"] or std["tiers"]) == sorted(std["tiers"]))
 
 
@@ -375,7 +434,7 @@ def _base(forge, entry, fmt, seen):
             "build_command": _build_command(fmt, seen), "credit": CREDIT,
             "options": {"sizes": list(SIZES[fmt]), "colours": "WUBRG", "styles": list(STYLES),
                         "tiers": list(TIERS[fmt]), "budgets": list(BUDGETS),
-                        "overnight_minutes": OVERNIGHT_MINUTES},
+                        "overnight_minutes": OVERNIGHT_MINUTES, "same_commander": None},
             "default_budget": DEFAULT_BUDGET, "default_size": DEFAULT_SIZE[fmt], "forge": forge.status(),
             "catalogue": None, "sample": None, "standard": None, "is_standard": False, "opponents": [], "groups": {},
             "games": 0, "note": None, "notes": [], "status": "none", "job": None, "notice": None, "error": None,
@@ -384,10 +443,11 @@ def _base(forge, entry, fmt, seen):
             "before": None, "compare": None, "older": None}
 
 
-def _answer(forge, g, entry, choices, seen, summary=None):
+def _answer(forge, g, entry, choices, seen, summary=None, commanders=()):
     """gauntlet_view's answer for entry and the request's choices, as seen may see it (summary,
     the deck's library summary, for the standard sample's before-figure: none without it). A trial
-    deck's samples leave out its own precon (gauntlet.trial_excluded: "of" counts the rest)."""
+    deck's samples leave out its own precon (gauntlet.trial_excluded: "of" counts the rest).
+    commanders: the deck's own (_commanders), for options' "same_commander"."""
     fmt = _format(entry)
     exclude = trial_excluded(summary)
     out = _base(forge, entry, fmt, seen)
@@ -403,9 +463,11 @@ def _answer(forge, g, entry, choices, seen, summary=None):
     if not playing and job is None:
         job, snap = _find_job(entry, chosen["id"], seen, exclude)
     out["catalogue"] = _catalogue_json(cat)
+    out["options"]["same_commander"] = _same_count(fmt, cat, commanders, exclude)
     # saved: the sample comes back by its id (the page's address keeps only such a one).
     out["sample"] = {"id": chosen["id"], "size": chosen.get("size"), "filters": chosen.get("filters"),
                      "decks": len(chosen.get("decks") or []), "all": bool(chosen.get("all")),
+                     "commander": list(chosen.get("commander") or []) or None,
                      "saved": bool(choices["sample"]) or job is not None or _is_saved(g, chosen["id"])}
     out.update(standard=standard_json(standard), is_standard=chosen["id"] == standard["id"])
     if chosen.get("decks"):
@@ -453,21 +515,23 @@ def standard_json(standard):
 
 
 def gauntlet_view(deck_id, version="target", sample=None, size=None, colours=None, styles=None, tiers=None,
-                  profile=None):
+                  commander=None, profile=None):
     """GET /api/gauntlet?id=&version=[&sample=|&size=&colours=&styles=&tiers=][&profile=]: the list
     against a sample of popular decks (the module docstring). A sample drawn from the filters isn't
     saved until it's played. ApiError as deck_view for the id or version (404 first for a deck the
     viewer may not see), 400 for a Beginner Box half or a choice that isn't one, 404 for a sample id
     that isn't saved, 500 when the gauntlet can't be loaded or worked out. profile is accepted for
     the page's usual query and changes nothing. With no choices, the sample is the standard one
-    (forge.gauntlet.standard: the default draw)."""
+    (forge.gauntlet.standard: the default draw). commander="same" (E3-S49): every catalogue deck
+    with the deck's own commanders (400 for a 60-card deck, a deck without a commander or another
+    choice beside it); none there is an answer with no opponents, never a run."""
     if deck_id is None:
         raise ApiError(400, "The request needs id")
     forge = forge_runs._forge_module()
-    summary, entry = field_page._field_entry(forge, deck_id, version or "target")
+    summary, sections, entry = field_page._field_list(forge, deck_id, version or "target")
     g = _gauntlet(forge)
-    choices = _choices(_format(entry), sample, size, colours, styles, tiers)
-    return _answer(forge, g, entry, choices, forge_runs._Seen(), summary)
+    choices = _with_commanders(_choices(_format(entry), sample, size, colours, styles, tiers, commander), sections)
+    return _answer(forge, g, entry, choices, forge_runs._Seen(), summary, _commanders(sections))
 
 
 # ============================================================ the summary (E3-S33)
@@ -648,15 +712,15 @@ def run_gauntlet(body):
     _visible_first(data, profile)
     guard.require_start(profile)        # the simulations setting (api/simulations.py)
     _keys(data, ("profile", "id"), ("version", "budget", "expected_card_sha", "sample", "size", "colours",
-                                    "styles", "tiers"))
+                                    "styles", "tiers", "commander"))
     budget = data.get("budget") or DEFAULT_BUDGET
     if budget not in BUDGETS:
         raise ApiError(400, f"budget must be one of: {', '.join(BUDGETS)}")
     forge = forge_runs._forge_module()
-    summary, entry = field_page._field_entry(forge, data["id"], data.get("version"))
+    summary, sections, entry = field_page._field_list(forge, data["id"], data.get("version"))
     fmt = _format(entry)
-    choices = _choices(fmt, data.get("sample"), data.get("size"), data.get("colours"), data.get("styles"),
-                       data.get("tiers"))
+    choices = _with_commanders(_choices(fmt, data.get("sample"), data.get("size"), data.get("colours"),
+                                        data.get("styles"), data.get("tiers"), data.get("commander")), sections)
     if "expected_card_sha" in data:
         expected = data["expected_card_sha"]
         if not isinstance(expected, str) or not _SHA_RE.fullmatch(expected):
@@ -676,7 +740,7 @@ def run_gauntlet(body):
         exclude = trial_excluded(summary)
         chosen = without(drawn, exclude)
         if not chosen.get("decks"):
-            raise ApiError(400, NO_DECKS)
+            raise ApiError(400, NO_SAME_COMMANDER if choices["commander"] else NO_DECKS)
         g.entries(fmt, chosen["decks"])         # every deck still playable in today's catalogue
     except (ValueError, forge.ForgeError) as e:
         raise ApiError(400, _public(e)) from None
@@ -693,7 +757,8 @@ def run_gauntlet(body):
             run_recovery.submit(forge, "gauntlet", run, profile, data, key, rerun=True)
         except jobs.Busy as e:
             raise ApiError(503, forge_runs.MATCHUP_STOPPING if e.stopping else GAUNTLET_BUSY) from None
-    return _answer(forge, g, entry, dict(choices, sample=chosen["id"]), seen, summary)
+    return _answer(forge, g, entry, dict(choices, sample=chosen["id"], commander=False), seen, summary,
+                   _commanders(sections))
 
 
 def stop_gauntlet(body):
@@ -706,7 +771,7 @@ def stop_gauntlet(body):
     _visible_first(data, profile)
     _keys(data, ("profile", "id"), ("version", "sample"))
     forge = forge_runs._forge_module()
-    summary, entry = field_page._field_entry(forge, data["id"], data.get("version"))
+    summary, sections, entry = field_page._field_list(forge, data["id"], data.get("version"))
     g = _gauntlet(forge)
     choices = _choices(_format(entry), data.get("sample"))
     seen = forge_runs._Seen(profile)
@@ -718,4 +783,4 @@ def stop_gauntlet(body):
             job.wait(forge_runs.STOP_WAIT)
     if playing:
         choices["sample"] = playing[0].fn.sample["id"]
-    return _answer(forge, g, entry, choices, seen, summary)
+    return _answer(forge, g, entry, choices, seen, summary, _commanders(sections))
