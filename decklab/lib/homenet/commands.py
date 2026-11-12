@@ -887,6 +887,22 @@ def _last_run_line(info, at_logon=False):
                 f"Its log may say why: {control.LOG_FILE}")
 
 
+def disk_report(settings):
+    """lib/disk_space.report(settings): imported here so a status that never gets that far doesn't."""
+    from decklab.lib import disk_space
+    return disk_space.report(settings)
+
+
+def check_disk(entries):
+    """The Disk lines from disk_space.report()'s entries (None: the check didn't finish): free
+    space per disk, WARN under config.json's disk_space.warn_below_gb, and the data folders' sizes."""
+    if entries is None:
+        return [line(WARN, "Disk", "Couldn't check free space: the check didn't finish.")]
+    return [line(WARN, "Disk", entry["text"], "Make room on this disk: the Data folders line shows what "
+                 "Deck Lab's own folders use (old Forge results and backups are the usual).")
+            if entry["level"] == "warn" else line(OK, "Disk", entry["text"]) for entry in entries]
+
+
 def check_tunnel(settings, result, ingress=None, listener=None, credentials=None):
     """The Tunnel lines: whether the public address (config.json's "tunnel")
     shows Cloudflare Access's login; result is tunnel.check_public's answer
@@ -973,7 +989,8 @@ def cmd_status(name, port):
     helpers = [threading.Thread(target=lambda: found.update(answer=probe(port, _probe_host(mine))), daemon=True),
                threading.Thread(target=lambda: found.update(mdns=multicast.mdns_lookup(f"{hostname}.local",
                                                                                        local_ipv4())),
-                                daemon=True)]
+                                daemon=True),
+               threading.Thread(target=lambda: found.update(disk=disk_report(settings)), daemon=True)]
     if public:
         helpers.append(threading.Thread(target=lambda: found.update(public=tunnel.check_public(public)),
                                         daemon=True))
@@ -1022,6 +1039,7 @@ def cmd_status(name, port):
         lines += check_wake(facts, wake["gate"], found.get("gate"))
     lines += check_tunnel(settings, found.get("public"), tunnel.ingress_problems(settings, port),
                           found.get("listener"), tunnel.credentials_problem(settings))
+    lines += check_disk(found.get("disk"))
     seconds = time.monotonic() - started
     header = (f"Deck Lab status, {datetime.now().strftime('%Y-%m-%d %H:%M')} (port {port}; checked in "
               f"{seconds:.1f} s, of which PowerShell {facts.get('seconds', 0):.1f} s)")

@@ -96,7 +96,17 @@ def _status(args):
     shop_warning = warning()
     if shop_warning:
         print("WARNING: " + shop_warning)
+    _disk_lines()
     return 0
+
+
+def _disk_lines(report=None):
+    """Free disk space and the data folders' sizes (lib/disk_space.py, E11-S86), a warning
+    prefixed as the others are."""
+    if report is None:
+        from decklab.lib.disk_space import report
+    for entry in report():
+        print(("WARNING: " if entry["level"] == "warn" else "") + entry["text"])
 
 
 def _personal_state(name):

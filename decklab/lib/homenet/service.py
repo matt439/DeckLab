@@ -475,6 +475,7 @@ def status(name, port):
     jobs = {"answer": lambda: commands.probe(port, commands._probe_host(mine)),
             "mdns": lambda: multicast.mdns_lookup(f"{hostname}.local", commands.local_ipv4())}
     jobs["power"] = lambda: _power_lines(settings)
+    jobs["disk"] = lambda: commands.disk_report(settings)
     if public:
         jobs["public"] = lambda: tunnel.check_public(public)
     if access_port:
@@ -504,7 +505,8 @@ def status(name, port):
     lines += found.get("power") or [line(WARN, "Sleep", "Couldn't check sleep and wake: the check didn't finish.")]
     lines += commands.check_tunnel(settings, found.get("public"), tunnel.ingress_problems(settings, port),
                                    found.get("listener"), tunnel.credentials_problem(settings))
-    header = f"Deck Lab status, {datetime.now().strftime('%Y-%m-%d %H:%M')} (port {port})"
+    lines += commands.check_disk(found.get("disk"))
+    header =f"Deck Lab status, {datetime.now().strftime('%Y-%m-%d %H:%M')} (port {port})"
     shown = any(entry["level"] == OK and "http://" in entry["text"] for entry in addresses)
     footer = ("These checks run on this computer, so they can't prove a phone gets through: the real test "
               + ("is opening the address above on a phone on the home Wi-Fi." if shown else

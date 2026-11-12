@@ -108,6 +108,22 @@ def _shop_prices():
     return shops.nightly(db.log)
 
 
+def _disk_space(report=None):
+    """Log free disk space and the data folders' sizes (lib/disk_space.py, E11-S86). False when a
+    disk is under config.json's disk_space.warn_below_gb or can't be read: the heartbeat's
+    "disk space" step, never a failed nightly (a full disk fails the steps that need room)."""
+    try:
+        if report is None:
+            from decklab.lib.disk_space import report
+        entries = report()
+    except Exception as e:                    # noqa: BLE001 (a warning, never the nightly)
+        db.log(f"Nightly: disk space couldn't be checked: {type(e).__name__}.")
+        return False
+    for entry in entries:
+        db.log("Nightly: " + ("WARNING: " if entry["level"] == "warn" else "") + entry["text"])
+    return not any(entry["level"] == "warn" for entry in entries)
+
+
 def run():
     """The nightly job. Returns 0, or 1 when any step failed."""
     from decklab.lib import keepawake
@@ -155,5 +171,6 @@ def _run():
         outcomes.update(heartbeat_steps(datetime.now().astimezone().date()))
     except Exception:
         outcomes["shop health"] = False
+    outcomes["disk space"] = _disk_space()      # a warning, apart from the steps' result
     notify({**outcomes, "nightly": not failed}, log=db.log)
     return 1 if failed else 0

@@ -353,6 +353,7 @@ class ServiceCommandTests(SystemdCase, Guarded):
         self.probe = self.patch("decklab.lib.homenet.commands.probe", side_effect=lambda *a, **k: self.answer)
         self.patch("decklab.lib.homenet.commands.local_ipv4", return_value="192.168.1.20")
         self.patch("decklab.lib.homenet.commands.newest_code_mtime", return_value=None)
+        self.patch("decklab.lib.homenet.commands.disk_report", return_value=[{"level": "ok", "text": "Disk: 100.0 GB free of 500.0 GB (20%)."}])
         # status's network reads and the .local lookup (linux_facts and mdns have tests of their own).
         self.facts = {"network": NETWORK, "firewall": {"active": [], "zone": None, "port": None, "mdns": None},
                       "errors": {}}
