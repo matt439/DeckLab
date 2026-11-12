@@ -107,6 +107,12 @@ class ProfileConfigReadTests(unittest.TestCase):
             with self.assertRaises(profile_config.InvalidProfileEdit):
                 profile_config.read_settings()
 
+    def test_read_and_require_ready_check_the_same_journal(self):
+        # One layout helper: read_settings(), require_ready() and the edit journal agree.
+        self.assertEqual(profile_config._guarded_pending(), profile_config.journal_file())
+        self.assertEqual(profile_config.journal_file(), self.journal)
+        self.assertEqual(profile_config.control(), self.control)
+
 
 if __name__ == "__main__":
     unittest.main()
