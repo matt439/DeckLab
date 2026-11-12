@@ -12,6 +12,9 @@ Usage (from the repo root):
         [--no-cache]       simulate again even when a saved result exists
     python -m decklab.lib.goldfish --all [--halves] [--pairings]
                            headline numbers for every deck (and the Beginner Box)
+                           (mull%: a Commander deck's games that kept fewer than 7, as the page)
+    Exit codes: 0 done; 1 a deck that can't be found or read (with --all it's skipped, with a
+    note on stderr); 2 the database can't be reached; 130 stopped with Ctrl+C.
 
 From code:
 

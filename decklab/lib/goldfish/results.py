@@ -90,10 +90,24 @@ def _summary(counts, setup, turns, E_colours, big_in_deck, model=None):
 
 # ============================================================ summaries
 
+def _kept_fewer_than_7(kept):
+    """The share of games whose kept hand had fewer than 7 cards (the deck page's "Kept fewer
+    than 7": mulligans that cost a card), from a setup's kept-hand shares. Like _share, a
+    chance that isn't 0 or 1 is never rounded to them."""
+    seven = next((k["share"] for k in kept if k["cards"] == 7), 0)
+    if seven is None:
+        return None
+    fewer = 1 - seven
+    rounded = round(fewer, SHARE_DIGITS)
+    return rounded if rounded not in (0, 1) or fewer in (0, 1) else fewer
+
+
 def headline(result, setup=None):
     """The few numbers a deck list shows, for one setup: by default the
     games the deck is played in, multiplayer for a Commander deck (the
-    shop's Commander nights) and on the play otherwise. Mulligan rate, 3rd
+    shop's Commander nights) and on the play otherwise. Mulligan rate (and
+    kept_fewer_than_7, the page's Commander figure: the free first mulligan
+    costs nothing, so mulligan_rate is about half of all games there), 3rd
     land on turn 3, 4th land on turn 4, colour screw turns, flood turns,
     first 4-drop by turn 4."""
     if setup is None:
@@ -103,6 +117,7 @@ def headline(result, setup=None):
     return {
         "setup": setup,
         "mulligan_rate": r["mulligans"]["rate"],
+        "kept_fewer_than_7": _kept_fewer_than_7(r["mulligans"]["kept"]),
         "land_3_by_3": drops.get(3),
         "land_4_by_4": drops.get(4),
         "colour_screw": r["colours"]["screw_turns"],

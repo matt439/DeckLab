@@ -5,7 +5,7 @@ import argparse
 import json
 import sys
 
-from decklab.lib import decks
+from decklab.lib import decks, inventory, spaces
 
 from . import runs
 from .results import headline
@@ -50,7 +50,8 @@ def main(argv=None):
 
 
 def _main(argv):
-    sys.stdout.reconfigure(errors="replace")
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="replace")
     parser = argparse.ArgumentParser(prog="python -m decklab.lib.goldfish",
                                      description="Practice-hand simulation for a Deck Lab deck.")
     parser.add_argument("deck_id", nargs="?", help='e.g. casual/gruul-ramp, "pairing/cats+elves"')
@@ -71,6 +72,28 @@ def _main(argv):
     if not args.all and not args.deck_id:
         parser.error("give a deck id or --all")
 
+    try:
+        return _run(args)
+    except inventory.Unavailable as e:      # the database can't be used: python -m decklab.db's exit 2
+        print(e, file=sys.stderr)
+        return 2
+
+
+# A deck that can't be found (no such id, a pairing's or an idea's missing Play-now list) or read
+# (no decklist block, a bad product list): one sentence and exit 1, as pool.main does.
+_DECK_ERRORS = (decks.DeckNotFound, decks.DeckFileError, spaces.SpaceNotFound)
+
+
+def _mulligan_figure(h, result):
+    """The --all table's mull% for a headline: in a setup with a free first mulligan (a
+    Commander deck's multiplayer games) the page's "Kept fewer than 7", since about half of
+    all sevens go back for the free one by design; otherwise the mulligan rate, as today."""
+    setup = result["results"][h["setup"]]
+    free = setup["mulligans"].get("free_rate") is not None
+    return h["kept_fewer_than_7"] if free else h["mulligan_rate"]
+
+
+def _run(args):
     def run(summary, version):
         kind = decks.engine_kind(summary)
         sections = decks.load_deck(summary["id"], version)
@@ -78,7 +101,12 @@ def _main(argv):
                                     refresh=args.no_cache)
 
     if args.all:
-        everything = [s for s in decks.list_decks() if not s.get("error")]
+        everything = []
+        for summary in decks.list_decks():
+            if summary.get("error"):
+                print(f"Skipped {summary['id']}: {summary['error']}", file=sys.stderr)
+            else:
+                everything.append(summary)
         chosen = [s for s in everything if args.halves or not s["id"].startswith(f"product/{decks.BEGINNER_BOX}/")]
         if args.pairings:
             chosen += decks.beginner_box_pairings()
@@ -86,17 +114,30 @@ def _main(argv):
               f"{'flood':>6} {'4d@4':>6} {'secs':>6}")
         for summary in chosen:
             for version in summary["versions"]:
-                result = run(summary, version)
+                try:
+                    result = run(summary, version)
+                except _DECK_ERRORS as e:
+                    print(f"Skipped {summary['id']} ({version}): {e}", file=sys.stderr)
+                    continue
                 h = headline(result)        # multiplayer for Commander decks, on the play for the rest
-                print(f"{summary['id']:<48} {version:<6} {h['setup']:<11} {_pct(h['mulligan_rate']):>6} "
+                print(f"{summary['id']:<48} {version:<6} {h['setup']:<11} {_pct(_mulligan_figure(h, result)):>6} "
                       f"{_pct(h['land_3_by_3']):>6} {_pct(h['land_4_by_4']):>6} {_pct(h['colour_screw']):>6} "
                       f"{_pct(h['flood_turns']):>6} {_pct(h['big_by_4']):>6} {result['seconds']:>6}")
+        print("mull%: games that kept fewer than 7 in multiplayer (the free first mulligan costs nothing), "
+              "as the deck page shows; otherwise the share of games that mulliganed.")
         return 0
-    summary = decks.find_summary(args.deck_id)
-    if summary is None or summary.get("error"):
-        print(f"No deck {args.deck_id!r}", file=sys.stderr)
+    try:
+        summary = decks.find_summary(args.deck_id)
+        if summary is None:
+            print(f"No deck {args.deck_id!r}", file=sys.stderr)
+            return 1
+        if summary.get("error"):
+            print(f"{args.deck_id} can't be read: {summary['error']}", file=sys.stderr)
+            return 1
+        result = run(summary, "owned" if args.owned else "target")
+    except _DECK_ERRORS as e:
+        print(e, file=sys.stderr)
         return 1
-    result = run(summary, "owned" if args.owned else "target")
     if args.json:
         print(json.dumps(result, indent=2, ensure_ascii=False))
     else:
