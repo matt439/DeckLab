@@ -39,13 +39,17 @@ def runner(stdout="", stderr="", code=0, raises=None):
 class ParseTests(unittest.TestCase):
     def test_windows_and_linux_outputs(self):
         self.assertEqual(tunnel.parse_version(WINDOWS_OUT),
-                         {"version": "2025.8.1", "released": date(2025, 8, 1), "built": "2025-08-21"})
+                         {"version": "2025.8.1", "released": date(2025, 8, 21), "built": "2025-08-21"})
         self.assertEqual(tunnel.parse_version(LINUX_OUT),
-                         {"version": "2024.6.1", "released": date(2024, 6, 1), "built": "2024-06-12"})
+                         {"version": "2024.6.1", "released": date(2024, 6, 12), "built": "2024-06-12"})
 
     def test_without_a_build_date_and_with_leading_zeroes(self):
         self.assertEqual(tunnel.parse_version("cloudflared version 2023.02.2\n"),
                          {"version": "2023.2.2", "released": date(2023, 2, 1), "built": None})
+
+    def test_an_impossible_build_date_falls_back_to_the_month(self):
+        self.assertEqual(tunnel.parse_version("cloudflared version 2025.2.0 (built 2025-02-30-0000 UTC)"),
+                         {"version": "2025.2.0", "released": date(2025, 2, 1), "built": None})
 
     def test_unreadable_outputs(self):
         for text in ("", None, "cloudflared version DEV (built unknown)", "command not found",
@@ -91,17 +95,31 @@ class JudgeTests(unittest.TestCase):
         self.assertEqual(judged["text"], "cloudflared 2025.8.1 (at C:/cf/cloudflared.exe; built 2025-08-21), "
                                          "within Cloudflare's 365-day support.")
 
-    def test_the_limit_is_support_days_after_the_versions_month(self):
-        start = date(2025, 8, 1)
+    def test_the_limit_is_support_days_after_the_build_date(self):
+        start = date(2025, 8, 21)
         last = date.fromordinal(start.toordinal() + tunnel.SUPPORT_DAYS)
         self.assertEqual(tunnel.judge_version(self.found(WINDOWS_OUT), last)["state"], "current")
         later = date.fromordinal(last.toordinal() + 1)
         judged = tunnel.judge_version(self.found(WINDOWS_OUT), later, None, "win32")
         self.assertEqual(judged["state"], "old")
         self.assertEqual(judged["age_days"], tunnel.SUPPORT_DAYS + 1)
-        self.assertIn("is from August 2025", judged["text"])
+        self.assertIn("was built on 2025-08-21, more than 365 days ago", judged["text"])
         self.assertIn("never updates itself", judged["text"])
         self.assertIn("winget upgrade Cloudflare.cloudflared", judged["fix"])
+
+    def test_a_late_month_build_near_the_limit_is_current(self):
+        # 2025.11.5 built on 2025-11-28 is 349 days old on 2026-11-12, though its month began 376 days before.
+        judged = tunnel.judge_version(self.found("cloudflared version 2025.11.5 (built 2025-11-28-0900 UTC)\n"),
+                                      date(2026, 11, 12), "/usr/bin/cloudflared", "linux")
+        self.assertEqual((judged["state"], judged["age_days"]), ("current", 349))
+        self.assertIsNone(judged["fix"])
+
+    def test_without_a_build_date_the_month_is_used(self):
+        found = self.found("cloudflared version 2025.11.5\n")
+        self.assertEqual(tunnel.judge_version(found, date(2026, 11, 1))["state"], "current")
+        judged = tunnel.judge_version(found, date(2026, 11, 2), None, "linux")
+        self.assertEqual((judged["state"], judged["age_days"]), ("old", 366))
+        self.assertIn("is from November 2025, more than 365 days ago", judged["text"])
 
     def test_a_wrong_clock_is_current(self):
         judged = tunnel.judge_version(self.found(WINDOWS_OUT), date(2020, 1, 1))

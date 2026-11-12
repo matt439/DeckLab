@@ -76,8 +76,10 @@ POSIX_INSTALL_PLACES = ("/usr/bin/cloudflared", "/usr/local/bin/cloudflared", "~
 WINDOWS_HINT = "winget install Cloudflare.cloudflared"
 # Cloudflare's support policy for cloudflared, from SUPPORT_SOURCE (the "Updates" part of its downloads
 # page), as read on SUPPORT_POLICY_CHECKED: "Cloudflare supports versions of cloudflared that are within
-# one year of the most recent release." The newest release isn't known without a fetch, so a version is
-# judged against today, which warns at most a release's gap early. Proposed until Matt confirms it.
+# one year of the most recent release." The newest release isn't known without a fetch, so a version's
+# build date is judged against today, which warns early by at most the time since Cloudflare's newest
+# release (a version without a build date is dated from the first of its month, up to a month earlier
+# still). Proposed until Matt confirms it.
 SUPPORT_DAYS = 365
 SUPPORT_POLICY_CHECKED = "2026-11-12"
 SUPPORT_SOURCE = "https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/"
@@ -299,16 +301,21 @@ _VERSION_RE = re.compile(r"\bcloudflared(?:\.exe)?\s+version\s+(\d{4})\.(\d{1,2}
 
 
 def parse_version(text):
-    """`cloudflared --version`'s output as {"version": "2025.8.1", "released": date (the first of the
-    version's month), "built": "2025-08-21" or None}, or None when it can't be read (a DEV build, an
-    error, nothing)."""
+    """`cloudflared --version`'s output as {"version": "2025.8.1", "released": date (the build date, or
+    the first of the version's month without a readable one), "built": "2025-08-21" or None}, or None
+    when it can't be read (a DEV build, an error, nothing)."""
     match = _VERSION_RE.search(text or "")
     if not match:
         return None
     year, month, patch = (int(part) for part in match.group(1, 2, 3))
     if not 1 <= month <= 12:
         return None
-    return {"version": f"{year}.{month}.{patch}", "released": date(year, month, 1), "built": match.group(4)}
+    built = match.group(4)
+    try:
+        released = date.fromisoformat(built) if built else None
+    except ValueError:
+        built = released = None
+    return {"version": f"{year}.{month}.{patch}", "released": released or date(year, month, 1), "built": built}
 
 
 def cloudflared_version(program, run=None, timeout=VERSION_TIMEOUT):
@@ -352,22 +359,23 @@ def upgrade_hint(program, platform=None):
 def judge_version(answer, today, program=None, platform=None):
     """cloudflared_version's answer judged on `today` (a date) against SUPPORT_DAYS: {"state": "current",
     "old" or "unknown", "version", "age_days", "limit_days", "text", "fix" (the upgrade command, for an
-    old one, else None)}. A version from a month after today (a wrong clock) is current."""
+    old one, else None)}. Its age runs from parse_version's "released" (the build date when it has one); a
+    version dated after today (a wrong clock) is current."""
     kind, found = answer
     where = f" (at {program})" if program else ""
     if kind != "ok":
         return {"state": "unknown", "version": None, "age_days": None, "limit_days": SUPPORT_DAYS,
                 "text": f"cloudflared's version is unknown{where}: {found}.", "fix": None}
     age = (today - found["released"]).days
-    facts = [f"at {program}"] * bool(program) + [f"built {found['built']}"] * bool(found["built"])
-    where = f" ({'; '.join(facts)})" if facts else ""
     if age > SUPPORT_DAYS:
+        when = (f"was built on {found['built']}" if found["built"] else f"is from {found['released']:%B %Y}")
         return {"state": "old", "version": found["version"], "age_days": age, "limit_days": SUPPORT_DAYS,
-                "text": (f"cloudflared {found['version']}{where} is from {found['released']:%B %Y}, more "
-                         f"than {SUPPORT_DAYS} days ago: Cloudflare supports only versions within a year of its "
-                         f"newest release, and this one never updates itself (--no-autoupdate), so the tunnel "
+                "text": (f"cloudflared {found['version']}{where} {when}, more than {SUPPORT_DAYS} days ago: "
+                         f"Cloudflare supports only versions within a year of its newest release, and this one never updates itself (--no-autoupdate), so the tunnel "
                          f"may stop when Cloudflare drops it."),
                 "fix": upgrade_hint(program, platform)}
+    facts = [f"at {program}"] * bool(program) + [f"built {found['built']}"] * bool(found["built"])
+    where = f" ({'; '.join(facts)})" if facts else ""
     return {"state": "current", "version": found["version"], "age_days": max(age, 0), "limit_days": SUPPORT_DAYS,
             "text": f"cloudflared {found['version']}{where}, within Cloudflare's {SUPPORT_DAYS}-day support.",
             "fix": None}
