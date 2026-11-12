@@ -43,17 +43,21 @@ def _incomplete(result):
     return buying_needs.incomplete(result, common._public)
 
 
-def gather(summaries, queue, card_for, *, errors=()):
+def gather(summaries, queue, card_for, *, errors=(), players=None):
     """Return (missing_cards, legacy decks_missing) from the caller's pinned snapshot.
 
     Home summary enumeration failures arrive in errors. A pool failure invalidates
     all comparisons; a single unreadable planned list leaves the other rows visible
     with ready=False and a named error. Pictures remain optional, as elsewhere on
     Shopping. Every matching queue row retains its purpose, state and reference data.
+    A players dict, when given, is filled with buying_needs' card -> counting deck
+    ids (left empty unless the decks were counted); it never joins the answer.
     """
     counted = buying_needs.count(summaries, canonical=_canonical, public=common._public, log=common._log,
                                 errors=errors, incomplete_for=_incomplete, problem_for=_problem)
     errors = counted.errors
+    if players is not None:
+        players.update(getattr(counted, "players", None) or {})
     if counted.phase == "no_targets":
         return {"ready": not errors, "rows": [], "warnings": [], "errors": errors,
                 "totals": {"cards": 0, "copies": 0}}, []

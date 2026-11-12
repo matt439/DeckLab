@@ -16,7 +16,10 @@ class CountedNeeds:
 
     phase distinguishes early no-target/pool-failure returns from a completed
     counting pass with zero rows. status is fixed wording for non-UI callers;
-    raw error details need not leave their local capture.
+    raw error details need not leave their local capture. players maps each
+    canonical card name to the ids of the counted decks whose planned list needs
+    it, shortfall or not: each deck's count sees the whole free pool, so a card
+    two decks need can't be compared with its summed missing copies (E5-S37).
     """
     phase: str
     rows: list = field(default_factory=list)
@@ -24,6 +27,7 @@ class CountedNeeds:
     errors: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
     message: str | None = None
+    players: dict = field(default_factory=dict)
 
     @property
     def status(self):
@@ -78,7 +82,7 @@ def count(summaries, *, canonical, public, log, errors=(), incomplete_for=None, 
     if warnings:
         return CountedNeeds("unavailable", errors=errors, warnings=warnings,
                             message="Missing cards cannot be counted until the home card pool is complete.")
-    gathered, legacy = {}, []
+    gathered, legacy, players = {}, [], {}
     for summary in wanted:
         try:
             result = pool.owned_vs_needed(summary["id"], "target", pool=supply, prices=False)
@@ -88,6 +92,10 @@ def count(summaries, *, canonical, public, log, errors=(), incomplete_for=None, 
                 continue
             amounts = {}
             for row in result["rows"]:
+                if row.get("need", 0) > 0:
+                    holders = players.setdefault(canonical(row["name"]), [])
+                    if summary["id"] not in holders:
+                        holders.append(summary["id"])
                 if row["missing"] > 0:
                     name = canonical(row["name"])
                     amounts[name] = amounts.get(name, 0) + row["missing"]
@@ -106,4 +114,4 @@ def count(summaries, *, canonical, public, log, errors=(), incomplete_for=None, 
         except Exception as error:  # noqa: BLE001 - one unreadable deck must leave other proven needs available
             log(f"Shopping missing cards: {summary['id']} could not be counted: {error}")
             errors.append(describe(summary, "This deck could not be counted: " + public(error)))
-    return CountedNeeds("counted", list(gathered.values()), legacy, errors)
+    return CountedNeeds("counted", list(gathered.values()), legacy, errors, players=players)

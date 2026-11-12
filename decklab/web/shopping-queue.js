@@ -92,6 +92,7 @@ function shopQueueTableRecord(card, casual, showFor, view) {
   const deck = casual.querySelector(".shop-queue-deck"), actions = casual.querySelector(".shop-queue-actions");
   if (deck) deck.setAttribute("title", card.deck.title);
   const reprints = casual.querySelector(".reprint-info"), words = casual.querySelector(".shop-match-words");
+  const need = casual.querySelector(".shop-queue-need");
   const snapshot = casual.querySelector(".shop-snapshot-list") || casual.querySelector(".shop-snapshot");
   const nameCell = el("td", {class: "shop-q-name"});
   const price = shopPrice(card), value = price ? thousands(card.listed_aud,
@@ -138,7 +139,7 @@ function shopQueueTableRecord(card, casual, showFor, view) {
     const menu = actions?.querySelector(".menu");
     if (menu) { menu.style.left = ""; menu.style.top = ""; menu.style.translate = ""; }
     if (lab) {
-      shopQueuePut(nameCell, trigger, words);
+      shopQueuePut(nameCell, trigger, need, words);
       if (deck) shopQueuePut(forCell, deck);
       // The price cell keeps one marker; the full snapshot (fetch time, stock, link) is in the extra row.
       if (snapshot) shopQueuePut(extraBody, snapshot);
@@ -323,4 +324,39 @@ function shopWatchQueueDensity(view) {
   };
   shopQueueDensityStop = stop;
   query.addEventListener("change", changed);
+}
+
+/** E5-S37: a queued card the counted home decks no longer miss, or miss fewer copies of than are queued.
+ * Read-only words from the server's queue_need; the queue changes only through Edit or Remove here. */
+function shopQueueNeedWords(need) {
+  if (!need || !["covered", "fewer"].includes(need.state)) return null;
+  const across = need.rows > 1 ? ` (${num(need.queued)} queued across ${num(need.rows)} rows)` : "";
+  if (need.state === "covered") return `No deck is missing this now${across}`;
+  return `Decks now miss ${num(need.fewer)} fewer than queued: ${plural(need.missing, "copy", "copies")} of ${num(need.queued)}`
+    + (need.rows > 1 ? ` across ${num(need.rows)} rows` : "");
+}
+
+function shopQueueNeedNote(card, view) {
+  const words = shopQueueNeedWords(card.queue_need);
+  if (!words) return null;
+  const writes = view && mayDo("orders") && view.data.queue_revision && card.queue_row;
+  const button = (text, label, open) => {
+    const node = el("button", {type: "button", class: "btn btn-quiet shop-queue-write shop-queue-need-action", text,
+      "aria-label": `${label} ${card.name}`, "data-queue-row": card.queue_row, onclick: () => open()});
+    node.disabled = Boolean(view.busy || view.stale);
+    return node;
+  };
+  return el("div", {class: "shop-queue-need"}, status("plain", words),
+    writes ? el("div", {class: "actions"}, button("Edit…", "Change", () => shopQueueSheet(view, card)),
+      button("Remove…", "Remove", () => shopRemoveQueueSheet(view, card, null))) : null);
+}
+
+/** After a queue write the marks of that card are out of date until the next read: drop them, never guess. */
+function shopQueueNeedForget(queue, changed) {
+  if (!changed) return;
+  const name = String(changed.name || "").toLowerCase(), card = changed.queue_need?.card;
+  for (const item of queue) {
+    if (!item.queue_need) continue;
+    if (String(item.name || "").toLowerCase() === name || (card && item.queue_need.card === card)) delete item.queue_need;
+  }
 }

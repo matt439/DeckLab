@@ -250,6 +250,10 @@
 .shop-queue-actions { display: grid; justify-items: start; gap: var(--s-2); }
 .shop-queue-actions .menu { top: calc(100% + var(--s-1)); left: 0; }
 .shop-queue-actions .form-error { width: 100%; }
+/* E5-S37: a queued card the home decks no longer miss (or miss fewer of), with its Edit and Remove. */
+.shop-queue-need { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); padding: var(--s-2) var(--s-3); }
+.shop-queue-need > .status { max-width: 100%; white-space: normal; }
+.shop-q-name > .shop-queue-need { padding: var(--s-1) 0 0; }
 /* Casual purchase entries have one surface and separate saved reference from each shop's dated check.
    Keep the original direct children: the lab projection moves them and restores the same controls. */
 @media (max-width: 999px) {
