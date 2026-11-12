@@ -6,13 +6,17 @@ so one saved pool also describes prior physical stock after subtracting those de
 free copies are consumed globally before any new copy is suggested for a waiting deck.
 A precon additionally proves its newly created deck, reserving its physical recipe first.
 This never assigns cards, changes a deck or reads/writes a notice or kit.
+
+A ready answer also carries "storage_locations" (E8-S27, storage_places.advice): where the
+space's copies of each card in its "To storage" group are already filed, from the same saved
+snapshot. A lookup that fails leaves the field out; the save and the rest of the advice stand.
 """
 from collections import Counter, defaultdict
 
 from decklab.lib import cards, decks, inventory, pool
 from decklab.lib.inventory import rules
 
-from . import guard
+from . import guard, storage_places
 
 MAX_ADDED_ROWS = 20000
 MAX_DECKS = 200
@@ -214,6 +218,16 @@ def _allocate(after, space, profile, added, created=None, *, cli_owned=False):
     return out
 
 
+def _with_locations(answer, after, space):
+    """answer plus its To storage cards' storage_locations; without them when the lookup fails."""
+    try:
+        names = {answer["added"][item["row"]]["name"] for item in answer["destinations"] if item["kind"] == "storage"}
+        answer["storage_locations"] = storage_places.advice(after, space, names)
+    except Exception:           # optional: the saved addition and its destinations stand
+        answer.pop("storage_locations", None)
+    return answer
+
+
 def after_import(after, space, profile, facts, total):
     """Never raise for optional advice after a committed import; only its exact snapshot is read."""
     authorized = False
@@ -224,8 +238,8 @@ def after_import(after, space, profile, facts, total):
             authorized = True
             added = _validated_added(after, space, facts, total)
             destinations = _allocate(after, space, profile, added)
-        return {"space": space, "profile": profile["id"], "status": "ready", "cards": total,
-                "added": added, "destinations": destinations}
+        return _with_locations({"space": space, "profile": profile["id"], "status": "ready", "cards": total,
+                                "added": added, "destinations": destinations}, after, space)
     except Exception:           # advice is optional; saved cards and raw imports remain saved
         return unknown(space, profile, facts if authorized else None, total if authorized else 0)
 
@@ -243,7 +257,8 @@ def after_cli_merge(after, space, facts, total):
         with inventory.pinned(after):
             added = _validated_added(after, space, facts, total)
             destinations = _allocate(after, space, None, added, cli_owned=True)
-        return {"space": space, "status": "ready", "cards": total, "added": added, "destinations": destinations}
+        return _with_locations({"space": space, "status": "ready", "cards": total, "added": added,
+                                "destinations": destinations}, after, space)
     except Exception:           # the merge stands even when optional filing advice cannot be proved
         added = _public_added(facts)
         destinations = ([{"kind": "unknown", "row": i, "quantity": row["quantity"]}
@@ -271,8 +286,8 @@ def after_precon(after, space, profile, facts, total, proof):
             added = _validated_added(after, space, facts, total)
             created = _created_deck(after, space, profile, proof)
             destinations = _allocate(after, space, profile, added, created)
-        return {"space": space, "profile": profile["id"], "status": "ready", "cards": total,
-                "added": added, "destinations": destinations}
+        return _with_locations({"space": space, "profile": profile["id"], "status": "ready", "cards": total,
+                                "added": added, "destinations": destinations}, after, space)
     except Exception:
         answer = unknown(space, profile, facts if authorized else None, total if authorized else 0)
         answer["message"] = PRECON_UNKNOWN

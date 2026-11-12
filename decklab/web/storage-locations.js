@@ -338,6 +338,38 @@ function packLocationNote(view) {
   return found && found.ready === false ? el("p", { class: "sub", text: STORAGE_LOCATIONS_OFF }) : null;
 }
 
+/** Where these go (E8-S27): a saved answer's storage_locations, copied and checked, or null (an older server, a
+ * failed lookup or a malformed answer: no location words at all). {ready, cards: {name: {places, more}}}. */
+function storageAdviceLocations(found) {
+  if (!found || typeof found !== "object" || typeof found.ready !== "boolean") return null;
+  if (!found.ready) return Object.freeze({ ready: false, cards: Object.freeze({}) });
+  if (!found.cards || typeof found.cards !== "object" || Array.isArray(found.cards)) return null;
+  const names = Object.keys(found.cards);
+  if (names.length > 5000) return null;
+  const cards = {};
+  for (const name of names) {
+    const entry = found.cards[name];
+    if (!entry || !Array.isArray(entry.places) || entry.places.length > 3 || !Number.isSafeInteger(entry.more) || entry.more < 0
+        || entry.places.some(place => typeof place !== "string" || !place || place.length > STORAGE_LOCATION_MAX)
+        || entry.more && entry.places.length < 3) return null;
+    cards[name] = Object.freeze({ places: Object.freeze([...entry.places]), more: entry.more });
+  }
+  return Object.freeze({ ready: true, cards: Object.freeze(cards) });
+}
+
+/** One To storage line's place words: "Usually in Row 2, B · Binder and 2 more", "No location recorded yet", or null. */
+function storageAdviceWords(found, name) {
+  const entry = found?.ready === true && Object.hasOwn(found.cards, name) ? found.cards[name] : null;
+  if (!entry) return null;
+  if (!entry.places.length) return "No location recorded yet";
+  return `Usually in ${entry.places.join(" · ")}${entry.more ? ` and ${entry.more} more` : ""}`;
+}
+
+/** A To storage group's note when locations can't be shown (the database needs updating). */
+function storageAdviceNote(found) {
+  return found?.ready === false ? el("p", { class: "sub storage-advice-off", text: STORAGE_LOCATIONS_OFF }) : null;
+}
+
 /** Location filtering and batches need a checked location snapshot, including on an older server. */
 function colLocationsChecked(cv) { return !!(cv.locations?.ready && cv.locations.sha256 && !cv.locations.error); }
 

@@ -42,6 +42,11 @@ still on the way), for "Where these go"'s Ready to build or Still N to get. Only
 sees home's inventory and that deck; a deck whose counts can't be confirmed is left out, and
 working them out never fails the receipt.
 
+Apply's "storage_locations" (E8-S27, storage_places.advice) says where home's copies of each card
+the receipt brought in a cards component are already filed, from the same saved snapshot, for
+"Where these go"'s To storage lines. Only for a viewer who sees home's inventory; a lookup that
+fails leaves the field out and never fails the receipt.
+
 After the change is saved, arrivals.record keeps an arrival notice for each home player whose
 decks the receipt brought missing cards for (E6-S19, api/arrivals.py shows it); that never
 fails the receipt.
@@ -62,7 +67,7 @@ from . import common
 from .card_lookup import _card_json, _shown_printing, image_url
 from .carddata import _index_info, _require_cards
 from .common import DATABASE_DOWN, LINE_FINISHES, ApiError, _keys, _parse_body, _public
-from . import guard
+from . import guard, storage_places
 from .settings import _writer
 
 PREVIEW_LIFETIME = 1800
@@ -538,7 +543,26 @@ def apply_receipt(body):
     return {"received": True, "order": record["order"], "totals": summary.extra["totals"],
             "assignments": summary.extra["assignments"], "remaining": _remaining(after, record["order"]),
             "fingerprint": fingerprint(after.revision),
-            "tables": tables, "readiness": _readiness(after, tables, profile)}
+            "tables": tables, "readiness": _readiness(after, tables, profile),
+            **_storage_locations(after, record["order"], summary.extra.get("assignments"), profile)}
+
+
+def _storage_locations(after, order_id, assignments, profile):
+    """{"storage_locations": ...} for the received cards components' names (see the module
+    docstring); {} for a viewer outside home's inventory or on any failure."""
+    if not guard.sees_inventory(spaces.HOME, profile):
+        return {}
+    try:
+        received = {item["received"] for item in assignments or () if isinstance(item, dict)}
+        order = after.order(order_id)
+        names = set()
+        for component in order.components if order is not None else ():
+            if component.id in received and component.kind == "cards" and component.status == "received":
+                names.update(row["name"] for row in receive.payload_rows(after, component))
+        return {"storage_locations": storage_places.advice(after, spaces.HOME, names)}
+    except Exception:           # the receipt stands; the page just leaves the locations out
+        common._log("A receipt's storage locations couldn't be worked out:\n" + traceback.format_exc())
+        return {}
 
 
 def _readiness(after, tables, profile):
