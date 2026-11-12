@@ -8,9 +8,11 @@ minutes), so together they still take at most 45 minutes and the task's two-hour
 cuts them off; never a failed night, since a shop that can't be reached is nothing wrong with
 the database, and one shop's failure never stops the other's).
 
-After a backup that worked, the shrink check (shrink.py, E11-S87) compares the watched tables
-counts with the previous good dump's and logs a WARNING for each that shrank sharply; it never
-fails the night, but the operator heartbeat gets "shrink" as failed.
+After a backup that worked, the shrink check (shrink.py, E11-S87), when config.json's
+"database" block turns it on ("shrink_warn": true; off until Matt agrees its tables and
+thresholds), compares the watched tables' counts with those of the newest good dump at least 20
+hours older and logs a WARNING for each that shrank sharply; it never fails the night, but the
+operator heartbeat gets "shrink" as failed. Off, it sends no "shrink" step.
 
 Every step runs even when an earlier one failed (an unreachable NAS is no reason to skip the
 export), and each one's outcome goes into decklab/data/logs/db.log. The check comes after the
@@ -108,8 +110,8 @@ def _restore_check_if_due():
 
 
 def _shrink_check():
-    """E11-S87: whether no watched table shrank sharply since the previous good dump (shrink.py);
-    None when it couldn't be read. Its lines go to db.log; it never fails the night."""
+    """E11-S87: whether no watched table shrank sharply since the night before's good dump
+    (shrink.py); None when it couldn't be read or is off. Its lines go to db.log; it never fails the night."""
     from decklab.db import shrink
     try:
         return shrink.nightly(db.log)

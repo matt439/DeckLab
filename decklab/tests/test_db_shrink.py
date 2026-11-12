@@ -13,6 +13,7 @@ NOW = datetime(2026, 11, 12, 3, 30, tzinfo=timezone.utc)
 BASE = {"public.collection_card": 1000, "public.deck": 40, "public.token_card": 60,
         "public.purchase_order": 30, "public.wishlist_entry": 20, "public.accessory": 12,
         "audit.row_change": 5000}
+ON = {"shrink_warn": True}
 
 
 def counts(**changes):
@@ -86,6 +87,26 @@ class PairTests(unittest.TestCase):
         self.assertIsNone(shrink.pair([row(False, 0, "copy to x failed: no; " + backup.dump_detail(BASE)),
                                        row(True, 1, BASE)]))
 
+    def test_an_interim_dump_doesnt_hide_the_shrink(self):
+        # A bad import, then an update's pre-migration backup (or a manual one), then the night:
+        # the night compares with the night before, not with the interim dump.
+        shrunk = counts(collection_card=100)
+        rows = [row(True, 0, shrunk), row(True, 0.3, shrunk), row(True, 1, BASE)]
+        previous, current = shrink.pair(rows)
+        self.assertEqual(previous["started_at"], NOW - timedelta(days=1))
+        found, earlier = shrink.judge(rows, ON)
+        self.assertEqual([(f["label"], f["before"], f["after"]) for f in found], [("collection", 1000, 100)])
+        self.assertEqual(earlier, NOW - timedelta(days=1))
+        # db status, after a manual dump during the day, still shows it.
+        self.assertEqual(len(shrink.status_lines(rows=[row(True, 0, shrunk)] + rows[1:], s=ON)), 1)
+
+    def test_the_earlier_dump_is_chosen_by_time(self):
+        hours = shrink.MIN_GAP_HOURS
+        self.assertIsNone(shrink.pair([row(True, 0, BASE), row(True, (hours - 1) / 24, BASE)]))
+        previous, _ = shrink.pair([row(True, 0, BASE), row(True, (hours - 1) / 24, BASE),
+                                   row(False, hours / 24, BASE), row(True, hours / 24, counts(deck=7))])
+        self.assertEqual(previous["counts"]["public.deck"], 7)
+
     def test_needs_an_earlier_dump(self):
         self.assertIsNone(shrink.pair([]))
         self.assertIsNone(shrink.pair([row(True, 0, BASE)]))
@@ -125,16 +146,16 @@ class WordingTests(unittest.TestCase):
 
     def test_status_lines(self):
         rows = [row(True, 0, counts(wishlist_entry=2)), row(True, 1, BASE)]
-        lines = shrink.status_lines(rows=rows, s={})
+        lines = shrink.status_lines(rows=rows, s=ON)
         self.assertEqual(len(lines), 1)
         self.assertTrue(lines[0].startswith("  WARNING: the wishlists table (public.wishlist_entry) shrank from 20 rows to 2"))
         self.assertTrue(lines[0].endswith("."))
-        self.assertEqual(shrink.status_lines(rows=[row(True, 0, BASE), row(True, 1, BASE)], s={}), [])
-        self.assertEqual(shrink.status_lines(rows=[row(True, 0, BASE)], s={}), [])
+        self.assertEqual(shrink.status_lines(rows=[row(True, 0, BASE), row(True, 1, BASE)], s=ON), [])
+        self.assertEqual(shrink.status_lines(rows=[row(True, 0, BASE)], s=ON), [])
 
     def test_status_read_failure_is_one_line(self):
         with mock.patch.object(shrink, "read_rows", side_effect=db.DbUnavailable("secret host detail")):
-            lines = shrink.status_lines(s={})
+            lines = shrink.status_lines(s=ON)
         self.assertEqual(lines, ["  Shrink check: couldn't be read (DbUnavailable)."])
 
     def test_backup_status_includes_the_warning(self):
@@ -144,17 +165,41 @@ class WordingTests(unittest.TestCase):
         with mock.patch.object(backup, "last_ok", return_value=last), \
                 mock.patch.object(backup, "latest", return_value={k: newest.get(k) for k in
                                                                   ("dump", "export", "check", "restore_check")}), \
-                mock.patch.object(backup.db, "settings", return_value=dict(db.DEFAULTS)), \
+                mock.patch.object(backup.db, "settings", return_value=dict(db.DEFAULTS, shrink_warn=True)), \
                 mock.patch.object(shrink, "read_rows", return_value=rows):
             lines = backup.status(now=NOW)
         self.assertTrue(any("decks table (public.deck) shrank from 40 rows to 3" in line for line in lines), lines)
+
+
+class OffByDefaultTests(unittest.TestCase):
+    """Off until Matt agrees the watched tables and thresholds: no status lines, no nightly step."""
+    ROWS = [row(True, 0, counts(deck=3)), row(True, 1, BASE)]
+
+    def test_enabled_only_when_set_true(self):
+        self.assertFalse(shrink.enabled({}))
+        self.assertFalse(shrink.enabled(dict(db.DEFAULTS)))
+        for value in ("true", 1, None, False):
+            self.assertFalse(shrink.enabled({"shrink_warn": value}), value)
+        self.assertTrue(shrink.enabled(ON))
+
+    def test_off_status_says_nothing_and_reads_nothing(self):
+        with mock.patch.object(shrink, "read_rows", side_effect=AssertionError("read")):
+            self.assertEqual(shrink.status_lines(s={}), [])
+        self.assertEqual(shrink.status_lines(rows=self.ROWS, s={"shrink_warn": False}), [])
+
+    def test_off_nightly_logs_and_sends_nothing(self):
+        logged = []
+        with mock.patch.object(shrink, "read_rows", side_effect=AssertionError("read")):
+            self.assertIsNone(shrink.nightly(logged.append, s={}))
+        self.assertIsNone(shrink.nightly(logged.append, rows=self.ROWS, s={}))
+        self.assertEqual(logged, [])
 
 
 class NightlyShrinkTests(unittest.TestCase):
     def test_nightly_logs_each_finding(self):
         logged = []
         rows = [row(True, 0, counts(purchase_order=1, token_card=None)), row(True, 1, BASE)]
-        self.assertFalse(shrink.nightly(logged.append, rows=rows, s={}))
+        self.assertFalse(shrink.nightly(logged.append, rows=rows, s=ON))
         self.assertEqual(len(logged), 2)
         self.assertTrue(all(line.startswith("Nightly: WARNING: the ") for line in logged))
         self.assertIn("orders table (public.purchase_order) shrank from 30 rows to 1", logged[1])
@@ -162,12 +207,12 @@ class NightlyShrinkTests(unittest.TestCase):
 
     def test_nightly_quiet_outcomes(self):
         logged = []
-        self.assertTrue(shrink.nightly(logged.append, rows=[row(True, 0, BASE), row(True, 1, BASE)], s={}))
+        self.assertTrue(shrink.nightly(logged.append, rows=[row(True, 0, BASE), row(True, 1, BASE)], s=ON))
         self.assertIn("no watched table shrank sharply", logged[-1])
-        self.assertTrue(shrink.nightly(logged.append, rows=[row(True, 0, BASE)], s={}))
-        self.assertIn("no two good dumps", logged[-1])
+        self.assertTrue(shrink.nightly(logged.append, rows=[row(True, 0, BASE)], s=ON))
+        self.assertIn("no good dump with counts at least 20 hours older", logged[-1])
         with mock.patch.object(shrink, "read_rows", side_effect=RuntimeError("private")):
-            self.assertIsNone(shrink.nightly(logged.append, s={}))
+            self.assertIsNone(shrink.nightly(logged.append, s=ON))
         self.assertEqual(logged[-1], "Nightly: the shrink check couldn't be read: RuntimeError.")
 
     def _run(self, backup_code, shrunk):
