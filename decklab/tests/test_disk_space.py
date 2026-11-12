@@ -104,6 +104,39 @@ class MeasureTests(Folders):
             return real(path)
         self.assertIsNone(self.measure(scandir=scandir)["folders"][0]["bytes"])
 
+    def test_a_file_or_folder_deleted_during_the_walk_is_skipped_not_unknown(self):
+        self.write("backups/a.dump", 1000)
+        self.write("backups/gone.dump", 7)
+        self.write("backups/vanished/b.dump", 5)
+        real = os.scandir
+
+        class Gone:
+            def __init__(self, entry):
+                self.path, self.name = entry.path, entry.name
+
+            def stat(self, follow_symlinks=True):
+                raise FileNotFoundError(2, "gone", self.path)
+
+        class Listing:
+            def __init__(self, inner):
+                self.inner = inner
+
+            def __enter__(self):
+                return (Gone(e) if e.name == "gone.dump" else e for e in self.inner)
+
+            def __exit__(self, *exc):
+                self.inner.close()
+
+            def close(self):
+                self.inner.close()
+
+        def scandir(path):
+            if Path(path).name == "vanished":
+                raise FileNotFoundError(2, "gone", str(path))
+            return Listing(real(path))
+        got = self.measure(scandir=scandir)["folders"][0]
+        self.assertEqual((got["bytes"], got["reason"]), (1000, None))
+
     def test_a_walk_cut_short_by_the_file_cap_is_unknown(self):
         for n in range(5):
             self.write(f"backups/{n}.dump", 10)
@@ -229,6 +262,14 @@ class ShownByTests(unittest.TestCase):
         out = io.StringIO()
         with redirect_stdout(out):
             db_main._disk_lines(lambda: self.LINES)
+        self.assertEqual(out.getvalue().splitlines(), ["WARNING: " + self.LINES[0]["text"], self.LINES[1]["text"]])
+
+    def test_db_status_prints_the_disk_lines_when_the_database_cant_be_reached(self):
+        from decklab.db import migrate
+        out = io.StringIO()
+        with mock.patch.object(db, "settings", return_value={"name": "decklab", "host": "localhost", "port": 5432}),                 mock.patch.object(migrate, "status", side_effect=OSError("connection refused")),                 mock.patch.object(disk_space, "report", return_value=self.LINES), redirect_stdout(out):
+            with self.assertRaises(OSError):
+                db_main._status(mock.Mock(dbname=None))
         self.assertEqual(out.getvalue().splitlines(), ["WARNING: " + self.LINES[0]["text"], self.LINES[1]["text"]])
 
     def test_homenet_status_lines_warn_with_a_fix(self):

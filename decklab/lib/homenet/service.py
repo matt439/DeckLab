@@ -506,7 +506,7 @@ def status(name, port):
     lines += commands.check_tunnel(settings, found.get("public"), tunnel.ingress_problems(settings, port),
                                    found.get("listener"), tunnel.credentials_problem(settings))
     lines += commands.check_disk(found.get("disk"))
-    header =f"Deck Lab status, {datetime.now().strftime('%Y-%m-%d %H:%M')} (port {port})"
+    header = f"Deck Lab status, {datetime.now().strftime('%Y-%m-%d %H:%M')} (port {port})"
     shown = any(entry["level"] == OK and "http://" in entry["text"] for entry in addresses)
     footer = ("These checks run on this computer, so they can't prove a phone gets through: the real test "
               + ("is opening the address above on a phone on the home Wi-Fi." if shown else

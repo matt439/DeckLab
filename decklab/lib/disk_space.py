@@ -103,11 +103,17 @@ def _walk(root, budget, scandir=os.scandir):
                         return None, True, TOO_MANY
                     if budget["clock"]() > budget["deadline"]:
                         return None, True, TOO_SLOW
-                    info = entry.stat(follow_symlinks=False)
+                    try:
+                        info = entry.stat(follow_symlinks=False)
+                    except FileNotFoundError:
+                        continue                    # deleted since the folder was listed
                     if stat.S_ISLNK(info.st_mode) or getattr(entry, "is_junction", lambda: False)():
                         continue                    # never followed or counted
                     if stat.S_ISDIR(info.st_mode):
-                        pending.append(scandir(entry.path))
+                        try:
+                            pending.append(scandir(entry.path))
+                        except FileNotFoundError:
+                            continue                # removed since it was listed
                     elif stat.S_ISREG(info.st_mode):
                         total += info.st_size
     except OSError:

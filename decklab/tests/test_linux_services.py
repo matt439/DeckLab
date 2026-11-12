@@ -499,6 +499,15 @@ class ServiceCommandTests(SystemdCase, Guarded):
         self.assertNotIn("the address above", text)
         self.assertIn("http://decklab-pc.local:18642/ (or the PC's IP address)", text)
 
+    def test_status_has_the_disk_lines(self):
+        self.main("install", "--at-logon")
+        code, text = self.main("status")
+        self.assertIn("Disk: 100.0 GB free of 500.0 GB (20%).", " ".join(text.split()))
+        self.patch("decklab.lib.homenet.commands.disk_report", return_value=[
+            {"level": "warn", "text": "Disk: only 1.0 GB free of 500.0 GB (0%)."}])
+        code, text = self.main("status")
+        self.assertRegex(" ".join(text.split()), r"WARN\s+Disk: Disk: only 1\.0 GB free")
+
     def test_status_checks_the_tunnels_listener(self):
         self.main("install", "--at-logon")
         settings = {"tunnel": {"config": str(self.home / "config.yml"), "hostname": "decklab.example.com"},

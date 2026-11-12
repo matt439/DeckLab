@@ -930,6 +930,17 @@ class StatusCommandTests(Guarded):
         self.assertIn("OK Start at logon: Off: Deck Lab starts only with python -m decklab.lib.homenet start", text)
         self.assertIn("0 problems, 0 warnings.", text)
 
+    def test_the_disk_lines_are_shown_and_a_low_disk_warns(self):
+        _, text = self.run_status(REAL_FACTS)
+        self.assertIn("OK Disk: Disk: 100.0 GB free of 500.0 GB (20%).", text)
+        self.patch("decklab.lib.homenet.commands.disk_report", return_value=[
+            {"level": "warn", "text": "Disk: only 1.0 GB free of 500.0 GB (0%)."}])
+        with Quiet() as q:
+            homenet.commands.cmd_status("Deck Lab", PORT)
+        text = " ".join(q.out.getvalue().split())
+        self.assertIn("WARN Disk: Disk: only 1.0 GB free of 500.0 GB (0%).", text)
+        self.assertIn("1 problem, 5 warnings.", text)
+
     def test_public_network_and_block_rule(self):
         facts = json.loads(json.dumps(REAL_FACTS))
         facts["network"] = network(category="Public")
