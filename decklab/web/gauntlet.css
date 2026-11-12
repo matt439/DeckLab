@@ -80,6 +80,15 @@ muted range bar (no band). */
 .gt-stale { display: grid; gap: var(--s-2); }
 .gt-stale > .sub { margin: 0; }
 
+/* E3-S50: the figure across the list's saved versions, a short timeline with the step between each two. */
+.gt-history { display: grid; gap: var(--s-2); min-width: 0; max-width: 46rem; margin-top: var(--s-3); }
+.gt-history > h3 { margin: 0; }
+.gt-history-list { display: grid; gap: var(--s-2); margin: 0; padding: 0; list-style: none; }
+.gt-history-row { display: grid; gap: var(--s-1); min-width: 0; }
+.gt-history-row > p { margin: 0; overflow-wrap: anywhere; }
+.gt-history-step { display: grid; gap: var(--s-1); min-width: 0; padding-left: var(--s-3);
+  border-left: 2px solid var(--border); }
+
 @media (min-width: 1000px) {
   .gt-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
