@@ -24,6 +24,8 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **First-run review (2026-11-10):** a review of installing and using Deck Lab as a newcomer ([first-run-review-2026-11-10.md](decklab/design/first-run-review-2026-11-10.md)) verified 76 findings and added seven self-hoster stories (`E11-S78` to `E11-S84`) that cover them all; their rows below join the reserve with no order among them. The biggest obstacle is PostgreSQL's failures all reading the same (`E11-S78`); `E11-S84`'s gitignore of update's config.json copy guards this public repo.
 
+**Backlog review (2026-11-12):** TODO.md had no `OPEN` row left, so every unscheduled or deferred story was checked against the code and seven areas were searched for gaps no story covered; each proposal was checked for duplicates and refuted where it could be. `E4-S09` (it had no row) joins the reserve, with 20 new stories (`E3-S49` to `E3-S51`, `E5-S37`, `E5-S38`, `E8-S27`, `E9-S34` to `E9-S38`, `E10-S46`, `E11-S85` to `E11-S92`), each with a fixture-only first slice in its owner; their rows below have no order among them. `E5-S15` stays deferred until Matt lifts it; `E8-S03`, `E11-S50` to `E11-S52`, `E9-S11`, `E3-S13`, `E10-S18` and `E4-S19` were looked at and left as they are.
+
 **Maintenance lane (updated 2026-10-29):** Tokens' workflow split and the source-length CI guard (`E11-S36`, `E11-S43`) are built. The editor workflow and collection parser splits (`E11-S37`, `E11-S38`) are built, creating room for their upcoming features. Keep structural and feature changes separate. The comment and command-document audits (`E11-S41`, `E11-S42`) are built. The fixture-only test entry point (`E11-S44`) is built. The test-group split (`E11-S40`) is built; the PostgreSQL snapshot split (`E11-S39`) is built and qualified on throwaway databases (2026-10-31). The editor drafts split (`E11-S46`) is built, leaving `web/editor.js` at 1,017 lines for `E2-S16`. The old-file wording in messages (`E11-S12`) is built. The [source-maintenance owner](decklab/SOURCE_AUDIT.md#maintenance-backlog) records the measured files, boundaries and validation. Length is a review trigger, not a reason to divide every large file mechanically. The accessibility pass (`E11-S55`) is built bar a real screen-reader check (in NOW). The long-file audit of 2026-11-05 split `web/collection.js` (Add a precon, into `web/precon-add.js`) and `web/components.css` (Forge results, into `web/sim-ui.css`), and recorded a seam for each of the other 34 files over 1,000 lines for when a change needs the room.
 
 **Needs Matt or another person — these don't block coding:**
@@ -61,6 +63,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
+| `E10-S46` | OPEN | should | M | Preview what a Public switch will show, confirmed before it flips; first slice: an owner-only `GET /api/visibility/preview` with own-space counts and privacy tests. |
 | `E10-S41` | DEFERRED | could | L | Per-deck public (decision A): only once someone wants it. |
 | `E10-S18` | DEFERRED | could | M | Small person-space items (`E10-S18` first-visit landing, `E4-S19` game players): only if a member asks. Check Settings, Visits first. |
 
@@ -70,6 +73,8 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
+| `E4-S09` | OPEN | could | M | Deal a hand says after Keep or Mulligan whether the deck's keep rule agrees, and why, beside its mulligan notes; first slice: the goldfish's keep rule in the practice payload and a pure `keepVerdict` in web/hands.js. |
+| `E8-S27` | OPEN | could | S | Where these go names each card's recorded storage location; first slice: share Build decks' location lookup and add it to the receipt's and filing advice's answers. |
 | `E2-S16` | DECISION | could | L | Implementation built, including Quick edit and new-deck drafts. Left: same-profile resume, competing drafts and save/discard across the household's real devices; fixtures cannot qualify touch/Safari or device durability. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes, on the P1 redesign since 2026-11-05 ([evidence](decklab/safari/EVIDENCE.md)). |
 | `E8-S25` | DECISION | should | M | A setting for what a space's storage is like. The inventory and proposal are written ([storage-setting.md](decklab/design/storage-setting.md), 2026-11-05): Matt answers its part 4, then slice 2 (the record and its reader). |
@@ -81,6 +86,8 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
+| `E5-S38` | OPEN | should | S | Token cards the built decks lack beside Shopping's baskets, as add-ons to look for (nothing queued); first slice: a home-records-only `token_addons` field and the basket note. |
+| `E5-S37` | OPEN | should | M | To buy marks queued cards no home deck is missing any more; first slice: a pure `annotate()` after `shopping_missing.gather`, writing nothing. |
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
 | `E7-S32` | DECISION | could | L | Card/token scanning and reviewed one-change import built. Left: 10–20 real photos on each household phone, including foils, sleeves, old cards and token cards; actual photos/devices are needed. |
 
@@ -90,6 +97,11 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
+| `E9-S35` | OPEN | should | M | What a Commander deck can answer: interaction by what it hits, mass or targeted, instant speed; first slice: a pure lib/stats/answers.py over oracle tags. |
+| `E9-S34` | OPEN | should | M | A Commander night line-up: home's Commander decks against the night's bracket aim; first slice: a pure `lineup()` in lib/commander_lineup.py. |
+| `E9-S36` | OPEN | should | M | Game Changer and ban changes named for our decks after a card-data update; first slice: `diff_official()` saved before the index is overwritten. |
+| `E9-S37` | OPEN | could | M | A card's Game Changer chip and known two-card combos in the card viewer, for an opponent's commander; first slice: `combos.with_card()` and a public read-only lookup. |
+| `E9-S38` | OPEN | could | S | The editor's bracket box says "No Game Changers" twice and nests brackets; first slice: the wording fixes in editor-save.js and compare.js with a UI test. |
 | `E9-S11` | DEFERRED | could | L+pc | Four-player pod runs from the page (with `E9-S21` win shares and `E9-S22` why-not by Start); after `FG#2`. First `lib/forge/pods.py` from the prototype, fixtures only. |
 
 ## Deck Lab: testing and Forge
@@ -98,6 +110,9 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
+| `E3-S49` | OPEN | could | M | Test a Commander deck against its own commander's popular builds; first slice: `same_commander()` in the gauntlet's sample.py with its own sample id. Real results need `FG#4`. |
+| `E3-S51` | OPEN | could | S | The turn a deck typically wins and loses in against popular decks; first slice: a pure `clock()` pooled per group. |
+| `E3-S50` | OPEN | could | M | The popular-decks figure across a deck's saved versions; first slice: lib/api/gauntlet_history.py over gauntlet_before's revision walk. |
 | `E3-S23` | DECISION | could | M | Field membership, saved choices, home-admin preview/save and fail-closed selection built. Left: a real-browser saved choice used by a real run; this needs a separately authorised live policy/run acceptance session. |
 | `FG#4` | DECISION | should | M+pc | The gauntlet on the Linux spare PC: build both catalogues, measure parallel Commander throughput (dev PC: about 40 games a minute, 4 opponents), a first standard run per Commander deck; with Matt's OK. |
 | `E11-S28` | DECISION | should | M | Run the user-testing session with User2 from the prepared [checklist](decklab/design/user-testing-user2.md) (confirm his device first), then the follow-up review and stories. |
@@ -111,6 +126,14 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
+| `E11-S91` | OPEN | should | S | Two flaky test races seen in CI (a download stream's close, a per-request log line); first slice: deadline wait and probe-filtered log lines. |
+| `E11-S90` | OPEN | should | M | `find_summary` re-reads every deck on each lookup, so the Game log and Build decks slow quadratically; first slice: memoise `list_decks` per inventory snapshot. |
+| `E11-S89` | OPEN | should | M | Profile reads walk the config path's folders about six times; first slice: check each guarded path once per `read_settings()`. |
+| `E11-S85` | OPEN | should | M | Warn when card data or the exchange rate stop refreshing; first slice: a pure judge in lib/card_freshness.py in status and the nightly. |
+| `E11-S86` | OPEN | should | S | Free disk space and data-folder sizes in status; first slice: lib/disk_space.py `measure` and `judge`. |
+| `E11-S87` | OPEN | should | M | Nightly warning when a key table shrinks sharply since the last dump; first slice: a pure db/shrink.py `compare`. Matt agrees the tables and thresholds. |
+| `E11-S88` | OPEN | could | S | Warn when cloudflared is old; first slice: its version and an age judge, the limit a reviewed fact Matt confirms. |
+| `E11-S92` | OPEN | could | S | stats, goldfish and tokens command lines crash with tracebacks, and goldfish --all shows the wrong Commander mulligan figure; first slice: the error handling and test_deck_cli_errors.py. |
 | `E11-S30` | DECISION | should | L | [UI implementation and Chromium review](decklab/design/visual-polish-completion-2026-11-07.md) complete; household Safari/touch, software keyboards, screen reader and real-art acceptance remain. |
 | `E11-S31` | DECISION | could | M | Global search in the top bar ([stories.md](decklab/design/stories.md#e11-s31)) is built and its `/` decided (2026-10-31): Matt checks the iPad field and phone sheet on devices. |
 | `E11-S58` | DECISION | should | L | Live server on Linux ([stories.md](decklab/design/stories.md#e11-s58)) is built and fixture-tested (2026-11-01): WSL qualified the database, backups, the services, `systemd-inhibit` under polkit and real Forge games (2026-11-02); still to qualify on the real Linux PC: suspend and wake, phones, and Tesseract on real card photos. |
