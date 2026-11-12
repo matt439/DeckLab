@@ -8,6 +8,10 @@ minutes), so together they still take at most 45 minutes and the task's two-hour
 cuts them off; never a failed night, since a shop that can't be reached is nothing wrong with
 the database, and one shop's failure never stops the other's).
 
+After a backup that worked, the shrink check (shrink.py, E11-S87) compares the watched tables
+counts with the previous good dump's and logs a WARNING for each that shrank sharply; it never
+fails the night, but the operator heartbeat gets "shrink" as failed.
+
 Every step runs even when an earlier one failed (an unreachable NAS is no reason to skip the
 export), and each one's outcome goes into decklab/data/logs/db.log. The check comes after the
 backup and the export, so a problem it finds never stops either. It runs under pythonw, with no
@@ -103,6 +107,17 @@ def _restore_check_if_due():
     return backup.run_restore_check()
 
 
+def _shrink_check():
+    """E11-S87: whether no watched table shrank sharply since the previous good dump (shrink.py);
+    None when it couldn't be read. Its lines go to db.log; it never fails the night."""
+    from decklab.db import shrink
+    try:
+        return shrink.nightly(db.log)
+    except Exception as e:                # noqa: BLE001 (a warning's check never stops the night)
+        db.log(f"Nightly: the shrink check failed: {type(e).__name__}.")
+        return None
+
+
 def _shop_prices():
     from decklab.lib import shops
     return shops.nightly(db.log)
@@ -145,6 +160,7 @@ def _run():
              ("check", check.run), ("restore check", _restore_check_if_due), ("shop prices", _shop_prices)]
     outcomes = {label: _step(label, func) for label, func in steps}
     failed = [label for label, ok in outcomes.items() if not ok]
+    shrunk = _shrink_check() if outcomes["backup"] else None
     if failed:
         db.log(f"Nightly: finished; failed: {', '.join(failed)}.")
     else:
@@ -155,5 +171,7 @@ def _run():
         outcomes.update(heartbeat_steps(datetime.now().astimezone().date()))
     except Exception:
         outcomes["shop health"] = False
+    if shrunk is not None:
+        outcomes["shrink"] = shrunk        # a warning for the heartbeat, never a failed night
     notify({**outcomes, "nightly": not failed}, log=db.log)
     return 1 if failed else 0
