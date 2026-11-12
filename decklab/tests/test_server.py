@@ -982,6 +982,12 @@ class ProtocolTests(ServerTestCase):
         self.assertTrue(answer.startswith(b"HTTP/1.1 400 "), answer[:100])
         self.assertIn(b"More than one Content-Length", answer)
         self.assertEqual(api.get_settings("matt"), saved)            # nothing was saved
+        # No probe here: this route refuses any query before it reads the body, so the requests
+        # can't carry one. Each line is written (handle_one_request) before finish() closes the
+        # connection, which raw() reads to its end, so both are in by now; wait on the path and
+        # status anyway. Another test's late line for this path only makes the wait end sooner.
+        own = self.own_log_lines(before, " PUT /api/profiles/matt/settings 400 ", count=2)
+        self.assertGreaterEqual(len(own), 2, self.log[before:])
         self.assertFalse(any("Traceback" in line for line in self.log[before:]), self.log[before:])
 
     def test_an_unread_body_closes_the_connection(self):
@@ -1007,17 +1013,19 @@ class ProtocolTests(ServerTestCase):
         self.assertEqual(self.request("GET", "/api/status")[1]["Server"], "DeckLab")
 
     def test_one_log_line_per_request(self):
-        before, probe = len(self.log), self.probe()
-        self.request("GET", f"/app.js?v={probe}")      # API routes refuse an unknown query
-        self.request("GET", f"/api/nope?{probe}&x=%0d%0aFAKE")
-        # Only this test's own lines count (own_log_lines): a line is written after its answer has
-        # gone, and an earlier test's late line, or another thread's, may land meanwhile.
-        self.own_log_lines(before, probe, count=2)
+        before, app, nope = len(self.log), self.probe(), self.probe()
+        self.request("GET", f"/app.js?v={app}")        # API routes refuse an unknown query
+        self.request("GET", f"/api/nope?{nope}&x=%0d%0aFAKE")
+        # Each request's line is found by its own probe (own_log_lines), never by position: a line
+        # is written after its answer has gone, so the two may land in either order, and an earlier
+        # test's late line, or another thread's, may land meanwhile.
+        self.own_log_lines(before, app)
+        self.own_log_lines(before, nope)
         time.sleep(0.05)                    # a second line for either request would be in by now
-        lines = self.own_log_lines(before, probe, count=2)
-        self.assertEqual(len(lines), 2, self.log[before:])
-        self.assertRegex(lines[0], rf" 127\.0\.0\.1 GET /app\.js\?v={probe} 200 \d+ ms$")
-        self.assertRegex(lines[1], rf" GET /api/nope\?{probe}&x=%0d%0aFAKE 404 \d+ ms$")
+        app_lines, nope_lines = self.own_log_lines(before, app), self.own_log_lines(before, nope)
+        self.assertEqual((len(app_lines), len(nope_lines)), (1, 1), self.log[before:])
+        self.assertRegex(app_lines[0], rf" 127\.0\.0\.1 GET /app\.js\?v={app} 200 \d+ ms$")
+        self.assertRegex(nope_lines[0], rf" GET /api/nope\?{nope}&x=%0d%0aFAKE 404 \d+ ms$")
 
     def test_own_log_lines_skips_other_lines_and_waits_for_late_ones(self):
         before, probe = len(self.log), self.probe()
