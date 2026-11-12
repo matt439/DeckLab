@@ -201,3 +201,62 @@ class WritesTests(LibraryCacheTestCase):
             with mock.patch.object(decks.spaces, "space_ids", return_value=["home"]), self.counting():
                 self.assertEqual(len([s for s in decks.list_decks() if not s["id"].startswith("product/")]), 3)
             self.assertEqual(self.parses, [])               # the parses themselves are still kept
+
+
+class BuildDecksTests(LibraryCacheTestCase):
+    """Build decks (GET /api/assembly and its preview) reads each deck's text once too: the usual
+    opponents and the selected decks' packing, stand-ins and sections share the library's parse."""
+
+    def test_the_build_decks_page_parses_each_deck_at_most_once(self):
+        from decklab.lib.api import assembly
+        self.add_decks(10)
+        with inventory.pinned(), self.counting():
+            ids = self.deck_ids()
+            answer = assembly.assembly_view("casual/gruul-test")
+            self.assertEqual([item["id"] for item in answer["decks"]], ["casual/gruul-test"])
+        self.assertEqual(len(ids), 13)
+        self.assertEqual(sorted(self.parses), sorted(deck_id.rsplit("/", 1)[1] for deck_id in ids))
+
+    def test_a_preview_of_several_decks_parses_each_at_most_once(self):
+        import json
+        from decklab.lib.api import assembly
+        body = json.dumps({"decks": [{"id": "casual/gruul-test", "version": "target"},
+                                     {"id": "commander/elf-commander", "version": "target"}]})
+        with inventory.pinned(), self.counting():
+            answer = assembly.assembly_preview(body)
+        self.assertEqual(len(answer["decks"]), 2)
+        self.assertEqual(sorted(self.parses), ["broken", "elf-commander", "gruul-test"])
+
+    def test_a_parse_handed_to_build_decks_is_its_own_copy(self):
+        with inventory.pinned():
+            stored = inventory.current().deck("casual/gruul-test")
+            first = decks.parsed_stored(stored)
+            first.target["Deck"].clear()
+            first.header.clear()
+            again = decks.parsed_stored(stored)
+            self.assertTrue(again.target["Deck"])
+            self.assertEqual(again.status, "building")
+            self.assertIs(decks.parsed_stored(stored, own_copy=False), decks.parsed_stored(stored, own_copy=False))
+
+    def test_a_wrapped_list_decks_doesnt_send_lookups_back_to_rereading_the_library(self):
+        # Review finding: find_summary fell back to list_decks() whenever list_decks wasn't the
+        # module's own function (a test's patch, or a profiling wrapper), reading it per lookup.
+        with inventory.pinned(), mock.patch.object(decks, "list_decks", wraps=decks.list_decks) as listed, \
+                mock.patch.object(decks, "beginner_box_pairings", wraps=decks.beginner_box_pairings) as pairs:
+            pair_id = decks._kept_pairing_summaries()[0]["id"]
+            for _ in range(3):
+                self.assertEqual(decks.find_summary("casual/gruul-test")["id"], "casual/gruul-test")
+                self.assertEqual(decks.find_summary(pair_id)["id"], pair_id)
+        self.assertEqual((listed.call_count, pairs.call_count), (0, 0))
+
+
+class StandInTests(LibraryCacheTestCase):
+
+    def test_a_tests_stand_in_library_is_the_one_find_summary_looks_in(self):
+        from decklab.tests import library_stand_in
+        pairing = {"id": "pairing/cats+elves", "kind": "casual", "versions": ["target"]}
+        library_stand_in.start(self, [{"id": "casual/green", "title": "Green", "kind": "casual"}], [pairing])
+        self.assertEqual(decks.find_summary("casual/green")["title"], "Green")
+        self.assertIsNone(decks.find_summary("casual/gruul-test"))
+        self.assertEqual(decks.find_summary("pairing/elves+cats")["id"], "pairing/cats+elves")
+        self.assertEqual([s["id"] for s in decks.list_decks()], ["casual/green"])

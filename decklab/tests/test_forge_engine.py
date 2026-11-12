@@ -21,6 +21,7 @@ import zipfile
 from unittest import mock
 
 from decklab.lib import forge
+from decklab.tests import library_stand_in
 from decklab.tests import test_forge
 from decklab.tests.test_forge import CARD_LOG, CHECKED_BUILD, GISA, GREEN, RED, entry, make_forge, sections, stored
 from decklab.tests.test_web import MATCHUP_SCRIPTS, NODE, _run_page
@@ -550,12 +551,11 @@ class CommandLineTests(EngineCase):
         summaries = [{"id": "casual/green", "title": "Green", "kind": "casual", "versions": ["target"]},
                      {"id": "casual/red", "title": "Red", "kind": "casual", "versions": ["target"]}]
         lists = {"casual/green": GREEN, "casual/red": RED}
-        for p in (mock.patch.object(forge.cli.decks, "list_decks", return_value=summaries),
-                  mock.patch.object(forge.cli.decks, "beginner_box_pairings", return_value=[]),
-                  mock.patch.object(forge.cli.decks, "load_deck",
-                                    side_effect=lambda deck_id, version: sections(lists[deck_id]))):
-            p.start()
-            self.addCleanup(p.stop)
+        library_stand_in.start(self, summaries, module=forge.cli.decks)
+        p = mock.patch.object(forge.cli.decks, "load_deck",
+                              side_effect=lambda deck_id, version: sections(lists[deck_id]))
+        p.start()
+        self.addCleanup(p.stop)
 
     run_main = test_forge.CommandLineTests.run_main
 

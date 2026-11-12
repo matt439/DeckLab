@@ -23,7 +23,7 @@ def _load(item, profile):
     if stored is None:
         return empty
     try:
-        parsed = decks.parse_deck(stored.data, stored.slug, stored.kind, space=stored.space)
+        parsed = decks.parsed_stored(stored)
         empty["parsed"] = parsed
         empty["editable"] = guard.allowed(profile, "deck.edit", parsed)
         data = standins.get_stand_ins(parsed)

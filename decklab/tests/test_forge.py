@@ -51,6 +51,7 @@ from pathlib import Path
 from unittest import mock
 
 from decklab.lib import cards, config, decks, forge, jobs
+from decklab.tests import library_stand_in
 
 FIXTURES = Path(__file__).parent / "fixtures"
 HERE = FIXTURES / "forge"
@@ -491,11 +492,10 @@ class CommandLineTests(ForgeCase):
         summaries = [{"id": "casual/green", "title": "Green", "kind": "casual", "versions": ["target", "owned"]},
                      {"id": "casual/red", "title": "Red", "kind": "casual", "versions": ["target"]}]
         lists = {"casual/green": GREEN, "casual/red": RED}
-        for p in (mock.patch.object(decks, "list_decks", return_value=summaries),
-                  mock.patch.object(decks, "beginner_box_pairings", return_value=[]),
-                  mock.patch.object(decks, "load_deck", side_effect=lambda deck_id, version: sections(lists[deck_id]))):
-            p.start()
-            self.addCleanup(p.stop)
+        library_stand_in.start(self, summaries)
+        p = mock.patch.object(decks, "load_deck", side_effect=lambda deck_id, version: sections(lists[deck_id]))
+        p.start()
+        self.addCleanup(p.stop)
 
     def run_main(self, *argv):
         """(exit code, stdout, stderr) of forge.main(argv)."""

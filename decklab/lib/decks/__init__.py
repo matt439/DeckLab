@@ -543,6 +543,25 @@ def _parsed(path, space):
                               lambda: read_deck_file(path, space=space))
 
 
+def parsed_stored(stored, own_copy=True):
+    """parse_deck() of a stored deck record (inventory.current().deck(id)), parsed at most once a
+    snapshot and shared with list_decks()'s reading (library_cache, E11-S90). Each caller gets its
+    own copy; own_copy=False hands out the kept DeckFile itself, only for a reader that never
+    changes it. A record that isn't the current snapshot's, or that couldn't be read, is parsed
+    as before, each time. Raises DeckFileError as parse_deck does."""
+    snapshot = _snapshot()
+    if stored.error is None and snapshot.decks.get(stored.id) is stored:
+        try:
+            path = deck_path(stored.kind, stored.slug, stored.space)
+        except ValueError:
+            path = None
+        if path is not None:
+            found = library_cache.kept(snapshot, ("deck", str(path), stored.space),
+                                       lambda: parse_deck(stored.data, stored.slug, stored.kind, path, stored.space))
+            return library_cache.copied(found) if own_copy else found
+    return parse_deck(stored.data, stored.slug, stored.kind, space=stored.space)
+
+
 def _read_library(only_space):
     out = []
     for space, path in _space_files():
@@ -691,27 +710,17 @@ def find_summary(deck_id):
     beginner_box_pairings(), its halves in either order. The summary's id is
     the library's (a pairing's halves in its order). Every lookup on one inventory snapshot
     shares its one reading of the library (library_cache, E11-S90) and gets its own copy.
-    A test's stand-in for list_decks or beginner_box_pairings (PATCHED in test_decks) is
-    still the one asked."""
-    from decklab.lib import inventory
-    pairing = deck_id.startswith("pairing/")
-    if pairing and beginner_box_pairings is not _OWN_READERS[1]:
+    A test stands in for the library by patching _kept_summaries and _kept_pairing_summaries
+    (decklab/tests/library_stand_in.py), beside list_decks and beginner_box_pairings."""
+    if deck_id.startswith("pairing/"):
         wanted = _pairing_halves(deck_id)
-        return next((s for s in beginner_box_pairings() if _pairing_halves(s["id"]) == wanted), None)
-    snapshot = _snapshot()
-    with inventory.pinned(snapshot):
-        if pairing:
-            wanted = _pairing_halves(deck_id)
-            found = next((s for s in _kept_pairing_summaries() if _pairing_halves(s["id"]) == wanted), None)
-        elif list_decks is not _OWN_READERS[0]:
-            deck_id = inventory.resolve_deck_id(deck_id, snapshot)
-            return next((s for s in list_decks() if s["id"] == deck_id), None)
-        else:
+        found = next((s for s in _kept_pairing_summaries() if _pairing_halves(s["id"]) == wanted), None)
+    else:
+        from decklab.lib import inventory
+        snapshot = _snapshot()
+        with inventory.pinned(snapshot):
             found = _kept_summaries().get(inventory.resolve_deck_id(deck_id, snapshot))
     return None if found is None else library_cache.copied(found)
-
-
-_OWN_READERS = (list_decks, beginner_box_pairings)      # find_summary's check for a test's stand-in
 
 
 def engine_kind(summary):
