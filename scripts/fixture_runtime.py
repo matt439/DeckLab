@@ -75,7 +75,8 @@ def _refuse(path):
 def _file_guards(root):
     global _protected
     known = [root / "decklab" / leaf for leaf in ("config.json", "simulation.local.json")]
-    known.extend((root / "decklab/data/shops/health.json", root / "decklab/data/diagnostics/error-references.json"))
+    known.extend((root / "decklab/data/shops/health.json", root / "decklab/data/diagnostics/error-references.json",
+                  root / "decklab/data/sources.json"))
     home = os.environ.get("USERPROFILE") if os.name == "nt" else os.environ.get("HOME")
     home = home or os.path.expanduser("~")
     known.extend([Path(home) / ".pgpass", Path(home) / ".pg_service.conf"])

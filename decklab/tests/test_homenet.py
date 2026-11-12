@@ -927,6 +927,7 @@ class StatusCommandTests(Guarded):
                                      {"answered": True, "deck_lab": True, "cards_ready": True})
         self.assertEqual(code, 0, text)
         self.assertIn("OK Start at logon: Off: Deck Lab starts only with python -m decklab.lib.homenet start", text)
+        self.assertIn("OK Card data: Refreshing: Scryfall's data of 2026-10-01", text)     # E11-S85
         self.assertIn("0 problems, 0 warnings.", text)
 
     def test_public_network_and_block_rule(self):

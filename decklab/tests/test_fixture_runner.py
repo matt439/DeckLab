@@ -27,6 +27,7 @@ class FixtureRunnerTests(unittest.TestCase):
         self.write("decklab/config.json", "FAKE PRIVATE CANARY")
         self.write("decklab/simulation.local.json", "FAKE LOCAL SIMULATION CANARY")
         self.write("decklab/data/shops/health.json", "FAKE SHOP HEALTH CANARY")
+        self.write("decklab/data/sources.json", "FAKE DATA SOURCES CANARY")
         self.write("decklab/data/diagnostics/error-references.json", "FAKE DIAGNOSTIC CANARY")
         self.write("home/.pgpass", "FAKE CREDENTIAL CANARY")
         self.write("roaming/postgresql/pgpass.conf", "FAKE WINDOWS CANARY")
@@ -72,6 +73,7 @@ class FixtureRunnerTests(unittest.TestCase):
             assert not config.CONFIG_FILE.exists(), 'private config was visible before test package import'
             assert not config.CONFIG_FILE.with_name('simulation.local.json').exists(), 'local simulation settings were visible'
             assert not config.CONFIG_FILE.parent.joinpath('data/shops/health.json').exists(), 'shop health was visible'
+            assert not config.CONFIG_FILE.parent.joinpath('data/sources.json').exists(), 'data-source receipts were visible'
             assert not config.CONFIG_FILE.parent.joinpath('data/diagnostics/error-references.json').exists(), 'diagnostics were visible'
             assert 'DECKLAB_CONFIG_EXTRA' not in os.environ, 'extra overlay survived'
             assert 'DECKLAB_DECK_EXPORT' not in os.environ, 'export overlay survived'

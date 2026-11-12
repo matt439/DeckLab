@@ -12,7 +12,7 @@ import threading
 import traceback
 from pathlib import Path
 
-from decklab.lib import cards, config, currency, pricing_setting, shops
+from decklab.lib import card_freshness, cards, config, currency, pricing_setting, shops
 
 from . import common
 from .common import ApiError, _public
@@ -92,14 +92,19 @@ def _require_cards():
                         f"on the PC says more." + recovery)
 
 
-def _card_recovery():
-    """Fixed local instructions only to a named admin; never a raw index/update error."""
+def _named_admin():
+    """True for a request naming an admin profile (not a script naming nobody, nor a member)."""
     from . import guard
     try:
         viewer = guard.viewer()
     except ApiError:
         viewer = None
-    if not viewer or viewer.get("role") != "admin":
+    return bool(viewer) and viewer.get("role") == "admin"
+
+
+def _card_recovery():
+    """Fixed local instructions only to a named admin; never a raw index/update error."""
+    if not _named_admin():
         return ""
     return (" On the server PC run python -m decklab.lib.cards update; see "
             "decklab/data/logs/server.log (or the configured server log).")
@@ -124,13 +129,32 @@ def _cached_rate(code=None):
     return None
 
 
+def _freshness(info, code):
+    """E11-S85, for a named admin: {"stale", "warning"}, card_freshness's judgement of the loaded
+    index's Scryfall date and the day the rate was last fetched; None to anyone else, or while there's
+    no index (the 503s and the footer already say so). The warning is one fixed sentence."""
+    if info is None or not _named_admin():
+        return None
+    bulk = info.get("bulk") if isinstance(info, dict) else None
+    needed = code != "USD"
+    try:
+        found = card_freshness.judge((bulk or {}).get("default_cards") if isinstance(bulk, dict) else None,
+                                     card_freshness.fx_fetched_on(code) if needed else None,
+                                     datetime.date.today(), fx_needed=needed)
+    except Exception:       # noqa: BLE001 (status must answer; the judge reads only small files)
+        return None
+    return {"stale": found["stale"], "warning": found["warning"]}
+
+
 def status():
     """GET /api/status: whether the card data is ready, and the cached rate.
 
     cards.error says why the index can't be loaded (None when it can), and
     update_error why the last background update failed. fx is the cached USD rate in the configured
     currency, and pricing what Settings says about the prices (E11-S53), None while config.json
-    can't be read (the footer still answers, in the default currency). config holds only the
+    can't be read (the footer still answers, in the default currency). cards.freshness is a named
+    admin's warning that the card data or the rate stopped refreshing (_freshness, E11-S85), else
+    None. config holds only the
     source file's ready/missing/unreadable state and fixed guidance, never profile diagnostics."""
     info, error = _index_info()
     try:
@@ -146,6 +170,7 @@ def status():
             "price_date": (cards.price_date() or None) if info else None,
             "error": error,
             "help": _card_recovery().strip() if info is None else None,
+            "freshness": _freshness(info, code),
         },
         "updating": UPDATE["running"],
         "update_error": UPDATE["error"],

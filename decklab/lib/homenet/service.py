@@ -39,7 +39,7 @@ from decklab.lib import access, config, systemd, tunnel
 
 from . import commands, linux_facts, linux_power, profile_config
 from . import mdns as multicast
-from .checks import (check_addresses, check_firewall_linux, check_network, exit_code, format_report,
+from .checks import (card_data_lines, check_addresses, check_firewall_linux, check_network, exit_code, format_report,
                      lan_of)
 from .common import (OK, PROBE_TIMEOUT, PROBLEM, SERVER_SCRIPT, START_WAIT, TASK_NAME, WARN, WATCHDOG_GIVE_UP,
                      WATCHDOG_STABLE, _int, line, log, loopback, say)
@@ -504,6 +504,7 @@ def status(name, port):
     lines += found.get("power") or [line(WARN, "Sleep", "Couldn't check sleep and wake: the check didn't finish.")]
     lines += commands.check_tunnel(settings, found.get("public"), tunnel.ingress_problems(settings, port),
                                    found.get("listener"), tunnel.credentials_problem(settings))
+    lines += card_data_lines()
     header = f"Deck Lab status, {datetime.now().strftime('%Y-%m-%d %H:%M')} (port {port})"
     shown = any(entry["level"] == OK and "http://" in entry["text"] for entry in addresses)
     footer = ("These checks run on this computer, so they can't prove a phone gets through: the real test "

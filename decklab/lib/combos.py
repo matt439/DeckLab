@@ -58,7 +58,7 @@ import urllib.error
 from datetime import datetime
 from pathlib import Path
 
-from decklab.lib import card_index, cards, currency
+from decklab.lib import card_index, cards, currency, source_health
 from decklab.lib.config import DATA
 
 COMBOS_DIR = DATA / "combos"
@@ -340,6 +340,7 @@ def update(force=False, log=print):
                                    timeout=DOWNLOAD_TIMEOUT, headers=headers, response_headers=got)
         except urllib.error.HTTPError as e:
             e.close()
+            source_health.record("spellbook", e.code == 304)
             if e.code != 304:
                 log(f"combos: download failed ({e}); keeping the local file.")
             else:
@@ -347,9 +348,11 @@ def update(force=False, log=print):
                 cards._write_json(META_FILE, meta)
                 log("combos: unchanged on Commander Spellbook")
         except cards.NETWORK_ERRORS as e:
+            source_health.record("spellbook", False)
             log(f"combos: download failed ({e}); keeping the local file." if EXPORT_FILE.exists()
                 else f"combos: download failed ({e}); combos can't be checked until it works.")
         else:
+            source_health.record("spellbook", True)
             got = {k.lower(): v for k, v in got.items()}
             meta = {"uri": EXPORT_URL, "downloaded_at": _now().isoformat(timespec="seconds"),
                     "etag": got.get("etag"), "last_modified": got.get("last-modified"), "size": size}
