@@ -342,6 +342,13 @@ table.data tfoot .total-cost { font-weight: var(--fw-semibold); text-align: left
 .hands-section .hands-bottom[aria-pressed="true"] { outline: 3px solid var(--focus); outline-offset: -3px; }
 .hands-status { margin: 0; font-weight: var(--fw-semibold); }
 .hands-counts { margin: 0; }
+/* E4-S09: the keep rule's verdict after Keep or Mulligan, and the deck's mulligan notes, beside the hand. */
+.hands-section .hands-advice { margin-top: var(--s-4); display: grid; gap: var(--s-3); max-width: 70ch; }
+.hands-section .hands-verdict { padding: var(--s-3); border-radius: var(--r-md); background: var(--surface-2); }
+.hands-section .hands-verdict p { margin: 0 0 var(--s-1); }
+.hands-section .hands-verdict-agree { font-weight: var(--fw-semibold); }
+.hands-section .hands-verdict-borderline { background: var(--warn-soft); color: var(--warn-ink); }
+.hands-section .hands-notes h3 { margin: 0 0 var(--s-2); }
 @media (max-width: 599px) {
   .hands-section .hands-settings { flex-direction: column; align-items: stretch; }
 }
