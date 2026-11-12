@@ -37,16 +37,16 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 23 | 2 | 0 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 42 | 36 | 3 | 3 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 25 | 1 | 2 | 2 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 36 | 31 | 0 | 3 | 2 |
+| [E3: Test a deck](#e3-test-a-deck) | 42 | 37 | 5 | 0 | 0 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 26 | 1 | 1 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 36 | 33 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 23 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 35 | 1 | 0 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 18 | 0 | 3 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 33 | 24 | 0 | 8 | 1 |
-| [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 33 | 1 | 2 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 87 | 57 | 13 | 13 | 4 |
-| **Total** | **396** | **325** | **21** | **34** | **16** |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 19 | 0 | 2 | 2 |
+| [E9: Commander nights](#e9-commander-nights) | 33 | 29 | 0 | 3 | 1 |
+| [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 87 | 63 | 15 | 5 | 4 |
+| **Total** | **396** | **342** | **25** | **13** | **16** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1488,7 +1488,7 @@ First slice: command line only with a fixed game count: `run_unpaired` in `deckl
 
 Built (2026-11-11; Matt approved OPEN feature defaults): explicit CLI `--size-change` with a fixed `--games N` or `--quick` plays both versions against the same opponents/count on one verified engine, with independent domain-separated seed streams. A same-size change stays paired. Constructed below60 and Commander other than100 are refused; the CLI also bounds work to1,000 cards and100,000 games per arm. The independent balanced MOVER95% difference has a separate default5-point equivalence margin, one fixed final look and explicit wide-range/more-games wording. Arms have their own validated `unpaired` result kind and isolated experiments directory; checkpoint reuse avoids duplicate completed games. Normal enumeration and per-card consumers reject this kind.12 control/CLI/math fixtures and two production-runner/disposable-fake-process checks pass, with195 broader legacy/qualification/engine checks passing before the final narrow guards. No actual game, saved household result or deck was touched.
 
-**E3-S49** · Matt · could · M · missing
+**E3-S49** · Matt · could · M · partial
 
 As a Commander deck builder, I want to test my deck head to head against the popular builds of its own commander (EDHREC's core and upgraded average decks, and a published precon with the same commander, when the catalogue has them), so that I know whether my take plays better than the common one, without treating those lists as advice.
 
@@ -1497,11 +1497,9 @@ As a Commander deck builder, I want to test my deck head to head against the pop
 - Given a trial deck (E3-S39), then its own precon is never one of its opponents.
 - Given the catalogue holds no deck with that commander, then the choice says so instead of starting an empty run.
 
-Gap: `decklab/lib/gauntlet/sample.py` groups by commander (`family()`) and keeps one deck per commander (`_one_per_family`); `decklab/lib/api/gauntlet_page.py` `_choices` has no commander filter. From the backlog review of 2026-11-12.
+Built (2026-11-12): a Commander deck's Against popular decks offers **Which decks: A balanced sample | Same commander**. Same commander plays every playable catalogue deck whose commanders match the deck's (a partner pair in either order, a double-faced commander by its front face, case ignored), core, upgraded and precon alike, most popular first (`sample.same_commander`, `commander_key`, `commanders_of`; `forge.gauntlet.same_commander`). Its sample id hashes the commander key, so it never matches a balanced or All sample's, and once played it's saved like any other sample. `GET /api/gauntlet?commander=same` and `POST /api/gauntlet/run` read the commanders from the deck's own Commander section, never from the request; any other value, a 60-card deck, a deck without a commander, and a size, colour, style, tier or saved sample sent with it get 400, after a hidden deck's 404. A trial's own precon is left out. With no matching deck the choice says so and is disabled, and a run is refused instead of starting empty. The CLI has `gauntlet plan|play|view <deck> --same-commander`. Tests: `decklab/tests/test_gauntlet_same_commander.py` (20, sample to Node-DOM UI), with the neighbouring gauntlet modules passing. No real game was played and no catalogue was built. Left: real results wait for `FG#4`, the server's Commander catalogue and real Same commander Forge games.
 
-First slice: `same_commander()` in `decklab/lib/gauntlet/sample.py` with its own sample id (hashing the commander key, so it never shares an id with a balanced or All sample), a Commander-only `commander` choice in `gauntlet_page._choices` reading the commanders from the deck itself, never the request; fixture tests. Real results need Forge runs and, on the server, a built catalogue (`FG#4`).
-
-**E3-S50** · Matt · could · M · missing
+**E3-S50** · Matt · could · M · partial
 
 As a deck builder tuning a deck over many edits, I want a short timeline of the deck's popular-decks figure for each earlier list that has standard-sample games, with what changed between them, so that I can see which edits actually helped.
 
@@ -1510,11 +1508,9 @@ As a deck builder tuning a deck over many edits, I want a short timeline of the 
 - Given a list tested only under an older Forge, catalogue or pilot, then it's listed muted, without a figure.
 - Given the search stops at a bound, then the timeline says it isn't every list.
 
-Gap: `decklab/lib/api/gauntlet_before.py` walks back only to the single most recent differing tested list (E3-S34's one before and after); `web/gauntlet.js` has no history view. From the backlog review of 2026-11-12.
+Built (2026-11-12): `GET /api/gauntlet/history` (`decklab/lib/api/gauntlet_history.py`) reuses `gauntlet_before`'s revision walk and bounds, which now date each list by the oldest revision of its newest unbroken run (a revision whose list can't be read ends a run, so a date is never pushed back over revisions that didn't hold that list). It answers today's list and up to 8 earlier lists with standard-sample results, newest first, each with its saved date, figure, range and opponents; a list tested only under older keys is muted without a figure. Each step between neighbours names the cards added and taken out and compares only the opponents both share (`no_shared` when there are none), and when a bound left out a list with run notes the timeline says it isn't every list. The Testing tab's Against popular decks gains **Show earlier lists** (`web/gauntlet.js`). Fixture tests only. Left: a live check of Show earlier lists against saved standard-sample runs on the server, for a deck with several saved lists.
 
-First slice: `decklab/lib/api/gauntlet_history.py` reusing `gauntlet_before`'s revision walk and bounds with an explicit cap on lists, and its fixture tests; the Testing tab's panel is slice 2. Useful output needs saved standard runs, which `FG#2`'s Forge update will reset.
-
-**E3-S51** · Matt · could · S · missing
+**E3-S51** · Matt · could · S · built
 
 As a deck builder reading Against popular decks, I want the typical round the deck wins in and the typical round it loses in, overall and by style group, so that I can tell whether it's too slow for the table.
 
@@ -1523,9 +1519,7 @@ As a deck builder reading Against popular decks, I want the typical round the de
 - Given fewer than five games won (or lost), then that side shows its count and no median.
 - Given a Commander deck, then it's labelled "simulated Forge games, 1v1, turns each", with a note that the gauntlet isn't a four-player pod.
 
-Gap: `decklab/lib/forge/views.py` gives one combined rounds mean, minimum and maximum per matchup; the gauntlet's view and summary (`lib/forge/gauntlet.py`, `lib/api/gauntlet_page.py`) carry no round figures, though the saved games have them. From the backlog review of 2026-11-12.
-
-First slice: a pure `clock(games, side)` in `decklab/lib/forge/views.py`, attached per opponent and pooled per group from the games (never by averaging medians) in `gauntlet._group`, with fixture tests; the page lines follow.
+Built (2026-11-12): `decklab/lib/forge/views.py`'s `clock(games, side)` gives the median and middle half of the rounds of games won and of games lost. It leaves out draws, timeouts, errors and games without a round count, counts them, and gives no median below five games. `field._row` keeps each pair's round tally. The gauntlet attaches a clock to each opponent and pools the games (never the medians) for each group and the overall figure, labelled "simulated Forge games, turns each" (Commander: "1v1, turns each", with a note that it isn't a four-player pod), and `GET /api/gauntlet` passes them on. The Testing tab's Against popular decks shows the overall line under the headline and a line on each group and opponent, each with its left-out count; when no game was won or lost, the overall box says so and still counts them. Fixture tests only. Not covered: the Overview's gauntlet summary and the Popular decks board.
 
 ---
 
@@ -1533,7 +1527,7 @@ First slice: a pure `clock(games, side)` in `decklab/lib/forge/views.py`, attach
 
 This epic covers getting physical decks onto the table and learning from the games played: choosing the decks, pulling and sleeving the cards from home's shared pool on Build decks (#/assembly, the packing plan), reading a deck's How to play and practising opening hands, playing with sideboard plans, and recording the result on the Game log (#/play). Each game is seen only by the spaces whose decks it names, a side whose deck the viewer may not see shows only as words such as "one of the home decks", and each space changes only its own side (E10-S32). Teaching the rules is left to products like the Beginner Box, so Deck Lab keeps teaching minimal. User1 uses Deck Lab on her phone, so Build decks and the Game log on a phone matter most.
 
-Open: E4-S09, E4-S19.
+Open: E4-S19.
 
 **E4-S01** · Matt · must · L · built
 
@@ -1632,7 +1626,7 @@ Evidence:
 - `decklab/web/hands.js`: OpeningHand, manualHandsSection, handStatus, handCounts
 - `decklab/tests/test_play_ui.py`: test_london_mulligan_draws_seven_and_bottoms_exactly_once, test_free_multiplayer_mulligan_reset_and_empty_library
 
-**E4-S09** · User1 · could · M · missing
+**E4-S09** · User1 · could · M · built
 
 As a beginner practising opening hands, I want to be told after I decide whether the hand I dealt is a keep for this deck, and why, in plain words, so that I learn this deck's mulligan decisions rather than guessing.
 
@@ -1643,12 +1637,12 @@ As a beginner practising opening hands, I want to be told after I decide whether
 Decided (Matt, 2026-10-13): teaching in Deck Lab stays minimal, so this is a could.
 
 Evidence:
-- `decklab/web/hands.js`: handStatus (only 'Keep or mulligan?')
-- `decklab/lib/goldfish/engine.py`: _keeps, _bottom (keep rules used only by practice-game simulation)
+- `decklab/lib/api/keep_rule.py`: view (the goldfish's Karsten keep rule and its sources, read-only), keep_land (lands and spell // land cards, as the simulation counts)
+- `decklab/lib/api/deck_page.py`: the practice payload's `keep_rule` and each main-deck line's `keep_land`
+- `decklab/web/hands.js`: keepVerdict, keepAgreement, handAdvice/keepVerdictBox (shown after Keep or Mulligan, linked to its source), mulliganNotes, handCounts (counted as the rule counts)
+- `decklab/tests/test_keep_rule.py`
 
-Gap: Deal a hand never comments on the hand and doesn't show the deck's mulligan notes beside it; the keep rules live only inside the goldfish simulation.
-
-First slice (backlog review of 2026-11-12): send a read-only `keep_rule` (the goldfish's land ranges, imported from `decklab/lib/goldfish/common.py`, with Karsten's source) and a per-card `keep_land` flag with the practice payload, so the page counts lands as the simulation does; a pure `keepVerdict` in `web/hands.js` (four or fewer cards keep; the free Commander seven uses its own range; a count at either end of a range is borderline; the words name lands only); the verdict shows only after Keep or Mulligan, with the deck Notes' mulligan topic (`lib/api/guide.py`) beside the hand; Node and API fixture tests.
+Built (2026-11-12): after **Keep hand** or **Mulligan**, Deal a hand on the Practice tab says whether the deck's keep rule agrees, and why, in plain words about lands. The rule is the practice games' goldfish rule (Karsten's): keep 7 cards with 2 to 5 lands, 6 or 5 after bottoming with 2 to 4, always keep 4 or fewer; a free multiplayer seven is kept with 3 to 5 lands, and spell // land cards count as lands. `GET /api/deck` sends it read-only as `keep_rule` with each main-deck line's `keep_land`, and the verdict links to its source. A land count at either end of the range is borderline, and the page says either choice is fair. A hand judged at Mulligan is bottomed first, as the rule does, and the hand's counts line counts lands the same way. The Notes' Mulligans or Opening hand topic shows beside any dealt hand, with the stale-guide warning. Nothing is saved. Limits, by design: the verdict judges lands only, not curve or colours, and "borderline" is Deck Lab's reading of the range's ends, not the rule's own label.
 
 **E4-S11** · User1 · must · M · built
 
@@ -2572,7 +2566,7 @@ Evidence: `inventory/bonus_warnings.py`, orders/queue and Shopping/variant adapt
 
 Built (2026-11-11; Matt approved OPEN feature defaults): Shopping can explicitly preview and save one or selected ready-row retailer observations as one audited queue change, with all four old/new values and confirmed printing/source evidence. References are selected dated retailer observations, not automatically maintained historical minima; a higher overwrite needs the same review. Optional AUD per-copy market targets (migration0026) and lowest-kept90-day marks share exact printing/finish and the fresh household listing preference. Actor-bound expiring previews recheck queue/source/preference receipts within the existing atomic operation. Unknown saves offer refresh rather than retry; filters and group expansion survive successful refresh. Legacy CSV/schema reads stay blank, nonblank old-schema writes refuse, and CLI/export/check parity preserve price-free intent.353 broad checks pass (46 guarded DB/platform skips),17 latest API/UI and27 owned checks pass (overlap); four disposable-PG cases await CI. No real records, vendor request, schema activation, purchase or order was performed.
 
-**E5-S37** · Matt · should · M · missing
+**E5-S37** · Matt · should · M · built
 
 As Matt, the buyer, I want To buy to mark queued cards that no home deck is missing any more (or that are queued for more copies than the decks now miss), so that I don't order a card a gift, trade, precon or decklist change already made unnecessary.
 
@@ -2580,11 +2574,9 @@ As Matt, the buyer, I want To buy to mark queued cards that no home deck is miss
 - Given an exact-printing row, a token card, a row whose deck can't be found or a pool that can't be worked out, then the row says nothing rather than "covered".
 - Given the mark, then nothing is written: the queue changes only through Edit or Remove.
 
-Gap: `decklab/lib/api/shopping_missing.py` `gather` links queue rows to missing cards one way only; `shopping.py` never compares a row's quantity with what the decks miss, and E5-S25 checks for duplicates only when a row is added. From the backlog review of 2026-11-12.
+Built (2026-11-12): `decklab/lib/api/shopping_queue_need.py` `annotate` runs after `shopping_missing.gather` from the same snapshot, inside Shopping's optional-annotation boundary (a failure leaves every row unmarked). It compares all of a card's eligible rows together (printing `any`, not a token, linked to a counted, non-trial home deck), long-term rows included, and marks a card only when at most one counted deck's Planned list needs it (`buying_needs` records which decks need each card); with two or more decks each count sees the same free pool, so the row stays silent. To buy says "No deck is missing this now", or "Decks now miss N fewer than queued", with Edit… and Remove… beside it. Nothing is written, and a queue write drops that card's marks until the next read. Matt may still change the wording or whether long-term rows show it.
 
-First slice: a pure `annotate(to_buy, missing_cards)` in a new `decklab/lib/api/shopping_queue_need.py`, called after `shopping_missing.gather` when the card data is ready, with fixture tests for each state; the chip in To buy is slice 2. Matt chooses the wording and whether long-term rows show it.
-
-**E5-S38** · Matt · should · S · missing
+**E5-S38** · Matt · should · S · built
 
 As Matt, choosing a shop basket, I want Shopping to list the token cards my built decks make but have no card for, as optional add-ons to look for at that shop, so that a big order doesn't go out without the tokens the decks need.
 
@@ -2593,9 +2585,7 @@ As Matt, choosing a shop basket, I want Shopping to list the token cards my buil
 - Given the list, then nothing is queued or added to Record this order, and no price or stock is claimed.
 - Given a viewer who can't see home's records, then the list isn't sent; given the token reader fails, the baskets still answer without it.
 
-Gap: `decklab/lib/api/shop_baskets.py` builds add-ons only from queue rows, and missing tokens are shown only on the Tokens page. AGENTS.md's "Tokens in every buylist" rule (Matt, 2026-10-20) is followed only by Claude, by hand. From the backlog review of 2026-11-12.
-
-First slice: a `token_addons` field on `GET /api/shopping` for home-record readers, built from the tokens' existing gaps reader, and the note in `web/shopping-baskets.js`; data, privacy and UI fixture tests.
+Built (2026-11-12): `GET /api/shopping` has a `token_addons` field (`decklab/lib/api/shopping_token_addons.py`), built from the tokens' existing gaps reader and sent only to home-record readers. Each basket that was read gets the collapsed note "Token cards your decks make but you don't have (not checked at this shop)", listing each token with how many decks want it and a Copy names action (`web/shopping-baskets.js`). A token already on order, one only the opponent gets, and one with only a differing stand-in owned (as the Tokens page's gaps reader) are left out. Nothing is queued or added to Record this order, no price or stock is claimed, and a failed token reader leaves the baskets answering without the note. Tests: `test_shopping_token_addons`, `test_shopping_token_addons_ui`.
 
 ---
 
@@ -4076,7 +4066,7 @@ Evidence:
 - `decklab/web/core.js`: accessoryOwnerOf, accessoryUsable, seesAccessoriesAs; `deck.js` (deckKit), `editor.js`, `editor-details.js`, `editor-save.js`, `accessories.js`
 - `decklab/tests/test_member_accessories.py`; `test_permissions.py`, `test_accessories.py`, `test_api_permissions_inventory.py`, `test_public_accessories.py` (the rules updated)
 
-**E8-S27** · Matt · could · S · missing
+**E8-S27** · Matt · could · S · built
 
 As Matt, unpacking a delivery or an import, I want Where these go's "To storage" group to say where each card's copies are already filed (and which have no location yet), so that new copies go next to the old ones.
 
@@ -4084,9 +4074,7 @@ As Matt, unpacking a delivery or an import, I want Where these go's "To storage"
 - Given a database without migration 0016, then locations show as unavailable.
 - Given the lookup fails, then the save and its other advice stand.
 
-Gap: `decklab/web/receipt-workflow.js` and `web/collection-filing.js` give only a fixed storage sentence; `lib/api/collection_filing.py` never reads locations, though Build decks does (`lib/api/assembly_locations.py`). From the backlog review of 2026-11-12.
-
-First slice: factor the name-keyed location lookup out of `assembly_locations.annotate`, add a bounded `storage_locations` field to the receipt's and the filing advice's answers (each for its own readers), and the lines in both pages; fixture tests.
+Built (2026-11-12): Build decks' name-keyed location lookup moved to `lib/api/storage_places.py` (`by_name`, `advice`), shared by `assembly_locations` and a bounded `storage_locations` field on the receipt's answer (`lib/api/receipts.py`) and the filing advice's answer (`lib/api/collection_filing.py`), each read from the same saved snapshot as its advice and only for that answer's own readers; the CLI `collection merge` advice prints the same words. `web/storage-locations.js` renders each To storage line's "Usually in Row 2, B" (at most three, then "and N more") or "No location recorded yet" for `receipt-workflow.js` and `collection-filing.js`. Without migration 0016 the lines say locations aren't available yet, and a failed lookup drops only the location words. Tests: `tests/test_where_these_go_locations.py`, `tests/test_where_these_go_locations_ui.py`.
 ---
 
 ## E9: Commander nights
@@ -4546,7 +4534,7 @@ First slice: let `decklab/lib/combos.py` reduce and match three pieces into a se
 
 Built (2026-11-11): explicit card-data update reduces the cached public export into a separate three_card.json; page reads load it lazily without a fetch. Only complete Commander-legal three-named-piece recipes with one copy each and no templates/unreleased pieces match, respecting commander-only requirements. A pair achieving all the triple's named outcomes suppresses the spare-piece recipe; a necessary third payoff with a new result remains. Stats, What opponents will face and the printed sheet show a separate Three-card combos heading, total and capped25 findings, cached date, unavailable states and explicit no-bracket/no-early-timing wording. Triples never enter min_bracket or cuts. Missing pair data also withholds a positive deduplicated triple claim.164 focused combo/stats/readiness/print/default checks pass, and both complete historical inventory golden cases pass. Narrow compatibility removes only exact role-derived category proposals and the exact unavailable-triple default; real triple facts, wrong labels and all counted bracket values still compare. No actual metadata download, deck write, inventory read or game was run for this story.
 
-**E9-S34** · Matt · should · M · missing
+**E9-S34** · Matt · should · M · built
 
 As Matt, heading to the shop's Commander night, I want one list of home's Commander decks showing each deck's counted minimum bracket against the night's recorded aim and range, whether it's built, its stand-ins, when its box was last checked and when it was last played, so that I pick a deck that fits the pod without opening every deck page.
 
@@ -4555,11 +4543,9 @@ As Matt, heading to the shop's Commander night, I want one list of home's Comman
 - Given a viewer, then only decks they may see are listed, and stand-ins and the box-checked date only to inventory readers.
 - Given a deck whose checks don't finish in time, then it's listed as unknown.
 
-Gap: `decklab/web/commander-night.js` compares one deck's Target bracket with the night's aim; the counted minimum (`lib/stats/commander.py`) is worked out only on each deck's own page, and `lib/play_pairs.py` (E1-S28) takes only casual decks. From the backlog review of 2026-11-12.
+Built (2026-11-12): Commander night has **Show the line-up** after Tonight's pairs, for the home profiles (`GET /api/commander-night/lineup`, `lib/api/commander_lineup.py`, the pure `lib/commander_lineup.py` `lineup()`). It sorts home's Commander decks into Fits the night (the counted minimum at or below the lowest of the night's limit, the household aim and the top of the published range), Above the aim (naming the cards that decide the minimum) and Unknown (no recorded night, aim or range, an unknown card, unread tags or combos, a failed check, or checks that didn't finish within the 20-second budget); Unknown is never shown as fitting. A built deck is judged on its built list, any other on its Planned list; trials, products, pairings and retired decks aren't listed, and decks follow `guard.visible_decks`. Each deck shows whether it's built, its target bracket, its stand-ins (inventory readers only), its box-checked date (home record readers only) and when it was last played. Nothing is fetched or saved. Tests: `test_commander_lineup`, `test_commander_lineup_api`, `test_commander_lineup_ui`. A check already running isn't interrupted when the budget runs out, so the answer can be late by that check's time, but it never gives that deck a verdict.
 
-First slice: a pure `lineup(entries, night, today)` in a new `decklab/lib/commander_lineup.py` over already worked-out deck summaries, with fixture tests for each group and the unknown cases; the API and page come next.
-
-**E9-S35** · Matt · should · M · missing
+**E9-S35** · Matt · should · M · built
 
 As Matt, taking a Commander deck to pods of strangers' decks, I want the Stats tab to count what my interaction can hit (creatures, artifacts, enchantments, planeswalkers, any nonland permanent, graveyards, spells on the stack), targeted or mass, and how much is instant speed, so that I notice before the night that the deck has no answer to an artifact or graveyard deck, and can fill the gap from the pool.
 
@@ -4567,11 +4553,9 @@ As Matt, taking a Commander deck to pods of strangers' decks, I want the Stats t
 - Given a kind whose tag the card data lacks, then it says "not checked", never zero; with no tag file at all, the panel says why.
 - Given a 60-card deck, then the panel isn't shown in this slice.
 
-Gap: `decklab/lib/card_index.py` merges removal's child tags into flat roles, so what a card can hit is lost; `lib/stats/deckparts.py` and `role_targets.py` count only targeted and mass disruption. From the backlog review of 2026-11-12.
+Built (2026-11-12): the Stats tab of a Commander deck lists the cards that can deal with creatures, artifacts, enchantments, planeswalkers, any nonland permanent, graveyards and spells on the stack, each split into targeted, mass or not split, and by instant, sorcery or on-a-permanent speed (`lib/stats/answers.py`, `web/deck-answers.js`), read from Scryfall's oracle tags through `cards.tag_members`, which now remembers tags the file lacks and takes `missing_ok`, so the 16 tags take one parse. A kind whose tag the data lacks says "not checked", never zero, and with no tag file the panel says why; 60-card decks get no panel. The tag names were checked against the real oracle tags file on 2026-11-12 and indexed in `reviewed.py`. Not covered: suggesting cards from the pool to fill a gap, and a panel for 60-card decks.
 
-First slice: a pure `decklab/lib/stats/answers.py` reading Scryfall oracle tags through the existing `cards.tag_members` and `tag_branches` (no card-index change), with fixture tests. Check the tag names against the real oracle tags file when building it, and record that date in `lib/stats/reviewed.py`.
-
-**E9-S36** · Matt · should · M · missing
+**E9-S36** · Matt · should · M · built
 
 As Matt, aiming our Commander decks at a bracket, I want to see which cards became or stopped being Game Changers, or were banned or unbanned in Commander, when the card data last changed, and which of our decks hold them, so that I know which decks to re-check before the next night.
 
@@ -4579,11 +4563,9 @@ As Matt, aiming our Commander decks at a bracket, I want to see which cards beca
 - Given a kept change, then a read-only view lists the cards and the Commander decks the viewer may see that hold them, with each deck's counted minimum on today's flags.
 - Given the old card data can't be read, then no change is claimed; given saving the change fails, the update still succeeds.
 
-Gap: `decklab/lib/official_lists.py` (E9-S24) records only the date of Wizards' newest announcement, so every deck is told the list "may have changed"; `lib/cards.py` `_update_index` discards the old flags without comparing them. From the backlog review of 2026-11-12.
+Built (2026-11-12): `official_lists.diff_official(old, new)` compares the Game Changer flags and Commander legality of the old and new indexes. `cards._update_index` reads the old flags before `write_index` overwrites them, and `record_changes` atomically saves the last change that wasn't empty, with both data dates, to `decklab/data/scryfall/official_changes.json`. An old index that can't be read claims no change, and a failed save is logged without failing the update. The read-only `GET /api/official-changes` (`lib/api/official_changes.py`, filtered by `guard.deck_reader`, trials left out) lists the changed cards with the Commander decks the viewer may see that hold them (each deck's Built version, else its Planned list) and each deck's counted minimum bracket on today's flags; the Decks page shows it read-only (`web/library-official.js`). Tests: `test_official_changes.py`, `test_library_official_ui.py`.
 
-First slice: a pure `diff_official(old, new)` in `official_lists.py`, read from the old index before `_update_index` overwrites it and saved atomically to `decklab/data/scryfall/official_changes.json` (the last change that wasn't empty), with fixture tests; the view comes next.
-
-**E9-S37** · Matt · could · M · missing
+**E9-S37** · Matt · could · M · built
 
 As Matt, sitting down across from a commander I don't know, I want to open that card in Deck Lab and see whether it's a Game Changer and which known two-card combos it is a piece of, from the combo list already on the PC, so that I know what to watch for without sending anyone's decklist anywhere.
 
@@ -4592,11 +4574,9 @@ As Matt, sitting down across from a commander I don't know, I want to open that 
 - Given the list is missing or unreadable, then it says combos weren't checked, never "none".
 - Given the lookup, then no deck, space or network fetch is involved.
 
-Gap: `decklab/lib/combos.py` matches whole decks only; `lib/api/card_details.py` already returns `game_changer`, but `web/card-viewer.js` and `card-viewer-details.js` show neither it nor combos. From the backlog review of 2026-11-12.
+Built (2026-11-12): `combos.with_card(oracle_id)` gives the two-card combos a card is a piece of, from the cached list alone, ordered as `find()` orders them, raising `ComboListError` when the list can't be read. The public read-only `GET /api/cards/combos?name=` (`lib/api/card_combos.py`) answers the card's exact name, `game_changer` and `checked`, and when the list was read its date, version, credit and total with at most 25 combos (other pieces, which must be the commander, up to three results, the bracket floor and a Commander Spellbook link); it reads no deck, space, profile, inventory or network. The card viewer shows a Game Changer chip and a collapsed "Known two-card combos with this card (N)" part with the cap line, date and credit; an unread list says combos weren't checked, never none, and a failure is retried on the next opening. Tests: `test_card_combos`, `test_card_viewer_combos_ui`. Not covered: a real browser pass and the live combo list.
 
-First slice: a pure `combos.with_card(oracle_id)` over the two-card list, raising when the list can't be read, served by a public read-only `GET /api/card/combos?name=` the viewer loads after it first draws; fixture tests, then the viewer's chip and part.
-
-**E9-S38** · Matt · could · S · missing
+**E9-S38** · Matt · could · S · built
 
 As a Commander builder checking a list in the editor, I want the bracket box to say each thing once in clean sentences, so that I can read the verdict at a glance before a shop night.
 
@@ -4604,9 +4584,7 @@ As a Commander builder checking a list in the editor, I want the bracket box to 
 - Given a target bracket, then it's its own sentence ("Target: Bracket 2."), and no label shows nested brackets such as ") (".
 - Given Compare's bracket row, then "today's lists" is in the row's heading, not appended to the label.
 
-Gap: `decklab/web/editor-save.js` `bracketBox` adds "No Game Changers." on top of the server's reason that already says it, and appends "(the target is Bracket N)" to labels ending in ")"; `web/compare.js` appends "(today's lists)" the same way. A known low issue in HISTORY.md. From the backlog review of 2026-11-12.
-
-First slice: the wording fixes in `editor-save.js` and `compare.js` (checking that `ui_review/compare-baselines.js` still finds "today's lists"), with a Node UI fixture test.
+Built (2026-11-12): the editor's bracket box drops its own "No Game Changers." when the server's reason already starts with it, and the target is its own sentence ("Target: Bracket 2."), so no label shows ") (". Compare's In brief heading reads "Bracket (today's lists)" when any side is a saved revision or a precon, and `ui_review/compare-baselines.js` still finds that text. Test: `decklab/tests/test_bracket_wording_ui.py` (Node).
 
 ---
 
@@ -5281,7 +5259,7 @@ Built 2026-11-11 under the all-OPEN approval: picture requests dial only checked
 
 Evidence:148 transport/scan tests pass (one native skip), plus132 accessory upload/member/Public/privacy/scanner tests (two existing skips), with changing-resolver/no-second-lookup and original certificate/SNI proofs. Source/whitespace guards pass. DNS follows OS resolver timeouts; concurrency remains bounded during resolution, and the watchdog enforces socket work rather than claiming a DNS wall-clock guarantee. No live URLs/photos/records/config were used or changed. Native Linux OCR/photo acceptance remains with the existing device gates; no general rate limiter is introduced. From the product review of 2026-11-10.
 
-**E10-S46** · Space members · should · M · missing
+**E10-S46** · Space members · should · M · built
 
 As a member (or User1, for home) about to make my decks, collection, games or kit Public, I want to see what signed-in readers would get and confirm before it flips, so that I share on purpose and never by a stray tap.
 
@@ -5290,9 +5268,7 @@ As a member (or User1, for home) about to make my decks, collection, games or ki
 - Given anyone but the owner, an admin included, then the preview is refused before anything is read, and it never names another space, deck or person.
 - Given a Public switch, then turning it Private stays one tap.
 
-Gap: `decklab/web/visibility.js` flips a switch on one click with only fixed wording; `lib/api/visibility.py` has no preview. Nothing is Public yet, so every first switch is still ahead. Claude never changes a member's switch. From the backlog review of 2026-11-12.
-
-First slice: `GET /api/visibility/preview?owner=&thing=` under `change()`'s ownership rule, giving own-space counts only, with privacy fixture tests; the confirm sheet in `visibility.js` is slice 2.
+Built (2026-11-12): `GET /api/visibility/preview?owner=&thing=` (`decklab/lib/api/visibility_preview.py`) applies `change()`'s ownership rule before anything is read, with no admin or script override, and a refusal never names another space, deck or person. It gives counts from the owner's own space only (decks, collection rows and cards, token rows, games or kit rows) and, for decks, lists up to a cap the ones whose write-ups mention orders or purchases; decklists, the owned-vs-needed table and play-sequencing wording ("in order to", turn, play, casting or mana order) are ignored. A preview that can't be worked out says so. In `decklab/web/visibility.js`, Who sees what opens a confirm sheet before a switch turns Public, and nothing changes until Confirm; a failed preview still offers Confirm, and turning a switch Private stays one tap. Tests: `decklab/tests/test_visibility_preview.py`, `test_visibility_ui.py`. Nothing is Public yet, and Claude never changes a member's switch.
 
 ---
 
@@ -6731,7 +6707,7 @@ Also built 2026-11-10: `simulation.example.json` ships neutral defaults, and opt
 
 Left: Matt's decision on a stable update channel, changelog and updates-available line. No release is published yet (E11-S49); E11-S51 owns the release updater. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (ongoing-use-burden 0 to 2, 7, 9, 10). No channel is selected by this work.
 
-**E11-S85** · Matt · should · M · missing
+**E11-S85** · Matt · should · M · built
 
 As Matt, running Deck Lab on a headless spare PC, I want to be told when the Scryfall card data or the exchange rate has quietly stopped refreshing, and later every downloaded source in one place, so that name checks, prices, Game Changers and new precons don't go weeks out of date while every page looks fine.
 
@@ -6739,11 +6715,9 @@ As Matt, running Deck Lab on a headless spare PC, I want to be told when the Scr
 - Given an unknown or malformed date, then the warning says the age is unknown.
 - Given MTGJSON, EDHREC, rulings, Commander Spellbook and the gauntlet catalogue, then a later Data sources panel shows each one's last good fetch and last failure.
 
-Gap: `decklab/lib/server_run.py` retries the card update silently; `lib/api/carddata.py` returns the dates but nothing judges their age; `operator_alerts.STEPS` has no card-data step, and the other sources fall back silently (only the shops have a health check, E11-S68). From the backlog review of 2026-11-12.
+Built (2026-11-12): `decklab/lib/card_freshness.py` is a pure judge of two dates read from disk, the Scryfall data the index was built from and the day the exchange rate was last fetched, with limits from the existing intervals plus two days of retries (card data 11 days, the rate 3). An unknown, malformed or future date has an unknown age and counts as not refreshing. The warning is one fixed sentence naming `python -m decklab.lib.cards update`, quoting no error or path, and `cards update` now refreshes the rate too. It shows in a named admin's `/api/status` (`cards.freshness`, the warning box's "Card data"), as a Card data line in `homenet status` on Windows and Linux, and as the nightly's `card data` heartbeat step, which never fails the night. `server_run.UPDATE_EVERY` comes from `card_freshness.CHECK_EVERY`, and the date parser moved here from `stats/commander.py`. `decklab/lib/source_health.py` keeps each download's last good fetch and last failure in `decklab/data/sources.json` (Scryfall's bulk files, the rate, rulings, Commander Spellbook, MTGJSON, EDHREC, the gauntlet build), served to admins by `GET /api/settings/data-sources` and shown in Settings' Data sources panel on **Show data sources**. Tests: `test_card_freshness`, `test_source_health`, `test_settings_data_sources_ui`. No live fetch or nightly was run.
 
-First slice: a pure judge in a new `decklab/lib/card_freshness.py` sharing `stats/commander.py`'s date parsing (moved, not copied), wired into the status footer, `homenet status` and a nightly `card data` step read from the index on disk; fixture tests.
-
-**E11-S86** · Matt · should · S · missing
+**E11-S86** · Matt · should · S · built
 
 As Matt, leaving Deck Lab running on the spare PC for months, I want status and the nightly to warn before the disk fills up and to show what is using the space, so that a full disk doesn't silently break backups, Forge results and the card update.
 
@@ -6751,11 +6725,9 @@ As Matt, leaving Deck Lab running on the spare PC for months, I want status and 
 - Given free space under the threshold, then they warn.
 - Given a folder that can't be read or whose walk is cut short, then its size is unknown, never zero; two folders on one disk count the disk once.
 
-Gap: nothing measures disk space outside `decklab/forge-trial/`; backups stage every dump, the card update downloads large files and Forge results are never pruned (E11-S17), yet no status or nightly step checks the disk. From the backlog review of 2026-11-12.
+Built (2026-11-12): `python -m decklab.db status`, `homenet status` (Windows and Linux) and the nightly's log show each disk's free space once, however many folders are on it, and the sizes of the backups, Forge results, gauntlet, shops and card data folders under those fixed labels, never a path. A disk below config.json's `disk_space.warn_below_gb` (default 10 GB) warns, and the nightly sends a `disk space` heartbeat step that never fails the night. A folder that can't be read, or whose walk hits its file or time limit, is unknown, never zero, and `db status` prints the disk lines even when the database can't be reached.
 
-First slice: `decklab/lib/disk_space.py` with `measure` (an injected disk-usage call and a capped walk) and `judge`, shown in `db status` and `homenet status`, with fixture tests; the nightly step and Settings panel are slice 2. The real thresholds are set on the spare PC.
-
-**E11-S87** · Matt · should · M · missing
+**E11-S87** · Matt · should · M · partial
 
 As Matt, relying on the nightly backups, I want the nightly to warn when the collection, decks, token cards, orders, wishlists or accessories shrank sharply since the previous good dump, so that a mistaken bulk removal or bad import is noticed while the daily dumps from before it still exist.
 
@@ -6763,11 +6735,9 @@ As Matt, relying on the nightly backups, I want the nightly to warn when the col
 - Given the warning, then it gives whole-table counts only, never a space's or a row's contents.
 - Given a watched table missing from either dump, then it says the table couldn't be compared.
 
-Gap: `decklab/db/backup.py` records each dump's table counts, but only the restore check compares them; nothing compares one night with the last, and the prune keeps 14 dailies, so an unnoticed loss loses its earlier restore points. From the backlog review of 2026-11-12.
+Built (2026-11-12), off by default: `decklab/db/shrink.py` compares each watched table's whole-table count (collection_card, deck, token_card, purchase_order, wishlist_entry, accessory) in the newest good dump with the newest good dump at least 20 hours older, chosen by time so a manual or pre-update backup in between doesn't hide a loss. A table that shrank by more than 25% and at least 5 rows (proposed; `shrink_warn_percent` and `shrink_warn_rows` change them) gets a WARNING line in `db status` and db.log, and the nightly's `shrink` heartbeat step is sent as failed without failing the night. A table missing from either dump is reported as couldn't be compared. None of this runs until config.json's `database.shrink_warn` is true. Left: Matt agrees the watched tables and thresholds and turns it on (he may also want the heartbeat to carry the table and counts).
 
-First slice: a pure `decklab/db/shrink.py` `compare(previous, current)` over the recorded counts, with fixture tests; the nightly wiring follows once Matt agrees the watched tables and thresholds.
-
-**E11-S88** · Matt · could · S · missing
+**E11-S88** · Matt · could · S · partial
 
 As Matt, whose members reach Deck Lab only through the Cloudflare Tunnel, I want `homenet status` and the smoke test to show the installed cloudflared version and warn when it's old, so that the tunnel doesn't stop when Cloudflare drops an old client that never updates itself.
 
@@ -6775,50 +6745,40 @@ As Matt, whose members reach Deck Lab only through the Cloudflare Tunnel, I want
 - Given output that can't be read, a timeout or no tunnel, then the line says unknown or isn't shown.
 - Given the age limit, then it's a dated reviewed fact in `lib/stats/reviewed.py`, looked up from Cloudflare's current support policy, never remembered.
 
-Gap: cloudflared runs with `--no-autoupdate` (decklab/README.md), and `decklab/lib/tunnel.py` never asks it for its version. From the backlog review of 2026-11-12.
+Built (2026-11-12): `decklab/lib/tunnel.py` asks the installed cloudflared for its version (`--version`, 10-second timeout) and judges its age from the build date (or the first of its version month without one) against `SUPPORT_DAYS` = 365, Cloudflare's "within one year of the most recent release". `homenet status` shows a Tunnel version line and, for an old version, warns with the platform's upgrade command (winget, apt, snap, brew or the GitHub release); the smoke test notes the version and never fails for it. Unreadable output, a timeout or no tunnel shows as unknown or adds no line. The limit is a dated reviewed fact (`cloudflared-support` in `lib/stats/reviewed.py`). Left: Matt confirms the 365-day limit, and a run with a real cloudflared on the server PCs.
 
-First slice: `tunnel.cloudflared_version()` and a pure age judge with fixture tests over Windows and Linux outputs; Matt confirms the age limit.
-
-**E11-S89** · Matt · should · M · missing
+**E11-S89** · Matt · should · M · built
 
 As Matt running Deck Lab and its tests, I want reading the profile list to stop re-checking every folder above config.json for links several times per call, so that pages listing decks answer faster and the Windows fixture suite stops spending a third of its time in those checks.
 
 - Given one `read_settings()`, then each guarded path (the config file, the control folder and `pending.json`) is checked for links once, not about six times.
 - Given a pending profile edit appearing during the read, then it's still refused as now; given a linked control or data folder, it's still refused.
 
-Gap: `decklab/lib/profile_config.py` `read_settings()` calls `require_ready()` twice, each walking every ancestor folder; `spaces._people()` reads profiles on every `decks.list_decks()`. Profiling showed `test_play_records` spending 59 of 105 seconds there. From the backlog review of 2026-11-12.
+Built (2026-11-12): `read_settings()` checks the config file, the control folder, `pending.json` and every folder above them for links once per call (`_guarded_pending()`, no cache across calls), down from about six times. It still looks for the pending journal before and after `config.load()`, and still refuses a linked or junctioned config, control or data folder. The journal's path is spelt once (`_control_path`, `_journal_path`, `JOURNAL_NAME`, `journal_file()`), so reads and `require_ready()` check the same file. Tests: `decklab/tests/test_profile_config_reads.py`.
 
-First slice: check the guarded paths once per `read_settings()` call (no cross-call cache), with a counting test and the pending and linked-folder cases.
-
-**E11-S90** · Matt · should · M · missing
+**E11-S90** · Matt · should · M · built
 
 As a home player opening the Game log or Build decks, I want Deck Lab to read each deck once per request, so that these pages don't slow down with the square of the library's size.
 
 - Given one request, then each deck's text is parsed at most once, however many lookups it makes.
 - Given a returned deck summary, then changing it changes no other caller's copy; given a write, the next read sees it.
 
-Gap: `decklab/lib/decks/__init__.py` `find_summary()` runs `list_decks()` on every call, and `lib/api/play_records.py`, `lib/api/assembly.py` and the sideboard preview call it per deck and version: profiling 50 Game log loads gave 1,374 `list_decks` calls and 8,066 deck parses. From the backlog review of 2026-11-12.
+Built (2026-11-12): the deck library is read once per inventory snapshot (`decklab/lib/decks/library_cache.py`): its parses, summaries, product decks and Beginner Box pairings are kept on the snapshot object, so each deck's text is parsed at most once per request across `find_summary`, `list_decks`, `load_deck`, the Game log's record lookups and Build decks (`GET /api/assembly` and its preview, usual opponents, packing, stand-ins, sections and completion, through `decks.parsed_stored`). Every caller gets its own copy, and a write's new snapshot is read afresh. Write paths still parse on their own, by design. Tests: `decklab/tests/test_deck_library_cache.py` (parse counts, copies, writes, growth linear in the library).
 
-First slice: memoise `list_decks` on the inventory snapshot object (not the pin, which each `find_summary` opens afresh), returning copies, with fixture tests that parses grow linearly and that writes are seen.
-
-**E11-S91** · Matt · should · S · missing
+**E11-S91** · Matt · should · S · built
 
 As Matt merging pull requests that must pass `tests`, I want the fixture suite free of timing races, so that a green change isn't blocked or re-run because a test checked a server thread before it finished.
 
 - Given `test_member_self_service`'s download test, then it waits, with a deadline, for the server thread to close the stream before asserting it.
 - Given `test_server`'s one-log-line-per-request test, then it counts only the lines of its own requests, not a previous test's late line.
 
-Gap: CI failed once on each (2026-11-10 and 2026-11-11 Linux shards): `lib/feature_routes.py` closes the download after answering, and log lines are written after the answer. From the backlog review of 2026-11-12.
+Built (2026-11-12): `test_member_self_service`'s download test waits, with a deadline, for its stream to close. `test_server`'s log tests count only their own lines: each request carries its own probe, found by `own_log_lines(before, probe, count)` with a deadline, never by position, and the Content-Length test waits for its own two lines before checking for a traceback. Repeated runs of both modules pass.
 
-First slice: both test fixes, checking the module's other `self.log[before:]` uses, then repeated runs of both modules on the fixture runner.
-
-**E11-S92** · Matt · could · S · missing
+**E11-S92** · Matt · could · S · built
 
 As Matt running `python -m decklab.lib.stats` or `goldfish` at the PC, I want a missing deck or Play-now list, a pairing's `--owned` or an unreachable database to end in one sentence with the documented exit code, and the `--all` table to show the same Commander mulligan figure as the page.
 
 - Given a deck that can't be found or read, then `stats` and `goldfish` print one line and exit 1 (in `--all`, skip that deck with a note); given an unreachable database, exit 2; `tokens` does the same for the database.
 - Given a Commander deck in `goldfish --all`, then its mulligan column shows "kept fewer than 7", the page's figure, and 60-card decks keep today's rate.
 
-Gap: `decklab/lib/stats/__init__.py` and `goldfish/cli.py` catch none of these (`pool.main` does); HISTORY.md's known low issues record the `stats <pairing> --owned` traceback and the `--all` mulligan figure. From the backlog review of 2026-11-12.
-
-First slice: the error handling in all three command lines, a `kept_fewer_than_7` field beside the unchanged headline, and `decklab/tests/test_deck_cli_errors.py`.
+Built (2026-11-12): `decklab/lib/stats/__init__.py` and `goldfish/cli.py` catch a missing or unreadable deck, a missing Play-now list and a pairing's `--owned` (one line, exit 1; `--all` skips the deck with a note on stderr), and an unreachable database (exit 2), as does `decklab/lib/tokens`. goldfish's headline gains `kept_fewer_than_7` beside the unchanged `mulligan_rate`, and the `--all` table's mull% uses it for setups with a free first mulligan, as the page does. Tests: `decklab/tests/test_deck_cli_errors.py` (23).
