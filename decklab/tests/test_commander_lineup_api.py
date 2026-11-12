@@ -177,6 +177,22 @@ class LineupViewTests(PermissionTestCase):
         self.assertEqual(answer["counts"]["unknown"], 4)
         self.assertTrue(all(row["unknown_reason"] == commander_lineup.NO_CARDS for row in answer["groups"]["unknown"]))
 
+    def test_a_check_that_ends_after_the_budget_is_unknown(self):
+        self.save_night()
+        clock = [1000.0]
+
+        def slow(sections):
+            clock[0] += commander_lineup.TIME_BUDGET + 1     # this one check runs past the budget
+            return fake_bracket(sections)
+        self.bracket.side_effect = slow
+        with mock.patch.object(commander_lineup.time, "monotonic", side_effect=lambda: clock[0]):
+            answer = self.view()
+        self.assertEqual((answer["counts"]["fits"], answer["counts"]["above"]), (0, 0))
+        self.assertEqual(answer["timed_out"], answer["counts"]["unknown"])
+        self.assertTrue(all(row["unknown_reason"] == commander_lineup.NOT_IN_TIME
+                            for row in answer["groups"]["unknown"]))
+        self.assertEqual(self.bracket.call_count, 1)        # nothing more is checked once the budget is spent
+
     def test_a_game_log_that_can_t_be_read_shows_no_dates(self):
         self.save_night()
         with mock.patch.object(self.box.state, "play_list", side_effect=state.Unavailable("down")):

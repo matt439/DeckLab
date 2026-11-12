@@ -11,8 +11,11 @@ home's saved Commander decks the viewer may see (guard.visible_decks; never a tr
 deck, or a retired deck, which isn't listed at all). A built deck is judged on its built list
 (pool._built_version), any other on its Planned list, by the stats' counted minimum (stats.deck_rules,
 lib/stats/commander.py), worked out on this PC from its card data, oracle tags and combo list: nothing
-is fetched. The checks share TIME_BUDGET seconds: a deck whose check would start after it is listed as
-unknown, never as fitting, and so is a deck whose check fails. The stand-ins (the installed recipe of a
+is fetched. The checks share TIME_BUDGET seconds: a deck whose checks don't finish within it (one that
+would start after it, or one that ends after it) is listed as unknown, never as fitting, and so is a deck
+whose check fails. Once the budget is spent no further deck is checked; a check already running is local
+work on this PC (no fetch, no lock) and isn't interrupted, so one slow check can make the answer late by
+that check's own time, but it never gives that deck a verdict. The stand-ins (the installed recipe of a
 built deck, else its Planned list's chosen stand-ins) go only to viewers who may see home's inventory,
 and the box-checked date only to home's record readers, as on the deck page. When it was last played
 comes from the Game log's games and Commander pods this viewer may see (a renamed deck's old id counts
@@ -128,10 +131,15 @@ def _entry(summary, deadline, shows_standins, shows_box):
             entry["unknown"] = NOT_IN_TIME
         else:
             try:
-                entry["bracket"] = _bracket(sections)
+                found = _bracket(sections)
             except Exception:       # cards.INDEX_ERRORS and any other: unknown, never fitting
                 common._log(f"The Commander line-up couldn't check {deck_id}:\n" + traceback.format_exc())
                 entry["unknown"] = NO_CARDS
+            else:
+                if time.monotonic() > deadline:     # finished, but after the budget: unknown, never fitting
+                    entry["unknown"] = NOT_IN_TIME
+                else:
+                    entry["bracket"] = found
     return entry
 
 
