@@ -164,8 +164,10 @@ function compareBrief(sides, labels) {
     ["Creatures", ...of((st) => (st.curve ? num(st.curve.creatures) : null))],
     ["Other spells", ...of((st) => (st.curve ? num(st.curve.noncreatures) : null))],
     ["Colour sources", ...of(sources)],
-    commander ? ["Bracket", ...of((st,d) => st.commander?.bracket?.label
-      ? st.commander.bracket.label + (compareBaseline(d) ? " (today's lists)" : "") : null)] : null]));
+    // A revision or precon is judged on today's Game Changer and bracket lists: the row's heading says so
+    // once, never appended to a label that may end in its own brackets (E9-S38).
+    commander ? [sides.some(compareBaseline) ? "Bracket (today's lists)" : "Bracket",
+      ...of((st) => st.commander?.bracket?.label || null)] : null]));
 }
 
 /** Both mana curves on one scale (a phone stacks them), each with its bars' cards, and the two as one table. */
