@@ -191,6 +191,20 @@ class AnswerTests(unittest.TestCase):
         self.assertTrue(self.kind(found, "creature")["checked"])          # the others still count
         self.assertEqual(self.kind(found, "stack")["count"], 2)
 
+    def test_missing_tags_read_the_file_once_and_are_remembered(self):
+        path = write_tags(self.folder, without("hate-graveyard", "counterspell"))
+        real = cards.card_index._read_tag_tree
+        with mock.patch.object(cards.card_index, "_read_tag_tree", side_effect=real) as read:
+            found, missing = answers.read_tags(path)
+            self.assertEqual(read.call_count, 1)
+            self.assertEqual(missing, ["hate-graveyard", "counterspell"])
+            self.assertNotIn("hate-graveyard", found)
+            self.assertIn("removal-creature", found)
+            self.assertEqual(answers.read_tags(path), (found, missing))     # a second deck: no read
+            with self.assertRaises(KeyError):                                # nor for a strict ask
+                cards.tag_members(["counterspell"], path)
+            self.assertEqual(read.call_count, 1)
+
     def test_a_missing_permanent_kind_leaves_other_unworked(self):
         tree = without("removal-artifact")
         tree["removal"] = ([c for c in TREE["removal"][0] if c != "removal-artifact"], [])

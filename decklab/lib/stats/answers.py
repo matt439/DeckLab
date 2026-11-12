@@ -85,19 +85,10 @@ def all_tags():
 def read_tags(path=None):
     """({slug: frozenset of oracle ids}, [slugs the file doesn't have]) for all_tags(). Raises OSError (and
     ValueError for a file that isn't JSON lines) when the tag file can't be read at all. A slug the file
-    lacks is read alone, so the others still count."""
+    lacks is left out (the file is read once either way), so the others still count."""
     slugs = all_tags()
-    try:
-        return cards.tag_members(slugs, path), []
-    except KeyError:
-        pass
-    found, missing = {}, []
-    for slug in slugs:
-        try:
-            found.update(cards.tag_members([slug], path))
-        except KeyError:
-            missing.append(slug)
-    return found, missing
+    found = cards.tag_members(slugs, path, missing_ok=True)
+    return found, [slug for slug in slugs if slug not in found]
 
 
 def speed(card):
