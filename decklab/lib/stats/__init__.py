@@ -43,6 +43,7 @@ files, except commander.TAG_FILE, COMBO_FILE and OFFICIAL_FILE)
                     types, roles, tribes and keywords
     colourcheck.py  the coloured-source check
     role_targets.py the Command Zone template's Commander role targets (E9-S26)
+    answers.py      what a Commander deck's interaction can hit (E9-S35)
     commander.py    the Commander checks and bracket, TAG_FILE, COMBO_FILE and
                     OFFICIAL_FILE
     __main__.py     python -m decklab.lib.stats
@@ -224,6 +225,11 @@ Result (every key is always there; None where it doesn't apply)
                     [{"category", "label", "target", "about", "count" (None: no
                     Deck Lab measure), "status" ("below" | "at" | "above" | None),
                     "roles", "except", "role_bar", "measure"}], "by_role"}
+    answers         None for constructed decks, else what the deck's interaction can hit
+                    (answers.py, E9-S35): creatures, artifacts, enchantments,
+                    planeswalkers, any nonland permanent, graveyards and the stack,
+                    each split into targeted and mass and by speed, from Scryfall's
+                    oracle tags; {"checked": False, "reason"} without a tag file
     tribes          {"types": [{"type", "count", "cards"}] most first,
                     "changelings": {"count", "cards", "note"}}
     keywords        [{"keyword", "count", "cards"}] most first
@@ -329,6 +335,8 @@ from .colourcheck import (
     _Source, _requirements, _checks, _needed, _cost_key, _Sources, _colour_groups, _hardest_first,
     _colour_check)
 from .role_targets import SOURCE_ID as ROLE_TARGETS_SOURCE_ID, role_targets as _role_targets
+from . import commander as _commander_module
+from .answers import answers as _answers
 from .commander import (
     min_bracket, _copies_allowed, is_basic, _can_be_commander, _is_background, _is_doctor,
     _partner_abilities, _pairing, _partners, _abilities_in_words, _commander_checks)
@@ -387,6 +395,8 @@ def deck_stats(sections, kind):
         "types": _types(main),
         "roles": _roles(main),
         "role_targets": _role_targets(main, lands["lands"]) if kind == "commander" else None,
+        "answers": (_answers(main, _commander_module.TAG_FILE, commander["bracket"]["data"]["tags_date"])
+                    if commander else None),
         "tribes": _tribes(main),
         "keywords": _keywords(main),
         "sideboard": {"count": counts["sideboard"], "cards": card_list(by_section["Sideboard"]),
@@ -515,6 +525,13 @@ def _print_summary(deck_id, result):
     tribes = result["tribes"]["types"][:3]
     if tribes:
         print("  Tribes: " + ", ".join(f"{t['count']} {t['type']}" for t in tribes))
+    found = result.get("answers")
+    if found and found["checked"]:
+        print("  Answers: " + ", ".join(
+            f"{k['label']} {k['count']}" if k["checked"] else f"{k['label']} not checked" for k in found["kinds"])
+            + (f" (none for: {', '.join(found['gaps'])})" if found["gaps"] else ""))
+    elif found:
+        print(f"  Answers: {found['reason']}")
     commander = result["commander"]
     if commander:
         print(f"  Commander: {commander['bracket']['label']}; "

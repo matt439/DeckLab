@@ -133,7 +133,9 @@ older code (the committed tests/fixtures/inventory_goldens):
 - "role-target-defaults": E9-S26 adds deck_view's stats "role_targets", the Command Zone
   template's Commander role targets beside the list's counts. Constructed decks answer None,
   and no golden deck is a Commander deck, so only None is dropped; a Commander deck's targets
-  still compare. test_role_targets checks its values.
+  still compare. test_role_targets checks its values. E9-S35's stats "answers" (what a Commander
+  deck can answer) is None for constructed decks the same way and dropped only then
+  (test_stats_answers checks it).
 - "absent-shop-prices": E5-S08 adds an explicit missing-card shop check to deck Prices. Only
   the exact typed 15-field not-checked default is dropped from positive integer shortfalls
   in synthetic home deck_view answers: the raw script, the exact local-script sentinel and
@@ -688,8 +690,9 @@ def role_target_defaults(dump):
         views = mine.get("deck_view") if isinstance(mine, dict) else None
         for view in views.values() if isinstance(views, dict) else []:
             stats = view.get("stats") if isinstance(view, dict) else None
-            if isinstance(stats, dict) and "role_targets" in stats and stats["role_targets"] is None:
-                stats.pop("role_targets")
+            for key in ("role_targets", "answers"):         # E9-S35's "answers" is None for them too
+                if isinstance(stats, dict) and key in stats and stats[key] is None:
+                    stats.pop(key)
 
 
 def opponent_token_defaults(dump):
