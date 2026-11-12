@@ -47,6 +47,9 @@ def shopping_overview():
         answer and on each queued card, each shop's with its own fetch time; left out without any;
       - "baskets": a proposed basket for each snapshot shop (shop_baskets.py, E5-S27): the ready rows in stock
         there with prices and a total, add-ons in stock, and the ready rows no read shop has; left out without any;
+      - "token_addons" beside the baskets: [{name, kind, decks}], the token cards home's built decks make
+        with no card and none on order, never the opponent's only (shopping_token_addons.py, E5-S38);
+        left out when the token reader fails or the card data isn't ready;
       - "decks_missing": the home decks whose planned list still misses cards;
       - "missing_cards": {ready, rows, warnings, errors, totals}, one canonical card
         per row with summed individual deck shortfalls, wanting decks and every matching
@@ -105,6 +108,8 @@ def _overview():
     shop_prices.enrich_missing(answer, data=shop_data)
     from . import shop_baskets
     shop_baskets.enrich(answer, data=shop_data)
+    from . import shopping_token_addons
+    shopping_token_addons.enrich(answer, cards_ready=cards_ready)
     return answer
 
 
