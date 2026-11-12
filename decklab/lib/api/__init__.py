@@ -136,6 +136,7 @@ called as before (from decklab.lib import api; api.<name>). Each part:
     card_lookup.py   card and line JSON, which printing, search(), printings(), image_file();
                      _pool_counts, the copies the viewer may see (home's, or their own space's)
     card_rulings.py  GET /api/cards/rulings: a card's Scryfall rulings for the card viewer (E1-S25)
+    card_combos.py   GET /api/cards/combos: a card's Game Changer flag and two-card combos for the card viewer (E9-S37)
     card_decks.py    GET /api/cards/decks: one card's decks and free copies in a space, for the card viewer (E1-S29)
     deck_page.py     decks_index(), deck_view() (the space's inventory only for those who may
                      see it)

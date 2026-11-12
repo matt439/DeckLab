@@ -214,6 +214,9 @@ inventory writes answer 503 with "reason": "database":
     GET  /api/cards/printings?name=<name>   the printing picker: owned counts, prices
     GET  /api/cards/rulings?name=<name>    the card viewer's: {"name", "available", "updated", "rulings":
                                          [{"date", "source", "text"}]} (lib/api/card_rulings.py)
+    GET  /api/cards/combos?name=<name>     the card viewer's (E9-S37): {"name", "game_changer", "checked", "date",
+                                         "total", "combos" (at most 25), "credit"} or "reason"; public card data,
+                                         no deck, space or network (lib/api/card_combos.py)
     GET  /api/cards/decks?name=<name>[&space=<id>]   the card viewer's line (E1-S29): the space's decks that
                                          hold or want the card and its free copies (lib/api/card_decks.py;
                                          403 as /api/collection)

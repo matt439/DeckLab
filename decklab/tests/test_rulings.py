@@ -226,6 +226,8 @@ const answers = {
 };
 const asked = [];
 ctx.fetch = async (path) => {
+  // The viewer's combos part (E9-S37) asks too: not counted here.
+  if (!String(path).startsWith('/api/cards/rulings')) return { ok: true, status: 200, json: async () => ({ checked: false }) };
   const name = decodeURIComponent(path.split('name=')[1]);
   asked.push(name);
   const a = answers[name];

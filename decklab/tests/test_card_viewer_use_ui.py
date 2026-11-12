@@ -52,7 +52,7 @@ class ViewerUseLineTests(unittest.TestCase):
           const lotus = {name: "Black Lotus", type_line: "Artifact"};
           const reads = [];
           const answers = {};
-          api = (path) => { if (path.startsWith("/api/cards/rulings")) return Promise.resolve({available: true, rulings: []});
+          api = (path) => { if (path.startsWith("/api/cards/rulings") || path.startsWith("/api/cards/combos")) return Promise.resolve({available: true, rulings: []});
             reads.push(path); const a = answers[path];
             return a instanceof Error ? Promise.reject(a) : Promise.resolve(a); };
           const path = (name, space) => "/api/cards/decks?" + new URLSearchParams(space ? {name, space} : {name});
@@ -176,7 +176,7 @@ class ViewerUseLineTests(unittest.TestCase):
         self.run_js("""
           location.hash = "#/deck?id=casual/gruul-test";
           let release;
-          api = (p) => { if (p.startsWith("/api/cards/rulings")) return Promise.resolve({available: true, rulings: []});
+          api = (p) => { if (p.startsWith("/api/cards/rulings") || p.startsWith("/api/cards/combos")) return Promise.resolve({available: true, rulings: []});
             reads.push(p); return p === path("Llanowar Elves")
             ? new Promise((resolve) => { release = () => resolve(answer()); })
             : Promise.resolve(answer({name: "Black Lotus", holds: [], wants: [], owned: 1, free: 1})); };
