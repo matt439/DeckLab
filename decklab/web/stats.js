@@ -69,6 +69,7 @@ function statsSection(data) {
     st.commander ? nearCombosPanel(data) : null,
     drawOddsPanel(data),
     compositionPanel(st, data),
+    st.answers ? answersPanel(st.answers, data) : null,
     categoriesPanel(data),
     tribesPanel(st),
     st.sideboard && st.sideboard.count ? sideboardPanel(st) : null,

@@ -633,15 +633,17 @@ _tag_cache = {}         # (path, mtime_ns, size) -> {slug: frozenset of oracle i
 _tag_lock = threading.Lock()
 
 
-def tag_members(slugs, path=None):
+def tag_members(slugs, path=None, missing_ok=False):
     """{slug: frozenset of oracle ids} for any Scryfall oracle tags, each
     with the cards of every tag below it, as the roles are counted.
 
     Compare the ids with a card's "oracle_id". Reads the oracle_tags bulk file
     (path, by default the downloaded one) once for all the slugs asked for,
-    and keeps the answers in memory until the file changes. Raises KeyError
-    for a slug the file doesn't have, and OSError (FileNotFoundError) when
-    there's no tag file."""
+    and keeps the answers in memory until the file changes, a slug the file
+    doesn't have included (so asking for it again doesn't read the file
+    again). Raises KeyError for a slug the file doesn't have, unless
+    missing_ok, which leaves it out of the answer instead; and OSError
+    (FileNotFoundError) when there's no tag file."""
     path = Path(path) if path is not None else bulk_path("oracle_tags")
     stat = path.stat()
     key = (str(path.resolve()), stat.st_mtime_ns, stat.st_size)
@@ -651,15 +653,16 @@ def tag_members(slugs, path=None):
         missing = [slug for slug in slugs if slug not in known]
         if missing:
             tags, by_slug = card_index._read_tag_tree(path)
-            unknown = [slug for slug in missing if slug not in by_slug]
-            if unknown:
-                raise KeyError(f"No oracle tag {', '.join(map(repr, unknown))} in {path}")
             known = dict(known)
-            for slug in missing:
-                known[slug] = frozenset(card_index._tag_closure(tags, by_slug[slug]))
+            for slug in missing:        # None: the file has no such tag
+                known[slug] = (frozenset(card_index._tag_closure(tags, by_slug[slug]))
+                               if slug in by_slug else None)
             _tag_cache.clear()          # an older version of the file isn't needed again
             _tag_cache[key] = known
-    return {slug: known[slug] for slug in slugs}
+    unknown = [slug for slug in slugs if known[slug] is None]
+    if unknown and not missing_ok:
+        raise KeyError(f"No oracle tag {', '.join(map(repr, unknown))} in {path}")
+    return {slug: known[slug] for slug in slugs if known[slug] is not None}
 
 
 def tag_branches(slug, path=None):
