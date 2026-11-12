@@ -264,6 +264,10 @@ inventory writes answer 503 with "reason": "database":
                                          (each {"record", "sha256"}), with "warnings" and "today"
     GET  /api/play/pairs                 tonight's pairs: up to 3 ready home pairs, evenest and least lately
                                          played first, with reasons (home profiles only; lib/api/play_tonight.py)
+    GET  /api/commander-night/lineup     home's Commander decks sorted into fits, above the aim (naming the
+                                         cards that decide it) and unknown against the recorded Commander
+                                         night, each with built, stand-ins, box checked and last played (home
+                                         profiles only; E9-S34, lib/api/commander_lineup.py)
     POST /api/play/game, /api/play/sideboard   body {"profile", "id", "sha256", <the record's fields>,
                                          "preview", "review_sha256"?}: preview, then save a game or a
                                          sideboard plan (409 when it changed since it was read)

@@ -92,6 +92,7 @@ function drawPlay(data, deckId) {
       description: "Played games, Commander pods and sideboard plans. Separate from Forge's simulations." }),
     warningsBox(data.warnings, "Some play records or deck lists could not be loaded"),
     data.lists.length && !deckId && typeof playTonightSection === "function" ? playTonightSection(data) : null,
+    !deckId && typeof commanderLineupSection === "function" ? commanderLineupSection() : null,
     data.lists.length ? playQuickRecord(data, deckId) : playWithoutDecks(data),
     el("section", { class: "play-section", "aria-labelledby": "play-games-title" },
       el("div", { class: "play-section-head" }, el("h2", { id: "play-games-title", text: data.pods?.length ? "Played 1v1 games" : "Played games" }),

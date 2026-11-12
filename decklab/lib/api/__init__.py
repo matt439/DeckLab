@@ -229,6 +229,9 @@ called as before (from decklab.lib import api; api.<name>). Each part:
                      save_game(), save_sideboard(). Imported when first asked, as tokens.py
     play_tonight.py  tonight's pairs (E1-S28): pairs_view(), GET /api/play/pairs, over
                      lib/play_pairs.py's suggest(). Imported when first asked, as tokens.py
+    commander_lineup.py  a Commander night line-up (E9-S34): lineup_view(), GET
+                     /api/commander-night/lineup, over lib/commander_lineup.py's lineup(). Imported
+                     when first asked, as tokens.py
     activity.py      the Activity page: activity_view(), the audit trail filtered for each
                      viewer (visible_change). Imported when first asked, as tokens.py. Its rows'
                      words are activity_summaries.py's, its headlines activity_headlines.py's
