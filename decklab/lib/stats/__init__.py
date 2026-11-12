@@ -8,6 +8,8 @@ Usage (from the repo root):
         [--owned]      the deck file's owned-only list instead of the target list
         [--json]       the whole result as JSON
     python -m decklab.lib.stats --all [--pairings]      headline numbers for every deck
+    Exit codes: 0 done; 1 a deck that can't be found or read (with --all it's skipped, with a
+    note on stderr); 2 the database can't be reached.
 
 From code:
 
@@ -300,7 +302,7 @@ import json
 import sys
 from collections import Counter
 
-from decklab.lib import decks
+from decklab.lib import decks, inventory, spaces
 
 # Every function, class and constant the module had before Milestone 7
 # split it up, except commander.TAG_FILE (tests patch it there; a copy here
@@ -539,7 +541,8 @@ def _print_summary(deck_id, result):
 
 
 def main(argv=None):
-    sys.stdout.reconfigure(errors="replace")
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="replace")
     parser = argparse.ArgumentParser(prog="python -m decklab.lib.stats",
                                      description="Deck stats for a Deck Lab deck.")
     parser.add_argument("deck_id", nargs="?", help='e.g. casual/gruul-ramp, "pairing/cats+elves"')
@@ -550,27 +553,56 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if not args.all and not args.deck_id:
         parser.error("give a deck id or --all")
+    try:
+        return _run(args)
+    except inventory.Unavailable as e:      # the database can't be used: python -m decklab.db's exit 2
+        print(e, file=sys.stderr)
+        return 2
+
+
+# A deck that can't be found (no such id, a pairing's or an idea's missing Play-now list) or read
+# (no decklist block, a bad product list): one sentence and exit 1, as pool.main does.
+_DECK_ERRORS = (decks.DeckNotFound, decks.DeckFileError, spaces.SpaceNotFound)
+
+
+def _run(args):
     if args.all:
-        summaries = [s for s in decks.list_decks() if not s.get("error")]
+        summaries = []
+        for summary in decks.list_decks():
+            if summary.get("error"):
+                print(f"Skipped {summary['id']}: {summary['error']}", file=sys.stderr)
+            else:
+                summaries.append(summary)
         if args.pairings:
             summaries += decks.beginner_box_pairings()
         print(f"{'deck':<48} {'ver':<6} {'cards':>5} {'lands':>6} {'rec':>6} {'verdict':<13} "
               f"{'avg MV':>6} {'bracket':>7}  colour shortfalls")
         for summary in summaries:
             for version in summary["versions"]:
-                result = deck_stats(decks.load_deck(summary["id"], version), decks.engine_kind(summary))
+                try:
+                    result = deck_stats(decks.load_deck(summary["id"], version), decks.engine_kind(summary))
+                except _DECK_ERRORS as e:
+                    print(f"Skipped {summary['id']} ({version}): {e}", file=sys.stderr)
+                    continue
                 h = headline(result)
                 print(f"{summary['id']:<48} {version:<6} {h['cards']:>5} {h['lands']:>6g} "
                       f"{h['recommended'] or '-':>6} {h['verdict'] or '-':<13} "
                       f"{h['average_mv'] or '-':>6} {h['min_bracket'] or '-':>7}  "
                       + ("; ".join(h["colour_short"]) or ("-" if h["colours_ok"] is None else "none")))
         return 0
-    summary = decks.find_summary(args.deck_id)       # a pairing's halves in either order
-    if summary is None:
-        print(f"No deck {args.deck_id!r}", file=sys.stderr)
+    try:
+        summary = decks.find_summary(args.deck_id)       # a pairing's halves in either order
+        if summary is None:
+            print(f"No deck {args.deck_id!r}", file=sys.stderr)
+            return 1
+        if summary.get("error"):
+            print(f"{args.deck_id} can't be read: {summary['error']}", file=sys.stderr)
+            return 1
+        result = deck_stats(decks.load_deck(summary["id"], "owned" if args.owned else "target"),
+                            decks.engine_kind(summary))
+    except _DECK_ERRORS as e:
+        print(e, file=sys.stderr)
         return 1
-    result = deck_stats(decks.load_deck(summary["id"], "owned" if args.owned else "target"),
-                        decks.engine_kind(summary))
     if args.json:
         print(json.dumps(result, indent=2, ensure_ascii=False))
     else:

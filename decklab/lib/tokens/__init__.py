@@ -742,7 +742,11 @@ def main(argv=None):
     parser.add_argument("--space", default=spaces.HOME, help="with --check: whose token cards (default home)")
     args = parser.parse_args(argv)
     with inventory.pinned():    # one snapshot for the whole command
-        code = _main(parser, args)
+        try:
+            code = _main(parser, args)
+        except inventory.Unavailable as e:  # the database can't be used: python -m decklab.db's exit 2
+            print(e, file=sys.stderr)
+            return 2
         stale = inventory.pinned_stale()
     if stale:                   # the database's last good snapshot, as python -m decklab.db says
         print(f"Note: {stale}.", file=sys.stderr)
@@ -770,6 +774,6 @@ def _main(parser, args):
     except RuntimeError as e:
         print(f"The card data isn't ready: {e}")
         return 1
-    except (decks.DeckNotFound, decks.DeckFileError) as e:
+    except (decks.DeckNotFound, decks.DeckFileError, spaces.SpaceNotFound) as e:
         print(e)
         return 1
