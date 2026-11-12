@@ -509,9 +509,16 @@ class ServiceCommandTests(SystemdCase, Guarded):
                                                                              "with Cloudflare Access's login"))
         listener = self.patch("decklab.lib.tunnel.check_listener", return_value=(
             "refuses", "The tunnel's listener (127.0.0.1:18644) refuses visits without a Cloudflare Access login"))
+        version = self.patch("decklab.lib.tunnel.version_check", return_value={
+            "state": "old", "text": "cloudflared 2024.6.1 is from June 2024.",
+            "fix": "Upgrade it: sudo snap refresh cloudflared, then python -m decklab.lib.homenet restart."})
         code, text = self.main("status")
         listener.assert_called_once_with(18644, "decklab.example.com", commands.PROBE_TIMEOUT)
-        self.assertIn("refuses visits without a Cloudflare Access login", " ".join(text.split()))
+        version.assert_called_once_with(settings)
+        text = " ".join(text.split())
+        self.assertIn("refuses visits without a Cloudflare Access login", text)
+        self.assertIn("WARN Tunnel: cloudflared 2024.6.1 is from June 2024.", text)    # E11-S88
+        self.assertIn("sudo snap refresh cloudflared", text)
 
     def test_status_has_the_sleep_lines(self):
         self.main("install", "--at-logon")

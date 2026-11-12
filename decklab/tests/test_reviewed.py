@@ -32,7 +32,7 @@ class IndexTests(unittest.TestCase):
     def test_every_named_group_is_indexed_with_its_source_dates_and_interval(self):
         found = {record["id"]: record for record in reviewed.records()}
         self.assertEqual(list(found), ["bracket-rules", "tutor-wording", "karsten", "role-targets",
-                                       "edhrec-page", "edhrec-average-decks"])
+                                       "edhrec-page", "edhrec-average-decks", "cloudflared-support"])
         for record in found.values():
             self.assertTrue(record["label"] and record["source"] and record["where"], record["id"])
             self.assertIsInstance(record["reviewed"], date)
@@ -51,7 +51,10 @@ class IndexTests(unittest.TestCase):
         self.assertEqual(found["role-targets"]["reviewed"], iso(role_targets.CHECKED))
         self.assertEqual(found["edhrec-page"]["reviewed"], iso(edhrec.SHAPE_CHECKED))
         self.assertEqual(found["edhrec-average-decks"]["reviewed"], iso(edhrec_source.SHAPE_CHECKED))
-        for key in ("karsten", "role-targets", "edhrec-page", "edhrec-average-decks"):
+        from decklab.lib import tunnel
+        self.assertEqual(found["cloudflared-support"]["reviewed"], iso(tunnel.SUPPORT_POLICY_CHECKED))
+        self.assertIn(f"{tunnel.__name__}.SUPPORT_DAYS", found["cloudflared-support"]["where"])
+        for key in ("karsten", "role-targets", "edhrec-page", "edhrec-average-decks", "cloudflared-support"):
             self.assertIsNone(found[key]["reviewed_through"])
 
     def test_every_pointer_names_something_that_exists(self):

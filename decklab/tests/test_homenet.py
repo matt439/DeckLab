@@ -939,6 +939,19 @@ class StatusCommandTests(Guarded):
         self.assertIn("PROBLEM Network", text)
         self.assertIn("PROBLEM Firewall: Rule 'pythonw.exe' blocks pythonw.exe", text)
 
+    def test_tunnel_shows_cloudflareds_version(self):
+        # E11-S88: no hostname, so the public address isn't asked; the version is.
+        settings = {"tunnel": {"config": "c.yml"}}
+        self.patch("decklab.lib.config.load", return_value=settings)
+        self.patch("decklab.lib.tunnel.settings_of", return_value={"config": Path("c.yml"), "hostname": ""})
+        version = self.patch("decklab.lib.tunnel.version_check", return_value={
+            "state": "old", "text": "cloudflared 2024.6.1 is from June 2024.",
+            "fix": "Upgrade it: winget upgrade Cloudflare.cloudflared, then python -m decklab.lib.homenet restart."})
+        code, text = self.run_status(REAL_FACTS)
+        version.assert_called_once_with(settings)
+        self.assertIn("WARN Tunnel: cloudflared 2024.6.1 is from June 2024.", text)
+        self.assertIn("winget upgrade Cloudflare.cloudflared", text)
+
     def test_powershell_failed(self):
         facts = {"errors": [], "error": "PowerShell didn't finish within 30 seconds", "seconds": 30.0}
         code, text = self.run_status(facts)

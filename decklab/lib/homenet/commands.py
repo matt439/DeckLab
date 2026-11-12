@@ -887,7 +887,7 @@ def _last_run_line(info, at_logon=False):
                 f"Its log may say why: {control.LOG_FILE}")
 
 
-def check_tunnel(settings, result, ingress=None, listener=None, credentials=None):
+def check_tunnel(settings, result, ingress=None, listener=None, credentials=None, version=None):
     """The Tunnel lines: whether the public address (config.json's "tunnel")
     shows Cloudflare Access's login; result is tunnel.check_public's answer
     (None when there's no tunnel set up, or the check didn't finish). With
@@ -895,12 +895,15 @@ def check_tunnel(settings, result, ingress=None, listener=None, credentials=None
     hostnames (ingress: tunnel.ingress_problems' list) and whether the
     tunnel's listener refuses a visit without a login (listener:
     tunnel.check_listener's answer, None when it wasn't asked). credentials
-    is tunnel.credentials_problem's answer (None: fine, or not named)."""
+    is tunnel.credentials_problem's answer (None: fine, or not named).
+    version is tunnel.version_check's answer (E11-S88; None: no line)."""
     setup = tunnel.settings_of(settings)
     if setup is None:
         return []
     area = "Tunnel"
     lines = []
+    if version is not None:
+        lines.append(line(OK if version["state"] == "current" else WARN, area, version["text"], version["fix"]))
     if credentials:
         lines.append(line(PROBLEM, area, f"{credentials}, so Deck Lab doesn't start the tunnel.",
                           f"Fix credentials-file in {setup['config']} (cloudflared tunnel list names the tunnel), "
@@ -977,6 +980,9 @@ def cmd_status(name, port):
     if public:
         helpers.append(threading.Thread(target=lambda: found.update(public=tunnel.check_public(public)),
                                         daemon=True))
+    if public is not None:
+        helpers.append(threading.Thread(target=lambda: found.update(cloudflared=tunnel.version_check(settings)),
+                                        daemon=True))
     if access_port:
         helpers.append(threading.Thread(target=lambda: found.update(
             listener=tunnel.check_listener(access_port, public, PROBE_TIMEOUT)), daemon=True))
@@ -1021,7 +1027,7 @@ def cmd_status(name, port):
     if wake is not None and sys.platform == "win32":
         lines += check_wake(facts, wake["gate"], found.get("gate"))
     lines += check_tunnel(settings, found.get("public"), tunnel.ingress_problems(settings, port),
-                          found.get("listener"), tunnel.credentials_problem(settings))
+                          found.get("listener"), tunnel.credentials_problem(settings), found.get("cloudflared"))
     seconds = time.monotonic() - started
     header = (f"Deck Lab status, {datetime.now().strftime('%Y-%m-%d %H:%M')} (port {port}; checked in "
               f"{seconds:.1f} s, of which PowerShell {facts.get('seconds', 0):.1f} s)")

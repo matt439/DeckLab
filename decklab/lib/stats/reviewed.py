@@ -38,6 +38,7 @@ _CONSTANTS = "decklab.lib.stats.constants"
 _ROLE_TARGETS = "decklab.lib.stats.role_targets"
 _EDHREC = "decklab.lib.edhrec"
 _AVERAGE_DECKS = "decklab.lib.gauntlet.edhrec_source"
+_TUNNEL = "decklab.lib.tunnel"
 
 HALF_YEAR = 182
 YEAR = 365
@@ -71,6 +72,10 @@ FACTS = (
      "source": "EDHREC's average decks and top commanders (json.edhrec.com)",
      "where": (f"{_AVERAGE_DECKS}.TOP_PATH", f"{_AVERAGE_DECKS}.AVERAGE_PATH"),
      "reviewed": (_AVERAGE_DECKS, "SHAPE_CHECKED"), "interval": HALF_YEAR, "through": None},
+    {"id": "cloudflared-support", "label": "Cloudflare's cloudflared support window",
+     "source": "Cloudflare's cloudflared downloads page (its Updates part)",
+     "where": (f"{_TUNNEL}.SUPPORT_DAYS", f"{_TUNNEL}.SUPPORT_SOURCE"),
+     "reviewed": (_TUNNEL, "SUPPORT_POLICY_CHECKED"), "interval": HALF_YEAR, "through": None},
 )
 
 
