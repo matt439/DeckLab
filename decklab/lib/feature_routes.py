@@ -187,6 +187,7 @@ LEGACY_ACCESS = MappingProxyType({
     ('GET', '/api/me'): 'open',
     ('GET', '/api/visibility'): 'profile',
     ('PUT', '/api/visibility'): 'profile',
+    ('GET', '/api/visibility/preview'): 'profile',
     ('GET', '/api/simulations'): 'viewer-filtered',
     ('PUT', '/api/simulations'): 'admin',
     ('GET', '/api/shop-postage'): 'home-records',

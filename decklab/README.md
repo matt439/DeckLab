@@ -1943,6 +1943,15 @@ everyone signed in, members included, never an internet-public page; unnamed
 trusted home readers can read Public data too. The deck control explains that the
 write-up and Play-now list can hint at owned or ordered cards.
 
+Turning a switch Public first opens a confirm sheet (E10-S46) from
+`GET /api/visibility/preview?owner=&thing=`: counts from the owner's own space or kit
+only (decks, collection rows and cards, token card rows, games, kit rows and pictures)
+and, for decks, the owner's decks whose write-ups (outside the lists and the
+owned-vs-needed table) mention orders or purchases. It checks ownership as the flip
+does before reading anything, so anyone else, an admin and a script included, gets the
+same 403; it writes nothing. When the counts can't be worked out the sheet says so and
+still offers Make public. Turning a switch Private stays one tap.
+
 `python -m decklab.db visibility list` reports every switch. The documented
 `visibility set OWNER THING on|off -m "..."` changes only home's collection,
 decks/games or its kit owners (the home profiles and shared) as Claude/cli; members flip their
