@@ -118,6 +118,7 @@ def _earlier(forge, summary, entry, dates=None):
     engine_kind = decks.engine_kind(summary)
     seen, out, newer, last, deleted = {entry["card_sha"]}, [], None, None, False
     run, first = entry["card_sha"], True    # the run's list, and whether it's that list's newest run
+    live = True                             # whether last's lists are run's: an unparsed list ends the run
     try:
         for rev in _revisions(summary["id"]):
             if rev is True:
@@ -132,10 +133,10 @@ def _earlier(forge, summary, entry, dates=None):
             newer = rev
             lists = _lists_of(rev.text)
             if lists is not None and lists == last:
-                if first and dates is not None:
+                if live and first and dates is not None:
                     dates[run] = rev.at
                 continue                # the newer revision's lists: the same sha
-            last = lists
+            broken, last, live = not live, lists, False
             sections = _sections(rev, kind, slug, space, entry["version"])
             if sections is None:
                 continue
@@ -143,7 +144,8 @@ def _earlier(forge, summary, entry, dates=None):
                 sha = forge.card_sha(sections, engine_kind)
             except Exception:
                 continue
-            if sha != run:
+            live = True
+            if sha != run or broken:     # after an unparsed list, even run's own list starts a new run
                 if sha not in seen and len(out) >= MAX_LISTS:
                     return out, None, True
                 run, first = sha, sha not in seen

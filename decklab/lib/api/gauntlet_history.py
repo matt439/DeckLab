@@ -113,11 +113,17 @@ def _earlier_part(forge, g, summary, entry, standard, cat):
     found, note, capped = gauntlet_before._earlier(forge, summary, entry, dates)
     has_notes = getattr(g, "has_notes", None)
     space, items, viewed, complete = gauntlet_before._space(entry), [], 0, not capped
-    for sha, sections in found:
+
+    def noted(sha):
+        return has_notes is None or has_notes({"card_sha": sha, "kind": entry["kind"]}, space)
+
+    for n, (sha, sections) in enumerate(found):
         if len(items) >= MAX_SHOWN or viewed >= MAX_VIEWED:
-            complete = False
+            # Only a list left with run notes could have been shown: one without isn't missed.
+            if any(noted(rest) for rest, _ in found[n:]):
+                complete = False
             break
-        if has_notes is not None and not has_notes({"card_sha": sha, "kind": entry["kind"]}, space):
+        if not noted(sha):
             continue
         viewed += 1
         prev = forge.entry(summary["id"], entry["version"], summary["title"], decks.engine_kind(summary), sections)

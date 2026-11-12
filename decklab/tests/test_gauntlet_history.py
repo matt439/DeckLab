@@ -172,6 +172,21 @@ class BoundTests(HistoryCase):
         found = self.timeline()
         self.assertEqual((len(found["lists"]), found["complete"], found["notes"]), (9, True, []))
 
+    def test_eight_lists_and_older_lists_without_notes_is_every_list(self):
+        forests = [21] + list(range(20, 12, -1)) + [9]   # the oldest (21 Forests) has no run notes
+        self.history({GRUUL: self.lists(forests)})
+        tested = {self.sha(f) for f in forests if f != 21}
+        self.g.per = {sha: {self.ids[0]: 0.5} for sha in tested}
+        self.g.has_notes = lambda entry, space: entry["card_sha"] in tested
+        found = self.timeline()
+        self.assertEqual((len(found["lists"]), found["complete"], found["notes"]), (9, True, []))
+        # With notes, the ninth earlier list could have been shown: then it isn't every list.
+        gauntlet_before.clear_cache()
+        tested.add(self.sha(21))
+        found = self.timeline()
+        self.assertEqual((len(found["lists"]), found["complete"]), (9, False))
+        self.assertIn(gauntlet_history.NOT_EVERY, found["notes"])
+
     def test_the_views_are_bounded(self):
         forests = list(range(40, 20, -1)) + [9]           # 20 earlier lists with notes, none tested
         self.history({GRUUL: self.lists(forests)})
@@ -227,6 +242,35 @@ class DatesTests(HistoryCase):
         self.assertEqual([sha for sha, _ in found], [self.sha(8), self.sha(7)])
         self.assertEqual((note, capped), (None, False))
         self.assertEqual(dates, {self.sha(9): _at(6), self.sha(8): _at(4), self.sha(7): _at(3)})
+
+    def test_an_unparsed_list_ends_a_run(self):
+        # Today's list (9) saved on day 4; days 2 and 3 hold no readable decklist; day 1 held 9 too.
+        unread = "# Gruul Test\n\nNo list here.\n"
+        revs = [revision(GRUUL, 1, _text(9), op="A", at=_at(1)),
+                revision(GRUUL, 2, unread, at=_at(2)),
+                revision(GRUUL, 3, unread + "\nMore prose.\n", at=_at(3)),
+                revision(GRUUL, 4, _text(9), at=_at(4)),
+                revision(GRUUL, 5, _text(9) + "\n| Table |\n", at=_at(5))]
+        self.history({GRUUL: revs})
+        summary, entry = gauntlet_history.field_page._field_entry(self.forge, GRUUL, "target")
+        dates = {}
+        found, note, capped = gauntlet_before._earlier(self.forge, summary, entry, dates)
+        self.assertEqual((found, note, capped), ([], None, False))
+        self.assertEqual(dates, {self.sha(9): _at(4)})
+
+    def test_an_owned_list_missing_from_older_revisions_keeps_its_date(self):
+        # Days 1 and 2 have no owned-only list; it was first saved on day 3.
+        plain = _text(9).split("## Substitutes")[0]
+        revs = [revision(GRUUL, 1, plain, op="A", at=_at(1)),
+                revision(GRUUL, 2, plain + "\n| Table |\n", at=_at(2)),
+                revision(GRUUL, 3, _text(9), at=_at(3)),
+                revision(GRUUL, 4, _text(9) + "\n| Table |\n", at=_at(4))]
+        self.history({GRUUL: revs})
+        summary, entry = gauntlet_history.field_page._field_entry(self.forge, GRUUL, "owned")
+        dates = {}
+        found, _, _ = gauntlet_before._earlier(self.forge, summary, entry, dates)
+        self.assertEqual(found, [])
+        self.assertEqual(dates, {entry["card_sha"]: _at(3)})
 
     def test_the_list_bound_still_says_so(self):
         forests = list(range(40, 15, -1)) + [9]
