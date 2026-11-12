@@ -33,6 +33,8 @@ ACCESS = MappingProxyType({
     ('GET', 'settings/errors'): 'home-admin',
     ('GET', 'settings/maintenance'): 'admin',
     ('GET', 'settings/reference-facts'): 'admin',
+    # Public card data; the decks named are only those the viewer may see (api/official_changes.py, E9-S36).
+    ('GET', 'official-changes'): 'viewer-filtered',
     ('GET', 'server/restart'): 'home-admin',
     ('GET', 'collection'): 'inventory',
     ('GET', 'collection/rows'): 'inventory',
@@ -427,6 +429,7 @@ def route_tables():
     from decklab.lib.api import practice
     from decklab.lib.api import product_kit_undo
     from decklab.lib.api import commander_lineup
+    from decklab.lib.api import official_changes
 
     gets = {
         ("activity", "product-kit-undo"): (product_kit_undo.view, ("id",)),
@@ -439,6 +442,7 @@ def route_tables():
         ("settings", "errors"): (error_reports.view, ()),
         ("settings", "maintenance"): (maintenance.maintenance_view, ()),
         ("settings", "reference-facts"): (reference_facts.reference_facts_view, ()),
+        ("official-changes",): (official_changes.view, ()),
         ("server", "restart"): (server_restart.view, ()),
         ("collection",): (collection.collection_view,
                          ("q", "color", "type", "role", "mv", "availability", "page", "limit", "space")),

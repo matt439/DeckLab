@@ -13,7 +13,8 @@ It also refreshes Scryfall's rulings (decklab.lib.rulings) and Commander
 Spellbook's combo list (decklab.lib.combos) on the same schedule, and once a
 day checks Wizards' sitemap for the newest Commander announcement
 (decklab.lib.official_lists), each a separate step whose failure never fails
-the update.
+the update. Rebuilding the index keeps any change in Game Changer flags or
+Commander bans since the old index (official_lists.record_changes, E9-S36).
 When Scryfall can't be reached or a download is cut off, the local files are
 kept and used; it only fails when there's no local copy at all. The index
 itself is built from the bulk files by decklab.lib.card_index.
@@ -298,6 +299,33 @@ def _update_official_lists(force, log):
         log(f"Official lists: not checked ({type(e).__name__}: {e}); keeping the last result.")
 
 
+def _official_before(log):
+    """The Game Changer flags and Commander bans of the index about to be replaced (official_lists.snapshot),
+    or None when there's none or it can't be read: then no change is claimed (E9-S36)."""
+    if not INDEX_FILE.exists():
+        return None
+    try:
+        from decklab.lib import official_lists
+        return official_lists.read_snapshot(INDEX_FILE)
+    except Exception as e:      # noqa: BLE001 (the new index matters more)
+        log(f"Game Changers and Commander bans: the old index can't be read ({type(e).__name__}), "
+            f"so no change is claimed.")
+        return None
+
+
+def _record_official_changes(old_flags, index, log):
+    """Keep what changed in the Game Changer flags and Commander bans (official_lists.record_changes). A
+    failure is logged and never fails the update."""
+    if old_flags is None:
+        return
+    try:
+        from decklab.lib import official_lists
+        official_lists.record_changes(old_flags, index, log)
+    except Exception as e:      # noqa: BLE001 (the update itself has succeeded)
+        log(f"Game Changers and Commander bans: the change wasn't kept ({type(e).__name__}: {e}); "
+            f"the card data update still succeeded.")
+
+
 def write_index(index, path=INDEX_FILE):
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
@@ -338,11 +366,13 @@ def _update_index(force, downloaded, log):
 
     log("Building the index...")
     started = time.monotonic()
+    old_flags = _official_before(log)       # read before the index is overwritten (E9-S36)
     index = build_index(bulk_path("default_cards"), bulk_path("oracle_tags"), bulk_dates, log)
     write_index(index, INDEX_FILE)
     meta["index"] = stamp
     _write_json(BULK_META_FILE, meta)
     _index = None     # the next lookup loads the new index
+    _record_official_changes(old_flags, index, log)
 
     n_printings = sum(len(numbers) for numbers in index["printings"].values())
     log(f"Index: {len(index['cards']):,} cards, {n_printings:,} printings, "

@@ -25,6 +25,14 @@ From code:
                                 #  "last_success_at", "error"}: what the last checks found
     official_lists.announcement_date("commander-bans-and-restrictions-april-22-2025")
                                 # date(2025, 4, 22), or None for a post that doesn't count
+    official_lists.diff_official(old_index, new_index)
+                                # {"old_date", "new_date", "changes": [{"name", "kind"}]}: Game Changer
+                                #  flags and Commander bans that changed between two card indexes (E9-S36)
+    official_lists.read_changes()   # the last non-empty change cards update kept, or None
+
+Each card data update (cards._update_index) reads the old index's flags before overwriting it and keeps
+a non-empty change in decklab/data/scryfall/official_changes.json; GET /api/official-changes
+(lib/api/official_changes.py) lists those cards with the Commander decks the viewer may see that hold them.
 
 The Commander checks (decklab/lib/stats/commander.py, _data_dates) compare the
 announcement's date with the card data's (for the Game Changers and the ban
@@ -32,6 +40,7 @@ list) and with constants.BRACKET_RULES_DATE (for the bracket rules).
 """
 import gzip
 import io
+import json
 import re
 import urllib.error
 import xml.etree.ElementTree as ET
@@ -238,3 +247,136 @@ def update(force=False, log=print, path=None):
     state.update(last_success_at=state["checked_at"], error=None)
     cards._write_json(path, state)
     return True
+
+
+# --- Game Changer and ban changes between card data updates (E9-S36) ----------
+#
+# cards._update_index reads the old index's flags (read_snapshot) before it overwrites the index, then
+# record_changes() keeps what changed (diff_official) in official_changes.json beside the index: the last
+# change that wasn't empty, with both card data dates. An old index that can't be read claims no change; a
+# save that fails never fails the update (cards.py wraps both steps).
+
+CHANGES_NAME = "official_changes.json"
+CHANGES_FILE = None             # None: CHANGES_NAME beside cards.INDEX_FILE; the tests point it elsewhere
+CHANGES_FORMAT = 1
+CHANGE_KINDS = ("game_changer_added", "game_changer_removed", "banned", "unbanned")
+CHANGE_WORDS = {"game_changer_added": "Became a Game Changer",
+                "game_changer_removed": "No longer a Game Changer",
+                "banned": "Banned in Commander", "unbanned": "No longer banned in Commander"}
+# Wizards' lists hold a few dozen cards. More changes than this at once means the data changed shape (an
+# index format without the flags, say), not the lists, so nothing is claimed.
+MAX_CHANGES = 200
+
+
+def changes_path():
+    return CHANGES_FILE or cards.INDEX_FILE.with_name(CHANGES_NAME)
+
+
+def _data_date(index):
+    """The card data's date (the default_cards bulk file's, as an ISO date), or None when unknown."""
+    bulk = index.get("bulk") if isinstance(index, dict) else None
+    value = bulk.get("default_cards") if isinstance(bulk, dict) else None
+    return _iso_date(value[:10]) if isinstance(value, str) else None
+
+
+def _iso_date(value):
+    try:
+        return date.fromisoformat(value).isoformat() if isinstance(value, str) else None
+    except ValueError:
+        return None
+
+
+def _flags(index):
+    """{key: (name, game_changer, legality)} for each card whose two flags read as they should; key is its
+    oracle id (a renamed card is still the same card), else its name. ValueError for data that isn't an index."""
+    found = index.get("cards") if isinstance(index, dict) else None
+    if not isinstance(found, dict):
+        raise ValueError("the card data has no cards")
+    flags = {}
+    for name, card in found.items():
+        if not isinstance(name, str) or not isinstance(card, dict):
+            continue
+        changer, legality = card.get("game_changer"), card.get("commander_legality")
+        if not isinstance(changer, bool) or not isinstance(legality, str):
+            continue
+        oracle_id = card.get("oracle_id")
+        flags[oracle_id if isinstance(oracle_id, str) and oracle_id else "name:" + name] = (name, changer, legality)
+    return flags
+
+
+def snapshot(index):
+    """The part of an index diff_official reads (its date and each card's two flags), index-shaped, so the
+    old flags can be kept while the new index is built without keeping the whole old index."""
+    bulk = index.get("bulk") if isinstance(index, dict) else None
+    return {"bulk": {"default_cards": bulk.get("default_cards") if isinstance(bulk, dict) else None},
+            "cards": {name: {"oracle_id": None if key.startswith("name:") else key, "game_changer": changer,
+                             "commander_legality": legality}
+                      for key, (name, changer, legality) in _flags(index).items()}}
+
+
+def read_snapshot(path):
+    """snapshot() of the index stored at path, read as it is on disk (any index format). Raises OSError,
+    EOFError, ValueError or zlib.error for one that can't be read."""
+    with gzip.open(path, "rt", encoding="utf-8") as f:
+        return snapshot(json.load(f))
+
+
+def diff_official(old, new):
+    """What changed between two indexes (or snapshots) in Game Changer flags and Commander bans:
+    {"old_date", "new_date" (the card data's dates, or None), "changes": [{"name", "kind"}]}, in
+    CHANGE_KINDS order, then by name. A card in only one of them changed nothing (a new card isn't news of
+    a list). Raises ValueError when either isn't card data, or when more than MAX_CHANGES changed."""
+    before, after = _flags(old), _flags(new)
+    changes = []
+    for key, (name, changer, legality) in after.items():
+        if key not in before:
+            continue
+        _, was_changer, was_legality = before[key]
+        if changer != was_changer:
+            changes.append({"name": name, "kind": "game_changer_added" if changer else "game_changer_removed"})
+        if (legality == "banned") != (was_legality == "banned"):
+            changes.append({"name": name, "kind": "banned" if legality == "banned" else "unbanned"})
+    if len(changes) > MAX_CHANGES:
+        raise ValueError(f"{len(changes)} cards changed at once, more than a list change would make")
+    changes.sort(key=lambda c: (CHANGE_KINDS.index(c["kind"]), c["name"].casefold(), c["name"]))
+    return {"old_date": _data_date(old), "new_date": _data_date(new), "changes": changes}
+
+
+def save_changes(change, path=None):
+    """Keep a non-empty diff_official() result, written atomically (a temporary file, then a rename); an
+    empty one keeps the last. True when it was written."""
+    if not change["changes"]:
+        return False
+    cards._write_json(path or changes_path(), {
+        "format": CHANGES_FORMAT, "recorded_at": _now().isoformat(timespec="seconds"),
+        "old_date": change["old_date"], "new_date": change["new_date"], "changes": change["changes"]})
+    return True
+
+
+def record_changes(old, new, log=print, path=None):
+    """cards._update_index's step once the new index is written: compare and keep (E9-S36). Returns the
+    change, or None when nothing changed. Raises what diff_official and the write raise."""
+    change = diff_official(old, new)
+    if not save_changes(change, path):
+        log("Game Changers and Commander bans: no change in this card data.")
+        return None
+    counts = {kind: sum(1 for c in change["changes"] if c["kind"] == kind) for kind in CHANGE_KINDS}
+    log(f"Game Changers and Commander bans changed since the card data of {change['old_date'] or 'an unknown date'}: "
+        + "; ".join(f"{CHANGE_WORDS[kind].lower()}: {n}" for kind, n in counts.items() if n) + ".")
+    return change
+
+
+def read_changes(path=None):
+    """The last kept change, read-only: {"recorded_at", "old_date", "new_date", "changes": [{"name", "kind"}]},
+    or None when none was kept or the file can't be read (never a claim of no change)."""
+    data = cards._read_json(path or changes_path(), None)
+    if not isinstance(data, dict) or data.get("format") != CHANGES_FORMAT or not isinstance(data.get("changes"), list):
+        return None
+    changes = [{"name": c["name"], "kind": c["kind"]} for c in data["changes"][:MAX_CHANGES]
+               if isinstance(c, dict) and isinstance(c.get("name"), str) and c.get("kind") in CHANGE_KINDS]
+    if not changes:
+        return None
+    recorded = _parse_time(data.get("recorded_at"))
+    return {"recorded_at": recorded.isoformat(timespec="seconds") if recorded else None,
+            "old_date": _iso_date(data.get("old_date")), "new_date": _iso_date(data.get("new_date")),
+            "changes": changes}

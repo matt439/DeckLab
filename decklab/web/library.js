@@ -21,7 +21,7 @@ decks Played by the visitor at home, or a person's own decks.
 
 Loaded after core.js, whose helpers (el, load, state, deckHref, pairingId, warningsBox, ...) it uses, and
 library-glance.js (the detail pane's key cards, stats and play guide, libGlance), library-tables.js (the Tables out
-of date list, libTablesPanel), library-gauntlet.js (the popular-decks line, E3-S36) and cover.js (openCoverPicker) after it. app.js's route() calls showLibrary(), and its deckPlayerWords() names who
+of date list, libTablesPanel), library-official.js (the Game Changer and ban changes, libOfficialPanel), library-gauntlet.js (the popular-decks line, E3-S36) and cover.js (openCoverPicker) after it. app.js's route() calls showLibrary(), and its deckPlayerWords() names who
 plays each deck. Nothing here runs at load.
 */
 "use strict";
@@ -316,6 +316,7 @@ function drawLibrary(data, filters) {
       primary, more: rowMore ? [] : more }),
     warningsBox(data.warnings, "Warnings"),
     tables,
+    libOfficialPanel(data),           // library-official.js: Game Changer and ban changes (E9-S36)
     titleSearch,
     el("div", { class: "lib-filters", role: "group", "aria-label": "Filter the decks" },
       el("div", { class: "segmented", role: "group", "aria-label": "Whose decks" }, mine, all),
