@@ -120,6 +120,11 @@ class KeepVerdictUiTests(unittest.TestCase):
           for(const t of [keepVerdict(hand(3,4),RULE).text]) assert.ok(!/drop|spell/.test(t));
           assert.equal(keepVerdict(hand(3,4),null),null);
           assert.equal(keepVerdict([{name:'X'},{name:'Y'},{name:'Z'},{name:'W'},{name:'V'},{name:'U'},{name:'T'}],RULE).lands,0);
+          // A spell // land card (keep_land, though its card type isn't Land) counts as a land in the counts line too.
+          const mdfc={name:"Emeria's Call // Emeria, Shattered Skyclave",card:{type_line:'Sorcery // Land'},keep_land:true};
+          const mixed=[mdfc,...hand(2,4)];
+          assert.equal(keepVerdict(mixed,RULE).lands,3);
+          assert.equal(handCounts(mixed),'3 lands · 4 spells');
           // Agreement words.
           assert.equal(keepAgreement('keep',{verdict:'keep'}),'you kept, and the rule agrees.');
           assert.equal(keepAgreement('keep',{verdict:'mulligan'}),'you kept; the rule would have taken a mulligan.');

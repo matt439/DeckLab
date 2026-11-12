@@ -263,9 +263,10 @@ function keepAgreement(choice, result) {
   return kept ? "you kept; the rule would have taken a mulligan." : "you took a mulligan; the rule would have kept.";
 }
 
-/** "3 lands · 4 spells" for the cards in hand. */
+/** "3 lands · 4 spells" for the cards in hand, counted as the keep rule counts them (a spell // land card is a
+ * land), so the counts never contradict the verdict beside them (E4-S09). */
 function handCounts(hand) {
-  const lands = hand.filter((line) => line.card && typeGroup(line.card) === "Lands").length;
+  const lands = hand.filter(keepLand).length;
   return `${plural(lands, "land")} · ${plural(hand.length - lands, "spell")}`;
 }
 
