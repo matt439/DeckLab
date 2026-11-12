@@ -39,17 +39,34 @@ PENDING = "A member update needs recovery. Run python -m decklab.db sync-profile
 
 def ordinary(path):
     path = Path(path).absolute()
-    if any(part.is_symlink() or part.is_junction() for part in (path, *path.parents)):
+    if any(_linked(part) for part in (path, *path.parents)):
         raise InvalidProfileEdit("Member updates cannot use linked configuration paths.")
     return path
 
 
+JOURNAL_NAME = "pending.json"
+
+
+def _control_path(config_file):
+    """The control folder for this config file, unchecked: the one place its layout is spelt."""
+    return Path(config_file).absolute().parent / "data" / "profile-config"
+
+
+def _journal_path(config_file):
+    """The pending journal for this config file, unchecked (see `_control_path`)."""
+    return _control_path(config_file) / JOURNAL_NAME
+
+
 def control():
-    return ordinary(ordinary(config.CONFIG_FILE).parent / "data" / "profile-config")
+    return ordinary(_control_path(ordinary(config.CONFIG_FILE)))
+
+
+def journal_file():
+    return ordinary(control() / JOURNAL_NAME)
 
 
 def pending():
-    return ordinary(control() / "pending.json").exists()
+    return journal_file().exists()
 
 
 def require_ready():
@@ -57,11 +74,35 @@ def require_ready():
         raise PendingProfileEdit(PENDING)
 
 
+def _linked(part):
+    return part.is_symlink() or part.is_junction()
+
+
+def _guarded_pending():
+    """The pending journal's path, with the config file, the control folder and the
+    journal (and every folder above them) each checked for links once (E11-S89).
+
+    `require_ready()` walks the shared ancestors three times; a read only needs one walk."""
+    config_file = Path(config.CONFIG_FILE).absolute()
+    path = _journal_path(config_file)
+    parts = dict.fromkeys((path, path.parent, config_file, *path.parents, *config_file.parents))
+    if any(_linked(part) for part in parts):
+        raise InvalidProfileEdit("Member updates cannot use linked configuration paths.")
+    return path
+
+
 def read_settings():
-    """Profile-specific reader; DB connection settings remain readable for recovery."""
-    require_ready()
+    """Profile-specific reader; DB connection settings remain readable for recovery.
+
+    The guarded paths are checked for links once per call (no cache across calls); the
+    pending journal is still looked for before and after the load, so an edit published
+    meanwhile is refused."""
+    journal = _guarded_pending()
+    if journal.exists():
+        raise PendingProfileEdit(PENDING)
     settings = config.load()
-    require_ready()
+    if journal.exists():
+        raise PendingProfileEdit(PENDING)
     return settings
 
 
@@ -175,12 +216,12 @@ def write_bytes(path, raw):
 
 def prepare(journal):
     require_ready()
-    write_bytes(control() / "pending.json", json_bytes(journal))
+    write_bytes(journal_file(), json_bytes(journal))
 
 
 def load_journal():
     try:
-        raw = ordinary(control() / "pending.json").read_bytes()
+        raw = journal_file().read_bytes()
         if len(raw) > 3 * MAX_CONFIG:
             raise ValueError
         journal = parse(raw)
@@ -203,4 +244,4 @@ def load_journal():
 
 
 def complete():
-    ordinary(control() / "pending.json").unlink()
+    journal_file().unlink()
