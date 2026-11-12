@@ -34,6 +34,7 @@ import tempfile
 import threading
 import time
 import unittest
+import uuid
 from pathlib import Path
 from unittest import mock
 
@@ -134,6 +135,24 @@ class ServerTestCase(unittest.TestCase):
         self.assertEqual(list(data), ["error"])
         self.assertNotIn("Traceback", data["error"])
         return data["error"]
+
+    @staticmethod
+    def probe():
+        """A query value no other request sends, to pick out a test's own log lines."""
+        return f"probe-{uuid.uuid4().hex}"
+
+    def own_log_lines(self, before, probe, count=1, timeout=5):
+        """The log lines since index before that name probe (sent in the test's own requests),
+        waiting with a deadline until there are count of them. A request's line is written once
+        its answer has gone, so it may land a moment after the client has the answer, and
+        another test's late line (or another thread's) may land meanwhile: those aren't counted."""
+        lines = []
+
+        def arrived():
+            lines[:] = [line for line in self.log[before:] if probe in line]
+            return len(lines) >= count
+        wait_until(arrived, timeout, 0.01)
+        return lines
 
     def raw(self, data):
         """Send bytes as they are; return the whole answer."""
@@ -944,9 +963,10 @@ class ProtocolTests(ServerTestCase):
 
     def test_http_0_9_is_refused_without_a_traceback(self):
         # An HTTP/0.9 request has no headers at all; it used to crash the Host check.
-        before = len(self.log)
-        answer = self.raw(b"GET /api/status\r\n")
+        before, probe = len(self.log), self.probe()
+        answer = self.raw(b"GET /api/status?" + probe.encode() + b"\r\n")
         self.assertEqual(json.loads(answer), {"error": "HTTP/0.9 isn't supported"})
+        self.assertEqual(len(self.own_log_lines(before, probe)), 1, self.log[before:])
         self.assertFalse(any("Traceback" in line for line in self.log[before:]), self.log[before:])
 
     def test_content_length_must_be_one_plain_number(self):
@@ -974,33 +994,40 @@ class ProtocolTests(ServerTestCase):
         self.assertIn(b"User1", answer)
 
     def test_control_characters_in_the_method_are_escaped_in_the_log(self):
-        before = len(self.log)
-        answer = self.raw(b"G\x1b[31mET /api/status HTTP/1.1\r\nHost: 127.0.0.1\r\n"
+        before, probe = len(self.log), self.probe()
+        answer = self.raw(b"G\x1b[31mET /api/status?" + probe.encode() + b" HTTP/1.1\r\nHost: 127.0.0.1\r\n"
                           b"Connection: close\r\n\r\n")
         self.assertTrue(answer.startswith(b"HTTP/1.1 501 "), answer[:100])
-        lines = self.log[before:]
-        self.assertTrue(lines)
+        lines = self.own_log_lines(before, probe)
+        self.assertTrue(lines, self.log[before:])
         self.assertFalse(any("\x1b" in line for line in lines), lines)
-        self.assertTrue(any("G\\x1b[31mET /api/status 501" in line for line in lines), lines)
+        self.assertTrue(any(f"G\\x1b[31mET /api/status?{probe} 501" in line for line in lines), lines)
 
     def test_server_header(self):
         self.assertEqual(self.request("GET", "/api/status")[1]["Server"], "DeckLab")
 
     def test_one_log_line_per_request(self):
-        before = len(self.log)
-        self.request("GET", "/api/profiles")
-        self.request("GET", "/api/nope?x=%0d%0aFAKE")
-        # A request's line is written once its answer has gone, so it may come a moment after the
-        # client has it; and other threads (the card data's) may log meanwhile.
-        deadline = time.monotonic() + 5
-        while True:
-            lines = [line for line in self.log[before:] if " GET /api/" in line]
-            if len(lines) >= 2 or time.monotonic() > deadline:
-                break
-            time.sleep(0.01)
+        before, probe = len(self.log), self.probe()
+        self.request("GET", f"/app.js?v={probe}")      # API routes refuse an unknown query
+        self.request("GET", f"/api/nope?{probe}&x=%0d%0aFAKE")
+        # Only this test's own lines count (own_log_lines): a line is written after its answer has
+        # gone, and an earlier test's late line, or another thread's, may land meanwhile.
+        self.own_log_lines(before, probe, count=2)
+        time.sleep(0.05)                    # a second line for either request would be in by now
+        lines = self.own_log_lines(before, probe, count=2)
         self.assertEqual(len(lines), 2, self.log[before:])
-        self.assertRegex(lines[0], r" 127\.0\.0\.1 GET /api/profiles 200 \d+ ms$")
-        self.assertRegex(lines[1], r" GET /api/nope\?x=%0d%0aFAKE 404 \d+ ms$")
+        self.assertRegex(lines[0], rf" 127\.0\.0\.1 GET /app\.js\?v={probe} 200 \d+ ms$")
+        self.assertRegex(lines[1], rf" GET /api/nope\?{probe}&x=%0d%0aFAKE 404 \d+ ms$")
+
+    def test_own_log_lines_skips_other_lines_and_waits_for_late_ones(self):
+        before, probe = len(self.log), self.probe()
+        self.log.append("2026-11-12 00:00:00 127.0.0.1 GET /api/profiles 200 1 ms")     # an earlier test's
+        own = f"2026-11-12 00:00:00 127.0.0.1 GET /api/status?{probe} 200 1 ms"
+        late = threading.Timer(0.1, self.log.append, (own,))
+        self.addCleanup(late.cancel)
+        late.start()
+        self.assertEqual(self.own_log_lines(before, probe), [own])
+        self.assertEqual(self.own_log_lines(before, self.probe(), timeout=0.05), [])
 
 
 class WriteTests(ServerTestCase):
