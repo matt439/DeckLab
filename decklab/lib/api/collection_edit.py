@@ -363,9 +363,11 @@ def _extras(space, shown):
     from . import collection_forecast, collection_locations as places
     prices = _prices(shown)
     storage = _storage(space, shown, prices)
-    box = places.storage_box(space, shown, storage, _picture_key)
+    setup = places.setup_view(space)        # the space's storage setup (E8-S25), read once
+    box = places.storage_box(space, shown, storage, _picture_key, setup)
     return {"prices": prices, "storage": storage, "locations": places.locations(space, _picture_key),
-            "storage_box": box, "storage_forecast": collection_forecast.build(space, shown, box)}
+            "storage_box": box, "storage_setup": places.storage_setup(space, shown, storage, _picture_key, setup),
+            "storage_forecast": collection_forecast.build(space, shown, box, setup["storage"])}
 
 
 def _stale(space, sha=None):
@@ -432,7 +434,7 @@ def rows_view(space=None):
     """GET /api/collection/rows?space=<id>: {space, sha256 (of the collection
     rendered as collection.csv; of nothing while it has no cards), rows (its
     eight columns, as text, sorted), pictures (_pictures), prices (_prices),
-    storage (_storage), locations and storage_box (collection_locations), editable (may this visitor change it)
+    storage (_storage), locations, storage_box and storage_setup (collection_locations), editable (may this visitor change it)
     and, where it may, scan (collection.scan_flag)}. 403 for a space whose inventory the visitor may not see
     (guard.require_sees_inventory)."""
     space = space_param(space)

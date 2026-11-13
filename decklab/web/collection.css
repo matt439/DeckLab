@@ -107,6 +107,9 @@ button.col-find-open { cursor: pointer; }
 .col-price-note { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2); margin-top: var(--s-2); }
 .col-detail-code { display: none; }
 .col-storage { font-size: var(--fs-sm); }
+/* A space's storage setup (E8-S25): one line per container in the Card list's count. */
+.col-storage-line { display: block; }
+
 /* Keep the Card list ahead of general storage guidance; all scenario facts remain inspectable. */
 .col-storage-forecast > h2 { font-size: var(--fs-md); }
 .col-forecast-summary { margin-bottom: var(--s-2); }

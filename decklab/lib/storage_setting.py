@@ -25,20 +25,22 @@ def capacity_seed():
     return None
 
 
-def _view(space, saved):
-    record, source = rules.effective(space, saved["storage"], capacity_seed())
+def _view(space, saved, seed=True):
+    record, source = rules.effective(space, saved["storage"], capacity_seed() if seed else None)
     return {"space": space, "revision": saved["revision"], "ready": saved["ready"], "source": source,
             "storage": record}
 
 
-def read(space):
-    """The space's storage as it applies now (the module docstring); state errors propagate."""
-    return _view(space, state.store().space_storage(space))
+def read(space, *, seed=True):
+    """The space's storage as it applies now (the module docstring); state errors propagate.
+    seed False leaves config.json unread (the built-in box then holds BUILTIN_CAPACITY), for a
+    caller that needs only the containers and their sections."""
+    return _view(space, state.store().space_storage(space), seed)
 
 
-def current(space):
+def current(space, *, seed=True):
     """read(space), or the built-in answer when the store can't be read (never raises)."""
     try:
-        return read(space)
+        return read(space, seed=seed)
     except (state.StateError, RuntimeError, OSError):
-        return _view(space, {"revision": None, "storage": None, "ready": None})
+        return _view(space, {"revision": None, "storage": None, "ready": None}, seed)

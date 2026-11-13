@@ -1,7 +1,8 @@
 /* Storage locations (E8-S22) and the storage box's count (E8-S19): where a collection row's storage
  * copies are ("Row 2, B", "Binder"), set on the Collection page's card sheet and shown in the Card list
  * and Build decks' pull and put-back steps. Locations are kept apart from the rows (their sha256 stays
- * the eight columns'): the rows answers' "locations" {ready, rows: {colKey: text}} and "storage_box". */
+ * the eight columns'): the rows answers' "locations" {ready, rows: {colKey: text}} and "storage_box".
+ * The count and the suggestions follow the space's storage setup (E8-S25): "storage_setup". */
 "use strict";
 
 const STORAGE_LOCATION_MAX = 40;
@@ -25,6 +26,7 @@ function colTakeLocations(cv, answer) {
     if (answer.locations) cv.locations = colLocations(answer.locations);
     else if (Array.isArray(answer.rows) && cv.locations) cv.locations = { ...cv.locations, sha256: null };
     if (Object.hasOwn(answer, "storage_box")) cv.storageBoxCount = answer.storage_box || null;
+    if (Object.hasOwn(answer, "storage_setup")) cv.storageSetup = colStorageSetup(answer.storage_setup);
   }
   cv.storageForecast = colStorageForecast(answer?.storage_forecast, cv);
   drawColStorageForecast(cv);
@@ -42,10 +44,46 @@ function colWithLocation(cv, row, words) {
   return place ? `${words} · ${place}` : words;
 }
 
-/** The suggestions the location box offers: the four rows of the storage box, then those already used. */
+/** A rows answer's storage_setup (E8-S25) as the page keeps it: the space's containers with their
+ * counts and its location suggestions; null without one (an older server) or for a bad answer. */
+function colStorageSetup(raw) {
+  if (!raw || typeof raw !== "object" || !Array.isArray(raw.containers) || raw.containers.length > 20
+      || !Array.isArray(raw.suggestions)) return null;
+  const count = (value) => value === null || Number.isSafeInteger(value) && value >= 0;
+  const containers = [];
+  for (const c of raw.containers) {
+    if (!c || typeof c.id !== "string" || typeof c.name !== "string" || !c.name || !count(c.cards)
+        || !(c.capacity === null || Number.isSafeInteger(c.capacity) && c.capacity > 0)) return null;
+    containers.push({ id: c.id, name: c.name, kind: String(c.kind || ""), capacity: c.capacity, cards: c.cards,
+      sleeved: c.sleeved === true, over: c.capacity !== null && c.cards !== null && c.cards > c.capacity });
+  }
+  const totals = {};
+  for (const key of ["elsewhere", "unplaced", "not_counted"]) {
+    if (!count(raw[key] ?? null)) return null;
+    totals[key] = raw[key] ?? null;
+  }
+  return { source: String(raw.source || ""), default: typeof raw.default === "string" ? raw.default : null,
+    containers, ...totals, suggestions: raw.suggestions.filter((text) => typeof text === "string" && text).slice(0, 1000) };
+}
+
+/** The space's own suggestions: its storage setup's sections (or names), else, from an older server,
+ * home's built-in box rows and nothing for any other space. */
+function colSetupSuggestions(cv) {
+  if (cv.storageSetup) return cv.storageSetup.suggestions;
+  return cv.space && cv.space !== HOME_SPACE ? [] : STORAGE_LOCATION_ROWS;
+}
+
+/** The suggestions the location box offers: the space's storage sections, then those already used. */
 function colLocationChoices(cv) {
   const used = Object.values(cv.locations?.rows || {}).filter((text) => typeof text === "string" && text);
-  return [...new Set([...STORAGE_LOCATION_ROWS, ...used.sort((a, b) => a.localeCompare(b))])];
+  return [...new Set([...colSetupSuggestions(cv), ...used.sort((a, b) => a.localeCompare(b))])];
+}
+
+/** The location field's example: one of the space's sections, else a neutral one. */
+function colLocationExample(cv) {
+  const sections = colSetupSuggestions(cv);
+  const first = sections[1] || sections[0];
+  return first ? `Such as ${first}, B or Binder` : "Such as Binder or Shelf 2";
 }
 
 /** The card sheet's Storage location field: a short line with suggestions. Off (with why) while the
@@ -54,7 +92,7 @@ function colLocationField(ctx, row, id) {
   const cv = ctx.cv;
   const list = el("datalist", { id: id("places") }, colLocationChoices(cv).map((text) => el("option", { value: text })));
   const input = el("input", { id: id("location"), type: "text", maxlength: STORAGE_LOCATION_MAX, autocomplete: "off",
-    list: list.id, value: row ? colLocationOf(cv, row) : "", placeholder: "Such as Row 2, B or Binder" });
+    list: list.id, value: row ? colLocationOf(cv, row) : "", placeholder: colLocationExample(cv) });
   const hint = el("small", { class: "field-hint", text: "Where its unsleeved copies are kept. Build decks shows it." });
   ctx.location = { input, list, hint, start: input.value, dirty: false };
   input.addEventListener("input", () => { ctx.location.dirty = true; });
@@ -91,6 +129,7 @@ function colLocationToSend(ctx) {
 function drawColStorageBox(cv) {
   drawColStorageForecast(cv);
   if (!cv.boxNote) return;
+  if (cv.storageSetup) { drawColStorageSetup(cv); return; }
   const box = cv.storageBoxCount;
   cv.boxNote.hidden = !box;
   if (!box) return;
@@ -100,6 +139,32 @@ function drawColStorageBox(cv) {
   cv.boxNote.textContent = box.over
     ? `The storage box is over capacity: about ${num(box.cards)} cards for about ${num(box.capacity)} places.${counted}`
     : `Storage box: about ${num(box.cards)} of ${num(box.capacity)} cards (the copies not in built decks or products kept intact).${counted}`;
+}
+
+/** One line per container of the space's storage setup (E8-S25), by its name: "Binder: about 310 of
+ * 360 cards", or a card total when its capacity isn't known; a warning box when one is over. Nothing
+ * when the space has no containers or the counts can't be worked out. */
+function drawColStorageSetup(cv) {
+  const setup = cv.storageSetup;
+  const shown = setup.containers.filter((c) => c.cards !== null);
+  cv.boxNote.hidden = !shown.length;
+  if (!shown.length) { clear(cv.boxNote); return; }
+  const line = (c) => c.over ? `${c.name} is over capacity: about ${num(c.cards)} cards for about ${num(c.capacity)} places.`
+    : c.capacity !== null ? `${c.name}: about ${num(c.cards)} of ${num(c.capacity)} cards`
+    : `${c.name}: about ${plural(c.cards, "card")}`;
+  const notes = (setup.not_counted ? ` Basic lands (${plural(setup.not_counted, "card")}) aren't counted.` : "")
+    + (setup.elsewhere ? ` Cards kept somewhere that isn't one of these (${plural(setup.elsewhere, "card")}) aren't counted.` : "")
+    + (setup.unplaced ? ` Cards with no location recorded (${plural(setup.unplaced, "card")}) aren't in any of these.` : "");
+  const what = " (the copies not in built decks or products kept intact).";
+  cv.boxNote.className = shown.some((c) => c.over) ? "box box-warn col-storage-box" : "sub col-storage-box";
+  if (shown.length === 1) {
+    const only = line(shown[0]);
+    cv.boxNote.textContent = (shown[0].over ? only : only + what) + notes;
+    return;
+  }
+  clear(cv.boxNote).append(
+    ...shown.map((c) => el("span", { class: "col-storage-line", text: c.over ? line(c) : `${line(c)}.` })),
+    el("span", { class: "col-storage-line", text: `Counts are the copies not in built decks or products kept intact.${notes}` }));
 }
 
 // ---------------------------------------------------- pending storage scenario

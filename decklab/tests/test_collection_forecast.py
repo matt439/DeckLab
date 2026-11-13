@@ -91,11 +91,28 @@ class CollectionForecastTests(unittest.TestCase):
         self.assertEqual(inv.locations_of("home"), {("fdn", "227", "nonfoil"): "Binder"})
 
     def test_row_location_policy_is_shared_with_current_box(self):
-        for location in ("", "Row 2, B", "row3"):
+        # Home's storage setup (E8-S25): the built-in box's sections are Row 1 to Row 4 only (Q3).
+        for location, box in (("", 4), ("Row 2, B", 4), ("row 3", 4), ("row3", 0), ("Row 5", 0)):
             with self.subTest(location=location):
                 row = LocationRow.make(set="fdn", collector_number="227", finish="nonfoil", location=location)
                 inv = fixture().replace(locations={"home": Sheet(paths.locations("home"), LocationRow.COLUMNS, (row,), True)})
-                self.assertEqual(self.build(inv)["box_candidates"], 4)
+                answer = self.build(inv)
+                self.assertEqual((answer["box_candidates"], answer["recorded_elsewhere"]), (box, 4 - box))
+                self.assertEqual(answer["by_container"], {"box": 4} if box else {})
+                self.assertEqual(answer["sources"][0]["rows"][0]["container"], "box" if box else None)
+
+    def test_a_saved_setup_routes_by_container(self):
+        from decklab.lib.state import space_storage
+        record = space_storage.normalize({"default": "box", "containers": [
+            {"id": "box", "name": "Box", "capacity": 110, "sections": ["Row 1"]},
+            {"id": "binder", "name": "Binder", "kind": "binder", "capacity": 360}]})
+        row = LocationRow.make(set="fdn", collector_number="227", finish="nonfoil", location="Binder, page 2")
+        inv = fixture().replace(locations={"home": Sheet(paths.locations("home"), LocationRow.COLUMNS, (row,), True)})
+        with inventory.pinned(inv):
+            answer = forecast.build("home", [], BOX, record)
+        self.assertEqual((answer["box_candidates"], answer["recorded_elsewhere"], answer["by_container"]),
+                         (0, 4, {"binder": 4}))
+        self.assertEqual(answer["sources"][0]["rows"][0]["container"], "binder")
 
     def test_unknown_location_capability_or_invalid_source_never_means_no_locations(self):
         bad = LocationRow.make(set="fdn", collector_number="999", finish="nonfoil", location="Binder")
@@ -341,9 +358,12 @@ class CollectionForecastTests(unittest.TestCase):
         with mock.patch.object(ce, "_prices", return_value={}), mock.patch.object(ce, "_storage", return_value={}), \
                 mock.patch.object(forecast.places, "storage_box", return_value=BOX), \
                 mock.patch.object(forecast.places, "locations", return_value={}), \
+                mock.patch.object(forecast.places, "setup_view", return_value={"storage": "SETUP"}), \
+                mock.patch.object(forecast.places, "storage_setup", return_value={"containers": []}), \
                 mock.patch.object(forecast, "build", return_value={"status": "unknown"}) as build:
             answer = ce._extras("home", [])
         self.assertIs(answer["storage_box"], BOX)
         self.assertEqual(set(answer["storage_box"]), {"cards", "capacity", "over", "not_counted", "elsewhere"})
-        build.assert_called_once_with("home", [], BOX)
+        self.assertEqual(answer["storage_setup"], {"containers": []})
+        build.assert_called_once_with("home", [], BOX, "SETUP")
         self.assertEqual(answer["storage_forecast"], {"status": "unknown"})

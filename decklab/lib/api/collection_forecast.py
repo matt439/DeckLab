@@ -1,6 +1,9 @@
 """Conditional home storage scenario from one pinned snapshot; never a placement or write.
 
-Only verified pending loose-card sources enter the box scenario. Products await an
+Only verified pending loose-card sources enter the box scenario. Each copy is routed by home's
+storage setup (E8-S25): to the container its printing's recorded location matches, else the
+default container; "box" is the container storage_box counts (collection_locations.box_id), every
+other routing "elsewhere", with the container's id beside it (by_container counts both). Products await an
 explicit receipt-time intact choice; token accounting is outside this scenario. All
 totals include examined sources omitted from the bounded detail sample. Unknown sources
 are explicit, never quantities of zero. No research-path, retailer or price lookups.
@@ -12,6 +15,8 @@ import re
 
 from decklab.lib import cards, decks, inventory, pool, spaces
 from decklab.lib.inventory import files, ops_collection as ops, paths, receive, rules
+
+from decklab.lib.state import space_storage
 
 from . import collection_locations as places, guard
 
@@ -80,8 +85,11 @@ def _source(order=None, component=None, kind="unknown", problem=None):
 
 
 class _Projection:
-    def __init__(self, inv, box):
+    def __init__(self, inv, box, record=None):
         self.inv, self.answer = inv, _base(box)
+        self.record = record if record is not None else places.setup_view(spaces.HOME, seed=False)["storage"]
+        self.box = places.box_id(self.record)
+        self.answer["by_container"] = {}
         self.rows = self.bytes = self.details = self.sources = 0
         self.candidates = Counter()
         self.locations = None
@@ -123,11 +131,11 @@ class _Projection:
             raise OverflowError
         return parsed
 
-    def detail(self, source, row, name, disposition, location=""):
+    def detail(self, source, row, name, disposition, location="", container=None):
         if self.details < MAX_DETAILS:
             source["rows"].append({"name": name, "set": row["set"], "collector_number": row["collector_number"],
                                    "finish": row["finish"], "quantity": int(row["quantity"]),
-                                   "disposition": disposition, "location": location})
+                                   "disposition": disposition, "location": location, "container": container})
             self.details += 1
         else:
             source["omitted_rows"] += 1
@@ -156,16 +164,21 @@ class _Projection:
             source["known_cards"] += qty
             if decks.is_basic_land(name):
                 source["basic_excluded"] += qty
-                disposition, location = "basic", ""
+                disposition, location, container = "basic", "", None
             else:
                 location = self.locations.get(rules.ident(row), "") if self.locations is not None else ""
-                disposition = "unknown" if self.locations is None else "box" if places.in_box(location) else "elsewhere"
+                container = None if self.locations is None else space_storage.match(self.record, location)
+                disposition = ("unknown" if self.locations is None
+                               else "box" if self.box is not None and container == self.box else "elsewhere")
+                if container is not None:
+                    found = self.answer["by_container"]
+                    found[container] = found.get(container, 0) + qty
                 if disposition == "box":
                     source["box_candidates"] += qty
                     self.candidates[name] += qty
                 elif disposition == "elsewhere":
                     source["recorded_elsewhere"] += qty
-            self.detail(source, row, name, disposition, location)
+            self.detail(source, row, name, disposition, location, container)
         for field in ("known_loose_cards", "basic_excluded", "box_candidates", "recorded_elsewhere"):
             value = source["known_cards" if field == "known_loose_cards" else field]
             if value is not None:
@@ -242,7 +255,7 @@ class _Projection:
                 raise ValueError
             physical = Counter()
             sheet = self.inv.collection(spaces.HOME)
-            reader = _Projection(self.inv, None)
+            reader = _Projection(self.inv, None, self.record)
             for row in reader.checked_rows(sheet, existing=True) if sheet.exists else []:
                 name = cards.resolve(row["name"])
                 if not name:
@@ -387,7 +400,7 @@ class _Projection:
         return answer
 
 
-def build(space, rows, box):
+def build(space, rows, box, record=None):
     """Optional rows-answer sibling. Gate this projection before enumerating any home records.
 
     rows is the caller's current collection view; the snapshot supplies canonical physical
@@ -404,7 +417,7 @@ def build(space, rows, box):
     try:
         inv = inventory.current()
         with inventory.pinned(inv):
-            return _Projection(inv, box).run()
+            return _Projection(inv, box, record).run()
     except OverflowError:
         return _unavailable(box, "work_limit", stale=bool(inv is not None and inv.stale))
     except Exception:                   # noqa: BLE001 - enrichment must not fail a saved change or 409

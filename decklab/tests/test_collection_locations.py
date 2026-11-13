@@ -137,8 +137,10 @@ class StorageBoxTests(CollectionEditTestCase):
 
 
     def test_copies_kept_outside_the_box_rows_arent_in_its_count(self):
-        self.assertTrue(places.in_box("") and places.in_box("Row 2, B") and places.in_box("row3"))
-        self.assertFalse(places.in_box("Binder") or places.in_box("Trade box, row 1"))
+        self.assertTrue(places.in_box("") and places.in_box("Row 2, B") and places.in_box("row 3"))
+        # Home's built-in box is Row 1 to Row 4 only (E8-S25, Q3): "row3" and "Row 5" are elsewhere now.
+        self.assertFalse(places.in_box("Binder") or places.in_box("Trade box, row 1") or places.in_box("row3")
+                         or places.in_box("Row 5"))
         held = self.rows()["storage"]["rows"][ce._picture_key(ELVES)]["held"] or 0
         row = next(r for r in self.rows()["rows"] if r["set"] == "fdn" and r["collector_number"] == "227")
         free = int(row["quantity"]) - held
@@ -149,6 +151,72 @@ class StorageBoxTests(CollectionEditTestCase):
                 self.save(action="edit", original=ELVES, location=place, row=row)
                 box = self.rows()["storage_box"]
                 self.assertEqual((box["cards"], box["elsewhere"]), (before["cards"] - moved, moved))
+
+
+class StorageSetupTests(CollectionEditTestCase):
+    """The rows answers' storage_setup (E8-S25 slice 3): one count per container, from the setting."""
+
+    def setup(self, space="home", **record):
+        from decklab.lib import state
+        actor = state.Actor("matt", "Matt", "home")
+        expect = self.box.state.space_storage(space)["revision"]
+        return self.box.state.space_storage_put(space, record, expect, actor, "Set the storage setup")
+
+    def locate(self, place):
+        row = next(r for r in self.rows()["rows"] if r["set"] == "fdn" and r["collector_number"] == "227")
+        self.save(action="edit", original=ELVES, location=place, row=row)
+        held = self.rows()["storage"]["rows"][ce._picture_key(ELVES)]["held"] or 0
+        return int(row["quantity"]) - held
+
+    def test_home_default_is_the_built_in_box_and_matches_storage_box(self):
+        answer = self.rows()
+        setup, box = answer["storage_setup"], answer["storage_box"]
+        self.assertEqual((setup["source"], setup["default"]), ("default", "box"))
+        self.assertEqual([(c["id"], c["name"], c["capacity"], c["sleeved"]) for c in setup["containers"]],
+                         [("box", "Storage box", 2400, False)])
+        self.assertEqual((setup["containers"][0]["cards"], setup["not_counted"]), (box["cards"], box["not_counted"]))
+        self.assertEqual(setup["elsewhere"] + setup["unplaced"], box["elsewhere"])
+        self.assertEqual(setup["suggestions"], ["Row 1", "Row 2", "Row 3", "Row 4"])
+        with self.as_("user2"):
+            member = self.rows("user2")["storage_setup"]
+        self.assertEqual((member["source"], member["containers"], member["suggestions"]), ("none", [], []))
+
+    def test_a_saved_setup_counts_each_container_and_suggests_its_sections(self):
+        before = self.rows()["storage_box"]
+        self.setup(default="box", containers=[
+            {"id": "box", "name": "Shoebox", "capacity": 50, "sections": ["Front", "Back"], "order": "name"},
+            {"id": "binder", "name": "Binder", "kind": "binder", "capacity": 2, "sleeved": True}])
+        free = self.locate("Binder, page 3")
+        answer = self.rows()
+        setup = answer["storage_setup"]
+        shoebox, binder = setup["containers"]
+        self.assertEqual((binder["cards"], binder["over"], binder["sleeved"]), (free, free > 2, True))
+        self.assertEqual(shoebox["cards"], before["cards"] - free)
+        self.assertEqual(answer["storage_box"], {"cards": shoebox["cards"], "capacity": 50, "over": shoebox["cards"] > 50,
+                                                 "not_counted": before["not_counted"], "elsewhere": free})
+        self.assertEqual(setup["suggestions"], ["Front", "Back", "Binder"])
+        self.locate("Row 2")                                       # no longer one of home's sections
+        setup = self.rows()["storage_setup"]
+        self.assertEqual((setup["containers"][1]["cards"], setup["elsewhere"]), (0, free))
+
+    def test_no_default_container_means_no_box_count(self):
+        self.setup(default=None, containers=[{"name": "Binder", "kind": "binder"}])
+        answer = self.rows()
+        self.assertIsNone(answer["storage_box"])
+        setup = answer["storage_setup"]
+        self.assertEqual((setup["containers"][0]["capacity"], setup["containers"][0]["over"]), (None, None))
+        self.assertGreater(setup["unplaced"], 0)                   # no location and nowhere to go
+        self.setup(containers=[])                                  # the opt-out
+        self.assertIsNone(self.rows()["storage_box"])
+        self.assertEqual(self.rows()["storage_setup"]["suggestions"], [])
+
+    def test_a_member_saved_setup_reaches_only_their_answer(self):
+        self.setup("user2", default="binder", containers=[{"name": "Binder", "kind": "binder", "capacity": 100}])
+        with self.as_("user2"):
+            member = self.rows("user2")
+        self.assertIsNone(member["storage_box"])                   # home's only, as before
+        self.assertEqual([c["name"] for c in member["storage_setup"]["containers"]], ["Binder"])
+        self.assertEqual(self.rows()["storage_setup"]["source"], "default")
 
 
 class PackingPlanTests(CollectionEditTestCase):
