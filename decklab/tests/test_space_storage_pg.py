@@ -16,7 +16,7 @@ from decklab.tests import db_support
 
 ACTOR = Actor("test", "Test", source="cli")
 BINDER = {"name": "Binder", "kind": "binder", "capacity": 360, "sections": ["Page 1"], "order": "set", "sleeved": True}
-SAVED = {"v": 1, "default": "binder", "containers": [dict(BINDER, id="binder")]}
+SAVED = {"v": 1, "default": "binder", "containers": [dict(BINDER, id="binder", holds={})]}
 
 
 class SpaceStorageDbTests(db_support.DbTestCase):
