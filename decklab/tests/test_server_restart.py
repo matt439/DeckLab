@@ -7,7 +7,7 @@ import sys
 import unittest
 from unittest import mock
 
-from decklab.lib import build, control, permissions, release_check, tunnel
+from decklab.lib import build, control, permissions, release_check, tunnel, update_channel
 from decklab.lib.api import guard, server_restart
 from decklab.lib.api.common import ApiError
 from decklab.tests import test_permissions as people
@@ -39,6 +39,7 @@ class ServerRestartTests(unittest.TestCase):
         self.launch = mock.patch.object(server_restart, "_launch", return_value=_Proc()).start()
         mock.patch.object(server_restart, "_asked_at", None).start()
         self.release = mock.patch.object(release_check, "view", return_value=None).start()     # test_release_check
+        self.updates = mock.patch.object(update_channel, "view", return_value=None).start()   # test_update_channel
         self.addCleanup(mock.patch.stopall)
 
     def refused(self, status, call, *args):
@@ -59,6 +60,7 @@ class ServerRestartTests(unittest.TestCase):
                     self.refused(403, server_restart.restart, b"not even json")
         self.launch.assert_not_called()
         self.release.assert_not_called()        # nobody else starts a release check
+        self.updates.assert_not_called()        # nor runs git for the updates line
         self.assertIsNone(permissions.reason(people.MATT, "server.restart", script=False))
         self.assertIsNotNone(permissions.reason(None, "server.restart", script=True))
 
@@ -66,8 +68,9 @@ class ServerRestartTests(unittest.TestCase):
         self.busy.return_value = ["1 Forge matchup playing or waiting"]
         self.assertEqual(server_restart.view(), {"may_restart": True, "why_not": None,
                                                  "busy": ["1 Forge matchup playing or waiting"], "restarting": False,
-                                                 "release": None})
+                                                 "release": None, "updates": None})
         self.release.assert_called_once_with()
+        self.updates.assert_called_once_with()
 
     def test_restart_starts_the_helper_on_this_servers_port(self):
         self.assertEqual(self.post(), {"restarting": True, "started_at": STARTED})
