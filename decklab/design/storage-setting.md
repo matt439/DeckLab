@@ -63,7 +63,7 @@ Build decks is home's only, so this is the household's order today, not a member
 |---|---|---|
 | `decklab/web/assembly.js:331-332` `packOrderControls` | The second order is called "Storage order" | Name it after the default container's rule, or keep "Storage order" and follow the setting |
 | `assembly.js:347-371` `packStorageGroup` | The fixed order: creatures by colour (WUBRG, multicolour, colourless), artifact creatures; spells the same, artifacts; lands by the colour of mana they make; then "Other cards". Ranks 0-23 are hard-coded | One of a few named ordering rules (part 2.3); `colour-type` is today's function unchanged |
-| `assembly.js:373-394` `packCardGroups` | Groups by that function, then by mana value, then name | Groups by the chosen rule; later, by container first (from the cards' recorded locations) |
+| `assembly.js:373-394` `packCardGroups` | Groups by that function, then by mana value, then name | Groups by the chosen rule; with two or more containers, by container first, from the cards' recorded locations (built 2026-11-13, slice 7) |
 | `assembly.js:496-502` | In Storage order, basic lands join the pull step and tokens come after Put back | Only for rules that file basics with the other lands; ask (Q4) |
 | `decklab/web/assembly.css:18-19` `.pack-storage-group` | Nothing about the box; style only | None |
 | `decklab/README.md:330` | Describes the order in words | Say it follows the space's storage setting, with today's order as home's default |
@@ -75,14 +75,14 @@ Tests that pin it: `decklab/tests/test_assembly_sort_ui.py` (`test_storage_divid
 
 | Where | What it assumes | What a setting changes |
 |---|---|---|
-| `decklab/web/receipt-workflow.js:478` | "Broken up: its cards go into the storage box." | Name the default container, or "with your loose cards" |
-| `receipt-workflow.js:502-504` | Heading "To storage"; "No deck is waiting for these: they go unsleeved into the storage box." | Heading "To <default container>"; later, each card's section by the rule ("Row 1 · Creatures") |
+| `decklab/web/receipt-workflow.js:478` | "Broken up: its cards go into the storage box." | Name the default container, or "with your loose cards" (built 2026-11-13, slice 6) |
+| `receipt-workflow.js:502-504` | Heading "To storage"; "No deck is waiting for these: they go unsleeved into the storage box." | Heading "To <default container>" (built 2026-11-13, slice 6: home's built-in heading changed from "To storage" to "To Storage box"; "unsleeved" only for a container that isn't sleeved; "with your loose cards" with none), and each card's section by the rule ("Row 1 · Creatures", built slice 7) |
 | `receipt-workflow.js:462` (comment) | "the rest to storage; token cards to the token box" | Comment only |
-| `decklab/web/receipts.js:1075` | Product choice card: "Its cards go into the storage box, free for any deck." | Same as `:478` |
+| `decklab/web/receipts.js:1075` | Product choice card: "Its cards go into the storage box, free for any deck." | Same as `:478` (built 2026-11-13, slice 6) |
 | `decklab/web/receipt-layout.js:183,207,212` | `kind: "storage"`; "break up into storage"; "storage; no deck is waiting" | Generic "storage" words; fine as they are. A later slice adds the container |
-| `decklab/lib/api/collection_filing.py:211` | Every copy no deck waits for is `{"kind": "storage"}` | Add the container (and section) the setting files it in; keep `kind: "storage"` |
-| `decklab/web/collection-filing.js:92-94` | "To storage"; "keep them with your unsleeved cards" | Generic, works in any space now. With a setting: the container's name |
-| `decklab/db/inv_collection.py:362` (`collection merge`'s guide) | "  Storage:" | "  Storage (<container>):" once there is one |
+| `decklab/lib/api/collection_filing.py:211` | Every copy no deck waits for is `{"kind": "storage"}` | Add the container (and section) the setting files it in; keep `kind: "storage"` (built 2026-11-13: `storage_default` in slice 6, its `sections` and `storage_groups` in slice 7) |
+| `decklab/web/collection-filing.js:92-94` | "To storage"; "keep them with your unsleeved cards" | Generic, works in any space now. With a setting: the container's name (built 2026-11-13, slice 6) |
+| `decklab/db/inv_collection.py:362` (`collection merge`'s guide) | "  Storage:" | "  Storage (<container>):" once there is one (built 2026-11-13, slice 6; each card's section, slice 7) |
 
 Receive delivery is home's (orders are home's), so its "storage box" words are true today; they are listed because a self-hoster's home has no such box. Tests that pin it: `decklab/tests/test_receipt_destinations_ui.py`, `test_receipts_ui.py`, `test_collection_filing_ui.py`, `test_collection_add_filing_ui.py`, `test_precon_filing_ui.py` (the "To storage" and "storage box" words), and `test_collection_merge_filing_cli.py` for the CLI's `Storage:` line.
 
@@ -164,7 +164,7 @@ A short fixed list, each a function on the page, never a free-form rule:
 
 There's no `type-colour` (Matt, Q4) and no colour-only rule; either can be added later as one more named function.
 
-A rule may say which section each group goes in, so Where these go can say "Row 1 · Creatures · White". Home's four rows each hold one group (Q2): Row 1 creatures, Row 2 spells, Row 3 lands, Row 4 token cards. That's the "sections from the rule" slice (3, step 7); the record doesn't carry it yet.
+A rule may say which section each group goes in, so Where these go can say "Row 1 · Creatures · White". Home's four rows each hold one group (Q2): Row 1 creatures, Row 2 spells, Row 3 lands, Row 4 token cards. That's the "sections from the rule" slice (3, step 7, built 2026-11-13): carried as a colour-type container's `holds` ({section: group}, each group once); home's built-in box has it.
 
 ### 2.4 Who reads and changes it
 
@@ -198,8 +198,9 @@ The sheet:
 | Card list's count (1.1) | One line per container with a capacity, by name; "not in a container with a capacity" for the rest; basic lands still left out |
 | Pending scenario (1.2) | Each pending copy routed to the container its printing's location matches, else the default; home's only, as now |
 | Location suggestions (1.3) | The containers' sections and names, then the space's used locations |
-| Build decks' order (1.4) | The default container's rule. Later: grouped by container first, from the copies' recorded locations |
-| Where these go and Receive delivery (1.5) | "To <default container>", and later each card's section |
+| Build decks' order (1.4) | The default container's rule. With two or more containers (built 2026-11-13, slice 7): grouped by container first, each card under the first of its recorded locations, in collection row order, that matches a container; "Somewhere else" when its locations match none; the default container when none is recorded. Each container then uses its own rule (and its own sections). With one container nothing changes |
+| Where these go and Receive delivery (1.5) | "To <default container>" (slice 6) and each card's section (slice 7), both built 2026-11-13 |
+| Shopping (built 2026-11-13, slice 7) | Home's containers with a capacity, about how full now and once the pending orders arrive (the pending scenario's `by_container`); home-record readers only |
 
 ## 3. Build order
 
@@ -210,15 +211,15 @@ Each slice keeps every space's page as it is now unless the space saves a settin
 3. **The count and the suggestions** (built 2026-11-13; the rows answers' `storage_setup`, beside `storage_box`). `collection_locations.py` reads the setting (containers, matching, default) instead of `BOX_ROW`, `CAPACITY` and `in_box`; the rows answers gain per-container counts beside `storage_box`; the Card list draws one line per container; the location suggestions come from the setting; the pending scenario routes by container. Home's default keeps every current test's numbers; a member's space loses the Row 1-4 suggestions (a fix, 1.3).
 4. **Storage setup… on the Collection page** (built 2026-11-13; `web/storage-setup.js`, `POST /api/storage/preview`). The sheet, its preview, its conflict and permission refusals, and its UI tests.
 5. **Build decks' order follows the rule** (built 2026-11-13; the plan's `storage_order`). `packStorageGroup` becomes the `colour-type` rule among the others; the toggle's label follows the setting (Storage order, Set order, or only Name).
-6. **Words.** Receive delivery, Where these go and the CLI merge guide name the default container; README, AGENTS.md and the E8 stories updated.
-7. **Later, if wanted:** sections from the rule (Where these go says "Row 1 · Creatures"), Build decks grouped by container from recorded locations, and a container's fill shown on Shopping before an order.
+6. **Words** (built 2026-11-13; `storage_default` on `GET /api/receipt` and on the filing answers, `storage_order`'s `sleeved`). Receive delivery, Where these go, the CLI merge guide and Build decks' Put back name the default container and say "unsleeved" only for one that isn't sleeved; README, AGENTS.md and the E8 stories updated.
+7. **Later, if wanted** (all three built 2026-11-13): sections from the rule (a colour-type container's `holds`; Where these go, Receive delivery, `collection merge` and Build decks' dividers say "Row 1 · Creatures"), Build decks grouped by container from recorded locations (`storage_order`'s `containers` and `placed`), and a container's fill shown on Shopping before an order (`GET /api/shopping`'s `storage_fill`, `lib/api/shopping_storage.py`, `web/shopping-storage.js`).
 
 ## 4. Questions for Matt: decided 2026-11-13
 
 Matt answered every question as proposed ("all as recommended").
 
 1. **One record per space, edited on the Collection page by that space's own people** (2.2, 2.6). Not on Settings, home's included.
-2. **Home's four rows each hold one group:** Row 1 creatures, Row 2 spells, Row 3 lands, Row 4 token cards. Recorded here (2.3) for the later "sections from the rule" slice; the record doesn't carry it yet.
+2. **Home's four rows each hold one group:** Row 1 creatures, Row 2 spells, Row 3 lands, Row 4 token cards. Recorded here (2.3) and built 2026-11-13 as the "sections from the rule" slice: home's built-in box carries it.
 3. **Fixed sections `Row 1` to `Row 4`,** not a pattern: a `Row 5` location stops matching the box. Before slice 3 reaches the server, list home's live locations (`python -m decklab.db collection locations`) and name any that would move to Matt. The coding task can't read the live database, so this is the coordinator's step.
 4. **Rules `colour-type` (today's), `set`, `name` and `none`;** no `type-colour`. In today's order basic lands stay in the pull step and token cards come after Put back.
 5. **Yes, a per-container `sleeved` flag** (2.1), so Put back and Where these go stop saying "unsleeved" for a sleeved container.

@@ -42,11 +42,11 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 36 | 33 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 23 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 35 | 1 | 0 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 19 | 1 | 1 | 2 |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 20 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 33 | 29 | 0 | 3 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 87 | 68 | 11 | 4 | 4 |
-| **Total** | **396** | **348** | **21** | **10** | **17** |
+| **Total** | **396** | **349** | **20** | **10** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -4033,7 +4033,7 @@ Evidence:
 - `decklab/tests/test_editor.py`: test_a_building_deck_chooses_its_kit_then_keeps_it_when_built, test_a_building_deck_made_an_idea_clears_its_kit_first; `test_editor_player_kit.py` (every case also on a building deck); `test_api_permissions_inventory.py` (kit visibility also on building decks)
 - `decklab/tests/test_assembly_kit.py`: test_a_building_decks_chosen_kit_is_prefilled_and_kept; `test_deck_kit_ui.py`: test_a_building_deck_shows_its_tiles_and_chooses_its_kit; `test_deck_retirement.py`: test_building_deck_holding_kit_cannot_be_retired; `test_receipts_api.py`: test_sleeves_show_for_building_decks_too_but_never_ideas
 
-**E8-S25** · Matt · should · M · partial
+**E8-S25** · Matt · should · M · built
 
 As Matt, or anyone setting up Deck Lab with their own cards, I want to say what my storage is like, so that "storage" on Deck Lab's pages means how I really keep my cards, not one household's box.
 
@@ -4051,7 +4051,11 @@ Built (2026-11-13), slice 4: the Collection page's More, **Storage setup…** (`
 
 Built (2026-11-13), slice 5: Build decks' second card order follows home's default container's rule (the plan's `storage_order`, `lib/api/assembly_locations.py`): `colour-type` keeps Storage order as it was; `set` offers **Set order**, a divider per set in collector-number order from the printing of home's copy filed there, basics and token cards keeping their own steps; `name`, `none` and no default container offer only Name (the saved choice comes back later). Tests: `test_assembly_storage_order_ui`, `test_collection_locations` (`StorageOrderTests`).
 
-Left: 6 (words: Receive delivery, Where these go and the merge guide name the default container, and `sleeved` stops "unsleeved"), 7 (later: sections from the rule). Before slice 3 reaches the server, list home's live locations (`collection locations`) for any `Row 5`-style one that would leave the box, and apply 0028 there.
+Built (2026-11-13), slice 6: the words. Receive delivery (`GET /api/receipt`'s `storage_default`, always home's), Where these go (every filing answer's `storage_default`, the collection's own space's, so a member gets their own container and never home's), the CLI merge guide (`  Storage (<container>):`) and Build decks' Put back (`storage_order`'s `sleeved`) name the default container and say "unsleeved" only for one that isn't sleeved; with no default container, "To storage" and "your loose cards". Home's built-in heading is now "To Storage box". Tests: `test_receipt_destinations_ui`, `test_collection_filing_ui`, `test_assembly_storage_order_ui`, `test_receipts_api`, `test_collection_locations` (`StorageWordsTests`), `test_collection_merge_filing_cli`.
+
+Built (2026-11-13), slice 7: sections from the rule (a colour-type container's optional `holds`, {section: creatures|spells|lands|tokens}, each group once; home's built-in box Row 1 creatures, Row 2 spells, Row 3 lands, Row 4 token cards; the Storage setup sheet's "What each section holds"; Where these go, Receive delivery, `collection merge` and Build decks' colour-type dividers name each card's section, "Row 1 · Creatures"); Build decks grouped by container (with two or more containers, `storage_order`'s `containers` and `placed`: each card under the first recorded location that matches a container, "Somewhere else", or the default container when none is recorded, then that container's own rule and sections); and Shopping's storage fill (`GET /api/shopping`'s `storage_fill`, home-record readers only: home's containers with a capacity, now and once pending orders arrive, from the Card list's count and pending scenario). Tests: `test_storage_sections`, `test_storage_setup_ui`, `test_collection_locations` (`StorageOrderTests`), `test_assembly_storage_order_ui`, `test_shopping_storage`, `test_shopping_storage_ui`.
+
+Deployment (the coordinator's, with Matt's OK): before 0028 reaches the server, list home's live locations (`collection locations`) for any `Row 5`-style one that would leave the box, then apply 0028 there.
 
 
 **E8-S26** · Space members · should · M · built
