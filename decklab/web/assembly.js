@@ -40,7 +40,7 @@ function drawAssembly(data, token, restoredRecipe = null) {
   const sortKey = `packing-order.${state.profile?.id || "guest"}`;
   const view = { token, hash: location.hash, profile: state.profile?.id, choices: data.choices.filter(item => !item.error && item.versions?.length),
     selected: (restoredRecipe || data.selections || data.decks).map(packSelectedChoice), seq: 0, timer: null,
-    sortKey, order: local.get(sortKey) === "storage" ? "storage" : "name" };
+    sortKey, order: local.get(sortKey) === "storage" ? "storage" : "name", storageRule: packStorageRule(null) };
   view.root = el("div", { class: "pack-page" });
   view.results = el("div", { class: "pack-results", "aria-live": "polite" });
   view.message = el("p", { class: "pack-message", role: "status" });
@@ -327,21 +327,80 @@ function packTile(view, name, { qty, meta, caption, id, finishes = [], overlap =
   return tile;
 }
 
+/** Home's storage order (E8-S25 slice 5): the plan's "storage_order", its default container's rule.
+ * An answer without the field (an older server) is today's colour-and-type order; null (no default
+ * container) and an unknown rule are "none". */
+function packStorageRule(data) {
+  if (!data || !Object.hasOwn(data, "storage_order")) return { rule: "colour-type", container: null, printings: {} };
+  const order = data.storage_order;
+  if (!order || typeof order !== "object") return { rule: "none", container: null, printings: {} };
+  const known = (rule) => ["colour-type", "set", "name", "none"].includes(rule) ? rule : "none";
+  return { rule: known(order.rule),
+    container: typeof order.container === "string" && order.container ? order.container : null,
+    sleeved: order.sleeved === true, // slice 6: Put back drops "unsleeved" for a sleeved default container
+    sections: packSections(order.sections), // slice 7
+    printings: order.printings && typeof order.printings === "object" ? order.printings : {},
+    ...packStorageContainers(order, known) };
+}
+
+/** A container's {group: section} (slice 7), checked by storage-locations.js when it's loaded. */
+function packSections(sections) {
+  return typeof storageGroupSections === "function" ? storageGroupSections(sections) : {};
+}
+
+/** Slice 7: two or more containers, each with its own rule and sections, and the container id the server
+ * placed each card in (null: somewhere else; a card it doesn't list goes to the default container). One
+ * container or none sends neither, and the plan looks as before. */
+function packStorageContainers(order, known) {
+  const list = Array.isArray(order.containers) ? order.containers.filter(c => c && typeof c.id === "string"
+    && typeof c.name === "string") : [];
+  if (list.length < 2) return { containers: null, placed: {} };
+  return { containers: list.map(c => ({ id: c.id, name: c.name, rule: known(c.order), sections: packSections(c.sections) })),
+    placed: order.placed && typeof order.placed === "object" ? order.placed : {} };
+}
+
+/** The orders on offer: Name, and the storage's own when it differs from Name (colour-type: "Storage
+ * order"; set: "Set order"; two or more containers: "Storage order", by container first). */
+function packOrderOptions(view) {
+  const label = view.storageRule.containers ? "Storage order"
+    : { "colour-type": "Storage order", set: "Set order" }[view.storageRule.rule];
+  return label ? [["name", "Name"], ["storage", label]] : [["name", "Name"]];
+}
+
+/** The order the plan is drawn in: the person's choice, when the storage still offers it. */
+function packOrder(view) {
+  return view.order === "storage" && packOrderOptions(view).length > 1 ? "storage" : "name";
+}
+
+/** Basic lands join the pull step, and token cards follow Put back, only in the colour-and-type order
+ * (Q4: that rule files basics with the other lands). */
+function packFilesBasics(view) {
+  return packOrder(view) === "storage" && view.storageRule.rule === "colour-type";
+}
+
 /** A browser preference for this person. Reordering the displayed plan needs no new preview. */
 function packOrderControls(view) {
-  const options = [["name", "Name"], ["storage", "Storage order"]];
-  const group = el("div", { class: "segmented", role: "group", "aria-label": "Card order" });
-  for (const [value, label] of options) {
-    group.append(el("button", { type: "button", text: label, "aria-pressed": String(view.order === value),
-      onclick: () => {
-        if (!view.data || view.order === value) return;
-        view.order = value;
-        local.set(view.sortKey, value);
-        Array.from(group.children).forEach((button, i) => button.setAttribute("aria-pressed", String(options[i][0] === value)));
-        renderAssemblyPlan(view, view.data);
-      } }));
-  }
-  return el("div", { class: "toolbar pack-sort" }, el("span", { text: "Card order" }), group);
+  view.orderGroup = el("div", { class: "segmented", role: "group", "aria-label": "Card order" });
+  view.orderLabel = el("span", { text: "Card order" });
+  packOrderSync(view);
+  return el("div", { class: "toolbar pack-sort" }, view.orderLabel, view.orderGroup);
+}
+
+/** The order buttons for the storage the plan was read with; Name alone isn't offered as a choice. */
+function packOrderSync(view) {
+  const options = packOrderOptions(view), shown = packOrder(view);
+  const name = view.storageRule.container;
+  const where = view.storageRule.containers ? "By where the cards are filed, then as each container is ordered"
+    : name ? `As the ${typeof colLowerName === "function" ? colLowerName(name) : name} is ordered` : null;
+  clear(view.orderGroup).append(...options.map(([value, label]) => el("button", { type: "button", text: label,
+    "aria-pressed": String(shown === value), title: value === "storage" ? where : null,
+    onclick: () => {
+      if (!view.data || packOrder(view) === value) return;
+      view.order = value;
+      local.set(view.sortKey, value);
+      renderAssemblyPlan(view, view.data);
+    } })));
+  view.orderGroup.hidden = view.orderLabel.hidden = options.length < 2;
 }
 
 /** The storage rows: creatures (artifacts last), spells (artifacts last), then lands by mana colour.
@@ -365,30 +424,87 @@ function packStorageGroup(card) {
   return [color + (creature ? 0 : 8), `${creature ? "Creatures" : "Spells"} · ${words[color]}`];
 }
 
+/** A colour-type divider with its section first (slice 7), when the default container's rule says which section
+ * holds the divider's group: "Row 1 · Creatures · White", "Row 2 · Artifacts". Ranks 0-7 are creatures, 8-15
+ * spells, 16-22 lands (packStorageGroup); "Other cards" keeps its label. */
+function packSectionLabel(sections, rank, label) {
+  const group = rank < 8 ? "creatures" : rank < 16 ? "spells" : rank < 23 ? "lands" : null;
+  const section = group ? sections?.[group] : null;
+  return section ? `${section} · ${label}` : label;
+}
+
 /** Unknown mana values sort after known costs, including zero. */
 function packManaValue(card) {
   return Number.isFinite(card?.cmc) ? card.cmc : Infinity;
 }
 
-/** Picture grids in name order, or by mana value under the storage dividers. Rows keep their tick ids. */
+/** The set order's divider (E8-S25 slice 5): the set of home's copy filed in the default container,
+ * as storage_order's printings say; cards without one last. Ranks sort as strings. */
+function packSetGroup(view, name) {
+  const printing = view.storageRule.printings[name];
+  if (!Array.isArray(printing) || typeof printing[0] !== "string" || !printing[0]) return ["~", "No printing recorded"];
+  const code = printing[0].toUpperCase();
+  return [`0${code}`, `Set · ${code}`];
+}
+
+/** Collector numbers in number order ("9" before "10"), then the name. */
+function packCollectorOrder(view, a, b) {
+  const number = (name) => String((view.storageRule.printings[name] || [])[1] || "");
+  return number(a).localeCompare(number(b), undefined, { numeric: true }) || a.localeCompare(b);
+}
+
+/** Picture grids in name order, or under the storage order's dividers (colour-and-type: by mana value;
+ * set: by collector number). Rows keep their tick ids. */
 function packCardGroups(view, rows) {
   if (!rows.length) return null;
-  const grid = (items) => el("div", { class: "card-tiles pack-tiles" },
-    items.map(row => packTile(view, row.name, row)));
   const sorted = [...rows].sort((a, b) => a.name.localeCompare(b.name));
-  if (view.order !== "storage") return grid(sorted);
+  if (packOrder(view) !== "storage") return packGrid(view, sorted);
+  if (!view.storageRule.containers) return packRuleGroups(view, sorted, view.storageRule.rule, "h4");
+  return packContainerGroups(view, sorted);
+}
+
+function packGrid(view, rows) {
+  return el("div", { class: "card-tiles pack-tiles" }, rows.map(row => packTile(view, row.name, row)));
+}
+
+/** Slice 7: a heading for each container holding some of the rows, in the setup's order, then
+ * "Somewhere else" (locations no container matches); within each, that container's own rule. */
+function packContainerGroups(view, sorted) {
+  const { containers, placed, container: fallbackName } = view.storageRule;
+  const fallback = containers.find(c => c.name === fallbackName)?.id ?? null;
+  const groups = new Map([...containers.map(c => [c.id, { name: c.name, rule: c.rule, sections: c.sections, rows: [] }]),
+    [null, { name: "Somewhere else", rule: "name", sections: {}, rows: [] }]]);
+  for (const row of sorted) {
+    const id = Object.hasOwn(placed, row.name) ? placed[row.name] : fallback;
+    (groups.get(id) || groups.get(null)).rows.push(row);
+  }
+  return [...groups.values()].filter(group => group.rows.length).map(group => {
+    const count = group.rows.reduce((total, row) => total + row.qty, 0);
+    return el("div", { class: "pack-container-group" },
+      el("h4", {}, group.name, el("span", { class: "pack-section-count", text: ` · ${plural(count, "card")}` })),
+      packRuleGroups(view, group.rows, group.rule, "h5", group.sections));
+  });
+}
+
+/** Name-sorted rows under one rule's dividers (colour-type or set; name and none: one grid); sections
+ * ({group: section}) start the colour-type dividers. */
+function packRuleGroups(view, sorted, rule, heading, sections = view.storageRule.sections) {
+  if (rule !== "colour-type" && rule !== "set") return packGrid(view, sorted);
+  const grid = (items) => packGrid(view, items);
+  const bySet = rule === "set";
   const groups = new Map();
   for (const row of sorted) {
-    const [rank, label] = packStorageGroup(view.cards[row.name]);
-    if (!groups.has(rank)) groups.set(rank, { label, rows: [] });
+    const [rank, label] = bySet ? packSetGroup(view, row.name) : packStorageGroup(view.cards[row.name]);
+    if (!groups.has(rank)) groups.set(rank, { label: bySet ? label : packSectionLabel(sections, rank, label), rows: [] });
     groups.get(rank).rows.push(row);
   }
-  return [...groups].sort(([a], [b]) => a - b).map(([, group]) => {
-    group.rows.sort((a, b) => packManaValue(view.cards[a.name]) - packManaValue(view.cards[b.name])
-      || a.name.localeCompare(b.name));
+  const ranked = (a, b) => typeof a === "number" ? a - b : a < b ? -1 : a > b ? 1 : 0;
+  return [...groups].sort(([a], [b]) => ranked(a, b)).map(([, group]) => {
+    group.rows.sort(bySet ? (a, b) => packCollectorOrder(view, a.name, b.name)
+      : (a, b) => packManaValue(view.cards[a.name]) - packManaValue(view.cards[b.name]) || a.name.localeCompare(b.name));
     const count = group.rows.reduce((total, row) => total + row.qty, 0);
     return el("div", { class: "pack-storage-group" },
-      el("h4", {}, group.label, el("span", { class: "pack-section-count", text: ` · ${plural(count, "card")}` })),
+      el(heading, {}, group.label, el("span", { class: "pack-section-count", text: ` · ${plural(count, "card")}` })),
       grid(group.rows));
   });
 }
@@ -494,13 +610,13 @@ function packDeck(view, deck) {
     packStandinsPart(view, deck),
     step("sleeves", "Sleeves", kitNode, sleeves && need ? el("ul", { class: "pack-list" },
       assemblyTick(`Get out ${need} ${assemblyKitName(sleeves)} sleeves`, 1, [sleeves.id || sleeves.value, need], "sleeves")) : null),
-    cardStep("pull", "Pull from storage", view.order === "storage" ? [...pulls, ...basics] : pulls, pulls.length ? packLocationNote(view) : null),
+    cardStep("pull", "Pull from storage", packFilesBasics(view) ? [...pulls, ...basics] : pulls, pulls.length ? packLocationNote(view) : null),
     cardStep("move", "Move from other decks", moves, el("p", { class: "sub", text: "Change their sleeves as you move them." })),
-    view.order !== "storage" ? cardStep("basic", "Basic lands", basics) : null,
+    !packFilesBasics(view) ? cardStep("basic", "Basic lands", basics) : null,
     cardStep("standin", "Spare-card stand-ins", markers),
-    view.order !== "storage" ? tokenStep() : null,
-    cardStep("return", "Put back", returns, el("p", { class: "sub", text: "Take these out of the deck and put them back in storage, unsleeved." })),
-    view.order === "storage" ? tokenStep() : null,
+    !packFilesBasics(view) ? tokenStep() : null,
+    cardStep("return", "Put back", returns, el("p", { class: "sub", text: `Take these out of the deck and put them back in storage${view.storageRule.sleeved ? "" : ", unsleeved"}.` })),
+    packFilesBasics(view) ? tokenStep() : null,
     step("box", "Pack", box ? el("ul", { class: "pack-list" },
       assemblyTick(`Pack into ${assemblyKitName(box)}`, 1, [box.id || box.value], "box")) : null),
     keptNode,
@@ -523,6 +639,8 @@ function renderAssemblyPlan(view, data) {
   view.bulk = [];
   view.finish = null;
   view.cards = data.cards || {};
+  view.storageRule = packStorageRule(data);
+  packOrderSync(view);
   view.sortControl.hidden = !data.decks.length;
   if (!data.decks.length) {
     packAttachSwitcher(view, data, []);

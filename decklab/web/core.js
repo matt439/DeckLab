@@ -495,7 +495,9 @@ function createTargets() {
 the phone's tab bar (shell.js), the crumbs, document.title and who sees which page. A route is
   {path, label (in the nav), h1 (the page heading), title (the tab title), icon (shell.js's ICONS),
    nav: "main" (the top bar and the phone's tab bar) | "more" (the More menu and sheet) | "account" (the avatar
-   menu), visible(profile, may) (absent: everyone), parent (a child page's parent route)}.
+   menu), pill (a "more" page that is also a pill in the lab's top bar from 1000 px wide, and left out of the
+   top bar's More there; below 1000 px, a phone on its side included, it stays only in More: E11-S61),
+   visible(profile, may) (absent: everyone), parent (a child page's parent route)}.
 Pages refine the tab title with their subject (setTitle). */
 const ROUTES = [
   { path: "library", label: "Decks", h1: "Decks", title: "Decks", icon: "decks", nav: "main" },
@@ -507,7 +509,7 @@ const ROUTES = [
   { path: "accessories", label: "Sleeves & boxes", h1: "Sleeves & boxes", title: "Sleeves & boxes", icon: "sleeves",
     nav: "more", visible: (profile, may) => may ? may.see_accessories !== false : seesAccessoriesAs(profile) },
   { path: "assembly", label: "Build decks", h1: "Build decks", title: "Build decks", icon: "plan", nav: "more",
-    visible: (profile, may) => seesHomeInventory(may) },
+    pill: true, visible: (profile, may) => seesHomeInventory(may) },
   { path: "play", label: "Game log", h1: "Game log", title: "Game log", icon: "log", nav: "more" },
   { path: "wishlist", label: "Wishlist", h1: "Wishlist", title: "Wishlist", icon: "wishlist", nav: "more" },
   { path: "activity", label: "Activity", h1: "Activity", title: "Activity", icon: "activity", nav: "more" },
@@ -733,7 +735,8 @@ function wireMenu(button, menu) {
     menu.hidden = false;
     keepInWindow(menu);
     button.setAttribute("aria-expanded", "true");
-    const eligible = (item) => keyboardShown(item) && !item.disabled && item.getAttribute("aria-disabled") !== "true";
+    const eligible = (item) => keyboardShown(item) && !item.disabled && item.getAttribute("aria-disabled") !== "true"
+      && (!item.getClientRects || item.getClientRects().length > 0);
     const first = Array.from(menu.querySelectorAll("[role=menuitem]")).find(eligible)
       || Array.from(menu.querySelectorAll("button")).find(eligible) || Array.from(menu.querySelectorAll("a")).find(eligible);
     if (first && first.focus) first.focus();
@@ -752,8 +755,9 @@ function wireMenu(button, menu) {
       return;
     }
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    // An item a stylesheet hides at this width (the top bar's More from 1000 px, E11-S61) takes no focus.
     const items = [...menu.querySelectorAll("[role=menuitem]")].filter((item) => !item.disabled
-      && item.getAttribute("aria-disabled") !== "true");
+      && item.getAttribute("aria-disabled") !== "true" && (!item.getClientRects || item.getClientRects().length > 0));
     if (!items.length) return;
     const at = items.indexOf(document.activeElement), down = event.key === "ArrowDown";
     items[at < 0 ? (down ? 0 : items.length - 1) : (at + (down ? 1 : -1) + items.length) % items.length].focus();

@@ -31,7 +31,8 @@ MAX_AGE = 3600          # seconds before another run may drop a leftover copy
 PROBE_TIMEOUT = 1       # seconds to wait for the server's port before skipping
 # migration 0003's tables, which reset() empties
 PHASE2_TABLES = ("wishlist_entry", "profile_setting", "simulation_mode", "play_record")
-STATE_TABLES = PHASE2_TABLES + ("packing_tick", "commander_night", "visibility", "shop_postage", "pricing_setting")
+STATE_TABLES = PHASE2_TABLES + ("packing_tick", "commander_night", "visibility", "shop_postage", "pricing_setting",
+                                 "space_storage")
 # migration 0004's audited tables, children before parents (the order reset() deletes them in;
 # collection_import_content goes with collection_import, and reset() empties inventory_revision),
 # then migration 0006's (the decks part: its history and derived rows before the decks, a text
@@ -228,7 +229,7 @@ def reset(dbname, tables=STATE_TABLES):
             if cur.execute("select to_regclass('public.space_departure')").fetchone()[0]:
                 cur.execute("delete from space_departure")
             for table in tables:
-                if table in ("card_loan", "dice_counter") and not c.execute("select to_regclass(%s) is not null", ("public." + table,)).fetchone()[0]:
+                if table in ("card_loan", "dice_counter", "space_storage") and not c.execute("select to_regclass(%s) is not null", ("public." + table,)).fetchone()[0]:
                     continue
                 cur.execute(sql.SQL("delete from {}").format(sql.Identifier(table)))
             if set(tables) & set(INVENTORY_TABLES) - set(DECK_TABLES):
@@ -244,6 +245,7 @@ def reset(dbname, tables=STATE_TABLES):
 # What undoes each later migration, for tests that roll a throwaway database back to an older
 # schema and migrate it forward again (roll_back_schema). A new migration needs its entry here.
 UNDO_MIGRATION = {
+    28: ("drop table public.space_storage",),
     27: ("alter table deck_line drop column category",),
     26: ("alter table watchlist_item drop column buy_under_aud",),
     # Disposable schema rollback only: remove the new preference while retaining

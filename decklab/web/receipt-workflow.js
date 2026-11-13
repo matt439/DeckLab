@@ -461,14 +461,17 @@ function rcptAddedWords(totals) {
 /** "Where these go": the decks that count on these cards (by deck, with its sleeves when you see them), then the
  * rest to storage; token cards to the token box; a product as its own deck(s) or into storage. readiness is
  * apply's {deck id: {missing, coming}} after the receipt (E6-S26): each deck's Ready to build or Still N to get.
- * places is apply's checked storage_locations (E8-S27): each To storage line says where its card's copies are filed. */
+ * places is apply's checked storage_locations (E8-S27): each To storage line says where its card's copies are filed.
+ * The storage words name home's default container (E8-S25 slice 6, the view's storage_default). */
 function rcptWhereTheyGo(view, received, readiness, places = null) {
   const decks = new Map(), storage = [], unknown = [], basics = [], parts = [];
+  const place = storagePlace(view.data), cardGroups = storageCardGroups(view.data); // slice 7: "Row 1 · Creatures"
   const kits = view.data.kits || {};
   for (const item of rcptDestinationAdvice(view, received)) {
     if (item.kind === "tokens") {
+      const section = storageSectionWords(place, "tokens");
       parts.push(el("div", { class: "panel rcpt-where" }, el("h3", { text: "Token cards" }),
-        el("p", {}, `${plural(item.quantity, "token card")} go with your tokens. `,
+        el("p", {}, `${plural(item.quantity, "token card")} go with your tokens${section ? `, in ${storagePlaceNamed(place)}: ${section}` : ""}. `,
           el("a", { href: "#/tokens", text: "See them on Tokens" }))));
       continue;
     }
@@ -476,7 +479,7 @@ function rcptWhereTheyGo(view, received, readiness, places = null) {
       const comp = item.comp;
       parts.push(el("div", { class: "panel rcpt-where" }, el("h3", { text: item.title }),
         el("p", { text: comp.intact === "yes" ? "Kept as its own deck(s): choose its sleeves and deck box on its deck page."
-          : comp.intact === "no" ? "Broken up: its cards go into the storage box."
+          : comp.intact === "no" ? `Broken up: ${rcptBrokenUpWords(place)}.`
             : "Its storage choice is not known from the recorded selection." })));
       continue;
     }
@@ -501,11 +504,13 @@ function rcptWhereTheyGo(view, received, readiness, places = null) {
       rcptReadyLine(deck, readiness), lines(cards)))));
   }
   if (storage.length) {
-    out.push(el("div", { class: "panel rcpt-where" }, el("h3", { text: "To storage" }),
-      el("p", { class: "sub", text: "No deck is waiting for these: they go unsleeved into the storage box." }), storageAdviceNote(places),
+    out.push(el("div", { class: "panel rcpt-where" }, el("h3", { text: storagePlaceHeading(place) }),
+      el("p", { class: "sub", text: `No deck is waiting for these: ${place === undefined ? "they go unsleeved into the storage box"
+        : storagePlaceGo(place)}.` }), storageAdviceNote(places),
       el("ul", { class: "rcpt-where-cards" }, storage.map(([n, name]) => {
-        const where = storageAdviceWords(places, name);
-        return el("li", {}, `${n} × ${name}`, where ? el("span", { class: "sub rcpt-where-place", text: ` · ${where}` }) : null);
+        const where = storageAdviceWords(places, name), section = storageSectionWords(place, cardGroups.get(name));
+        return el("li", {}, `${n} × ${name}`, section ? el("span", { class: "rcpt-where-section", text: ` · ${section}` }) : null,
+          where ? el("span", { class: "sub rcpt-where-place", text: ` · ${where}` }) : null);
       }))));
   }
   if (unknown.length) out.push(el("div", { class: "panel rcpt-where rcpt-where-unknown" },
@@ -515,6 +520,13 @@ function rcptWhereTheyGo(view, received, readiness, places = null) {
     el("h3", { text: "Basic lands" }),
     el("p", { class: "sub", text: "Basic-land deck destinations are not tracked." }), lines(basics)));
   return [...out, ...parts];
+}
+
+/** A broken-up product's cards: "its cards go into the storage box" (home's default container; today's words for an
+ * older server's answer), or "its cards go with your loose cards" when home has none. */
+function rcptBrokenUpWords(place) {
+  return place === undefined ? "its cards go into the storage box"
+    : place ? `its cards go into ${storagePlaceNamed(place)}` : "its cards go with your loose cards";
 }
 
 /** One deck's Planned list after the receipt: "Ready to build" (to Build decks), "Ready once N cards

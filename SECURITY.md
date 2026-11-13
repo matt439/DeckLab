@@ -75,7 +75,10 @@ full tracebacks stay only in the operator's local server log.
 Optional `alerts` is disabled unless the operator supplies an HTTP(S) address. A
 nightly completion or the watchdog's first give-up transition sends only fixed step
 names and `ok`/`failed`, with a five-second socket timeout, no redirect following and
-no environment proxy. No profile, inventory, message or error text is sent. The
+no environment proxy. No profile, inventory, message or error text is sent. The one
+exception is a failed `shrink` step (E11-S87, off unless `database.shrink_warn` is
+true), which carries one bounded line of whole-table names, row counts and the earlier
+dump's date, never a space, row or card. The
 configured address can itself contain a private monitor token: keep it in local
 configuration, never source or a public log. Enabling a monitor and exercising a
 real endpoint remain explicit operator actions.
@@ -164,3 +167,4 @@ on any server. The route-access fixture check fails when a source migration is a
 - `0025_listing_preferences.sql`
 - `0026_watchlist_buy_under.sql`
 - `0027_deck_line_categories.sql`
+- `0028_space_storage.sql`

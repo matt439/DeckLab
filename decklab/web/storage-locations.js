@@ -1,7 +1,9 @@
 /* Storage locations (E8-S22) and the storage box's count (E8-S19): where a collection row's storage
  * copies are ("Row 2, B", "Binder"), set on the Collection page's card sheet and shown in the Card list
  * and Build decks' pull and put-back steps. Locations are kept apart from the rows (their sha256 stays
- * the eight columns'): the rows answers' "locations" {ready, rows: {colKey: text}} and "storage_box". */
+ * the eight columns'): the rows answers' "locations" {ready, rows: {colKey: text}} and "storage_box".
+ * The count and the suggestions follow the space's storage setup (E8-S25): "storage_setup"; the count
+ * line's Change… opens the Storage setup… sheet (storage-setup.js). */
 "use strict";
 
 const STORAGE_LOCATION_MAX = 40;
@@ -25,6 +27,7 @@ function colTakeLocations(cv, answer) {
     if (answer.locations) cv.locations = colLocations(answer.locations);
     else if (Array.isArray(answer.rows) && cv.locations) cv.locations = { ...cv.locations, sha256: null };
     if (Object.hasOwn(answer, "storage_box")) cv.storageBoxCount = answer.storage_box || null;
+    if (Object.hasOwn(answer, "storage_setup")) cv.storageSetup = colStorageSetup(answer.storage_setup);
   }
   cv.storageForecast = colStorageForecast(answer?.storage_forecast, cv);
   drawColStorageForecast(cv);
@@ -42,10 +45,46 @@ function colWithLocation(cv, row, words) {
   return place ? `${words} · ${place}` : words;
 }
 
-/** The suggestions the location box offers: the four rows of the storage box, then those already used. */
+/** A rows answer's storage_setup (E8-S25) as the page keeps it: the space's containers with their
+ * counts and its location suggestions; null without one (an older server) or for a bad answer. */
+function colStorageSetup(raw) {
+  if (!raw || typeof raw !== "object" || !Array.isArray(raw.containers) || raw.containers.length > 20
+      || !Array.isArray(raw.suggestions)) return null;
+  const count = (value) => value === null || Number.isSafeInteger(value) && value >= 0;
+  const containers = [];
+  for (const c of raw.containers) {
+    if (!c || typeof c.id !== "string" || typeof c.name !== "string" || !c.name || !count(c.cards)
+        || !(c.capacity === null || Number.isSafeInteger(c.capacity) && c.capacity > 0)) return null;
+    containers.push({ id: c.id, name: c.name, kind: String(c.kind || ""), capacity: c.capacity, cards: c.cards,
+      sleeved: c.sleeved === true, over: c.capacity !== null && c.cards !== null && c.cards > c.capacity });
+  }
+  const totals = {};
+  for (const key of ["elsewhere", "unplaced", "not_counted"]) {
+    if (!count(raw[key] ?? null)) return null;
+    totals[key] = raw[key] ?? null;
+  }
+  return { source: String(raw.source || ""), default: typeof raw.default === "string" ? raw.default : null,
+    containers, ...totals, suggestions: raw.suggestions.filter((text) => typeof text === "string" && text).slice(0, 1000) };
+}
+
+/** The space's own suggestions: its storage setup's sections (or names), else, from an older server,
+ * home's built-in box rows and nothing for any other space. */
+function colSetupSuggestions(cv) {
+  if (cv.storageSetup) return cv.storageSetup.suggestions;
+  return cv.space && cv.space !== HOME_SPACE ? [] : STORAGE_LOCATION_ROWS;
+}
+
+/** The suggestions the location box offers: the space's storage sections, then those already used. */
 function colLocationChoices(cv) {
   const used = Object.values(cv.locations?.rows || {}).filter((text) => typeof text === "string" && text);
-  return [...new Set([...STORAGE_LOCATION_ROWS, ...used.sort((a, b) => a.localeCompare(b))])];
+  return [...new Set([...colSetupSuggestions(cv), ...used.sort((a, b) => a.localeCompare(b))])];
+}
+
+/** The location field's example: one of the space's sections, else a neutral one. */
+function colLocationExample(cv) {
+  const sections = colSetupSuggestions(cv);
+  const first = sections[1] || sections[0];
+  return first ? `Such as ${first}, B or Binder` : "Such as Binder or Shelf 2";
 }
 
 /** The card sheet's Storage location field: a short line with suggestions. Off (with why) while the
@@ -54,7 +93,7 @@ function colLocationField(ctx, row, id) {
   const cv = ctx.cv;
   const list = el("datalist", { id: id("places") }, colLocationChoices(cv).map((text) => el("option", { value: text })));
   const input = el("input", { id: id("location"), type: "text", maxlength: STORAGE_LOCATION_MAX, autocomplete: "off",
-    list: list.id, value: row ? colLocationOf(cv, row) : "", placeholder: "Such as Row 2, B or Binder" });
+    list: list.id, value: row ? colLocationOf(cv, row) : "", placeholder: colLocationExample(cv) });
   const hint = el("small", { class: "field-hint", text: "Where its unsleeved copies are kept. Build decks shows it." });
   ctx.location = { input, list, hint, start: input.value, dirty: false };
   input.addEventListener("input", () => { ctx.location.dirty = true; });
@@ -91,6 +130,7 @@ function colLocationToSend(ctx) {
 function drawColStorageBox(cv) {
   drawColStorageForecast(cv);
   if (!cv.boxNote) return;
+  if (cv.storageSetup) { drawColStorageSetup(cv); return; }
   const box = cv.storageBoxCount;
   cv.boxNote.hidden = !box;
   if (!box) return;
@@ -100,6 +140,58 @@ function drawColStorageBox(cv) {
   cv.boxNote.textContent = box.over
     ? `The storage box is over capacity: about ${num(box.cards)} cards for about ${num(box.capacity)} places.${counted}`
     : `Storage box: about ${num(box.cards)} of ${num(box.capacity)} cards (the copies not in built decks or products kept intact).${counted}`;
+}
+
+/** A container's name inside a sentence: "Storage box" as "storage box", but a name with a capital
+ * after its first letter ("Ultimate Guard binder") as written. */
+function colLowerName(name) {
+  const text = String(name);
+  return /[A-Z]/.test(text.slice(1)) ? text : text.charAt(0).toLowerCase() + text.slice(1);
+}
+
+/** One line per container of the space's storage setup (E8-S25), by its name: "Binder: about 310 of
+ * 360 cards", or a card total when its capacity isn't known; a warning box when one is over. Nothing
+ * when the space has no containers or the counts can't be worked out. */
+function drawColStorageSetup(cv) {
+  const setup = cv.storageSetup;
+  const shown = setup.containers.filter((c) => c.cards !== null);
+  cv.boxNote.hidden = !shown.length;
+  if (!shown.length) { clear(cv.boxNote); return; }
+  try { colStorageLines(cv, setup, shown); } finally { colStorageChange(cv); }
+}
+
+/** The count line's "Change…" (E8-S25 slice 4): the Storage setup… sheet, for the space's own people. */
+function colStorageChange(cv) {
+  if (!cv.editable || cv.unsupported || typeof openStorageSetup !== "function" || cv.boxNote.hidden) return;
+  cv.boxNote.append(" ", el("button", { type: "button", class: "btn btn-quiet col-storage-change", text: "Change…",
+    "aria-label": "Change the storage setup", onclick: () => openStorageSetup(cv) }));
+}
+
+function colStorageLines(cv, setup, shown) {
+  const line = (c) => c.over ? `${c.name} is over capacity: about ${num(c.cards)} cards for about ${num(c.capacity)} places.`
+    : c.capacity !== null ? `${c.name}: about ${num(c.cards)} of ${num(c.capacity)} cards`
+    : `${c.name}: about ${plural(c.cards, "card")}`;
+  const basics = setup.not_counted ? ` Basic lands (${plural(setup.not_counted, "card")}) aren't counted.` : "";
+  const what = " (the copies not in built decks or products kept intact).";
+  cv.boxNote.className = shown.some((c) => c.over) ? "box box-warn col-storage-box" : "sub col-storage-box";
+  if (shown.length === 1) {
+    // One container keeps the single box's sentences: "The storage box is over capacity", "outside the box".
+    const only = shown[0], the = `the ${colLowerName(only.name)}`;
+    const binder = only.kind === "binder" ? "" : ", such as in a binder";
+    const notes = basics
+      + (setup.elsewhere ? ` Cards kept outside ${the} (${plural(setup.elsewhere, "card")}${binder}) aren't counted.` : "")
+      + (setup.unplaced ? ` Cards with no location recorded (${plural(setup.unplaced, "card")}) aren't counted in ${the}.` : "");
+    cv.boxNote.textContent = (only.over
+      ? `The ${colLowerName(only.name)} is over capacity: about ${num(only.cards)} cards for about ${num(only.capacity)} places.`
+      : line(only) + what) + notes;
+    return;
+  }
+  const notes = basics
+    + (setup.elsewhere ? ` Cards kept somewhere that isn't one of these (${plural(setup.elsewhere, "card")}) aren't counted.` : "")
+    + (setup.unplaced ? ` Cards with no location recorded (${plural(setup.unplaced, "card")}) aren't in any of these.` : "");
+  clear(cv.boxNote).append(
+    ...shown.map((c) => el("span", { class: "col-storage-line", text: c.over ? line(c) : `${line(c)}.` })),
+    el("span", { class: "col-storage-line", text: `Counts are the copies not in built decks or products kept intact.${notes}` }));
 }
 
 // ---------------------------------------------------- pending storage scenario
@@ -370,6 +462,65 @@ function storageAdviceNote(found) {
   return found?.ready === false ? el("p", { class: "sub storage-advice-off", text: STORAGE_LOCATIONS_OFF }) : null;
 }
 
+/** Slice 6's words (E8-S25): an answer's default container ({name, kind, sleeved}) where loose cards go, checked.
+ * undefined when the answer has no such field (an older server: today's words), null when the space has none. */
+function storagePlace(answer, key = "storage_default") {
+  if (!answer || typeof answer !== "object" || !Object.hasOwn(answer, key)) return undefined;
+  const raw = answer[key];
+  if (!raw || typeof raw !== "object" || typeof raw.name !== "string" || !raw.name.trim() || raw.name.length > 40
+      || /[\r\n]/.test(raw.name) || typeof raw.sleeved !== "boolean") return null;
+  return Object.freeze({ name: raw.name.trim(), kind: typeof raw.kind === "string" ? raw.kind : "other", sleeved: raw.sleeved,
+    sections: storageGroupSections(raw.sections) });
+}
+
+/** Slice 7 ("sections from the rule"): the groups a colour-type container's sections hold, and their words. */
+const STORAGE_GROUP_WORDS = Object.freeze({ creatures: "Creatures", spells: "Spells", lands: "Lands", tokens: "Token cards" });
+
+/** A place's {group: section}, checked: known groups only, each a one-line section of at most 40 characters. */
+function storageGroupSections(raw) {
+  const out = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return Object.freeze(out);
+  for (const group of Object.keys(STORAGE_GROUP_WORDS)) {
+    const section = Object.hasOwn(raw, group) ? raw[group] : null;
+    if (typeof section === "string" && section.trim() && section.length <= 40 && !/[\r\n]/.test(section)) out[group] = section.trim();
+  }
+  return Object.freeze(out);
+}
+
+/** An answer's storage_groups ({card name: creatures | spells | lands}), checked; an empty map without one. */
+function storageCardGroups(answer) {
+  const raw = answer && typeof answer === "object" ? answer.storage_groups : null, out = new Map();
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const [name, group] of Object.entries(raw)) {
+    if (name && group !== "tokens" && Object.hasOwn(STORAGE_GROUP_WORDS, group)) out.set(name, group);
+  }
+  return out;
+}
+
+/** "Row 1 · Creatures": the section a place's rule files a group in, or null when it doesn't say. */
+function storageSectionWords(place, group) {
+  const section = place && place.sections && group ? place.sections[group] : null;
+  return section ? `${section} · ${STORAGE_GROUP_WORDS[group]}` : null;
+}
+
+/** A container's name inside a sentence: "the storage box", "the red binder"; a name with capitals, digits or
+ * punctuation beyond its first letter ("Shelf A", "Matt's binder") stays as written. */
+function storagePlaceNamed(place) {
+  const name = place.name;
+  return /^[A-Z]?[a-z]*( [a-z]+)*$/.test(name) ? `the ${name.charAt(0).toLowerCase()}${name.slice(1)}` : name;
+}
+
+/** "To Storage box", or "To storage" when there's no default container (or no word of one). */
+function storagePlaceHeading(place) {
+  return place ? `To ${place.name}` : "To storage";
+}
+
+/** "they go unsleeved into the storage box" ("unsleeved" only when the container isn't sleeved), or "they go with
+ * your loose cards" when the space has no default container. Callers keep today's words for undefined. */
+function storagePlaceGo(place) {
+  return place ? `they go ${place.sleeved ? "" : "unsleeved "}into ${storagePlaceNamed(place)}` : "they go with your loose cards";
+}
+
 /** Location filtering and batches need a checked location snapshot, including on an older server. */
 function colLocationsChecked(cv) { return !!(cv.locations?.ready && cv.locations.sha256 && !cv.locations.error); }
 
@@ -479,7 +630,7 @@ function openLocationBatch(cv, selected = false, opener = null) {
   ctx.mode.value = "";
   const choices = el("datalist", { id: id("places") }, colLocationChoices(cv).map(text => el("option", { value: text })));
   ctx.input = el("input", { id: id("place"), type: "text", maxlength: STORAGE_LOCATION_MAX, autocomplete: "off",
-    list: choices.id, placeholder: "Such as Row 2, B or Binder", oninput: () => {
+    list: choices.id, placeholder: colLocationExample(cv), oninput: () => {
       if (colLocationSheetCurrent(ctx) && ctx.input.value) ctx.mode.value = "assign";
       change();
     } });

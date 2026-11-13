@@ -1,9 +1,11 @@
 """Restarting Deck Lab from the page: a named home admin's, through the tunnel too, so a
 "Restart needed" banner seen on a phone can be dealt with without the PC.
 
-    GET  /api/server/restart   {"may_restart", "why_not", "busy", "restarting", "release"}
+    GET  /api/server/restart   {"may_restart", "why_not", "busy", "restarting", "release", "updates"}
                                (release: whether a newer release is out, lib/release_check.py's
-                               view(); None in a git checkout, which asks nothing)
+                               view(); None in a git checkout, which asks nothing. updates: a git
+                               checkout's updates waiting as last fetched, lib/update_channel.py's
+                               view(), E11-S84; None in a release install. Neither fetches here)
     POST /api/server/restart   {"profile", "anyway"?: bool} -> 202 {"restarting": true,
                                 "started_at"} (the running server's, build.status()'s, so the
                                 page knows the new one by a different started_at)
@@ -33,7 +35,7 @@ import sys
 import threading
 import time
 
-from decklab.lib import build, config, control, release_check, tunnel
+from decklab.lib import build, config, control, release_check, tunnel, update_channel
 
 from . import guard
 from .common import ApiError, _load_json
@@ -137,7 +139,7 @@ def view():
     _admin()
     why = _why_not()
     return {"may_restart": why is None, "why_not": why, "busy": _busy(), "restarting": _restarting(),
-            "release": release_check.view()}
+            "release": release_check.view(), "updates": update_channel.view()}
 
 
 def _command(port):

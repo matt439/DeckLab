@@ -115,12 +115,12 @@ class PairTests(unittest.TestCase):
 
 class ThresholdSettingTests(unittest.TestCase):
     def test_defaults_and_overrides(self):
-        self.assertEqual(shrink.thresholds({}), (shrink.PROPOSED_PERCENT, shrink.PROPOSED_MIN_ROWS))
+        self.assertEqual(shrink.thresholds({}), (shrink.DEFAULT_PERCENT, shrink.DEFAULT_MIN_ROWS))
         self.assertEqual(shrink.thresholds({"shrink_warn_percent": 10, "shrink_warn_rows": 50}), (10.0, 50))
         for bad in (True, "10", 0, 500, None, -1):
-            self.assertEqual(shrink.thresholds({"shrink_warn_percent": bad})[0], shrink.PROPOSED_PERCENT, bad)
+            self.assertEqual(shrink.thresholds({"shrink_warn_percent": bad})[0], shrink.DEFAULT_PERCENT, bad)
         for bad in (True, "10", 0, 10**9, None, -1):
-            self.assertEqual(shrink.thresholds({"shrink_warn_rows": bad})[1], shrink.PROPOSED_MIN_ROWS, bad)
+            self.assertEqual(shrink.thresholds({"shrink_warn_rows": bad})[1], shrink.DEFAULT_MIN_ROWS, bad)
 
     def test_judge_uses_the_settings(self):
         rows = [row(True, 0, counts(collection_card=900)), row(True, 1, BASE)]
@@ -172,7 +172,7 @@ class WordingTests(unittest.TestCase):
 
 
 class OffByDefaultTests(unittest.TestCase):
-    """Off until Matt agrees the watched tables and thresholds: no status lines, no nightly step."""
+    """Off until config.json's database.shrink_warn is true: no status lines, no nightly step."""
     ROWS = [row(True, 0, counts(deck=3)), row(True, 1, BASE)]
 
     def test_enabled_only_when_set_true(self):
@@ -215,7 +215,17 @@ class NightlyShrinkTests(unittest.TestCase):
             self.assertIsNone(shrink.nightly(logged.append, s=ON))
         self.assertEqual(logged[-1], "Nightly: the shrink check couldn't be read: RuntimeError.")
 
-    def _run(self, backup_code, shrunk):
+    def test_nightly_outcome_gives_the_heartbeat_detail(self):
+        rows = [row(True, 0, counts(purchase_order=1, token_card=None)), row(True, 1, BASE)]
+        ok, detail = shrink.nightly_outcome(lambda line: None, rows=rows, s=ON)
+        when = f"{(NOW - timedelta(days=1)).astimezone():%Y-%m-%d}"
+        self.assertIs(ok, False)
+        self.assertEqual(detail, f"token_card not compared since {when}; purchase_order 30->1 since {when}")
+        self.assertEqual(shrink.nightly_outcome(lambda line: None, rows=[row(True, 0, BASE), row(True, 1, BASE)], s=ON),
+                         (True, None))
+        self.assertEqual(shrink.nightly_outcome(lambda line: None, rows=rows, s={}), (None, None))
+
+    def _run(self, backup_code, shrunk, detail=None):
         def step(code=0):
             return lambda *a, **k: code
         with mock.patch.object(backup, "run_backup", step(backup_code)), \
@@ -224,20 +234,28 @@ class NightlyShrinkTests(unittest.TestCase):
                 mock.patch.object(nightly, "_restore_check_if_due", step()), \
                 mock.patch.object(nightly, "_shop_prices", step()), mock.patch.object(db, "log"), \
                 mock.patch.object(health, "heartbeat_steps", return_value={}), \
-                mock.patch.object(shrink, "nightly", return_value=shrunk) as judged, \
+                mock.patch.object(shrink, "nightly_outcome", return_value=(shrunk, detail)) as judged, \
                 mock.patch.object(alerts, "notify") as notify:
             code = nightly._run()
+        self.last_details = notify.call_args.kwargs.get("details")
         return code, notify.call_args.args[0], judged
 
     def test_a_shrink_warns_the_heartbeat_without_failing_the_night(self):
-        code, sent, _ = self._run(0, False)
+        code, sent, _ = self._run(0, False, "deck 40->3 since 2026-11-11")
         self.assertEqual(code, 0)
         self.assertIs(sent["shrink"], False)
         self.assertIs(sent["nightly"], True)
+        self.assertEqual(self.last_details, {"shrink": "deck 40->3 since 2026-11-11"})
 
     def test_no_shrink_is_ok_and_unread_sends_nothing(self):
         self.assertIs(self._run(0, True)[1]["shrink"], True)
+        self.assertIsNone(self.last_details)
         self.assertNotIn("shrink", self._run(0, None)[1])
+        self.assertIsNone(self.last_details)
+
+    def test_a_failing_check_is_neither_sent_nor_fails_the_night(self):
+        with mock.patch.object(db, "log"), mock.patch.object(shrink, "nightly_outcome", side_effect=RuntimeError("x")):
+            self.assertEqual(nightly._shrink_check(), (None, None))
 
     def test_no_shrink_check_after_a_failed_backup(self):
         code, sent, judged = self._run(1, False)
@@ -245,14 +263,59 @@ class NightlyShrinkTests(unittest.TestCase):
         self.assertNotIn("shrink", sent)
         judged.assert_not_called()
 
-    def test_heartbeat_carries_only_the_step_name(self):
-        opener = mock.Mock()
-        opener.open.return_value.__enter__ = lambda s: mock.Mock(status=204)
-        opener.open.return_value.__exit__ = lambda *a: None
-        self.assertTrue(alerts.notify({"shrink": False, "nightly": True},
-                                      settings={"alerts": "https://hooks.example.com/x"}, opener=opener))
-        request = opener.open.call_args.args[0]
-        self.assertEqual(json.loads(request.data), {"steps": {"nightly": "ok", "shrink": "failed"}})
+
+def _opener():
+    opener = mock.Mock()
+    opener.open.return_value.__enter__ = lambda s: mock.Mock(status=204)
+    opener.open.return_value.__exit__ = lambda *a: None
+    return opener
+
+
+SETTINGS = {"alerts": "https://hooks.example.com/x"}
+
+
+class HeartbeatDetailTests(unittest.TestCase):
+    def sent(self, outcomes, details=None):
+        opener = _opener()
+        self.assertTrue(alerts.notify(outcomes, details=details, settings=SETTINGS, opener=opener))
+        return json.loads(opener.open.call_args.args[0].data)
+
+    def test_detail_names_table_counts_and_date_only(self):
+        earlier = NOW - timedelta(days=1)
+        findings = shrink.compare(BASE, counts(collection_card=600, deck=3, accessory=None))
+        detail = shrink.heartbeat_detail(findings, earlier)
+        when = f"{earlier.astimezone():%Y-%m-%d}"
+        self.assertEqual(detail, f"collection_card 1000->600 since {when}; deck 40->3 since {when}; "
+                                 f"accessory not compared since {when}")
+        for word in ("public.", "collection table", "decks", "space", "home"):
+            self.assertNotIn(word, detail)
+        self.assertIsNone(shrink.heartbeat_detail([], earlier))
+        self.assertIsNone(shrink.heartbeat_detail(findings, None))
+
+    def test_without_details_only_the_step_name(self):
+        self.assertEqual(self.sent({"shrink": False, "nightly": True}),
+                         {"steps": {"nightly": "ok", "shrink": "failed"}})
+
+    def test_a_failed_shrink_carries_its_detail(self):
+        self.assertEqual(self.sent({"shrink": False, "nightly": True}, {"shrink": "deck 40->3 since 2026-11-11"}),
+                         {"steps": {"nightly": "ok", "shrink": "failed"},
+                          "details": {"shrink": "deck 40->3 since 2026-11-11"}})
+
+    def test_detail_only_for_a_failed_detail_step(self):
+        self.assertNotIn("details", self.sent({"shrink": True}, {"shrink": "deck 40->3"}))
+        self.assertNotIn("details", self.sent({"check": False}, {"check": "PRIVATE"}))
+        self.assertNotIn("details", self.sent({"backup": False}, {"shrink": "deck 40->3"}))
+        self.assertNotIn("details", self.sent({"shrink": False}, {"shrink": 12}))
+        self.assertNotIn("details", self.sent({"shrink": False}, {"shrink": " \n "}))
+        self.assertNotIn("details", self.sent({"shrink": False}, ["shrink"]))
+
+    def test_detail_is_bounded_printable_ascii(self):
+        sent = self.sent({"shrink": False}, {"shrink": "deck\n40->3é " + "x" * 1000})
+        line = sent["details"]["shrink"]
+        self.assertEqual(len(line), alerts.MAX_DETAIL)
+        self.assertTrue(line.startswith("deck 40->3  x"))
+        self.assertTrue(line.endswith("..."))
+        self.assertTrue(all(32 <= ord(ch) < 127 for ch in line))
 
 
 if __name__ == "__main__":

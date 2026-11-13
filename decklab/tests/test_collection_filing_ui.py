@@ -57,6 +57,44 @@ class CollectionFilingUiTests(unittest.TestCase):
           colTakeNotice(fresh); assert.equal(main.querySelectorAll('.col-filing-guide').length, 1);
         """)
 
+    def test_the_storage_group_names_the_spaces_default_container(self):
+        """E8-S25 slice 6: the built-in box, a sleeved binder, no default container, an older answer."""
+        self.run_js(r"""
+          const cases = [
+            [{name: 'Storage box', kind: 'box', sleeved: false}, 'To Storage box', 'they go unsleeved into the storage box.'],
+            [{name: 'Binder', kind: 'binder', sleeved: true}, 'To Binder', 'they go into the binder.'],
+            [null, 'To storage', 'they go with your loose cards.'],
+            [undefined, 'To storage', 'keep them with your unsleeved cards.']];
+          for (const [place, head, words] of cases) {
+            const {ctx} = await openGrouped(); readyGroups(ctx); const answer = reply();
+            if (place !== undefined) answer.filing.storage_default = place;
+            apiWrite = async () => answer; await applyImport(ctx, false); view();
+            const panel = guide().querySelectorAll('.col-filing-panel').find(p => p.querySelector('h3').textContent === head);
+            assert(panel, 'no panel ' + head + ': ' + guide().textContent);
+            assert(panel.textContent.includes('Copies left after the waiting decks: ' + words), panel.textContent);
+            assert(panel.textContent.includes('1 × Aerie Mystics'));
+          }
+        """)
+
+    def test_each_storage_line_says_its_section_by_the_rule(self):
+        """E8-S25 slice 7: storage_default's sections and the answer's storage_groups; nothing without them."""
+        self.run_js(r"""
+          const sections = {creatures: 'Row 1', spells: 'Row 2', lands: 'Row 3', tokens: 'Row 4'};
+          const cases = [[{creatures: 'Creature', 'Aerie Mystics': 'creatures', 'Llanowar Elves': 'tokens'},
+              sections, ['1 × Llanowar Elves (FDN 227)', '1 × Aerie Mystics (CON 1 · Foil) · Row 1 · Creatures']],
+            [{'Aerie Mystics': 'creatures'}, {spells: 'Row 2'}, ['1 × Llanowar Elves (FDN 227)', '1 × Aerie Mystics (CON 1 · Foil)']],
+            [undefined, sections, ['1 × Llanowar Elves (FDN 227)', '1 × Aerie Mystics (CON 1 · Foil)']]];
+          for (const [groups, map, lines] of cases) {
+            const {ctx} = await openGrouped(); readyGroups(ctx); const answer = reply();
+            answer.filing.storage_default = {name: 'Storage box', kind: 'box', sleeved: false, sections: map};
+            if (groups !== undefined) answer.filing.storage_groups = groups;
+            apiWrite = async () => answer; await applyImport(ctx, false); view();
+            const panel = guide().querySelectorAll('.col-filing-panel').find(p => p.querySelector('h3').textContent === 'To Storage box');
+            assert(panel, guide().textContent);
+            same(panel.querySelectorAll('li').map(li => li.textContent), lines);
+          }
+        """)
+
     def test_exact_printing_case_and_finish_stay_separate_and_added_counts_ignore_old_copies(self):
         self.run_js(r"""
           const cv = view(), answer = {added: {rows: 0, cards: 2}, filing: {space: 'home', profile: 'matt', status: 'ready',

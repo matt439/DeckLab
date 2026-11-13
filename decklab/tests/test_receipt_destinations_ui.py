@@ -36,6 +36,59 @@ class ReceiptDestinationTests(unittest.TestCase):
           assert(post.textContent.includes('2 \u00d7 Alpha'));assert(!/not known|unavailable/i.test(post.textContent));
         """, draw=False)
 
+    def test_storage_words_name_homes_default_container(self):
+        """E8-S25 slice 6: the built-in box, a sleeved binder, no default container, and an older answer."""
+        self.run_js("""
+          const cases=[
+            [{name:'Storage box',kind:'box',sleeved:false},'To Storage box','they go unsleeved into the storage box.',
+              'its cards go into the storage box.','Its cards go into the storage box, free for any deck.'],
+            [{name:'Binder',kind:'binder',sleeved:true},'To Binder','they go into the binder.',
+              'its cards go into the binder.','Its cards go into the binder, free for any deck.'],
+            [{name:"Matt's Shelf 2",kind:'shelf',sleeved:false},"To Matt's Shelf 2","they go unsleeved into Matt's Shelf 2.",
+              "its cards go into Matt's Shelf 2.","Its cards go into Matt's Shelf 2, free for any deck."],
+            [null,'To storage','they go with your loose cards.','its cards go with your loose cards.',
+              'Its cards go with your loose cards, free for any deck.'],
+            [undefined,'To storage','they go unsleeved into the storage box.','its cards go into the storage box.',
+              'Its cards go into the storage box, free for any deck.']];
+          for(const [place,head,go,broken,choice] of cases){
+            clear(main);const d=delivery();if(place!==undefined)d.storage_default=place;
+            d.components[0].rows=d.components[0].rows.slice(0,1);d.components[0].decks=[[]];
+            d.components.push({id:'kit',kind:'product',status:'pending',checks:[],fields:[],rows:[],product:{name:'Kit'},
+              items:[{name:'Alpha',set:'tst',collector_number:'1',finish:'nonfoil',quantity:'60',section:'deck'}],pictures:[],decks:[]});
+            const v=drawReceipt(d,routeToken);v.comps.forEach(c=>c.selected=true);rcptTick(v,v.comps[0],v.comps[0].rows[0],true);v.comps[1].intact='no';
+            const post=add(el('div',{}),rcptWhereTheyGo(v,rcptReceived(v)));
+            const storage=post.querySelectorAll('.rcpt-where').find(p=>p.querySelector('h3').textContent===head);
+            assert(storage,'no panel: '+post.textContent);assert(storage.textContent.includes('No deck is waiting for these: '+go),storage.textContent);
+            assert(post.textContent.includes('Broken up: '+broken),post.textContent);
+            assert.equal(storage.textContent.includes('unsleeved'),!!place?.sleeved===false&&place!==null);
+            const card=rcptIntactChoice(v,v.comps[1]).querySelectorAll('button').find(b=>b.getAttribute('data-intact')==='no');
+            assert(card.textContent.includes(choice),card.textContent);
+          }
+        """, draw=False)
+
+    def test_storage_lines_and_token_cards_say_their_section_by_the_rule(self):
+        """E8-S25 slice 7: storage_default's sections with the view's storage_groups; nothing without them."""
+        self.run_js("""
+          const sections={creatures:'Row 1',spells:'Row 2',lands:'Row 3',tokens:'Row 4'};
+          const cases=[[sections,{Alpha:'creatures'},'2 \\u00d7 Alpha \\u00b7 Row 1 \\u00b7 Creatures',
+              '3 token cards go with your tokens, in the storage box: Row 4 \\u00b7 Token cards.'],
+            [{spells:'Row 2'},{Alpha:'creatures'},'2 \\u00d7 Alpha','3 token cards go with your tokens.'],
+            [sections,undefined,'2 \\u00d7 Alpha','3 token cards go with your tokens, in the storage box: Row 4 \\u00b7 Token cards.'],
+            [undefined,{Alpha:'creatures'},'2 \\u00d7 Alpha','3 token cards go with your tokens.']];
+          for(const [map,groups,line,tokens] of cases){
+            clear(main);const d=delivery();d.storage_default={name:'Storage box',kind:'box',sleeved:false,...(map?{sections:map}:{})};
+            if(groups)d.storage_groups=groups;
+            d.components[0].rows=d.components[0].rows.slice(0,1);d.components[0].decks=[[]];
+            const v=drawReceipt(d,routeToken);rcptTick(v,v.comps[0],v.comps[0].rows[0],true);
+            const received=[...rcptReceived(v),{kind:'tokens',rows:[{values:{quantity:'3'}}]}];
+            const post=add(el('div',{}),rcptWhereTheyGo(v,received));
+            const storage=post.querySelectorAll('.rcpt-where').find(p=>p.querySelector('h3').textContent==='To Storage box');
+            assert(storage,post.textContent);same(storage.querySelectorAll('li').map(li=>li.textContent),[line]);
+            const token=post.querySelectorAll('.rcpt-where').find(p=>p.querySelector('h3').textContent==='Token cards');
+            assert(token.textContent.includes(tokens),token.textContent);
+          }
+        """, draw=False)
+
     def test_split_and_printing_rows_share_each_deck_waiting_cap_and_pre_post_confidence(self):
         self.run_js("""
           const d=delivery(),c=d.components[0];c.checks=[];c.rows[0].quantity='3';

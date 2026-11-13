@@ -12,7 +12,7 @@ from unittest import mock
 
 from decklab.lib import access, inventory
 from decklab.lib.inventory.model import DeckRevision
-from decklab.lib.api import deck_page, library_played
+from decklab.lib.api import deck_page, guard, library_played
 from decklab.lib.api import play_pods as pods
 from decklab.lib.api import play_records as play
 from decklab.tests.test_api import ApiTestCase, ELF_COMMANDER, _write
@@ -180,13 +180,25 @@ class DeckPlayedTests(MixedFixture, ApiTestCase):
     def test_a_member_s_deck_page_names_no_hidden_side(self):
         with access.viewing("user2"):
             answer = deck_page.deck_view("user2/casual/r-elves")
-        self.assertEqual(answer["played"], {"last": "2026-10-08", "games": 2,
+        self.assertEqual(answer["played"], {"last": "2026-10-08", "games": 2, "can_record": True,
                                             "since": {"version": "target", "changes": [], "more": 0}})
         text = json.dumps(answer["played"])
         self.assertNotIn("gruul", text)
         self.assertNotIn("m-elves", text)
         with access.viewing("user3"):
             self.assertEqual(library_played.deck_played("user3/casual/m-elves")["games"], 1)
+
+    def test_can_record_follows_the_game_log_s_play_record_rule(self):
+        # Record a game is offered only where the Game log's quick record takes the deck (E11-S61): a
+        # Public deck of another space is read-only, so its page offers only the Game log.
+        with access.viewing("matt"):
+            self.assertIs(deck_page.deck_view("casual/gruul-test")["played"]["can_record"], True)
+        with access.viewing("user2"), mock.patch.object(guard, "public_deck_spaces", return_value=frozenset({"home"})):
+            played = deck_page.deck_view("casual/gruul-test")["played"]
+        self.assertIs(played["can_record"], False)
+        self.box.state.down = True
+        with access.viewing("matt"):
+            self.assertIsNone(deck_page.deck_view("casual/gruul-test")["played"])
 
     def test_games_that_can_t_be_read_or_a_failing_comparison(self):
         self.box.state.down = True

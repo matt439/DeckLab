@@ -10,24 +10,27 @@ holds the shrunk counts, and comparing with it would hide the loss.
 
 What it says is whole-table counts only: a table's label, from what count to what, and the
 earlier dump's date; never a space, a row or anything a row holds. The lines go to
-`python -m decklab.db status` (under Backups) and the nightly's log, and the nightly's operator
-heartbeat gets the fixed step name "shrink" as failed (nothing else leaves the PC). A shrink is
-a warning, never a failed night: the backup itself worked.
+`python -m decklab.db status` (under Backups) and the nightly's log. The nightly's operator
+heartbeat gets the step "shrink" as failed with heartbeat_detail()'s one line (bounded by
+operator_alerts): for each table that shrank only its table name, from-count, to-count and the
+earlier dump's date, and for one either dump lacks only its name and "not compared". Nothing
+else about the data leaves the PC. A shrink is a warning, never a failed night: the backup
+itself worked.
 
-OFF until Matt agrees the watched tables and the thresholds: config.json's "database" block
-turns it on with "shrink_warn": true. Off, the nightly runs no check and sends no "shrink" step,
-and `status` shows nothing for it.
+OFF until config.json's "database" block turns it on with "shrink_warn": true, a live setting
+Matt makes on the server PC. Off, the nightly runs no check and sends no "shrink" step, and
+`status` shows nothing for it.
 
-The watched tables and the thresholds are PROPOSED defaults, waiting on Matt's agreement:
-a table counts as shrunk when it lost more than PROPOSED_PERCENT per cent of its rows AND at
-least PROPOSED_MIN_ROWS rows (so a small table losing one row doesn't warn). config.json's
+The watched tables and the thresholds are as Matt agreed them on 2026-11-13: a table counts as
+shrunk when it lost more than DEFAULT_PERCENT per cent of its rows AND at least
+DEFAULT_MIN_ROWS rows (so a small table losing one row doesn't warn). config.json's
 "database" block may set "shrink_warn_percent" and "shrink_warn_rows" to change them.
 """
 from datetime import timedelta
 
 from decklab.db import backup, conn as db
 
-# label -> schema.table, as backup.count_rows names them. PROPOSED: Matt agrees the list.
+# label -> schema.table, as backup.count_rows names them (Matt agreed the list, 2026-11-13).
 WATCHED = (
     ("collection", "public.collection_card"),
     ("decks", "public.deck"),
@@ -36,8 +39,8 @@ WATCHED = (
     ("wishlists", "public.wishlist_entry"),
     ("accessories", "public.accessory"),
 )
-PROPOSED_PERCENT = 25             # more than this share of a table's rows gone (per cent)
-PROPOSED_MIN_ROWS = 5             # and at least this many rows gone
+DEFAULT_PERCENT = 25              # more than this share of a table's rows gone (per cent)
+DEFAULT_MIN_ROWS = 5              # and at least this many rows gone
 MIN_GAP_HOURS = 20                # the earlier dump is at least this much older than the newest
 RECENT = 60                       # dump rows read to find the two good ones with counts
 ENABLED_KEY = "shrink_warn"
@@ -47,14 +50,14 @@ SHRANK, MISSING = "shrank", "missing"
 
 def enabled(s=None):
     """Whether config.json's "database" block turned the check on ("shrink_warn": true); off by
-    default until Matt agrees the watched tables and thresholds."""
+    default."""
     s = s if s is not None else db.settings()
     return s.get(ENABLED_KEY) is True
 
 
 def thresholds(s=None):
     """(percent, min_rows) from config.json's "database" block, each falling back to the
-    proposed default when it isn't set or isn't a sensible number."""
+    agreed default when it isn't set or isn't a sensible number."""
     s = s if s is not None else db.settings()
 
     def number(key, default, low, high, kind):
@@ -63,8 +66,8 @@ def thresholds(s=None):
             return default
         value = kind(value)
         return value if low <= value <= high else default
-    return (number(PERCENT_KEY, PROPOSED_PERCENT, 1, 100, float),
-            number(ROWS_KEY, PROPOSED_MIN_ROWS, 1, 10_000_000, int))
+    return (number(PERCENT_KEY, DEFAULT_PERCENT, 1, 100, float),
+            number(ROWS_KEY, DEFAULT_MIN_ROWS, 1, 10_000_000, int))
 
 
 def _count(counts, table):
@@ -72,7 +75,7 @@ def _count(counts, table):
     return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
 
 
-def compare(previous, current, *, watched=WATCHED, percent=PROPOSED_PERCENT, min_rows=PROPOSED_MIN_ROWS):
+def compare(previous, current, *, watched=WATCHED, percent=DEFAULT_PERCENT, min_rows=DEFAULT_MIN_ROWS):
     """The watched tables that shrank sharply or couldn't be compared between two dumps' recorded
     counts ({schema.table: count}), in watched's order: each {"label", "table", "kind" (SHRANK or
     MISSING), "before", "after"} (None for a count a dump lacks). A table shrank when it lost
@@ -126,6 +129,24 @@ def lines(findings, earlier):
     return out
 
 
+def heartbeat_detail(findings, earlier):
+    """The heartbeat's one line for findings (compare's), or None without any: per table only
+    its table name (no schema), from-count, to-count and the earlier dump's date (the PC's local
+    date, as the log's), such as "deck 40->3 since 2026-11-11; token_card not compared since
+    2026-11-11". operator_alerts bounds its length. Pure."""
+    if not findings or earlier is None:
+        return None
+    when = f"{earlier.astimezone():%Y-%m-%d}"
+    parts = []
+    for f in findings:
+        name = f["table"].rpartition(".")[2]
+        if f["kind"] == SHRANK:
+            parts.append(f"{name} {int(f['before'])}->{int(f['after'])} since {when}")
+        else:
+            parts.append(f"{name} not compared since {when}")
+    return "; ".join(parts)
+
+
 def read_rows(dbname=None):
     """The newest RECENT dump rows (ok, started_at, detail), newest first, read-only."""
     with db.connect("ro", dbname=dbname, autocommit=True) as c:
@@ -162,22 +183,28 @@ def nightly(log=None, rows=None, s=None):
     """The nightly's check after the backup: logs each finding and returns True when nothing
     shrank and every watched table was compared, False when something did or couldn't be, and
     None when it couldn't be read or is off (nothing is sent for it then; off, nothing is logged)."""
+    return nightly_outcome(log, rows, s)[0]
+
+
+def nightly_outcome(log=None, rows=None, s=None):
+    """(nightly()'s result, the heartbeat's detail line): the line is heartbeat_detail()'s,
+    None unless a table shrank or couldn't be compared."""
     log = log or db.log
     try:
         s = s if s is not None else db.settings()
         if not enabled(s):
-            return None
+            return None, None
         rows = read_rows() if rows is None else rows
         findings, earlier = judge(rows, s)
     except Exception as e:            # noqa: BLE001 (the night goes on)
         log(f"Nightly: the shrink check couldn't be read: {type(e).__name__}.")
-        return None
+        return None, None
     if earlier is None:
         log("Nightly: no shrink check tonight (no good dump with counts at least "
             f"{MIN_GAP_HOURS} hours older to compare with).")
-        return True
+        return True, None
     for line in lines(findings, earlier):
         log(f"Nightly: WARNING: {line}.")
     if not findings:
         log(f"Nightly: shrink check: no watched table shrank sharply since the dump of {earlier.astimezone():%Y-%m-%d %H:%M}.")
-    return not findings
+    return not findings, heartbeat_detail(findings, earlier)

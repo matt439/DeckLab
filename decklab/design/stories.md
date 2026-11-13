@@ -37,16 +37,16 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 23 | 2 | 0 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 42 | 37 | 5 | 0 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 26 | 1 | 1 | 2 |
+| [E3: Test a deck](#e3-test-a-deck) | 42 | 38 | 4 | 0 | 0 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 26 | 1 | 0 | 3 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 36 | 33 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 23 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 35 | 1 | 0 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 19 | 0 | 2 | 2 |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 20 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 33 | 29 | 0 | 3 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 87 | 63 | 15 | 5 | 4 |
-| **Total** | **396** | **342** | **25** | **13** | **16** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 87 | 68 | 11 | 4 | 4 |
+| **Total** | **396** | **349** | **20** | **10** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1395,7 +1395,7 @@ First slice: casual decks only: a legality-free fit in `decklab/lib/decks/role_p
 
 Built (2026-11-11): Free cards by role supports ordinary casual lists using the selected list's non-land colours, without Commander legality or a claimed target, through the same hidden-deck/inventory guards. Commander Stats places a lazy comparable-ranges fold after the cited targets. Its intrinsic public-cache-only projection uses unique complete100-card playable same-tier catalogue decks (target Bracket2/core or3/upgraded), with low/typical/high25th/50th/75th percentiles, build date, deck count and 'a range, not a recipe'. Missing dates/tags/catalogue, unsupported tier or fewer than10 comparable decks yield no band. It never fetches, rebuilds, loads inventory for ranges or changes a target. Async panels retain profile/route/connected ownership.68 focused role/API/UI/privacy/declaration/web checks pass; Ruff and source bounds pass. No actual card pool/catalogue, recommendations, Forge run or source fetch was used.
 
-**E3-S43** · Matt · could · S · partial
+**E3-S43** · Matt · could · S · built
 
 As the person who runs the gauntlet, I want to see when the popular decks list was built and what a rebuild would change, so that a rebuild never orphans results by surprise.
 
@@ -1406,9 +1406,9 @@ As the person who runs the gauntlet, I want to see when the popular decks list w
 
 Status: partial. Now: the first slice is built (2026-11-10; [HISTORY.md](../HISTORY.md#when-the-popular-decks-list-was-built-and-what-a-rebuild-would-change-2026-11-10-e3-s43-first-slice)): the muted "Popular decks list built <date> (<short sha>)" line on the Popular decks board and a deck's Against popular decks, with its age from 90 days old and never a request to rebuild (`gauntlet_page.catalogue_stamp`, `gtBuiltLine`), and `gauntlet build`'s printed difference before saving and on a dry run (opponents' lists changed, joined, left; whether the standard sample would change: `lib/gauntlet/catalogue.difference`). Left: `gauntlet export FILE` / `gauntlet import FILE` (catalogues and saved samples with a verified sha, playable decks screened again, no house results), which waits for Matt's decision on `FG#4` (copy the development PC's catalogue to the server, or build its own).
 
-Awaiting: decision
+Decided (Matt, 2026-11-13): each PC builds its own catalogue (`FG#4` builds the server's with `gauntlet build`), so criterion 4's `gauntlet export`/`import` isn't wanted and is withdrawn; the story is complete with criteria 1-3.
 
-Remaining: Criterion 4 is unbuilt: `gauntlet export FILE` / `gauntlet import FILE` (catalogues and saved samples with a verified sha, playable decks screened again, no house deck's results). It waits for Matt's decision on FG#4: copy the development PC's catalogue to the server, or build its own there. Criteria 1-3 (the built line on the board and Testing tab, the age note from 90 days, and gauntlet build's printed difference) are done.
+Withdrawn criterion 4 (kept for the record): `gauntlet export FILE` / `gauntlet import FILE` (catalogues and saved samples with a verified sha, playable decks screened again, no house deck's results). It waits for Matt's decision on FG#4: copy the development PC's catalogue to the server, or build its own there. Criteria 1-3 (the built line on the board and Testing tab, the age note from 90 days, and gauntlet build's printed difference) are done.
 
 Gap: the catalogue already records its build date and sha (E3-S28), and E3-S34 explains results a rebuild set aside; there is no export or import yet. From the product review of 2026-11-10. Needs Matt's decision: whether `FG#4` copies the development PC's catalogue to the server or builds its own as planned.
 
@@ -1990,7 +1990,7 @@ Built 2026-11-11: both modern counters use a shared guarded wake-lock helper, re
 
 Evidence: `play_markers.py`, `life-counter-tools.js`, life/pod models and controls, and scoped marker/Undo/wake/privacy fixtures. 222 targeted tests pass (one DB qualification skip); smoke rendering passed 8/8 cases with simulated Wake Lock and complete cleanup. The full `life-counters` matrix has 24 synthetic cases, including supported/unavailable wake, both themes and phone/tablet/desktop controls. Real device wake/Safari acceptance remains separate. From the product review of 2026-11-10, compared with Lifetap, Playgroup.gg and Magic Life Counter.
 
-**E4-S33** · Matt · could · L · missing
+**E4-S33** · Matt · wont · L · not_wanted
 
 As Matt, learning a new deck before taking it to the table, I want to play a kept practice hand out by hand, so that I can see how its first turns go without a Forge game.
 
@@ -2001,7 +2001,7 @@ As Matt, learning a new deck before taking it to the table, I want to play a kep
 
 Gap: Deal a hand (E4-S08) stops after the draw: `web/hands.js` has only hand and library. E4-S09 (keep-or-mulligan feedback) and the automated goldfish are separate. Token tiles and counters are a later slice; a saved note and a life counter are left out. From the product review of 2026-11-10, compared with Moxfield's and Archidekt's playtesters and ManaStack. Needs Matt's decision: whether a solo board with no rules engine is practice for the physical deck, or the digital play Deck Lab doesn't do.
 
-First slice: a board class beside `OpeningHand` in `web/hands.js` with play, tap, graveyard, next turn and a snapshot Undo, with model tests in `tests/test_play_ui.py`.
+Decided (Matt, 2026-11-13): not wanted. Magic here is played with physical cards; Deal a hand and keep-or-mulligan cover the opening and Forge covers how a deck plays, so a manual board with no rules engine would be digital play for little gain (free playtesters such as Moxfield's already exist).
 
 **E4-S34** · Matt · could · M · built
 
@@ -4033,7 +4033,7 @@ Evidence:
 - `decklab/tests/test_editor.py`: test_a_building_deck_chooses_its_kit_then_keeps_it_when_built, test_a_building_deck_made_an_idea_clears_its_kit_first; `test_editor_player_kit.py` (every case also on a building deck); `test_api_permissions_inventory.py` (kit visibility also on building decks)
 - `decklab/tests/test_assembly_kit.py`: test_a_building_decks_chosen_kit_is_prefilled_and_kept; `test_deck_kit_ui.py`: test_a_building_deck_shows_its_tiles_and_chooses_its_kit; `test_deck_retirement.py`: test_building_deck_holding_kit_cannot_be_retired; `test_receipts_api.py`: test_sleeves_show_for_building_decks_too_but_never_ideas
 
-**E8-S25** · Matt · should · M · missing
+**E8-S25** · Matt · should · M · built
 
 As Matt, or anyone setting up Deck Lab with their own cards, I want to say what my storage is like, so that "storage" on Deck Lab's pages means how I really keep my cards, not one household's box.
 
@@ -4043,7 +4043,19 @@ As Matt, or anyone setting up Deck Lab with their own cards, I want to say what 
 
 Decided (Matt, 2026-11-04): today "storage" really only means how Matt does it, so it needs to become a setting.
 
-Gap: the inventory and proposal are written ([storage-setting.md](storage-setting.md), 2026-11-05). They list every place that assumes the 4-row box or its colour-and-type order (the Card list's count, the pending scenario, the Row 1 to Row 4 suggestions every space gets, Build decks' Storage order, Where these go and Receive delivery). They propose a per-space record of containers (name, kind, capacity, sections, ordering rule) in a new audited table, edited on the Collection page by the space's own people and shown on Activity only to them. Home keeps today's box whenever it has no saved record. Next: Matt answers the questions in its part 4, then slice 2 (the record, its reader and the `storage show|set` commands).
+Decided (Matt, 2026-11-13): part 4 of [storage-setting.md](storage-setting.md) as proposed: one record per space, edited on the Collection page by its own people; home's Row 1 to Row 4 hold creatures, spells, lands and token cards; the rules colour-type, set, name and none; a sleeved flag per container; `storage_box_capacity` seeds home's built-in box until its first save; storage follows a Public collection, read-only; a new install's home keeps the built-in box and opts out by saving no containers; containers stay apart from accessories.
+
+Built (2026-11-13), slices 2 and 3: the `space_storage` table (migration `0028_space_storage.sql`, not applied live), its store read and write with a revision and the audit trail (`lib/state/space_storage.py`, `pg_space_storage.py`, `lib/storage_setting.py`), `storage.edit` (the space's own people, no admin override), `GET`/`PUT /api/storage?space=`, `python -m decklab.db storage show|set` (`--expect`, `-m`, `--actor`, `--dry-run`, refused before 0028), and the table in the export, `db check`, admission, removal, the member export and Activity ("Storage setup updated", only to the space's own people). The Card list counts per container from the setup (the one-box sentences kept for one container), location suggestions and the bulk review's example come from its sections (a member's space no longer gets home's Row 1 to 4), and the pending-delivery scenario routes by container. Home's built-in box now matches only Row 1 to Row 4. Tests: `test_space_storage`, `test_collection_locations_ui`, `test_collection_locations_bulk_ui`, `test_where_these_go_locations`; `test_space_storage_pg` runs in CI's database jobs.
+
+Built (2026-11-13), slice 4: the Collection page's More, **Storage setup…** (`web/storage-setup.js`), also the count line's **Change…**, for the space's own people: containers with name, kind, capacity, sections (one per line, or `4 rows`), order and sleeved, added, removed and moved, and where cards with no location go; a preview (`POST /api/storage/preview`, writing nothing) of the counts now and after, the recorded locations that would change container (by count) and the new suggestions; Save sends the revision read, a setup saved meanwhile offers Load the latest, and before 0028 nothing can be saved. Tests: `test_storage_setup_ui`, `test_collection_locations` (`StoragePreviewTests`).
+
+Built (2026-11-13), slice 5: Build decks' second card order follows home's default container's rule (the plan's `storage_order`, `lib/api/assembly_locations.py`): `colour-type` keeps Storage order as it was; `set` offers **Set order**, a divider per set in collector-number order from the printing of home's copy filed there, basics and token cards keeping their own steps; `name`, `none` and no default container offer only Name (the saved choice comes back later). Tests: `test_assembly_storage_order_ui`, `test_collection_locations` (`StorageOrderTests`).
+
+Built (2026-11-13), slice 6: the words. Receive delivery (`GET /api/receipt`'s `storage_default`, always home's), Where these go (every filing answer's `storage_default`, the collection's own space's, so a member gets their own container and never home's), the CLI merge guide (`  Storage (<container>):`) and Build decks' Put back (`storage_order`'s `sleeved`) name the default container and say "unsleeved" only for one that isn't sleeved; with no default container, "To storage" and "your loose cards". Home's built-in heading is now "To Storage box". Tests: `test_receipt_destinations_ui`, `test_collection_filing_ui`, `test_assembly_storage_order_ui`, `test_receipts_api`, `test_collection_locations` (`StorageWordsTests`), `test_collection_merge_filing_cli`.
+
+Built (2026-11-13), slice 7: sections from the rule (a colour-type container's optional `holds`, {section: creatures|spells|lands|tokens}, each group once; home's built-in box Row 1 creatures, Row 2 spells, Row 3 lands, Row 4 token cards; the Storage setup sheet's "What each section holds"; Where these go, Receive delivery, `collection merge` and Build decks' colour-type dividers name each card's section, "Row 1 · Creatures"); Build decks grouped by container (with two or more containers, `storage_order`'s `containers` and `placed`: each card under the first recorded location that matches a container, "Somewhere else", or the default container when none is recorded, then that container's own rule and sections); and Shopping's storage fill (`GET /api/shopping`'s `storage_fill`, home-record readers only: home's containers with a capacity, now and once pending orders arrive, from the Card list's count and pending scenario). Tests: `test_storage_sections`, `test_storage_setup_ui`, `test_collection_locations` (`StorageOrderTests`), `test_assembly_storage_order_ui`, `test_shopping_storage`, `test_shopping_storage_ui`.
+
+Deployment (the coordinator's, with Matt's OK): before 0028 reaches the server, list home's live locations (`collection locations`) for any `Row 5`-style one that would leave the box, then apply 0028 there.
 
 
 **E8-S26** · Space members · should · M · built
@@ -5313,7 +5325,7 @@ Evidence:
 - `decklab/cloudflare/test/worker.test.mjs`; `decklab/tests/test_cloudflare_worker.py`: test_the_worker_tests_pass, test_the_worker_looks_for_the_servers_header
 - `decklab/README.md`, "From outside the home"
 
-Gap: checked live only without a sign-in (Access answers first). Matt still has to check, signed in on a phone, the off page with Deck Lab stopped and then started again, and a deck save and an accessory photo upload through the Worker.
+Gap: checked live only without a sign-in (Access answers first). Matt still has to check, signed in on a phone, the off page with Deck Lab stopped and then started again, and a deck save and an accessory photo upload through the Worker; and at the next Worker deploy, deploy with README's `--config wrangler.local.toml` (The real routes; from E11-S62, 2026-11-13).
 
 **E11-S03** · Matt · must · L · built
 
@@ -6176,7 +6188,9 @@ Built (2026-11-04): the first slice. `scripts/make_release.py` makes the zip (tr
 
 Built (2026-11-05): Settings says when a newer release is out. On a release install only (a git checkout asks nothing), `lib/release_check.py` asks GitHub for the repository's latest published release at most once a day, in a background thread, and saves the answer in the gitignored `decklab/data/release-check.json`. Nothing is downloaded. A home admin's Settings, About part (`GET /api/server/restart`'s `release`, `web/settings-restart.js`), names a newer release with a link to its page. Otherwise it says this is the newest, or that it couldn't check, with the date of the last good check. `config.json`'s `"release_check"` turns it off (`false`) or names another repository (`"owner/repo"`). Tests: `decklab/tests/test_release_check.py`, `test_settings_restart_ui.py`, `test_server_restart.py`.
 
-Gap: the first real release, which Matt publishes; an update command for release installs (E11-S51).
+Decided (Matt, 2026-11-13): tag `v0.1.0` on main once `FG#2` (Forge 2.0.16) is running on the server; version tags on main are also the git checkouts' stable update channel (E11-S84).
+
+Gap: the first real release, tagging `v0.1.0` (Matt, or Claude with his OK), after `FG#2` reaches the server; an update command for release installs (E11-S51).
 
 **E11-S50** · Self-hoster · could · L · missing
 
@@ -6343,7 +6357,7 @@ Evidence:
 - `decklab/db/move.py` (`digest`, `restore`)
 - `SELF-HOSTING.md` ("Updating", "11. Moving Deck Lab to another PC"); `decklab/README.md` (`digest`, `restore`)
 
-**E11-S61** · Matt · could · S · missing
+**E11-S61** · Matt · could · S · built
 
 As Matt, finding things on Deck Lab, I want to know whether the More menus help or hide things, so that what people use often is in plain sight.
 
@@ -6352,9 +6366,11 @@ As Matt, finding things on Deck Lab, I want to know whether the More menus help 
 
 Decided (Matt, 2026-11-04): he couldn't find Build decks on the iPad, though he had used it before, because it was in the deck page's More; investigate the More dropdown and whether it's beneficial.
 
-Gap: Matt's decision on the review in [more-menus-review.md](more-menus-review.md) (2026-11-05): make Build decks a top-bar pill in the lab from 1000 px only (a CSS rule as well as `nav: "main"`, since a phone on its side gets the lab's bar from 600 px), staying in the phone's and upright iPad's More sheet and in a phone on its side's More ▾; add a Game log link to the deck Overview's Played at home panel; then take Build decks out of the Collection page's More; keep every other item. Then make the moves he agrees and record their reasons here. The page counts weren't available off the server PC: the review gives the read-only query to weigh Tokens, Sleeves & boxes, Wishlist and Activity with.
+Decided (Matt, 2026-11-13): the review's recommendation in short, as written.
 
-**E11-S62** · Matt · should · S · partial
+Built (2026-11-13): Build decks is a pill in the lab's top bar from 1000 px only: its route keeps `nav: "more"` with `pill: true`, drawn by `shell.js` as `li.nav-wide` with its More item `nav-narrow` (`shell.css`), so a phone on its side, the upright iPad and the phone's More sheet keep it in More only; the menus' focus and arrow keys skip an item the stylesheet hides (`core.js` wireMenu). The deck Overview's Played at home panel links the Game log filtered to the deck (`#/play?id=`): Open the Game log once it has games; before then Record a game, only to a viewer who may record one with it (`/api/deck` played.can_record, the Game log's per-deck `play.record`), else Open the Game log. The Collection page's More no longer offers Build decks; every other item stays. Tests: `test_shell_ui` (pill, hidden-item focus), `test_deck_overview_ui`, `test_device_layout_ui`, `test_accounts_ui`, `test_library_played`. The top bar at 667, 932 and 1000 px in a real browser joins E11-S30's device check; weighing Tokens, Sleeves & boxes, Wishlist and Activity by the server's page counts (the review's item 4) is for when they're read.
+
+**E11-S62** · Matt · should · S · built
 
 As Matt, publishing Deck Lab's code in a public repo, I want the Worker's config to name no real zone and CI to stop the next such leak, so that the public-repo rule is checked, not only written down.
 
@@ -6370,6 +6386,8 @@ Evidence:
 - `decklab/cloudflare/wrangler.toml`, `.gitignore` (`wrangler.local.toml`); `decklab/README.md`, "The real routes"
 
 Gap: only Matt's decision on a history rewrite. Run against the real config on 2026-11-10, the audit found nothing in the tree, and `git log --all -i -S` for each configured value (6 emails, the domain and its first label alone, the Access team address, the AUD tag) found no commit, so the history doesn't appear to hold the domain or emails as `config.json` has them and no rewrite looks needed. That search covers only values held in `config.json`; the README's wrangler `--config` and `--route` deploy steps were not run against wrangler.
+
+Decided (Matt, 2026-11-13): no history rewrite. The leftover check of README's `--config wrangler.local.toml` deploy joins E11-S02's next Worker deploy.
 
 **E11-S63** · Matt · could · S · partial
 
@@ -6610,7 +6628,7 @@ Built 2026-11-11: setup diagnostics classify recognized network/authentication/m
 
 Evidence: `lib/db_failures.py`, preflight/doctor, db.conn/setup/CLI, server startup, dbstatus and version.js; `test_setup_diagnostics.py` plus existing preflight/runtime/CLI/lifecycle tests cover sanitized classifications, write-free version refusal, cache truth, setup-vs-restore wording and optional simulation behavior. Targeted groups (146 and 112 tests, overlapping; three separate DB skips) pass. The password recipe follows PostgreSQL's HBA/psql docs; it was not executed on this install. E11-S68's log rotation remains separate. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md).
 
-**E11-S79** · Self-hoster · should · S · partial
+**E11-S79** · Self-hoster · should · S · built
 
 As a newcomer editing `decklab/config.json` by hand, I want a mistake in it to be named with its line, and a missing file to be noticed, so that a stray comma doesn't end in a Python traceback or an empty "Who are you?" screen.
 
@@ -6626,7 +6644,7 @@ Also built 2026-11-10: a missing config logs setup guidance without changing the
 
 Compatibility review: Forge's config update and the strict member-config reader also accept BOM JSON. Updater backups retain original bytes/newlines, and profile journals still verify byte-exact original digests (`test_update`, `test_profile_edits`).
 
-Left: Matt's decision about the timezone default (PC's zone or an explicit example setting); the current fallback is unchanged. E11-S52's setup page would replace hand editing later. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (windows-walkthrough 1, errors-and-recovery 0, 7, database-and-config 2, 3, first-run-ui 0, linux-mac 9).
+Decided (Matt, 2026-11-13): without a zone, follow the PC's own; the example config carries the key. Built (2026-11-13): `lib/hometime.py` has no fixed UTC+10 any more: without `timezone` (missing, or blank as `config.example.json` now carries it) a receipt's arrival date and a game's date are this PC's own local date (its offset from the OS, no tzdata needed), the Linux timers name no zone and the time-zone checks have nothing to compare; a zone set that the PC has no data for makes only those dates fall back, and smoke and doctor warn. The household's config names `Australia/Brisbane` (AEST, Matt 2026-11-13), so its dates don't move. Tests: `test_linux_ops` (the OS's offset without tzdata, a moment the OS can't convert). E11-S52's setup page would ask for it later.
 
 **E11-S80** · Self-hoster · should · M · built
 
@@ -6691,7 +6709,7 @@ First slice: Played by offering only the players the profiles have, never a raw 
 
 Built (2026-11-11): Played by offers only configured home slots (and the shared option when applicable), retaining member restrictions and all player/kit draft gates; old absent slots display neutral words. Profile first/second aliases normalize to existing record values without rewriting config. Status/list hints and a static About-linked glossary explain the terms. Import now explicitly requires collection CSV/printing-tagged text, explains that a bare name list needs printing details, names each supported app's export location and supplies a blank CSV template without guessing owned printings. Empty Collection offers Import, precon, Scan and Add one card only to its current editor. Card-data recovery commands/log location are named-admin-only; a missing Forge install is informational/optional and broken installations keep their diagnostic.93 focused checks and46 overlapping web/version/observability checks pass; six strict synthetic phone captures completed cleanly and were inspected. No live config, cards, import, download, Forge or device acceptance was used.
 
-**E11-S84** · Self-hoster · should · S · partial
+**E11-S84** · Self-hoster · should · S · built
 
 As a self-hoster keeping Deck Lab up to date, I want updates and release installs to leave my settings alone and to tell me when there's something to update to, so that a copy of my config isn't left where git can pick it up and a release install isn't refused a restart.
 
@@ -6705,7 +6723,7 @@ Built 2026-11-10: update's `config.json.before-forge-update` copy is gitignored.
 
 Also built 2026-11-10: `simulation.example.json` ships neutral defaults, and optional gitignored `simulation.local.json` replaces the whole tracked simulation document for pilots and field edits. Both readers select it, the pilot cache notices creation/change/removal, and an unreadable override does not restore shipped choices. No existing file is rewritten; README explains copying existing customizations and moving local settings to another install. Fixture checks preserve default/adopted pilots, field membership and privacy.
 
-Left: Matt's decision on a stable update channel, changelog and updates-available line. No release is published yet (E11-S49); E11-S51 owns the release updater. From the [first-run review of 2026-11-10](first-run-review-2026-11-10.md) (ongoing-use-burden 0 to 2, 7, 9, 10). No channel is selected by this work.
+Decided (Matt, 2026-11-13): version tags on main are the stable channel; a checkout follows main by default. Built (2026-11-13): `python -m decklab.update --channel release` (or config.json's `"update": {"channel": "release"}`; the flag wins) fetches tags without forcing and fast-forwards the branch only to the newest stable `vX.Y.Z` tag on its upstream (`lib/update_channel.py`): never a commit between tags, a pre-release or an older release, and a malformed channel is refused before fetching; every earlier safety check still runs. A home admin's Settings, About shows a git checkout's waiting updates (commits on its named upstream, or newer releases with the newest named), counted from git's last fetch with that fetch's household date, never fetching; an unreadable config.json says the channel is unknown. `release.yml` drafts the release notes with `scripts/release_notes.py` (the HISTORY.md entries since the previous version tag). Tests: `test_update_channel` (fake git and a real local clone), `test_release_notes`, `test_settings_restart_ui`, `test_server_restart`. Not yet exercised: a real release-channel update and a real release run (no release yet, E11-S49); E11-S51 owns the release updater.
 
 **E11-S85** · Matt · should · M · built
 
@@ -6735,9 +6753,9 @@ As Matt, relying on the nightly backups, I want the nightly to warn when the col
 - Given the warning, then it gives whole-table counts only, never a space's or a row's contents.
 - Given a watched table missing from either dump, then it says the table couldn't be compared.
 
-Built (2026-11-12), off by default: `decklab/db/shrink.py` compares each watched table's whole-table count (collection_card, deck, token_card, purchase_order, wishlist_entry, accessory) in the newest good dump with the newest good dump at least 20 hours older, chosen by time so a manual or pre-update backup in between doesn't hide a loss. A table that shrank by more than 25% and at least 5 rows (proposed; `shrink_warn_percent` and `shrink_warn_rows` change them) gets a WARNING line in `db status` and db.log, and the nightly's `shrink` heartbeat step is sent as failed without failing the night. A table missing from either dump is reported as couldn't be compared. None of this runs until config.json's `database.shrink_warn` is true. Left: Matt agrees the watched tables and thresholds and turns it on (he may also want the heartbeat to carry the table and counts).
+Built (2026-11-12), off by default: `decklab/db/shrink.py` compares each watched table's whole-table count (collection_card, deck, token_card, purchase_order, wishlist_entry, accessory) in the newest good dump with the newest good dump at least 20 hours older, chosen by time so a manual or pre-update backup in between doesn't hide a loss. A table that shrank by more than 25% and at least 5 rows (proposed; `shrink_warn_percent` and `shrink_warn_rows` change them) gets a WARNING line in `db status` and db.log, and the nightly's `shrink` heartbeat step is sent as failed without failing the night. A table missing from either dump is reported as couldn't be compared. None of this runs until config.json's `database.shrink_warn` is true. Decided (Matt, 2026-11-13): the watched tables and thresholds as proposed, and the heartbeat carries the table and its counts. Built (2026-11-13): a shrink's heartbeat message names each shrunk table with its from and to counts and the earlier dump's date (whole-table counts only, bounded), still a warning that never fails the night (`test_db_shrink`). Left: set config.json's `database.shrink_warn` to true on the server PC (a live setting, Matt's or Claude's with his OK).
 
-**E11-S88** · Matt · could · S · partial
+**E11-S88** · Matt · could · S · built
 
 As Matt, whose members reach Deck Lab only through the Cloudflare Tunnel, I want `homenet status` and the smoke test to show the installed cloudflared version and warn when it's old, so that the tunnel doesn't stop when Cloudflare drops an old client that never updates itself.
 
@@ -6745,7 +6763,7 @@ As Matt, whose members reach Deck Lab only through the Cloudflare Tunnel, I want
 - Given output that can't be read, a timeout or no tunnel, then the line says unknown or isn't shown.
 - Given the age limit, then it's a dated reviewed fact in `lib/stats/reviewed.py`, looked up from Cloudflare's current support policy, never remembered.
 
-Built (2026-11-12): `decklab/lib/tunnel.py` asks the installed cloudflared for its version (`--version`, 10-second timeout) and judges its age from the build date (or the first of its version month without one) against `SUPPORT_DAYS` = 365, Cloudflare's "within one year of the most recent release". `homenet status` shows a Tunnel version line and, for an old version, warns with the platform's upgrade command (winget, apt, snap, brew or the GitHub release); the smoke test notes the version and never fails for it. Unreadable output, a timeout or no tunnel shows as unknown or adds no line. The limit is a dated reviewed fact (`cloudflared-support` in `lib/stats/reviewed.py`). Left: Matt confirms the 365-day limit, and a run with a real cloudflared on the server PCs.
+Built (2026-11-12): `decklab/lib/tunnel.py` asks the installed cloudflared for its version (`--version`, 10-second timeout) and judges its age from the build date (or the first of its version month without one) against `SUPPORT_DAYS` = 365, Cloudflare's "within one year of the most recent release". `homenet status` shows a Tunnel version line and, for an old version, warns with the platform's upgrade command (winget, apt, snap, brew or the GitHub release); the smoke test notes the version and never fails for it. Unreadable output, a timeout or no tunnel shows as unknown or adds no line. The limit is a dated reviewed fact (`cloudflared-support` in `lib/stats/reviewed.py`). Decided (Matt, 2026-11-13): the 365-day limit is confirmed. The check with a real cloudflared on the server PCs is part of E11-S58's server checks.
 
 **E11-S89** · Matt · should · M · built
 

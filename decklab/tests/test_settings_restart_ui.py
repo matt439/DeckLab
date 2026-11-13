@@ -112,6 +112,33 @@ class SettingsRestartUiTests(unittest.TestCase):
           drawServerRelease(null);assert(line.hidden);
         ''')
 
+    def test_a_git_checkout_counts_the_updates_waiting_as_last_fetched(self):
+        # E11-S84: lib/update_channel.py's answer; a release install's null hides the line.
+        self.run_js(r'''
+          const base={channel:'main',count:3,newest:null,upstream:'origin/main',fetched_on:'2026-11-12',problem:null};
+          view={...view,release:null,updates:base};await openSettings();
+          const line=byId('server-updates');assert(!line.hidden);
+          assert.equal(line.textContent,'3 updates (commits on origin/main) available as last fetched (2026-11-12). '
+            +'On the PC, python -m decklab.update installs them.');
+          same(reads,['/api/server/restart']);
+          drawServerUpdates({...base,count:0});
+          assert.equal(line.textContent,'No updates are waiting as last fetched (2026-11-12) (the main channel).');
+          drawServerUpdates({...base,channel:'release',count:1,newest:'v1.3.0',fetched_on:null});
+          assert.equal(line.textContent,'1 newer release (newest v1.3.0) available as last fetched. '
+            +'On the PC, python -m decklab.update installs the newest release.');
+          drawServerUpdates({...base,channel:'release',count:0});
+          assert(line.textContent.startsWith('No newer release is waiting'));
+          drawServerUpdates({...base,count:null,problem:"This checkout's branch has no upstream to compare with."});
+          assert(line.textContent.startsWith("Couldn't count the updates waiting: This checkout"),line.textContent);
+          drawServerUpdates({...base,channel:'release',count:2,newest:'<b>x</b>'});
+          assert(!line.textContent.includes('<b>'));
+          drawServerUpdates({...base,upstream:'origin/feature-x'});
+          assert(line.textContent.startsWith('3 updates (commits on origin/feature-x) available'),line.textContent);
+          drawServerUpdates({...base,upstream:'<i>x</i> y'});
+          assert(line.textContent.startsWith('3 updates (commits on its upstream branch) available'),line.textContent);
+          drawServerUpdates(null);assert(line.hidden);
+        ''')
+
 
 if __name__ == "__main__":
     unittest.main()

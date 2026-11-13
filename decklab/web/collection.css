@@ -107,6 +107,27 @@ button.col-find-open { cursor: pointer; }
 .col-price-note { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2); margin-top: var(--s-2); }
 .col-detail-code { display: none; }
 .col-storage { font-size: var(--fs-sm); }
+/* A space's storage setup (E8-S25): one line per container in the Card list's count. */
+.col-storage-line { display: block; }
+.col-storage-change { min-height: var(--tap); padding-inline: var(--s-2); }
+/* Storage setup… (storage-setup.js): one fieldset per container, stacked; kind and capacity side by side
+ * from tablet width, one above the other on a phone. */
+.storage-setup, .storage-review { display: grid; gap: var(--s-3); }
+.storage-review h3 { margin: 0; }
+.storage-review h3:focus:not(:focus-visible) { outline: none; }
+.storage-containers { display: grid; gap: var(--s-3); margin: 0; padding: 0; list-style: none; }
+.storage-container fieldset { display: grid; gap: var(--s-3); min-width: 0; margin: 0; padding: var(--s-3);
+  border: 1px solid var(--border); border-radius: var(--r-md); }
+.storage-container legend { padding-inline: var(--s-1); font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
+.storage-pair { display: grid; gap: var(--s-3); }
+@media (min-width: 600px) { .storage-pair { grid-template-columns: 1fr 1fr; } }
+.storage-moves { flex-wrap: wrap; }
+.storage-container fieldset.storage-holds { gap: var(--s-2); border-style: dashed; }
+.storage-container fieldset.storage-holds[hidden] { display: none; }
+.storage-holds legend { font-weight: var(--fw-medium); }
+@media (min-width: 600px) { .storage-holds-row { display: grid; grid-template-columns: 8rem 1fr; align-items: center; } }
+.storage-counts, .storage-moves-list, .storage-holds-list { display: grid; gap: var(--s-1); margin: 0; padding-left: var(--s-5); }
+
 /* Keep the Card list ahead of general storage guidance; all scenario facts remain inspectable. */
 .col-storage-forecast > h2 { font-size: var(--fs-md); }
 .col-forecast-summary { margin-bottom: var(--s-2); }

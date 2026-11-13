@@ -59,7 +59,7 @@ import uuid
 import zlib
 from pathlib import PurePosixPath
 
-from decklab.lib import arrivals, cards, config, hometime, inventory, spaces
+from decklab.lib import arrivals, cards, config, hometime, inventory, spaces, storage_setting
 from decklab.lib.decks.identity import CardIdentityError, deck_colors
 from decklab.lib.inventory import files, receive, rules
 from decklab.lib.tokens import details as token_details
@@ -80,7 +80,7 @@ def _hex(value, length):
 
 
 def _receipt_today():
-    """The household's date (config.json's "timezone", else UTC+10), independent of the server's timezone."""
+    """The household's date (config.json's "timezone", else this PC's own zone)."""
     return hometime.household_today()
 
 
@@ -128,6 +128,13 @@ def receipt_view(order=None):
       from the target sections already read (None unknown, [] known colourless);
     - "kits": {deck id: {"sleeves": name}} for the building and built decks those name, only where this viewer
       sees that deck's sleeves (guard.sees_kit, the accessories' owner rule), for "Where these go";
+    - "storage_default": home's default container where loose cards go, {name, kind, sleeved}, or None
+      when home's storage setup has none (E8-S25 slice 6: "To Storage box", "unsleeved" only when it
+      isn't sleeved); always home's, as the deliveries are; with "sections" ({group: section}) when its
+      colour-type rule maps groups to sections, and then "storage_groups" ({name: group} for the cards
+      components' names the card data knows and that container holds: none for a card whose recorded
+      locations put it in another container), so To <container> lines say "Row 1 · Creatures" and token
+      cards their section (slice 7);
     - "face_names": Scryfall's token face names when the order has a tokens component ([] while
       the card data isn't ready), for the token sheet's suggestions;
     - "keywords": the keywords a token's details may list (lower case), for its "Read as" line,
@@ -150,7 +157,8 @@ def receipt_view(order=None):
 
 def _board(inv, view, record):
     """The check-off board's additions to a delivery view (see receipt_view), in place."""
-    view.update(today=_receipt_today(), kits={}, face_names=[], keywords=sorted(token_details._keywords()))
+    view.update(today=_receipt_today(), kits={}, face_names=[], keywords=sorted(token_details._keywords()),
+                storage_default=storage_setting.default_place(spaces.HOME))
     ready = _index_info()[0] is not None
     by_id = {component.id: component for component in record.components}
     from . import arrival_checks
@@ -170,7 +178,12 @@ def _board(inv, view, record):
         if any(item["kind"] == "tokens" for item in view["components"]):
             view["face_names"] = cards.token_face_names()
         _deck_uses(inv, view, by_id)
-    return view
+    names = {row.get("name") for item in view["components"] if item["kind"] == "cards" for row in item.get("rows") or ()}
+    try:                # a card whose copies are filed in another container gets no section (slice 7)
+        places = storage_places.by_name(inv, spaces.HOME, names) if inv.locations_ready else {}
+    except Exception:   # noqa: BLE001 (optional words: the board stands without them)
+        places = None
+    return storage_setting.with_groups(view, names, record=storage_setting.default_record(spaces.HOME), places=places)
 
 
 def _product_items(inv, component, item):

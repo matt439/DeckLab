@@ -19,6 +19,7 @@ psycopg through lib/venv.py; .venv\\Scripts\\python, or .venv/bin/python off Win
   visits           who has visited Deck Lab and what they opened (read-only; visits.py)
   schedule         manage the nightly Task Scheduler task, or preview systemd user units
   wishlist         list or change a profile's wishlist: list, add, set, remove (wishlist_cli.py)
+  storage          show or set a space's storage setup: show, set (storage_cli.py)
 
 The inventory's commands (phase 3) come from decklab/db/inv_<area>.py modules, found and
 registered here without editing this file: each module has register(subparsers), which adds
@@ -333,6 +334,8 @@ def parser():
     wishlist_cli.add_parser(sub)
     from decklab.db import visibility_cli
     visibility_cli.add_parser(sub)
+    from decklab.db import storage_cli
+    storage_cli.add_parser(sub)
     register_inventory(sub)
     return p
 

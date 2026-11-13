@@ -17,7 +17,7 @@ HOME_ROWS = frozenset({"public.product", "public.product_item", "public.product_
                        "public.order_component", "public.order_card_item", "public.order_token_item", "public.watchlist_item",
                        "public.packing_tick", "public.commander_night"})
 SPACE_ROWS = frozenset({"public.profile", "public.collection_card", "public.collection_import", "public.token_card",
-                        "public.dice_counter", "public.card_loan", "public.deck"})
+                        "public.dice_counter", "public.card_loan", "public.deck", "public.space_storage"})
 EXCLUDED = frozenset({"public.profile_email", "audit.change_set", "public.wishlist_entry", "public.profile_setting",
                       "public.simulation_mode",
                       "public.visibility", "public.space_departure", "public.field_policy", "public.shop_postage",

@@ -3,7 +3,8 @@
 This is deliberately separate from export.inventory_files: that export reads all
 spaces and home-only data. Here every data query is scoped before rendering. The
 artifact holds collection.csv, tokens.csv (header-only for empty lists), imports/,
-decks/<kind>/<slug>.md and retired/decks/<kind>/<slug>.md (the last saved text).
+decks/<kind>/<slug>.md and retired/decks/<kind>/<slug>.md (the last saved text), and storage.json
+(the storage setup, E8-S25) when the space saved one.
 
 manifest.json binds those files to a deterministic, space-scoped database SHA.
 The SHA also covers histories, aliases, wishlist, settings, switches, editor drafts
@@ -130,6 +131,13 @@ def snapshot(c, space, *, details=False, personal=False):
                                                    (space,))), key=_json)
         if loans:
             data["loans"] = loans
+    # The storage setup (E8-S25, migration 0028): only when the space saved one, so an export made
+    # before the migration still matches; written as storage.json beside collection.csv.
+    if c.execute("select to_regclass('public.space_storage') is not null").fetchone()[0]:
+        storage = [row[0] for row in c.execute("select to_jsonb(r) from space_storage r where space_id = %s",
+                                               (space,))]
+        if storage:
+            data["storage"] = storage
     cards = [{("set" if key == "set_code" else key): value for key, value in row.items()
               if key != "space_id"} for row in data["collection"]]
     cards.sort(key=rules.sort_key)
@@ -149,6 +157,8 @@ def snapshot(c, space, *, details=False, personal=False):
         made = [{key: (str(row.get("set_code" if key == "set" else key) or "")) for key in loan_rules.FIELDS}
                 for row in data["loans"]]
         files["loans.csv"] = rules.csv_bytes(sorted(made, key=loan_rules.sort_key), loan_rules.FIELDS)
+    if data.get("storage"):
+        files["storage.json"] = _json(data["storage"][0]["content"])
     if data.get("dice"):
         from decklab.lib.inventory import dice_rules
         from decklab.lib.inventory.table_rows import DICE_COLUMNS

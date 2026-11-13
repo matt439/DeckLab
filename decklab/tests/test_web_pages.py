@@ -223,6 +223,7 @@ class PageSourceTests(unittest.TestCase):
                 self.assertIn(path, script)
         self.assertIn("openPreconSheet(cv)", _function(script, "colHead"))
         self.assertIn("openTradeSheet(cv)", _function(script, "colHead"))
+        self.assertIn("openStorageSetup(cv)", _function(script, "colHead"))       # E8-S25 slice 4: storage-setup.js
         self.assertIn("openScanSheet(cv)", _function(script, "colHead"))
         self.assertIn("openCoverageSheet(cv)", _function(script, "colHead"))
         self.assertIn("seq !== ctx.seq", _function(script, "searchPrecons"))

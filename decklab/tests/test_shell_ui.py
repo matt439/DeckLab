@@ -136,8 +136,13 @@ class ShellUiTests(unittest.TestCase):
           location.hash = "#/library";
           drawShell(); await flush();
           const nav = document.getElementById("main-nav"), bar = document.getElementById("tabbar");
-          same(labels(nav), ["Decks", "Testing", "Collection", "Shopping", "Tokens", "Sleeves & boxes", "Build decks",
-            "Game log", "Wishlist", "Activity"]);
+          // Build decks is a pill from 1000 px (E11-S61) and in More below that: the stylesheet shows one of the two.
+          same(labels(nav), ["Decks", "Testing", "Collection", "Shopping", "Build decks", "Tokens", "Sleeves & boxes",
+            "Build decks", "Game log", "Wishlist", "Activity"]);
+          const pill = nav.querySelector(".nav-wide");
+          assert.equal(pill.querySelector("a").getAttribute("href"), "#/assembly");
+          same(nav.querySelectorAll(".nav-wide").length, 1);
+          same(nav.querySelectorAll(".nav-narrow").map((a) => a.getAttribute("data-route")), ["assembly"]);
           same(labels(bar), ["Decks", "Testing", "Collection", "Shopping"]);
           assert(bar.textContent.includes("More"));
           same(labels(document.getElementById("more-list")), ["Tokens", "Sleeves & boxes", "Build decks",
@@ -162,7 +167,16 @@ class ShellUiTests(unittest.TestCase):
           syncShell("tokens");
           assert(current().every((path) => path === "tokens"));
           assert(nav.querySelector(".nav-more").classList.contains("is-current"));
+          assert(!nav.querySelector(".nav-more").classList.contains("is-current-narrow"));
           assert(bar.querySelector(".tab-more").classList.contains("is-current"));
+          // Build decks marks its pill; the top bar's More only below 1000 px (is-current-narrow), the tab bar's More always.
+          syncShell("assembly");
+          assert(current().every((path) => path === "assembly") && current().length >= 3);
+          assert(!nav.querySelector(".nav-more").classList.contains("is-current"));
+          assert(nav.querySelector(".nav-more").classList.contains("is-current-narrow"));
+          assert(bar.querySelector(".tab-more").classList.contains("is-current"));
+          syncShell("library");
+          assert(!nav.querySelector(".nav-more").classList.contains("is-current-narrow"));
 
           // User1 (a member at home): no Settings, the rest as Matt.
           as("user1");
@@ -286,6 +300,49 @@ class ShellUiTests(unittest.TestCase):
           assert.equal(back.getAttribute("href"), "#/matchups");
           location.hash = "#/collection"; syncShellBack();
           assert.equal(back.hidden, true);
+        """)
+
+    def test_a_menu_item_the_stylesheet_hides_takes_no_focus(self):
+        # E11-S61: from 1000 px the top bar's More hides Build decks (a.nav-narrow), its pill showing instead.
+        # This fake DOM has no layout, so each item's getClientRects says what a browser would: [] when hidden.
+        self.run_js("""
+          as("matt", false);
+          location.hash = "#/library";
+          drawShell(); await flush();
+          const nav = document.getElementById("main-nav");
+          const button = nav.querySelector(".nav-more"), menu = document.getElementById("nav-more-menu");
+          const items = menu.querySelectorAll("[role=menuitem]");
+          for (const item of items) item.getClientRects = () => item.matches(".nav-narrow") ? [] : [{}];
+          const label = () => document.activeElement.textContent;
+          const key = (k) => menu.fire("keydown", { key: k, target: document.activeElement });
+          same(items.map((a) => a.textContent).slice(0, 4), ["Tokens", "Sleeves & boxes", "Build decks", "Game log"]);
+          button.click();
+          assert.equal(menu.hidden, false);
+          assert.equal(label(), "Tokens");
+          key("ArrowDown"); assert.equal(label(), "Sleeves & boxes");
+          assert(key("ArrowDown").defaultPrevented);
+          assert.equal(label(), "Game log", "ArrowDown steps over the hidden Build decks");
+          key("ArrowUp"); assert.equal(label(), "Sleeves & boxes", "and so does ArrowUp");
+          // Below 1000 px it shows, and the arrow keys stop on it.
+          for (const item of items) item.getClientRects = () => [{}];
+          key("ArrowDown"); assert.equal(label(), "Build decks");
+          closeMenus();
+
+          // A hidden first item: opening focuses the first one shown, and wrapping skips the hidden one both ways.
+          const hidden = (text) => { const a = el("a", { role: "menuitem", href: "#/x", text }); a.getClientRects = () => []; return a; };
+          const shown = (text) => { const a = el("a", { role: "menuitem", href: "#/x", text }); a.getClientRects = () => [{}]; return a; };
+          const own = el("button", { type: "button", "aria-haspopup": "menu", "aria-expanded": "false" });
+          const list = el("div", { class: "menu", role: "menu", hidden: true }, hidden("One"), shown("Two"), shown("Three"), hidden("Four"));
+          main.append(own, list);
+          wireMenu(own, list);
+          own.click();
+          assert.equal(list.hidden, false);
+          assert.equal(document.activeElement.textContent, "Two", "the first item shown, not the hidden first one");
+          list.fire("keydown", { key: "ArrowUp", target: document.activeElement });
+          assert.equal(document.activeElement.textContent, "Three", "ArrowUp wraps past hidden Four and One");
+          list.fire("keydown", { key: "ArrowDown", target: document.activeElement });
+          assert.equal(document.activeElement.textContent, "Two", "ArrowDown wraps past them too");
+          closeMenus();
         """)
 
     def test_settings_are_an_admins_and_the_footer_is_one_line(self):

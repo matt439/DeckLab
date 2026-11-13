@@ -103,7 +103,7 @@ class CategoryProjectionPgTests(db_support.DbTestCase):
         self.tag()
         before = self.persisted()
         applied = migrate.apply(dbname=self.dbname)
-        self.assertEqual(applied, ["0027_deck_line_categories.sql"])
+        self.assertEqual(applied[0], "0027_deck_line_categories.sql")   # later migrations follow it
         after = self.persisted()
         for table in before.keys() - {"audit.change_set"}:
             self.assertEqual(after[table], before[table], table)

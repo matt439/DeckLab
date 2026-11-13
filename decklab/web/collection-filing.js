@@ -49,7 +49,9 @@ function colFilingSnapshot(answer, cv, source = "import") {
   if (accounted.some((quantity, index) => quantity !== added[index].quantity)) return unknown(added);
   return Object.freeze({ space: cv.space, profile: cv.profile, source, status: "ready", total,
     added: Object.freeze(added), destinations: Object.freeze(destinations),
-    places: storageAdviceLocations(raw.storage_locations) }); // E8-S27: null without a lookup
+    places: storageAdviceLocations(raw.storage_locations), // E8-S27: null without a lookup
+    storage: storagePlace(raw), // E8-S25 slice 6: the space's default container; undefined from an older server
+    groups: storageCardGroups(raw) }); // slice 7: each To storage card's group, for its section ("Row 1 · Creatures")
 }
 
 function colFilingHere(cv, guide, root = null) {
@@ -66,6 +68,12 @@ function colFilingSavedBox(saved, box) {
   const part = colFilingGuide(cv, guide);
   cv.root = box; // construction precedes attachment; later controls require this exact connected saved box
   return part;
+}
+
+/** The To storage group's line: the space's default container (E8-S25 slice 6), its loose cards when it has none,
+ * and today's words for an older server's answer. */
+function colFilingStorageWords(place) {
+  return `Copies left after the waiting decks: ${place === undefined ? "keep them with your unsleeved cards" : storagePlaceGo(place)}.`;
 }
 
 /** One set of original controls in either density; Show more never changes the advice or writes. */
@@ -90,9 +98,9 @@ function colFilingGuide(cv, guide) {
   let initialLeft = COL_FILING_PAGE; // bound the whole first paint, including many waiting decks
   for (const group of groups.values()) {
     const heading = group.kind === "deck" ? el("h3", {}, el("a", { href: deckHref(group.deck.id, "target"), text: group.deck.title }))
-      : el("h3", { text: group.kind === "storage" ? "To storage" : "Destination unknown" });
+      : el("h3", { text: group.kind === "storage" ? storagePlaceHeading(guide.storage) : "Destination unknown" });
     const panel = el("section", { class: "panel col-filing-panel" }, heading,
-      group.kind === "storage" ? el("p", { class: "sub", text: "Copies left after the waiting decks: keep them with your unsleeved cards." }) : null,
+      group.kind === "storage" ? el("p", { class: "sub", text: colFilingStorageWords(guide.storage) }) : null,
       group.kind === "storage" ? storageAdviceNote(guide.places) : null);
     const list = el("ul", { class: "col-filing-lines", tabindex: 0,
       "aria-label": group.kind === "deck" ? `Printing copies suggested for ${group.deck.title}`
@@ -104,7 +112,9 @@ function colFilingGuide(cv, guide) {
       for (const item of next) {
         const row = guide.added[item.row];
         const where = item.kind === "storage" ? storageAdviceWords(guide.places, row.name) : null;
+        const section = item.kind === "storage" ? storageSectionWords(guide.storage, guide.groups?.get(row.name)) : null;
         list.append(el("li", {}, `${item.quantity} \u00d7 ${row.name} (${colPrinting(row)})`,
+          section ? el("span", { class: "col-filing-section", text: ` \u00b7 ${section}` }) : null,
           where ? el("span", { class: "sub col-filing-place", text: ` \u00b7 ${where}` }) : null));
       }
       shown += next.length;

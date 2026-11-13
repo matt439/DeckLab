@@ -78,6 +78,61 @@ class CollectionLocationsUiTests(unittest.TestCase):
           assert.equal(calls.length, 1); assert(!Object.hasOwn(calls[0], 'location'));
         """)
 
+    def test_the_storage_setup_draws_one_line_per_container(self):
+        self.run_js("""
+          const box = {id: 'box', name: 'Storage box', kind: 'box', capacity: 2400, sleeved: false, cards: 3, over: false};
+          const binder = {id: 'binder', name: 'Binder', kind: 'binder', capacity: 360, sleeved: true, cards: 310, over: false};
+          // Read-only, so the line has no Change… (test_storage_setup_ui has that).
+          const setup = (containers, extra = {}) => ({editable: false, storage_setup: {source: 'saved', default: 'box', containers,
+            elsewhere: 0, unplaced: 0, not_counted: 0, suggestions: ['Row 1', 'Binder'], ...extra}});
+          draw(setup([box]));
+          let note = main.querySelector('.col-storage-box');
+          assert.equal(note.textContent,
+            `Storage box: about 3 of ${num(2400)} cards (the copies not in built decks or products kept intact).`);
+          draw(setup([box, binder, {...binder, id: 'shelf', name: 'Shelf', capacity: null, cards: 12}], {elsewhere: 2}));
+          note = main.querySelector('.col-storage-box');
+          const lines = note.querySelectorAll('.col-storage-line').map(span => span.textContent);
+          same(lines.slice(0, 3), [`Storage box: about 3 of ${num(2400)} cards.`, 'Binder: about 310 of 360 cards.',
+            'Shelf: about 12 cards.']);
+          assert(lines[3].includes("somewhere that isn't one of these (2 cards)"), lines[3]);
+          assert(!note.className.includes('box-warn'));
+          draw(setup([box, {...binder, cards: 400, over: true}]));
+          note = main.querySelector('.col-storage-box');
+          assert(note.className.includes('box-warn'));
+          assert(note.textContent.includes('Binder is over capacity: about 400 cards for about 360 places.'));
+          draw(setup([{...box, cards: 2500, over: true}], {elsewhere: 1, not_counted: 2}));
+          note = main.querySelector('.col-storage-box');           // one container keeps the box's sentences
+          assert(note.className.includes('box-warn'));
+          assert.equal(note.textContent, `The storage box is over capacity: about ${num(2500)} cards for about ${num(2400)}`
+            + " places. Basic lands (2 cards) aren't counted. Cards kept outside the storage box (1 card, such as in a"
+            + " binder) aren't counted.");
+          draw(setup([{...binder, id: 'binder2', name: 'Ultimate Guard binder'}], {unplaced: 3}));
+          assert.equal(main.querySelector('.col-storage-box').textContent, 'Ultimate Guard binder: about 310 of 360 cards'
+            + " (the copies not in built decks or products kept intact). Cards with no location recorded (3 cards)"
+            + " aren't counted in the Ultimate Guard binder.");
+          draw(setup([binder], {elsewhere: 4}));
+          assert(main.querySelector('.col-storage-box').textContent.endsWith(
+            "Cards kept outside the binder (4 cards) aren't counted."));
+          draw(setup([])); assert(main.querySelector('.col-storage-box').hidden);
+          draw(setup([{...box, cards: null}])); assert(main.querySelector('.col-storage-box').hidden);
+          draw({storage_setup: {containers: 'bad'}});              // a bad answer falls back to storage_box
+          assert(main.querySelector('.col-storage-box').textContent.includes('about 3 of'));
+        """)
+
+    def test_suggestions_follow_the_setup_and_a_member_gets_no_home_rows(self):
+        self.run_js("""
+          let cv = draw({storage_setup: {source: 'saved', default: 'binder', containers: [], elsewhere: 0, unplaced: 0,
+            not_counted: 0, suggestions: ['Page 1', 'Page 2']}});
+          same(colLocationChoices(cv), ['Page 1', 'Page 2', 'Row 2, B']);
+          assert.equal(colLocationExample(cv), 'Such as Page 2, B or Binder');
+          cv = draw({storage_setup: {source: 'none', default: null, containers: [], elsewhere: 0, unplaced: 0,
+            not_counted: 0, suggestions: []}});
+          same(colLocationChoices(cv), ['Row 2, B']);
+          assert.equal(colLocationExample(cv), 'Such as Binder or Shelf 2');
+          same(colLocationChoices({space: 'user2', locations: {rows: {}}}), []);     // an older server
+          same(colLocationChoices({space: 'home', locations: {rows: {}}}), ['Row 1', 'Row 2', 'Row 3', 'Row 4']);
+        """)
+
     def test_packing_tiles_name_where_cards_are_kept(self):
         self.run_js("""
           const view = {data: {storage_locations: {ready: true, cards: {'Llanowar Elves': ['Row 2, B', 'Binder']}}}};

@@ -42,7 +42,7 @@ class MergeFilingCliTests(_PreviewTree):
         self.assertIn("Deck casual/b (B)", guide)
         self.assertIn("2 x Llanowar Elves (FDN 227, nonfoil)", guide)
         self.assertNotIn("Deck casual/a", guide)
-        self.assertNotIn("Storage:", guide)
+        self.assertNotRegex(guide, r"(?m)^  Storage\b")
         self.assertIn("at this saved merge", guide)
         self.assertIn("no cards were packed or reserved", guide)
         self.assertEqual(len(writes), 1)
@@ -92,6 +92,23 @@ class MergeFilingCliTests(_PreviewTree):
         self.assertIn("Nothing saved (--dry-run)", out)
         self.assertNotIn("Where these go", out)
         advice.assert_not_called()
+
+    def test_the_storage_line_names_the_spaces_default_container(self):
+        """E8-S25 slice 6: home's built-in box, a saved binder, and no default container."""
+        code, out, err = self.merge()
+        self.assertEqual(code, 0, err)
+        self.assertIn("  Storage (Storage box):\n    2 x Llanowar Elves (FDN 227, nonfoil)", out)
+        binder = {"name": "Binder", "kind": "binder", "sleeved": True}
+        with mock.patch.object(filing.storage_setting, "default_place", return_value=binder) as place:
+            code, out, err = self.merge(self.gift(1))
+        self.assertEqual(code, 0, err)
+        place.assert_called_once_with("home")
+        self.assertIn("  Storage (Binder):\n", out)
+        with mock.patch.object(filing.storage_setting, "default_place", return_value=None):
+            code, out, err = self.merge(self.gift(1))
+        self.assertEqual(code, 0, err)
+        self.assertIn("  Storage:\n", out)
+        self.assertNotIn("Storage (", out)
 
     def test_zero_tracked_copies_is_success_without_attempting_an_allocation(self):
         source = self.gift(text=HEADER + "Forest,fdn,280,nonfoil,12,,,\n")
@@ -151,7 +168,7 @@ class MergeFilingCliTests(_PreviewTree):
                 guide = out.split("Where these go", 1)[1]
                 self.assertIn("Destination unknown", guide)
                 self.assertIn("merge is saved", guide)
-                self.assertNotIn("Storage:", guide)
+                self.assertNotRegex(guide, r"(?m)^  Storage\b")
                 self.assertNotIn("private", guide)
             finally:
                 for patcher in patchers:
@@ -168,7 +185,7 @@ class MergeFilingCliTests(_PreviewTree):
             self.assertIn("2 cards merged", out)
             self.assertIn("Kept magic/imports/", out)
             self.assertIn("Destination unknown. The merge is saved", out)
-            self.assertNotIn("Storage:", out)
+            self.assertNotRegex(out, r"(?m)^  Storage\b")
             self.assertNotIn("private advice detail", out + err)
 
     def test_large_guide_labels_omitted_printing_lines_without_truncating_the_merge(self):
@@ -185,7 +202,7 @@ class MergeFilingCliTests(_PreviewTree):
             code, out, err = self.merge()
         self.assertEqual(code, 0, err)
         self.assertIn("Destination unknown", out)
-        self.assertNotIn("Storage:", out)
+        self.assertNotRegex(out, r"(?m)^  Storage\b")
         self.assertNotIn("run the merge again", out + err)
 
     def test_stale_and_unavailable_writes_keep_existing_refusal_exit_codes_without_advice(self):

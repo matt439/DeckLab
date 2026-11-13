@@ -17,6 +17,10 @@
 .pack-completion-error p { color: var(--warn-text); }
 .pack-storage-group + .pack-storage-group { margin-top: var(--s-4); }
 .pack-storage-group h4 { margin: 0; font-size: var(--fs-sm); color: var(--ink-2); }
+/* Two or more containers (E8-S25 slice 7): a container's heading over its own rule's dividers. */
+.pack-container-group + .pack-container-group { margin-top: var(--s-5); }
+.pack-container-group > h4 { margin: 0 0 var(--s-2); font-size: var(--fs-md); }
+.pack-container-group .pack-storage-group h5 { margin: 0; font-size: var(--fs-sm); color: var(--ink-2); }
 
 /* The deck checklist. */
 .pack-choose { min-width: 0; padding: 0; }

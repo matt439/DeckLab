@@ -7,7 +7,7 @@ from collections import Counter
 from unittest import mock
 
 from decklab.lib import access, cards, config, decks, inventory, pool
-from decklab.lib.api import carddata, collection_edit as ce
+from decklab.lib.api import carddata, collection_edit as ce, shopping_storage
 from decklab.tests import test_collection_holder_colors as color_fixtures
 from decklab.tests import test_collection_sources as source_fixtures
 from decklab.tests.test_api import ApiTestCase, _write
@@ -140,7 +140,9 @@ class ShoppingBuiltPoolIdentityTests(MissingFixture, unittest.TestCase):
             result = real(*args, **kwargs)
             built.append(result)
             return result
-        with mock.patch.object(self.backend, "load", wraps=self.backend.load) as inventory_read, \
+        # Shopping's storage fill (E8-S25 slice 7) reads the Card list's own pools; this counts the missing part's.
+        with mock.patch.object(shopping_storage, "enrich", side_effect=lambda answer: answer), \
+                mock.patch.object(self.backend, "load", wraps=self.backend.load) as inventory_read, \
                 mock.patch.object(pool, "load_pool", side_effect=load) as pool_read:
             answer = self.overview()
         self.assertEqual(inventory_read.call_count, 1)

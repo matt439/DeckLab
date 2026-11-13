@@ -1,4 +1,5 @@
 {
+  "timezone": "",
   "profiles": [
     {"id": "alex", "name": "Alex", "plays_as": "first", "role": "admin", "space": "home", "emails": []}
   ]

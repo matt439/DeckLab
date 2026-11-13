@@ -10,7 +10,7 @@ import unittest
 from unittest import mock
 
 from decklab.lib import access, cards, config, decks, inventory, pool, server_http
-from decklab.lib.api import common, shopping, shopping_missing, shopping_queue
+from decklab.lib.api import common, shopping, shopping_missing, shopping_queue, shopping_storage
 from decklab.lib.api.common import ApiError
 from decklab.lib.inventory import files, rules
 from decklab.lib.inventory.model import Component, Order, QUEUE_FIELDS
@@ -185,7 +185,10 @@ class FileShoppingMissingTests(_Fixture, unittest.TestCase):
 
     def test_only_home_saved_decks_contribute_and_the_home_pool_is_reused_once_without_pricing(self):
         real = pool.owned_vs_needed
-        with mock.patch.object(shopping, "_cards_ready", wraps=shopping._cards_ready) as ready, \
+        # The storage fill (E8-S25 slice 7) is a separate optional note reading the Card list's own count
+        # and scenario, each with its own pool; this test is about the missing cards' one shared pool.
+        with mock.patch.object(shopping_storage, "enrich", side_effect=lambda answer: answer), \
+                mock.patch.object(shopping, "_cards_ready", wraps=shopping._cards_ready) as ready, \
                 mock.patch.object(pool, "load_pool", wraps=pool.load_pool) as load, \
                 mock.patch.object(pool, "owned_vs_needed", wraps=real) as compare, \
                 mock.patch.object(cards, "price_aud", side_effect=AssertionError("no prices needed")):

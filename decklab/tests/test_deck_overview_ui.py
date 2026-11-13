@@ -241,12 +241,25 @@ class DeckOverviewUiTests(unittest.TestCase):
           // Games that couldn't be read: no line at all, never "not played".
           assert.equal(draw(null), null);
           assert.equal(draw(undefined), null);
-          const empty = draw({last: null, games: 0, since: null});
+          const empty = draw({last: null, games: 0, since: null, can_record: true});
           assert.equal(empty.querySelector('.deck-played').textContent, 'Not played at home yet');
           assert.equal(empty.querySelector('h2'), null);
+          // The Game log narrowed to the deck, in plain sight (E11-S61).
+          assert.equal(empty.querySelector('.deck-played-log').textContent, 'Record a game');
+          assert.equal(empty.querySelector('.deck-played-log').getAttribute('href'), '#/play?id=casual%2Ftest');
+          // A viewer who may not record a game with it (another space's Public deck) is only shown the Game log.
+          for (const can_record of [false, undefined]) {
+            const shown = draw({last: null, games: 0, since: null, can_record});
+            assert.equal(shown.querySelector('.deck-played-log').textContent, 'Open the Game log');
+            assert.equal(shown.querySelector('.deck-played-log').getAttribute('href'), '#/play?id=casual%2Ftest');
+          }
           let part = draw({last: '2026-10-20', games: 3, since: {version: 'target', changes: [], more: 0}});
           assert.equal(part.querySelector('.deck-played').textContent, 'Last played 2026-10-20 · 3 games');
           assert.equal(part.querySelector('h2').textContent, 'Played at home');
+          const log = part.querySelector('.deck-played-log');
+          assert(log.closest('.deck-section-head'));
+          assert.equal(log.textContent, 'Open the Game log');
+          assert.equal(log.getAttribute('href'), '#/play?id=casual%2Ftest');
           assert(part.textContent.includes("Its list hasn't changed since that game."));
           part = draw({last: '2026-10-20', games: 1, since: null});
           assert(part.textContent.includes('1 game'));
@@ -259,10 +272,11 @@ class DeckOverviewUiTests(unittest.TestCase):
             'Took out 2 Elvish Mystic, another printing', 'Changed the printing of Pick Your Poison (sideboard)']);
           assert(part.textContent.includes('Its Play-now list has changed since that game:'));
           assert(part.textContent.includes('And 2 more changes; its History has them all.'));
-          assert.equal(part.querySelector('a').getAttribute('href'), '#/history?id=casual%2Ftest&v=owned');
-          // A read-only (product or pairing) page has no History link.
+          assert.equal(part.querySelector('.deck-played-since').querySelector('a').getAttribute('href'), '#/history?id=casual%2Ftest&v=owned');
+          // A read-only (product or pairing) page has no History link, but keeps its Game log.
           part = draw({last: '2026-10-20', games: 2, since: {version: 'target', more: 1, changes: []}}, {read_only: true});
-          assert.equal(part.querySelector('a'), null);
+          assert.equal(part.querySelector('.deck-played-since').querySelector('a'), null);
+          same(part.querySelectorAll('a').map((a) => a.textContent), ['Open the Game log']);
           assert(part.textContent.includes('And 1 more change.'));
         """)
 

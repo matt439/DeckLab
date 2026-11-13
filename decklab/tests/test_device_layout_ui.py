@@ -384,6 +384,18 @@ class ShellTests(unittest.TestCase):
         self.assertNotRegex(_css("tokens.css"), r"--shell-top: calc\(48px")
         self.assertIn("const TAB_COUNT = 4;", _text("shell.js"))
 
+    def test_build_decks_is_a_pill_only_from_1000_px(self):
+        # E11-S61: a route's pill (core.js) shows from 1000 px only, where the top bar's More leaves it out; a phone
+        # on its side's top bar (from 600 px) has no room for a fifth pill, so there it stays in More.
+        shell = _css("shell.css")
+        self.assertIn(".nav-items > li.nav-wide { display: none; }", shell)
+        lab = _block(shell, "(min-width: 1000px)")
+        self.assertIn(".nav-items > li.nav-wide { display: flex; }", lab)
+        self.assertIn(".nav-more-menu > a.nav-narrow { display: none; }", lab)
+        self.assertNotIn("nav-wide", _block(shell, "(orientation: landscape) and (max-height: 500px)"))
+        self.assertIn("box-shadow: inset 0 -2px var(--accent)", _block(shell, "(max-width: 999px)"))
+        self.assertRegex(_text("core.js"), r'path: "assembly",[^}]*nav: "more",\s*pill: true')
+
     def test_no_page_hides_the_tab_bar(self):
         shell = _css("shell.css")
         self.assertNotRegex(shell, r"has-edit-bar[^{]*\{[^}]*--shell-bottom: 0px")

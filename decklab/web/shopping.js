@@ -776,7 +776,8 @@ function drawShopping(data) {
   // pane; below 1281 px they stack, with links to each part. Keep delivery/Undo/history nodes across writes.
   const main = [
     shopSection("shop-on-the-way", "On the way", waiting.length, null,
-      waiting.length ? el("div", { class: "shop-deliveries" }, waiting.map((order) => shopDelivery(order, onArrival(order), view)))
+      waiting.length ? [el("div", { class: "shop-deliveries" }, waiting.map((order) => shopDelivery(order, onArrival(order), view))),
+        typeof shopStorageFill === "function" ? shopStorageFill(view) : null]        // shopping-storage.js (E8-S25)
         : emptyBox("Nothing is on the way.", isAdminProfile() && mayDo("orders") && data.queue_revision
           ? el("button", { type: "button", class: "btn shop-queue-write", text: "Record an order", onclick: () => shopOrderSheet(view) })
           : null)),

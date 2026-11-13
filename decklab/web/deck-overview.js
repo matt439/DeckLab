@@ -188,17 +188,23 @@ function deckOverviewCurve(data) {
 
 /** When the deck was last played at home (E1-S27), from the Game log's games this viewer may see (/api/deck's
  * played): "Last played 2026-10-20 · 3 games" or "Not played at home yet", then what its list changed since that
- * game (played.since, from the deck's own revisions). Nothing when the games couldn't be read (never "not
+ * game (played.since, from the deck's own revisions), with a link to its Game log. Nothing when the games couldn't be read (never "not
  * played"), and no change line when the list it was played with can't be found. */
 function deckOverviewPlayed(data) {
   if (data.summary.trial) return ptrDeckNotice(data);         // precon-trial.js: a trial isn't played at home (E3-S39)
   const p = data.played;
   if (!p) return null;
+  // The Game log narrowed to this deck, in plain sight (E11-S61): recording a game is a common step after one.
+  const log = (text) => el("a", { class: "btn btn-quiet deck-more-link deck-played-log",
+    href: `#/play?id=${encodeURIComponent(data.summary.id)}`, text });
   if (!p.games || !p.last) {
     return el("div", { class: "deck-overview-played deck-played-empty" },
-      el("p", { class: "deck-played", text: "Not played at home yet" }));
+      el("p", { class: "deck-played", text: "Not played at home yet" }),
+      // Only a viewer the Game log would let record one with this deck (play.record) is offered to.
+      el("p", {}, log(p.can_record === true ? "Record a game" : "Open the Game log")));
   }
-  const parts = [el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-played", text: "Played at home" }))];
+  const parts = [el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-played", text: "Played at home" }),
+    log("Open the Game log"))];
   parts.push(el("p", {}, factLine("deck-played", [`Last played ${p.last}`, plural(p.games, "game")])));
   parts.push(deckPlayedSince(p.since, data.summary));
   return el("section", { class: "deck-section deck-overview-played", "aria-labelledby": "h-overview-played" }, parts);
