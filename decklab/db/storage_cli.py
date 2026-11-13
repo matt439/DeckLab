@@ -127,13 +127,16 @@ def run(args):
             if expect != current["revision"]:
                 _say(f"{rules.CHANGED} (it's at revision {current['revision']}; run storage show again)")
                 return 1
-            preview = {**current, "storage": record, "source": "saved"}
-            if args.dry_run:
-                print("Would save:")
-                print("\n".join(describe({**preview, "revision": current["revision"] + 1})))
-                return 0
+            if current["ready"] is False:          # the save would be refused, so the preview is too
+                _say(rules.MIGRATE)
+                return 1
             if current["source"] == "saved" and current["storage"] == record:
                 print("Nothing to change: the storage setup is already that.")
+                return 0
+            if args.dry_run:
+                print("Would save:")
+                print("\n".join(describe({**current, "storage": record, "source": "saved",
+                                          "revision": current["revision"] + 1})))
                 return 0
             saved = store.space_storage_put(space, record, expect, actor, args.message.strip())
             print("\n".join(describe(storage_setting._view(space, saved))))

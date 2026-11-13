@@ -179,7 +179,7 @@ A rule may say which section each group goes in, so Where these go can say "Row 
 - **Any other space with no record** (a member's space): no containers. No count line, no Row suggestions (only locations already used), and the words "storage" and "loose cards" only, never "the storage box". Where these go keeps "To storage".
 - **A saved record always wins**, home's included. Saving an empty list of containers is allowed and means "no particular storage": it's how a self-hosted install's home opts out of the built-in box (Q8).
 
-This is the one default rule: home's built-in box applies whenever home has no saved record, whatever `config.json` holds and whether or not any location is recorded. Slices 2 and 3 build it that way; Q8 asks only whether a fresh install should be told how to opt out.
+This is the one default rule: home's built-in box applies whenever home has no saved record, whatever `config.json` holds and whether or not any location is recorded. Slices 2 and 3 build it that way; Q8 (decided 2026-11-13): keep it; `decklab/README.md` says how a fresh install opts out, by saving no containers.
 
 ### 2.6 Where it's edited
 

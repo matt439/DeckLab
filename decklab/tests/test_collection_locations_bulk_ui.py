@@ -270,5 +270,21 @@ class CollectionLocationBulkUiTests(unittest.TestCase):
         """)
 
 
+    def test_the_batch_example_follows_the_space_setup(self):
+        self.run_js("""
+          let cv = drawLoc(); let ctx = batch(cv);
+          assert.equal(ctx.input.getAttribute('placeholder'), 'Such as Row 2, B or Binder');
+          ctx.sheet.close();
+          cv = drawLoc({storage_setup: {source: 'saved', default: 'binder', containers: [], elsewhere: 0, unplaced: 0,
+            not_counted: 0, suggestions: ['Page 1', 'Page 2']}});
+          ctx = batch(cv); assert.equal(ctx.input.getAttribute('placeholder'), 'Such as Page 2, B or Binder');
+          ctx.sheet.close();
+          clear(main); as('user2', MAY.user2);                 // a member's space never gets home's rows
+          cv = drawCollectionRows({space: 'user2', sha256: 's1', rows, editable: true,
+            locations: {ready: true, sha256: locationSha, rows: locations}}, 'user2');
+          ctx = batch(cv); assert.equal(ctx.input.getAttribute('placeholder'), 'Such as Binder or Shelf 2');
+        """)
+
+
 if __name__ == "__main__":
     unittest.main()

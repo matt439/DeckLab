@@ -297,6 +297,10 @@ class CliTests(unittest.TestCase):
         code, out, _ = self.run_cli("set", str(file), "--expect", "1", "-m", "Again")
         self.assertEqual((code, len(self.store._changes)), (0, 1))
         self.assertIn("Nothing to change", out)
+        code, out, _ = self.run_cli("set", str(file), "--expect", "1", "-m", "Again", "--dry-run")
+        self.assertEqual((code, len(self.store._changes)), (0, 1))
+        self.assertIn("Nothing to change", out)               # the preview says what the save would
+        self.assertNotIn("Would save", out)
 
     def test_refusals(self):
         file = self.folder / "bad.json"
@@ -310,6 +314,10 @@ class CliTests(unittest.TestCase):
         code, _, err = self.run_cli("set", str(file), "--expect", "0", "-m", "Opt out")
         self.assertEqual(code, 1)
         self.assertIn("migration 0028", err)
+        code, out, err = self.run_cli("set", str(file), "--expect", "0", "-m", "Opt out", "--dry-run")
+        self.assertEqual(code, 1)                             # the preview refuses as the save would
+        self.assertIn("migration 0028", err)
+        self.assertNotIn("Would save", out)
         self.store.down = True
         self.assertEqual(self.run_cli("show")[0], 2)
 

@@ -141,6 +141,13 @@ function drawColStorageBox(cv) {
     : `Storage box: about ${num(box.cards)} of ${num(box.capacity)} cards (the copies not in built decks or products kept intact).${counted}`;
 }
 
+/** A container's name inside a sentence: "Storage box" as "storage box", but a name with a capital
+ * after its first letter ("Ultimate Guard binder") as written. */
+function colLowerName(name) {
+  const text = String(name);
+  return /[A-Z]/.test(text.slice(1)) ? text : text.charAt(0).toLowerCase() + text.slice(1);
+}
+
 /** One line per container of the space's storage setup (E8-S25), by its name: "Binder: about 310 of
  * 360 cards", or a card total when its capacity isn't known; a warning box when one is over. Nothing
  * when the space has no containers or the counts can't be worked out. */
@@ -152,16 +159,24 @@ function drawColStorageSetup(cv) {
   const line = (c) => c.over ? `${c.name} is over capacity: about ${num(c.cards)} cards for about ${num(c.capacity)} places.`
     : c.capacity !== null ? `${c.name}: about ${num(c.cards)} of ${num(c.capacity)} cards`
     : `${c.name}: about ${plural(c.cards, "card")}`;
-  const notes = (setup.not_counted ? ` Basic lands (${plural(setup.not_counted, "card")}) aren't counted.` : "")
-    + (setup.elsewhere ? ` Cards kept somewhere that isn't one of these (${plural(setup.elsewhere, "card")}) aren't counted.` : "")
-    + (setup.unplaced ? ` Cards with no location recorded (${plural(setup.unplaced, "card")}) aren't in any of these.` : "");
+  const basics = setup.not_counted ? ` Basic lands (${plural(setup.not_counted, "card")}) aren't counted.` : "";
   const what = " (the copies not in built decks or products kept intact).";
   cv.boxNote.className = shown.some((c) => c.over) ? "box box-warn col-storage-box" : "sub col-storage-box";
   if (shown.length === 1) {
-    const only = line(shown[0]);
-    cv.boxNote.textContent = (shown[0].over ? only : only + what) + notes;
+    // One container keeps the single box's sentences: "The storage box is over capacity", "outside the box".
+    const only = shown[0], the = `the ${colLowerName(only.name)}`;
+    const binder = only.kind === "binder" ? "" : ", such as in a binder";
+    const notes = basics
+      + (setup.elsewhere ? ` Cards kept outside ${the} (${plural(setup.elsewhere, "card")}${binder}) aren't counted.` : "")
+      + (setup.unplaced ? ` Cards with no location recorded (${plural(setup.unplaced, "card")}) aren't counted in ${the}.` : "");
+    cv.boxNote.textContent = (only.over
+      ? `The ${colLowerName(only.name)} is over capacity: about ${num(only.cards)} cards for about ${num(only.capacity)} places.`
+      : line(only) + what) + notes;
     return;
   }
+  const notes = basics
+    + (setup.elsewhere ? ` Cards kept somewhere that isn't one of these (${plural(setup.elsewhere, "card")}) aren't counted.` : "")
+    + (setup.unplaced ? ` Cards with no location recorded (${plural(setup.unplaced, "card")}) aren't in any of these.` : "");
   clear(cv.boxNote).append(
     ...shown.map((c) => el("span", { class: "col-storage-line", text: c.over ? line(c) : `${line(c)}.` })),
     el("span", { class: "col-storage-line", text: `Counts are the copies not in built decks or products kept intact.${notes}` }));
@@ -544,7 +559,7 @@ function openLocationBatch(cv, selected = false, opener = null) {
   ctx.mode.value = "";
   const choices = el("datalist", { id: id("places") }, colLocationChoices(cv).map(text => el("option", { value: text })));
   ctx.input = el("input", { id: id("place"), type: "text", maxlength: STORAGE_LOCATION_MAX, autocomplete: "off",
-    list: choices.id, placeholder: "Such as Row 2, B or Binder", oninput: () => {
+    list: choices.id, placeholder: colLocationExample(cv), oninput: () => {
       if (colLocationSheetCurrent(ctx) && ctx.input.value) ctx.mode.value = "assign";
       change();
     } });

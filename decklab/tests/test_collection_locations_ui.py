@@ -99,6 +99,19 @@ class CollectionLocationsUiTests(unittest.TestCase):
           note = main.querySelector('.col-storage-box');
           assert(note.className.includes('box-warn'));
           assert(note.textContent.includes('Binder is over capacity: about 400 cards for about 360 places.'));
+          draw(setup([{...box, cards: 2500, over: true}], {elsewhere: 1, not_counted: 2}));
+          note = main.querySelector('.col-storage-box');           // one container keeps the box's sentences
+          assert(note.className.includes('box-warn'));
+          assert.equal(note.textContent, `The storage box is over capacity: about ${num(2500)} cards for about ${num(2400)}`
+            + " places. Basic lands (2 cards) aren't counted. Cards kept outside the storage box (1 card, such as in a"
+            + " binder) aren't counted.");
+          draw(setup([{...binder, id: 'binder2', name: 'Ultimate Guard binder'}], {unplaced: 3}));
+          assert.equal(main.querySelector('.col-storage-box').textContent, 'Ultimate Guard binder: about 310 of 360 cards'
+            + " (the copies not in built decks or products kept intact). Cards with no location recorded (3 cards)"
+            + " aren't counted in the Ultimate Guard binder.");
+          draw(setup([binder], {elsewhere: 4}));
+          assert(main.querySelector('.col-storage-box').textContent.endsWith(
+            "Cards kept outside the binder (4 cards) aren't counted."));
           draw(setup([])); assert(main.querySelector('.col-storage-box').hidden);
           draw(setup([{...box, cards: null}])); assert(main.querySelector('.col-storage-box').hidden);
           draw({storage_setup: {containers: 'bad'}});              // a bad answer falls back to storage_box
