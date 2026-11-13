@@ -106,7 +106,8 @@ older code (the committed tests/fixtures/inventory_goldens):
   home and its games). No golden scenario records a game, so only the no-games answer
   ({"last": None, "games": 0}) or the unread one (None) is dropped from decks_index summaries;
   a recorded game still compares. test_library_played checks its values. Its second slice adds
-  deck_view's "played" too, dropped only as {"last": None, "games": 0, "since": None} or None.
+  deck_view's "played" too, dropped only as {"last": None, "games": 0, "since": None} or None
+  (E11-S61's "can_record" beside it ignored).
 - "keep-rule-defaults": E4-S09 adds deck_view's "keep_rule" (the practice games' keep rule, the
   same constant for every deck and viewer) and each Deck line's "keep_land"; both are dropped
   (test_keep_rule checks their values).
@@ -652,7 +653,10 @@ def played_defaults(dump):
                 summary.pop("played")
         views = mine.get("deck_view") if isinstance(mine, dict) else None
         for view in views.values() if isinstance(views, dict) else []:
-            if isinstance(view, dict) and view.get("played", 0) in (None, {"last": None, "games": 0, "since": None}):
+            played = view.get("played", 0) if isinstance(view, dict) else 0
+            if isinstance(played, dict):    # E11-S61's can_record, the viewer's play.record answer, compares nowhere
+                played = {k: v for k, v in played.items() if k != "can_record"}
+            if isinstance(view, dict) and played in (None, {"last": None, "games": 0, "since": None}):
                 view.pop("played")
 
 

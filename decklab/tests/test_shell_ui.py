@@ -302,6 +302,49 @@ class ShellUiTests(unittest.TestCase):
           assert.equal(back.hidden, true);
         """)
 
+    def test_a_menu_item_the_stylesheet_hides_takes_no_focus(self):
+        # E11-S61: from 1000 px the top bar's More hides Build decks (a.nav-narrow), its pill showing instead.
+        # This fake DOM has no layout, so each item's getClientRects says what a browser would: [] when hidden.
+        self.run_js("""
+          as("matt", false);
+          location.hash = "#/library";
+          drawShell(); await flush();
+          const nav = document.getElementById("main-nav");
+          const button = nav.querySelector(".nav-more"), menu = document.getElementById("nav-more-menu");
+          const items = menu.querySelectorAll("[role=menuitem]");
+          for (const item of items) item.getClientRects = () => item.matches(".nav-narrow") ? [] : [{}];
+          const label = () => document.activeElement.textContent;
+          const key = (k) => menu.fire("keydown", { key: k, target: document.activeElement });
+          same(items.map((a) => a.textContent).slice(0, 4), ["Tokens", "Sleeves & boxes", "Build decks", "Game log"]);
+          button.click();
+          assert.equal(menu.hidden, false);
+          assert.equal(label(), "Tokens");
+          key("ArrowDown"); assert.equal(label(), "Sleeves & boxes");
+          assert(key("ArrowDown").defaultPrevented);
+          assert.equal(label(), "Game log", "ArrowDown steps over the hidden Build decks");
+          key("ArrowUp"); assert.equal(label(), "Sleeves & boxes", "and so does ArrowUp");
+          // Below 1000 px it shows, and the arrow keys stop on it.
+          for (const item of items) item.getClientRects = () => [{}];
+          key("ArrowDown"); assert.equal(label(), "Build decks");
+          closeMenus();
+
+          // A hidden first item: opening focuses the first one shown, and wrapping skips the hidden one both ways.
+          const hidden = (text) => { const a = el("a", { role: "menuitem", href: "#/x", text }); a.getClientRects = () => []; return a; };
+          const shown = (text) => { const a = el("a", { role: "menuitem", href: "#/x", text }); a.getClientRects = () => [{}]; return a; };
+          const own = el("button", { type: "button", "aria-haspopup": "menu", "aria-expanded": "false" });
+          const list = el("div", { class: "menu", role: "menu", hidden: true }, hidden("One"), shown("Two"), shown("Three"), hidden("Four"));
+          main.append(own, list);
+          wireMenu(own, list);
+          own.click();
+          assert.equal(list.hidden, false);
+          assert.equal(document.activeElement.textContent, "Two", "the first item shown, not the hidden first one");
+          list.fire("keydown", { key: "ArrowUp", target: document.activeElement });
+          assert.equal(document.activeElement.textContent, "Three", "ArrowUp wraps past hidden Four and One");
+          list.fire("keydown", { key: "ArrowDown", target: document.activeElement });
+          assert.equal(document.activeElement.textContent, "Two", "ArrowDown wraps past them too");
+          closeMenus();
+        """)
+
     def test_settings_are_an_admins_and_the_footer_is_one_line(self):
         self.run_js("""
           showFooter = () => {}; loadServerRestart = () => {};          // the version check is version.js's (test_version_ui)

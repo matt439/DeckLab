@@ -199,7 +199,9 @@ function deckOverviewPlayed(data) {
     href: `#/play?id=${encodeURIComponent(data.summary.id)}`, text });
   if (!p.games || !p.last) {
     return el("div", { class: "deck-overview-played deck-played-empty" },
-      el("p", { class: "deck-played", text: "Not played at home yet" }), el("p", {}, log("Record a game")));
+      el("p", { class: "deck-played", text: "Not played at home yet" }),
+      // Only a viewer the Game log would let record one with this deck (play.record) is offered to.
+      el("p", {}, log(p.can_record === true ? "Record a game" : "Open the Game log")));
   }
   const parts = [el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-played", text: "Played at home" }),
     log("Open the Game log"))];
