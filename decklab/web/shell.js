@@ -175,13 +175,16 @@ function drawShell() {
   if (nav) {
     nav.hidden = false;
     const moreMenu = el("div", { class: "menu nav-more-menu", id: "nav-more-menu", role: "menu", hidden: true },
-      more.map((r) => el("a", { role: "menuitem", href: `#/${r.path}`, "data-route": r.path, onclick: () => closeMenus() },
-        shellIcon(r.icon), el("span", { text: r.label }))));
+      more.map((r) => el("a", { role: "menuitem", href: `#/${r.path}`, "data-route": r.path, onclick: () => closeMenus(),
+        class: r.pill ? "nav-narrow" : null }, shellIcon(r.icon), el("span", { text: r.label }))));
     const moreButton = el("button", { type: "button", class: "nav-item nav-more", "aria-haspopup": "menu",
       "aria-expanded": "false", "aria-controls": "nav-more-menu", "data-route-group": "more" },
       "More", el("span", { class: "menu-caret", "aria-hidden": "true" }));
     clear(nav).append(el("ul", { class: "nav-items" },
       main.map((r) => el("li", {}, navLink(r, "nav-item"))),
+      // A "more" page with a pill (Build decks, E11-S61): its pill shows from 1000 px only (shell.css), where
+      // More leaves it out; a phone on its side's top bar has no room for a fifth pill, so there it's in More.
+      more.filter((r) => r.pill).map((r) => el("li", { class: "nav-wide" }, navLink(r, "nav-item"))),
       more.length ? el("li", { class: "menu-wrap" }, wireMenu(moreButton, moreMenu), moreMenu) : null));
   }
 
@@ -278,9 +281,12 @@ function syncShell(path = parseHash().path) {
     else link.removeAttribute("aria-current");
   }
   for (const group of document.querySelectorAll("[data-route-group]")) {
-    const inside = group.dataset.routeGroup === "more" ? section.nav === "more"
+    const more = group.dataset.routeGroup === "more";
+    const inside = more ? section.nav === "more"
       : !navRoutes("main").slice(0, TAB_COUNT).some((r) => r.path === section.path);
-    group.classList.toggle("is-current", inside);
+    // A page with its own pill from 1000 px marks the top bar's More only below that (shell.css).
+    group.classList.toggle("is-current", inside && !(more && section.pill));
+    group.classList.toggle("is-current-narrow", inside && more && Boolean(section.pill));
   }
   syncShellBack();
   syncShellTitle();

@@ -457,6 +457,12 @@ class AccountsUiTests(unittest.TestCase):
           drawCollection({ space: "user2", spaces, editable: true, types: [], roles: [], total: 0, page: 1, pages: 1,
             note: "", warnings: [], cards: [] }, new URLSearchParams(), "user2");
           assert(button(main, "Add card") && button(main, "Import cards…"));
+          // Home's collection: Build decks is the top bar's pill or More's now, not the Collection page's (E11-S61).
+          as("user1", MAY.user1);
+          drawCollectionRows({ space: "home", sha256: "s1", rows: [row], editable: true, spaces }, "home");
+          assert(main.textContent.includes("Download collection (CSV)"));
+          assert(!main.textContent.includes("Build decks"));
+          assert(!main.querySelectorAll("a").some((a) => a.getAttribute("href") === "#/assembly"));
           assert.equal(colPath("/api/collection", "user2", new URLSearchParams("q=elf")), "/api/collection?q=elf&space=user2");
           assert.equal(colPath("/api/collection/rows", "home"), "/api/collection/rows");
         """)

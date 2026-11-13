@@ -136,8 +136,13 @@ class ShellUiTests(unittest.TestCase):
           location.hash = "#/library";
           drawShell(); await flush();
           const nav = document.getElementById("main-nav"), bar = document.getElementById("tabbar");
-          same(labels(nav), ["Decks", "Testing", "Collection", "Shopping", "Tokens", "Sleeves & boxes", "Build decks",
-            "Game log", "Wishlist", "Activity"]);
+          // Build decks is a pill from 1000 px (E11-S61) and in More below that: the stylesheet shows one of the two.
+          same(labels(nav), ["Decks", "Testing", "Collection", "Shopping", "Build decks", "Tokens", "Sleeves & boxes",
+            "Build decks", "Game log", "Wishlist", "Activity"]);
+          const pill = nav.querySelector(".nav-wide");
+          assert.equal(pill.querySelector("a").getAttribute("href"), "#/assembly");
+          same(nav.querySelectorAll(".nav-wide").length, 1);
+          same(nav.querySelectorAll(".nav-narrow").map((a) => a.getAttribute("data-route")), ["assembly"]);
           same(labels(bar), ["Decks", "Testing", "Collection", "Shopping"]);
           assert(bar.textContent.includes("More"));
           same(labels(document.getElementById("more-list")), ["Tokens", "Sleeves & boxes", "Build decks",
@@ -162,7 +167,16 @@ class ShellUiTests(unittest.TestCase):
           syncShell("tokens");
           assert(current().every((path) => path === "tokens"));
           assert(nav.querySelector(".nav-more").classList.contains("is-current"));
+          assert(!nav.querySelector(".nav-more").classList.contains("is-current-narrow"));
           assert(bar.querySelector(".tab-more").classList.contains("is-current"));
+          // Build decks marks its pill; the top bar's More only below 1000 px (is-current-narrow), the tab bar's More always.
+          syncShell("assembly");
+          assert(current().every((path) => path === "assembly") && current().length >= 3);
+          assert(!nav.querySelector(".nav-more").classList.contains("is-current"));
+          assert(nav.querySelector(".nav-more").classList.contains("is-current-narrow"));
+          assert(bar.querySelector(".tab-more").classList.contains("is-current"));
+          syncShell("library");
+          assert(!nav.querySelector(".nav-more").classList.contains("is-current-narrow"));
 
           // User1 (a member at home): no Settings, the rest as Matt.
           as("user1");

@@ -2,6 +2,8 @@
 
 E11-S61's review. Matt couldn't find Build decks on the iPad, though he had used it before, because it was in the deck page's More. That button has since moved out: the deck page's head now has **Build deck** (or **Review build**) beside Edit. This review lists every item in every More menu at each width, says what it opens and whether there's already another way to it in plain sight, and recommends keep, move into plain sight or remove. Matt decides; nothing here changes the page.
 
+> **Decided 2026-11-13.** Matt accepted the recommendation in short below, all as recommended, and it's built: Build decks is a pill in the lab's top bar from 1000 px (the route's `pill`, core.js; `.nav-wide` and `.nav-narrow` in shell.css), where the top bar's More ▾ leaves it out, and it stays in the More sheet under 1000 px and in a phone on its side's More ▾; the deck Overview's Played at home panel links to the Game log narrowed to the deck (`#/play?id=`, which the Game log already supported): **Open the Game log**, or **Record a game** before its first game; and the Collection page's More no longer holds Build decks. Everything else is kept where it was.
+
 ## How it was checked
 
 - **The code, not a running page.** The menus come from the routes table (`decklab/web/core.js`, `ROUTES`, each route's `nav`), the shell (`decklab/web/shell.js`, `drawShell`), the deck page's head (`decklab/web/deck.js`, `deckHeader` and `deckMoreItems`) and each page's `pageHead({ more })`. The widths come from `shell.css`, `deck.css` and `tokens.css`.

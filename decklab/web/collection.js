@@ -327,8 +327,7 @@ function colHead(cv, query) {
     cv.editable && !cv.unsupported ? { label: "Loans…", onclick: () => openCollectionLoans(cv) } : null,
     cv.unsupported ? null : { label: "Download collection (CSV)", onclick: () => downloadCollection(cv) },
     typeof memberOwnSpace === "function" && memberOwnSpace() && cv.space === ownSpace()
-      ? { label: "Download my space (zip)", onclick: () => downloadMemberSpace(cv) } : null,
-    cv.space === HOME_SPACE && seesInventory(HOME_SPACE) ? { label: routeH1("assembly"), href: "#/assembly" } : null];
+      ? { label: "Download my space (zip)", onclick: () => downloadMemberSpace(cv) } : null];
   return [
     ...pageHead({ title: colTitle(cv.space),
       description: cv.kind === "rows" ? "Every printing recorded, one row each." : "Cards you own or have on the way.",
