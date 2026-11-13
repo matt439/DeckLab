@@ -16,14 +16,15 @@ package decklab;
  *                 SpellAbilityStackInstance, Game and Trigger maxId, CombatView nextId: their
  *                 values feed hashCode (Objects.hash(class, id)), so they order the HashSets and
  *                 HashMaps of abilities a game iterates (r2-engine notes, "(d)")
- *   KEYED_CACHES  Card.cp2card: taken back to the keys it had at snapshot()
+ *   KEYED_CACHES  Card.cp2card: taken back to the keys it had at snapshot(); and, from Forge
+ *                 2.0.16 (optional: an earlier build hasn't the class), AITimeoutTracker.SLOTS
  *   EMPTIED       ChangeZoneAi.multipleCardsToChoose: emptied
  *   and AiCache.clear().
  * The fields are found by name with reflection, so a Forge upgrade that renames one is found at
  * once: snapshot() then notes the problem (problem()) instead of throwing, sim mode's v1 games
  * (which never reset) play on, serve mode won't start (DLSERVE|fail), and reset() throws
- * IllegalStateException with it. reset() runs every game, so it stays cheap: 7 ints, one pass
- * over a map that holds a few cards, and two clears.
+ * IllegalStateException with it. reset() runs every game, so it stays cheap: 7 ints, a pass
+ * over each map (a few cards; from Forge 2.0.16, a few AI sessions), and two clears.
  *
  * Not reset, and not this class's: a game that crashed (an exception or StackOverflowError in
  * Match.startGame) may leave Forge's unsynchronised static lazy maps half updated
@@ -67,9 +68,14 @@ final class WarmState {
      * process's game that meets such a card takes ids a warm worker already holding it doesn't
      * (v-r05). Taking out what games put in makes the worker build it again at the same point.
      * Not cleared outright: whatever start-up put there stays, as it does in a fresh process.
+     * forge.util.AITimeoutTracker.SLOTS (Forge 2.0.16's AI deadline sessions) is keyed by game and
+     * player id, which COUNTERS puts back every game: a game thread a clock stop or a stuck eval left
+     * running in a session would otherwise lend its deadline to the next game's same key. A third
+     * element "optional" skips an entry whose class or field this Forge hasn't.
      */
     static final String[][] KEYED_CACHES = {
         {"forge.game.card.Card", "cp2card"},
+        {"forge.util.AITimeoutTracker", "SLOTS", "optional"},
     };
 
     /** Forge's static AI state reset() empties: {class, field}, each a Collection. */
@@ -97,7 +103,11 @@ final class WarmState {
             Map<?, ?>[] maps = new Map<?, ?>[KEYED_CACHES.length];
             Set<?>[] keys = new Set<?>[KEYED_CACHES.length];
             for (int k = 0; k < KEYED_CACHES.length; k++) {
-                maps[k] = (Map<?, ?>) field(KEYED_CACHES[k]).get(null);
+                Field f = KEYED_CACHES[k].length > 2 ? optionalField(KEYED_CACHES[k]) : field(KEYED_CACHES[k]);
+                if (f == null) {
+                    continue;   // an optional cache this Forge hasn't: maps[k] stays null, reset() skips it
+                }
+                maps[k] = (Map<?, ?>) f.get(null);
                 keys[k] = new HashSet<>(maps[k].keySet());
             }
             Field[] lists = new Field[EMPTIED.length];
@@ -123,6 +133,15 @@ final class WarmState {
         Field f = Class.forName(name[0]).getDeclaredField(name[1]);
         f.setAccessible(true);
         return f;
+    }
+
+    /** {class, field, "optional"}'s field, made accessible, or null when this Forge hasn't it. */
+    private static Field optionalField(String[] name) {
+        try {
+            return field(name);
+        } catch (ReflectiveOperationException e) {
+            return null;
+        }
     }
 
     /** Why reset() can't work, or null. */
@@ -152,6 +171,9 @@ final class WarmState {
                 fields[k].setInt(null, snapshot[k]);
             }
             for (int k = 0; k < caches.length; k++) {
+                if (caches[k] == null) {
+                    continue;
+                }
                 for (int tries = 1; ; tries++) {
                     try {
                         caches[k].keySet().retainAll(cacheKeys[k]);

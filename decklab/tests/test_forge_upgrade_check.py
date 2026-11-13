@@ -242,6 +242,25 @@ class UpgradeCheckTests(unittest.TestCase):
         self.assertIn("--plan needs a release tag", err)
 
 
+class StepArgsTests(unittest.TestCase):
+    """Each step's args are its command's own parser defaults, with the real commands."""
+
+    def test_each_step_gets_every_option_its_command_has(self):
+        # A hand-made Namespace once lacked cardlog-check's --require-development and --serial, so
+        # the real command failed with an AttributeError before playing a game (2026-11-13).
+        for forge_dir in (None, pathlib.Path("staged-forge")):
+            with mock.patch.object(cli_checks, "_cardlog_check", return_value=0) as check:
+                name, command, args, _ = cli_upgrade._steps(forge_dir)[0]
+                self.assertEqual((name, command(args)), ("cardlog-check", 0))
+                self.assertEqual(check.call_args, mock.call(cli_checks.CHECK_GAMES, cli_checks.CHECK_COMMANDER_GAMES,
+                                                            forge_dir))
+            for name, _, args, _ in cli_upgrade._steps(forge_dir):
+                self.assertEqual(args.forge_dir, forge_dir, name)
+                self.assertNotIn("command", vars(args), name)
+        _, _, args, _ = cli_upgrade._steps()[0]
+        self.assertEqual((args.require_development, args.serial), (False, False))
+
+
 class StagedUpgradeCheckTests(unittest.TestCase):
     """upgrade-check --dir (E11-S45): the steps run against a staged build in a scratch folder, set
     up without noting its version, the summary names the folder, and nothing is noted for the

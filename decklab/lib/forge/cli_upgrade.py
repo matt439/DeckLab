@@ -94,21 +94,29 @@ def _run_step(name, command, args, reason):
     return FAILED, reason(tee.lines(), code), False
 
 
+def _defaults(add_args, argv, forge_dir):
+    """The args a command gets when typed as argv with no options: its own parser's defaults, so an
+    option added to the command later is there too (a hand-made Namespace once lacked cardlog-check's
+    --require-development and --serial, and the step failed with an AttributeError), plus forge_dir."""
+    parser = argparse.ArgumentParser(add_help=False)
+    add_args(parser.add_subparsers(dest="command"))
+    args = parser.parse_args(argv)
+    del args.command
+    args.forge_dir = forge_dir
+    return args
+
+
 def _steps(forge_dir=None):
     """The steps as (name, the command's function, its args, the reason for a failure), read
     from their modules when called, so a test's patch of a command reaches them. forge_dir (a
     staged build, --dir) goes to each step as its args' forge_dir; None is the installed build."""
-    from . import servecheck
     return [
         ("cardlog-check", checks._cmd_cardlog_check,
-         argparse.Namespace(games=checks.CHECK_GAMES, commander_games=checks.CHECK_COMMANDER_GAMES,
-                            forge_dir=forge_dir), _first_line),
+         _defaults(checks._cardlog_check_args, ["cardlog-check"], forge_dir), _first_line),
         ("serve-check", checks._cmd_serve_check,
-         argparse.Namespace(games=servecheck.GAMES, commander_games=servecheck.COMMANDER_GAMES, v1=False,
-                            forge_dir=forge_dir), _first_line),
+         _defaults(checks._serve_check_args, ["serve-check"], forge_dir), _first_line),
         ("overrides check", commands._cmd_overrides,
-         argparse.Namespace(action="check", set_name=None, user_dir=None, sets=None, json=False,
-                            forge_dir=forge_dir), _overrides_reason),
+         _defaults(commands._overrides_args, ["overrides", "check"], forge_dir), _overrides_reason),
     ]
 
 

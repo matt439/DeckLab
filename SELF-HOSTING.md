@@ -248,17 +248,17 @@ You need a **Java JDK 21 or later** (a full JDK, with `javac` and `jar`: the car
 
 ### Download it (the usual way)
 
-1. **Download the release** Deck Lab expects: [2.0.15-decklab-52387e83f](https://github.com/matt439/forge/releases/tag/2.0.15-decklab-52387e83f) (it's `RELEASE` in [decklab/lib/forge/simjar.py](decklab/lib/forge/simjar.py)). It's Forge 2.0.15 with the fork built in. Get both files: `forge-2.0.15-decklab-52387e83f.zip` and its `.zip.sha256`.
+1. **Download the release** Deck Lab expects: [2.0.16-decklab-029c9518f](https://github.com/matt439/forge/releases/tag/2.0.16-decklab-029c9518f) (it's `RELEASE` in [decklab/lib/forge/simjar.py](decklab/lib/forge/simjar.py)). It's Forge 2.0.16 with the fork built in. Get both files: `forge-2.0.16-decklab-029c9518f.zip` and its `.zip.sha256`.
 2. **Check the checksum** matches the one in the `.sha256` file and the release's notes:
-   - Windows (PowerShell): `Get-FileHash forge-2.0.15-decklab-52387e83f.zip -Algorithm SHA256`
-   - Linux: `sha256sum -c forge-2.0.15-decklab-52387e83f.zip.sha256`
-   - macOS: `shasum -a 256 -c forge-2.0.15-decklab-52387e83f.zip.sha256`
+   - Windows (PowerShell): `Get-FileHash forge-2.0.16-decklab-029c9518f.zip -Algorithm SHA256`
+   - Linux: `sha256sum -c forge-2.0.16-decklab-029c9518f.zip.sha256`
+   - macOS: `shasum -a 256 -c forge-2.0.16-decklab-029c9518f.zip.sha256`
 
    If it doesn't match, the download is damaged: delete it and download it again.
-3. **Unzip it** somewhere of its own, such as `C:\Tools` or `~/tools`. It makes one folder, `forge-2.0.15-decklab-52387e83f`.
-   - Windows: Explorer's **Extract All**, or `Expand-Archive forge-2.0.15-decklab-52387e83f.zip C:\Tools`.
-   - Linux: `unzip forge-2.0.15-decklab-52387e83f.zip -d ~/tools` (a stock Ubuntu or Debian server has no `unzip`: `sudo apt install unzip`). Without it, Deck Lab's own unzipper keeps the launchers' permissions, from the repo's folder: `python -c "import os; from decklab.update import safe_extract; print(safe_extract('<the zip>', os.path.expanduser('~/tools')))"`. (Python's own `python -m zipfile -e` drops them; games still play, as Deck Lab starts Java itself.)
-   - macOS: `unzip forge-2.0.15-decklab-52387e83f.zip -d ~/tools`.
+3. **Unzip it** somewhere of its own, such as `C:\Tools` or `~/tools`. It makes one folder, `forge-2.0.16-decklab-029c9518f`.
+   - Windows: Explorer's **Extract All**, or `Expand-Archive forge-2.0.16-decklab-029c9518f.zip C:\Tools`.
+   - Linux: `unzip forge-2.0.16-decklab-029c9518f.zip -d ~/tools` (a stock Ubuntu or Debian server has no `unzip`: `sudo apt install unzip`). Without it, Deck Lab's own unzipper keeps the launchers' permissions, from the repo's folder: `python -c "import os; from decklab.update import safe_extract; print(safe_extract('<the zip>', os.path.expanduser('~/tools')))"`. (Python's own `python -m zipfile -e` drops them; games still play, as Deck Lab starts Java itself.)
+   - macOS: `unzip forge-2.0.16-decklab-029c9518f.zip -d ~/tools`.
 
    Then either rename that folder to `forge-decklab` (`~/tools/forge-decklab`, or `C:\Tools\forge-decklab` on Windows), where Deck Lab looks when `config.json` has no `forge_dir`, or keep its name and set `forge_dir` to it (below). Later releases are installed beside it as `forge-<release>` by `python -m decklab.update`, which sets `forge_dir` itself.
 4. Go on with "Point Deck Lab at it" below.
@@ -267,12 +267,12 @@ You need a **Java JDK 21 or later** (a full JDK, with `javac` and `jar`: the car
 
 Only if you want to change Forge itself, or no release fits your Deck Lab. It needs Maven as well as the JDK.
 
-1. **Download the Forge 2.0.15 release** from [Forge's releases](https://github.com/Card-Forge/forge/releases/tag/forge-2.0.15) (the desktop archive) and unpack it into a folder of its own, such as `C:\Tools\forge` or `~/forge-2.0.15`. It should hold one `forge-gui-desktop-2.0.15-jar-with-dependencies.jar` and a `res` folder. The build copies its `res` folder and launch scripts, and never changes it.
-2. **Clone the fork with its history.** The build compares the branch with the `forge-2.0.15` tag, so don't make a shallow clone:
+1. **Download the Forge 2.0.16 release** from [Forge's releases](https://github.com/Card-Forge/forge/releases/tag/forge-2.0.16) (the desktop archive) and unpack it into a folder of its own, such as `C:\Tools\forge` or `~/forge-2.0.16`. It should hold one `forge-gui-desktop-2.0.16-jar-with-dependencies.jar` and a `res` folder. The build copies its `res` folder and launch scripts, and never changes it.
+2. **Clone the fork with its history.** The build compares the branch with the `forge-2.0.16` tag, so don't make a shallow clone:
    ```
    git clone -b decklab https://github.com/matt439/forge forge-decklab-src
    ```
-   Deck Lab trusts the card log only from the fork build it was checked with: `RELEASE` in [decklab/lib/forge/simjar.py](decklab/lib/forge/simjar.py), such as `2.0.15-decklab-52387e83f`. If the branch has moved on since, check out that commit (`git checkout 52387e83f`). Any other build still plays matchups, but with plain Forge and without per-card stats.
+   Deck Lab trusts the card log only from the fork build it was checked with: `RELEASE` in [decklab/lib/forge/simjar.py](decklab/lib/forge/simjar.py), such as `2.0.16-decklab-029c9518f`. If the branch has moved on since, check out that commit (`git checkout 029c9518f`). Any other build still plays matchups, but with plain Forge and without per-card stats.
 3. **Build and install it** with `JAVA_HOME` set to the JDK and Maven on the PATH. From the fork's folder:
    ```
    python decklab/install.py --release <the release folder> --out <where to install it>

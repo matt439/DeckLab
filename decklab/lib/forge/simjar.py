@@ -82,14 +82,14 @@ from pathlib import Path
 
 from . import common
 
-V = "2.0.15-decklab-52387e83f"         # the fork's build installed on 2026-10-20, AI fixes round 1 (install.forge_version())
+V = "2.0.16-decklab-029c9518f"         # the fork's build installed on 2026-11-13, Forge 2.0.16 (install.forge_version())
 CHECKED = frozenset({V})                # Forge versions the card log was checked against in code
 # The Forge build each of CHECKED was checked with: its jar manifest's Implementation-Version.
 CHECKED_BUILDS = {V: V}
 # The card log's source each of CHECKED was checked with: its source_sha256(). A test in
 # test_forge_simjar holds it to the source, so an edit to Deck Lab's Java fails the tests until
 # cardlog-check passes with the edit and this is updated.
-CHECKED_SOURCE = {V: "60f69e2f7eedc5cefd6fc1022126e2451f88a224f03c1d558d118617822d81ce"}
+CHECKED_SOURCE = {V: "a3c79d274b650c30868b98fdc78d51b15b451b5fe006792afc336fb1fda9394b"}
 # The fork build a new install downloads: its release on GitHub is tagged with the build name and
 # holds the whole install, with a checksum (SELF-HOSTING.md, "Forge simulations"; the fork's
 # decklab/RELEASE.md makes one). Move it with CHECKED when a new build is checked.
