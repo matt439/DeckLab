@@ -2,6 +2,8 @@
 over the built-in default. state/space_storage.py has the record's rules and match().
 
     read(space)   -> {space, revision, ready, source, storage}; raises state's errors
+    default_place(space) -> {name, kind, sleeved} of the container loose cards go to, or None
+                     (slice 6's words: "To Storage box", "unsleeved" only when it isn't sleeved)
     current(space) -> the same, but never raises: a store that can't be read (the database down,
                      no store installed) answers as "nothing saved", so home keeps its built-in
                      box and the Card list's count still shows (source "default", revision None)
@@ -44,3 +46,16 @@ def current(space, *, seed=True):
         return read(space, seed=seed)
     except (state.StateError, RuntimeError, OSError):
         return _view(space, {"revision": None, "storage": None, "ready": None}, seed)
+
+
+def place(record):
+    """The record's default container as the pages word it: {name, kind, sleeved}, or None."""
+    found = rules.container(record, (record or {}).get("default"))
+    if found is None:
+        return None
+    return {"name": found["name"], "kind": found["kind"], "sleeved": bool(found.get("sleeved"))}
+
+
+def default_place(space):
+    """place() of the space's storage as it applies now (current(): never raises)."""
+    return place(current(space, seed=False)["storage"])

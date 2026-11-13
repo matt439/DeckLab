@@ -59,6 +59,25 @@ class AssemblyStorageOrderUiTests(unittest.TestCase):
           assert(main.querySelectorAll('.pack-storage-group').length > 0);
         """)
 
+    def test_put_back_says_unsleeved_only_when_the_default_container_isnt_sleeved(self):
+        """E8-S25 slice 6: storage_order's sleeved."""
+        self.run_js("""
+          const cards = {'Zebra': card('Zebra', 'Creature', ['W']), 'Back': card('Back', 'Instant', ['U'])};
+          const cases = [[undefined, true], [null, true], [{rule: 'colour-type', container: 'Storage box', sleeved: false}, true],
+            [{rule: 'set', container: 'Binder', sleeved: true, printings: {}}, false]];
+          for (const [order, unsleeved] of cases) {
+            clear(main);
+            const data = plan(cards, {steps: [{name: 'Zebra', storage: 1, keep: 0, transfers: [], waiting: 0, missing: 0}],
+              returns: [{name: 'Back', quantity: 1}]});
+            if (order !== undefined) data.storage_order = order;
+            drawAssembly(data, routeToken);
+            const back = main.querySelectorAll('.pack-step').find(s => s.querySelector('h3').textContent.includes('Put back'));
+            assert(back, steps());
+            const words = unsleeved ? 'put them back in storage, unsleeved.' : 'put them back in storage.';
+            assert(back.textContent.includes('Take these out of the deck and ' + words), back.textContent);
+          }
+        """)
+
 
 if __name__ == "__main__":
     unittest.main()

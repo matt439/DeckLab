@@ -14,6 +14,7 @@ which Where these go shares (E8-S27).
 the default container's (where cards with no location go)
 
     {"rule": "colour-type" | "set" | "name" | "none", "container": its name,
+     "sleeved": bool (slice 6: Put back says "unsleeved" only when it's false),
      "printings": {name: [set, collector_number]}}       (rule "set" only)
 
 or None when home has no default container. Build decks' second card order follows it: today's
@@ -54,7 +55,7 @@ def storage_order(inv, wanted):
     box = space_storage.container(record, record.get("default"))
     if box is None:
         return None
-    answer = {"rule": box["order"], "container": box["name"]}
+    answer = {"rule": box["order"], "container": box["name"], "sleeved": bool(box.get("sleeved"))}
     if box["order"] == "set":
         answer["printings"] = _printings(inv, record, box["id"], wanted)
     return answer

@@ -10,10 +10,13 @@ This never assigns cards, changes a deck or reads/writes a notice or kit.
 A ready answer also carries "storage_locations" (E8-S27, storage_places.advice): where the
 space's copies of each card in its "To storage" group are already filed, from the same saved
 snapshot. A lookup that fails leaves the field out; the save and the rest of the advice stand.
+It also carries "storage_default" (E8-S25 slice 6): the space's own default container where its
+"storage" copies go, {name, kind, sleeved}, or None when the space's storage setup has none (a
+member's space with nothing saved). The items stay {"kind": "storage"}; the words name it.
 """
 from collections import Counter, defaultdict
 
-from decklab.lib import cards, decks, inventory, pool
+from decklab.lib import cards, decks, inventory, pool, storage_setting
 from decklab.lib.inventory import rules
 
 from . import guard, storage_places
@@ -225,6 +228,7 @@ def _with_locations(answer, after, space):
         answer["storage_locations"] = storage_places.advice(after, space, names)
     except Exception:           # optional: the saved addition and its destinations stand
         answer.pop("storage_locations", None)
+    answer["storage_default"] = storage_setting.default_place(space)   # never raises: nothing saved reads as such
     return answer
 
 
