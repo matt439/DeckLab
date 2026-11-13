@@ -14,9 +14,11 @@ image often starts on UTC, so "timezone" says what the household's zone is:
 Without "timezone" (missing or blank), everything follows this PC's own zone: the timer's
 OnCalendar names no zone (so systemd uses the PC's), the smoke step and doctor have nothing to
 compare, and household_today is the PC's local date (Matt, 2026-11-13; it was a fixed UTC+10
-before). So is it when the name is set but this PC has no data for it (Windows has no zone data
-of its own unless Python's tzdata package is installed): datetime.astimezone() with no argument
-reads the PC's own offset, which needs no tzdata.
+before). When the name is set but this PC has no data for it (Windows has no zone data of its
+own unless Python's tzdata package is installed), only household_today falls back to the PC's
+local date (datetime.astimezone() with no argument reads the PC's own offset, which needs no
+tzdata): the timer still names the zone, so systemd needs the system's own zone data for it,
+and smoke and doctor warn that the zone can't be compared.
 
 Only the standard library is used (zoneinfo).
 """

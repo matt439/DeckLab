@@ -67,6 +67,40 @@ class HomeTimeTests(unittest.TestCase):
                              at.astimezone().date().isoformat())
         self.assertEqual(hometime.household_today({}, now=at), at.astimezone().date().isoformat())
 
+    def test_local_keeps_now_when_the_os_cant_convert_it(self):
+        class Stubborn(datetime):
+            def astimezone(self, tz=None):
+                raise OverflowError("out of range")
+        at = Stubborn(2026, 10, 31, 23, 30, tzinfo=timezone.utc)
+        self.assertIs(hometime._local(at), at)
+        with mock.patch.object(hometime, "zone", return_value=None):
+            self.assertEqual(hometime.household_today({"timezone": "Australia/Brisbane"}, now=at), "2026-10-31")
+        for error in (OSError("no"), ValueError("no")):
+            class Failing(datetime):
+                def astimezone(self, tz=None, _e=error):
+                    raise _e
+            self.assertEqual(hometime.household_today({}, now=Failing(2026, 10, 31, 23, 30, tzinfo=timezone.utc)),
+                             "2026-10-31")
+
+    @unittest.skipUnless(hasattr(time, "tzset"), "time.tzset is POSIX only")
+    def test_household_today_reads_the_os_zone_without_tzdata(self):
+        # A POSIX TZ string needs no zone data: UTC+10 written as "XXX-10".
+        at = datetime(2026, 10, 31, 14, 30, tzinfo=timezone.utc)      # 00:30 on Nov 1 at +10
+        before = os.environ.get("TZ")
+        try:
+            for tz, want in (("XXX-10", "2026-11-01"), ("YYY+05", "2026-10-31")):
+                os.environ["TZ"] = tz
+                time.tzset()
+                with mock.patch.object(hometime, "zone", return_value=None):
+                    self.assertEqual(hometime.household_today({"timezone": "Australia/Brisbane"}, now=at), want)
+                self.assertEqual(hometime.household_today({}, now=at), want)
+        finally:
+            if before is None:
+                os.environ.pop("TZ", None)
+            else:
+                os.environ["TZ"] = before
+            time.tzset()
+
     def test_the_example_config_leaves_timezone_blank(self):
         import json
         example = json.loads((REPO / "decklab" / "config.example.json").read_text(encoding="utf-8"))
