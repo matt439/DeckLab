@@ -223,6 +223,7 @@ function colView(data, space, token, kind) {
     pictures: data.pictures && typeof data.pictures === "object" ? { ...data.pictures } : {},
     prices: colPrices(data.prices),
     storage: colStorage(data.storage), locations: colLocations(data.locations), storageBoxCount: data.storage_box || null,
+    storageSetup: colStorageSetup(data.storage_setup),
     message: el("div", { class: "col-message", role: "status", "aria-live": "polite" }) };
   cv.storageForecast = colStorageForecast(forecast, cv);
   return cv;

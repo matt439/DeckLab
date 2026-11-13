@@ -23,7 +23,7 @@ KINDS = ("decks", "collection", "tokens", "shopping", "wishlist", "sleeves", "ga
 _KIND_OF = {
     "collection_card": "collection", "collection_import": "collection", "token_card": "tokens",
     "dice_counter": "tokens",
-    "card_loan": "collection",
+    "card_loan": "collection", "space_storage": "collection",
     **{table: "shopping" for table in ("product", "product_status", "purchase_order", "order_component",
                                         "watchlist_item", *ITEM_TABLES)},
     rules.DECK_TABLE: "decks", "deck_alias": "decks", "packing_tick": "decks", rules.ACCESSORY_TABLE: "sleeves", "wishlist_entry": "wishlist",
@@ -250,6 +250,8 @@ def describe(rows, actor_name, orders=None, groups=(), profiles=None, *, own=Non
         phrases.append(("updated the shops' postage", None))
     if take("pricing_setting"):
         phrases.append(("updated the price settings", None))
+    if take("space_storage"):
+        phrases.append(("updated the storage setup", None))
     kit = take(rules.ACCESSORY_TABLE)
     if len(kit) == 1:
         phrases.append((_lower(kit[0]["summary"]), None))

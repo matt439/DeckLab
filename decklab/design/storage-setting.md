@@ -1,6 +1,6 @@
 # A space's storage as a setting: inventory and proposal (E8-S25)
 
-Written 2026-11-05 against `09ec735`, as E8-S25's first slice. It changes no code. Part 1 lists every place that assumes the household's storage; part 2 proposes the setting's shape; part 3 is the build order; part 4 is the questions for Matt. Nothing here is decided until Matt answers part 4.
+Written 2026-11-05 against `09ec735`, as E8-S25's first slice. It changes no code. Part 1 lists every place that assumes the household's storage; part 2 proposes the setting's shape; part 3 is the build order; part 4 is the questions for Matt, which he answered on 2026-11-13 (all as proposed). Part 2 follows his answers.
 
 ## 0. What "storage" means today
 
@@ -121,9 +121,9 @@ One record per space, saved whole with a revision, as Commander-night notes and 
  "default": "box",
  "containers": [
    {"id": "box", "name": "Storage box", "kind": "box", "capacity": 2400,
-    "sections": ["Row 1", "Row 2", "Row 3", "Row 4"], "order": "colour-type"},
+    "sections": ["Row 1", "Row 2", "Row 3", "Row 4"], "order": "colour-type", "sleeved": false},
    {"id": "binder", "name": "Binder", "kind": "binder", "capacity": 360,
-    "sections": [], "order": "none"}
+    "sections": [], "order": "none", "sleeved": true}
  ]}
 ```
 
@@ -134,14 +134,15 @@ One record per space, saved whole with a revision, as Commander-night notes and 
   - `capacity`: how many cards it holds, 1-100,000, or blank when not known (then it gets no count line, only a card total).
   - `sections`: 0 to 50 short names (each 1-40 characters), such as `Row 1` or `Page 1-20`. They're the location suggestions, and a recorded location starting with one belongs to this container.
   - `order`: how cards are ordered inside, one of a few named rules (2.3).
+  - `sleeved`: whether the cards in it are kept sleeved (a binder's pockets, a sleeved shelf), `false` by default. Pages say "unsleeved" only for a container that isn't (Q5).
 - **`default`**: the container loose cards go to when no location is recorded, or blank. Today that's the box: no location counts as "in the box".
 - A location matches a container when it starts with one of its sections, or with its name, ignoring case and followed by the end, a space or a comma. When two match, the longer match wins. A location matching nothing is "somewhere else", as `Binder` is today.
 
-Today's `BOX_ROW` (`row\s*\d`) also counts `Row 9` and `row3` as in the box. Under the proposal home's default sections are `Row 1` to `Row 4`, so `Row 5` would stop counting. Home's live locations should be listed before the switch (`python -m decklab.db collection locations`), and any that would move named to Matt (Q3).
+Today's `BOX_ROW` (`row\s*\d`) also counts `Row 9` and `row3` as in the box. Home's default sections are `Row 1` to `Row 4`, so `Row 5` stops counting (Q3, decided). Home's live locations must be listed before slice 3 ships to the server (`python -m decklab.db collection locations`), and any that would move named to Matt: a `Row 5`, or a `row3` written without its space (matching ignores case, but `Row 1` doesn't match `row1`).
 
 ### 2.2 Where it's kept
 
-**A database table, `public.space_storage`, in a new migration `0023_space_storage.sql`:** `space_id` (primary key, referencing `space`), `revision`, `content jsonb` with a check on its shape, and the audit triggers, as `0021_shop_postage.sql` does. A save sends `expect` (the revision it read), and an older revision is refused as a conflict.
+**A database table, `public.space_storage`, in a new migration `0028_space_storage.sql`** (0023 to 0027 were taken by other work before slice 2 was built): `space_id` (primary key, referencing `space`), `revision`, `content jsonb` with a check on its shape, and the audit triggers, as `0021_shop_postage.sql` does. A save sends `expect` (the revision it read), and an older revision is refused as a conflict.
 
 Why not the other places:
 - **`profile_setting`** is a profile's, private to that profile with no sharing. Home's storage is Matt's and User1's together, and a profile's settings are read only by that profile (E10-S38).
@@ -156,29 +157,29 @@ A new per-space table also has to join the per-space lists:
 ### 2.3 Ordering rules
 
 A short fixed list, each a function on the page, never a free-form rule:
-- `colour-type` (home's default): today's `packStorageGroup`, unchanged, with its groups labelled as now.
-- `type-colour`: lands, creatures and spells first, colour inside each (if Matt wants it; Q4).
-- `colour`: by colour only, then mana value.
+- `colour-type` (home's default): today's `packStorageGroup`, unchanged, with its groups labelled as now. Basic lands stay in the pull step and token cards come after Put back (Q4).
 - `set`: by set, then collector number (how a binder by set is kept).
 - `name`: by name.
 - `none`: no order; Build decks' order offers only Name.
 
-A rule may say which section each group goes in (`colour-type` with four rows: creatures in Row 1, spells in Row 2, lands in Row 3…), so Where these go can say "Row 1 · Creatures · White". That needs Matt to say how the rows are really used (Q2), and is a later slice.
+There's no `type-colour` (Matt, Q4) and no colour-only rule; either can be added later as one more named function.
+
+A rule may say which section each group goes in, so Where these go can say "Row 1 · Creatures · White". Home's four rows each hold one group (Q2): Row 1 creatures, Row 2 spells, Row 3 lands, Row 4 token cards. That's the "sections from the rule" slice (3, step 7); the record doesn't carry it yet.
 
 ### 2.4 Who reads and changes it
 
 - **Changes:** the space's own people, the same as its collection (home: Matt and User1; a member: only that member). No admin override (E10-S29). A new rule `storage.edit` in `decklab/lib/permissions.py`, equal to the collection's edit rule, checked on the server's write as every write is.
-- **Reads:** whoever may see that space's inventory (`permissions.sees_inventory`). When a space makes its collection Public, its storage setting follows it, read-only (Q7).
+- **Reads:** whoever may see that space's inventory (`permissions.sees_inventory`). When a space makes its collection Public, its storage setting follows it, read-only (Q7, decided).
 - **Activity:** a save's row shows only to the space's own people (`scope_spaces`, as `collection_card`'s rows; no admin override), with a fixed summary, "Storage setup updated", never container names or sections; its message and reason follow the module's usual rules within that space. A test checks that an admin doesn't see a member space's storage row or its message.
 - **Command line:** `python -m decklab.db storage show [--space S] [--json]` and `storage set FILE [--space S] --expect N -m "..."` (a JSON file in the scratchpad, as `watchlist apply` takes a CSV), with `--actor` and `--dry-run` as the other writes. Every save is one audited change set. Member upkeep through Claude follows the existing relay rule: report only that it's done.
 
 ### 2.5 Defaults
 
-- **Home with no saved record:** a built-in default that is today's behaviour: one container `Storage box`, kind box, sections `Row 1` to `Row 4`, capacity `storage_box_capacity` from `config.json` or 2,400, order `colour-type`, and it's the default. Nothing on the page changes until someone saves.
+- **Home with no saved record:** a built-in default that is today's behaviour: one container `Storage box`, kind box, sections `Row 1` to `Row 4`, capacity `storage_box_capacity` from `config.json` or 2,400, order `colour-type`, not sleeved, and it's the default. Nothing on the page changes until someone saves. Once home has saved, `storage_box_capacity` is ignored (Q6).
 - **Any other space with no record** (a member's space): no containers. No count line, no Row suggestions (only locations already used), and the words "storage" and "loose cards" only, never "the storage box". Where these go keeps "To storage".
 - **A saved record always wins**, home's included. Saving an empty list of containers is allowed and means "no particular storage": it's how a self-hosted install's home opts out of the built-in box (Q8).
 
-This is the one default rule: home's built-in box applies whenever home has no saved record, whatever `config.json` holds and whether or not any location is recorded. Slices 2 and 3 build it that way; Q8 asks only whether a fresh install should be told how to opt out.
+This is the one default rule: home's built-in box applies whenever home has no saved record, whatever `config.json` holds and whether or not any location is recorded. Slices 2 and 3 build it that way; Q8 (decided 2026-11-13): keep it; `decklab/README.md` says how a fresh install opts out, by saving no containers.
 
 ### 2.6 Where it's edited
 
@@ -205,14 +206,28 @@ The sheet:
 Each slice keeps every space's page as it is now unless the space saves a setting.
 
 1. **This inventory and proposal** (2026-11-05). Matt answers part 4.
-2. **The record and its reader.** Migration `0023_space_storage.sql`, the state-store read and write with a revision and the audit trail, the per-space table lists of 2.2 (export, check, admission, departure, space export, Activity's row rule and headline group with its privacy test, `STATE_TABLES`), `permissions.storage.edit`, `GET`/`PUT /api/storage?space=`, the `storage show|set` commands, home's built-in default (2.5's rule), and the fixture tests (the in-memory store) plus `UNDO_MIGRATION`. No page change. Applying the migration live is Matt's, separately.
-3. **The count and the suggestions.** `collection_locations.py` reads the setting (containers, matching, default) instead of `BOX_ROW`, `CAPACITY` and `in_box`; the rows answers gain per-container counts beside `storage_box`; the Card list draws one line per container; the location suggestions come from the setting; the pending scenario routes by container. Home's default keeps every current test's numbers; a member's space loses the Row 1-4 suggestions (a fix, 1.3).
+2. **The record and its reader** (built 2026-11-13). Migration `0028_space_storage.sql`, the state-store read and write with a revision and the audit trail, the per-space table lists of 2.2 (export, check, admission, departure, space export, Activity's row rule and headline group with its privacy test, `STATE_TABLES`), `permissions.storage.edit`, `GET`/`PUT /api/storage?space=`, the `storage show|set` commands, home's built-in default (2.5's rule), and the fixture tests (the in-memory store) plus `UNDO_MIGRATION`. No page change. Applying the migration live is Matt's, separately.
+3. **The count and the suggestions** (built 2026-11-13; the rows answers' `storage_setup`, beside `storage_box`). `collection_locations.py` reads the setting (containers, matching, default) instead of `BOX_ROW`, `CAPACITY` and `in_box`; the rows answers gain per-container counts beside `storage_box`; the Card list draws one line per container; the location suggestions come from the setting; the pending scenario routes by container. Home's default keeps every current test's numbers; a member's space loses the Row 1-4 suggestions (a fix, 1.3).
 4. **Storage setup… on the Collection page.** The sheet, its preview, its conflict and permission refusals, and its UI tests.
 5. **Build decks' order follows the rule.** `packStorageGroup` becomes the `colour-type` rule among the others; the toggle's label follows the setting.
 6. **Words.** Receive delivery, Where these go and the CLI merge guide name the default container; README, AGENTS.md and the E8 stories updated.
 7. **Later, if wanted:** sections from the rule (Where these go says "Row 1 · Creatures"), Build decks grouped by container from recorded locations, and a container's fill shown on Shopping before an order.
 
-## 4. Questions for Matt
+## 4. Questions for Matt: decided 2026-11-13
+
+Matt answered every question as proposed ("all as recommended").
+
+1. **One record per space, edited on the Collection page by that space's own people** (2.2, 2.6). Not on Settings, home's included.
+2. **Home's four rows each hold one group:** Row 1 creatures, Row 2 spells, Row 3 lands, Row 4 token cards. Recorded here (2.3) for the later "sections from the rule" slice; the record doesn't carry it yet.
+3. **Fixed sections `Row 1` to `Row 4`,** not a pattern: a `Row 5` location stops matching the box. Before slice 3 reaches the server, list home's live locations (`python -m decklab.db collection locations`) and name any that would move to Matt. The coding task can't read the live database, so this is the coordinator's step.
+4. **Rules `colour-type` (today's), `set`, `name` and `none`;** no `type-colour`. In today's order basic lands stay in the pull step and token cards come after Put back.
+5. **Yes, a per-container `sleeved` flag** (2.1), so Put back and Where these go stop saying "unsleeved" for a sleeved container.
+6. **`storage_box_capacity` seeds home's built-in default** until home's first save, then is ignored.
+7. **Storage follows a Public collection,** read-only.
+8. **Keep 2.5's rule:** a new install's home starts with the built-in box; the README says how to opt out (save no containers).
+9. **Containers stay a separate list,** not accessories. Members do have their own accessories now (E8-S26), but a storage box isn't deck kit.
+
+The questions as asked:
 
 1. **One record per space, edited on the Collection page by that space's own people,** as in 2.2 and 2.6: is that right, or should home's be on Settings too?
 2. **How are the four rows really used?** Does each row hold one group (creatures, spells, lands, tokens?), or do the groups run on from row to row? The answer decides whether a rule can name a card's section.

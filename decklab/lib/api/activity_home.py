@@ -54,6 +54,17 @@ def pricing_setting_row(row, scope, profiles, me):
     return {"table": "pricing_setting", "op": row.get("op"), "summary": "Price settings updated"}
 
 
+def space_storage_row(row, spaces):
+    """A space's storage setup (E8-S25): only that space's own people (spaces: scope_spaces', None
+    for a script naming nobody), as its collection rows; never a container's name or sections."""
+    record = row.get("after") if isinstance(row.get("after"), dict) else row.get("before")
+    key = row.get("key") if isinstance(row.get("key"), dict) else {}
+    space = (record or {}).get("space_id") or key.get("space_id")
+    if not isinstance(space, str) or not space or (spaces is not None and space not in spaces):
+        return None
+    return {"table": "space_storage", "op": row.get("op"), "summary": "Storage setup updated"}
+
+
 def field_policy_row(row, scope, profiles, me):
     """HOME only, before generic admin handling; never relay rules or proof data."""
     if scope == "all":

@@ -56,6 +56,7 @@ TABLES = [
     ("public.field_policy", ("format",)),
     ("public.shop_postage", ("id",)),
     ("public.pricing_setting", ("id",)),
+    ("public.space_storage", ("space_id",)),
     # Migration 0004's: the inventory. collection_import_content (whole files) isn't a CSV: the
     # raw imports are under magic/ instead.
     ("public.inventory_revision", ("id",)),
@@ -87,7 +88,7 @@ INVENTORY_TABLES = {name for name, _ in TABLES[TABLES.index(("public.inventory_r
 # Inventory tables a later migration adds (0020's dice_counter). Without one the magic folder is
 # still written (the snapshot reads its rows as none); only its CSV is skipped.
 LATER_INVENTORY_TABLES = {"public.dice_counter", "public.card_loan"}
-# Tables a database not yet migrated may lack (0003, 0004, 0006, 0010-0013, 0017 and 0020-0022).
+# Tables a database not yet migrated may lack (0003, 0004, 0006, 0010-0013, 0017, 0020-0022 and 0028).
 # Until it's migrated they're skipped, a CSV already written for one is kept and the wishlists
 # (or magic) folder is left as it is (without 0006 no deck file is exported; a missing table of
 # LATER_INVENTORY_TABLES doesn't hold magic back), so the nightly export still works between
@@ -95,7 +96,7 @@ LATER_INVENTORY_TABLES = {"public.dice_counter", "public.card_loan"}
 UNTIL_MIGRATED = {"public.wishlist_entry", "public.profile_setting", "public.simulation_mode",
                   "public.play_record", "public.packing_tick", "public.commander_night", "public.visibility",
                   "public.space_departure", "public.field_policy", "public.shop_postage",
-                  "public.pricing_setting"} | INVENTORY_TABLES | DECK_TABLES
+                  "public.pricing_setting", "public.space_storage"} | INVENTORY_TABLES | DECK_TABLES
 MAGIC = "magic"                     # the export repo's folder of inventory files
 
 README = """# Deck Lab data export
@@ -124,6 +125,8 @@ git's history shows what changed between them.
   retained in `tables/public.commander_night.csv`, and each shop's postage rules and their
   revision in `tables/public.shop_postage.csv`, and the price settings (the currency and the
   price-check shops chosen on Settings) and their revision in `tables/public.pricing_setting.csv`.
+  Each space's storage setup (its containers, capacities and sections) and its revision are in
+  `tables/public.space_storage.csv`; a space with no row uses the built-in default.
   Public switches and their audit metadata are in `tables/public.visibility.csv`;
   an absent owner/thing row means Private.
   Departed member IDs and their removal operation/change identity are retained in

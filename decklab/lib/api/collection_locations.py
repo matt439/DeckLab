@@ -4,29 +4,32 @@ apart from the rows like their prices and storage counts, in every answer that s
 
     "locations":   {"ready", "sha256", "rows": {"set|number|finish": "Row 2, B"}}
     "storage_box": {"cards", "capacity", "over", "not_counted", "elsewhere"} (home only), or None
+    "storage_setup": {"source", "revision", "default", "containers", "elsewhere", "unplaced",
+                      "not_counted", "suggestions"} (storage_setup(): every space, E8-S25)
 
 locations' ready is False while the database lacks migration 0016: the page then shows locations
 as unavailable and the card sheet can't set one (the rows and every other edit still work). The
 rows' keys are collection_edit._picture_key's. Only the space's own people get these answers
 (rows_view and every write check guard.require_sees_inventory / require_space_write first).
 
-storage_box is the 4-row storage box's fill (E8-S19's first slice): home's copies not held by a
-built deck or an intact product (the storage counts: collection_edit._storage), against
-config.json's "storage_box_capacity" (CAPACITY, about 2,400 unsleeved cards, when it isn't set).
-Basic lands aren't counted (their copies in decks aren't tracked), nor (as "elsewhere") a row's
-free copies whose recorded location isn't one of the box's rows ("Binder": in_box), and a count
-that can't be worked out (the pool can't be read) is None rather than a guess.
+Both counts follow the space's storage setup (E8-S25, lib/storage_setting.py): its containers,
+each row's free copies (not held by a built deck or an intact product: collection_edit._storage)
+going to the container its recorded location matches (state/space_storage.match), or with none
+recorded to the default container. With nothing saved, home has its built-in 4-row storage box
+(capacity config.json's "storage_box_capacity", CAPACITY when it isn't set) and any other space
+no containers. storage_box is home's default container's fill (E8-S19's first slice, kept for the
+page's older code and the pending scenario's baseline). Basic lands aren't counted (their copies
+in decks aren't tracked), and a count that can't be worked out (the pool can't be read) is None
+rather than a guess.
 """
-import re
-
-from decklab.lib import config, inventory, spaces
+from decklab.lib import inventory, spaces, storage_setting
 from decklab.lib.inventory import ops_collection as ops, rules
+from decklab.lib.state import space_storage
 
 from . import common, guard
 from .common import ApiError
 
-CAPACITY = 2400
-BOX_ROW = re.compile(r"row\s*\d", re.IGNORECASE)   # "Row 2, B", "row3": a place in the storage box
+CAPACITY = space_storage.BUILTIN_CAPACITY      # home's built-in box when storage_box_capacity isn't set
 
 
 def location_input(value):
@@ -114,37 +117,97 @@ def bulk_set(body):
 
 
 def capacity():
-    """config.json's storage_box_capacity when it's a whole number from 1 to 100,000, else CAPACITY."""
-    value = config.load().get("storage_box_capacity")
-    if isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= 100_000:
-        return value
-    return CAPACITY
+    """Home's built-in box's capacity: config.json's storage_box_capacity when it's a whole number
+    from 1 to 100,000, else CAPACITY (only a seed until home saves its storage setup, Q6)."""
+    return storage_setting.capacity_seed() or CAPACITY
 
 
-def in_box(location):
-    """Whether a row's recorded location puts it in the storage box: none recorded (the box is
-    where unsleeved cards go), or one starting with a box row ("Row 2, B")."""
-    return not location or BOX_ROW.match(location) is not None
+def setup_view(space, *, seed=True):
+    """The space's storage setup as it applies now (lib/storage_setting.current: never raises)."""
+    return storage_setting.current(space, seed=seed)
 
 
-def storage_box(space, rows, storage, key):
-    """The storage box's count (see the module docstring), or None outside home or when the
-    storage counts couldn't be worked out."""
-    if space != spaces.HOME or storage.get("error"):
+def box_id(record):
+    """The id of the container storage_box describes: the default one, when it has a capacity."""
+    box = space_storage.container(record, (record or {}).get("default"))
+    return box["id"] if box is not None and box["capacity"] is not None else None
+
+
+def in_box(location, record=None):
+    """Whether a recorded location puts a row in home's storage box (box_id's container of record,
+    home's setup read when not given), by the setting's one rule (space_storage.match): none
+    recorded, or one starting with one of its sections ("Row 2, B"). Matt, 2026-11-13 (Q3): the
+    built-in box's sections are Row 1 to Row 4 only, so "Row 5" and "row3" are elsewhere."""
+    if record is None:
+        record = setup_view(spaces.HOME)["storage"]
+    ident = box_id(record)
+    return ident is not None and space_storage.match(record, location) == ident
+
+
+def _counts(space, rows, storage, key, record):
+    """{container id: free copies, "_elsewhere": a location matching no container, "_unplaced":
+    no location and no default container, "_basic": basic lands (not counted)}; None when the
+    copies in decks couldn't be worked out."""
+    if storage.get("error"):
         return None
     counts = storage.get("rows") or {}
     found = inventory.current().locations_of(space)
-    cards = not_counted = elsewhere = 0
+    out = {c["id"]: 0 for c in record["containers"]}
+    out.update(_elsewhere=0, _unplaced=0, _basic=0)
     for row in rows:
         held = counts.get(key(row), {})
         copies = int(row["quantity"])
         if "held" in held and held["held"] is None:          # a basic land: its copies in decks aren't known
-            not_counted += copies
+            out["_basic"] += copies
             continue
         free = max(0, copies - (held.get("held") or 0))
-        if in_box(found.get((row["set"], row["collector_number"], row["finish"]), "")):
-            cards += free
+        location = found.get((row["set"], row["collector_number"], row["finish"]), "")
+        ident = space_storage.match(record, location)
+        if ident is not None:
+            out[ident] += free
+        elif location.strip():
+            out["_elsewhere"] += free
         else:
-            elsewhere += free
-    size = capacity()
-    return {"cards": cards, "capacity": size, "over": cards > size, "not_counted": not_counted, "elsewhere": elsewhere}
+            out["_unplaced"] += free
+    return out
+
+
+def storage_setup(space, rows, storage, key, view=None):
+    """The rows answers' "storage_setup" (E8-S25): the space's containers with their counts.
+
+        {"source": "saved" | "default" | "none", "revision", "default": container id or None,
+         "containers": [{id, name, kind, capacity, sleeved, cards, over}], "elsewhere",
+         "unplaced", "not_counted", "suggestions": the location suggestions, in order}
+
+    cards and the totals are None when the copies in decks can't be worked out; over is None for
+    a container without a capacity. Sections go only into suggestions."""
+    view = view or setup_view(space)
+    record = view["storage"]
+    counts = _counts(space, rows, storage, key, record)
+    containers = []
+    for c in record["containers"]:
+        cards = None if counts is None else counts[c["id"]]
+        containers.append({"id": c["id"], "name": c["name"], "kind": c["kind"], "capacity": c["capacity"],
+                           "sleeved": c["sleeved"], "cards": cards,
+                           "over": None if cards is None or c["capacity"] is None else cards > c["capacity"]})
+    totals = {name: None if counts is None else counts[key_] for name, key_ in
+              (("elsewhere", "_elsewhere"), ("unplaced", "_unplaced"), ("not_counted", "_basic"))}
+    return {"source": view["source"], "revision": view["revision"], "default": record["default"],
+            "containers": containers, **totals, "suggestions": space_storage.suggestions(record)}
+
+
+def storage_box(space, rows, storage, key, view=None):
+    """The storage box's count (see the module docstring): home's default container, when it has a
+    capacity, as {cards, capacity, over, not_counted, elsewhere (every other free copy)}; None
+    outside home, without such a container, or when the storage counts couldn't be worked out."""
+    if space != spaces.HOME or storage.get("error"):
+        return None
+    record = (view or setup_view(space))["storage"]
+    ident = box_id(record)
+    if ident is None:
+        return None
+    counts = _counts(space, rows, storage, key, record)
+    cards, size = counts[ident], space_storage.container(record, ident)["capacity"]
+    elsewhere = sum(n for name, n in counts.items() if name not in (ident, "_basic"))
+    return {"cards": cards, "capacity": size, "over": cards > size, "not_counted": counts["_basic"],
+            "elsewhere": elsewhere}

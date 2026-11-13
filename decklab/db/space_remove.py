@@ -22,6 +22,7 @@ _TABLE_KEYS = {
     "tokens": ("token_card", ("id",)),
     "dice": ("dice_counter", ("id",)),
     "loans": ("card_loan", ("space_id", "id")),
+    "storage": ("space_storage", ("space_id",)),
     "imports": ("collection_import", ("id",)),
     "decks": ("deck", ("id",)),
     "texts": ("deck_text", ("deck_id",)),
