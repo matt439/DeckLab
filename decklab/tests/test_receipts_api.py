@@ -87,7 +87,8 @@ class WebReceiptTests(FilesReceiptCase):
     def test_the_view_names_homes_default_container_for_the_storage_words(self):
         """E8-S25 slice 6: home's (never another space's) default container, or None when it has none."""
         self.assertEqual(receipts.receipt_view("test")["storage_default"],
-                         {"name": "Storage box", "kind": "box", "sleeved": False})
+                         {"name": "Storage box", "kind": "box", "sleeved": False,
+                          "sections": {"creatures": "Row 1", "spells": "Row 2", "lands": "Row 3", "tokens": "Row 4"}})
         binder = {"name": "Binder", "kind": "binder", "sleeved": True}
         with mock.patch.object(receipts.storage_setting, "default_place", return_value=binder) as place:
             self.assertEqual(receipts.receipt_view("test")["storage_default"], binder)

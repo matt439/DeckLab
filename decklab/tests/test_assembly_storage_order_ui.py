@@ -59,6 +59,27 @@ class AssemblyStorageOrderUiTests(unittest.TestCase):
           assert(main.querySelectorAll('.pack-storage-group').length > 0);
         """)
 
+    def test_colour_type_dividers_start_with_their_section_when_the_rule_maps_groups(self):
+        """E8-S25 slice 7: storage_order's sections ({group: section}); without them, today's labels."""
+        self.run_js("""
+          const cards = {'Zebra': card('Zebra', 'Creature', ['W']), 'Bird': card('Bird', 'Artifact Creature', ['U']),
+            'Apple': card('Apple', 'Instant', ['U']), 'Relic': card('Relic', 'Artifact', []),
+            'Grove': card('Grove', 'Land', [], {produced_mana: ['G']}), 'Odd': null};
+          const sections = {creatures: 'Row 1', spells: 'Row 2', lands: 'Row 3', tokens: 'Row 4'};
+          const heads = () => main.querySelectorAll('.pack-storage-group').map(g => g.querySelector('h4').textContent.replace(/ · [0-9]+ cards?$/, ''));
+          clear(main);
+          drawAssembly({...plan(cards), storage_order: {rule: 'colour-type', container: 'Storage box', sleeved: false, sections}}, routeToken);
+          choose('Storage order');
+          same(heads(), ['Row 1 · Creatures · White', 'Row 1 · Artifact creatures', 'Row 2 · Spells · Blue', 'Row 2 · Artifacts',
+            'Row 3 · Lands · Green', 'Other cards']);
+          clear(main);
+          drawAssembly({...plan(cards), storage_order: {rule: 'colour-type', container: 'Storage box', sections: {lands: 'Row 3', bogus: 'X'}}}, routeToken);
+          same(heads(), ['Creatures · White', 'Artifact creatures', 'Spells · Blue', 'Artifacts', 'Row 3 · Lands · Green', 'Other cards']);
+          clear(main);
+          drawAssembly({...plan(cards), storage_order: {rule: 'colour-type', container: 'Storage box'}}, routeToken);
+          same(heads(), ['Creatures · White', 'Artifact creatures', 'Spells · Blue', 'Artifacts', 'Lands · Green', 'Other cards']);
+        """)
+
     def test_put_back_says_unsleeved_only_when_the_default_container_isnt_sleeved(self):
         """E8-S25 slice 6: storage_order's sleeved."""
         self.run_js("""

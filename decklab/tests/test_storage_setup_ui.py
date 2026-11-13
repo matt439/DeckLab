@@ -150,6 +150,45 @@ class StorageSetupUiTests(unittest.TestCase):
           assert.equal(main.querySelector('.col-storage-change'), null);
         """)
 
+    def test_what_each_section_holds_for_a_colour_type_container(self):
+        """E8-S25 slice 7: a "holds" choice per section, sent as holds; one group once; other orders send none."""
+        self.run_js("""
+          const cv = draw();
+          api = async () => ({...VIEW, storage: {v: 1, default: 'box', containers: [{...BOX,
+            holds: {'Row 1': 'creatures', 'Row 2': 'spells', 'Row 3': 'lands', 'Row 4': 'tokens'}}]}});
+          const ctx = await openStorageSetup(cv); await flush();
+          const box = ctx.edit.querySelector('.storage-holds');
+          assert(!box.hidden);
+          const selects = () => ctx.edit.querySelector('.storage-holds').querySelectorAll('select');
+          same(selects().map(s => s.getAttribute('aria-label')), ['What Row 1 of Storage box holds', 'What Row 2 of Storage box holds',
+            'What Row 3 of Storage box holds', 'What Row 4 of Storage box holds']);
+          same(selects().map(s => s.querySelectorAll('option').find(o => o.getAttribute('selected') !== null).getAttribute('value')), ['creatures', 'spells', 'lands', 'tokens']);
+          same(storageRecord(ctx).containers[0].holds, {'Row 1': 'creatures', 'Row 2': 'spells', 'Row 3': 'lands', 'Row 4': 'tokens'});
+          type(selects()[1], '', 'change');                         // Row 2: any cards
+          type(selects()[3], 'creatures', 'change');                // Row 4 now creatures too
+          let previews = 0;
+          apiWrite = async () => { previews += 1; return {}; };
+          foot(ctx, 'preview').click(); await flush();
+          assert(ctx.message.textContent.includes('Storage box has two sections holding creatures. Choose one.'), ctx.message.textContent);
+          assert.equal(previews, 0);
+          type(selects()[0], '', 'change');
+          same(storageRecord(ctx).containers[0].holds, {'Row 3': 'lands', 'Row 4': 'creatures'});
+          type(ctx.edit.querySelector('textarea'), 'Row 1\\nRow 4', 'input');
+          ctx.edit.querySelector('textarea').fire('change');       // the sections change: the choices follow them
+          same(selects().map(s => s.getAttribute('aria-label')), ['What Row 1 of Storage box holds', 'What Row 4 of Storage box holds']);
+          same(storageRecord(ctx).containers[0].holds, {'Row 4': 'creatures'});
+          const order = ctx.edit.querySelectorAll('select').find(s => s.id.includes('-order-'));
+          type(order, 'set', 'change');
+          assert(ctx.edit.querySelector('.storage-holds').hidden);
+          assert(!Object.hasOwn(storageRecord(ctx).containers[0], 'holds'));
+          type(order, 'colour-type', 'change');
+          const proposed = {v: 1, default: 'box', containers: [{...BOX, sections: ['Row 1', 'Row 4'], holds: {'Row 4': 'creatures'}}]};
+          apiWrite = async (path, body) => ({space: 'home', storage: proposed, now: null, after: null, moves: [], counts_error: 'x'});
+          foot(ctx, 'preview').click(); await flush();
+          assert(ctx.reviewBox.textContent.includes('What each section holds'), ctx.reviewBox.textContent);
+          assert(ctx.reviewBox.textContent.includes('Storage box: Row 4 holds creatures'), ctx.reviewBox.textContent);
+        """)
+
     def test_the_count_lines_change_opens_it(self):
         self.run_js("""
           const cv = draw();

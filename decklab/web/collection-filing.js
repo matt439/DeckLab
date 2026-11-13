@@ -50,7 +50,8 @@ function colFilingSnapshot(answer, cv, source = "import") {
   return Object.freeze({ space: cv.space, profile: cv.profile, source, status: "ready", total,
     added: Object.freeze(added), destinations: Object.freeze(destinations),
     places: storageAdviceLocations(raw.storage_locations), // E8-S27: null without a lookup
-    storage: storagePlace(raw) }); // E8-S25 slice 6: the space's default container; undefined from an older server
+    storage: storagePlace(raw), // E8-S25 slice 6: the space's default container; undefined from an older server
+    groups: storageCardGroups(raw) }); // slice 7: each To storage card's group, for its section ("Row 1 · Creatures")
 }
 
 function colFilingHere(cv, guide, root = null) {
@@ -111,7 +112,9 @@ function colFilingGuide(cv, guide) {
       for (const item of next) {
         const row = guide.added[item.row];
         const where = item.kind === "storage" ? storageAdviceWords(guide.places, row.name) : null;
+        const section = item.kind === "storage" ? storageSectionWords(guide.storage, guide.groups?.get(row.name)) : null;
         list.append(el("li", {}, `${item.quantity} \u00d7 ${row.name} (${colPrinting(row)})`,
+          section ? el("span", { class: "col-filing-section", text: ` \u00b7 ${section}` }) : null,
           where ? el("span", { class: "sub col-filing-place", text: ` \u00b7 ${where}` }) : null));
       }
       shown += next.length;

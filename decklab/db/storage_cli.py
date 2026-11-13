@@ -78,6 +78,10 @@ def describe(view):
         lines.append(f"  [{c['id']}] {c['name']}: {', '.join(parts)}")
         if c["sections"]:
             lines.append(f"      sections: {', '.join(c['sections'])}")
+        holds = c.get("holds") or {}
+        if holds and c["order"] == "colour-type":
+            lines.append("      holds: " + ", ".join(f"{section} {rules.GROUP_WORDS.get(group, group).lower()}"
+                                                     for section, group in holds.items()))
     default = rules.container(record, record["default"])
     lines.append(f"  Cards with no location go to: {default['name'] if default else 'no particular container'}")
     return lines

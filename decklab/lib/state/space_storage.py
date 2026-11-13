@@ -5,14 +5,19 @@ are kept. One record per space, saved whole with a revision, as the shops' posta
     {"v": 1, "default": "box",
      "containers": [{"id": "box", "name": "Storage box", "kind": "box", "capacity": 2400,
                      "sections": ["Row 1", "Row 2", "Row 3", "Row 4"], "order": "colour-type",
-                     "sleeved": false}]}
+                     "sleeved": false, "holds": {"Row 1": "creatures", "Row 2": "spells",
+                     "Row 3": "lands", "Row 4": "tokens"}}]}
 
 - containers: 0 to MAX_CONTAINERS, in the space's order. id is a slug made once from the name (as
   accessory ids are) and kept through a rename; name 1-40 characters, one line, unique in the space
   ignoring case; kind box, binder, shelf or other (words only); capacity a whole number of cards
   1-100,000, or None when not known; sections 0 to MAX_SECTIONS short names (a recorded location
   starting with one belongs to the container); order one of ORDERS; sleeved whether its cards are
-  kept sleeved (a binder's pockets), so pages stop saying "unsleeved" there.
+  kept sleeved (a binder's pockets), so pages stop saying "unsleeved" there; holds (E8-S25 slice 7,
+  "sections from the rule") which group of cards each section holds, {section: group}, for a
+  colour-type container only: groups GROUPS (creatures, spells, lands, token cards), each at most
+  once, each section one of the container's own. Another order's holds are dropped. A record
+  saved before slice 7 has no holds and reads as none ({}): the version stays 1.
 - default: the id of the container loose cards go to when no location is recorded, or None.
 
 No saved record: home uses BUILTIN_HOME's box (today's behaviour, its capacity config.json's
@@ -35,12 +40,14 @@ MAX_CAPACITY = 100_000
 KINDS = ("box", "binder", "shelf", "other")
 ORDERS = ("colour-type", "set", "name", "none")     # Matt, 2026-11-13 (Q4): no type-colour
 ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
-FIELDS = ("id", "name", "kind", "capacity", "sections", "order", "sleeved")
+FIELDS = ("id", "name", "kind", "capacity", "sections", "order", "sleeved", "holds")
+# What a colour-type section may hold (slice 7), and how the pages word each group.
+GROUPS = ("creatures", "spells", "lands", "tokens")
+GROUP_WORDS = {"creatures": "Creatures", "spells": "Spells", "lands": "Lands", "tokens": "Token cards"}
 EMPTY = {"v": VERSION, "default": None, "containers": []}
 BUILTIN_CAPACITY = 2400
 HOME_ROWS = ("Row 1", "Row 2", "Row 3", "Row 4")
-# How the household's rows are used (Q2): one group each. Not part of the record yet; the later
-# "sections from the rule" slice reads it.
+# How the household's rows are used (Q2): one group each, the built-in box's holds (slice 7).
 HOME_ROW_GROUPS = {"Row 1": "creatures", "Row 2": "spells", "Row 3": "lands", "Row 4": "tokens"}
 CHANGED = "The storage setup changed. Reload it before saving."
 MIGRATE = ("The storage setup needs the database's migration 0028 (python -m decklab.db migrate on "
@@ -67,7 +74,8 @@ def builtin_home(capacity=None):
     size = capacity if type(capacity) is int and 1 <= capacity <= MAX_CAPACITY else BUILTIN_CAPACITY
     return {"v": VERSION, "default": "box",
             "containers": [{"id": "box", "name": "Storage box", "kind": "box", "capacity": size,
-                            "sections": list(HOME_ROWS), "order": "colour-type", "sleeved": False}]}
+                            "sections": list(HOME_ROWS), "order": "colour-type", "sleeved": False,
+                            "holds": dict(HOME_ROW_GROUPS)}]}
 
 
 def effective(space, saved, capacity=None):
@@ -132,9 +140,36 @@ def _sections(value, what):
     return out
 
 
+def _holds(value, sections, order, what):
+    """{section: group} in section order (the module docstring); {} for any order but colour-type."""
+    if value is None or value == {}:
+        return {}
+    if not isinstance(value, dict):
+        raise Invalid(f"{what}'s holds must map a section to the group of cards it holds")
+    if order != "colour-type":
+        return {}
+    canonical = {section.casefold(): section for section in sections}
+    found, groups = {}, set()
+    for key, group in value.items():
+        if group in (None, ""):
+            continue
+        section = canonical.get(" ".join(key.split()).casefold()) if isinstance(key, str) else None
+        if section is None:
+            raise Invalid(f"{what}'s holds name a section it doesn't have: {key!r}")
+        if group not in GROUPS:
+            raise Invalid(f"A section of {what} holds one of {', '.join(GROUPS)}")
+        if group in groups:
+            raise Invalid(f"{what} has two sections holding {GROUP_WORDS[group].lower()}")
+        if section in found:
+            raise Invalid(f"{what}'s holds name the section {section!r} twice")
+        groups.add(group)
+        found[section] = group
+    return {section: found[section] for section in sections if section in found}
+
+
 def _container(value, taken, reserved):
     if not isinstance(value, dict):
-        raise Invalid("Each container must be an object of id, name, kind, capacity, sections, order and sleeved")
+        raise Invalid("Each container must be an object of id, name, kind, capacity, sections, order, sleeved and holds")
     unknown = sorted(set(value) - set(FIELDS))
     if unknown:
         raise Invalid(f"Unknown container field {unknown[0]!r}; a container has {', '.join(FIELDS)}")
@@ -157,8 +192,10 @@ def _container(value, taken, reserved):
     sleeved = value.get("sleeved", False)
     if type(sleeved) is not bool:
         raise Invalid(f"{name}'s sleeved must be true or false")
+    sections = _sections(value.get("sections"), name)
     return {"id": ident, "name": name, "kind": kind, "capacity": _capacity(value.get("capacity"), name),
-            "sections": _sections(value.get("sections"), name), "order": order, "sleeved": sleeved}
+            "sections": sections, "order": order, "sleeved": sleeved,
+            "holds": _holds(value.get("holds"), sections, order, name)}
 
 
 def normalize(value):
@@ -240,3 +277,21 @@ def suggestions(record):
 def container(record, ident):
     """The container with that id, or None."""
     return next((c for c in (record or {}).get("containers") or () if c.get("id") == ident), None)
+
+
+def group_sections(found):
+    """{group: section} of a container's holds (slice 7), {} when it has none or isn't colour-type
+    (a record saved before slice 7, or another order)."""
+    if not found or found.get("order") != "colour-type" or not isinstance(found.get("holds"), dict):
+        return {}
+    return {group: section for section, group in found["holds"].items() if group in GROUPS}
+
+
+def card_group(type_line):
+    """The group a playable card is filed with by the colour-type rule, from its front face's type
+    line: "lands" (a land creature too, as Build decks' storage order files it), "creatures", else
+    "spells"; None when the type line isn't known. Token cards are "tokens" by what they are."""
+    front = (type_line or "").split(" // ")[0].split("\u2014")[0].split()
+    if not front:
+        return None
+    return "lands" if "Land" in front else "creatures" if "Creature" in front else "spells"

@@ -18,6 +18,8 @@ from decklab.lib.inventory import rules
 from decklab.tests.test_collection_edit import CollectionEditTestCase
 
 ELVES = {"set": "fdn", "collector_number": "227", "finish": "nonfoil"}
+# Home's built-in box says which row holds each group (E8-S25 slice 7).
+HOME_SECTIONS = {"creatures": "Row 1", "spells": "Row 2", "lands": "Row 3", "tokens": "Row 4"}
 
 
 class LocationRuleTests(CollectionEditTestCase):
@@ -264,7 +266,8 @@ class StorageOrderTests(CollectionEditTestCase):
         return assembly_locations.storage_order(inventory.current(), set(names))
 
     def test_the_built_in_box_a_set_binder_and_no_default(self):
-        self.assertEqual(self.order("Llanowar Elves"), {"rule": "colour-type", "container": "Storage box", "sleeved": False})
+        self.assertEqual(self.order("Llanowar Elves"), {"rule": "colour-type", "container": "Storage box", "sleeved": False,
+                                                        "sections": HOME_SECTIONS})
         self.setup(default="binder", containers=[{"name": "Shoebox", "order": "name"},
                                                  {"id": "binder", "name": "Binder", "kind": "binder", "order": "set",
                                                   "sleeved": True}])
@@ -299,7 +302,7 @@ class StorageWordsTests(CollectionEditTestCase):
     """The default container the words name (E8-S25 slice 6): storage_setting.default_place, and the
     filing guide's storage_default for the collection's own space only."""
     setup = StorageSetupTests.setup
-    BOX = {"name": "Storage box", "kind": "box", "sleeved": False}
+    BOX = {"name": "Storage box", "kind": "box", "sleeved": False, "sections": HOME_SECTIONS}
 
     def guide(self, space):
         from decklab.lib.api import collection_filing

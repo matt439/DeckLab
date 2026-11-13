@@ -13,6 +13,9 @@ snapshot. A lookup that fails leaves the field out; the save and the rest of the
 It also carries "storage_default" (E8-S25 slice 6): the space's own default container where its
 "storage" copies go, {name, kind, sleeved}, or None when the space's storage setup has none (a
 member's space with nothing saved). The items stay {"kind": "storage"}; the words name it.
+When that container's colour-type rule says which section holds each group, storage_default has
+"sections" ({group: section}) and the answer "storage_groups" ({name: group} for the To storage
+cards the card data knows), so each line says its section ("Row 1 · Creatures", slice 7).
 """
 from collections import Counter, defaultdict
 
@@ -223,13 +226,14 @@ def _allocate(after, space, profile, added, created=None, *, cli_owned=False):
 
 def _with_locations(answer, after, space):
     """answer plus its To storage cards' storage_locations; without them when the lookup fails."""
+    names = set()
     try:
         names = {answer["added"][item["row"]]["name"] for item in answer["destinations"] if item["kind"] == "storage"}
         answer["storage_locations"] = storage_places.advice(after, space, names)
     except Exception:           # optional: the saved addition and its destinations stand
         answer.pop("storage_locations", None)
     answer["storage_default"] = storage_setting.default_place(space)   # never raises: nothing saved reads as such
-    return answer
+    return storage_setting.with_groups(answer, names)       # slice 7: each card's section ("Row 1 · Creatures")
 
 
 def after_import(after, space, profile, facts, total):

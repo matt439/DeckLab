@@ -130,7 +130,10 @@ def receipt_view(order=None):
       sees that deck's sleeves (guard.sees_kit, the accessories' owner rule), for "Where these go";
     - "storage_default": home's default container where loose cards go, {name, kind, sleeved}, or None
       when home's storage setup has none (E8-S25 slice 6: "To Storage box", "unsleeved" only when it
-      isn't sleeved); always home's, as the deliveries are;
+      isn't sleeved); always home's, as the deliveries are; with "sections" ({group: section}) when its
+      colour-type rule maps groups to sections, and then "storage_groups" ({name: group} for the cards
+      components' names the card data knows), so To <container> lines say "Row 1 · Creatures" and token
+      cards their section (slice 7);
     - "face_names": Scryfall's token face names when the order has a tokens component ([] while
       the card data isn't ready), for the token sheet's suggestions;
     - "keywords": the keywords a token's details may list (lower case), for its "Read as" line,
@@ -174,7 +177,8 @@ def _board(inv, view, record):
         if any(item["kind"] == "tokens" for item in view["components"]):
             view["face_names"] = cards.token_face_names()
         _deck_uses(inv, view, by_id)
-    return view
+    names = {row.get("name") for item in view["components"] if item["kind"] == "cards" for row in item.get("rows") or ()}
+    return storage_setting.with_groups(view, names)
 
 
 def _product_items(inv, component, item):

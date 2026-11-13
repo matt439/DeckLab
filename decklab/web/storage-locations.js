@@ -469,7 +469,38 @@ function storagePlace(answer, key = "storage_default") {
   const raw = answer[key];
   if (!raw || typeof raw !== "object" || typeof raw.name !== "string" || !raw.name.trim() || raw.name.length > 40
       || /[\r\n]/.test(raw.name) || typeof raw.sleeved !== "boolean") return null;
-  return Object.freeze({ name: raw.name.trim(), kind: typeof raw.kind === "string" ? raw.kind : "other", sleeved: raw.sleeved });
+  return Object.freeze({ name: raw.name.trim(), kind: typeof raw.kind === "string" ? raw.kind : "other", sleeved: raw.sleeved,
+    sections: storageGroupSections(raw.sections) });
+}
+
+/** Slice 7 ("sections from the rule"): the groups a colour-type container's sections hold, and their words. */
+const STORAGE_GROUP_WORDS = Object.freeze({ creatures: "Creatures", spells: "Spells", lands: "Lands", tokens: "Token cards" });
+
+/** A place's {group: section}, checked: known groups only, each a one-line section of at most 40 characters. */
+function storageGroupSections(raw) {
+  const out = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return Object.freeze(out);
+  for (const group of Object.keys(STORAGE_GROUP_WORDS)) {
+    const section = Object.hasOwn(raw, group) ? raw[group] : null;
+    if (typeof section === "string" && section.trim() && section.length <= 40 && !/[\r\n]/.test(section)) out[group] = section.trim();
+  }
+  return Object.freeze(out);
+}
+
+/** An answer's storage_groups ({card name: creatures | spells | lands}), checked; an empty map without one. */
+function storageCardGroups(answer) {
+  const raw = answer && typeof answer === "object" ? answer.storage_groups : null, out = new Map();
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const [name, group] of Object.entries(raw)) {
+    if (name && group !== "tokens" && Object.hasOwn(STORAGE_GROUP_WORDS, group)) out.set(name, group);
+  }
+  return out;
+}
+
+/** "Row 1 · Creatures": the section a place's rule files a group in, or null when it doesn't say. */
+function storageSectionWords(place, group) {
+  const section = place && place.sections && group ? place.sections[group] : null;
+  return section ? `${section} · ${STORAGE_GROUP_WORDS[group]}` : null;
 }
 
 /** A container's name inside a sentence: "the storage box", "the red binder"; a name with capitals, digits or

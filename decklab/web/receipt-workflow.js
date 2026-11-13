@@ -465,12 +465,13 @@ function rcptAddedWords(totals) {
  * The storage words name home's default container (E8-S25 slice 6, the view's storage_default). */
 function rcptWhereTheyGo(view, received, readiness, places = null) {
   const decks = new Map(), storage = [], unknown = [], basics = [], parts = [];
-  const place = storagePlace(view.data);
+  const place = storagePlace(view.data), cardGroups = storageCardGroups(view.data); // slice 7: "Row 1 · Creatures"
   const kits = view.data.kits || {};
   for (const item of rcptDestinationAdvice(view, received)) {
     if (item.kind === "tokens") {
+      const section = storageSectionWords(place, "tokens");
       parts.push(el("div", { class: "panel rcpt-where" }, el("h3", { text: "Token cards" }),
-        el("p", {}, `${plural(item.quantity, "token card")} go with your tokens. `,
+        el("p", {}, `${plural(item.quantity, "token card")} go with your tokens${section ? `, in ${place.name}: ${section}` : ""}. `,
           el("a", { href: "#/tokens", text: "See them on Tokens" }))));
       continue;
     }
@@ -507,8 +508,9 @@ function rcptWhereTheyGo(view, received, readiness, places = null) {
       el("p", { class: "sub", text: `No deck is waiting for these: ${place === undefined ? "they go unsleeved into the storage box"
         : storagePlaceGo(place)}.` }), storageAdviceNote(places),
       el("ul", { class: "rcpt-where-cards" }, storage.map(([n, name]) => {
-        const where = storageAdviceWords(places, name);
-        return el("li", {}, `${n} × ${name}`, where ? el("span", { class: "sub rcpt-where-place", text: ` · ${where}` }) : null);
+        const where = storageAdviceWords(places, name), section = storageSectionWords(place, cardGroups.get(name));
+        return el("li", {}, `${n} × ${name}`, section ? el("span", { class: "rcpt-where-section", text: ` · ${section}` }) : null,
+          where ? el("span", { class: "sub rcpt-where-place", text: ` · ${where}` }) : null);
       }))));
   }
   if (unknown.length) out.push(el("div", { class: "panel rcpt-where rcpt-where-unknown" },

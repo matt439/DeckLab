@@ -15,6 +15,8 @@ the default container's (where cards with no location go)
 
     {"rule": "colour-type" | "set" | "name" | "none", "container": its name,
      "sleeved": bool (slice 6: Put back says "unsleeved" only when it's false),
+     "sections": {group: section} (slice 7, colour-type only and only when its holds map groups:
+                 the dividers then start with the section, "Row 1 · Creatures · White"),
      "printings": {name: [set, collector_number]}}       (rule "set" only)
 
 or None when home has no default container. Build decks' second card order follows it: today's
@@ -56,6 +58,9 @@ def storage_order(inv, wanted):
     if box is None:
         return None
     answer = {"rule": box["order"], "container": box["name"], "sleeved": bool(box.get("sleeved"))}
+    sections = space_storage.group_sections(box)
+    if sections:
+        answer["sections"] = sections
     if box["order"] == "set":
         answer["printings"] = _printings(inv, record, box["id"], wanted)
     return answer

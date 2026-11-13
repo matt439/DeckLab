@@ -2,7 +2,8 @@
 box, a binder...), their capacities, sections and order, and where loose cards with no location go.
 
     GET /api/storage?space=   view(space): {space, revision, ready, source, storage, can_edit,
-                              kinds, orders, limits}. Whoever may see the space's inventory
+                              kinds, orders, groups (what a colour-type section may hold, slice 7),
+                              limits}. Whoever may see the space's inventory
                               (guard.require_sees_inventory: its own people, and everyone signed
                               in once its collection is Public, read-only: Q7); anyone else the
                               collection's 403, which names no space.
@@ -40,7 +41,7 @@ MAX_BODY = 32 * 1024
 
 def _answer(view):
     return {**view, "can_edit": guard.allowed(guard.viewer(), "storage.edit", view["space"]),
-            "kinds": list(rules.KINDS), "orders": list(rules.ORDERS),
+            "kinds": list(rules.KINDS), "orders": list(rules.ORDERS), "groups": list(rules.GROUPS),
             "limits": {"containers": rules.MAX_CONTAINERS, "sections": rules.MAX_SECTIONS,
                        "name": rules.MAX_NAME, "capacity": rules.MAX_CAPACITY}}
 
