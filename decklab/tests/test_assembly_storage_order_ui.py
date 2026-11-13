@@ -59,6 +59,47 @@ class AssemblyStorageOrderUiTests(unittest.TestCase):
           assert(main.querySelectorAll('.pack-storage-group').length > 0);
         """)
 
+    def test_two_containers_group_by_container_then_each_ones_rule(self):
+        """E8-S25 slice 7: storage_order's containers and placed."""
+        self.run_js("""
+          const cards = {'Zebra': card('Zebra', 'Creature', ['W']), 'Apple': card('Apple', 'Instant', ['U']),
+            'Mango': card('Mango', 'Sorcery', ['B']), 'Kiwi': card('Kiwi', 'Creature', ['G']),
+            'Pear': card('Pear', 'Creature', ['R']), 'Fig': card('Fig', 'Instant', ['U'])};
+          const data = plan(cards);
+          data.storage_order = {rule: 'colour-type', container: 'Storage box', sleeved: false,
+            containers: [{id: 'box', name: 'Storage box', order: 'colour-type', sleeved: false},
+              {id: 'binder', name: 'Binder', order: 'set', sleeved: true},
+              {id: 'shelf', name: 'Shelf', order: 'name', sleeved: false}],
+            placed: {Zebra: 'binder', Apple: 'binder', Mango: null, Kiwi: 'box', Fig: 'shelf'},   // Pear: the default
+            printings: {Zebra: ['fdn', '10'], Apple: ['fdn', '9']}};
+          drawAssembly(data, routeToken);
+          same(main.querySelector('.pack-sort').querySelectorAll('button').map(b => b.textContent), ['Name', 'Storage order']);
+          choose('Storage order');
+          const groups = main.querySelectorAll('.pack-container-group');
+          same(groups.map(g => g.querySelector('h4').textContent), ['Storage box · 2 cards', 'Binder · 2 cards',
+            'Shelf · 1 card', 'Somewhere else · 1 card']);
+          same(groups.map(names), [['Pear', 'Kiwi'], ['Apple', 'Zebra'], ['Fig'], ['Mango']]);
+          same(groups[0].querySelectorAll('h5').map(h => h.textContent), ['Creatures · Red · 1 card', 'Creatures · Green · 1 card']);
+          same(groups[1].querySelectorAll('h5').map(h => h.textContent), ['Set · FDN · 2 cards']);
+          assert.equal(groups[2].querySelectorAll('.pack-storage-group').length, 0);     // name: one grid
+          choose('Name');
+          assert.equal(main.querySelectorAll('.pack-container-group').length, 0);
+          same(names(main), ['Apple', 'Fig', 'Kiwi', 'Mango', 'Pear', 'Zebra']);
+        """)
+
+    def test_one_container_looks_as_before(self):
+        self.run_js("""
+          const cards = {'Zebra': card('Zebra', 'Creature', ['W']), 'Apple': card('Apple', 'Instant', ['U'])};
+          const data = plan(cards);
+          data.storage_order = {rule: 'colour-type', container: 'Storage box', sleeved: false,
+            containers: [{id: 'box', name: 'Storage box', order: 'colour-type', sleeved: false}], placed: {Zebra: null}};
+          drawAssembly(data, routeToken);
+          choose('Storage order');
+          assert.equal(main.querySelectorAll('.pack-container-group').length, 0);
+          same(main.querySelectorAll('.pack-storage-group').map(g => g.querySelector('h4').textContent),
+            ['Creatures · White · 1 card', 'Spells · Blue · 1 card']);
+        """)
+
     def test_put_back_says_unsleeved_only_when_the_default_container_isnt_sleeved(self):
         """E8-S25 slice 6: storage_order's sleeved."""
         self.run_js("""

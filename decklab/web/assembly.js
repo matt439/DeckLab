@@ -334,16 +334,30 @@ function packStorageRule(data) {
   if (!data || !Object.hasOwn(data, "storage_order")) return { rule: "colour-type", container: null, printings: {} };
   const order = data.storage_order;
   if (!order || typeof order !== "object") return { rule: "none", container: null, printings: {} };
-  return { rule: ["colour-type", "set", "name", "none"].includes(order.rule) ? order.rule : "none",
+  const known = (rule) => ["colour-type", "set", "name", "none"].includes(rule) ? rule : "none";
+  return { rule: known(order.rule),
     container: typeof order.container === "string" && order.container ? order.container : null,
     sleeved: order.sleeved === true, // slice 6: Put back drops "unsleeved" for a sleeved default container
-    printings: order.printings && typeof order.printings === "object" ? order.printings : {} };
+    printings: order.printings && typeof order.printings === "object" ? order.printings : {},
+    ...packStorageContainers(order, known) };
+}
+
+/** Slice 7: two or more containers, each with its own rule, and the container id the server placed
+ * each card in (null: somewhere else; a card it doesn't list goes to the default container). One
+ * container or none sends neither, and the plan looks as before. */
+function packStorageContainers(order, known) {
+  const list = Array.isArray(order.containers) ? order.containers.filter(c => c && typeof c.id === "string"
+    && typeof c.name === "string") : [];
+  if (list.length < 2) return { containers: null, placed: {} };
+  return { containers: list.map(c => ({ id: c.id, name: c.name, rule: known(c.order) })),
+    placed: order.placed && typeof order.placed === "object" ? order.placed : {} };
 }
 
 /** The orders on offer: Name, and the storage's own when it differs from Name (colour-type: "Storage
- * order"; set: "Set order"). */
+ * order"; set: "Set order"; two or more containers: "Storage order", by container first). */
 function packOrderOptions(view) {
-  const label = { "colour-type": "Storage order", set: "Set order" }[view.storageRule.rule];
+  const label = view.storageRule.containers ? "Storage order"
+    : { "colour-type": "Storage order", set: "Set order" }[view.storageRule.rule];
   return label ? [["name", "Name"], ["storage", label]] : [["name", "Name"]];
 }
 
@@ -370,7 +384,8 @@ function packOrderControls(view) {
 function packOrderSync(view) {
   const options = packOrderOptions(view), shown = packOrder(view);
   const name = view.storageRule.container;
-  const where = name ? `As the ${typeof colLowerName === "function" ? colLowerName(name) : name} is ordered` : null;
+  const where = view.storageRule.containers ? "By where the cards are filed, then as each container is ordered"
+    : name ? `As the ${typeof colLowerName === "function" ? colLowerName(name) : name} is ordered` : null;
   clear(view.orderGroup).append(...options.map(([value, label]) => el("button", { type: "button", text: label,
     "aria-pressed": String(shown === value), title: value === "storage" ? where : null,
     onclick: () => {
@@ -427,11 +442,40 @@ function packCollectorOrder(view, a, b) {
  * set: by collector number). Rows keep their tick ids. */
 function packCardGroups(view, rows) {
   if (!rows.length) return null;
-  const grid = (items) => el("div", { class: "card-tiles pack-tiles" },
-    items.map(row => packTile(view, row.name, row)));
   const sorted = [...rows].sort((a, b) => a.name.localeCompare(b.name));
-  if (packOrder(view) !== "storage") return grid(sorted);
-  const bySet = view.storageRule.rule === "set";
+  if (packOrder(view) !== "storage") return packGrid(view, sorted);
+  if (!view.storageRule.containers) return packRuleGroups(view, sorted, view.storageRule.rule, "h4");
+  return packContainerGroups(view, sorted);
+}
+
+function packGrid(view, rows) {
+  return el("div", { class: "card-tiles pack-tiles" }, rows.map(row => packTile(view, row.name, row)));
+}
+
+/** Slice 7: a heading for each container holding some of the rows, in the setup's order, then
+ * "Somewhere else" (locations no container matches); within each, that container's own rule. */
+function packContainerGroups(view, sorted) {
+  const { containers, placed, container: fallbackName } = view.storageRule;
+  const fallback = containers.find(c => c.name === fallbackName)?.id ?? null;
+  const groups = new Map([...containers.map(c => [c.id, { name: c.name, rule: c.rule, rows: [] }]),
+    [null, { name: "Somewhere else", rule: "name", rows: [] }]]);
+  for (const row of sorted) {
+    const id = Object.hasOwn(placed, row.name) ? placed[row.name] : fallback;
+    (groups.get(id) || groups.get(null)).rows.push(row);
+  }
+  return [...groups.values()].filter(group => group.rows.length).map(group => {
+    const count = group.rows.reduce((total, row) => total + row.qty, 0);
+    return el("div", { class: "pack-container-group" },
+      el("h4", {}, group.name, el("span", { class: "pack-section-count", text: ` · ${plural(count, "card")}` })),
+      packRuleGroups(view, group.rows, group.rule, "h5"));
+  });
+}
+
+/** Name-sorted rows under one rule's dividers (colour-type or set; name and none: one grid). */
+function packRuleGroups(view, sorted, rule, heading) {
+  if (rule !== "colour-type" && rule !== "set") return packGrid(view, sorted);
+  const grid = (items) => packGrid(view, items);
+  const bySet = rule === "set";
   const groups = new Map();
   for (const row of sorted) {
     const [rank, label] = bySet ? packSetGroup(view, row.name) : packStorageGroup(view.cards[row.name]);
@@ -444,7 +488,7 @@ function packCardGroups(view, rows) {
       : (a, b) => packManaValue(view.cards[a.name]) - packManaValue(view.cards[b.name]) || a.name.localeCompare(b.name));
     const count = group.rows.reduce((total, row) => total + row.qty, 0);
     return el("div", { class: "pack-storage-group" },
-      el("h4", {}, group.label, el("span", { class: "pack-section-count", text: ` · ${plural(count, "card")}` })),
+      el(heading, {}, group.label, el("span", { class: "pack-section-count", text: ` · ${plural(count, "card")}` })),
       grid(group.rows));
   });
 }
