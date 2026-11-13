@@ -3,7 +3,9 @@
 asks the PC to restart, after a confirmation here. The page then waits for a server with another started_at
 (GET /api/status's build) and reloads. A restart is refused while the checkout has uncommitted code, and it
 never applies database migrations. On a release install, the same answer says whether a newer release is out
-(lib/release_check.py: checked at most once a day, nothing downloaded). The "Restart needed" warning box (version.js) links here for a home admin.
+(lib/release_check.py: checked at most once a day, nothing downloaded); in a git checkout it says how many updates
+are waiting on its update channel as last fetched (lib/update_channel.py, E11-S84: nothing is fetched for it). The
+"Restart needed" warning box (version.js) links here for a home admin.
 
 Loaded after settings.js and before app.js. Nothing here runs at load.
 */
@@ -22,6 +24,7 @@ function settingsRestartPart() {
   if (!mayRestartServer()) return null;
   return el("div", { class: "settings-fields", id: "server-restart" },
     el("p", { class: "sub", id: "server-release", hidden: true }),
+    el("p", { class: "sub", id: "server-updates", hidden: true }),
     el("p", { class: "sub", id: "server-restart-words", role: "status" }),
     el("div", { class: "actions", id: "server-restart-actions" }));
 }
@@ -33,6 +36,7 @@ async function loadServerRestart(token) {
     const view = await api("/api/server/restart");
     if (token === routeToken && host.isConnected && !host.restarting) {
       drawServerRelease(view.release);
+      drawServerUpdates(view.updates);
       drawServerRestart(host, view);
     }
   } catch (e) {
@@ -64,6 +68,32 @@ function drawServerRelease(release) {
     line.textContent = `This is the newest release (checked ${day}).`;
   } else {
     line.textContent = release.checking ? "Checking for a newer release now; reopen Settings to see what it finds." : "Not checked for a newer release yet.";
+  }
+}
+
+/** A git checkout's "N updates available" line (lib/update_channel.py): null in a release install. Counted from
+ * what git last fetched, never fetched for this page; python -m decklab.update (or its --dry-run) fetches. */
+function drawServerUpdates(updates) {
+  const line = byId("server-updates");
+  if (!line) return;
+  line.hidden = !updates || typeof updates !== "object";
+  if (line.hidden) return;
+  const day = typeof updates.fetched_on === "string" && /^\d{4}-\d{2}-\d{2}$/.test(updates.fetched_on) ? updates.fetched_on : null;
+  const fetched = day ? `as last fetched (${day})` : "as last fetched";
+  const release = updates.channel === "release";
+  const count = Number.isInteger(updates.count) && updates.count >= 0 ? updates.count : null;
+  const tag = typeof updates.newest === "string" && /^v\d+\.\d+\.\d+$/.test(updates.newest) ? updates.newest : null;
+  if (count === null) {
+    line.textContent = "Couldn't count the updates waiting" + (typeof updates.problem === "string" && updates.problem
+      ? `: ${updates.problem}` : ".");
+  } else if (count === 0) {
+    line.textContent = release ? `No newer release is waiting ${fetched} (the release channel).`
+      : `No updates are waiting ${fetched} (the main channel).`;
+  } else {
+    const what = release ? `${count} newer release${count === 1 ? "" : "s"}${tag ? ` (newest ${tag})` : ""}`
+      : `${count} update${count === 1 ? "" : "s"} (commits on main)`;
+    line.textContent = `${what} available ${fetched}. On the PC, python -m decklab.update installs `
+      + (release ? "the newest release." : "them.");
   }
 }
 

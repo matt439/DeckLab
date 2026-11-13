@@ -1,11 +1,14 @@
-"""Update a server PC: python -m decklab.update [--dry-run] [--no-forge] [--no-restart] [--no-smoke].
+"""Update a server PC: python -m decklab.update [--dry-run] [--channel main|release] [--no-forge] [--no-restart] [--no-smoke].
 
 For a PC that serves Deck Lab and only pulls updates (the code is developed and tested on
 another PC). In order, stopping at the first failure:
 
   1. refuse a checkout with changed tracked files, or a Python the .venv (and, on Linux, the
      background service and nightly timer) wasn't made with; then git fetch and show what's coming
-  2. git merge --ff-only with the branch's upstream (never a merge commit or a rebase)
+  2. git merge --ff-only with the branch's upstream (never a merge commit or a rebase); on the
+     release channel (--channel release, or config.json's "update": {"channel": "release"}) with
+     the newest stable vX.Y.Z tag on that upstream instead, never a commit between tags and never
+     back to an older release (lib/update_channel.py)
   3. reinstall psycopg into the .venv when requirements.txt changed (or doesn't match); on Windows
      the running server is stopped first, since it keeps psycopg's DLLs locked
   4. with migrations pending: the running server is stopped (on every system, so nothing is written
@@ -340,6 +343,34 @@ def interpreter_problem(executable=None, activate=None, venv=None, units=None, p
 
 # ---------------------------------------------------------------- the steps
 
+def update_channel_of(args):
+    """The channel this update follows (lib/update_channel.py): --channel, else config.json's."""
+    from decklab.lib import config, update_channel
+    flag = getattr(args, "channel", None)
+    try:
+        settings = config.load() if flag is None else {}
+        return update_channel.choose(flag, settings)
+    except update_channel.ChannelError as e:
+        raise Failed(f"{e}. Nothing was fetched.") from None
+    except (config.InvalidConfig, OSError) as e:
+        raise Failed(f"config.json can't be read for its update channel ({e}). Nothing was fetched.") from None
+
+
+def release_target(upstream):
+    """The release channel's commit to fast-forward to: the newest stable version tag's on upstream,
+    or HEAD itself when there's none newer (never a commit between tags, never an older release)."""
+    from decklab.lib import update_channel
+    try:
+        plan = update_channel.plan_release(git, upstream)
+    except ValueError as e:
+        raise Failed(str(e)) from None
+    if plan["move"]:
+        say(f"Release channel: moving to {plan['tag']}, the newest release on {upstream}.")
+    else:
+        say(f"Release channel: {plan['note']}")
+    return plan["target"]
+
+
 def before_pull(args):
     """Steps 1-2, in the code as it was. Returns the exit code of the rest (or 0 for a dry run)."""
     from decklab.lib import build
@@ -361,14 +392,20 @@ def before_pull(args):
     upstream = git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}", check=False)
     if not upstream:
         raise Failed(f"The branch {branch} has no upstream to pull from: git branch -u origin/main")
-    say(f"== Fetching {upstream}")
+    channel = update_channel_of(args)
+    say(f"== Fetching {upstream}" + (" and its release tags (the release channel)" if channel == "release" else ""))
     git("fetch", "--prune", timeout=300)
-    old, new = git("rev-parse", "HEAD"), git("rev-parse", "@{upstream}")
-    incoming = git("log", "--oneline", "--no-decorate", f"{old}..{new}")
-    ahead = git("rev-list", "--count", f"{new}..{old}")
+    if channel == "release":
+        git("fetch", "--tags", timeout=300)     # never --force: a moved tag is refused, not taken
+    old, tip = git("rev-parse", "HEAD"), git("rev-parse", "@{upstream}")
+    ahead = git("rev-list", "--count", f"{tip}..{old}")
     if ahead != "0":
         raise Failed(f"{branch} has {ahead} commits that {upstream} hasn't: a server PC shouldn't, so nothing "
                      "was pulled (git log @{upstream}..)")
+    new = tip
+    if channel == "release":
+        new = release_target(upstream)
+    incoming = git("log", "--oneline", "--no-decorate", f"{old}..{new}")
     new_release = None
     if incoming:
         lines = incoming.splitlines()
@@ -384,7 +421,7 @@ def before_pull(args):
         new_release = expected_release(git("show", f"{new}:decklab/lib/forge/simjar.py", check=False))
         if old_release != new_release:
             say(f"  Forge release: {old_release} -> {new_release}")
-    else:
+    elif channel == "main":
         say("Already up to date with " + upstream + ".")
     if args.dry_run:
         if not args.no_forge:
@@ -600,6 +637,9 @@ def main(argv=None):
     parser.add_argument("--no-restart", action="store_true", help="don't restart the background server")
     parser.add_argument("--no-smoke", action="store_true", help="don't run the smoke test at the end")
     parser.add_argument("--force", action="store_true", help="allow stopping/restarting while runs are busy or cannot be checked")
+    parser.add_argument("--channel", choices=("main", "release"),
+                        help="follow the upstream branch (main) or only its newest vX.Y.Z tag (release); "
+                             "default config.json's update.channel, else main")
     parser.add_argument("--after-pull", metavar="COMMIT", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     if sys.platform == "darwin":
