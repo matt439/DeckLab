@@ -50,6 +50,9 @@ def shopping_overview():
       - "token_addons" beside the baskets: [{name, kind, decks}], the token cards home's built decks make
         with no card and none on order, never the opponent's only (shopping_token_addons.py, E5-S38);
         left out when the token reader fails or the card data isn't ready;
+      - "storage_fill": home's containers with a capacity, how full each is now and once the pending
+        orders arrive, from the Card list's count and pending-delivery scenario (shopping_storage.py,
+        E8-S25 slice 7); left out when there's nothing to say or it can't be worked out;
       - "decks_missing": the home decks whose planned list still misses cards;
       - "missing_cards": {ready, rows, warnings, errors, totals}, one canonical card
         per row with summed individual deck shortfalls, wanting decks and every matching
@@ -123,6 +126,8 @@ def _overview():
     shop_baskets.enrich(answer, data=shop_data)
     from . import shopping_token_addons
     shopping_token_addons.enrich(answer, cards_ready=cards_ready)
+    from . import shopping_storage
+    shopping_storage.enrich(answer)
     return answer
 
 

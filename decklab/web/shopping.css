@@ -54,6 +54,11 @@
 /* Deliveries are compact native disclosure rows; opening one retains its existing body and actions. */
 .shop-deliveries { min-width: 0; background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--r-panel); box-shadow: var(--shadow-1); overflow: hidden; }
+/* Storage once these arrive (E8-S25 slice 7, shopping-storage.js): a small read-only estimate under the deliveries. */
+.shop-storage-fill { display: grid; gap: var(--s-1); min-width: 0; margin-top: var(--s-3); }
+.shop-storage-fill > h3 { margin: 0; font-size: var(--fs-sm); }
+.shop-storage-fill > p, .shop-storage-lines { margin: 0; }
+.shop-storage-lines { padding-left: var(--s-4); font-size: var(--fs-sm); }
 .shop-delivery.panel { display: block; min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .shop-delivery-summary { display: flex; align-items: center; gap: var(--s-3); min-height: 54px; padding: var(--s-1) var(--s-3);
   list-style: none; cursor: pointer; box-shadow: inset 0 -1px 0 var(--divider); }
