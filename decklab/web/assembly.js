@@ -337,6 +337,7 @@ function packStorageRule(data) {
   return { rule: ["colour-type", "set", "name", "none"].includes(order.rule) ? order.rule : "none",
     container: typeof order.container === "string" && order.container ? order.container : null,
     sleeved: order.sleeved === true, // slice 6: Put back drops "unsleeved" for a sleeved default container
+    sections: typeof storageGroupSections === "function" ? storageGroupSections(order.sections) : {}, // slice 7
     printings: order.printings && typeof order.printings === "object" ? order.printings : {} };
 }
 
@@ -403,6 +404,15 @@ function packStorageGroup(card) {
   return [color + (creature ? 0 : 8), `${creature ? "Creatures" : "Spells"} · ${words[color]}`];
 }
 
+/** A colour-type divider with its section first (slice 7), when the default container's rule says which section
+ * holds the divider's group: "Row 1 · Creatures · White", "Row 2 · Artifacts". Ranks 0-7 are creatures, 8-15
+ * spells, 16-22 lands (packStorageGroup); "Other cards" keeps its label. */
+function packSectionLabel(view, rank, label) {
+  const group = rank < 8 ? "creatures" : rank < 16 ? "spells" : rank < 23 ? "lands" : null;
+  const section = group ? view.storageRule.sections?.[group] : null;
+  return section ? `${section} · ${label}` : label;
+}
+
 /** Unknown mana values sort after known costs, including zero. */
 function packManaValue(card) {
   return Number.isFinite(card?.cmc) ? card.cmc : Infinity;
@@ -435,7 +445,7 @@ function packCardGroups(view, rows) {
   const groups = new Map();
   for (const row of sorted) {
     const [rank, label] = bySet ? packSetGroup(view, row.name) : packStorageGroup(view.cards[row.name]);
-    if (!groups.has(rank)) groups.set(rank, { label, rows: [] });
+    if (!groups.has(rank)) groups.set(rank, { label: bySet ? label : packSectionLabel(view, rank, label), rows: [] });
     groups.get(rank).rows.push(row);
   }
   const ranked = (a, b) => typeof a === "number" ? a - b : a < b ? -1 : a > b ? 1 : 0;

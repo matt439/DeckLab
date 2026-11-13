@@ -103,7 +103,8 @@ older code (the committed tests/fixtures/inventory_goldens):
   only an answer with none ({"ready": true, "cards": {}}) is dropped; a recorded location still
   compares. test_collection_locations checks its values. E8-S25 slice 5 adds the plan's
   "storage_order"; no golden scenario saves a storage setup, so only home's built-in box's
-  ({"rule": "colour-type", "container": "Storage box"}) is dropped. test_assembly_storage_order
+  ({"rule": "colour-type", "container": "Storage box", "sleeved": False, "sections": its rows' groups}:
+  slices 6 and 7) is dropped. test_assembly_storage_order
   checks its values.
 - "played-defaults": E1-S27 adds each library summary's "played" (when it was last played at
   home and its games). No golden scenario records a game, so only the no-games answer
@@ -179,6 +180,9 @@ NO_GIT = ("uncommitted", "commit_pending", "commit", "committed")
 HIDDEN_PAGE = ("owned", "table", "tokens")
 HIDDEN_INDEX = ("missing", "on_the_way", "availability_confirmed", "tokens")
 HIDDEN_EDIT = ("table",)
+# Build decks' storage_order for home's built-in box (E8-S25 slices 5-7), dropped as a default.
+BUILT_IN_ORDER = {"rule": "colour-type", "container": "Storage box", "sleeved": False,
+                  "sections": {"creatures": "Row 1", "spells": "Row 2", "lands": "Row 3", "tokens": "Row 4"}}
 DECK_ITEMS = ("list_decks", "beginner_box_pairings", "load_deck", "decks_index", "deck_view", "assembly",
               "by_viewer", "accessories", "accessories_p4")
 DECK_PATH = re.compile(r"^magic/(?:people/([a-z0-9]+(?:-[a-z0-9]+)*)/)?decks/(casual|commander)/([^/]+)\.md$")
@@ -645,7 +649,7 @@ def storage_location_defaults(dump):
         for plan in plans.values() if isinstance(plans, dict) else []:
             if isinstance(plan, dict) and plan.get("storage_locations") == {"ready": True, "cards": {}}:
                 plan.pop("storage_locations")
-            if isinstance(plan, dict) and plan.get("storage_order") == {"rule": "colour-type", "container": "Storage box"}:
+            if isinstance(plan, dict) and plan.get("storage_order") == BUILT_IN_ORDER:
                 plan.pop("storage_order")
 
 

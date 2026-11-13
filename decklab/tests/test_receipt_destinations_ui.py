@@ -66,6 +66,29 @@ class ReceiptDestinationTests(unittest.TestCase):
           }
         """, draw=False)
 
+    def test_storage_lines_and_token_cards_say_their_section_by_the_rule(self):
+        """E8-S25 slice 7: storage_default's sections with the view's storage_groups; nothing without them."""
+        self.run_js("""
+          const sections={creatures:'Row 1',spells:'Row 2',lands:'Row 3',tokens:'Row 4'};
+          const cases=[[sections,{Alpha:'creatures'},'2 \\u00d7 Alpha \\u00b7 Row 1 \\u00b7 Creatures',
+              '3 token cards go with your tokens, in Storage box: Row 4 \\u00b7 Token cards.'],
+            [{spells:'Row 2'},{Alpha:'creatures'},'2 \\u00d7 Alpha','3 token cards go with your tokens.'],
+            [sections,undefined,'2 \\u00d7 Alpha','3 token cards go with your tokens, in Storage box: Row 4 \\u00b7 Token cards.'],
+            [undefined,{Alpha:'creatures'},'2 \\u00d7 Alpha','3 token cards go with your tokens.']];
+          for(const [map,groups,line,tokens] of cases){
+            clear(main);const d=delivery();d.storage_default={name:'Storage box',kind:'box',sleeved:false,...(map?{sections:map}:{})};
+            if(groups)d.storage_groups=groups;
+            d.components[0].rows=d.components[0].rows.slice(0,1);d.components[0].decks=[[]];
+            const v=drawReceipt(d,routeToken);rcptTick(v,v.comps[0],v.comps[0].rows[0],true);
+            const received=[...rcptReceived(v),{kind:'tokens',rows:[{values:{quantity:'3'}}]}];
+            const post=add(el('div',{}),rcptWhereTheyGo(v,received));
+            const storage=post.querySelectorAll('.rcpt-where').find(p=>p.querySelector('h3').textContent==='To Storage box');
+            assert(storage,post.textContent);same(storage.querySelectorAll('li').map(li=>li.textContent),[line]);
+            const token=post.querySelectorAll('.rcpt-where').find(p=>p.querySelector('h3').textContent==='Token cards');
+            assert(token.textContent.includes(tokens),token.textContent);
+          }
+        """, draw=False)
+
     def test_split_and_printing_rows_share_each_deck_waiting_cap_and_pre_post_confidence(self):
         self.run_js("""
           const d=delivery(),c=d.components[0];c.checks=[];c.rows[0].quantity='3';

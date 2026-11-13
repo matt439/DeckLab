@@ -143,7 +143,7 @@ class FilingLocationTests(support.CollectionEditTestCase):
         merged = filing.after_cli_merge(snapshot, "home", self.facts(), 2)
         self.assertEqual(merged["storage_locations"]["cards"]["Llanowar Elves"]["places"], ["Row 2, B"])
         lines = inv_collection._merge_filing_lines(merged)
-        self.assertIn("    2 x Llanowar Elves (FDN 227, nonfoil): usually in Row 2, B", lines)
+        self.assertIn("    2 x Llanowar Elves (FDN 227, nonfoil) in Row 1 (creatures): usually in Row 2, B", lines)
 
 
 class CliLineTests(unittest.TestCase):

@@ -370,7 +370,7 @@ def _merge_filing_lines(guide):
             lines.append("    Storage locations aren't available yet: the database needs migration 0016.")
         for item in items[:MAX_FILING_LINES - shown]:
             row = guide["added"][item["row"]]
-            place = _merge_place(guide, row["name"]) if kind == "storage" else ""
+            place = _merge_section(guide, row["name"]) + _merge_place(guide, row["name"]) if kind == "storage" else ""
             lines.append(f"    {item['quantity']} x {row['name']} "
                          f"({row['set'].upper()} {row['collector_number']}, {row['finish']}){place}")
             shown += 1
@@ -388,6 +388,16 @@ def _merge_storage_head(guide):
     place = guide.get("storage_default")
     name = place.get("name") if isinstance(place, dict) else None
     return f"  Storage ({name}):" if isinstance(name, str) and name else "  Storage:"
+
+
+def _merge_section(guide, name):
+    """E8-S25 slice 7: " in Row 1 (creatures)" when the default container's rule says which section
+    holds the card's group, else ""."""
+    place = guide.get("storage_default")
+    sections = place.get("sections") if isinstance(place, dict) else None
+    group = (guide.get("storage_groups") or {}).get(name)
+    section = sections.get(group) if isinstance(sections, dict) and group else None
+    return f" in {section} ({group})" if isinstance(section, str) and section else ""
 
 
 def _merge_place(guide, name):

@@ -70,7 +70,43 @@ function storageTake(ctx, data) {
 function storageDraft(ctx, c = {}) {
   return { key: `c${++ctx.keys}`, id: c.id || "", name: c.name || "", kind: c.kind || "box",
     capacity: c.capacity == null ? "" : String(c.capacity), sections: (c.sections || []).join("\n"),
-    order: c.order || "none", sleeved: c.sleeved === true };
+    order: c.order || "none", sleeved: c.sleeved === true,
+    holds: c.holds && typeof c.holds === "object" && !Array.isArray(c.holds) ? { ...c.holds } : {} };
+}
+
+/** Slice 7: what each section of a colour-type container holds ({section: group}), as chosen beside its sections. */
+const STORAGE_HOLDS_WORDS = { "": "Any cards", creatures: "Creatures", spells: "Spells", lands: "Lands", tokens: "Token cards" };
+
+/** The "What each section holds" choices, for a colour-type container with sections; empty otherwise. */
+function storageHoldsBox(ctx, c, k, box) {
+  clear(box);
+  const sections = storageSections(c.sections);
+  box.hidden = c.order !== "colour-type" || !sections.length;
+  if (box.hidden) return box;
+  const label = c.name.trim() || "this container";
+  add(box, [el("legend", { text: "What each section holds" }),
+    el("small", { class: "field-hint", text: `Where these go and Build decks then say each card's section, such as “${sections[0]} · Creatures”.` }),
+    sections.slice(0, 50).map((section, n) => {
+      const select = el("select", { id: k(`holds-${n}`), "aria-label": `What ${section} of ${label} holds`,
+        onchange: (e) => { c.holds[section] = e.target.value; } },
+      Object.entries(STORAGE_HOLDS_WORDS).map(([value, text]) => el("option", { value, text, selected: (c.holds[section] || "") === value || null })));
+      return el("label", { class: "field storage-holds-row", for: select.id }, el("span", { text: section }), select);
+    })]);
+  return box;
+}
+
+/** A container's holds for the record: its current sections' chosen groups (colour-type only), or an Error. */
+function storageHolds(c, name, sections) {
+  if (c.order !== "colour-type") return {};
+  const out = {}, used = new Set();
+  for (const section of sections) {
+    const group = c.holds[section] || "";
+    if (!group) continue;
+    if (used.has(group)) throw new Error(`${name} has two sections holding ${STORAGE_HOLDS_WORDS[group].toLowerCase()}. Choose one.`);
+    used.add(group);
+    out[section] = group;
+  }
+  return out;
 }
 
 function storageLimits(ctx) {
@@ -124,10 +160,11 @@ function storageFieldset(ctx, c, i, id) {
     Object.entries(STORAGE_KIND_WORDS).map(([value, text]) => el("option", { value, text, selected: value === c.kind || null })));
   const capacity = el("input", { id: k("capacity"), type: "text", inputmode: "numeric", maxlength: 6, autocomplete: "off",
     value: c.capacity, placeholder: "Not known", oninput: (e) => { c.capacity = e.target.value; } });
+  const holds = el("fieldset", { class: "storage-holds" });
   const sections = el("textarea", { id: k("sections"), rows: 3, spellcheck: "false", value: c.sections,
-    placeholder: "Row 1\nRow 2", oninput: (e) => { c.sections = e.target.value; } });
+    placeholder: "Row 1\nRow 2", oninput: (e) => { c.sections = e.target.value; }, onchange: () => storageHoldsBox(ctx, c, k, holds) });
   sections.value = c.sections;
-  const order = el("select", { id: k("order"), onchange: (e) => { c.order = e.target.value; } },
+  const order = el("select", { id: k("order"), onchange: (e) => { c.order = e.target.value; storageHoldsBox(ctx, c, k, holds); } },
     Object.entries(STORAGE_ORDER_WORDS).map(([value, text]) => el("option", { value, text, selected: value === c.order || null })));
   const sleeved = el("input", { id: k("sleeved"), type: "checkbox", checked: c.sleeved || null,
     onchange: (e) => { c.sleeved = e.target.checked; } });
@@ -151,6 +188,7 @@ function storageFieldset(ctx, c, i, id) {
       el("label", { class: "field", for: sections.id }, el("span", { text: "Sections" }), sections,
         el("small", { class: "field-hint", text: "One per line, or a count such as “4 rows” for Row 1 to Row 4. They're the location suggestions." })),
       el("label", { class: "field", for: order.id }, el("span", { text: "Cards are ordered" }), order),
+      storageHoldsBox(ctx, c, k, holds),
       el("label", { class: "choice", for: sleeved.id }, sleeved, el("span", { text: "Its cards are kept sleeved" })),
       el("div", { class: "actions storage-moves" },
         el("button", { type: "button", class: "btn btn-quiet", text: "Move up", "data-move": "up", disabled: i === 0 || null,
@@ -181,8 +219,9 @@ function storageRecord(ctx) {
     if (capacity && (!/^\d+$/.test(capacity) || Number(capacity) < 1 || Number(capacity) > limits.capacity)) {
       throw new Error(`${name}'s capacity must be a whole number of cards from 1 to ${num(limits.capacity)}, or blank when you don't know it.`);
     }
+    const sections = storageSections(c.sections), holds = storageHolds(c, name, sections);
     return { ...(c.id ? { id: c.id } : {}), name, kind: c.kind, capacity: capacity ? Number(capacity) : null,
-      sections: storageSections(c.sections), order: c.order, sleeved: c.sleeved };
+      sections, order: c.order, sleeved: c.sleeved, ...(Object.keys(holds).length ? { holds } : {}) };
   });
   const chosen = ctx.containers.find((c) => c.key === ctx.defaultKey);
   const fallback = chosen ? (chosen.id || chosen.name.replace(/\s+/g, " ").trim()) : null;
@@ -249,11 +288,20 @@ function drawStorageReview(ctx) {
       : el("p", { class: "sub", text: "No recorded location changes container." }),
     el("p", { class: "sub", text: fallback ? `Cards with no location go to ${fallback.name}.` : "Cards with no location aren't counted in any container." }),
     el("h3", { text: "Location suggestions" }),
-    el("p", { class: "sub", text: suggestions.length ? suggestions.join(", ") : "None: the card sheet suggests only locations already used." })]);
+    el("p", { class: "sub", text: suggestions.length ? suggestions.join(", ") : "None: the card sheet suggests only locations already used." }),
+    storageHoldsReview(answer.storage)]);
   sheetActions(ctx.sheet, [{ text: "Back", value: "back", onclick: () => { if (!ctx.busy) { clear(ctx.message); showStorageEdit(ctx); } } },
     { text: "Save storage setup", kind: "primary", value: "save", onclick: () => saveStorage(ctx) }]);
   const heading = ctx.reviewBox.querySelector("h3");
   if (heading) { heading.tabIndex = -1; heading.focus(); }
+}
+
+/** The review's "What each section holds" (slice 7): one line per container whose sections hold groups. */
+function storageHoldsReview(storage) {
+  const lines = (storage.containers || []).filter((c) => c.holds && Object.keys(c.holds).length).map((c) =>
+    el("li", { text: `${c.name}: ${Object.entries(c.holds).map(([section, group]) =>
+      `${section} holds ${(STORAGE_HOLDS_WORDS[group] || group).toLowerCase()}`).join(", ")}` }));
+  return lines.length ? [el("h3", { text: "What each section holds" }), el("ul", { class: "storage-holds-list" }, lines)] : null;
 }
 
 async function saveStorage(ctx) {

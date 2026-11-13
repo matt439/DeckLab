@@ -3,7 +3,10 @@ over the built-in default. state/space_storage.py has the record's rules and mat
 
     read(space)   -> {space, revision, ready, source, storage}; raises state's errors
     default_place(space) -> {name, kind, sleeved} of the container loose cards go to, or None
-                     (slice 6's words: "To Storage box", "unsleeved" only when it isn't sleeved)
+                     (slice 6's words: "To Storage box", "unsleeved" only when it isn't sleeved),
+                     with "sections" {group: section} when that container's colour-type rule
+                     says which section holds each group (slice 7: "Row 1 · Creatures")
+    card_groups(names) -> {name: "creatures" | "spells" | "lands"} from the card data (slice 7)
     current(space) -> the same, but never raises: a store that can't be read (the database down,
                      no store installed) answers as "nothing saved", so home keeps its built-in
                      box and the Card list's count still shows (source "default", revision None)
@@ -49,11 +52,42 @@ def current(space, *, seed=True):
 
 
 def place(record):
-    """The record's default container as the pages word it: {name, kind, sleeved}, or None."""
+    """The record's default container as the pages word it: {name, kind, sleeved}, plus
+    "sections" ({group: section}) only when its rule maps groups to sections; or None."""
     found = rules.container(record, (record or {}).get("default"))
     if found is None:
         return None
-    return {"name": found["name"], "kind": found["kind"], "sleeved": bool(found.get("sleeved"))}
+    answer = {"name": found["name"], "kind": found["kind"], "sleeved": bool(found.get("sleeved"))}
+    sections = rules.group_sections(found)
+    if sections:
+        answer["sections"] = sections
+    return answer
+
+
+def card_groups(names):
+    """{name: group} for the names the card data knows (the colour-type rule's group from the
+    front face's type line: rules.card_group); {} without the card data. Never raises: the
+    section is only a word beside a destination."""
+    from decklab.lib import cards
+    out = {}
+    try:
+        for name in sorted(n for n in names if isinstance(n, str) and n):
+            card = cards.card(name)
+            group = rules.card_group(card.get("type_line")) if isinstance(card, dict) else None
+            if group:
+                out[name] = group
+    except Exception:           # no card data (or a broken index): no sections, the rest stands
+        return {}
+    return out
+
+
+def with_groups(answer, names, key="storage_default"):
+    """answer with "storage_groups" ({name: group}) for names when answer[key] maps sections;
+    the field is left out otherwise (no words to add)."""
+    found = answer.get(key)
+    if isinstance(found, dict) and found.get("sections"):
+        answer["storage_groups"] = card_groups(names)
+    return answer
 
 
 def default_place(space):
