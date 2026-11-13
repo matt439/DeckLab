@@ -193,6 +193,18 @@ svg.icon-more { stroke-width: 4; }
   color: var(--ink); box-shadow: inset 0 -2px var(--accent); font-weight: var(--fw-semibold);
 }
 .nav-item:focus-visible { outline-offset: 2px; }
+/* A "more" page with its own pill (Build decks, E11-S61): the pill from 1000 px, where the top bar's More leaves
+   it out; below that, a phone on its side's top bar included, it's only in More, which is marked while it's open. */
+.nav-items > li.nav-wide { display: none; }
+@media (min-width: 1000px) {
+  .nav-items > li.nav-wide { display: flex; }
+  .nav-more-menu > a.nav-narrow { display: none; }
+}
+@media (max-width: 999px) {
+  .nav-more.is-current-narrow {
+    color: var(--ink); box-shadow: inset 0 -2px var(--accent); font-weight: var(--fw-semibold);
+  }
+}
 @media (min-width: 600px) and (max-width: 799px) {
   .nav-item { padding: 0 var(--s-2); }
 }

@@ -525,6 +525,16 @@ def parse_omit(text):
     return frozenset(parts)
 
 
+def _played(deck_id, summary):
+    """library_played.deck_played's answer with "can_record": whether this viewer may record a game
+    with this deck (the Game log's own per-deck play.record answer, so the Overview offers Record a game
+    only where the Game log's quick record would take it: never a Public deck of another space)."""
+    played = deck_played(deck_id)
+    if played is not None:
+        played["can_record"] = guard.allowed(guard.viewer(), "play.record", [summary])
+    return played
+
+
 def deck_view(deck_id, version="target", omit=()):
     """GET /api/deck?id=<deck id>&version=target|owned[&omit=matchups]: the decklist with card
     data and images, its stats, and owned vs needed.
@@ -612,7 +622,8 @@ def deck_view(deck_id, version="target", omit=()):
     played is library_played.deck_played's: when the deck was last played at home and how many
     games it has, from the Game log's games this viewer may see (a hidden other side counted,
     never named), with "since", what its list changed after its last game, from the deck's own
-    revisions; None when the games can't be read.
+    revisions, and "can_record", whether this viewer may record a game with it (play.record, as the
+    Game log's decks say); None when the games can't be read.
 
     box_label is an owned intact product's box label (product_label.box_label: its name,
     colours, decks and the deck page its QR code opens), only for a viewer who sees home's
@@ -698,7 +709,7 @@ def deck_view(deck_id, version="target", omit=()):
         "guide": playing_guide(deck_file),
         "usual_opponents": usual_opponents(deck_id),
         # When it was last played at home and what its list changed since (E1-S27): the Game log's games.
-        "played": deck_played(deck_id),
+        "played": _played(deck_id, summary),
         "swaps": view_swaps(deck_file),
         # The Considering list (E2-S23): its free counts only for a viewer who sees the inventory.
         "considering": considering_view(deck_file, deck_id, p, sees, warnings),
