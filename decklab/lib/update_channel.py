@@ -19,7 +19,7 @@ the tests pass a fake.
 """
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 CHANNELS = ("main", "release")
@@ -103,9 +103,9 @@ def plan_release(git, upstream):
 
 
 def _fetched_on(git, root, settings=None):
-    """The date (YYYY-MM-DD) of the last git fetch here, from FETCH_HEAD's time, or None. Dated in
-    the household's zone (config.json's "timezone", else UTC+10, lib/hometime.py), so a fetch
-    early in the household's morning isn't shown as the day before."""
+    """The date (YYYY-MM-DD) of the last git fetch here, from FETCH_HEAD's time, or None. Dated as
+    the household's dates are (lib/hometime.py: config.json's "timezone", else this PC's own zone),
+    so a fetch early in the household's morning isn't shown as the day before."""
     try:
         path = Path(git("rev-parse", "--git-path", "FETCH_HEAD"))
         if not path.is_absolute():
@@ -114,11 +114,7 @@ def _fetched_on(git, root, settings=None):
     except Exception:       # noqa: BLE001 - never fetched, or git can't say: no date
         return None
     from decklab.lib import hometime
-    try:
-        zone = hometime.zone(hometime.configured(settings or {}))
-    except Exception:       # noqa: BLE001 - a date must always come back
-        zone = None
-    return datetime.fromtimestamp(moment, zone or hometime.FALLBACK).date().isoformat()
+    return hometime.household_today(settings or {}, now=datetime.fromtimestamp(moment, timezone.utc))
 
 
 def waiting(git, root, settings):

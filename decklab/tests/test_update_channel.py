@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import types
 import unittest
+from datetime import timedelta, timezone
 from pathlib import Path
 from unittest import mock
 
@@ -186,11 +187,17 @@ class WaitingTests(unittest.TestCase):
         os.utime(path, (1_700_000_000, 1_700_000_000))
         git = FakeGit(2, head="c1", upstream="c1")
         git.fetch_head = path
-        # 2023-11-14 22:13 UTC is the 15th in the household's zone (UTC+10 without "timezone").
-        self.assertEqual(update_channel.waiting(git, self.root, {})["fetched_on"], "2023-11-15")
-        with mock.patch("decklab.lib.hometime.zone", return_value=None):       # no zone data: still UTC+10
-            self.assertEqual(update_channel.waiting(git, self.root, {"timezone": "Nowhere/Else"})["fetched_on"],
+        # 2023-11-14 22:13 UTC is the 15th in a UTC+10 household zone.
+        with mock.patch("decklab.lib.hometime.zone", return_value=timezone(timedelta(hours=10))):
+            self.assertEqual(update_channel.waiting(git, self.root, {"timezone": "Etc/GMT-10"})["fetched_on"],
                              "2023-11-15")
+        # Without a zone (or with one this PC has no data for), the PC's own zone dates it.
+        with mock.patch("decklab.lib.hometime._local", side_effect=lambda now: now.astimezone(
+                timezone(timedelta(hours=10)))):
+            self.assertEqual(update_channel.waiting(git, self.root, {})["fetched_on"], "2023-11-15")
+            with mock.patch("decklab.lib.hometime.zone", return_value=None):
+                self.assertEqual(update_channel.waiting(git, self.root, {"timezone": "Nowhere/Else"})["fetched_on"],
+                                 "2023-11-15")
 
     def test_problems_are_fixed_words(self):
         found = update_channel.waiting(FakeGit(2, "c1", "c1"), self.root, {"update": {"channel": "x"}})
