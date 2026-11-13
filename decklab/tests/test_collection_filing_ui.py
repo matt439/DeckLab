@@ -57,6 +57,25 @@ class CollectionFilingUiTests(unittest.TestCase):
           colTakeNotice(fresh); assert.equal(main.querySelectorAll('.col-filing-guide').length, 1);
         """)
 
+    def test_the_storage_group_names_the_spaces_default_container(self):
+        """E8-S25 slice 6: the built-in box, a sleeved binder, no default container, an older answer."""
+        self.run_js(r"""
+          const cases = [
+            [{name: 'Storage box', kind: 'box', sleeved: false}, 'To Storage box', 'they go unsleeved into the storage box.'],
+            [{name: 'Binder', kind: 'binder', sleeved: true}, 'To Binder', 'they go into the binder.'],
+            [null, 'To storage', 'they go with your loose cards.'],
+            [undefined, 'To storage', 'keep them with your unsleeved cards.']];
+          for (const [place, head, words] of cases) {
+            const {ctx} = await openGrouped(); readyGroups(ctx); const answer = reply();
+            if (place !== undefined) answer.filing.storage_default = place;
+            apiWrite = async () => answer; await applyImport(ctx, false); view();
+            const panel = guide().querySelectorAll('.col-filing-panel').find(p => p.querySelector('h3').textContent === head);
+            assert(panel, 'no panel ' + head + ': ' + guide().textContent);
+            assert(panel.textContent.includes('Copies left after the waiting decks: ' + words), panel.textContent);
+            assert(panel.textContent.includes('1 × Aerie Mystics'));
+          }
+        """)
+
     def test_exact_printing_case_and_finish_stay_separate_and_added_counts_ignore_old_copies(self):
         self.run_js(r"""
           const cv = view(), answer = {added: {rows: 0, cards: 2}, filing: {space: 'home', profile: 'matt', status: 'ready',

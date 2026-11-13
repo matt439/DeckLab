@@ -462,6 +462,34 @@ function storageAdviceNote(found) {
   return found?.ready === false ? el("p", { class: "sub storage-advice-off", text: STORAGE_LOCATIONS_OFF }) : null;
 }
 
+/** Slice 6's words (E8-S25): an answer's default container ({name, kind, sleeved}) where loose cards go, checked.
+ * undefined when the answer has no such field (an older server: today's words), null when the space has none. */
+function storagePlace(answer, key = "storage_default") {
+  if (!answer || typeof answer !== "object" || !Object.hasOwn(answer, key)) return undefined;
+  const raw = answer[key];
+  if (!raw || typeof raw !== "object" || typeof raw.name !== "string" || !raw.name.trim() || raw.name.length > 40
+      || /[\r\n]/.test(raw.name) || typeof raw.sleeved !== "boolean") return null;
+  return Object.freeze({ name: raw.name.trim(), kind: typeof raw.kind === "string" ? raw.kind : "other", sleeved: raw.sleeved });
+}
+
+/** A container's name inside a sentence: "the storage box", "the red binder"; a name with capitals, digits or
+ * punctuation beyond its first letter ("Shelf A", "Matt's binder") stays as written. */
+function storagePlaceNamed(place) {
+  const name = place.name;
+  return /^[A-Z]?[a-z]*( [a-z]+)*$/.test(name) ? `the ${name.charAt(0).toLowerCase()}${name.slice(1)}` : name;
+}
+
+/** "To Storage box", or "To storage" when there's no default container (or no word of one). */
+function storagePlaceHeading(place) {
+  return place ? `To ${place.name}` : "To storage";
+}
+
+/** "they go unsleeved into the storage box" ("unsleeved" only when the container isn't sleeved), or "they go with
+ * your loose cards" when the space has no default container. Callers keep today's words for undefined. */
+function storagePlaceGo(place) {
+  return place ? `they go ${place.sleeved ? "" : "unsleeved "}into ${storagePlaceNamed(place)}` : "they go with your loose cards";
+}
+
 /** Location filtering and batches need a checked location snapshot, including on an older server. */
 function colLocationsChecked(cv) { return !!(cv.locations?.ready && cv.locations.sha256 && !cv.locations.error); }
 

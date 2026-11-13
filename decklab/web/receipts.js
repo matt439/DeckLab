@@ -1080,7 +1080,7 @@ function rcptIntactChoice(view, comp) {
   comp.choice = el("div", { class: "rcpt-choices", id: `rcpt-${comp.index}-intact`, role: "group", "aria-label": "What to do with it" },
     card("yes", "Keep it as its own deck(s)", decks ? "In its own sleeves and deck box; its cards stay out of the shared pool."
       : "It has no deck lists, so there's nothing to keep together.", !decks),
-    card("no", "Break it up into storage", "Its cards go into the storage box, free for any deck."));
+    card("no", "Break it up into storage", `${rcptBrokenUpWords(storagePlace(view.data)).replace(/^i/, "I")}, free for any deck.`));
   return comp.choice;
 }
 

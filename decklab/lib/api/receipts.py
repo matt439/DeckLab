@@ -59,7 +59,7 @@ import uuid
 import zlib
 from pathlib import PurePosixPath
 
-from decklab.lib import arrivals, cards, config, hometime, inventory, spaces
+from decklab.lib import arrivals, cards, config, hometime, inventory, spaces, storage_setting
 from decklab.lib.decks.identity import CardIdentityError, deck_colors
 from decklab.lib.inventory import files, receive, rules
 from decklab.lib.tokens import details as token_details
@@ -128,6 +128,9 @@ def receipt_view(order=None):
       from the target sections already read (None unknown, [] known colourless);
     - "kits": {deck id: {"sleeves": name}} for the building and built decks those name, only where this viewer
       sees that deck's sleeves (guard.sees_kit, the accessories' owner rule), for "Where these go";
+    - "storage_default": home's default container where loose cards go, {name, kind, sleeved}, or None
+      when home's storage setup has none (E8-S25 slice 6: "To Storage box", "unsleeved" only when it
+      isn't sleeved); always home's, as the deliveries are;
     - "face_names": Scryfall's token face names when the order has a tokens component ([] while
       the card data isn't ready), for the token sheet's suggestions;
     - "keywords": the keywords a token's details may list (lower case), for its "Read as" line,
@@ -150,7 +153,8 @@ def receipt_view(order=None):
 
 def _board(inv, view, record):
     """The check-off board's additions to a delivery view (see receipt_view), in place."""
-    view.update(today=_receipt_today(), kits={}, face_names=[], keywords=sorted(token_details._keywords()))
+    view.update(today=_receipt_today(), kits={}, face_names=[], keywords=sorted(token_details._keywords()),
+                storage_default=storage_setting.default_place(spaces.HOME))
     ready = _index_info()[0] is not None
     by_id = {component.id: component for component in record.components}
     from . import arrival_checks

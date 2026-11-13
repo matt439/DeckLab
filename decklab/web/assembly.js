@@ -336,6 +336,7 @@ function packStorageRule(data) {
   if (!order || typeof order !== "object") return { rule: "none", container: null, printings: {} };
   return { rule: ["colour-type", "set", "name", "none"].includes(order.rule) ? order.rule : "none",
     container: typeof order.container === "string" && order.container ? order.container : null,
+    sleeved: order.sleeved === true, // slice 6: Put back drops "unsleeved" for a sleeved default container
     printings: order.printings && typeof order.printings === "object" ? order.printings : {} };
 }
 
@@ -554,7 +555,7 @@ function packDeck(view, deck) {
     !packFilesBasics(view) ? cardStep("basic", "Basic lands", basics) : null,
     cardStep("standin", "Spare-card stand-ins", markers),
     !packFilesBasics(view) ? tokenStep() : null,
-    cardStep("return", "Put back", returns, el("p", { class: "sub", text: "Take these out of the deck and put them back in storage, unsleeved." })),
+    cardStep("return", "Put back", returns, el("p", { class: "sub", text: `Take these out of the deck and put them back in storage${view.storageRule.sleeved ? "" : ", unsleeved"}.` })),
     packFilesBasics(view) ? tokenStep() : null,
     step("box", "Pack", box ? el("ul", { class: "pack-list" },
       assemblyTick(`Pack into ${assemblyKitName(box)}`, 1, [box.id || box.value], "box")) : null),

@@ -264,11 +264,12 @@ class StorageOrderTests(CollectionEditTestCase):
         return assembly_locations.storage_order(inventory.current(), set(names))
 
     def test_the_built_in_box_a_set_binder_and_no_default(self):
-        self.assertEqual(self.order("Llanowar Elves"), {"rule": "colour-type", "container": "Storage box"})
+        self.assertEqual(self.order("Llanowar Elves"), {"rule": "colour-type", "container": "Storage box", "sleeved": False})
         self.setup(default="binder", containers=[{"name": "Shoebox", "order": "name"},
-                                                 {"id": "binder", "name": "Binder", "kind": "binder", "order": "set"}])
+                                                 {"id": "binder", "name": "Binder", "kind": "binder", "order": "set",
+                                                  "sleeved": True}])
         order = self.order("Llanowar Elves", "Not A Card")
-        self.assertEqual((order["rule"], order["container"]), ("set", "Binder"))
+        self.assertEqual((order["rule"], order["container"], order["sleeved"]), ("set", "Binder", True))
         self.assertEqual(order["printings"], {"Llanowar Elves": ["fdn", "227"]})
         self.setup(default=None, containers=[{"name": "Shoebox", "order": "set"}])
         self.assertIsNone(self.order("Llanowar Elves"))
@@ -292,6 +293,33 @@ class StorageOrderTests(CollectionEditTestCase):
         self.assertEqual(pick({("dom", "168", "nonfoil"): "Shelf"}), ["fdn", "227"])     # no location: the default's
         self.assertEqual(pick({k: "Shelf" for k in (("dom", "168", "nonfoil"), ("fdn", "227", "nonfoil"),
                                                     ("m19", "314", "nonfoil"))}), ["dom", "168"])   # else its first row
+
+
+class StorageWordsTests(CollectionEditTestCase):
+    """The default container the words name (E8-S25 slice 6): storage_setting.default_place, and the
+    filing guide's storage_default for the collection's own space only."""
+    setup = StorageSetupTests.setup
+    BOX = {"name": "Storage box", "kind": "box", "sleeved": False}
+
+    def guide(self, space):
+        from decklab.lib.api import collection_filing
+        return collection_filing._with_locations({"added": [], "destinations": []}, inventory.current(), space)
+
+    def test_built_in_box_saved_binder_and_none(self):
+        from decklab.lib import storage_setting
+        self.assertEqual(storage_setting.default_place("home"), self.BOX)
+        self.assertIsNone(storage_setting.default_place("user2"))
+        self.assertEqual(self.guide("home")["storage_default"], self.BOX)
+        self.assertIsNone(self.guide("user2")["storage_default"])
+        self.setup("user2", default="binder", containers=[{"id": "binder", "name": "Blue binder", "kind": "binder",
+                                                           "sleeved": True}])
+        binder = {"name": "Blue binder", "kind": "binder", "sleeved": True}
+        self.assertEqual(self.guide("user2")["storage_default"], binder)
+        self.assertEqual(self.guide("home")["storage_default"], self.BOX)       # never another space's
+        self.setup(default=None, containers=[{"name": "Shoebox"}])
+        self.assertIsNone(storage_setting.default_place("home"))
+        self.assertIsNone(self.guide("home")["storage_default"])
+        self.assertIsNone(storage_setting.place(None))
 
 
 class PackingPlanTests(CollectionEditTestCase):
