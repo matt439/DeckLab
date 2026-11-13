@@ -297,6 +297,46 @@ class StorageOrderTests(CollectionEditTestCase):
         self.assertEqual(pick({k: "Shelf" for k in (("dom", "168", "nonfoil"), ("fdn", "227", "nonfoil"),
                                                     ("m19", "314", "nonfoil"))}), ["dom", "168"])   # else its first row
 
+    def test_two_or_more_containers_place_each_card(self):
+        """Slice 7: containers and each card's container, from its recorded locations."""
+        lotus = {"set": "lea", "collector_number": "232", "finish": "nonfoil"}
+        self.save(action="edit", original=ELVES, location="Page 3, 2",
+                  row=next(r for r in self.rows()["rows"] if r["set"] == "fdn" and r["collector_number"] == "227"))
+        self.save(action="edit", original=lotus, location="Attic",
+                  row=next(r for r in self.rows()["rows"] if r["set"] == "lea" and r["collector_number"] == "232"))
+        self.setup(default="box", containers=[
+            {"id": "box", "name": "Storage box", "sections": ["Row 1", "Row 2"], "order": "colour-type",
+             "holds": {"Row 1": "creatures"}},
+            {"id": "binder", "name": "Binder", "kind": "binder", "sections": ["Page 3"], "order": "set", "sleeved": True}])
+        answer = {"rows": [{"name": n, "from_storage": 1} for n in ("Llanowar Elves", "Black Lotus", "Sol Ring")],
+                  "decks": []}
+        with inventory.pinned():
+            assembly_locations.annotate(answer, inventory.current())
+        order = answer["storage_order"]
+        self.assertEqual((order["rule"], order["container"], order["sleeved"]), ("colour-type", "Storage box", False))
+        self.assertEqual(order["containers"], [
+            {"id": "box", "name": "Storage box", "order": "colour-type", "sleeved": False,
+             "sections": {"creatures": "Row 1"}},     # each container's own sections
+            {"id": "binder", "name": "Binder", "order": "set", "sleeved": True}])
+        self.assertEqual(order["sections"], {"creatures": "Row 1"})
+        self.assertEqual(order["placed"], {"Llanowar Elves": "binder", "Black Lotus": None, "Sol Ring": "box"})
+        self.assertEqual(order["printings"], {"Llanowar Elves": ["fdn", "227"]})     # only the set-ordered binder's
+        self.setup(default="box", containers=[{"id": "box", "name": "Storage box", "order": "colour-type"}])
+        with inventory.pinned():
+            self.assertEqual(assembly_locations.storage_order(inventory.current(), {"Llanowar Elves"}),
+                             {"rule": "colour-type", "container": "Storage box", "sleeved": False})    # one: as before
+
+    def test_a_card_in_two_containers_goes_under_the_first_matching_location(self):
+        from decklab.lib.api import assembly_locations as al
+        record = {"default": "box", "containers": [{"id": "box", "name": "Storage box", "sections": ["Row 1"]},
+                                                   {"id": "binder", "name": "Binder", "sections": []}]}
+        self.assertEqual(al._placed(record, ["Binder, 4", "Row 1"]), "binder")
+        self.assertEqual(al._placed(record, ["Row 1", "Binder"]), "box")
+        self.assertEqual(al._placed(record, ["Attic", "Binder"]), "binder")     # the first that matches one
+        self.assertIsNone(al._placed(record, ["Attic"]))
+        self.assertEqual(al._placed(record, None), "box")
+        self.assertEqual(al._placed(record, []), "box")
+
 
 class StorageWordsTests(CollectionEditTestCase):
     """The default container the words name (E8-S25 slice 6): storage_setting.default_place, and the

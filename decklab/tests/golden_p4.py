@@ -103,8 +103,8 @@ older code (the committed tests/fixtures/inventory_goldens):
   only an answer with none ({"ready": true, "cards": {}}) is dropped; a recorded location still
   compares. test_collection_locations checks its values. E8-S25 slice 5 adds the plan's
   "storage_order"; no golden scenario saves a storage setup, so only home's built-in box's
-  ({"rule": "colour-type", "container": "Storage box", "sleeved": False, "sections": its rows' groups}:
-  slices 6 and 7) is dropped. test_assembly_storage_order
+  (BUILT_IN_ORDER: {"rule": "colour-type", "container": "Storage box", "sleeved": False, "sections":
+  its rows' groups}, slices 6 and 7; one container, so no slice 7 "containers") is dropped. test_assembly_storage_order
   checks its values.
 - "played-defaults": E1-S27 adds each library summary's "played" (when it was last played at
   home and its games). No golden scenario records a game, so only the no-games answer
