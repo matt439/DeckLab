@@ -198,6 +198,8 @@ LEGACY_ACCESS = MappingProxyType({
     ('PUT', '/api/simulations'): 'admin',
     ('GET', '/api/shop-postage'): 'home-records',
     ('PUT', '/api/shop-postage'): 'home-admin',
+    ('GET', '/api/storage'): 'inventory',
+    ('PUT', '/api/storage'): 'inventory-edit',
     ('GET', '/api/pricing-setting'): 'home-records',
     ('PUT', '/api/pricing-setting'): 'home-admin',
     ('GET', '/api/commander-night'): 'home-records',

@@ -140,6 +140,7 @@ Actions and their targets:
     "play.record"      the decks of the game (an iterable of decks)
     "collection.edit"  a space id
     "tokens.edit"      a space id
+    "storage.edit"     a space id: its storage setup (E8-S25), as collection.edit (its own people)
     "wishlist.edit"    a profile id
     "settings.edit"    a profile id
     "accessories.edit"  no target: whether the profile has accessories of its own to change
@@ -176,7 +177,7 @@ HOME = "home"
 EITHER = "either"               # the house's decks; they count as Matt's
 
 DECK_ACTIONS = ("deck.edit", "tables.update")
-SPACE_ACTIONS = ("collection.edit", "tokens.edit")
+SPACE_ACTIONS = ("collection.edit", "tokens.edit", "storage.edit")
 OWN_ACTIONS = ("wishlist.edit", "settings.edit")
 ADMIN_ACTIONS = ("receipts.apply", "products.edit", "orders.edit", "postage.edit", "pricing.edit")
 ACTIONS = (DECK_ACTIONS + SPACE_ACTIONS + OWN_ACTIONS + ADMIN_ACTIONS
@@ -465,7 +466,7 @@ def reason(profile, action, target=None, *, script=False):
         return "A game you record needs one of your decks in it."
     if action in SPACE_ACTIONS:
         # Its own space's, home's for a home member too (E10-S43); an admin no other (E10-S29).
-        what = "collection" if action == "collection.edit" else "tokens"
+        what = {"collection.edit": "collection", "tokens.edit": "tokens", "storage.edit": "storage setup"}[action]
         if target == _space_of(profile):
             return None
         return f"You can only change your own {what}."

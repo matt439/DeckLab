@@ -672,6 +672,13 @@ class Handler(BaseHTTPRequestHandler):
                 if self.command == "PUT":
                     return self._send_json(200, shop_postage.change(self._write_body(shop_postage.MAX_BODY)))
                 return self._send_json(200, shop_postage.view())
+            if route == ["storage"]:
+                from decklab.lib.api import storage as storage_api
+                self._allow(*GET, "PUT")
+                if self.command == "PUT":
+                    self._no_query(query)
+                    return self._send_json(200, storage_api.change(self._write_body(storage_api.MAX_BODY)))
+                return self._send_json(200, storage_api.view(**self._query(query, ("space",))))
             if route == ["pricing-setting"]:
                 from decklab.lib.api import pricing_setting
                 self._allow(*GET, "PUT")

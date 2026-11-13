@@ -929,6 +929,18 @@ class PgStore:
         from . import pg_pricing
         return pg_pricing.put(self, pricing, expected_revision, actor, message)
 
+    # ------------------------------------------------------------------ a space's storage (E8-S25)
+
+    def space_storage(self, space):
+        """{space, revision, storage or None, ready} (pg_space_storage.get; not cached)."""
+        from . import pg_space_storage
+        return pg_space_storage.get(self, space)
+
+    def space_storage_put(self, space, storage, expected_revision, actor, message):
+        """Replace the space's whole record after checking its revision (pg_space_storage.put)."""
+        from . import pg_space_storage
+        return pg_space_storage.put(self, space, storage, expected_revision, actor, message)
+
     # ------------------------------------------------------------------ the simulations mode
 
     def simulation_mode(self):

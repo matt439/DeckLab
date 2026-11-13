@@ -388,6 +388,37 @@ def _pricing_setting(c):
     return work
 
 
+def _space_storage(c):
+    """Every space's storage setup (E8-S25) in its complete saved form, for a space that exists."""
+    def work():
+        from decklab.lib.state import Invalid, space_storage
+        if c.execute("select to_regclass('public.space_storage') is null").fetchone()[0]:
+            return True, False, "the storage setups unavailable until migration 0028"
+        rows = c.execute("select s.space_id, s.revision, s.content, exists (select 1 from space p where p.id = s.space_id) "
+                         "from space_storage s order by s.space_id").fetchall()
+        if not rows:
+            return True, False, "none saved (home uses its built-in storage box)"
+        wrong = []
+        for space, revision, content, present in rows:
+            if not present:
+                wrong.append("a storage setup for a space that doesn't exist")
+                continue
+            if type(revision) is not int or revision < 1:
+                wrong.append("a storage setup with an invalid revision")
+                continue
+            try:
+                normalized = space_storage.normalize(content)
+            except Invalid:
+                wrong.append("a storage setup that breaks its rules")
+                continue
+            if normalized != content:
+                wrong.append("a storage setup not in its complete saved form")
+        if wrong:
+            return False, False, _listed(sorted(set(wrong)))
+        return True, False, f"{len(rows)} spaces' storage setups"
+    return work
+
+
 def _field_policy(c):
     """Validate stored policy only; old incarnation rules are intentional tombstones."""
     def work():
@@ -468,6 +499,8 @@ def _space_departures(c):
             references += (("dice_counter", "t.space_id = d.space_id"),)
         if c.execute("select to_regclass('public.card_loan') is not null").fetchone()[0]:
             references += (("card_loan", "t.space_id = d.space_id"),)
+        if c.execute("select to_regclass('public.space_storage') is not null").fetchone()[0]:     # migration 0028
+            references += (("space_storage", "t.space_id = d.space_id"),)
         if ids:
             for table, condition in references:
                 count = c.execute(f"select count(*) from {table} t where exists "
@@ -570,6 +603,7 @@ def run(dbname=None, say=backup.say):
         result.sub("Commander-night notes", _commander_night(c), c)
         result.sub("Shops' postage", _shop_postage(c), c)
         result.sub("Price settings", _pricing_setting(c), c)
+        result.sub("storage setups", _space_storage(c), c)
         result.sub("field policy", _field_policy(c), c)
         result.sub("visibility", _visibility(c), c)
         result.sub("member departures", _space_departures(c), c)

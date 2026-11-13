@@ -164,3 +164,4 @@ on any server. The route-access fixture check fails when a source migration is a
 - `0025_listing_preferences.sql`
 - `0026_watchlist_buy_under.sql`
 - `0027_deck_line_categories.sql`
+- `0028_space_storage.sql`
