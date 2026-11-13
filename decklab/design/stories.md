@@ -6190,7 +6190,7 @@ Built (2026-11-05): Settings says when a newer release is out. On a release inst
 
 Decided (Matt, 2026-11-13): tag `v0.1.0` on main once `FG#2` (Forge 2.0.16) is running on the server; version tags on main are also the git checkouts' stable update channel (E11-S84).
 
-Gap: the first real release, tagging `v0.1.0` (Matt, or Claude with his OK); `FG#2`'s Forge 2.0.16 reached the server on 2026-11-14, so it waits only on that OK. An update command for release installs (E11-S51).
+2026-11-14: with Matt's OK, `v0.1.0` was tagged on main's `bb3e46c` (the commit the live server runs, its `tests` and `ruff` passed), and `release.yml` made the draft release Deck Lab 0.1.0 (zip, SHA-256, manifest, provenance attestation). Gap: Matt publishes the draft; an update command for release installs (E11-S51).
 
 **E11-S50** · Self-hoster · could · L · missing
 
