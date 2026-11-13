@@ -172,7 +172,7 @@ class WordingTests(unittest.TestCase):
 
 
 class OffByDefaultTests(unittest.TestCase):
-    """Off until Matt agrees the watched tables and thresholds: no status lines, no nightly step."""
+    """Off until config.json's database.shrink_warn is true: no status lines, no nightly step."""
     ROWS = [row(True, 0, counts(deck=3)), row(True, 1, BASE)]
 
     def test_enabled_only_when_set_true(self):
