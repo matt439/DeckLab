@@ -732,7 +732,7 @@ def step_time(r, ctx, mismatch=None, settings=None):
     except LookupError:
         r.note(WARN, f"This PC has no time zone data for {name}, so it can't be compared"
                      + (" (install the tzdata package)" if sys.platform.startswith("linux") else
-                        "; Deck Lab's own dates use UTC+10 without it"))
+                        "; Deck Lab's own dates follow this PC's own zone without it"))
         return
     if differs:
         r.note(WARN, differs)

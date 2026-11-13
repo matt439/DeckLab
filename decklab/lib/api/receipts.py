@@ -80,7 +80,7 @@ def _hex(value, length):
 
 
 def _receipt_today():
-    """The household's date (config.json's "timezone", else UTC+10), independent of the server's timezone."""
+    """The household's date (config.json's "timezone", else this PC's own zone)."""
     return hometime.household_today()
 
 

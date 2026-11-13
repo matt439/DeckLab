@@ -68,7 +68,7 @@ def _hash(value):
 
 
 def _play_today():
-    """The household's date (config.json's "timezone", else UTC+10)."""
+    """The household's date (config.json's "timezone", else this PC's own zone)."""
     return hometime.household_today()
 
 

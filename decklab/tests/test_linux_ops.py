@@ -45,13 +45,33 @@ class HomeTimeTests(unittest.TestCase):
         self.assertIn("Australia/Sydney", problem)
         self.assertIsNone(hometime.configured({"timezone": 5}))
 
-    def test_household_today_falls_back_to_utc_plus_10(self):
-        late = datetime(2026, 10, 31, 14, 30, tzinfo=timezone.utc)      # 00:30 on Nov 1 at UTC+10
-        self.assertEqual(hometime.household_today({}, now=late), "2026-11-01")
+    def test_household_today_follows_this_pcs_zone_without_timezone(self):
+        # Matt, 2026-11-13: no "timezone" (missing, blank, or no data for it here) is this PC's
+        # own zone, no longer a fixed UTC+10.
+        minus_5 = timezone(timedelta(hours=-5))
+        late = datetime(2026, 10, 31, 14, 30, tzinfo=timezone.utc)      # 00:30 on Nov 1 at +10, 09:30 Oct 31 at -5
+        with mock.patch.object(hometime, "_local", side_effect=lambda now: now.astimezone(minus_5)):
+            self.assertEqual(hometime.household_today({}, now=late), "2026-10-31")
+            self.assertEqual(hometime.household_today({"timezone": ""}, now=late), "2026-10-31")
+            self.assertEqual(hometime.household_today({"timezone": "Sydney time"}, now=late), "2026-10-31")
+            with mock.patch.object(hometime, "zone", return_value=None):
+                self.assertEqual(hometime.household_today({"timezone": "Nowhere/Here"}, now=late), "2026-10-31")
+        with mock.patch.object(hometime, "_local", side_effect=lambda now: now.astimezone(PLUS_11)):
+            self.assertEqual(hometime.household_today({}, now=late), "2026-11-01")
+
+    def test_household_today_uses_the_os_offset_without_tzdata(self):
+        # The real fallback asks the OS for its offset (datetime.astimezone()), which needs no tzdata.
+        at = datetime(2026, 10, 31, 13, 30, tzinfo=timezone.utc)
         with mock.patch.object(hometime, "zone", return_value=None):
-            self.assertEqual(hometime.household_today({"timezone": "Nowhere/Here"}, now=late), "2026-11-01")
-        early = datetime(2026, 10, 31, 13, 30, tzinfo=timezone.utc)     # 23:30 at UTC+10
-        self.assertEqual(hometime.household_today({}, now=early), "2026-10-31")
+            self.assertEqual(hometime.household_today({"timezone": "Australia/Brisbane"}, now=at),
+                             at.astimezone().date().isoformat())
+        self.assertEqual(hometime.household_today({}, now=at), at.astimezone().date().isoformat())
+
+    def test_the_example_config_leaves_timezone_blank(self):
+        import json
+        example = json.loads((REPO / "decklab" / "config.example.json").read_text(encoding="utf-8"))
+        self.assertEqual(example["timezone"], "")
+        self.assertEqual(hometime.setting(example), (None, None))
 
     def test_household_today_uses_the_configured_zone(self):
         at = datetime(2026, 10, 31, 13, 30, tzinfo=timezone.utc)        # 23:30 at +10, 00:30 at +11

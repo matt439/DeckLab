@@ -76,7 +76,7 @@ def register(sub):
 
 
 def _today():
-    """The household's date (config.json's "timezone", else UTC+10), as the Receipts page takes it."""
+    """The household's date (config.json's "timezone", else this PC's own zone), as the Receipts page takes it."""
     from decklab.lib import hometime
     return hometime.household_today()
 

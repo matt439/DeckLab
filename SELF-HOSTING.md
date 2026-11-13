@@ -118,7 +118,7 @@ In PowerShell, `Copy-Item decklab/config.example.json decklab/config.json` works
 
 ```json
 {
-  "timezone": "Australia/Brisbane",
+  "timezone": "",
   "profiles": [
     {"id": "alex", "name": "Alex", "plays_as": "first", "role": "admin", "space": "home", "emails": []}
   ]
@@ -130,18 +130,19 @@ In PowerShell, `Copy-Item decklab/config.example.json decklab/config.json` works
 - `space` `home` is the household's shared collection and decks.
 - `plays_as` identifies one of the two supported home player slots: `first` or `second`. They normalize to the older `user`/`wife` values in saved records; existing configs still work. A profile using `either` can edit home decks marked **Played by: either** (an admin can also edit the other home decks). It does not grant both personal slots to a member. Use a separate space for someone with their own collection.
 - `emails` is used only for logins from outside the home (step 10). Leave it empty.
+- `timezone` is the household's time zone as an IANA name, such as `"Australia/Brisbane"` or `"Europe/London"` (`timedatectl list-timezones` lists them on Linux; Wikipedia's "List of tz database time zones" too). Blank means this PC's own zone, which is right when the PC's clock already keeps the household's time. Fill it in anyway on a server: the Linux nightly timer runs at 03:30 in it, a receipt's arrival date and a game's date are worked out in it, and the smoke test and doctor warn when this PC's own clock keeps another zone.
 
 To add a second person who shares your cards, add another profile with `"space": "home"`, `"role": "member"` and `"plays_as": "second"`. Someone with a collection of their own gets `"space"` set to their own `id` and no `plays_as`. The reference’s [People's own collections (spaces)](decklab/README.md#peoples-own-collections-spaces) explains what each can see and change.
 
 `config.json` is gitignored, so your names and addresses never end up in a commit. The other settings all have defaults. [decklab/config.full.example.json](decklab/config.full.example.json) shows the optional blocks for a backup folder, outside access through Cloudflare and a records repo. Its `backup_dir` and `records_repo` are Windows paths; Linux refuses those, so on Linux give absolute paths such as `/mnt/nas-backups/DeckLab` and `/home/<you>/MyCardRecords`.
 
-Choose your own IANA timezone in the example above. Outside Australia, also choose suitable `currency` and `shops` settings below. JSON paths use forward slashes (`C:/Tools/forge-decklab`) or doubled backslashes (`C:\\Tools\\forge-decklab`).
+Outside Australia, also choose suitable `currency` and `shops` settings below. JSON paths use forward slashes (`C:/Tools/forge-decklab`) or doubled backslashes (`C:\\Tools\\forge-decklab`).
 
 ### Linux and macOS config notes
 
 Two optional settings matter most on Linux:
 
-- **`"timezone"`:** the household's time zone, such as `"Australia/Sydney"`. The Linux nightly timer runs at 03:30 in that zone, a receipt's arrival date and a game's date are worked out in it, and the smoke test and doctor warn when the PC's own clock keeps another zone. Without it they follow the PC's clock (and those two dates use UTC+10).
+- **`"timezone"`:** the household's time zone, such as `"Australia/Sydney"`. The Linux nightly timer runs at 03:30 in that zone, a receipt's arrival date and a game's date are worked out in it, and the smoke test and doctor warn when the PC's own clock keeps another zone. Without it (or blank, or a zone this PC has no data for) everything follows the PC's own zone, so set the PC's zone too (`timedatectl`, above).
 - **Folders:** on Linux and macOS, `records_repo` and the `"database"` block's `backup_dir`, `staging_dir`, `export_repo` and `pg_bin` must be absolute paths such as `/mnt/nas-backups/DeckLab`; `~` works on every system. A Windows path (`\\NAS\...`, `D:\...`, any backslash) is refused with a message naming the setting: the backup and export fail and say so, and so does the smoke test. Give `forge_dir`, `forge_java` and the tunnel's `config` as absolute paths too.
 
 **Price-check shops:** each night Deck Lab looks the purchase queue's cards up at two Australian shops, MTGMate and Games Portal, and shows their prices in AUD. If you can't buy from them, turn the check off with `"shops": []`, or keep one with `"shops": ["mtgmate"]` (the keys are `mtgmate` and `gamesportal`). Without the setting both are checked.
