@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Storage setup… on the Collection page (2026-11-13; E8-S25 slice 4)
+
+The Collection page's More gains **Storage setup…**, and the Card list's count line a **Change…**, for the space's own people (home's Matt and User1, a member only themselves; no admin override). The sheet (`web/storage-setup.js`) reads `GET /api/storage` and lists each container as a fieldset: name, kind, capacity ("Holds (cards)", blank when not known), sections (one per line, or a count such as `4 rows` for Row 1 to Row 4), how cards are ordered and whether they're kept sleeved, with Move up, Move down and Remove, then Add a container and "Cards with no location go to". Saving no containers at home says it turns the built-in box off.
+
+**Preview** calls the new `POST /api/storage/preview` (`storage.edit`, as the save; it writes nothing): the record checked, `collection_locations.storage_setup`'s counts for the setup that applies now and the proposed one, and the recorded locations whose container would change, by count and container name, never naming a row (a renamed container moves nothing). The review shows both counts, the moves, where unlocated cards go and the new location suggestions; **Save storage setup** sends the checked record with the revision read. A setup saved meanwhile (409 with `latest`) keeps the draft and offers **Load the latest**; before migration 0028 the sheet says the database needs updating and offers no Save. After a save the Card list's count line takes the preview's counts.
+
+Checks: `test_storage_setup_ui` (the sheet's add, preview, save, validation, move and remove, conflict, migration and read-only cases, and Change…), `StoragePreviewTests` in `test_collection_locations` (counts and moves, nothing saved, refusals), and the full fixture suite (14,012 tests). Next is slice 5, Build decks' order following the rule.
+
 ## Matt's decisions of 2026-11-13, and what they unblocked (E11-S61, E11-S79, E11-S84, E11-S87, E8-S25)
 
 Matt went through every `DECISION` row that needed only his answer and took each recommendation. Recorded without code: no solo practice board (E4-S33, not wanted); no `gauntlet export`/`import`, since each PC builds its own catalogue (E3-S43 complete); no history rewrite (E11-S62 complete; its wrangler deploy check joins E11-S02); cloudflared's 365-day limit confirmed (E11-S88 complete; the real-cloudflared run is part of E11-S58); the first release, `v0.1.0`, once `FG#2` is on the server (E11-S49). Built the same day, each reviewed independently and its findings fixed:

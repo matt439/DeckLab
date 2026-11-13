@@ -12,6 +12,15 @@ box, a binder...), their capacities, sections and order, and where loose cards w
                               override, as collection.edit). The whole record is replaced after
                               checking its revision (409 with "latest" when it changed since);
                               409 with reason "migration" before migration 0028.
+    POST /api/storage/preview preview(body): {"profile", "space"?, "storage"}: storage.edit as the
+                              save. Writes nothing: the Collection page's Storage setup… sheet
+                              (storage-setup.js) shows it before Save. {space, storage (checked),
+                              now, after (each collection_locations.storage_setup's counts, for the
+                              setup that applies now and the proposed one), moves: [{from, to,
+                              locations}] (recorded locations whose container would change, by
+                              count, never naming a row; from/to a container's name, or None for
+                              "somewhere else"), counts_error}. counts_error is set (and now/after
+                              hold no counts) when the collection couldn't be read.
 
 storage is the record that applies now: the space's saved one (source "saved"), else home's
 built-in storage box (source "default") or no containers (source "none"); revision is the saved
@@ -54,8 +63,7 @@ def message(space):
             else f"Set {spaces.get(space).name}'s storage setup")
 
 
-def change(body):
-    """PUT /api/storage: the space's whole record, after checking its revision."""
+def _body(body, fields, what):
     if isinstance(body, str):
         body = body.encode("utf-8")
     if len(body) > MAX_BODY:
@@ -67,8 +75,59 @@ def change(body):
     profile = _writer(data)
     space = space_param(data.get("space"))
     guard.require_space_write(profile, "storage.edit", space)
-    if set(data) - {"profile", "space", "expect", "storage"} or "storage" not in data or "expect" not in data:
-        raise ApiError(400, "The storage request must have expect and storage (and space), and nothing else")
+    if set(data) - ({"profile", "space"} | set(fields)) or any(f not in data for f in fields):
+        raise ApiError(400, what)
+    return data, profile, space
+
+
+def _moves(space, before, after):
+    """[{from, to, locations}]: how many recorded locations would change container (by name; None is
+    "somewhere else"), largest first. Never names a row."""
+    from decklab.lib import inventory
+    names = lambda record: {c["id"]: c["name"] for c in record["containers"]}       # noqa: E731
+    old, new = names(before), names(after)
+    counted = {}
+    for location in inventory.current().locations_of(space).values():
+        if not str(location or "").strip():
+            continue
+        a, b = rules.match(before, location), rules.match(after, location)
+        if a == b:
+            continue                        # the same container (perhaps renamed), or still nowhere
+        key = (old.get(a), new.get(b))
+        counted[key] = counted.get(key, 0) + 1
+    return [{"from": f, "to": t, "locations": n}
+            for (f, t), n in sorted(counted.items(), key=lambda item: (-item[1], str(item[0])))]
+
+
+def preview(body):
+    """POST /api/storage/preview: what saving body's storage would change (the module docstring)."""
+    data, _profile, space = _body(body, ("storage",), "The storage preview must have storage (and space), and nothing else")
+    with state_errors():
+        record = rules.normalize(data["storage"])
+    current = storage_setting.current(space)
+    proposed = {**current, "source": "saved", "storage": record}
+    from . import collection_edit as ce, collection_locations as places
+    from decklab.lib import inventory
+    answer = {"space": space, "storage": record, "now": None, "after": None, "moves": [], "counts_error": None}
+    try:
+        with state_errors():
+            rows, _sha = ce._view(inventory.current().collection(space))
+        shown = ce._rows_json(rows)
+        held = ce._storage(space, shown, ce._prices(shown))
+        answer["now"] = places.storage_setup(space, shown, held, ce._picture_key, current)
+        answer["after"] = places.storage_setup(space, shown, held, ce._picture_key, proposed)
+        answer["moves"] = _moves(space, current["storage"], record)
+    except ApiError as e:
+        if e.status in (400, 403, 413):
+            raise
+        answer["counts_error"] = "The collection couldn't be read, so the counts aren't shown."
+    return answer
+
+
+def change(body):
+    """PUT /api/storage: the space's whole record, after checking its revision."""
+    data, profile, space = _body(body, ("expect", "storage"),
+                                 "The storage request must have expect and storage (and space), and nothing else")
     try:
         with state_errors():
             expect = rules.expectation(data["expect"])

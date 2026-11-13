@@ -219,6 +219,41 @@ class StorageSetupTests(CollectionEditTestCase):
         self.assertEqual(self.rows()["storage_setup"]["source"], "default")
 
 
+class StoragePreviewTests(CollectionEditTestCase):
+    """POST /api/storage/preview (E8-S25 slice 4): what a proposed setup would count, writing nothing."""
+    locate = StorageSetupTests.locate
+
+    def preview(self, storage, space="home", profile="matt"):
+        from decklab.lib.api import storage as storage_api
+        with self.as_(profile):
+            return self.call(storage_api.preview, profile, space=space, storage=storage)
+
+    def test_counts_now_and_after_and_the_locations_that_move(self):
+        free = self.locate("Binder, page 3")                       # in the built-in box's "somewhere else"
+        binder = {"name": "Binder", "kind": "binder", "capacity": 360, "sleeved": True}
+        box = {"id": "box", "name": "Shoebox", "capacity": 50, "sections": ["Row 1", "Row 2"]}
+        answer = self.preview({"default": "box", "containers": [box, binder]})
+        self.assertIsNone(answer["counts_error"])
+        self.assertEqual(answer["now"]["source"], "default")
+        self.assertEqual([c["name"] for c in answer["after"]["containers"]], ["Shoebox", "Binder"])
+        self.assertEqual(answer["after"]["containers"][1]["cards"], free)
+        self.assertEqual(answer["moves"], [{"from": None, "to": "Binder", "locations": 1}])
+        self.assertEqual(answer["storage"]["containers"][1]["id"], "binder")
+        self.assertEqual(self.box.state.space_storage("home")["revision"], 0)      # nothing saved
+        self.assertEqual(self.preview({"default": "box", "containers": [box]})["moves"], [])  # a rename moves nothing
+        self.locate("Row 2")
+        self.assertEqual(self.preview({"containers": [binder]})["moves"],
+                         [{"from": "Storage box", "to": None, "locations": 1}])
+
+    def test_only_the_spaces_own_people_and_a_bad_record_is_refused(self):
+        self.assertApiError(403, self.preview, {"containers": []}, "home", "user2")
+        self.assertApiError(403, self.preview, {"containers": []}, "user2", "matt")
+        self.assertApiError(400, self.preview, {"containers": [{"name": "Tin", "kind": "tin"}]})
+        with self.as_("user2"):
+            answer = self.preview({"containers": [{"name": "Binder"}]}, "user2", "user2")
+        self.assertEqual(answer["after"]["containers"][0]["name"], "Binder")
+
+
 class PackingPlanTests(CollectionEditTestCase):
 
     def test_pulled_and_returned_cards_name_their_locations(self):

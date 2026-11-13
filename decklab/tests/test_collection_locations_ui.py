@@ -82,7 +82,8 @@ class CollectionLocationsUiTests(unittest.TestCase):
         self.run_js("""
           const box = {id: 'box', name: 'Storage box', kind: 'box', capacity: 2400, sleeved: false, cards: 3, over: false};
           const binder = {id: 'binder', name: 'Binder', kind: 'binder', capacity: 360, sleeved: true, cards: 310, over: false};
-          const setup = (containers, extra = {}) => ({storage_setup: {source: 'saved', default: 'box', containers,
+          // Read-only, so the line has no Change… (test_storage_setup_ui has that).
+          const setup = (containers, extra = {}) => ({editable: false, storage_setup: {source: 'saved', default: 'box', containers,
             elsewhere: 0, unplaced: 0, not_counted: 0, suggestions: ['Row 1', 'Binder'], ...extra}});
           draw(setup([box]));
           let note = main.querySelector('.col-storage-box');

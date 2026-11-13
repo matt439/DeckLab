@@ -2,7 +2,8 @@
  * copies are ("Row 2, B", "Binder"), set on the Collection page's card sheet and shown in the Card list
  * and Build decks' pull and put-back steps. Locations are kept apart from the rows (their sha256 stays
  * the eight columns'): the rows answers' "locations" {ready, rows: {colKey: text}} and "storage_box".
- * The count and the suggestions follow the space's storage setup (E8-S25): "storage_setup". */
+ * The count and the suggestions follow the space's storage setup (E8-S25): "storage_setup"; the count
+ * line's Change… opens the Storage setup… sheet (storage-setup.js). */
 "use strict";
 
 const STORAGE_LOCATION_MAX = 40;
@@ -156,6 +157,17 @@ function drawColStorageSetup(cv) {
   const shown = setup.containers.filter((c) => c.cards !== null);
   cv.boxNote.hidden = !shown.length;
   if (!shown.length) { clear(cv.boxNote); return; }
+  try { colStorageLines(cv, setup, shown); } finally { colStorageChange(cv); }
+}
+
+/** The count line's "Change…" (E8-S25 slice 4): the Storage setup… sheet, for the space's own people. */
+function colStorageChange(cv) {
+  if (!cv.editable || cv.unsupported || typeof openStorageSetup !== "function" || cv.boxNote.hidden) return;
+  cv.boxNote.append(" ", el("button", { type: "button", class: "btn btn-quiet col-storage-change", text: "Change…",
+    "aria-label": "Change the storage setup", onclick: () => openStorageSetup(cv) }));
+}
+
+function colStorageLines(cv, setup, shown) {
   const line = (c) => c.over ? `${c.name} is over capacity: about ${num(c.cards)} cards for about ${num(c.capacity)} places.`
     : c.capacity !== null ? `${c.name}: about ${num(c.cards)} of ${num(c.capacity)} cards`
     : `${c.name}: about ${plural(c.cards, "card")}`;

@@ -30,6 +30,7 @@
  * finds a published precon, previews its cards, then adds them and makes its built deck in one go.
  * "Scan cards" (collection-scan.js) reads photos of cards on the PC into a pending list for the import preview.
  * "Record a trade" (collection-trade.js) saves the copies that left and the cards that came in as one change.
+ * "Storage setup" (storage-setup.js) says where the space's loose cards are kept (E8-S25).
  * "Precons we could build" (precon-coverage.js) ranks precons by how much of each the free pool covers, and
  * "Commanders we could build" (commander-candidates.js) the free commanders by the role targets it covers. */
 "use strict";
@@ -307,7 +308,7 @@ async function downloadCollection(cv) {
 }
 
 /** The head of both views: the title with Add card (where the visitor may change this collection) and
- * More (Import cards, Scan cards, Add a precon, Precons we could build, Commanders we could build, Record a trade, Download, Packing plan), then the space picker and Find cards / Card list. */
+ * More (Import cards, Scan cards, Add a precon, Precons we could build, Commanders we could build, Record a trade, Loans, Storage setup, Download), then the space picker and Find cards / Card list. */
 function colHead(cv, query) {
   const spaces = sortSpaces(Array.isArray(cv.data.spaces) && cv.data.spaces.length ? cv.data.spaces : spaceList())
     .filter((s) => seesInventory(s.id));
@@ -326,6 +327,7 @@ function colHead(cv, query) {
     cv.unsupported ? null : { label: "Commanders we could build…", onclick: () => openCommanderCandidates(cv) },
     cv.editable && !cv.unsupported ? { label: "Record a trade…", onclick: () => openTradeSheet(cv) } : null,
     cv.editable && !cv.unsupported ? { label: "Loans…", onclick: () => openCollectionLoans(cv) } : null,
+    cv.editable && !cv.unsupported ? { label: "Storage setup…", onclick: () => openStorageSetup(cv) } : null,
     cv.unsupported ? null : { label: "Download collection (CSV)", onclick: () => downloadCollection(cv) },
     typeof memberOwnSpace === "function" && memberOwnSpace() && cv.space === ownSpace()
       ? { label: "Download my space (zip)", onclick: () => downloadMemberSpace(cv) } : null];
