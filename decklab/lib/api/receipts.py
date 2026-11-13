@@ -132,7 +132,8 @@ def receipt_view(order=None):
       when home's storage setup has none (E8-S25 slice 6: "To Storage box", "unsleeved" only when it
       isn't sleeved); always home's, as the deliveries are; with "sections" ({group: section}) when its
       colour-type rule maps groups to sections, and then "storage_groups" ({name: group} for the cards
-      components' names the card data knows), so To <container> lines say "Row 1 · Creatures" and token
+      components' names the card data knows and that container holds: none for a card whose recorded
+      locations put it in another container), so To <container> lines say "Row 1 · Creatures" and token
       cards their section (slice 7);
     - "face_names": Scryfall's token face names when the order has a tokens component ([] while
       the card data isn't ready), for the token sheet's suggestions;
@@ -178,7 +179,11 @@ def _board(inv, view, record):
             view["face_names"] = cards.token_face_names()
         _deck_uses(inv, view, by_id)
     names = {row.get("name") for item in view["components"] if item["kind"] == "cards" for row in item.get("rows") or ()}
-    return storage_setting.with_groups(view, names)
+    try:                # a card whose copies are filed in another container gets no section (slice 7)
+        places = storage_places.by_name(inv, spaces.HOME, names) if inv.locations_ready else {}
+    except Exception:   # noqa: BLE001 (optional words: the board stands without them)
+        places = None
+    return storage_setting.with_groups(view, names, record=storage_setting.default_record(spaces.HOME), places=places)
 
 
 def _product_items(inv, component, item):

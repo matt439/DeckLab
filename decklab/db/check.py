@@ -388,6 +388,15 @@ def _pricing_setting(c):
     return work
 
 
+def _with_holds(content):
+    """A stored record with each container's holds filled in as none: a record saved before slice 7
+    has no holds and reads as none ({}), which is its complete saved form."""
+    if not isinstance(content, dict) or not isinstance(content.get("containers"), list):
+        return content
+    return {**content, "containers": [{**box, "holds": box.get("holds", {})} if isinstance(box, dict) else box
+                                      for box in content["containers"]]}
+
+
 def _space_storage(c):
     """Every space's storage setup (E8-S25) in its complete saved form, for a space that exists."""
     def work():
@@ -411,7 +420,7 @@ def _space_storage(c):
             except Invalid:
                 wrong.append("a storage setup that breaks its rules")
                 continue
-            if normalized != content:
+            if normalized != _with_holds(content):
                 wrong.append("a storage setup not in its complete saved form")
         if wrong:
             return False, False, _listed(sorted(set(wrong)))

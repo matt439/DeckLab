@@ -28,17 +28,10 @@ function shopStorageFillFacts(view) {
     products: fill.pending_products, tokens: fill.tokens_excluded });
 }
 
-/** A container's name inside a sentence, as the Card list words it (storage-locations.js colLowerName):
- * "Storage box" as "storage box", but a name with a capital after its first letter as written. */
-function shopStorageName(name) {
-  const text = String(name);
-  return /[A-Z]/.test(text.slice(1)) ? text : text.charAt(0).toLowerCase() + text.slice(1);
-}
-
 /** The note's caveats, as the Card list's scenario words them: an estimate, and what it leaves out. */
 function shopStorageCaveats(facts) {
   const parts = [`An estimate: each pending card goes where copies of its printing are kept${facts.default
-    ? `, else the ${shopStorageName(facts.default)}` : ""}, as if every order arrived in full. Basic lands aren't counted${facts.tokens ? ", and nor are token cards" : ""}.`];
+    ? `, else ${storagePlaceNamed({ name: facts.default })}` : ""}, as if every order arrived in full. Basic lands aren't counted${facts.tokens ? ", and nor are token cards" : ""}.`];
   if (facts.products) parts.push(`${plural(facts.products, "pending product")} ${facts.products === 1 ? "isn't" : "aren't"} counted: `
     + `whether ${facts.products === 1 ? "it stays" : "they stay"} intact is chosen when ${facts.products === 1 ? "it arrives" : "they arrive"}.`);
   if (facts.unknown) parts.push(`${plural(facts.unknown, "pending delivery", "pending deliveries")} couldn't be checked, `

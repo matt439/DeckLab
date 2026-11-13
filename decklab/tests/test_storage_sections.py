@@ -21,6 +21,8 @@ HOME_SECTIONS = location_tests.HOME_SECTIONS
 ACTOR = state.Actor("matt", "Matt", "home")
 ROWS = ["Row 1", "Row 2", "Row 3", "Row 4"]
 BOX = {"id": "box", "name": "Storage box", "kind": "box", "capacity": 2400, "sections": ROWS, "order": "colour-type"}
+BINDER = {"id": "binder", "name": "Binder", "kind": "binder", "capacity": 360, "sections": [], "order": "set",
+          "sleeved": True}
 CARDS = {"Llanowar Elves": {"type_line": "Creature — Elf Druid"},
          "Dryad Arbor": {"type_line": "Land Creature — Forest Dryad"},
          "Fire // Ice": {"type_line": "Instant // Instant"},
@@ -92,6 +94,20 @@ class SettingTests(unittest.TestCase):
             for place in (None, {"name": "Binder", "kind": "binder", "sleeved": True}):
                 self.assertNotIn("storage_groups", storage_setting.with_groups({"storage_default": place}, {"Dryad Arbor"}))
 
+    def test_with_groups_names_only_the_cards_its_default_container_holds(self):
+        record = rules.normalize({"default": "box", "containers": [dict(BOX, holds=rules.HOME_ROW_GROUPS), BINDER]})
+        names = {"Llanowar Elves", "Sol Ring", "Dryad Arbor", "Ornithopter"}
+        places = {"Llanowar Elves": ["Binder p3"],              # filed in the binder: no section
+                  "Sol Ring": ["Row 2, B"],                      # the box's own row
+                  "Ornithopter": ["Attic"]}                      # somewhere else: no section
+        with mock.patch("decklab.lib.cards.card", side_effect=CARDS.get):
+            answer = storage_setting.with_groups({"storage_default": storage_setting.place(record)}, names,
+                                                 record=record, places=places)
+            self.assertEqual(answer["storage_groups"], {"Sol Ring": "spells", "Dryad Arbor": "lands"})
+            failed = storage_setting.with_groups({"storage_default": storage_setting.place(record)}, names,
+                                                 record=record, places=None)
+            self.assertEqual(failed["storage_groups"], {})       # the lookup failed: no section is claimed
+
 
 class StorageCliTests(unittest.TestCase):
     def test_show_lists_what_each_section_holds(self):
@@ -139,6 +155,22 @@ class FilingTests(edit_tests.CollectionEditTestCase):
         self.assertNotIn("sections", home["storage_default"])
         self.assertNotIn("storage_groups", home)
 
+    locate = location_tests.StorageSetupTests.locate
+
+    def test_a_card_filed_in_another_container_gets_no_section(self):
+        self.setup(default="box", containers=[dict(BOX, holds=rules.HOME_ROW_GROUPS), BINDER])
+        self.assertEqual(self.guide("home", ("Llanowar Elves", "Sol Ring"))["storage_groups"],
+                         {"Llanowar Elves": "creatures", "Sol Ring": "spells"})
+        self.locate("Binder p3")
+        answer = self.guide("home", ("Llanowar Elves", "Sol Ring"))
+        self.assertEqual(answer["storage_groups"], {"Sol Ring": "spells"})
+        self.assertEqual(answer["storage_locations"]["cards"]["Llanowar Elves"]["places"], ["Binder p3"])
+        self.locate("Row 1")
+        self.assertEqual(self.guide("home")["storage_groups"], {"Llanowar Elves": "creatures"})
+        from decklab.lib.api import storage_places
+        with mock.patch.object(storage_places, "by_name", side_effect=RuntimeError("lookup failed")):
+            self.assertEqual(self.guide("home")["storage_groups"], {})      # unknown: no section claimed
+
     def test_build_decks_storage_order_carries_the_sections(self):
         from decklab.lib.api import assembly_locations
         self.assertEqual(assembly_locations.storage_order(inventory.current(), set())["sections"], HOME_SECTIONS)
@@ -174,6 +206,13 @@ class ReceiptTests(receipt_tests.FilesReceiptCase):
         binder = {"name": "Binder", "kind": "binder", "sleeved": True}
         with mock.patch.object(receipts.storage_setting, "default_place", return_value=binder):
             self.assertNotIn("storage_groups", receipts.receipt_view("test"))
+
+    def test_a_card_filed_in_another_container_gets_no_section(self):
+        record = rules.normalize({"default": "box", "containers": [dict(BOX, holds=rules.HOME_ROW_GROUPS), BINDER]})
+        with mock.patch.object(receipts.storage_setting, "default_record", return_value=record),                 mock.patch.object(receipts.storage_places, "by_name", return_value={"Llanowar Elves": ["Binder p3"]}):
+            self.assertEqual(receipts.receipt_view("test")["storage_groups"], {})
+        with mock.patch.object(receipts.storage_places, "by_name", side_effect=RuntimeError("lookup failed")):
+            self.assertEqual(receipts.receipt_view("test")["storage_groups"], {})
 
 
 if __name__ == "__main__":

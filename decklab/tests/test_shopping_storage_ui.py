@@ -57,7 +57,7 @@ class ShoppingStorageFillTests(unittest.TestCase):
             'Storage box: about 123 of 240 cards now, about 129 once these arrive.',
             'Ultimate Guard binder would be over capacity: about 12 cards for about 10 places (about 8 now).']);
           const words = node.querySelector('.sub').textContent;
-          assert(words.includes('else the Ultimate Guard binder'), words);
+          assert(words.includes('else Ultimate Guard binder, as if'), words);   // a proper name as written, as the receipt's
           assert(words.includes("Basic lands aren't counted, and nor are token cards."), words);
           assert(words.includes("2 pending products aren't counted: whether they stay intact is chosen when they arrive."), words);
           assert(words.includes("1 pending delivery couldn't be checked, so their cards aren't counted."), words);
@@ -66,6 +66,13 @@ class ShoppingStorageFillTests(unittest.TestCase):
           const one = note().querySelector('.sub').textContent;
           assert(one.includes("1 pending product isn't counted: whether it stays intact is chosen when it arrives."), one);
           assert(!one.includes('else the'), one);
+          for (const [name, said] of [["Matt's binder", "else Matt's binder, as if"], ['Shelf A', 'else Shelf A, as if'],
+                                      ['Red binder', 'else the red binder, as if']]) {
+            clear(main);
+            drawShopping(answer({storage_fill: fill({default: name})}));
+            const words = note().querySelector('.sub').textContent;
+            assert(words.includes(said), words);
+          }
         """)
 
     def test_nothing_without_the_field_for_a_bad_answer_nothing_on_the_way_or_outside_home_records(self):

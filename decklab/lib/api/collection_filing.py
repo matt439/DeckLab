@@ -15,7 +15,9 @@ It also carries "storage_default" (E8-S25 slice 6): the space's own default cont
 member's space with nothing saved). The items stay {"kind": "storage"}; the words name it.
 When that container's colour-type rule says which section holds each group, storage_default has
 "sections" ({group: section}) and the answer "storage_groups" ({name: group} for the To storage
-cards the card data knows), so each line says its section ("Row 1 · Creatures", slice 7).
+cards the card data knows and that container holds: a card whose recorded locations put it in
+another container, or somewhere else, gets none, as Build decks places it), so each line says its
+section ("Row 1 · Creatures", slice 7).
 """
 from collections import Counter, defaultdict
 
@@ -226,14 +228,20 @@ def _allocate(after, space, profile, added, created=None, *, cli_owned=False):
 
 def _with_locations(answer, after, space):
     """answer plus its To storage cards' storage_locations; without them when the lookup fails."""
-    names = set()
+    names, places = set(), None
     try:
         names = {answer["added"][item["row"]]["name"] for item in answer["destinations"] if item["kind"] == "storage"}
         answer["storage_locations"] = storage_places.advice(after, space, names)
     except Exception:           # optional: the saved addition and its destinations stand
         answer.pop("storage_locations", None)
+    try:                        # where each card is filed, for its section; none claimed when unknown
+        places = storage_places.by_name(after, space, names) if after.locations_ready else {}
+    except Exception:           # noqa: BLE001 (optional words)
+        places = None
     answer["storage_default"] = storage_setting.default_place(space)   # never raises: nothing saved reads as such
-    return storage_setting.with_groups(answer, names)       # slice 7: each card's section ("Row 1 · Creatures")
+    record = storage_setting.default_record(space)
+    # slice 7: each card its default container holds gets its section ("Row 1 · Creatures"); one filed elsewhere none
+    return storage_setting.with_groups(answer, names, record=record, places=places)
 
 
 def after_import(after, space, profile, facts, total):

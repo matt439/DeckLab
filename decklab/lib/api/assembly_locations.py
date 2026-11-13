@@ -67,15 +67,7 @@ def _printings(inv, record, ident, wanted, placed=None):
     return {name: printing for name, (_, printing) in best.items()}
 
 
-def _placed(record, places):
-    """The container id a card's recorded locations put it in (see the module docstring)."""
-    if not places:
-        return record.get("default")
-    for place in places:
-        found = space_storage.match(record, place)
-        if found is not None:
-            return found
-    return None
+_placed = space_storage.placed        # the one placing rule, shared with storage_setting.with_groups
 
 
 def _container(container):

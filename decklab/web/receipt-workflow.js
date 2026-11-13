@@ -471,7 +471,7 @@ function rcptWhereTheyGo(view, received, readiness, places = null) {
     if (item.kind === "tokens") {
       const section = storageSectionWords(place, "tokens");
       parts.push(el("div", { class: "panel rcpt-where" }, el("h3", { text: "Token cards" }),
-        el("p", {}, `${plural(item.quantity, "token card")} go with your tokens${section ? `, in ${place.name}: ${section}` : ""}. `,
+        el("p", {}, `${plural(item.quantity, "token card")} go with your tokens${section ? `, in ${storagePlaceNamed(place)}: ${section}` : ""}. `,
           el("a", { href: "#/tokens", text: "See them on Tokens" }))));
       continue;
     }

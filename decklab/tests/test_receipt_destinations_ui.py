@@ -71,9 +71,9 @@ class ReceiptDestinationTests(unittest.TestCase):
         self.run_js("""
           const sections={creatures:'Row 1',spells:'Row 2',lands:'Row 3',tokens:'Row 4'};
           const cases=[[sections,{Alpha:'creatures'},'2 \\u00d7 Alpha \\u00b7 Row 1 \\u00b7 Creatures',
-              '3 token cards go with your tokens, in Storage box: Row 4 \\u00b7 Token cards.'],
+              '3 token cards go with your tokens, in the storage box: Row 4 \\u00b7 Token cards.'],
             [{spells:'Row 2'},{Alpha:'creatures'},'2 \\u00d7 Alpha','3 token cards go with your tokens.'],
-            [sections,undefined,'2 \\u00d7 Alpha','3 token cards go with your tokens, in Storage box: Row 4 \\u00b7 Token cards.'],
+            [sections,undefined,'2 \\u00d7 Alpha','3 token cards go with your tokens, in the storage box: Row 4 \\u00b7 Token cards.'],
             [undefined,{Alpha:'creatures'},'2 \\u00d7 Alpha','3 token cards go with your tokens.']];
           for(const [map,groups,line,tokens] of cases){
             clear(main);const d=delivery();d.storage_default={name:'Storage box',kind:'box',sleeved:false,...(map?{sections:map}:{})};

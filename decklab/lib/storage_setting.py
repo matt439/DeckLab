@@ -81,11 +81,19 @@ def card_groups(names):
     return out
 
 
-def with_groups(answer, names, key="storage_default"):
+def with_groups(answer, names, key="storage_default", *, record=None, places=None):
     """answer with "storage_groups" ({name: group}) for names when answer[key] maps sections;
-    the field is left out otherwise (no words to add)."""
+    the field is left out otherwise (no words to add). With record (the setup answer[key] was
+    made from), only names its default container holds get a group: places ({name: [recorded
+    locations]}, storage_places.by_name) put a card where space_storage.placed says, as Build decks
+    and Shopping do, so a card filed in another container (or somewhere else) gets no section;
+    places None (the lookup failed) gives none at all."""
     found = answer.get(key)
     if isinstance(found, dict) and found.get("sections"):
+        if record is not None:
+            default = record.get("default")
+            names = set() if places is None else {
+                name for name in names if rules.placed(record, places.get(name)) == default}
         answer["storage_groups"] = card_groups(names)
     return answer
 
@@ -93,3 +101,8 @@ def with_groups(answer, names, key="storage_default"):
 def default_place(space):
     """place() of the space's storage as it applies now (current(): never raises)."""
     return place(current(space, seed=False)["storage"])
+
+
+def default_record(space):
+    """The space's storage record as it applies now (current(), unseeded: never raises)."""
+    return current(space, seed=False)["storage"]

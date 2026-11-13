@@ -92,6 +92,45 @@ class RuleTests(unittest.TestCase):
                                                  "Row 4": "tokens"})
 
 
+class _Rows:
+    def __init__(self, rows):
+        self.rows = rows
+
+    def fetchone(self):
+        return self.rows[0]
+
+    def fetchall(self):
+        return self.rows
+
+
+class _CheckConn:
+    """Just enough of a connection for db check's storage invariant: the table exists, these rows."""
+    def __init__(self, rows):
+        self.rows = rows
+
+    def execute(self, sql, *args):
+        return _Rows([(False,)]) if "to_regclass" in sql else _Rows(self.rows)
+
+
+class CheckTests(unittest.TestCase):
+    def invariant(self, content):
+        from decklab.db import check
+        return check._space_storage(_CheckConn([("home", 1, content, True)]))()
+
+    def test_a_record_saved_before_slice_7_without_holds_is_in_its_saved_form(self):
+        saved = rules.normalize({"default": "Storage box", "containers": [BOX, BINDER]})
+        old = json.loads(json.dumps(saved))
+        for box in old["containers"]:
+            del box["holds"]
+        self.assertEqual(self.invariant(old), (True, False, "1 spaces' storage setups"))
+        self.assertEqual(self.invariant(saved), (True, False, "1 spaces' storage setups"))
+
+    def test_a_record_not_in_its_saved_form_still_fails(self):
+        ok, _, detail = self.invariant({"v": 1, "default": None, "containers": [{"name": "Binder"}]})
+        self.assertFalse(ok)
+        self.assertIn("complete saved form", detail)
+
+
 class MemoryStoreTests(unittest.TestCase):
     def setUp(self):
         self.store = MemoryStore()

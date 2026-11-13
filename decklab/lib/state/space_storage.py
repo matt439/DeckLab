@@ -265,6 +265,19 @@ def match(record, location):
     return best
 
 
+def placed(record, places):
+    """The container id a card's recorded locations (in collection row order) put it in: the
+    container of the first that belongs to one (match), so a card in two containers goes under the
+    first; None when it has locations but none belongs to a container; the default with none."""
+    if not places:
+        return (record or {}).get("default")
+    for place in places:
+        found = match(record, place)
+        if found is not None:
+            return found
+    return None
+
+
 def suggestions(record):
     """The location suggestions the record gives, in order: each container's sections, or its name
     when it has none."""
