@@ -118,7 +118,7 @@ class SettingsRestartUiTests(unittest.TestCase):
           const base={channel:'main',count:3,newest:null,upstream:'origin/main',fetched_on:'2026-11-12',problem:null};
           view={...view,release:null,updates:base};await openSettings();
           const line=byId('server-updates');assert(!line.hidden);
-          assert.equal(line.textContent,'3 updates (commits on main) available as last fetched (2026-11-12). '
+          assert.equal(line.textContent,'3 updates (commits on origin/main) available as last fetched (2026-11-12). '
             +'On the PC, python -m decklab.update installs them.');
           same(reads,['/api/server/restart']);
           drawServerUpdates({...base,count:0});
@@ -132,6 +132,10 @@ class SettingsRestartUiTests(unittest.TestCase):
           assert(line.textContent.startsWith("Couldn't count the updates waiting: This checkout"),line.textContent);
           drawServerUpdates({...base,channel:'release',count:2,newest:'<b>x</b>'});
           assert(!line.textContent.includes('<b>'));
+          drawServerUpdates({...base,upstream:'origin/feature-x'});
+          assert(line.textContent.startsWith('3 updates (commits on origin/feature-x) available'),line.textContent);
+          drawServerUpdates({...base,upstream:'<i>x</i> y'});
+          assert(line.textContent.startsWith('3 updates (commits on its upstream branch) available'),line.textContent);
           drawServerUpdates(null);assert(line.hidden);
         ''')
 

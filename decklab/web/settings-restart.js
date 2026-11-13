@@ -81,6 +81,8 @@ function drawServerUpdates(updates) {
   const day = typeof updates.fetched_on === "string" && /^\d{4}-\d{2}-\d{2}$/.test(updates.fetched_on) ? updates.fetched_on : null;
   const fetched = day ? `as last fetched (${day})` : "as last fetched";
   const release = updates.channel === "release";
+  const upstream = typeof updates.upstream === "string" && /^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/.test(updates.upstream)
+    ? updates.upstream : null;
   const count = Number.isInteger(updates.count) && updates.count >= 0 ? updates.count : null;
   const tag = typeof updates.newest === "string" && /^v\d+\.\d+\.\d+$/.test(updates.newest) ? updates.newest : null;
   if (count === null) {
@@ -91,7 +93,7 @@ function drawServerUpdates(updates) {
       : `No updates are waiting ${fetched} (the main channel).`;
   } else {
     const what = release ? `${count} newer release${count === 1 ? "" : "s"}${tag ? ` (newest ${tag})` : ""}`
-      : `${count} update${count === 1 ? "" : "s"} (commits on main)`;
+      : `${count} update${count === 1 ? "" : "s"} (commits on ${upstream || "its upstream branch"})`;
     line.textContent = `${what} available ${fetched}. On the PC, python -m decklab.update installs `
       + (release ? "the newest release." : "them.");
   }

@@ -186,7 +186,11 @@ class WaitingTests(unittest.TestCase):
         os.utime(path, (1_700_000_000, 1_700_000_000))
         git = FakeGit(2, head="c1", upstream="c1")
         git.fetch_head = path
-        self.assertEqual(update_channel.waiting(git, self.root, {})["fetched_on"], "2023-11-14")
+        # 2023-11-14 22:13 UTC is the 15th in the household's zone (UTC+10 without "timezone").
+        self.assertEqual(update_channel.waiting(git, self.root, {})["fetched_on"], "2023-11-15")
+        with mock.patch("decklab.lib.hometime.zone", return_value=None):       # no zone data: still UTC+10
+            self.assertEqual(update_channel.waiting(git, self.root, {"timezone": "Nowhere/Else"})["fetched_on"],
+                             "2023-11-15")
 
     def test_problems_are_fixed_words(self):
         found = update_channel.waiting(FakeGit(2, "c1", "c1"), self.root, {"update": {"channel": "x"}})
@@ -204,6 +208,15 @@ class WaitingTests(unittest.TestCase):
             raise RuntimeError("no upstream")
         self.assertEqual(update_channel.waiting(no_upstream, self.root, {})["problem"],
                          "This checkout's branch has no upstream to compare with.")
+
+    def test_an_unreadable_config_says_so(self):
+        (self.root / ".git").mkdir()
+        from decklab.lib import build, config
+        with mock.patch.object(build, "is_release", return_value=False),                 mock.patch.object(config, "load", side_effect=ValueError("bad json at /secret/path")):
+            found = update_channel.view(self.root)
+        self.assertEqual(found["problem"], "config.json can't be read, so the update channel is unknown.")
+        self.assertIsNone(found["count"])
+        self.assertNotIn("secret", repr(found))
 
     def test_a_release_install_has_no_updates_line(self):
         from decklab.lib import build

@@ -19,7 +19,7 @@ the tests pass a fake.
 """
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 CHANNELS = ("main", "release")
@@ -102,8 +102,10 @@ def plan_release(git, upstream):
     raise ValueError(f"{newest} isn't ahead of this checkout or behind it, so nothing was moved")
 
 
-def _fetched_on(git, root):
-    """The date (YYYY-MM-DD, UTC) of the last git fetch here, from FETCH_HEAD's time, or None."""
+def _fetched_on(git, root, settings=None):
+    """The date (YYYY-MM-DD) of the last git fetch here, from FETCH_HEAD's time, or None. Dated in
+    the household's zone (config.json's "timezone", else UTC+10, lib/hometime.py), so a fetch
+    early in the household's morning isn't shown as the day before."""
     try:
         path = Path(git("rev-parse", "--git-path", "FETCH_HEAD"))
         if not path.is_absolute():
@@ -111,7 +113,12 @@ def _fetched_on(git, root):
         moment = os.stat(path).st_mtime
     except Exception:       # noqa: BLE001 - never fetched, or git can't say: no date
         return None
-    return datetime.fromtimestamp(moment, timezone.utc).date().isoformat()
+    from decklab.lib import hometime
+    try:
+        zone = hometime.zone(hometime.configured(settings or {}))
+    except Exception:       # noqa: BLE001 - a date must always come back
+        zone = None
+    return datetime.fromtimestamp(moment, zone or hometime.FALLBACK).date().isoformat()
 
 
 def waiting(git, root, settings):
@@ -132,7 +139,7 @@ def waiting(git, root, settings):
         out["problem"] = "This checkout's branch has no upstream to compare with."
         return out
     out["upstream"] = upstream
-    out["fetched_on"] = _fetched_on(git, root)
+    out["fetched_on"] = _fetched_on(git, root, settings)
     try:
         if out["channel"] == "main":
             out["count"] = int(git("rev-list", "--count", "HEAD..@{upstream}"))
@@ -160,6 +167,7 @@ def view(root=None):
 
     try:
         settings = config.load()
-    except Exception:       # noqa: BLE001 - an unreadable config: the channel is unknown
-        settings = {"update": "unreadable"}
+    except Exception:       # noqa: BLE001 - an unreadable config: the channel is unknown, said in fixed words
+        return {"channel": None, "count": None, "newest": None, "upstream": None, "fetched_on": None,
+                "problem": "config.json can't be read, so the update channel is unknown."}
     return waiting(git, root, settings)
