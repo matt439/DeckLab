@@ -4055,7 +4055,7 @@ Built (2026-11-13), slice 6: the words. Receive delivery (`GET /api/receipt`'s `
 
 Built (2026-11-13), slice 7: sections from the rule (a colour-type container's optional `holds`, {section: creatures|spells|lands|tokens}, each group once; home's built-in box Row 1 creatures, Row 2 spells, Row 3 lands, Row 4 token cards; the Storage setup sheet's "What each section holds"; Where these go, Receive delivery, `collection merge` and Build decks' colour-type dividers name each card's section, "Row 1 · Creatures"); Build decks grouped by container (with two or more containers, `storage_order`'s `containers` and `placed`: each card under the first recorded location that matches a container, "Somewhere else", or the default container when none is recorded, then that container's own rule and sections); and Shopping's storage fill (`GET /api/shopping`'s `storage_fill`, home-record readers only: home's containers with a capacity, now and once pending orders arrive, from the Card list's count and pending scenario). Tests: `test_storage_sections`, `test_storage_setup_ui`, `test_collection_locations` (`StorageOrderTests`), `test_assembly_storage_order_ui`, `test_shopping_storage`, `test_shopping_storage_ui`.
 
-Deployment (the coordinator's, with Matt's OK): before 0028 reaches the server, list home's live locations (`collection locations`) for any `Row 5`-style one that would leave the box, then apply 0028 there.
+Deployment: done 2026-11-14. Home's live collection had no recorded locations (0 of 1,075 rows), so none could leave the box; the server's update applied 0028 after its backup.
 
 
 **E8-S26** · Space members · should · M · built
@@ -6190,7 +6190,7 @@ Built (2026-11-05): Settings says when a newer release is out. On a release inst
 
 Decided (Matt, 2026-11-13): tag `v0.1.0` on main once `FG#2` (Forge 2.0.16) is running on the server; version tags on main are also the git checkouts' stable update channel (E11-S84).
 
-Gap: the first real release, tagging `v0.1.0` (Matt, or Claude with his OK), after `FG#2` reaches the server; an update command for release installs (E11-S51).
+Gap: the first real release, tagging `v0.1.0` (Matt, or Claude with his OK); `FG#2`'s Forge 2.0.16 reached the server on 2026-11-14, so it waits only on that OK. An update command for release installs (E11-S51).
 
 **E11-S50** · Self-hoster · could · L · missing
 
