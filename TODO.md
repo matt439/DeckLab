@@ -6,7 +6,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **The only ordering in this file.** Keep every `DECISION` row here. Keep this block to the current aim and the next few actions; results go in their owners (HISTORY.md for what shipped).
 
-**Decisions (Matt, 2026-11-13):** every `DECISION` row that needed only Matt's answer was decided as recommended and the coding it unblocked built on `work/decisions-2026-11-13` (HISTORY.md): `E11-S61`, `E11-S79` and `E11-S84` are complete, `E8-S25`'s slices 2-4 are built with slice 5 next, and `E4-S33`, `E3-S43`, `E11-S62` and `E11-S88` closed without code. The 2026-11-11 queue of 49 `OPEN` rows is finished.
+**Decisions (Matt, 2026-11-13):** every `DECISION` row that needed only Matt's answer was decided as recommended and the coding it unblocked built on `work/decisions-2026-11-13` (HISTORY.md): `E11-S61`, `E11-S79` and `E11-S84` are complete, `E8-S25`'s slices 2-5 are built with slice 6 next, and `E4-S33`, `E3-S43`, `E11-S62` and `E11-S88` closed without code. The 2026-11-11 queue of 49 `OPEN` rows is finished.
 
 **External acceptance from the 2026-11-11 queue:** `E2-S16` needs the household's actual devices; `E7-S32` needs real card/token photographs from each phone; `E3-S23` needs a saved field policy exercised in a real browser/run; `E11-S75` needs the updated NAS container and physical sleep/wake path. Their implementations are present, but the stories remain partial, tracked as `DECISION` below.
 
@@ -71,7 +71,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E2-S16` | DECISION | could | L | Implementation built, including Quick edit and new-deck drafts. Left: same-profile resume, competing drafts and save/discard across the household's real devices; fixtures cannot qualify touch/Safari or device durability. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes, on the P1 redesign since 2026-11-05 ([evidence](decklab/safari/EVIDENCE.md)). |
-| `E8-S25` | OPEN | should | M | Storage as a setting: slices 2-4 built (record, API, `storage show|set`, per-container counts and suggestions, the Collection page's Storage setup… sheet; migration 0028 not applied live). Next: slice 5, Build decks' order follows the rule ([storage-setting.md §3](decklab/design/storage-setting.md#3-build-order)). |
+| `E8-S25` | OPEN | should | M | Storage as a setting: slices 2-5 built (record, API, `storage show|set`, per-container counts and suggestions, the Collection page's Storage setup… sheet, Build decks' order following the rule; migration 0028 not applied live). Next: slice 6, the words (Receive delivery, Where these go and the merge guide name the default container; `sleeved` stops "unsleeved") ([storage-setting.md §3](decklab/design/storage-setting.md#3-build-order)). |
 
 ## Deck Lab: collection, orders and buying
 

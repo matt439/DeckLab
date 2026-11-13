@@ -101,7 +101,10 @@ older code (the committed tests/fixtures/inventory_goldens):
 - "storage-location-defaults": E8-S22 adds the packing plan's "storage_locations", where the
   cards it pulls from storage or puts back are kept. No golden collection records a location, so
   only an answer with none ({"ready": true, "cards": {}}) is dropped; a recorded location still
-  compares. test_collection_locations checks its values.
+  compares. test_collection_locations checks its values. E8-S25 slice 5 adds the plan's
+  "storage_order"; no golden scenario saves a storage setup, so only home's built-in box's
+  ({"rule": "colour-type", "container": "Storage box"}) is dropped. test_assembly_storage_order
+  checks its values.
 - "played-defaults": E1-S27 adds each library summary's "played" (when it was last played at
   home and its games). No golden scenario records a game, so only the no-games answer
   ({"last": None, "games": 0}) or the unread one (None) is dropped from decks_index summaries;
@@ -642,6 +645,8 @@ def storage_location_defaults(dump):
         for plan in plans.values() if isinstance(plans, dict) else []:
             if isinstance(plan, dict) and plan.get("storage_locations") == {"ready": True, "cards": {}}:
                 plan.pop("storage_locations")
+            if isinstance(plan, dict) and plan.get("storage_order") == {"rule": "colour-type", "container": "Storage box"}:
+                plan.pop("storage_order")
 
 
 def played_defaults(dump):

@@ -2,6 +2,14 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Build decks' order follows the storage setup (2026-11-13; E8-S25 slice 5)
+
+Build decks' plan answer gains `storage_order` (`lib/api/assembly_locations.py`): home's default container's name and ordering rule, and for a `set` rule each pulled or returned card's printing, taken from home's copy filed in that container (else one with no location, else its first row). None when home has no default container.
+
+The **Card order** toggle follows it. `colour-type` (the built-in box's, so nothing changes until home saves a setup) keeps **Storage order** exactly as before, basics in the pull step and token cards after Put back. `set` offers **Set order**: a divider per set ("Set · FDN") in collector-number order, "No printing recorded" last, and basic lands and token cards keep their own steps. `name`, `none` or no default container offer only Name, and the toggle is hidden; a saved Storage order choice is kept and comes back when the setup offers it again. The storage button's tooltip names the container ("As the binder is ordered"). An older server's answer, without the field, is read as colour-type.
+
+Checks: `test_assembly_storage_order_ui` (set order, the Name-only rules and the choice coming back), `StorageOrderTests` in `test_collection_locations` (the rule, the container, no default, and the printing preference), the existing Build decks order tests unchanged, the golden plans (the built-in box's `storage_order` dropped like E8-S22's empty locations), and the full fixture suite.
+
 ## Storage setup… on the Collection page (2026-11-13; E8-S25 slice 4)
 
 The Collection page's More gains **Storage setup…**, and the Card list's count line a **Change…**, for the space's own people (home's Matt and User1, a member only themselves; no admin override). The sheet (`web/storage-setup.js`) reads `GET /api/storage` and lists each container as a fieldset: name, kind, capacity ("Holds (cards)", blank when not known), sections (one per line, or a count such as `4 rows` for Row 1 to Row 4), how cards are ordered and whether they're kept sleeved, with Move up, Move down and Remove, then Add a container and "Cards with no location go to". Saving no containers at home says it turns the built-in box off.

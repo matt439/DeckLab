@@ -4049,7 +4049,9 @@ Built (2026-11-13), slices 2 and 3: the `space_storage` table (migration `0028_s
 
 Built (2026-11-13), slice 4: the Collection page's More, **Storage setup…** (`web/storage-setup.js`), also the count line's **Change…**, for the space's own people: containers with name, kind, capacity, sections (one per line, or `4 rows`), order and sleeved, added, removed and moved, and where cards with no location go; a preview (`POST /api/storage/preview`, writing nothing) of the counts now and after, the recorded locations that would change container (by count) and the new suggestions; Save sends the revision read, a setup saved meanwhile offers Load the latest, and before 0028 nothing can be saved. Tests: `test_storage_setup_ui`, `test_collection_locations` (`StoragePreviewTests`).
 
-Left: 5 (Build decks' order follows the rule), 6 (words: Receive delivery, Where these go and the merge guide name the default container, and `sleeved` stops "unsleeved"), 7 (later: sections from the rule). Before slice 3 reaches the server, list home's live locations (`collection locations`) for any `Row 5`-style one that would leave the box, and apply 0028 there.
+Built (2026-11-13), slice 5: Build decks' second card order follows home's default container's rule (the plan's `storage_order`, `lib/api/assembly_locations.py`): `colour-type` keeps Storage order as it was; `set` offers **Set order**, a divider per set in collector-number order from the printing of home's copy filed there, basics and token cards keeping their own steps; `name`, `none` and no default container offer only Name (the saved choice comes back later). Tests: `test_assembly_storage_order_ui`, `test_collection_locations` (`StorageOrderTests`).
+
+Left: 6 (words: Receive delivery, Where these go and the merge guide name the default container, and `sleeved` stops "unsleeved"), 7 (later: sections from the rule). Before slice 3 reaches the server, list home's live locations (`collection locations`) for any `Row 5`-style one that would leave the box, and apply 0028 there.
 
 
 **E8-S26** · Space members · should · M · built

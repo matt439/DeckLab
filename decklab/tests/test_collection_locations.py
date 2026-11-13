@@ -254,6 +254,46 @@ class StoragePreviewTests(CollectionEditTestCase):
         self.assertEqual(answer["after"]["containers"][0]["name"], "Binder")
 
 
+class StorageOrderTests(CollectionEditTestCase):
+    """Build decks' "storage_order" (E8-S25 slice 5): home's default container's rule and, for a set
+    order, each card's printing filed there."""
+    setup = StorageSetupTests.setup
+
+    def order(self, *names):
+        from decklab.lib.api import assembly_locations
+        return assembly_locations.storage_order(inventory.current(), set(names))
+
+    def test_the_built_in_box_a_set_binder_and_no_default(self):
+        self.assertEqual(self.order("Llanowar Elves"), {"rule": "colour-type", "container": "Storage box"})
+        self.setup(default="binder", containers=[{"name": "Shoebox", "order": "name"},
+                                                 {"id": "binder", "name": "Binder", "kind": "binder", "order": "set"}])
+        order = self.order("Llanowar Elves", "Not A Card")
+        self.assertEqual((order["rule"], order["container"]), ("set", "Binder"))
+        self.assertEqual(order["printings"], {"Llanowar Elves": ["fdn", "227"]})
+        self.setup(default=None, containers=[{"name": "Shoebox", "order": "set"}])
+        self.assertIsNone(self.order("Llanowar Elves"))
+
+    def test_a_set_order_prefers_the_copy_filed_in_the_container(self):
+        from decklab.lib.api import assembly_locations
+
+        class Row(dict):
+            def text(self, key):
+                return self[key]
+        rows = [Row(name="Llanowar Elves", set=s, collector_number=n, finish="nonfoil") for s, n in
+                (("dom", "168"), ("fdn", "227"), ("m19", "314"))]
+        record = {"default": "binder", "containers": [{"id": "binder", "name": "Binder", "sections": ["Page 1"]}]}
+
+        def pick(found):
+            inv = SimpleNamespace(locations_ready=True, locations_of=lambda _space: found,
+                                  collection=lambda _space: SimpleNamespace(rows=rows))
+            return assembly_locations._printings(inv, record, "binder", {"Llanowar Elves"})["Llanowar Elves"]
+        self.assertEqual(pick({("dom", "168", "nonfoil"): "Shelf", ("fdn", "227", "nonfoil"): "Shelf",
+                               ("m19", "314", "nonfoil"): "Page 1, 3"}), ["m19", "314"])    # filed in the binder
+        self.assertEqual(pick({("dom", "168", "nonfoil"): "Shelf"}), ["fdn", "227"])     # no location: the default's
+        self.assertEqual(pick({k: "Shelf" for k in (("dom", "168", "nonfoil"), ("fdn", "227", "nonfoil"),
+                                                    ("m19", "314", "nonfoil"))}), ["dom", "168"])   # else its first row
+
+
 class PackingPlanTests(CollectionEditTestCase):
 
     def test_pulled_and_returned_cards_name_their_locations(self):
