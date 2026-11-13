@@ -6,7 +6,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **The only ordering in this file.** Keep every `DECISION` row here. Keep this block to the current aim and the next few actions; results go in their owners (HISTORY.md for what shipped).
 
-**Decisions (Matt, 2026-11-13):** every `DECISION` row that needed only Matt's answer was decided as recommended and the coding it unblocked built on `work/decisions-2026-11-13` (HISTORY.md): `E11-S61`, `E11-S79` and `E11-S84` are complete, `E8-S25` is complete (slices 2-7; migration 0028 still to apply on the server after listing home's live locations, as its story says), and `E4-S33`, `E3-S43`, `E11-S62` and `E11-S88` closed without code. The 2026-11-11 queue of 49 `OPEN` rows is finished.
+**Decisions (Matt, 2026-11-13):** every `DECISION` row that needed only Matt's answer was decided as recommended and the coding it unblocked built on `work/decisions-2026-11-13` (HISTORY.md): `E11-S61`, `E11-S79` and `E11-S84` are complete, `E8-S25` is complete (slices 2-7; migration 0028 applied on the server 2026-11-14), and `E4-S33`, `E3-S43`, `E11-S62` and `E11-S88` closed without code. The 2026-11-11 queue of 49 `OPEN` rows is finished.
 
 **External acceptance from the 2026-11-11 queue:** `E2-S16` needs the household's actual devices; `E7-S32` needs real card/token photographs from each phone; `E3-S23` needs a saved field policy exercised in a real browser/run; `E11-S75` needs the updated NAS container and physical sleep/wake path. Their implementations are present, but the stories remain partial, tracked as `DECISION` below.
 
@@ -39,7 +39,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 - **`E7-S32`: real photos for Scan cards.** Take 10 to 20 photos of cards (a few foils, a few sleeved, one old card) with Collection's **Scan cards…** on each phone, plus a few token cards with Tokens' **Scan token cards…**, or copy them to the PC for `python -m decklab.lib.scan` (`--tokens` for token cards); the sheets and their APIs are fixture-tested only.
 - **`FG#4`: the gauntlet on the live server.** Decided (2026-11-13): the server builds its own catalogue. With Matt's OK on timing, run `gauntlet build` on the Linux spare PC, measure its Commander throughput and play a first standard run per Commander deck (PLAN.md, Still to do, item 12).
 - **`E11-S59`: wake-on-request, set up for real.** Built in code (2026-11-01): put the wake gate and its tunnel on the NAS, make the Access service token, deploy the Worker with its secrets, set the server PC's BIOS and adapter to wake, then time a real wake (decklab/README.md, "Sleeping and waking on request").
-- **`E11-S49`: the first release.** Decided (2026-11-13): tag `v0.1.0` on main once `FG#2` is on the server; Matt tags it, or Claude with his OK.
+- **`E11-S49`: publish the first release.** `v0.1.0` is tagged on main (2026-11-14, Matt's OK) and the release workflow made its draft, Deck Lab 0.1.0, with the zip, its SHA-256 and manifest: Matt reads it and clicks Publish on GitHub.
 - **`E11-S55`: a real screen reader.** The audits and fixes are done; try VoiceOver on an iPhone or the iPad over the library, a deck page and the Game log.
 - **`E11-S63`: the content policy in real browsers.** Built and tested (2026-11-10). After the server is updated, open Deck Lab in Safari on the iPad and a phone and on a desktop, scan a card (`E7-S32`), watch the console for "Refused to..." lines, and confirm wake-on-request still opens the gate from a home page.
 - **`E11-S64`: the load, timed on devices.** Built and tested (2026-11-10). Time a phone's and the iPad's page load on the live server before and after the update that brings the cached, compressed scripts and stylesheets.
@@ -48,7 +48,8 @@ An index of open work, one row per item; each row points to the doc that owns th
 - **`E3-S49`: Same commander's real results.** Built and fixture-tested (2026-11-12). With `FG#4`, once the server's Commander catalogue is built, play a first Same commander run for a Commander deck and read its results.
 - **`E3-S50`: earlier lists on live data.** Built and fixture-tested (2026-11-12). On the server, open a deck with several saved lists that have standard-sample runs and check the Testing tab's Show earlier lists against them.
 - **`E11-S87`: turn the shrink warning on.** Tables and thresholds agreed and the heartbeat carries the counts (2026-11-13). Set config.json's `database.shrink_warn` to true on the server PC.
-- **`FG#2`: Forge 2.0.16 on the server.** Built, checked and installed on this PC (2026-11-13). Check and publish the fork's draft release `2.0.16-decklab-029c9518f` (SELF-HOSTING.md already links it), merge the Deck Lab PR, run `python -m decklab.update` on the server, then on an idle PC there `python -m decklab.lib.forge replay`. The side-build speed A/B (PLAN.md, Later) waits for an idle PC too.
+- **`FG#2`: Forge 2.0.16's replay.** Released, on the server and checked there (2026-11-14); its replay (33 matchups, 13,120 games) was stopped after 3,199 for the server's Windows boot. Finish it on an idle server (HomeOps `replay.ps1` plays only what's missing), then read its results; the side-build speed A/B (PLAN.md, Later) waits for an idle PC.
+- **`E3-S40`: XMage on the live server.** Built and merged (2026-11-09) but set up nowhere. After `FG#2`, with Matt's OK on timing: install the pinned 1.4.63 release on the Linux server, set `xmage_dir`, build the bridge, then cross-check a few real home decks and note the cards XMage refuses ([setup](decklab/design/cross-simulator.md#setup-and-use)).
 
 **Activation:** migrations `0012` and `0013` were applied and the server restarted on committed code on 2026-10-19, so the privacy code and guarded member removal are live. No visibility choice or real member removal has been made.
 
@@ -100,8 +101,9 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E3-S23` | DECISION | could | M | Field membership, saved choices, home-admin preview/save and fail-closed selection built. Left: a real-browser saved choice used by a real run; this needs a separately authorised live policy/run acceptance session. |
 | `FG#4` | DECISION | should | M+pc | The gauntlet on the Linux spare PC (decided: it builds its own catalogue): build both, measure Commander throughput, a first standard run per Commander deck; with Matt's OK on timing. |
 | `E11-S28` | DECISION | should | M | Run the user-testing session with User2 from the prepared [checklist](decklab/design/user-testing-user2.md) (confirm his device first), then the follow-up review and stories. |
-| `FG#2` | DECISION | should | L+pc | Forge 2.0.16 built, checked and installed here (`2.0.16-decklab-029c9518f`, 2026-11-13). Left: publish the fork's draft release, update the server and replay its matchups on an idle PC, and the side-build speed A/B (2.0.16 left out #11314/#11981). |
+| `FG#2` | DECISION | should | L+pc | Forge 2.0.16 released, on the server and checked there; replay 3,199 of 13,120 games, stopped 2026-11-14. Left: finish it (plays only what's missing), read its results, and the side-build speed A/B (2.0.16 left out #11314/#11981). |
 | `FG#3` | DEFERRED | could | M+pc | More experiment games (AI profiles, team-pump fix, override sets), decided with `FG#2`'s replay; the clean `fiery` test ran 2026-10-21 (C4 does what `fiery` does). |
+| `E3-S40` | DECISION | should | M+pc | Cross-check with XMage is built but set up nowhere. Left, after `FG#2`: install pinned XMage 1.4.63 on the Linux server, set `xmage_dir`, build the bridge, cross-check a few real home decks for unsupported cards. |
 
 ## Deck Lab: running it
 
@@ -113,7 +115,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S30` | DECISION | should | L | [UI implementation and Chromium review](decklab/design/visual-polish-completion-2026-11-07.md) complete; household Safari/touch, software keyboards, screen reader and real-art acceptance remain. |
 | `E11-S31` | DECISION | could | M | Global search in the top bar ([stories.md](decklab/design/stories.md#e11-s31)) is built and its `/` decided (2026-10-31): Matt checks the iPad field and phone sheet on devices. |
 | `E11-S58` | DECISION | should | L | Live server on Linux ([stories.md](decklab/design/stories.md#e11-s58)) is built and fixture-tested (2026-11-01): WSL qualified the database, backups, the services, `systemd-inhibit` under polkit and real Forge games (2026-11-02); still to qualify on the real Linux PC: suspend and wake, phones, and Tesseract on real card photos. |
-| `E11-S49` | DECISION | could | M | Release zips, installs without git, the newer-release line and release notes are built; left: tag `v0.1.0` on main after `FG#2` is on the server (decided 2026-11-13). |
+| `E11-S49` | DECISION | could | M | Release zips, installs without git, the newer-release line and release notes are built; `v0.1.0` tagged 2026-11-14 and its draft release made; left: Matt publishes the draft. |
 | `E11-S50` | DEFERRED | could | L | One Windows installer (winget Python and PostgreSQL, release zip, generated postgres password, config questions, services, one firewall prompt, phone address); after `E11-S49`. |
 | `E11-S51` | DEFERRED | could | M | Update command for release installs (backup, replace, migrate, restart); after `E11-S49`. |
 | `E11-S52` | DEFERRED | could | L | First-run setup page on the PC (home profiles, optional Enable simulations); after `E11-S50`. |

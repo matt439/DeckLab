@@ -1366,6 +1366,8 @@ Decided (Matt, 2026-11-09): implement as much as possible overnight and open a p
 
 Built (2026-11-09): the Testing tab's deliberate saved-list matchup check, command-line card-swap checks, separate immutable engine results and native XMage bridge. Guarded fixtures, disposable native casual/Commander games and headless Chromium checks passed. The [owner](cross-simulator.md) records exact qualification and limits; optional installation on the live server and household-device acceptance remain separate.
 
+Left (Matt, 2026-11-14, tracked in TODO.md): XMage isn't set up on any PC yet (no `xmage_dir`, no built bridge). After `FG#2`'s replay, with Matt's OK on idle server time: install the pinned 1.4.63 release on the Linux server, set `xmage_dir` in its private config, run `python -m decklab.xmage build` and `describe`, then cross-check a few real home decks (casual and Commander) to see which household cards XMage refuses, and read the two engines' results side by side.
+
 **E3-S41** · Matt · could · M · built
 
 As a deck builder tuning a mana base, I want the practice games to name the spells my mana fails and to try one-land swaps, so that I know which plain-basic change helps most.
@@ -4055,7 +4057,7 @@ Built (2026-11-13), slice 6: the words. Receive delivery (`GET /api/receipt`'s `
 
 Built (2026-11-13), slice 7: sections from the rule (a colour-type container's optional `holds`, {section: creatures|spells|lands|tokens}, each group once; home's built-in box Row 1 creatures, Row 2 spells, Row 3 lands, Row 4 token cards; the Storage setup sheet's "What each section holds"; Where these go, Receive delivery, `collection merge` and Build decks' colour-type dividers name each card's section, "Row 1 · Creatures"); Build decks grouped by container (with two or more containers, `storage_order`'s `containers` and `placed`: each card under the first recorded location that matches a container, "Somewhere else", or the default container when none is recorded, then that container's own rule and sections); and Shopping's storage fill (`GET /api/shopping`'s `storage_fill`, home-record readers only: home's containers with a capacity, now and once pending orders arrive, from the Card list's count and pending scenario). Tests: `test_storage_sections`, `test_storage_setup_ui`, `test_collection_locations` (`StorageOrderTests`), `test_assembly_storage_order_ui`, `test_shopping_storage`, `test_shopping_storage_ui`.
 
-Deployment (the coordinator's, with Matt's OK): before 0028 reaches the server, list home's live locations (`collection locations`) for any `Row 5`-style one that would leave the box, then apply 0028 there.
+Deployment: done 2026-11-14. Home's live collection had no recorded locations (0 of 1,075 rows), so none could leave the box; the server's update applied 0028 after its backup.
 
 
 **E8-S26** · Space members · should · M · built
@@ -6190,7 +6192,7 @@ Built (2026-11-05): Settings says when a newer release is out. On a release inst
 
 Decided (Matt, 2026-11-13): tag `v0.1.0` on main once `FG#2` (Forge 2.0.16) is running on the server; version tags on main are also the git checkouts' stable update channel (E11-S84).
 
-Gap: the first real release, tagging `v0.1.0` (Matt, or Claude with his OK), after `FG#2` reaches the server; an update command for release installs (E11-S51).
+2026-11-14: with Matt's OK, `v0.1.0` was tagged on main's `bb3e46c` (the commit the live server runs, its `tests` and `ruff` passed), and `release.yml` made the draft release Deck Lab 0.1.0 (zip, SHA-256, manifest, provenance attestation). Gap: Matt publishes the draft; an update command for release installs (E11-S51).
 
 **E11-S50** · Self-hoster · could · L · missing
 
