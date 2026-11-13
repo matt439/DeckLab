@@ -49,6 +49,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 - **`E3-S50`: earlier lists on live data.** Built and fixture-tested (2026-11-12). On the server, open a deck with several saved lists that have standard-sample runs and check the Testing tab's Show earlier lists against them.
 - **`E11-S87`: turn the shrink warning on.** Tables and thresholds agreed and the heartbeat carries the counts (2026-11-13). Set config.json's `database.shrink_warn` to true on the server PC.
 - **`FG#2`: Forge 2.0.16's replay.** Released, on the server and checked there (2026-11-14); its replay (33 matchups, 13,120 games) was stopped after 3,199 for the server's Windows boot. Finish it on an idle server (HomeOps `replay.ps1` plays only what's missing), then read its results; the side-build speed A/B (PLAN.md, Later) waits for an idle PC.
+- **`E3-S40`: XMage on the live server.** Built and merged (2026-11-09) but set up nowhere. After `FG#2`, with Matt's OK on timing: install the pinned 1.4.63 release on the Linux server, set `xmage_dir`, build the bridge, then cross-check a few real home decks and note the cards XMage refuses ([setup](decklab/design/cross-simulator.md#setup-and-use)).
 
 **Activation:** migrations `0012` and `0013` were applied and the server restarted on committed code on 2026-10-19, so the privacy code and guarded member removal are live. No visibility choice or real member removal has been made.
 
@@ -102,6 +103,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E11-S28` | DECISION | should | M | Run the user-testing session with User2 from the prepared [checklist](decklab/design/user-testing-user2.md) (confirm his device first), then the follow-up review and stories. |
 | `FG#2` | DECISION | should | L+pc | Forge 2.0.16 released, on the server and checked there; replay 3,199 of 13,120 games, stopped 2026-11-14. Left: finish it (plays only what's missing), read its results, and the side-build speed A/B (2.0.16 left out #11314/#11981). |
 | `FG#3` | DEFERRED | could | M+pc | More experiment games (AI profiles, team-pump fix, override sets), decided with `FG#2`'s replay; the clean `fiery` test ran 2026-10-21 (C4 does what `fiery` does). |
+| `E3-S40` | DECISION | should | M+pc | Cross-check with XMage is built but set up nowhere. Left, after `FG#2`: install pinned XMage 1.4.63 on the Linux server, set `xmage_dir`, build the bridge, cross-check a few real home decks for unsupported cards. |
 
 ## Deck Lab: running it
 

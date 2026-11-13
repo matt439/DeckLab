@@ -1366,6 +1366,8 @@ Decided (Matt, 2026-11-09): implement as much as possible overnight and open a p
 
 Built (2026-11-09): the Testing tab's deliberate saved-list matchup check, command-line card-swap checks, separate immutable engine results and native XMage bridge. Guarded fixtures, disposable native casual/Commander games and headless Chromium checks passed. The [owner](cross-simulator.md) records exact qualification and limits; optional installation on the live server and household-device acceptance remain separate.
 
+Left (Matt, 2026-11-14, tracked in TODO.md): XMage isn't set up on any PC yet (no `xmage_dir`, no built bridge). After `FG#2`'s replay, with Matt's OK on idle server time: install the pinned 1.4.63 release on the Linux server, set `xmage_dir` in its private config, run `python -m decklab.xmage build` and `describe`, then cross-check a few real home decks (casual and Commander) to see which household cards XMage refuses, and read the two engines' results side by side.
+
 **E3-S41** · Matt · could · M · built
 
 As a deck builder tuning a mana base, I want the practice games to name the spells my mana fails and to try one-land swaps, so that I know which plain-basic change helps most.
