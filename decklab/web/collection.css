@@ -460,3 +460,11 @@ button.col-casual-open { cursor: pointer; }
   .col-row-lab .col-bulk-row-choice { min-height: calc(var(--row-h) - 1px); }
   .col-row-lab .col-table.has-bulk-selection .col-th-name { width: 13rem; }
 }
+
+/* Storage decisions: consequences first, optional configuration stays discoverable. */
+.storage-options-fields, .storage-impact { display: grid; gap: var(--s-3); }
+.storage-options summary { cursor: pointer; min-height: var(--tap); overflow-wrap: anywhere; }
+.storage-options-fields { padding-top: var(--s-2); }
+.storage-impact p, .storage-comparison p { margin: 0; }
+.storage-comparison { display: grid; gap: var(--s-3); list-style: none; padding: 0; margin: 0; }
+.storage-comparison > li { display: grid; gap: var(--s-1); border-top: 1px solid var(--border); padding-top: var(--s-2); overflow-wrap: anywhere; }

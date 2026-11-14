@@ -96,7 +96,13 @@ class AssemblyStorageOrderUiTests(unittest.TestCase):
           drawAssembly(data, routeToken);
           same(main.querySelector('.pack-sort').querySelectorAll('button').map(b => b.textContent), ['Name', 'Storage order']);
           choose('Storage order');
+          assert.equal(main.querySelector('.pack-order-help').textContent, 'Grouped by container, then by its filing order.');
+          assert(!main.querySelector('.pack-order-help').hidden);
           const groups = main.querySelectorAll('.pack-container-group');
+          assert.equal(groups[0].querySelector('[data-pack-remaining]').textContent, '2 cards left in this step');
+          assert(groups[3].textContent.includes('match no configured storage container'));
+          groups[0].querySelector('[data-pack-tick]').click();
+          assert.equal(groups[0].querySelector('[data-pack-remaining]').textContent, '1 card left in this step');
           same(groups.map(g => g.querySelector('h4').textContent), ['Storage box · 2 cards', 'Binder · 2 cards',
             'Shelf · 1 card', 'Somewhere else · 1 card']);
           same(groups.map(names), [['Pear', 'Kiwi'], ['Apple', 'Zebra'], ['Fig'], ['Mango']]);

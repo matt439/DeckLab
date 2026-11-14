@@ -54,8 +54,10 @@ class ShoppingStorageFillTests(unittest.TestCase):
           const node = note();
           assert((node.getAttribute('class') || '').includes('box box-warn'), node.getAttribute('class'));
           same(node.querySelectorAll('[data-storage-container]').map(line => line.textContent), [
-            'Storage box: about 123 of 240 cards now, about 129 once these arrive.',
-            'Ultimate Guard binder would be over capacity: about 12 cards for about 10 places (about 8 now).']);
+            'Ultimate Guard binder: about 2 cards over capacity after delivery. About 12 cards for 10 places (8 now).',
+            'Storage box: about 123 of 240 cards now, about 129 once these arrive.']);
+          assert(node.querySelector('.shop-storage-incomplete').textContent.includes('1 delivery and 2 products excluded'));
+          assert(node.querySelector('[data-storage-container]').getAttribute('class').includes('shop-storage-over'));
           const words = node.querySelector('.sub').textContent;
           assert(words.includes('else Ultimate Guard binder, as if'), words);   // a proper name as written, as the receipt's
           assert(words.includes("Basic lands aren't counted, and nor are token cards."), words);

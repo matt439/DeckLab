@@ -128,9 +128,7 @@ function drawStorageEdit(ctx) {
   const id = (key) => `storage-${key}-${ctx.sheet.heading.id}`;
   const limits = storageLimits(ctx);
   const home = ctx.cv.space === HOME_SPACE;
-  const intro = el("p", { class: "sub", text: "Where this collection's loose cards are kept: a storage box, a binder, a shelf. "
-    + "A card's storage location belongs to the container one of whose sections (or its name) it starts with, such as "
-    + `${home ? "“Row 2, B”" : "“Binder, page 3”"}. The Card list counts each container's cards.` });
+  const intro = el("p", { text: "Add the boxes, binders or shelves holding this collection's loose cards." });
   const list = el("ol", { class: "storage-containers" }, ctx.containers.map((c, i) => storageFieldset(ctx, c, i, id)));
   const adder = el("button", { type: "button", class: "btn btn-secondary", text: "Add a container",
     disabled: ctx.containers.length >= limits.containers || null, onclick: () => {
@@ -155,7 +153,22 @@ function drawStorageEdit(ctx) {
 function storageFieldset(ctx, c, i, id) {
   const k = (key) => id(`${key}-${c.key}`);
   const name = el("input", { id: k("name"), class: "storage-name", type: "text", maxlength: storageLimits(ctx).name, autocomplete: "off",
-    value: c.name, placeholder: "Such as Storage box or Binder", oninput: (e) => { c.name = e.target.value; } });
+    value: c.name, placeholder: "Such as Storage box or Binder", oninput: (e) => {
+      c.name = e.target.value;
+      const row = ctx.edit.querySelector(`[data-storage="${c.key}"]`);
+      const label = c.name.trim() || `Container ${i + 1}`;
+      if (row) {
+        row.querySelector("legend").textContent = label;
+        row.querySelectorAll("button").forEach((button) => {
+          if (button.textContent === "Move up") button.setAttribute("aria-label", `Move ${label} up`);
+          if (button.textContent === "Move down") button.setAttribute("aria-label", `Move ${label} down`);
+          if (button.textContent === "Remove") button.setAttribute("aria-label", `Remove ${label}`);
+        });
+      }
+      const defaultSelect = ctx.edit.querySelector(`#${id("default")}`);
+      const option = defaultSelect && Array.from(defaultSelect.querySelectorAll("option")).find((item) => item.value === c.key);
+      if (option) option.textContent = c.name.trim() || "(the container with no name yet)";
+    } });
   const kind = el("select", { id: k("kind"), onchange: (e) => { c.kind = e.target.value; } },
     Object.entries(STORAGE_KIND_WORDS).map(([value, text]) => el("option", { value, text, selected: value === c.kind || null })));
   const capacity = el("input", { id: k("capacity"), type: "text", inputmode: "numeric", maxlength: 6, autocomplete: "off",
@@ -182,14 +195,19 @@ function storageFieldset(ctx, c, i, id) {
     el("fieldset", {},
       el("legend", { text: label }),
       el("label", { class: "field", for: name.id }, el("span", { text: "Name" }), name),
-      el("div", { class: "storage-pair" },
-        el("label", { class: "field", for: kind.id }, el("span", { text: "Kind" }), kind),
-        el("label", { class: "field", for: capacity.id }, el("span", { text: "Holds (cards)" }), capacity)),
+      el("label", { class: "field", for: capacity.id }, el("span", { text: "Holds (cards)" }), capacity),
       el("label", { class: "field", for: sections.id }, el("span", { text: "Sections" }), sections,
         el("small", { class: "field-hint", text: "One per line, or a count such as “4 rows” for Row 1 to Row 4. They're the location suggestions." })),
-      el("label", { class: "field", for: order.id }, el("span", { text: "Cards are ordered" }), order),
-      storageHoldsBox(ctx, c, k, holds),
-      el("label", { class: "choice", for: sleeved.id }, sleeved, el("span", { text: "Its cards are kept sleeved" })),
+      el("p", { class: "field-hint", text: "A recorded location is matched by its starting words: a section or container name. For example, Row 2, B belongs to Row 2." }),
+      el("details", { class: "storage-options", open: c.optionsOpen || null,
+        ontoggle: (e) => { c.optionsOpen = e.target.open; } },
+        el("summary", { text: "Optional details: kind, filing order and sleeves" }),
+        el("div", { class: "storage-options-fields" },
+          el("label", { class: "field", for: kind.id }, el("span", { text: "Kind" }), kind),
+          el("label", { class: "field", for: order.id }, el("span", { text: "Cards are ordered" }), order,
+            el("small", { class: "field-hint", text: "Build decks uses this filing order when you choose Storage order." })),
+          storageHoldsBox(ctx, c, k, holds),
+          el("label", { class: "choice", for: sleeved.id }, sleeved, el("span", { text: "Its cards are kept sleeved" })))),
       el("div", { class: "actions storage-moves" },
         el("button", { type: "button", class: "btn btn-quiet", text: "Move up", "data-move": "up", disabled: i === 0 || null,
           "aria-label": `Move ${label} up`, onclick: () => move(-1) }),
@@ -269,6 +287,37 @@ function storageCounts(setup) {
     setup.unplaced ? el("li", { class: "sub", text: `No location and nowhere to go: about ${plural(setup.unplaced, "card")}` }) : null);
 }
 
+/** Consequences come before detail; a failed count must never look like a safe zero. */
+function storageImpact(answer) {
+  const moves = answer.moves || [];
+  const after = answer.after;
+  const overflow = after ? (after.containers || []).filter((c) => c.capacity && c.cards > c.capacity) : [];
+  return el("div", { class: "storage-impact" },
+    el("h3", { text: "Before you save" }),
+    answer.counts_error ? el("p", { class: "box box-warn", text: `Capacity and unplaced-card counts are unavailable. ${answer.counts_error}` }) : [
+      overflow.length ? overflow.map((c) => el("p", { class: "box box-warn storage-impact-warning" },
+        el("strong", { text: `${c.name}: about ${plural(c.cards - c.capacity, "card")} over capacity after saving.` })))
+        : el("p", { text: "No counted container would be over its recorded capacity." }),
+      el("p", { text: `Cards with no location and nowhere to go: about ${plural((after && after.unplaced) || 0, "card")}.` }),
+      after && after.elsewhere ? el("p", { text: `Recorded locations outside the setup: about ${plural(after.elsewhere, "card")}.` }) : null],
+    el("p", { text: answer.counts_error ? "Recorded-location reassignments could not be checked." : moves.length
+      ? `${plural(moves.reduce((n, m) => n + m.locations, 0), "recorded location")} would be assigned to a different container. This does not move physical cards.`
+      : "No recorded location changes container." }));
+}
+
+/** Pair containers by stable id so a rename never looks like a removal and an addition. */
+function storageComparison(now, after) {
+  const before = (now && now.containers) || [], next = (after && after.containers) || [];
+  const ids = new Set(next.map((c) => c.id));
+  const rows = next.map((c) => ({ before: before.find((old) => old.id === c.id), after: c }));
+  rows.push(...before.filter((c) => !ids.has(c.id)).map((c) => ({ before: c, after: null })));
+  return rows.length ? el("ul", { class: "storage-comparison" }, rows.map((row) => el("li", {},
+    el("strong", { text: (row.after || row.before).name }),
+    el("p", { class: "sub", text: row.before ? `Now — ${storageCountLine(row.before)}` : "Now — not in the setup" }),
+    el("p", { text: row.after ? `After saving — ${storageCountLine(row.after)}` : "After saving — removed from the setup" }))))
+    : el("p", { class: "sub", text: "No containers." });
+}
+
 /** The preview: counts now and after, the locations that move (by count), the new suggestions; Back and Save. */
 function drawStorageReview(ctx) {
   const answer = ctx.review;
@@ -279,11 +328,12 @@ function drawStorageReview(ctx) {
   const suggestions = (answer.after && answer.after.suggestions) || answer.storage.containers.flatMap((c) => c.sections.length ? c.sections : [c.name]);
   const fallback = answer.storage.containers.find((c) => c.id === answer.storage.default);
   add(clear(ctx.reviewBox), [
-    answer.counts_error ? el("p", { class: "box box-warn", text: answer.counts_error }) : [
-      el("h3", { text: "Now" }), storageCounts(answer.now),
-      el("h3", { text: "After saving" }), storageCounts(answer.after)],
+    storageImpact(answer),
+    answer.counts_error ? null : [el("h3", { text: "Container counts: now and after saving" }),
+      storageComparison(answer.now, answer.after)],
     el("h3", { text: "Recorded locations" }),
-    moves.length ? el("ul", { class: "storage-moves-list" }, moves.map((m) => el("li", {
+    answer.counts_error ? el("p", { class: "sub", text: "Recorded-location reassignments are unavailable until the collection can be read." })
+      : moves.length ? el("ul", { class: "storage-moves-list" }, moves.map((m) => el("li", {
       text: `${plural(m.locations, "recorded location")} would move from ${where(m.from)} to ${where(m.to)}.` })))
       : el("p", { class: "sub", text: "No recorded location changes container." }),
     el("p", { class: "sub", text: fallback ? `Cards with no location go to ${fallback.name}.` : "Cards with no location aren't counted in any container." }),
