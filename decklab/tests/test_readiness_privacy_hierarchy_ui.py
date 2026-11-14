@@ -49,4 +49,3 @@ class PublicationHierarchyTests(unittest.TestCase):
           assert.equal(sheet().querySelector('[data-action=confirm]').textContent, 'Make public');
           await answer('confirm'); assert.equal(sent.length,1);
         """)
-
