@@ -866,13 +866,21 @@ class PgInventory:
                     stored = self._read(c)
                     deck_key, part = self._read_decks(c)
                     before = self._join(stored, deck_key, part)
+                    from . import batch_import
+                    batch = None
+                    if isinstance(op, batch_import.BatchImport):
+                        batch, receipt = batch_import.prepare(cur, op, actor)
+                        if batch is None:
+                            # Roll back the new audit change_set as well as avoiding a second import.
+                            raise _Unchanged((before, batch_import.replay(receipt)))
                     if expected_revision is not None and str(expected_revision) != before.revision:
                         raise Conflict(files.MOVED_MESSAGE)
                     self._applying.saves = deck_key is not None
                     previous_connection = getattr(self._applying, "connection", None)
                     self._applying.connection = c
                     try:
-                        after, summary = op.run(changes.detach(before))
+                        detached = changes.detach(before)
+                        after, summary = batch_import.run(batch, detached) if batch is not None else op.run(detached)
                     finally:
                         self._applying.saves = None
                         self._applying.connection = previous_connection
@@ -981,6 +989,8 @@ class PgInventory:
                     # op hints may omit real writes or claim changes for a no-op.
                     summary = Summary(summary.text, summary.counts,
                                       {rel: ["changed"] for rel in changes.changed_paths(before, saved)}, summary.extra)
+                    if batch is not None:
+                        summary = batch_import.finish(cur, batch, summary, change_set)
                     return saved, summary
             except _Unchanged as u:
                 unchanged, summary = u.result

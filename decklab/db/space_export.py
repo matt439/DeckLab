@@ -119,6 +119,14 @@ def snapshot(c, space, *, details=False, personal=False):
             "(select id from profile where space_id = %s) or space_id = %s", (space, space))), key=_json)
         if new_drafts:
             data["new_drafts"] = new_drafts
+    # Staged collection batches: scratch content/receipts affect departure fingerprints
+    # and deletion, never personal/general artifact files. Optional until migration ships.
+    if not personal and c.execute("select to_regclass('public.collection_batch') is not null").fetchone()[0]:
+        collection_batches = sorted((r[0] for r in c.execute(
+            "select to_jsonb(r) from collection_batch r where profile_id in "
+            "(select id from profile where space_id = %s) or space_id = %s", (space, space))), key=_json)
+        if collection_batches:
+            data["collection_batches"] = collection_batches
     # Owned dice and counters (E7-S24, migration 0020): only when there are some, so an export made
     # before the migration still matches without them; written as dice.csv beside tokens.csv.
     if c.execute("select to_regclass('public.dice_counter') is not null").fetchone()[0]:

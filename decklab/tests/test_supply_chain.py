@@ -38,6 +38,19 @@ class WorkflowPinTests(unittest.TestCase):
         self.assertNotIn("pull_request_target", smoke)
         self.assertRegex(smoke, r"(?m)^permissions:\n  contents: read$")
 
+    def test_batch_durability_isolated_job_is_required_by_existing_aggregate(self):
+        text = (WORKFLOWS / "tests.yml").read_text(encoding="utf-8")
+        self.assertIn("  collection-batch-proof:", text)
+        self.assertIn("scripts/test_collection_batch_pg.py --pg-bin /usr/lib/postgresql/18/bin", text)
+        self.assertIn("needs: [changes, shard, linux-services, database, collection-batch-proof]", text)
+        self.assertIn('test "$BATCH_PROOF_RESULT" = success', text)
+        self.assertIn('test "$BATCH_PROOF_RESULT" = skipped', text)
+        job = text.split("  collection-batch-proof:", 1)[1].split("  linux-services:", 1)[0]
+        self.assertIn("timeout-minutes: 15", job)
+        self.assertNotIn("python -m decklab.db setup", job)
+        self.assertNotIn("PG_SUPER_PASSWORD", job)
+        self.assertNotIn("secrets.", job)
+
     def test_every_action_is_pinned_to_a_commit_with_its_version_in_a_comment(self):
         seen = 0
         for path in sorted(WORKFLOWS.glob("*.y*ml")):
