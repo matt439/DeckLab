@@ -1,6 +1,7 @@
 'use strict';
 // Static first-use guidance and empty Collection, with synthetic adapters and no actual writes.
 const path = require('node:path');
+const fs = require('node:fs/promises');
 const assert = require('node:assert/strict');
 const {run} = require('./common.js');
 
@@ -13,7 +14,7 @@ run('first-use', async review => {
       const result = {spec,status:'failed',page_errors:[],http_errors:[],console_errors:[]};
       let context;
       try {
-        review.select('matt');context = await review.context(spec);const page = await context.newPage();
+        review.select('matt');context = await review.context({...spec,acceptDownloads:mode==='pile'});const page = await context.newPage();
         review.observe(page,result.page_errors,result.http_errors);
         page.on('console',message=>{if(message.type()==='error')result.console_errors.push(review.safeText(message.text()));});
         await page.route('**/api/collection?*',route=>route.fulfill({status:200,json:{
@@ -51,6 +52,11 @@ run('first-use', async review => {
             await sheet.getByRole('button',{name:'Download pending batch',exact:true}).click();
             const file=await download;
             assert(file.suggestedFilename().startsWith('pending-collection-'));
+            const savedText=await fs.readFile(await file.path(),'utf8');
+            assert(savedText.includes('Llanowar Elves'));
+            assert(savedText.includes('fdn'));
+            assert(!savedText.includes('data:image'));
+            assert.equal(await file.failure(),null);
             assert((await sheet.innerText()).includes('Nothing was added now'));
             await sheet.getByRole('button',{name:'Cancel',exact:true}).click();
             await page.getByRole('button',{name:'Start with physical cards',exact:true}).click();

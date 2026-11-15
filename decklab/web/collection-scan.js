@@ -29,7 +29,7 @@ function openCollectionStartSheet(cv) {
   const sheet = colOpenSheet("Start recording your collection", {wide: true});
   const choose = (text, help, open) => el("li", {},
     el("button", {type: "button", class: "btn", text, onclick: event => {
-      if (sheet.closed || !colActive(cv) || cv.busy || !cv.editable || !event.currentTarget.isConnected) return;
+      if (sheet.closed || !colActive(cv) || cv.busy || !cv.editable || cv.unsupported || !event.currentTarget.isConnected) return;
       sheet.close(); open(cv);
     }}), el("p", {class: "sub", text: help}));
   sheet.body.append(
@@ -562,7 +562,7 @@ function colScanBack(importing) {
 
 /** Explicit portable checkpoint, using the existing import format; no photos, OCR text or other space's data. */
 function downloadScanBatch(ctx) {
-  if (!colScanHere(ctx) || !ctx.cv.editable || ctx.busy || ctx.picking || !ctx.pending.length) return;
+  if (!colScanHere(ctx) || !ctx.cv.editable || ctx.cv.unsupported || ctx.busy || ctx.picking || !ctx.pending.length) return;
   if (ctx.unsure.length) {
     colScanSay(ctx, "warn", "Resolve or skip the photos in Check these before downloading. Nothing was downloaded.");
     return;

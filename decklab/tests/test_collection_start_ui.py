@@ -30,7 +30,8 @@ class CollectionStartTests(unittest.TestCase):
         self.run_js(r'''
           const cv=draw(); const guide=openCollectionStartSheet(cv);
           const action=button(guide.body,'Enter a pile of loose cards');
-          routeToken++; action.click(); assert(!guide.closed);
+          cv.unsupported=true; action.click(); assert(!guide.closed);
+          cv.unsupported=false; routeToken++; action.click(); assert(!guide.closed);
         ''')
 
     def test_download_is_explicit_csv_only_and_retains_pending_list(self):
@@ -58,6 +59,7 @@ class CollectionStartTests(unittest.TestCase):
           const ctx=openScanSheet(draw()); let downloads=0;
           globalThis.Blob=class {}; URL.createObjectURL=()=>{downloads++;throw new Error('blocked');};
           addScanCard(ctx,proposal('Llanowar Elves','fdn','227','name'));
+          ctx.cv.unsupported=true;downloadScanBatch(ctx);assert.equal(downloads,0);ctx.cv.unsupported=false;
           ctx.unsure.push({id:1}); downloadScanBatch(ctx);assert.equal(downloads,0);
           ctx.unsure=[]; downloadScanBatch(ctx);assert.equal(downloads,1);
           assert.equal(ctx.pending.length,1);assert(!ctx.sheet.closed);
