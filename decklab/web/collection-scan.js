@@ -231,8 +231,8 @@ function colScanProposal(source) {
 function drawScanResult(ctx, answer) {
   ctx.currentUnsure = ctx.resolving = null;
   const proposals = (answer.proposals || []).slice(0, COL_SCAN_CHOICES).map(colScanProposal);
-  const sure = proposals[0]?.how === "name and number" && proposals[1]?.how !== "name and number";
-  const unsure = sure ? null : {id: ++ctx.nextPhoto, message: answer.message || "The card couldn't be read.",
+  let sure = proposals[0]?.how === "name and number" && proposals[1]?.how !== "name and number";
+  let unsure = sure ? null : {id: ++ctx.nextPhoto, message: answer.message || "The card couldn't be read.",
     proposals: proposals.map(colScanProposal),
     language: answer.read?.language || proposals.find(p => p.language)?.language || ""};
   if (unsure) {ctx.unsure.push(unsure);ctx.currentUnsure = unsure;ctx.resolving = unsure;}
@@ -245,7 +245,13 @@ function drawScanResult(ctx, answer) {
     return;
   }
   ctx.last = sure ? addScanCard(ctx, proposals[0], proposals) : null;
-  colScanSay(ctx, sure ? "info" : "warn", sure ? `Added ${colScanLabel(ctx.last)}.` : answer.message);
+  if (sure && !ctx.last) {
+    sure = false;
+    unsure = {id: ++ctx.nextPhoto, message: "This printing is at the 999-copy limit. Review a smaller batch; this card is still pending.",
+      proposals: proposals.map(colScanProposal), language: proposals[0]?.language || ""};
+    ctx.unsure.push(unsure); ctx.currentUnsure = ctx.resolving = unsure;
+  }
+  colScanSay(ctx, sure ? "info" : "warn", sure ? `Added ${colScanLabel(ctx.last)}.` : unsure?.message || answer.message);
   const others = sure ? proposals.slice(1) : proposals;
   drawScanUnsure(ctx); drawScanFoot(ctx);
   if (!others.length) return;
@@ -262,10 +268,10 @@ function colScanChoices(ctx, printings, instead, choices = printings, unsure = n
       if (!colScanControlHere(ctx, event.currentTarget) || (unsure ? !ctx.unsure.includes(unsure) : seq !== ctx.seq)) return;
       if (instead && replaced) {
         if (ctx.last !== replaced || !ctx.pending.includes(replaced)) return;
-        takeScanCard(ctx, replaced);
       }
       const current = unsure ? ctx.currentUnsure === unsure : true;
-      const selected = addScanCard(ctx, p, choices);
+      const selected = addScanCard(ctx, p, choices, instead ? replaced : null);
+      if (!selected) return;
       if (current) {ctx.last = selected; clear(ctx.result);}
       if (unsure) {
         ctx.unsure.splice(ctx.unsure.indexOf(unsure), 1);
@@ -330,15 +336,18 @@ function colScanSame(ctx, card) {
 
 /** Put a card on the pending list (one more copy when that printing, finish, condition and language is there),
  * with choices (the printings offered with it) as its printing choices. */
-function addScanCard(ctx, p, choices = [p]) {
+function addScanCard(ctx, p, choices = [p], replaced = null) {
   const kept = ctx.defaults || {};
   const finish = kept.finish && Array.isArray(p.finishes) && p.finishes.includes(kept.finish) ? kept.finish : p.finish || "nonfoil";
   const card = { name: p.name, set: p.set, collector_number: p.collector_number, finish,
     quantity: 1, condition: kept.condition || "", language: p.language || kept.language || "", choices: [] };
   colScanAddChoices(card, [p, ...choices]);
-  const same = colScanSame(ctx, card);
+  let same = colScanSame(ctx, card);
+  const total = (same?.quantity || 0) + 1 - (same === replaced && replaced ? 1 : 0);
+  if (!colScanCount(ctx, total)) return null;
+  if (replaced) { takeScanCard(ctx, replaced); same = colScanSame(ctx, card); }
   if (same) {
-    same.quantity = Math.min(999, same.quantity + 1);
+    same.quantity += 1;
     colScanAddChoices(same, card.choices);
     drawScanPending(ctx);
     return same;
@@ -352,7 +361,8 @@ function addScanCard(ctx, p, choices = [p]) {
 function colScanJoin(ctx, card) {
   const same = colScanSame(ctx, card);
   if (!same) return false;
-  same.quantity = Math.min(999, same.quantity + card.quantity);
+  if (!colScanCount(ctx, same.quantity + card.quantity)) return false;
+  same.quantity += card.quantity;
   colScanAddChoices(same, card.choices);
   ctx.pending.splice(ctx.pending.indexOf(card), 1);
   if (ctx.last === card) ctx.last = same;
@@ -360,14 +370,30 @@ function colScanJoin(ctx, card) {
   return true;
 }
 
+function colScanCount(ctx, quantity) {
+  if (Number.isInteger(quantity) && quantity >= 1 && quantity <= 999) return true;
+  colScanSay(ctx, "warn", "Keep each group between 1 and 999 copies. Nothing was clipped or removed; review a smaller batch.");
+  return false;
+}
+
+function colScanEdit(ctx, card, changes, choices = []) {
+  const candidate = {...card, ...changes};
+  const same = ctx.pending.find(c => c !== card && c.set === candidate.set && c.collector_number === candidate.collector_number
+    && c.finish === candidate.finish && c.condition === candidate.condition && c.language === candidate.language);
+  if (!colScanCount(ctx, (same?.quantity || 0) + candidate.quantity)) { drawScanPending(ctx); return false; }
+  Object.assign(card, changes);
+  colScanAddChoices(card, choices);
+  if (!colScanJoin(ctx, card)) drawScanPending(ctx);
+  return true;
+}
+
 /** Make a pending card printing p, keeping its finish when p has it (a picked printing's finish is the one
  * picked), then redraw the list. */
 function colScanSetPrinting(ctx, card, p, picked = false) {
-  card.set = p.set;
-  card.collector_number = p.collector_number;
-  if (picked || !p.finishes || !p.finishes.includes(card.finish)) card.finish = p.finish || (p.finishes && p.finishes[0]) || "nonfoil";
-  colScanAddChoices(card, [p]);
-  if (!colScanJoin(ctx, card)) drawScanPending(ctx);
+  const finish = picked || !p.finishes || !p.finishes.includes(card.finish)
+    ? p.finish || (p.finishes && p.finishes[0]) || "nonfoil" : card.finish;
+  if (!colScanEdit(ctx, card, {set: p.set, collector_number: p.collector_number, finish}, [p])) return false;
+  return true;
 }
 
 /** "Other printings…": the shared printing picker (GET /api/cards/printings, counting the visitor's own space's
@@ -426,19 +452,19 @@ function drawScanPending(ctx) {
     if (!card.choices) card.choices = [];
     const qty = el("input", { type: "number", class: "col-qty-input", inputmode: "numeric", min: 1, max: 999, step: 1,
       value: String(card.quantity), "aria-label": `Copies of ${card.name}`,
-      onchange: () => { card.quantity = Math.min(999, Math.max(1, parseInt(qty.value, 10) || 1)); qty.value = String(card.quantity); drawScanFoot(ctx); } });
+      onchange: () => { const count = Number(qty.value); if (colScanCount(ctx, count)) card.quantity = count; qty.value = String(card.quantity); drawScanFoot(ctx); } });
     const finish = el("select", { "aria-label": `Finish of ${card.name}`,
-      onchange: () => { card.finish = finish.value; colScanJoin(ctx, card); } },
+      onchange: () => { colScanEdit(ctx, card, {finish: finish.value}); } },
       Object.entries(COL_FINISH_WORDS).map(([value, text]) => el("option", { value, text })));
     finish.value = card.finish;
     const condition = el("select", { "aria-label": `Condition of ${card.name}`,
-      onchange: () => { card.condition = condition.value; colScanJoin(ctx, card); } },
+      onchange: () => { colScanEdit(ctx, card, {condition: condition.value}); } },
       COL_CONDITIONS.map(([value, , text]) => el("option", { value, text })));
     condition.value = card.condition;
     // Language: as read off the card, else not recorded (blank, never assumed English).
     const languages = COL_LANGUAGES.some(([v]) => v === card.language) ? COL_LANGUAGES : [...COL_LANGUAGES, [card.language, card.language]];
     const language = el("select", { "aria-label": `Language of ${card.name}`,
-      onchange: () => { card.language = language.value; colScanJoin(ctx, card); } },
+      onchange: () => { colScanEdit(ctx, card, {language: language.value}); } },
       languages.map(([value, text]) => el("option", { value, text: value ? `${text} (${value})` : text })));
     language.value = card.language;
     ctx.list.append(el("li", { class: "col-trade-line" },
