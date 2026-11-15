@@ -15,6 +15,8 @@ import uuid
 from decklab.db import space_members
 from decklab.lib.state import Conflict, Invalid, Unavailable
 
+from . import collection_batch_admission as admission_gate
+
 DRAFT_CONTRACT_VERSION = 3  # Optional bounded evidence; older payloads remain byte-for-byte valid.
 CHANGED = "This batch changed. Reload and review it again."
 DENIED = "This collection batch is not available."
@@ -108,7 +110,7 @@ def read(cur, profile, space, batch_id):
     return _get(cur, profile, space, batch_id)
 
 
-def create(cur, profile, space, batch_id, value):
+def create(cur, profile, space, batch_id, value, *, admission=None):
     from psycopg.types.json import Jsonb
     value, batch_id = content(value), _identity(batch_id)
     _lock(cur, profile, space)
@@ -119,6 +121,7 @@ def create(cur, profile, space, batch_id, value):
             raise Conflict(CHANGED)
         # Retry returns the current state, including a consumed identity, never a new draft.
         return _get(cur, profile, space, batch_id)
+    admission_gate.admit(cur, admission)
     if cur.execute("select 1 from collection_batch where profile_id=%s and space_id=%s "
                    "and status='draft'", (profile, space)).fetchone():
         raise Conflict("Resume or discard your existing batch first.")
@@ -132,12 +135,13 @@ def _draft(row, expected):
         raise Conflict(CHANGED)
 
 
-def save(cur, profile, space, batch_id, expected, value):
+def save(cur, profile, space, batch_id, expected, value, *, admission=None):
     from psycopg.types.json import Jsonb
     value = content(value)
     _lock(cur, profile, space)
     row = _get(cur, profile, space, batch_id)
     _draft(row, expected)
+    admission_gate.admit(cur, admission)
     if "evidence" in row["content"] and "evidence" not in value:
         raise Invalid("This batch includes scanner evidence. Resume with an evidence-aware editor; nothing was removed.")
     cur.execute("update collection_batch set content=%s,revision=revision+1,review=null,saved_at=now() "
@@ -146,15 +150,18 @@ def save(cur, profile, space, batch_id, expected, value):
     return _get(cur, profile, space, batch_id)
 
 
-def review(cur, profile, space, batch_id, expected):
+def review(cur, profile, space, batch_id, expected, *, admission=None):
     from psycopg.types.json import Jsonb
     _lock(cur, profile, space)
     row = _get(cur, profile, space, batch_id)
     _draft(row, expected)
     if not row["content"]["rows"] or row["content"]["unresolved"]:
         raise Invalid("Resolve or explicitly set aside ambiguous cards before review.")
+    admitted = admission_gate.admit(cur, admission)
     token = {"revision": expected, "digest": _digest(row["content"]),
              "inventory_revision": _revision(cur), "nonce": str(uuid.uuid4())}
+    if admitted is not None:
+        token["admission"] = admitted
     cur.execute("update collection_batch set review=%s where profile_id=%s and space_id=%s and batch_id=%s",
                 (Jsonb(token), profile, space, _identity(batch_id)))
     return token
@@ -162,14 +169,15 @@ def review(cur, profile, space, batch_id, expected):
 
 class Claim:
     """Internal transaction-bound claim, never serialized or accepted from a request."""
-    def __init__(self, cur, profile, space, batch_id, row):
+    def __init__(self, cur, profile, space, batch_id, row, admitted=None):
         self.connection = cur.connection
         self.transaction = cur.execute("select txid_current()").fetchone()[0]
         self.profile, self.space, self.batch_id = profile, space, _identity(batch_id)
         self.row = row
+        self.admitted = admitted
 
 
-def claim(cur, profile, space, batch_id, token):
+def claim(cur, profile, space, batch_id, token, *, admission=None):
     """Return (claim, None), or (None, previous receipt), before inventory effects."""
     _lock(cur, profile, space)
     row = _get(cur, profile, space, batch_id)
@@ -180,7 +188,10 @@ def claim(cur, profile, space, batch_id, token):
     _draft(row, token.get("revision"))
     if token.get("digest") != _digest(row["content"]) or token.get("inventory_revision") != _revision(cur):
         raise Conflict("The collection changed. Review this batch again.")
-    return Claim(cur, profile, space, batch_id, row), None
+    admitted = admission_gate.admit(cur, admission)
+    if token.get("admission") != admitted:
+        raise Conflict(admission_gate.REFUSED)
+    return Claim(cur, profile, space, batch_id, row, admitted), None
 
 
 def finish(cur, pending, result):
@@ -194,6 +205,8 @@ def finish(cur, pending, result):
         raise Invalid("A batch receipt needs its original transaction.")
     if cur.execute("select txid_current()").fetchone()[0] != pending.transaction:
         raise Invalid("A batch receipt needs its original transaction.")
+    if pending.admitted != pending.row["review"].get("admission"):
+        raise Invalid("Batch claim admission does not match its reviewed intent.")
     row = _get(cur, pending.profile, pending.space, pending.batch_id)
     if row != pending.row:
         raise Conflict(CHANGED)
@@ -207,18 +220,19 @@ def finish(cur, pending, result):
     return receipt
 
 
-def complete(cur, profile, space, batch_id, token, apply):
+def complete(cur, profile, space, batch_id, token, apply, *, admission=None):
     """Convenience participant for trusted single-cursor callers, not a public API."""
-    pending, previous = claim(cur, profile, space, batch_id, token)
+    pending, previous = claim(cur, profile, space, batch_id, token, admission=admission)
     if pending is None:
         return previous
     return finish(cur, pending, apply(cur, pending.row["content"]))
 
 
-def discard(cur, profile, space, batch_id, expected):
+def discard(cur, profile, space, batch_id, expected, *, admission=None):
     _lock(cur, profile, space)
     row = _get(cur, profile, space, batch_id)
     _draft(row, expected)
+    admission_gate.admit(cur, admission)
     cur.execute("update collection_batch set status='discarded',revision=revision+1,content=null,review=null, "
                 "saved_at=now() where profile_id=%s and space_id=%s and batch_id=%s",
                 (profile, space, _identity(batch_id)))

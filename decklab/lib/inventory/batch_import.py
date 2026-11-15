@@ -18,10 +18,11 @@ class BatchImport:
     space: str
     batch_id: str
     token: dict
+    admission: dict | None = None
 
 
 def prepare(cur, op, actor):
-    pending, receipt = batches.claim(cur, actor.id, op.space, op.batch_id, op.token)
+    pending, receipt = batches.claim(cur, actor.id, op.space, op.batch_id, op.token, admission=op.admission)
     return pending, receipt
 
 

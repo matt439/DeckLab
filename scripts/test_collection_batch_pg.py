@@ -49,7 +49,8 @@ def inventory_proof(root, connect_role, restart):
     tests.RESTART = restart
     from decklab.tests import test_collection_batch_http as http
     from decklab.tests import test_collection_batch_release as release
-    suite = unittest.TestSuite([unittest.defaultTestLoader.loadTestsFromModule(module) for module in (tests, release, http)])
+    from decklab.tests import test_collection_batch_admission as admission
+    suite = unittest.TestSuite([unittest.defaultTestLoader.loadTestsFromModule(module) for module in (tests, release, http, admission)])
     return unittest.TextTestRunner(verbosity=2).run(suite)
 
 
