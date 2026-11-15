@@ -135,9 +135,13 @@ class RouteAccessTests(PermissionTestCase):
         gets, posts = feature_routes.route_tables()
         actual = {(method, "/".join(route)) for method, rows in (("GET", gets), ("POST", posts)) for route in rows}
         self.assertEqual(actual, set(feature_routes.ACCESS))
-        self.assertTrue(set(feature_routes.ACCESS.values()) <= CLASSES)
-        for method, path in actual:
-            self.assertEqual(feature_routes.declared_access(method, path.split("/")), feature_routes.ACCESS[(method, path)])
+        optional = dict(feature_routes.OPTIONAL_ACCESS)
+        self.assertFalse(actual & optional.keys(), 'Optional routes must not silently override ordinary routes')
+        reviewed = {**feature_routes.ACCESS, **optional}
+        self.assertTrue(set(reviewed.values()) <= CLASSES)
+        for method, path in actual | optional.keys():
+            self.assertIn(method, ('GET', 'POST'))
+            self.assertEqual(feature_routes.declared_access(method, path.split("/")), reviewed[(method, path)])
         with self.assertRaises(RuntimeError):
             feature_routes.declared_access("POST", ("future", "unreviewed"))
 

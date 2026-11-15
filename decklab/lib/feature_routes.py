@@ -247,9 +247,15 @@ LEGACY_ACCESS = MappingProxyType({
 })
 
 
+# Separate metadata for a default-off, tunnel-only route; never part of ordinary tables.
+OPTIONAL_ACCESS = MappingProxyType({('GET', 'collection/batch-receipt'): 'profile'})
+
+
 def declared_access(method, route):
     """The reviewed access class; never infer one from a prefix or handler name."""
     key = (method, "/".join(route))
+    if key in OPTIONAL_ACCESS:
+        return OPTIONAL_ACCESS[key]
     if key not in ACCESS:
         raise RuntimeError("Route has no declared access class")
     return ACCESS[key]
@@ -621,6 +627,12 @@ def route_tables():
 def dispatch(handler, route, query):
     gets, posts = route_tables()
     key = tuple(route)
+    if (key == ("collection", "batch-receipt") and handler.server.remote
+            and getattr(handler.server, "batch_receipt_recovery", False) is True):
+        from decklab.lib import access
+        from decklab.lib.api import collection_batch_receipt
+        if access.current() and access.current().get("remote") is True:
+            gets[key] = (collection_batch_receipt.view, ("space", "batch_id"))
     if key in gets and not (key in posts and handler.command == "POST"):
         declared_access("GET", key)
         handler._allow("GET", "HEAD")
