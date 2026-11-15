@@ -32,3 +32,14 @@ drafts and receipts on rollback; do not remove tables or restore pre-receipt dat
 Review scope: owner privilege boundary; epoch and same-intent semantics; bounded lock order;
 commit-unknown output; receipt preservation; no auto-install/default activation. All shipped
 runtime use and operator qualification remain pending independent review and owner approval.
+
+Target hardening: blank/whitespace/NUL names refuse before connecting, both at argparse
+and the connection-owning execute boundary. Names are passed as the connector's dbname
+keyword, never interpolated into SQL or treated by this module as a DSN. Valid explicit
+names are not rewritten. The connected server's current_database() must match exactly
+before any policy mutation. Output includes connection.info host/port plus that verified
+database, never passwords or a conninfo/DSN. Host/port still come from the configured
+connector: database name alone is not cluster identity, and this is not a cluster-UUID
+pinning mechanism. Owner policy reads and writes explicitly use public; no application
+search_path is changed. Review of operator target confirmation remains required before
+real execution; successful source tests do not authorize a live transition.

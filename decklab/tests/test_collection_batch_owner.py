@@ -98,7 +98,12 @@ class OwnerTransitionTests(InventoryFixture, unittest.TestCase):
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
             self.assertEqual(owner.main(args), 0)
-        self.assertEqual(json.loads(output.getvalue())['policy']['epoch'], 2)
+        result = json.loads(output.getvalue())
+        self.assertEqual(result['policy']['epoch'], 2)
+        self.assertEqual(result['database'], self.dbname)
+        self.assertEqual(set(result['endpoint']), {'host','port'})
+        self.assertTrue(result['endpoint']['host'])
+        self.assertIsInstance(result['endpoint']['port'], int)
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
             self.assertEqual(owner.main(args+['--recover']), 0)
@@ -133,3 +138,51 @@ class OwnerTransitionTests(InventoryFixture, unittest.TestCase):
             results = [attempt.result(timeout=8) for attempt in attempts]
         self.assertEqual({result['outcome'] for result in results}, {'transitioned','target_confirmed'})
         self.assertEqual({result['policy']['epoch'] for result in results}, {2})
+
+    def test_connected_database_mismatch_refused_before_transition(self):
+        from unittest import mock
+        from decklab.db import conn as db
+        self.install()
+        with mock.patch.object(db, 'connect', side_effect=lambda *args, **kw: self.connection('owner')):
+            with self.assertRaisesRegex(Invalid, 'does not match'):
+                owner.execute('not_the_requested_database', contract=1,epoch=1,enabled=True)
+        self.assertEqual(self.invoke(owner.recover, contract=1,epoch=1,enabled=True)['outcome'], 'unchanged')
+
+    def test_shadow_policy_cannot_redirect_owner_read_or_write(self):
+        self.install()
+        with self.connection('owner') as c, c.cursor() as cur:
+            cur.execute('create schema shadow')
+            cur.execute('create table shadow.collection_batch_admission as select * from public.collection_batch_admission')
+            cur.execute('update shadow.collection_batch_admission set epoch=99,enabled=true')
+            cur.execute('set local search_path=shadow,public')
+            result = owner.transition(cur, contract=1,epoch=1,enabled=True)
+            self.assertEqual(result['policy']['epoch'], 2)
+            self.assertEqual(cur.execute('select epoch from shadow.collection_batch_admission').fetchone()[0], 99)
+            self.assertEqual(cur.execute('select epoch from public.collection_batch_admission').fetchone()[0], 2)
+
+
+class ExplicitTargetTests(unittest.TestCase):
+    def test_invalid_cli_target_never_calls_connector(self):
+        import contextlib
+        import io
+        from unittest import mock
+        from decklab.db import conn as db
+        for name in ('', ' ', '\t\n', ' trailing', 'trailing ', '\x00'):
+            with self.subTest(name=repr(name)), mock.patch.object(db, 'connect') as connect:
+                with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
+                    owner.main(['--dbname',name,'--contract','1','--epoch','1','--target','enabled'])
+                self.assertEqual(error.exception.code, 2)
+                connect.assert_not_called()
+
+    def test_invalid_programmatic_target_never_calls_connector(self):
+        from unittest import mock
+        from decklab.db import conn as db
+        for name in (None, '', ' ', '\t\n', 0, ' name', 'name ', '\x00'):
+            with self.subTest(name=repr(name)), mock.patch.object(db, 'connect') as connect:
+                with self.assertRaises(Invalid):
+                    owner.execute(name, contract=1,epoch=1,enabled=True)
+                connect.assert_not_called()
+
+    def test_literal_names_are_not_silently_rewritten(self):
+        for name in ('decklab', 'decklab_test_1', 'MixedCase', 'a-b', 'two words'):
+            self.assertEqual(owner.database_name(name), name)

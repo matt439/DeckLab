@@ -31,10 +31,11 @@ def _locked(cur):
         "where oid in (to_regclass('public.collection_batch'),to_regclass('public.collection_batch_admission'))").fetchall()
     if dict(owners) != {'collection_batch': role, 'collection_batch_admission': role}:
         raise Invalid('Compatible owner-held batch and admission tables must already be installed.')
-    policy = gate.policy(cur)
-    if policy is None or type(policy['enabled']) is not bool:
+    row = cur.execute('select contract,epoch,enabled from public.collection_batch_admission where singleton=1').fetchone()
+    if (row is None or type(row[0]) is not int or row[0] != gate.CONTRACT
+            or type(row[1]) is not int or row[1] < 1 or type(row[2]) is not bool):
         raise Conflict(gate.REFUSED)
-    return policy
+    return dict(zip(('contract', 'epoch', 'enabled'), row))
 
 
 def recover(cur, *, contract, epoch, enabled):
@@ -68,15 +69,40 @@ def transition(cur, *, contract, epoch, enabled):
     return {'outcome': 'transitioned', 'policy': {'contract': contract, 'epoch': epoch + 1, 'enabled': enabled}}
 
 
+def database_name(value):
+    """Require a literal explicit database name; never normalize to connector defaults."""
+    if not isinstance(value, str) or not value.strip() or value != value.strip() or '\x00' in value:
+        raise Invalid('Use an explicit nonblank database name without surrounding whitespace.')
+    return value
+
+
+def execute(dbname, *, contract, epoch, enabled, recovery=False):
+    """Connection-owning boundary: validate target and intent before calling the connector."""
+    name = database_name(dbname)
+    _intent(contract, epoch, enabled)
+    from decklab.db import conn as db
+    with db.connect('owner', dbname=name) as connection, connection.cursor() as cur:
+        actual = cur.execute('select current_database()').fetchone()[0]
+        if actual != name:
+            raise Invalid('Connected database does not match the explicit target; nothing was changed.')
+        endpoint = {'host': connection.info.host, 'port': connection.info.port}
+        answer = (recover if recovery else transition)(cur, contract=contract, epoch=epoch, enabled=enabled)
+    return {'database': actual, 'endpoint': endpoint, **answer}
+
+
 def main(argv=None):
     """Opt-in owner command; required explicit target, no installation or automatic retry."""
     import argparse
     import json
     from decklab.lib import venv
     venv.activate()
-    from decklab.db import conn as db
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--dbname', required=True)
+    def explicit_name(value):
+        try:
+            return database_name(value)
+        except Invalid as error:
+            raise argparse.ArgumentTypeError(str(error)) from error
+    parser.add_argument('--dbname', required=True, type=explicit_name)
     parser.add_argument('--contract', required=True, type=int)
     parser.add_argument('--epoch', required=True, type=int)
     parser.add_argument('--target', required=True, choices=('enabled', 'paused'))
@@ -84,12 +110,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
     intent = dict(contract=args.contract, epoch=args.epoch, enabled=args.target == 'enabled')
     try:
-        _intent(**intent)
-        with db.connect('owner', dbname=args.dbname) as connection, connection.cursor() as cur:
-            cur.execute('select 1')
-            answer = (recover if args.recover else transition)(cur, **intent)
-        # Never announce success before connection context has committed.
-        print(json.dumps({'database': args.dbname, **answer}, sort_keys=True))
+        answer = execute(args.dbname, **intent, recovery=args.recover)
+        # execute returns only after the connection context has committed.
+        print(json.dumps(answer, sort_keys=True))
         return 0 if answer['outcome'] in ('target_confirmed', 'transitioned') else 2
     except (Invalid, Conflict) as error:
         print(str(error))
