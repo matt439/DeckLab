@@ -57,8 +57,8 @@ class ClosureTests(unittest.TestCase):
 
     def test_optional_metadata_is_explicit_and_adapter_denies_lan_chooser(self):
         from decklab.lib.api.common import ApiError
-        self.assertEqual(feature_routes.OPTIONAL_ACCESS, {('GET','collection/batch-receipt'):'collection'})
-        self.assertEqual(feature_routes.declared_access('GET',('collection','batch-receipt')), 'collection')
+        self.assertEqual(feature_routes.OPTIONAL_ACCESS, {('GET','collection/batch-receipt'):'profile'})
+        self.assertEqual(feature_routes.declared_access('GET',('collection','batch-receipt')), 'profile')
         with access.using(None), access.viewing('user1'), mock.patch.object(receipt.private, '_backend') as backend:
             with self.assertRaises(ApiError) as error:
                 receipt.view('home', str(uuid.uuid4()))

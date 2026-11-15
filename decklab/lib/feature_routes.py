@@ -248,7 +248,7 @@ LEGACY_ACCESS = MappingProxyType({
 
 
 # Separate metadata for a default-off, tunnel-only route; never part of ordinary tables.
-OPTIONAL_ACCESS = MappingProxyType({('GET', 'collection/batch-receipt'): 'collection'})
+OPTIONAL_ACCESS = MappingProxyType({('GET', 'collection/batch-receipt'): 'profile'})
 
 
 def declared_access(method, route):
