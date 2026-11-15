@@ -31,6 +31,40 @@ class ClosureTests(unittest.TestCase):
                 receipt.view('home', str(uuid.uuid4()))
             backend.assert_not_called()
 
+    def test_normal_remote_startup_requires_explicit_boolean_config(self):
+        from decklab.lib import server_run
+        verifier = access.Verifier(signed.TEAM, signed.AUD, fetch=signed.Fetcher(),
+                                   clock=signed.Clock(), profiles=lambda: [])
+        with tempfile.TemporaryDirectory(prefix='decklab-receipt-startup-') as web:
+            for configured, expected in ((None,False),(False,False),('true',False),(True,True)):
+                settings = {} if configured is None else {'collection_batch_receipt_recovery':configured}
+                with mock.patch.object(access, 'settings_of', return_value={'port':0,'team':signed.TEAM,'aud':signed.AUD}), \
+                        mock.patch.object(access, 'tunnel_hosts', return_value=['127.0.0.1']), \
+                        mock.patch.object(access, 'Verifier', return_value=verifier), \
+                        mock.patch.object(server_run.tunnel, 'usual_server', return_value=True):
+                    listener = server_run._start_remote(settings, 8642, 8642, web_dir=web)
+                self.assertIsNotNone(listener)
+                try:
+                    self.assertEqual(listener.batch_receipt_recovery, expected)
+                finally:
+                    listener.shutdown()
+                    listener.server_close()
+            home = server_http.make_server('127.0.0.1', 0, web_dir=web, batch_receipt_recovery=True)
+            try:
+                self.assertFalse(home.batch_receipt_recovery)
+            finally:
+                home.server_close()
+
+    def test_optional_metadata_is_explicit_and_adapter_denies_lan_chooser(self):
+        from decklab.lib.api.common import ApiError
+        self.assertEqual(feature_routes.OPTIONAL_ACCESS, {('GET','collection/batch-receipt'):'collection'})
+        self.assertEqual(feature_routes.declared_access('GET',('collection','batch-receipt')), 'collection')
+        with access.using(None), access.viewing('user1'), mock.patch.object(receipt.private, '_backend') as backend:
+            with self.assertRaises(ApiError) as error:
+                receipt.view('home', str(uuid.uuid4()))
+            self.assertEqual(error.exception.status, 403)
+            backend.assert_not_called()
+
 
 class ReceiptRuntimeTests(InventoryFixture, unittest.TestCase):
     def setUp(self):
@@ -38,19 +72,12 @@ class ReceiptRuntimeTests(InventoryFixture, unittest.TestCase):
         from decklab.lib.state.pg import PgStore
         self.enterContext(inventory.use(self.backend))
         self.enterContext(state.use(PgStore(dbname=self.dbname)))
-        original = feature_routes.route_tables
-        def routes():
-            gets, posts = original()
-            return {**gets, ('collection','batch-receipt'): (receipt.view, ('space','batch_id'))}, posts
-        self.enterContext(mock.patch.object(feature_routes, 'route_tables', side_effect=routes))
-        self.enterContext(mock.patch.object(feature_routes, 'ACCESS', {
-            **feature_routes.ACCESS, ('GET','collection/batch-receipt'): 'collection'}))
         profiles = [{'id': name, 'name': name, 'emails':[name+'@example.com'], 'role':'admin',
                      'space':'home', 'plays_as':'user'} for name in ('user1','matt')]
         verifier = access.Verifier(signed.TEAM, signed.AUD, fetch=signed.Fetcher(),
                                    clock=signed.Clock(), profiles=lambda:profiles)
         web = Path(self.enterContext(tempfile.TemporaryDirectory(prefix='decklab-receipt-http-')))
-        self.httpd = server_http.make_server('127.0.0.1', 0, web_dir=web, access=verifier, tunnel_hosts=('127.0.0.1',))
+        self.httpd = server_http.make_server('127.0.0.1', 0, web_dir=web, access=verifier, tunnel_hosts=('127.0.0.1',), batch_receipt_recovery=True)
         self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
         self.thread.start()
         self.addCleanup(self.stop)
@@ -60,8 +87,11 @@ class ReceiptRuntimeTests(InventoryFixture, unittest.TestCase):
         self.httpd.server_close()
         self.thread.join(5)
 
-    def request(self, who='user1', batch_id=None, method='GET'):
+    def request(self, who='user1', batch_id=None, method='GET', invalid=False):
         headers = {'Cf-Access-Jwt-Assertion':signed.token(signed.claims(email=who+'@example.com'))} if who else {}
+        if invalid:
+            headers['Cf-Access-Jwt-Assertion'] = 'invalid-token'
+        headers['X-Deck-Lab-Viewer'] = 'user1'  # never substitutes for tunnel authentication
         with closing(http.client.HTTPConnection('127.0.0.1', self.httpd.server_address[1], timeout=10)) as c:
             c.request(method, ROUTE+'?space=home&batch_id='+(batch_id or self.bid), headers=headers)
             r = c.getresponse()
@@ -130,3 +160,15 @@ class ReceiptRuntimeTests(InventoryFixture, unittest.TestCase):
         code, _, body = self.request()
         self.assertEqual(code, 403, body)
         self.assertFalse({'draft','review','receipt','label','evidence'} & body.keys())
+
+    def test_listener_gate_disabled_enabled_home_and_bad_tokens(self):
+        with mock.patch.object(receipt.private, '_backend', wraps=receipt.private._backend) as backend:
+            with mock.patch.object(self.httpd, 'batch_receipt_recovery', False):
+                self.assertEqual(self.request()[0], 404)
+            self.assertEqual(self.request(who=None)[0], 403)
+            self.assertEqual(self.request(invalid=True)[0], 403)
+            # Even explicitly enabled home listener must not use its trusted chooser here.
+            with mock.patch.object(self.httpd, 'remote', False), mock.patch.object(self.httpd, 'tunnel_hosts', frozenset()):
+                self.assertEqual(self.request(who=None)[0], 404)
+            backend.assert_not_called()
+        self.assertEqual(self.request()[0], 200)

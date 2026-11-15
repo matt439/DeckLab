@@ -44,7 +44,8 @@ def _start_remote(settings, port, default_port, web_dir=None):
     try:
         remote = server_http.make_server("127.0.0.1", setup["port"], web_dir,
                              access=access.Verifier(setup["team"], setup["aud"]),
-                             tunnel_hosts=access.tunnel_hosts(settings))
+                             tunnel_hosts=access.tunnel_hosts(settings),
+                             batch_receipt_recovery=settings.get("collection_batch_receipt_recovery") is True)
     except (OSError, OverflowError) as e:
         server_http.log(f"{_stamp()} ACCESS: can't listen for the tunnel on 127.0.0.1:{setup['port']}: {e}. "
             f"The tunnel isn't started.")

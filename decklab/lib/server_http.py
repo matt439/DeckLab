@@ -1108,7 +1108,7 @@ class Server(ThreadingHTTPServer):
     allow_reuse_address = os.name != "nt"
 
     def __init__(self, address, web_dir=None, allowed_hosts=(), access=None, tunnel_hosts=(), home_networks=None,
-                 script_secret=None):
+                 script_secret=None, batch_receipt_recovery=False):
         """access: the access.Verifier of the tunnel's listener (every request
         then needs a Cloudflare Access login, for one of tunnel_hosts), or None
         for the home listener (which refuses tunnel_hosts with 421, and
@@ -1122,6 +1122,7 @@ class Server(ThreadingHTTPServer):
         self.allowed_hosts = tuple(allowed_hosts)
         self.access = access
         self.remote = access is not None
+        self.batch_receipt_recovery = self.remote and batch_receipt_recovery is True
         self.tunnel_hosts = frozenset(h.strip().lower().rstrip(".") for h in tunnel_hosts)
         super().__init__(address, Handler)
 
@@ -1144,8 +1145,8 @@ class Server(ThreadingHTTPServer):
         log(f"Error with a request from {client_address[0]}:\n{traceback.format_exc()}")
 
 
-def make_server(host, port, web_dir=None, allowed_hosts=(), access=None, tunnel_hosts=(), home_networks=None, script_secret=None):
+def make_server(host, port, web_dir=None, allowed_hosts=(), access=None, tunnel_hosts=(), home_networks=None, script_secret=None, batch_receipt_recovery=False):
     """A Server bound to (host, port); port 0 picks a free one (server.server_address).
     With access (an access.Verifier) it's the tunnel's listener (Server). home_networks:
     the home listener's networks (home_scope.networks; its built-in ones by default)."""
-    return Server((host, port), web_dir, allowed_hosts, access, tunnel_hosts, home_networks, script_secret)
+    return Server((host, port), web_dir, allowed_hosts, access, tunnel_hosts, home_networks, script_secret, batch_receipt_recovery)

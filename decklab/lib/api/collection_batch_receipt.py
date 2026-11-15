@@ -1,4 +1,4 @@
-"""Exact-owned receipt recovery candidate, deliberately unregistered in normal startup.
+"""Exact-owned receipt recovery; default-off, verified tunnel registration only.
 
 Reads only; no completion, creation, admission transition or inventory fallback.
 A missing result is never evidence that an earlier request did not commit.
@@ -9,6 +9,10 @@ from .common import ApiError
 
 
 def view(space=None, batch_id=None):
+    from decklab.lib import access
+    identity = access.current()
+    if not identity or identity.get("remote") is not True:
+        raise ApiError(403, "A verified tunnel sign-in is required.")
     profile, space = private._owner(space)
     if not isinstance(batch_id, str) or not batch_id:
         raise ApiError(400, 'An exact saved batch ID is required.', code='batch_id_required')
