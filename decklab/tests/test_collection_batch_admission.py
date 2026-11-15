@@ -184,3 +184,22 @@ class AdmissionTests(InventoryFixture, unittest.TestCase):
             'uploads':[('ordinary CSV','name,set,collector_number,finish,quantity\nLlanowar Elves,fdn,227,nonfoil,2\n')]}), actor, 'Ordinary CSV')
         self.assertEqual(self.counts()[:3], (3, 1, 1))
         self.assertEqual(self.call(batches.read), row)
+    def test_reopened_epoch_requires_new_review_not_just_fresh_capability(self):
+        first = self.install_admission()
+        with self.connection() as c, c.cursor() as cur:
+            cur.execute('select 1')
+            old = batches.review(cur, self.profile, self.space, self.bid, 1, admission=first)
+        self.assertEqual(self.transition_admission(False), {'contract': 1, 'epoch': 2})
+        fresh = self.transition_admission(True)
+        self.assertEqual(fresh, {'contract': 1, 'epoch': 3})
+        before, row = self.counts(), self.call(batches.read)
+        actor = Actor('user1', 'Fixture user', 'home')
+        with self.assertRaises(Conflict):
+            self.backend.apply(BatchImport('home', self.bid, old, fresh), actor, 'Old review with new capability')
+        self.assertEqual(self.counts(), before)
+        self.assertEqual(self.call(batches.read), row)
+        with self.connection() as c, c.cursor() as cur:
+            cur.execute('select 1')
+            renewed = batches.review(cur, self.profile, self.space, self.bid, 1, admission=fresh)
+        self.backend.apply(BatchImport('home', self.bid, renewed, fresh), actor, 'Freshly reviewed intent')
+        self.assertEqual(self.counts()[:3], (3, 1, 1))
