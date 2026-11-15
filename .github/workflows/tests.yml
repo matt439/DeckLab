@@ -11,7 +11,7 @@
 #   service container in the job's own VM, never the household's database; 2 jobs on Linux.
 # - linux-services: the nightly timer and the server's service under a real systemd user
 #   manager (scripts/linux_services_check.sh).
-# Standard GitHub-hosted runners are free on a public repo; the 11 jobs count against the
+# Standard GitHub-hosted runners are free on a public repo; the 12 test jobs count against the
 # account's 20 concurrent jobs. Real-Forge games still don't run here.
 name: tests
 
@@ -149,6 +149,31 @@ jobs:
       - name: Database integration tests
         run: python scripts/test_db.py ${{ matrix.index }} 2 --require-db --hang-after 900
 
+  collection-batch-proof:
+    needs: changes
+    if: needs.changes.outputs.run_tests == 'true'
+    name: Isolated collection batch durability
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - name: Fixture Python dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -q -r decklab/requirements.txt
+      - name: PostgreSQL 18 binaries for an independent temporary cluster
+        run: |
+          sudo apt-get install -y -q postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q --no-install-recommends postgresql-18
+      - name: Staged schema, atomic inventory receipts and removal recovery
+        # No config.json, setup command, external credentials or service-container connection.
+        # The runner initializes/stops its own loopback cluster and migrates fixture databases.
+        run: .venv/bin/python scripts/test_collection_batch_pg.py --pg-bin /usr/lib/postgresql/18/bin
+
   linux-services:
     needs: changes
     if: needs.changes.outputs.run_tests == 'true'
@@ -179,7 +204,7 @@ jobs:
 
   # Keep this required check present for docs-only PRs, without starting the shards.
   tests:
-    needs: [changes, shard, linux-services, database]
+    needs: [changes, shard, linux-services, database, collection-batch-proof]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -191,15 +216,18 @@ jobs:
           SHARD_RESULT: ${{ needs.shard.result }}
           SERVICES_RESULT: ${{ needs.linux-services.result }}
           DATABASE_RESULT: ${{ needs.database.result }}
+          BATCH_PROOF_RESULT: ${{ needs.collection-batch-proof.result }}
         run: |
           test "$CHANGES_RESULT" = success
           if [ "$RUN_TESTS" = false ]; then
             test "$SHARD_RESULT" = skipped
             test "$SERVICES_RESULT" = skipped
             test "$DATABASE_RESULT" = skipped
+            test "$BATCH_PROOF_RESULT" = skipped
           else
             test "$RUN_TESTS" = true
             test "$SHARD_RESULT" = success
             test "$SERVICES_RESULT" = success
             test "$DATABASE_RESULT" = success
+            test "$BATCH_PROOF_RESULT" = success
           fi

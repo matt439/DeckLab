@@ -24,12 +24,13 @@ LOCK_TABLES = tuple(sorted({
     "public.product", "public.product_item", "public.inventory_revision", "public.decks_revision",
     "ops.visit_day", "ops.visit_page", "public.space_departure", "public.deck_draft",
     "public.new_deck_draft", "public.dice_counter", "public.card_loan", "public.space_storage",
+    "public.collection_batch",
 }))
 # Locked only once their migration is applied (deck_draft: 0018, new_deck_draft: 0019, dice_counter:
 # 0020, card_loan: 0024, space_storage: 0028); a database without one has no rows.
 OPTIONAL_TABLES = frozenset({"public.deck_draft", "public.new_deck_draft", "public.dice_counter", "public.card_loan",
-                             "public.space_storage"})
-DELETE_ORDER = ("ops.visit_page", "ops.visit_day", "deck_draft", "new_deck_draft", "profile_email", "collection_import_content",
+                             "public.space_storage", "public.collection_batch"})
+DELETE_ORDER = ("ops.visit_page", "ops.visit_day", "deck_draft", "new_deck_draft", "collection_batch", "profile_email", "collection_import_content",
                 "collection_import", "card_loan", "collection_card", "token_card", "dice_counter", "deck_line", "deck_text",
                 "deck_revision", "deck_alias", "deck", "wishlist_entry", "profile_setting",
                 "visibility", "space_storage", "profile", "space")
