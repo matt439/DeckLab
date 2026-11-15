@@ -214,12 +214,12 @@ class Review {
     fs.writeFileSync(this.config.caseControl, fixtureCase, 'utf8');
   }
 
-  async context({ width, height, coarse = false, theme = 'light' }) {
+  async context({ width, height, coarse = false, theme = 'light', acceptDownloads = false }) {
     this.checkCancelled();
     const context = await this.browser.newContext({
       viewport: { width, height }, deviceScaleFactor: 2,
       isMobile: coarse, hasTouch: coarse, colorScheme: theme,
-      reducedMotion: 'reduce', acceptDownloads: false, serviceWorkers: 'block',
+      reducedMotion: 'reduce', acceptDownloads: acceptDownloads === true, serviceWorkers: 'block',
       locale: 'en-AU', timezoneId: 'Australia/Brisbane',
     });
     return this.guardContext(context);
