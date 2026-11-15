@@ -847,10 +847,14 @@ function playPlanForm(data, deckId, entry = null, preferred = {}) {
     : playListSelect(data.lists, old ? { id: old.opponent.id, version: old.opponent.version } : preferred.opponent || data.lists[1]);
   const notes = el("textarea", { maxlength: 2000, rows: 3 }, old ? old.notes : "");
   const moves = el("div", { class: "play-sides" });
+  const listContext = el("p", { class: "sub", "aria-live": "polite" });
   let controls = [];
   let generation = 0;
   const redraw = () => {
     controls = []; clear(moves);
+    listContext.textContent = own.get().version === "owned"
+      ? "Play-now list: counts below are in this saved list, not a fresh collection check."
+      : "Planned list: counts below are in the plan, not necessarily cards you own. Choose Play-now to plan with that saved list.";
     for (const [direction, section] of [["out", "Deck"], ["in", "Sideboard"]]) {
       const box = el("fieldset", { class: "play-side" }, el("legend", { text: direction === "in" ? "In from sideboard" : "Out of main deck" }));
       const counts = new Map();
@@ -860,7 +864,7 @@ function playPlanForm(data, deckId, entry = null, preferred = {}) {
         const input = el("input", { type: "number", min: 0, max: count, step: 1, value: previous ? Math.min(previous.qty, count) : 0,
           required: true, "aria-label": `${name}: copies ${direction}` });
         controls.push({ direction, name, input });
-        box.append(el("label", { class: "play-move" }, el("span", { text: `${name} (${count} available)` }), input));
+        box.append(el("label", { class: "play-move" }, el("span", { text: `${name} (${count} in this list)` }), input));
       }
       if (!counts.size) {
         const deck = own.get();
@@ -890,7 +894,7 @@ function playPlanForm(data, deckId, entry = null, preferred = {}) {
     finally { if (submit.isConnected) unbusy(submit); }
   } }, el("p", { class: "sub", text: "Choose equal numbers in and out. Saving keeps a separate plan and the resulting list; your saved deck is unchanged." }),
     playField("Your deck and list", own.select), playField("Opponent's deck and list", opposing.select),
-    moves, playField("When and why to use the plan", notes), error, submit);
+    listContext, moves, playField("When and why to use the plan", notes), error, submit);
   form.addEventListener("input", () => generation++);
   form.addEventListener("change", () => generation++);
   sheet.body.append(form);
