@@ -1,5 +1,13 @@
 # Deck Lab: history
 
+## Sideboard plan list counts, not ownership (2026-11-15)
+
+The sideboard planner now labels quantities as copies in the selected list rather than
+"available" cards. Nearby guidance distinguishes Planned from the saved Play-now list and
+does not claim a fresh collection check. Switching lists updates both the guidance and the
+cards; saving still creates a separate plan without editing the deck or inventory.
+
+
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
 ## Scanner count overflow refusal (2026-11-15)
