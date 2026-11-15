@@ -7,7 +7,7 @@ const {run} = require('./common.js');
 run('first-use', async review => {
   review.report.results = [];
   review.report.scope = 'Synthetic empty collection and static terminology/import guidance. No actual profiles, cards, imports or device acceptance.';
-  for (const mode of ['help','empty','import']) for (const theme of ['light','dark'])
+  for (const mode of ['help','empty','import','pile']) for (const theme of ['light','dark'])
     for (const width of (review.options.smoke ? [393] : [393,820,1440])) {
       const spec = {mode,theme,width,height:900,coarse:width<1000};
       const result = {spec,status:'failed',page_errors:[],http_errors:[],console_errors:[]};
@@ -28,6 +28,35 @@ run('first-use', async review => {
           await page.getByRole('button',{name:'Add one card',exact:true}).waitFor();
           for(const name of ['Import cards','Add a precon','Scan cards'])
             assert.equal(await page.getByRole('button',{name,exact:true}).count(),1);
+          if(mode==='pile') {
+            await page.getByRole('button',{name:'Start with physical cards',exact:true}).click();
+            let sheet=page.locator('dialog[open]').last();
+            await sheet.getByRole('button',{name:'Enter a pile of loose cards',exact:true}).waitFor();
+            assert((await sheet.innerText()).includes("You don't need a spreadsheet"));
+            assert.equal(await sheet.getByRole('button',{name:'Add an unchanged precon',exact:true}).count(),1);
+            await page.screenshot({path:path.join(review.out,`guide-${width}-${theme}.png`),fullPage:false});
+            await sheet.getByRole('button',{name:'Enter a pile of loose cards',exact:true}).click();
+            sheet=page.locator('dialog[open]').last();
+            await sheet.getByRole('button',{name:'Find its printings',exact:true}).waitFor();
+            await page.route('**/api/printings?*', route=>route.fulfill({status:200,json:{
+              name:'Llanowar Elves',printings:[{name:'Llanowar Elves',set:'fdn',collector_number:'227',set_name:'Foundations',finish:'nonfoil',finishes:['nonfoil'],owned:0}]}}));
+            // Render pending controls using synthetic cards, without OCR or inventory writes.
+            await page.evaluate(()=>{
+              const cv=colView({space:'home',editable:true,sha256:'fixture'},'home',routeToken,'find');
+              colCloseSheets(); const ctx=openScanSheet(cv);
+              addScanCard(ctx,{name:'Llanowar Elves',set:'fdn',collector_number:'227',finish:'nonfoil',finishes:['nonfoil']});
+            });
+            sheet=page.locator('dialog[open]').last();
+            const download=page.waitForEvent('download');
+            await sheet.getByRole('button',{name:'Download pending batch',exact:true}).click();
+            const file=await download;
+            assert(file.suggestedFilename().startsWith('pending-collection-'));
+            assert((await sheet.innerText()).includes('Nothing was added now'));
+            await sheet.getByRole('button',{name:'Cancel',exact:true}).click();
+            await page.getByRole('button',{name:'Start with physical cards',exact:true}).click();
+            await page.locator('dialog[open]').last().locator('[data-action=cancel]').click();
+            assert.equal(await page.locator('dialog[open]').count(),0);
+          }
           if(mode==='import') {
             await page.getByRole('button',{name:'Import cards',exact:true}).click();
             const sheet = page.locator('dialog[open]').last();

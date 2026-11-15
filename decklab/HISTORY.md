@@ -6,6 +6,10 @@ What each milestone and feature built, the decisions made along the way, and the
 
 The existing scan editor refuses quantity overflow instead of clipping. Counts remain limited to 999 per group; invalid numeric edits keep the previous value, metadata/printing joins preflight their total, and failed alternative-printing replacement retains the original card. A new photo that hits the limit remains unresolved rather than disappearing. This is a standalone production fix, with no durable batch persistence or database changes.
 
+## Physical collection first steps (2026-11-15)
+
+Collection now offers a physical-pile starting guide before file imports, preserving the unchanged-precon fast path. Small batches use existing manual/scan printing selection and import review. Pending confirmed cards can be explicitly downloaded as CSV before closing and imported later; no photos or uncertain guesses are exported, and the UI warns against adding the same downloaded batch twice. This is a portable checkpoint, not automatic draft persistence or duplicate-proof resumability. No live inventory was used.
+
 ## Task-first UI priorities (2026-11-15)
 
 Storage setup leads with name, capacity and sections, keeping optional filing details discoverable. Preview leads with overflow, unplaced cards and location reassignment before paired container counts; unavailable counts never imply no impact. Renaming refreshes its visible labels in place. Build decks explains storage ordering without a hover tooltip and shows remaining copies per container group. Shopping brings overflowing containers and excluded deliveries/products ahead of its detailed estimate. Commander night foregrounds readiness, bracket and packing warnings, with bracket details in an optional disclosure. Public-switch confirmation repeats its audience and makes a failed preview explicit beside a clearly labelled confirmation. These are presentation changes, not inventory, allocation, permission or publication policy changes.

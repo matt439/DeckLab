@@ -23,6 +23,32 @@ const COL_SCAN_CHOICES = 8;             // printings offered at most for one car
 const COL_SCAN_UNSURE_MAX = 50;         // bounded proposal metadata only; never photo bytes
 const COL_SCAN_OFF = "Photos can't be read on this server, so type each card's name instead.";
 
+/** A physical-pile first route: choices open existing guarded review flows, never write inventory. */
+function openCollectionStartSheet(cv) {
+  if (!colActive(cv) || cv.busy || !cv.editable || cv.unsupported) return null;
+  const sheet = colOpenSheet("Start recording your collection", {wide: true});
+  const choose = (text, help, open) => el("li", {},
+    el("button", {type: "button", class: "btn", text, onclick: event => {
+      if (sheet.closed || !colActive(cv) || cv.busy || !cv.editable || !event.currentTarget.isConnected) return;
+      sheet.close(); open(cv);
+    }}), el("p", {class: "sub", text: help}));
+  sheet.body.append(
+    el("p", {text: "You don't need a spreadsheet, and you don't need to record everything today. Start with one deck or a small pile of loose cards."}),
+    el("ul", {class: "lib-start-ways"},
+      choose("Enter a pile of loose cards", scanAvailable(cv.data)
+        ? "Photograph one card at a time or type its name. Check the printings, then review the batch together."
+        : "Type names and choose printings. Photo reading isn't available on this server, but manual entry works.", openScanSheet),
+      choose("Add an unchanged precon", "Use its published list instead of entering every card. Only use this shortcut when the physical cards match that list; check the preview first.", openPreconSheet),
+      choose("Import a list or saved batch", "Use a collection export, or a pending batch downloaded before you added it. Preview it before saving; don't import a batch you already added.", openImportSheet)),
+    el("ol", {},
+      el("li", {text: "Keep unrecorded cards in one pile. Put cards you have checked in a separate pile so you don't count them twice."}),
+      el("li", {text: "Choose the printing using the set code and collector number at the bottom of the card. Enter the quantity once for identical copies. Leave condition or language blank when unsure."}),
+      el("li", {text: "Review and add each small batch before starting the next. Adding a printing already recorded increases its quantity; it does not replace the count."})),
+    el("p", {class: "sub", text: "The pending scan list stays only in its open sheet. Download the batch before closing if you need to pause. Photos and unresolved guesses are not included. Plain basic lands are left out of collection imports."}));
+  sheetActions(sheet, [{text: "Close", value: "cancel", onclick: () => sheet.close()}]);
+  return sheet;
+}
+
 /** Whether the server can read photos: false only when a view says so (an older server's says nothing). */
 function scanAvailable(data) {
   return !(data && data.scan && data.scan.available === false);
@@ -63,7 +89,8 @@ function openScanSheet(cv, pending = []) {
     el("div", { class: "col-scan-typed" },
       el("label", { class: "field", for: ctx.name.id }, el("span", { text: ctx.reads ? "Or type a card's name" : "Type a card's name" }), ctx.name),
       el("button", { type: "button", class: "btn", text: "Find its printings", onclick: () => findScanName(ctx) })),
-    ctx.checks, el("h3", { text: "To add" }), ctx.list);
+    ctx.checks, el("h3", { text: "To add" }),
+    el("p", {class: "sub", text: "This pending batch is not saved when you close. Review and add small batches, or download this batch to import later. Do not import the download after adding the same cards here."}), ctx.list);
   drawScanPending(ctx);
   return ctx;
 }
@@ -483,6 +510,8 @@ function drawScanPending(ctx) {
 function drawScanFoot(ctx) {
   const cards = ctx.pending.reduce((n, c) => n + c.quantity, 0);
   sheetActions(ctx.sheet, [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.close() },
+    cards ? {text: "Download pending batch", value: "download", disabled: ctx.busy || ctx.picking || ctx.unsure.length > 0,
+      onclick: event => { if (colScanControlHere(ctx, event.currentTarget)) downloadScanBatch(ctx); }} : null,
     cards || ctx.unsure.length ? { text: cards ? `Review ${plural(cards, "card")}` : "Review", kind: "primary", value: "review",
       disabled: ctx.busy || ctx.picking, onclick: event => {
         if (colScanControlHere(ctx, event.currentTarget) && ctx.sheet.foot.contains(event.currentTarget)) reviewScan(ctx);
@@ -529,4 +558,25 @@ function colScanBack(importing) {
     importing.sheet.close();
     openScanSheet(importing.cv, importing.scanned);
   } };
+}
+
+/** Explicit portable checkpoint, using the existing import format; no photos, OCR text or other space's data. */
+function downloadScanBatch(ctx) {
+  if (!colScanHere(ctx) || !ctx.cv.editable || ctx.busy || ctx.picking || !ctx.pending.length) return;
+  if (ctx.unsure.length) {
+    colScanSay(ctx, "warn", "Resolve or skip the photos in Check these before downloading. Nothing was downloaded.");
+    return;
+  }
+  let url;
+  try {
+    url = URL.createObjectURL(new Blob([colScanCsv(ctx.pending)], {type: "text/csv;charset=utf-8"}));
+    const link = el("a", {href: url, download: `pending-collection-${new Date().toISOString().slice(0, 10)}.csv`});
+    document.body.append(link);
+    try { link.click(); } finally { link.remove(); }
+    colScanSay(ctx, "info", "Download requested. Check that the CSV is saved before closing. Later, use Import cards in this same collection and review it. Nothing was added now. Don't import it if you add this batch here.");
+  } catch (_) {
+    colScanSay(ctx, "warn", "The batch couldn't be downloaded. Keep this sheet open and review the cards, or try downloading again.");
+  } finally {
+    if (url) setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 }
