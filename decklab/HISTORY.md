@@ -2,6 +2,10 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Scanner count overflow refusal (2026-11-15)
+
+The existing scan editor refuses quantity overflow instead of clipping. Counts remain limited to 999 per group; invalid numeric edits keep the previous value, metadata/printing joins preflight their total, and failed alternative-printing replacement retains the original card. A new photo that hits the limit remains unresolved rather than disappearing. This is a standalone production fix, with no durable batch persistence or database changes.
+
 ## Task-first UI priorities (2026-11-15)
 
 Storage setup leads with name, capacity and sections, keeping optional filing details discoverable. Preview leads with overflow, unplaced cards and location reassignment before paired container counts; unavailable counts never imply no impact. Renaming refreshes its visible labels in place. Build decks explains storage ordering without a hover tooltip and shows remaining copies per container group. Shopping brings overflowing containers and excluded deliveries/products ahead of its detailed estimate. Commander night foregrounds readiness, bracket and packing warnings, with bracket details in an optional disclosure. Public-switch confirmation repeats its audience and makes a failed preview explicit beside a clearly labelled confirmation. These are presentation changes, not inventory, allocation, permission or publication policy changes.
