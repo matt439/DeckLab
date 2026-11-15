@@ -25,7 +25,10 @@ function commanderLineupSection() {
   body.append(show);
   return el("section", { class: "play-section commander-lineup", "aria-labelledby": "commander-lineup-title" },
     el("h2", { id: "commander-lineup-title", text: "Commander night line-up" }),
-    el("p", { class: "sub", text: "Home's Commander decks against the recorded night's bracket aim. The counted minimum covers only what the bracket rules name (Game Changers, mass land denial, extra turns and two-card combos), never a deck's real power: talk it over before the game." }),
+    el("p", { text: "A counted minimum, not a power rating. Talk it over before the game." }),
+    el("details", { class: "commander-lineup-help" },
+      el("summary", { text: "What the bracket check covers" }),
+      el("p", { class: "sub", text: "Home's Commander decks against the recorded night's bracket aim. The counted minimum covers only what the bracket rules name: Game Changers, mass land denial, extra turns and two-card combos." })),
     body);
 }
 
@@ -87,17 +90,17 @@ function commanderLineupRow(row, group) {
   else if (row.minimum_so_far != null) facts.push(`At least Bracket ${row.minimum_so_far} so far`);
   facts.push(row.target_bracket ? `Target Bracket ${row.target_bracket}` : "No target bracket");
   if (row.built && row.version === "owned") facts.push("Judged on its Play-now list");
-  const lines = [el("p", { class: "sub", text: facts.join(" · ") })];
+  const lines = [el("p", { class: "commander-lineup-readiness", text: facts.join(" · ") })];
+  if (Array.isArray(row.stand_ins)) lines.push(el("p", { class: row.stand_ins.length ? "note note-warn commander-lineup-standins" : "sub commander-lineup-standins", text: row.stand_ins.length
+    ? `Stand-ins: ${row.stand_ins.map(commanderLineupStandIn).join("; ")}` : "No stand-ins" }));
+  if ("box_checked_on" in row) lines.push(el("p", { class: row.box_checked_on ? "sub commander-lineup-box" : "note note-warn commander-lineup-box",
+    text: row.box_checked_on ? `Box checked ${row.box_checked_on}` : "Box not checked yet" }));
   if (group === "above" && row.deciding.length) {
     lines.push(el("ul", { class: "commander-lineup-deciding" }, row.deciding.map((d) =>
       el("li", {}, el("strong", { text: `${d.reason}: ` }), d.cards.join(", ")))));
   }
-  if (row.unknown_reason) lines.push(el("p", { class: "commander-lineup-why", text: row.unknown_reason }));
+  if (row.unknown_reason) lines.push(el("p", { class: "note note-warn commander-lineup-why", text: row.unknown_reason }));
   if (row.below_range) lines.push(el("p", { class: "sub", text: "Its counted minimum is below the venue's published range; check that it keeps up with the table." }));
-  if (Array.isArray(row.stand_ins)) lines.push(el("p", { class: "sub commander-lineup-standins", text: row.stand_ins.length
-    ? `Stand-ins: ${row.stand_ins.map(commanderLineupStandIn).join("; ")}` : "No stand-ins" }));
-  if ("box_checked_on" in row) lines.push(el("p", { class: "sub commander-lineup-box",
-    text: row.box_checked_on ? `Box checked ${row.box_checked_on}` : "Box not checked yet" }));
   if (row.played_known) lines.push(el("p", { class: "sub commander-lineup-played", text: row.last_played
     ? `Last played ${row.last_played}${row.days_since_played > 0 ? ` (${plural(row.days_since_played, "day")} ago)` : row.days_since_played === 0 ? " (today)" : ""}`
     : "Not played at home yet" }));

@@ -45,10 +45,28 @@ async function confirmPublic(row, label) {
     data = null;
   }
   const words = VISIBILITY_WORDS[row.thing];
-  const choice = await ask(`Make ${label.toLowerCase()} Public?`, [
-    "Everyone signed in would see, read-only:", ...visibilityPreviewLines(row.thing, data),
-    words ? words[1] : "", "Nothing changes until you confirm. Making it Private again is one tap."].filter(Boolean),
-  [{ text: "Keep private", value: "cancel" }, { text: "Make public", kind: "primary", value: "confirm" }]);
+  const previewKnown = !!(data && data.available && data.counts);
+  const choice = await new Promise((resolve) => {
+    const sheet = openSheet(`Make ${label.toLowerCase()} Public?`, {
+      onClose: (result) => resolve(result == null ? null : result),
+    });
+    sheet.body.append(el("p", {}, el("strong", {
+      text: "Everyone signed in, including members, and visitors on the home network would see this read-only. Nothing becomes public on the internet.",
+    })));
+    if (previewKnown) sheet.body.append(...visibilityPreviewLines(row.thing, data).map((text) => el("p", { text })));
+    if (words) sheet.body.append(el("p", { text: words[1] }));
+    sheet.body.append(el("p", { text: "Nothing changes until you confirm. Making it Private again is one tap." }));
+    if (!previewKnown) sheet.body.append(el("div", { class: "note note-warn", role: "alert" },
+      el("strong", { text: "Preview unavailable. " }),
+      ...visibilityPreviewLines(row.thing, data).map((text) => el("p", { text }))));
+    sheetActions(sheet, [
+      { text: "Keep private", value: "cancel", onclick: () => sheet.close("cancel") },
+      { text: previewKnown ? "Make public" : "Make public without preview", kind: "primary", value: "confirm",
+        onclick: () => sheet.close("confirm") },
+    ]);
+    const first = sheet.foot.querySelector(".btn-primary");
+    if (first) first.focus();
+  });
   return choice === "confirm";
 }
 

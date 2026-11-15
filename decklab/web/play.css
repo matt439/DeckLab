@@ -155,3 +155,10 @@ dialog.pod-life-counter::backdrop { background: var(--page); }
 @media (min-width: 600px) {
   .pod-life-main .life-total { font-size: var(--fs-2xl); }
 }
+
+/* Readiness is the line-up decision; historical details stay secondary. */
+.commander-lineup-readiness { font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
+.commander-lineup-help > summary { min-height: var(--tap); display: flex; align-items: center; cursor: pointer; }
+.commander-lineup-help:not([open]) > :not(summary) { display: none; }
+.commander-lineup-help > p { margin-top: var(--s-2); }
+.commander-lineup-deck .note { margin: 0; }
