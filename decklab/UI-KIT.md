@@ -13,6 +13,14 @@ The scripts share one global scope, so a name may be defined only once across al
 
 The page runs under a Content-Security-Policy (E11-S63; `PAGE_POLICY` in `lib/server_http.py`): scripts and styles only from Deck Lab's own files. So never an inline `<script>` or `<style>`, an `on…=""` or `style=""` attribute, `innerHTML` or `setAttribute("style", …)`: the browser drops them silently. Build nodes with `el()`, whose `style` prop goes through the element's style object (allowed), or set `node.style` yourself; prefer a class, with a custom property for a computed size. `theme-boot.js` is the one script that isn't deferred (the theme, before the first paint) and shares nothing with the others. `test_web.test_the_page_fits_its_content_security_policy` holds all of this.
 
+`forge-pods.js` follows `matchups-overview.js`; its stylesheet follows
+`matchups.css`. Testing links to the separate four-player chooser and saved
+results at `#/forge-pods`. Check prepares a review; only Start submits games.
+Four independent win-share figures use the full percentage range, with a 25%
+equal-share reference and explicit draw/clock-stop denominators. Page/profile,
+route, connected-control and request guards protect late replies and actions.
+The shared activity pill treats pods as coordinators, never two-seat scores.
+
 Library title, colour-identity and archetype filters use only its already authorized
 summaries. Native Includes choices require every chosen WUBRG colour; known `[]`
 is colourless and null/malformed/unreadable stays unknown. Archetypes match whole

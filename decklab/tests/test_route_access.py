@@ -120,6 +120,7 @@ class RouteAccessTests(PermissionTestCase):
             view=mock.Mock(side_effect=AssertionError("Hidden field reached its backend")))
         self.box.forge.lists = SimpleNamespace(one_snapshot=inventory.pinned)
         self.box.forge.group = SimpleNamespace(MAX_OPPONENTS=12)
+        self.box.forge.pods = SimpleNamespace(results=lambda: [], load=lambda key: None)
         from decklab.tests.test_gauntlet_api import FakeGauntlet
         self.box.forge.gauntlet = FakeGauntlet(self.box.forge, self.box.data / "no-gauntlet-results")
         self.box.forge.gauntlet.built = False
@@ -230,6 +231,14 @@ class RouteAccessTests(PermissionTestCase):
             if event == "call" and frame.f_code in watched:
                 observed.append(frame.f_code.co_name)
         body = {"profile": who, "space": "user3", "id": DECK}
+        if route in (("forge", "pods", "plan"), ("forge", "pods", "run")):
+            # Pods validate their bounded four-seat envelope before inspecting
+            # visibility. Supply that envelope so this remains an access probe,
+            # with the hidden first seat refused before format or deck loading.
+            body = {"profile": who, "decks": [{"id": deck_id, "version": "target"} for deck_id in
+                    [DECK, *(f"user3/commander/private-pod-{index}" for index in range(3))]], "games": 16}
+            if route[-1] == "run":
+                body["expected_key"] = "b" * 64
         if access_class == "profile" and who is not None:
             body["profile"] = "user3"     # another profile's state, not the caller's own notices
         if route[:1] == ("play",):

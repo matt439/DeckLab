@@ -11,12 +11,14 @@ from decklab.lib import config, pool
 from decklab.lib.api import card_combos, card_details
 from decklab.lib.api import deck_cuts, edhrec
 from decklab.lib.api import bracket_fixes
+from decklab.lib.api import forge_pods
 from decklab.lib.api import (accessories, activity, activity_undo, assembly, assembly_completion, assembly_ticks, collection, compare, comparison_lists, cover, editor, history, play_records,
                              precon_coverage, precon_trial, receipts, shopping, shopping_order_changes, shopping_orders, shopping_queue, tokens)
 from decklab.tests.test_server import ServerTestCase, WRITE
 
 
 GETS = (
+    ("/api/forge/pods", forge_pods, "pods_view", "key=" + "a" * 64, {"key": "a" * 64}),
     ("/api/deck/edhrec", edhrec, "edhrec_view", "id=commander%2Felf-commander&view=cuts", {"deck_id": "commander/elf-commander", "view": "cuts"}),
     ("/api/cards/lookup", card_details, "card_view", "name=Llanowar+Elves&set=fdn&number=227", {"name": "Llanowar Elves", "set": "fdn", "number": "227"}),
     ("/api/cards/combos", card_combos, "card_combos", "name=Rhystic+Study", {"name": "Rhystic Study"}),
@@ -51,6 +53,9 @@ GETS = (
      {"file": "TestDinos_TST", "space": "user2"}),
 )
 POSTS = (
+    ("/api/forge/pods/plan", forge_pods, "plan_pods"),
+    ("/api/forge/pods/run", forge_pods, "run_pods"),
+    ("/api/forge/pods/stop", forge_pods, "stop_pods"),
     ("/api/deck/bracket-replacements", bracket_fixes, "replacements"),
     ("/api/deck/cuts", deck_cuts, "preview_cuts"),
     ("/api/activity/undo", activity_undo, "apply_undo"),

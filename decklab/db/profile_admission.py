@@ -145,7 +145,7 @@ def _forge_files(claim, member_id):
     root = claim.root
     if not root.exists():
         return
-    for folder, field in ((root, False), (root / "paired", False),
+    for folder, field in ((root, False), (root / "paired", False), (root / "pods", False),
                           (root / "paired" / "tests", False), (root / "field", True)):
         lifecycle._ordinary(folder)
         for path in sorted(folder.glob("*.json")):

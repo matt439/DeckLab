@@ -10,6 +10,31 @@ cards; saving still creates a separate plan without editing the deck or inventor
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Four-player Commander pods in source (2026-11-16; E9-S11, E9-S21, E9-S22)
+
+Testing's **Four-player pods** opens a separate chooser and saved-result page.
+Check reviews four distinct visible Commander decks with declared target
+brackets at most one apart, then Start submits 16, 32, 64 or 128 games. The
+normal simulations setting supplies the reason beside Start, and the shared
+Forge activity supplies progress and permitted Stop controls.
+
+Cold processes rotate seats between four-game batches under the shared worker
+budget. Isolated pod checkpoints bind the tested lists and actual plain/default
+engine, preserve finished games on Stop, and use fresh seeds when completing a
+partial batch. Explicit run recovery checks all four participants again. Saved
+results show per-deck win shares with 95% Wilson ranges, draw/clock-stop and
+failure counts, partial completion, and the statistics-only caveat. Draws count
+in the denominator; clock stops do not. Pods enter no 1v1 result, rating, field,
+gauntlet, card-stat total or physical Game-log record.
+
+Every read checks all four decks, including queued work and changed Public
+visibility; cross-space actors are masked. The usual results-root lifecycle
+guard and member export/removal/admission checks cover the new pod subfolder.
+Validation uses disposable fixtures and intercepted browser requests, with no
+household data, real Forge games or server deployment. E9-S11 remains partial
+for a real-engine check after FG#2 on an idle PC with Matt's OK, followed by
+phone/iPad acceptance; E9-S21 and E9-S22 are built.
+
 ## Scanner count overflow refusal (2026-11-15)
 
 The existing scan editor refuses quantity overflow instead of clipping. Counts remain limited to 999 per group; invalid numeric edits keep the previous value, metadata/printing joins preflight their total, and failed alternative-printing replacement retains the original card. A new photo that hits the limit remains unresolved rather than disappearing. This is a standalone production fix, with no durable batch persistence or database changes.

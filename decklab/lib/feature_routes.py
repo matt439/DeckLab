@@ -17,6 +17,10 @@ wait or play, as the field's do.
 from types import MappingProxyType
 
 ACCESS = MappingProxyType({
+    ('GET', 'forge/pods'): 'viewer-filtered',
+    ('POST', 'forge/pods/plan'): 'deck',
+    ('POST', 'forge/pods/run'): 'deck-run',
+    ('POST', 'forge/pods/stop'): 'run-stop',
     ('GET', 'forge/unfinished'): 'profile',
     ('POST', 'forge/resume'): 'profile',
     ('POST', 'forge/dismiss'): 'profile',
@@ -418,6 +422,7 @@ def _crosscheck_stop(body):
 
 
 GAUNTLET_ROUTES = {("gauntlet",), ("gauntlet", "run"), ("gauntlet", "stop"),
+                   ("forge", "pods"), ("forge", "pods", "run"), ("forge", "pods", "stop"),
                    ("field", "group"), ("field", "group", "run"), ("field", "group", "stop"),
                    ("crosscheck",), ("crosscheck", "run"), ("crosscheck", "stop")}
 
@@ -450,8 +455,10 @@ def route_tables():
     from decklab.lib.api import product_kit_undo
     from decklab.lib.api import commander_lineup
     from decklab.lib.api import official_changes
+    from decklab.lib.api import forge_pods
 
     gets = {
+        ("forge", "pods"): (forge_pods.pods_view, ("key",)),
         ("activity", "product-kit-undo"): (product_kit_undo.view, ("id",)),
         ("forge", "unfinished"): (run_recovery.view, ()),
         ("deck", "development"): (development.development_view, ("id", "version")),
@@ -616,6 +623,9 @@ def route_tables():
         ("field", "group", "stop"): (_group_stop, MAX_BODY),  # run.stop, as the field's
         ("crosscheck", "run"): (_crosscheck_run, MAX_BODY),
         ("crosscheck", "stop"): (_crosscheck_stop, MAX_BODY),
+        ("forge", "pods", "plan"): (forge_pods.plan_pods, MAX_BODY),
+        ("forge", "pods", "run"): (forge_pods.run_pods, MAX_BODY),
+        ("forge", "pods", "stop"): (forge_pods.stop_pods, MAX_BODY),
         ("forge", "resume"): (run_recovery.resume, run_recovery.MAX_BODY),
         ("forge", "dismiss"): (run_recovery.dismiss, run_recovery.MAX_BODY),
         ("errors", "report"): (error_reports.report, error_reports.MAX_BODY),  # bounded operational metadata only

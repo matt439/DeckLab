@@ -103,13 +103,14 @@ class ShellUiTests(unittest.TestCase):
             tokens: "Tokens", accessories: "Sleeves & boxes", assembly: "Build decks", play: "Game log",
             wishlist: "Wishlist", activity: "Activity", visibility: "Who sees what", settings: "Settings", deck: "Deck", edit: "Edit deck",
             new: "New deck", history: "History", compare: "Compare decks", variant: "Test of a change", receipt: "Receive delivery",
-            matchup: "Matchup", help: "What these words mean" });
+            matchup: "Matchup", "forge-pods": "Four-player pods", help: "What these words mean" });
           for (const r of ROUTES) assert(r.nav || r.parent, r.path);
           // A child page sits under its parent's place in the nav.
           assert.equal(routeSection("deck").path, "library");
           assert.equal(routeSection("history").path, "library");
           assert.equal(routeSection("receipt").path, "shopping");
           assert.equal(routeSection("matchup").path, "matchups");
+          assert.equal(routeSection("forge-pods").path, "matchups");
           assert.equal(routeSection("nowhere").path, "library");
           // E3-S35: Testing keeps its address, #/matchups; #/testing is its other one, rewritten to it.
           assert.equal(routeFor("matchups").h1, "Testing");

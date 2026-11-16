@@ -49,6 +49,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 - **`E3-S50`: earlier lists on live data.** Built and fixture-tested (2026-11-12). On the server, open a deck with several saved lists that have standard-sample runs and check the Testing tab's Show earlier lists against them.
 - **`E11-S87`: turn the shrink warning on.** Tables and thresholds agreed and the heartbeat carries the counts (2026-11-13). Set config.json's `database.shrink_warn` to true on the server PC.
 - **`FG#2`: Forge 2.0.16's replay.** Released, on the server and checked there (2026-11-14); its replay (33 matchups, 13,120 games) was stopped after 3,199 for the server's Windows boot. Finish it on an idle server (HomeOps `replay.ps1` plays only what's missing), then read its results; the side-build speed A/B (PLAN.md, Later) waits for an idle PC.
+- **`E9-S11`: qualify four-player pods.** Implementation, win shares and Start guidance are built and fixture-tested (2026-11-16). After `FG#2`, with Matt's OK on an idle PC, check a small real rotated pod, Stop and resume, then the page on a phone and iPad. No real games or deployment were performed by the implementation task.
 - **`E3-S40`: XMage on the live server.** Built and merged (2026-11-09) but set up nowhere. After `FG#2`, with Matt's OK on timing: install the pinned 1.4.63 release on the Linux server, set `xmage_dir`, build the bridge, then cross-check a few real home decks and note the cards XMage refuses ([setup](decklab/design/cross-simulator.md#setup-and-use)).
 
 **Activation:** migrations `0012` and `0013` were applied and the server restarted on committed code on 2026-10-19, so the privacy code and guarded member removal are live. No visibility choice or real member removal has been made.
@@ -88,7 +89,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E9-S11` | DEFERRED | could | L+pc | Four-player pod runs from the page (with `E9-S21` win shares and `E9-S22` why-not by Start); after `FG#2`. First `lib/forge/pods.py` from the prototype, fixtures only. |
+| `E9-S11` | DECISION | could | M+pc | Four-player pod runs, win shares and Start guidance built in source (2026-11-16). Left after `FG#2`, with Matt's OK on an idle PC: qualify real rotated pod games, Stop/resume, then phone/iPad acceptance. |
 
 ## Deck Lab: testing and Forge
 

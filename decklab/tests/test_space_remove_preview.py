@@ -243,6 +243,56 @@ class ForgeSelectionTests(unittest.TestCase):
         self.assertEqual(files, {})
         self.assertEqual(meta["unknown"], 1)
 
+    def pod(self, owner=SPACE):
+        from decklab.lib.forge import pods
+        sides = [{"id": f"{owner}/commander/{i}", "version": "target", "kind": "commander",
+                  "title": "A pod deck", "card_sha": str(i + 1) * 64} for i in range(4)]
+        options = {"games": 16, "clock_s": 180, "seed_base": 1000000, "per_batch": 4}
+        key = pods.key(sides)
+        return {"pod_version": 1, "kind": "pods", "key": key, "sides": sides, "engine": None,
+                "options": options, "batches": [], "state": "ready"}
+
+    def test_own_only_pod_is_selected_without_changing_its_contents(self):
+        value = self.pod()
+        relative = "pods/" + value["key"] + ".json"
+        path = self.write(relative, value)
+        before = path.read_bytes()
+        files, meta = space_forge.snapshot(SPACE, self.root)
+        self.assertEqual(files, {relative: before})
+        self.assertEqual(set(meta["selected"]), {relative})
+        self.assertEqual((meta["preserved_related"], meta["unknown"]), (0, 0))
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_mixed_pod_and_shared_current_list_are_preserved_without_exporting_details(self):
+        from decklab.lib.forge import pods
+        value = self.pod()
+        value["sides"][3].update(id="other/commander/public", title=SECRET)
+        value["key"] = pods.key(value["sides"])
+        path = self.write("pods/" + value["key"] + ".json", value)
+        before = path.read_bytes()
+        files, meta = space_forge.snapshot(SPACE, self.root)
+        self.assertEqual(files, {})
+        self.assertEqual((meta["preserved_related"], meta["unknown"]), (1, 0))
+        self.assertNotIn(SECRET, json.dumps(meta))
+        self.assertNotIn(value["key"], json.dumps(meta))
+        self.assertEqual(path.read_bytes(), before)
+        path.unlink()
+        value = self.pod()
+        self.write("pods/" + value["key"] + ".json", value)
+        files, meta = space_forge.snapshot(SPACE, self.root, other_hashes={"1" * 64})
+        self.assertEqual(files, {})
+        self.assertEqual(meta["preserved_related"], 1)
+
+    def test_damaged_or_future_pod_is_unknown_and_never_exported(self):
+        value = self.pod()
+        path = self.write("pods/" + value["key"] + ".json", value)
+        for damaged in (dict(value, pod_version=999), dict(value, sides=[]), dict(value, key="f" * 64)):
+            with self.subTest(damaged=damaged):
+                path.write_text(json.dumps(damaged), encoding="utf-8")
+                files, meta = space_forge.snapshot(SPACE, self.root)
+                self.assertEqual(files, {})
+                self.assertEqual(meta["unknown"], 1)
+
 
 class PreviewContractTests(unittest.TestCase):
     def setUp(self):

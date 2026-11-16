@@ -43,10 +43,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 23 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 37 | 36 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 20 | 0 | 1 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 33 | 29 | 0 | 3 | 1 |
+| [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 87 | 68 | 11 | 4 | 4 |
-| **Total** | **397** | **350** | **20** | **10** | **17** |
+| **Total** | **397** | **352** | **21** | **7** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -4269,7 +4269,7 @@ Evidence:
 - `decklab/lib/forge/field.py`: _field
 - `decklab/tests/test_matchups_api.py`: test_commander_decks_play_commander_decks
 
-**E9-S11** · Matt · could · L · missing
+**E9-S11** · Matt · could · L · partial
 
 As a player going to 4-player pods, I want to start a run of 4-player Commander games from the page against decks of a similar bracket, so that I see how my deck keeps up at the table it will actually sit at.
 
@@ -4277,10 +4277,23 @@ As a player going to 4-player pods, I want to start a run of 4-player Commander 
 - Given a pod run is going, when I look at the page, then its progress shows in the Forge playing pill.
 
 Evidence:
-- `decklab/lib/forge/cardlog.py`: SEATS (only two seats are read)
-- `decklab/forge-trial/overnight_pods.py`: a prototype outside the page
+- `decklab/lib/forge/pods.py`: isolated cold-process samples, shared worker leases, rotated seats, checkpoints and fresh seeds for resumed partial batches
+- `decklab/lib/api/forge_pods.py`: four visible Commander lists, recorded target brackets at most one apart, reviewed list/engine key and normal simulation permissions
+- `decklab/web/forge-pods.js`: Testing's chooser, explicit Check/Start, saved results and guarded progress/Stop
+- `decklab/lib/api/forge_runs.py`: four-seat coordinator visibility and the shared Forge playing pill
+- `decklab/tests/test_forge_pods.py`, `test_forge_pods_api.py`, `test_forge_pods_integration.py`, `test_forge_pods_ui.py`, `test_run_recovery_pods.py`: disposable fixtures, no real Forge or household records
 
-Gap: nothing in `decklab/lib/forge` or the pages runs pods (PLAN.md, Still to do).
+Implementation requested by Matt and built in source (2026-11-16), including
+explicit recovery, all-four visibility and member export/removal guards. The
+game counts are 16, 32, 64 and 128; the starting choices are Planned lists.
+This does not claim the targets certify equal power or predict a social table.
+
+Awaiting: decision
+
+After `FG#2`, with Matt's OK on an idle PC, qualify the installed engine on a
+small real pod: check rotated seats, statistics, Stop and resume. Then check
+the chooser and result on a household phone and iPad. No real games, server
+deployment, migration or privacy-switch change was performed by this build.
 
 **E9-S12** · Matt · should · S · built
 
@@ -4356,16 +4369,19 @@ Evidence:
 - `decklab/tests/test_commander_night_api.py`: test_home_admin_saves_one_change_home_member_reads_and_unknowns_stay_unknown
 - `decklab/tests/test_commander_night_ui.py`: test_projection_is_quiet_when_absent_and_defends_home_boundaries, test_concurrent_save_preserves_inputs_and_requires_explicit_reload
 
-**E9-S21** · Matt · could · M · missing
+**E9-S21** · Matt · could · M · built
 
 As a player reading a pod run, I want each deck's share of wins with a range, so that I don't read too much into a few pod games.
 
 - Given a finished pod run, when I read it, then it shows each deck's share of wins with a range.
 - Given pod games don't replay exactly, when I read the result, then it says they're statistics only.
 
-Gap: there are no pod runs to show (E9-S11).
+Evidence (2026-11-16):
+- `decklab/lib/forge/pods.py`: per-deck win shares and 95% Wilson intervals; draws count in the denominator, clock stops do not, failed batches stay explicit
+- `decklab/web/forge-pods.js`: four independent figures, 25% equal-share reference, counts and a statistics-only caveat, separate from all 1v1 results
+- `decklab/tests/test_forge_pods.py`, `test_forge_pods_ui.py`: known outcomes, rotation and zero-count/partial samples; real-engine qualification remains E9-S11
 
-**E9-S22** · Matt · could · S · missing
+**E9-S22** · Matt · could · S · built
 
 As a player who may not be allowed to start simulations, I want to see why beside a pod run's Start, so that I know whom to ask rather than wondering why nothing happens.
 
@@ -4374,8 +4390,9 @@ As a player who may not be allowed to start simulations, I want to see why besid
 Evidence:
 - `decklab/lib/api/simulations.py`: view (why_not, used beside the other Play and Start buttons)
 - `decklab/lib/permissions.py`: reason
-
-Gap: there's no pod run's Start yet (E9-S11).
+- `decklab/lib/api/forge_pods.py`: the same simulation permission on Start; fresh visibility before permission refusals
+- `decklab/web/forge-pods.js`: the reason beside Start, with no names and no automatic run
+- `decklab/tests/test_forge_pods_api.py`, `test_forge_pods_ui.py`: paused/admin-only guidance and blocked activation (built 2026-11-16)
 
 **E9-S23** · Matt · should · M · built
 

@@ -527,6 +527,7 @@ const ROUTES = [
   { path: "variant", label: "Test of a change", h1: "Test of a change", title: "Test of a change", parent: "deck" },
   { path: "receipt", label: "Receive delivery", h1: "Receive delivery", title: "Receive delivery", parent: "shopping" },
   { path: "matchup", label: "Matchup", h1: "Matchup", title: "Matchup", parent: "matchups" },
+  { path: "forge-pods", label: "Four-player pods", h1: "Four-player Commander pods", title: "Four-player pods", parent: "matchups" },
 ];
 
 /** The route of a path ("library", "deck", ...); the library's for an unknown one, as route() shows it. */

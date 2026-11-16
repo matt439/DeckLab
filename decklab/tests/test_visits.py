@@ -86,6 +86,11 @@ class RecorderTests(unittest.TestCase):
         keys = {k[3:] for k in rec.pending()[1]}
         self.assertEqual(keys, {("collection", ""), ("deck", ""), ("history", "pairing/cats+vampires"), ("edit", "")})
 
+    def test_pod_page_is_recorded_without_a_run_key_or_participants(self):
+        rec = recorder()
+        self.assertTrue(rec.page("matt", "home", "forge-pods", "a" * 64))
+        self.assertEqual({key[3:] for key in rec.pending()[1]}, {("forge-pods", "")})
+
     def test_a_page_makes_its_day_without_counting_a_request(self):
         rec = recorder()
         rec.page("user1", "home", "wishlist")
