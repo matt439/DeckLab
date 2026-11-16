@@ -19,7 +19,7 @@ UNVERIFIED = "Unfinished-run recovery cannot be verified on the PC. No new run w
 MAX_BODY = 2048
 MISSING = "That unfinished run isn't available."
 LABELS = {"field": "field run", "group": "group run", "gauntlet": "gauntlet run", "variant": "test of a change",
-          "variant_more": "extended test of a change"}
+          "variant_more": "extended test of a change", "pods": "four-player pod run"}
 
 
 class Prepared(Exception):
@@ -95,6 +95,10 @@ def _canonical(kind, request, run, profile):
         data.update(id=run.base["id"], version=run.version, mode=run.mode)
         if isinstance(run.against, str) and run.against.startswith("gauntlet:"):
             data["against"] = run.against   # retain the exact saved sample, never redraw the standard one
+    elif kind == "pods":
+        data = {"profile": profile["id"], "decks": [{"id": side["id"], "version": side["version"]}
+                                                  for side in run.sides],
+                "games": run.games, "expected_key": run.key}
     return data
 
 
@@ -120,7 +124,16 @@ def _prepare(forge, kind, run, profile, request):
     if snapshot.stale or not snapshot.persisted:
         raise ApiError(503, UNVERIFIED)
     engine = _engine(forge, read_only=_capture.get())
-    if kind in ("field", "group", "gauntlet"):
+    if kind == "pods":
+        base = run.entry
+        plan = run.pods.plan(run.sides, run.games, eng=run.pods.engine_identity())
+        if plan["key"] != run.key:
+            raise ApiError(409, "The saved lists or engine changed. Review a new pod plan before starting.")
+        refs = _refs(run.sides, forge, engine)
+        remaining = plan["remaining"]
+        work = {"games": remaining, "approximate": False}
+        extras = {"pod_key": run.key, "target": run.games}
+    elif kind in ("field", "group", "gauntlet"):
         base = run.entry
         if kind == "gauntlet":
             plan = run.g.plan(run.entry, run.sample, run.budget)
@@ -224,6 +237,9 @@ def submit(forge, kind, run, profile, request, key, *, rerun=True):
 
 
 def _dispatch(kind, request):
+    if kind == "pods":
+        from . import forge_pods
+        return forge_pods.run_pods(json.dumps(request).encode("utf-8"))
     from . import field_group, field_page, gauntlet_page, variant_page
     functions = {"field": field_page.run_field, "group": field_group.run_group, "gauntlet": gauntlet_page.run_gauntlet,
                  "variant": variant_page.run_variant, "variant_more": variant_page.more_variant}
@@ -290,9 +306,14 @@ def _offer(record, profile):
     label = "Unfinished " + LABELS[record["kind"]]
     if isinstance(title, str) and title:
         label += ": " + title[:160]
+    if record["kind"] == "pods":
+        key = record["manifest"].get("pod_key")
+        link = "#/forge-pods?key=" + key if isinstance(key, str) and SHA.fullmatch(key) else None
+    else:
+        link = "#/deck?id=" + quote(base["id"], safe="") if isinstance(base.get("id"), str) else None
     return {"id": record["id"], "kind": record["kind"], "title": label, "created": record["created"],
             "may_resume": may, "why_not": why,
-            "link": "#/deck?id=" + quote(base["id"], safe="") if isinstance(base.get("id"), str) else None}
+            "link": link}
 
 
 def view():

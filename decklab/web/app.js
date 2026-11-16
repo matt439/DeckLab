@@ -299,6 +299,7 @@ function route() {
   if (path === "edit" && params.get("id")) return showEditor(params, token);
   if (path === "new") return showNewDeck(params, token);
   if (path === "matchups") return showMatchups(params, token);
+  if (path === "forge-pods") return showForgePods(params, token);
   if (path === "matchup" && (params.get("key") || (params.get("a") && params.get("b")))) {
     return showMatchup(params, token);
   }

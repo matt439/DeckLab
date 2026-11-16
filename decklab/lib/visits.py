@@ -43,7 +43,7 @@ CHANNELS = ("home", "remote")
 # The page's routes (web/core.js ROUTES); an unknown one isn't recorded.
 ROUTES = frozenset({"library", "collection", "shopping", "matchups", "tokens", "accessories", "assembly", "play",
                     "wishlist", "activity", "settings", "deck", "edit", "new", "history", "variant", "receipt",
-                    "matchup", "visibility"})
+                    "matchup", "visibility", "forge-pods"})
 DECK_ROUTES = frozenset({"deck", "edit", "history"})     # routes whose ?id= is a deck, kept with them
 MAX_DECK_ID = 200
 FLUSH_SECONDS = 60          # how often the timer writes what was gathered

@@ -535,6 +535,7 @@ function drawMatchups(library, matchups, params, token) {
   add(main, [
     pageHead({ title: routeH1("matchups"), description: "Test your decks against popular decks or each other.",
       primary: play, badge: simulationsChip() }),
+    el("p", {}, el("a", { href: "#/forge-pods", text: "Four-player pods" })),
     gate.may ? null : el("p", { class: "run-blocked mu-gate", text: gate.why }),
     forgeBox(data.forge),
     updates.node, lists]);

@@ -2,6 +2,31 @@
 
 What each milestone and feature built, the decisions made along the way, and the known low issues left open. These are dated records: the code and [README.md](README.md) say how things work now, and [PLAN.md](PLAN.md) says what's still to do.
 
+## Four-player Commander pods in source (2026-11-16; E9-S11, E9-S21, E9-S22)
+
+Testing's **Four-player pods** opens a separate chooser and saved-result page.
+Check reviews four distinct visible Commander decks with declared target
+brackets at most one apart, then Start submits 16, 32, 64 or 128 games. The
+normal simulations setting supplies the reason beside Start, and the shared
+Forge activity supplies progress and permitted Stop controls.
+
+Cold processes rotate seats between four-game batches under the shared worker
+budget. Isolated pod checkpoints bind the tested lists and actual plain/default
+engine, preserve finished games on Stop, and use fresh seeds when completing a
+partial batch. Explicit run recovery checks all four participants again. Saved
+results show per-deck win shares with 95% Wilson ranges, draw/clock-stop and
+failure counts, partial completion, and the statistics-only caveat. Draws count
+in the denominator; clock stops do not. Pods enter no 1v1 result, rating, field,
+gauntlet, card-stat total or physical Game-log record.
+
+Every read checks all four decks, including queued work and changed Public
+visibility; cross-space actors are masked. The usual results-root lifecycle
+guard and member export/removal/admission checks cover the new pod subfolder.
+Validation uses disposable fixtures and intercepted browser requests, with no
+household data, real Forge games or server deployment. E9-S11 remains partial
+for a real-engine check after FG#2 on an idle PC with Matt's OK, followed by
+phone/iPad acceptance; E9-S21 and E9-S22 are built.
+
 ## Forge 2.0.16 on the live server (2026-11-14; FG#2)
 
 The fork's release `2.0.16-decklab-029c9518f` is published (its zip's SHA-256 checked against GitHub's digest; the tag is the `decklab` branch's head). The live server's `python -m decklab.update` took main to `bb3e46c`: it stopped Deck Lab, backed up, applied migration 0028 (home had no recorded storage locations, so none could leave the box), downloaded and checked the release, set `forge_dir` to it, restarted, and the smoke test passed 16 of 16. On the server, `python -m decklab.lib.forge upgrade-check` passed all three parts (the card log played the same 12 Constructed and 3 Commander games as plain Forge, a warm worker the same 21 as fresh processes, every override fits): its first real use (E11-S15). `replay` then started on 33 matchups of the earlier engine, 13,120 games (estimated about 7 hours, 4 at once in the server's pool); it was stopped after 3,199 games, all saved, so the server could boot into Windows. Left: finish the replay and read its results, and the side-build speed A/B (PLAN.md, Later).

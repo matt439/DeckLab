@@ -503,9 +503,9 @@ def _job_json(job, snap, flip, key=None, sides=None):
 
 
 def _coord_kind(job):
-    """"field", "variant" or "gauntlet" for a COORD_JOBS job (its key's prefix), else None."""
+    """The kind of a COORD_JOBS job (its key's prefix), else None."""
     prefix = str(getattr(job, "key", "")).split(":", 1)[0]
-    return prefix if prefix in ("field", "variant", "gauntlet") else None
+    return prefix if prefix in ("field", "variant", "gauntlet", "pods") else None
 
 
 def _coord_title(job, detail):
@@ -514,6 +514,8 @@ def _coord_title(job, detail):
     deck = detail.get("deck") if isinstance(detail.get("deck"), dict) else {}
     title = deck.get("title") or "a deck"
     kind = _coord_kind(job)
+    if kind == "pods":
+        return "Four-player Commander pod"
     if kind == "gauntlet":
         return f"Gauntlet run of {title}"
     if getattr(job.fn, "kind", None) == "group":       # a field run of chosen decks (api/field_group.py)
@@ -523,6 +525,8 @@ def _coord_title(job, detail):
 
 def _coord_link(job, detail):
     """Where a coordinator job's page is: the deck page's field section, or the test's page."""
+    if _coord_kind(job) == "pods":
+        return "#/forge-pods?key=" + job.key.split(":", 1)[1]
     if _coord_kind(job) == "variant":
         return "#/variant?test=" + job.key.split(":", 1)[1]
     if _coord_kind(job) == "gauntlet" or getattr(job.fn, "kind", None) == "group":
@@ -1076,7 +1080,7 @@ def stop_matchup(body):
     data = _parse_body(body, MAX_BODY)
     profile = _writer(data)
     _keys(data, ("profile", "key"), ("a", "av", "b", "bv"))
-    if isinstance(data["key"], str) and data["key"].startswith(("field:", "variant:", "gauntlet:")):
+    if isinstance(data["key"], str) and data["key"].startswith(("field:", "variant:", "gauntlet:", "pods:")):
         seen = _Seen(profile)
         job = COORD_JOBS.get(data["key"])
         if job is None:

@@ -78,6 +78,25 @@ class MemberAdmissionTests(unittest.TestCase):
                 self.assertEqual(path.read_bytes(), before)
                 path.unlink()
 
+    def test_retained_pod_reference_blocks_reusing_member_id(self):
+        path = self.write("pods/" + KEY + ".json", {
+            "sides": [{"id": "user6/commander/old"}, {"id": "commander/home"},
+                      {"id": "user2/commander/public"}, {"id": "user3/commander/public"}]})
+        before = path.read_bytes()
+        with self.assertRaisesRegex(InvalidProfileEdit, "existing Forge records"):
+            self.check()
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_pod_metadata_must_establish_namespace_absence(self):
+        path = self.write("pods/" + KEY + ".json", {"future_provenance": {"owner": "user6"}})
+        with self.assertRaisesRegex(InvalidProfileEdit, "existing Forge records"):
+            self.check()
+        path.write_bytes(b"{invalid JSON")
+        with self.assertRaisesRegex(InvalidProfileEdit, "could not be checked safely"):
+            self.check()
+        path.write_text(json.dumps({"sides": [{"id": "other/commander/old"}]}), encoding="utf-8")
+        self.check()
+
     def test_legacy_unknown_target_namespace_and_scoped_field_filename_refuse(self):
         cases = [(KEY + ".json", {"future_provenance": {"owner": "user6/casual/old"}}),
                  (KEY + ".json", {"future_provenance": {"owner": "user6"}}),

@@ -1172,6 +1172,31 @@ Two decks play each other in [Forge](https://github.com/Card-Forge/forge), a fre
 - **Stopping the server** (`homenet stop` or `restart`, `--stop`, `taskkill` without `/F`, Ctrl+C, Ctrl+Break or closing its window) stops the playing matchups and saves the games they finished, then the warm workers quit. So does Windows logging off or shutting down. Every Forge process ends with the server, even if it's killed from Task Manager or with `taskkill /F`, but then those runs' games are lost.
 - To clear the results, delete the files in `decklab/data/forge/results/`. Some are already there from testing on 2026-10-01, played under the Matt and User1 profiles.
 
+### Four-player Commander pods
+
+Testing's **Four-player pods** opens `#/forge-pods`. Choose four different
+Commander decks you may see, with recorded target brackets no more than one
+apart, then **Check this pod** and **Start**. A target is an aim, not proof of
+equal power. Choose 16, 32, 64 or 128 games; seats rotate between four-game
+batches. The simulations setting applies, with its reason beside Start when
+runs are unavailable. The shared Forge activity shows progress and Stop.
+
+Each saved result shows the four decks' win shares and 95% Wilson ranges.
+Draws count in the denominator; clock stops do not, and their counts and failed
+batches remain visible. Four-player games do not replay exactly: these are
+statistics from Forge's default AI, not predictions for a social table.
+Pod runs use cold processes and the shared worker budget. They do not use the
+two-player pilots or card statistics, and never enter 1v1 ratings, the field,
+the gauntlet or the Game log.
+
+Stopped or interrupted runs retain completed games. Review the same four
+lists and game count to finish the missing games; recovery requires an
+explicit resume and refuses changed lists or engine provenance. All four
+decks must still be visible to read a result. Pod files live in
+`decklab/data/forge/results/pods/`, within the usual member-export/removal
+guards. This implementation is fixture-tested; real Forge qualification and
+phone/tablet acceptance remain separate checks after `FG#2`.
+
 ### Against the field
 
 A deck page's **Against the field** part (on its Testing tab; since wave 3, 2026-10-03) shows how the list does against every current deck of its format, not just one opponent:

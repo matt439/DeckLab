@@ -70,6 +70,7 @@ python scripts/ui_review.py --suite shopping-baskets-layout
 python scripts/ui_review.py --suite zoom
 python scripts/ui_review.py --suite crosscheck
 python scripts/ui_review.py --suite queue-workload --strict-console
+python scripts/ui_review.py --suite forge-pods --strict-console
 python scripts/ui_review.py --suite assembly-counters
 python scripts/ui_review.py --suite precon-bonus
 python scripts/ui_review.py --suite life-counters
@@ -152,6 +153,13 @@ the native top-bar activity sheet/popover at phone and desktop widths in both
 themes, including enlarged text. Exact, capped, partially unknown and wholly
 unknown anonymous work summaries must fit their containers. Responses are
 intercepted; no run is started or stopped and no household data is read.
+
+The opt-in `forge-pods` suite checks native four-deck selection, reviewed Check
+and Start requests, global run progress, simulation-policy guidance and complete
+or partial win shares at phone, tablet and desktop widths in both themes. Every
+pod response is intercepted in the browser: no Forge game or inventory/state
+write reaches the fixture. Screenshots still need visual inspection, and this
+does not qualify real Forge or physical devices.
 
 The opt-in `crosscheck` suite exercises the new second-simulator section on the
 Testing tab, in light and dark at phone, tablet and desktop widths. Ready saved
