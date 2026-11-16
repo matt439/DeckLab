@@ -41,12 +41,12 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 26 | 1 | 0 | 3 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 36 | 33 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 23 | 0 | 0 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 36 | 35 | 1 | 0 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 37 | 36 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 20 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 87 | 68 | 11 | 4 | 4 |
-| **Total** | **396** | **351** | **21** | **7** | **17** |
+| **Total** | **397** | **352** | **21** | **7** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -3660,6 +3660,19 @@ Built 2026-11-11: Add a precon and `collection add-precon` offer Secret Lair dro
 Evidence: 14 new API/CLI/Node UI fixtures, 193 core/legacy precon regressions and 101 secondary regressions pass. Disposable-PostgreSQL tests cover one audit set, unchanged deck tables/revisions and late token rollback; they are guarded locally and await CI. `precon-bonus` has 12 synthetic rendered cases for normal precons and drops; final capture waits for the batch's stable source. From the bonus-card investigation of 2026-11-10.
 
 ---
+
+
+**E7-S41** · Matt · should · M · built
+
+As someone with physical cards but no recorded list, I want a small-batch starting path so that I can begin without preparing a spreadsheet or recording everything in one sitting.
+
+- An editable empty Collection offers Start with physical cards before export import, and Card list has the same path. More keeps it available after the first batch.
+- The guide offers loose-card photo/manual entry, an unchanged precon shortcut and file import without writing inventory itself. It explains duplicate quantities and small reviewed batches.
+- Pending scan/manual cards can be explicitly downloaded as collection CSV, then reopened through Import cards for a fresh preview before one guarded add. Resolve/skip uncertain photos first; photos and OCR text never enter the file.
+- The UI warns that closing loses unsaved pending cards, checks download failure without discarding the list, and tells users not to import a downloaded batch they already added. No automatic cross-device draft is claimed.
+
+Built 2026-11-15 with synthetic fixture/browser evidence only. Real camera/foil/sleeve recognition and physical Safari remain unqualified. Future direction: a server-backed resumable batch with stable batch identity and exactly-once completion, followed by a real-photo evaluation before expanding beyond one card per photo.
+
 
 ## E8: Sleeves, boxes and storage
 

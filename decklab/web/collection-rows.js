@@ -136,8 +136,8 @@ function drawColRowList(cv) {
   clear(cv.list);
   if (!rows.length) {
     cv.list.append(el("div", { class: "empty" }, el("p", { text: "No cards recorded yet." }),
-      cv.editable ? el("button", { type: "button", class: "btn col-mutate", text: "Add card",
-        onclick: () => openCollectionSheet(cv) }) : null));
+      cv.editable && !cv.unsupported ? el("button", { type: "button", class: "btn col-mutate", text: "Start with physical cards",
+        onclick: () => openCollectionStartSheet(cv) }) : null));
   } else if (!shown.length) {
     // Emptied by the search or the filters: the one way back is to clear them.
     cv.list.append(emptyBox("No rows match the search and filters.", el("button", { type: "button", class: "btn",

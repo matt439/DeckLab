@@ -206,7 +206,7 @@ function colOpenAsked(cv, open) {
   if (open) setTimeout(() => {
     if (!colActive(cv)) return;
     history.replaceState(history.state, "", colHash(cv.space, "find", cv.query));
-    const sheet = { precon: openPreconSheet, import: openImportSheet }[open];
+    const sheet = { precon: openPreconSheet, import: openImportSheet, start: openCollectionStartSheet }[open];
     if (sheet && cv.editable && !cv.unsupported) sheet(cv);
   });
 }
@@ -320,6 +320,7 @@ function colHead(cv, query) {
     el("a", { href: colHash(cv.space, "rows"), text: "Card list", "aria-current": cv.kind === "rows" ? "page" : null }));
   const owner = cv.space === HOME_SPACE ? "the people of the home collection" : spaceName(cv.space);
   const more = [
+    cv.editable && !cv.unsupported ? { label: "Start recording a collection.", onclick: () => openCollectionStartSheet(cv) } : null,
     cv.editable ? { label: "Import cards…", onclick: () => openImportSheet(cv) } : null,
     cv.editable && !cv.unsupported ? { label: "Scan cards…", onclick: () => openScanSheet(cv) } : null,
     cv.editable ? { label: "Add a precon…", onclick: () => openPreconSheet(cv) } : null,
@@ -644,7 +645,8 @@ function colFindEmpty(cv, filtered, total = 0) {
       el("a", { class: "btn", href: colHash(cv.space, "find"), text: "Clear the filters" }));
   }
   const ways = cv.editable && !cv.unsupported ? [
-    ["Import cards", openImportSheet, "Bring in a collection export."],
+    ["Start with physical cards", openCollectionStartSheet, "No list yet? Work through a small pile at a time."],
+    ["Import cards", openImportSheet, "Bring in a collection export or a saved pending batch."],
     ["Add a precon", openPreconSheet, "Add an opened precon's cards and deck."],
     ["Scan cards", openScanSheet, "Review photos of your cards."],
     ["Add one card", openCollectionSheet, "Choose a card and its printing."]

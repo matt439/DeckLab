@@ -10,7 +10,6 @@ import unittest
 from decklab.tests.test_accounts_ui import SETUP
 from decklab.tests.test_workspace_ui import NODE, RUNNER, WEB
 
-
 FIXTURE = SETUP + """
   const rows = [{name: 'Llanowar Elves', set: 'fdn', collector_number: '227', finish: 'nonfoil', quantity: '4',
     condition: 'NM', language: 'en', notes: ''}];
@@ -35,7 +34,7 @@ FIXTURE = SETUP + """
 class CollectionScanUiTests(unittest.TestCase):
     def run_js(self, code):
         result = subprocess.run([NODE, str(RUNNER)], input=json.dumps([str(WEB), FIXTURE + code, True]),
-                                capture_output=True, text=True, encoding="utf-8", timeout=30)
+                                capture_output=True, text=True, encoding="utf-8", timeout=30, check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "ok")
 
@@ -345,4 +344,49 @@ class CollectionScanUiTests(unittest.TestCase):
           const blank = ctx.list.querySelectorAll('[aria-label="Language of Llanowar Elves"]')[1];
           blank.value = 'en'; blank.fire('change');
           same(ctx.pending.map((c) => [c.language, c.quantity]), [['en', 2]]);
+        """)
+
+    def test_quantity_input_refuses_overflow_and_fraction_without_clipping(self):
+        self.run_js("""
+          const ctx = openScanSheet(draw());
+          addScanCard(ctx, ELVES.proposals[0]);
+          const qty = pick(ctx, 'Copies of Llanowar Elves');
+          for (const bad of ['1000', '0', '-2', '1.5', '2junk', '']) {
+            qty.value = bad; qty.fire('change');
+            assert.equal(ctx.pending[0].quantity, 1);
+            assert.equal(qty.value, '1');
+            assert(ctx.message.textContent.includes('Nothing was clipped'));
+          }
+          qty.value = '999'; qty.fire('change'); assert.equal(ctx.pending[0].quantity, 999);
+        """)
+
+    def test_scan_at_limit_retains_the_new_card_as_unresolved(self):
+        self.run_js("""
+          const ctx = openScanSheet(draw());
+          addScanCard(ctx, ELVES.proposals[0]); ctx.pending[0].quantity = 999;
+          drawScanResult(ctx, ELVES);
+          assert.equal(ctx.pending[0].quantity, 999);
+          assert.equal(ctx.unsure.length, 1);
+          assert.equal(ctx.unsure[0].proposals[0].collector_number, '227');
+          assert(ctx.message.textContent.includes('still pending'));
+          assert.equal(reviewScan(ctx), null);
+        """)
+
+    def test_join_and_replacement_overflow_leave_both_rows_and_metadata_intact(self):
+        self.run_js("""
+          const ctx = openScanSheet(draw());
+          const first = addScanCard(ctx, ELVES.proposals[0]); first.quantity = 999;
+          const second = addScanCard(ctx, {...ELVES.proposals[0], language: 'ja'});
+          assert.equal(colScanEdit(ctx, second, {language: 'en'}), false);
+          same(ctx.pending.map(c => [c.language,c.quantity]), [['en',999],['ja',1]]);
+          assert.equal(colScanSetPrinting(ctx, second, {...ELVES.proposals[0], set: 'm19', collector_number:'314'}), true);
+          second.language='en'; ctx.last=second;
+          const replacement=colScanChoices(ctx,[ELVES.proposals[0]],true);
+          ctx.result.append(replacement); replacement.querySelector('button').fire('click');
+          same(ctx.pending.map(c => [c.set,c.quantity]), [['fdn',999],['m19',1]]);
+          assert.equal(ctx.last, second);
+          assert(ctx.message.textContent.includes('Nothing was clipped'));
+          first.quantity=998;
+          replacement.querySelector('button').fire('click');
+          same(ctx.pending.map(c => [c.set,c.quantity]), [['fdn',999]]);
         """)

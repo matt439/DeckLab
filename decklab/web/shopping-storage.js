@@ -44,11 +44,13 @@ function shopStorageFill(view) {
   const facts = shopStorageFillFacts(view);
   if (!facts) return null;
   const line = (c) => c.over
-    ? `${c.name} would be over capacity: about ${num(c.after)} cards for about ${num(c.capacity)} places (about ${num(c.now)} now).`
+    ? `${c.name}: about ${num(c.after - c.capacity)} cards over capacity after delivery. About ${num(c.after)} cards for ${num(c.capacity)} places (${num(c.now)} now).`
     : `${c.name}: about ${num(c.now)} of ${num(c.capacity)} cards now, about ${num(c.after)} once these arrive.`;
   const over = facts.containers.some((c) => c.over);
   return el("div", { class: over ? "box box-warn shop-storage-fill" : "shop-storage-fill", "data-storage-fill": "" },
     el("h3", { text: "Storage once these arrive" }),
-    el("ul", { class: "shop-storage-lines" }, facts.containers.map((c) => el("li", { "data-storage-container": c.name, text: line(c) }))),
+    facts.unknown || facts.products ? el("p", { class: "shop-storage-incomplete", text:
+      `Incomplete estimate: ${plural(facts.unknown, "delivery", "deliveries")} and ${plural(facts.products, "product")} excluded. Actual storage needs may be higher.` }) : null,
+    el("ul", { class: "shop-storage-lines" }, [...facts.containers].sort((a, b) => Number(b.over) - Number(a.over)).map((c) => el("li", { class: c.over ? "shop-storage-over" : "", "data-storage-container": c.name, text: line(c) }))),
     el("p", { class: "sub", text: shopStorageCaveats(facts) }));
 }

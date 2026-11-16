@@ -37,6 +37,26 @@ class DeckSideboardUiTests(unittest.TestCase):
                                 capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_planning_counts_are_not_claimed_as_collection_availability(self):
+        self.run_js("""
+          const a = answer(); a.sideboards = [];
+          a.lists.push({...list(own.id, 'owned'), sections: {Deck: [{name:'Elf',qty:4}],Sideboard:[]}});
+          await mount(a); choose();
+          buttonText(section(), 'Make a sideboard plan').click();
+          const sheet = document.querySelector('.sheet');
+          assert(sheet.textContent.includes('Bolt (2 in this list)'));
+          assert(!sheet.textContent.includes('2 available'));
+          assert(sheet.textContent.includes('not necessarily cards you own'));
+          const picker = sheet.querySelector('select'); picker.value = '2'; picker.fire('change');
+          assert(sheet.textContent.includes('not a fresh collection check'));
+          assert(!sheet.textContent.includes('not necessarily cards you own'));
+          assert(sheet.textContent.includes('No sideboard cards yet.'));
+          assert(!sheet.textContent.includes('Bolt (2 in this list)'));
+          picker.value = '0'; picker.fire('change');
+          assert(sheet.textContent.includes('not necessarily cards you own'));
+          assert(sheet.textContent.includes('your saved deck is unchanged'));
+        """)
+
     def test_pictures_use_recorded_printing_and_open_the_viewer(self):
         self.run_js("""
           await mount(); choose();

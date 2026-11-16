@@ -382,8 +382,9 @@ function packFilesBasics(view) {
 function packOrderControls(view) {
   view.orderGroup = el("div", { class: "segmented", role: "group", "aria-label": "Card order" });
   view.orderLabel = el("span", { text: "Card order" });
+  view.orderHelp = el("p", { class: "sub pack-order-help" });
   packOrderSync(view);
-  return el("div", { class: "toolbar pack-sort" }, view.orderLabel, view.orderGroup);
+  return el("div", { class: "toolbar pack-sort" }, view.orderLabel, view.orderGroup, view.orderHelp);
 }
 
 /** The order buttons for the storage the plan was read with; Name alone isn't offered as a choice. */
@@ -401,6 +402,9 @@ function packOrderSync(view) {
       renderAssemblyPlan(view, view.data);
     } })));
   view.orderGroup.hidden = view.orderLabel.hidden = options.length < 2;
+  view.orderHelp.hidden = options.length < 2 || shown !== "storage";
+  view.orderHelp.textContent = view.storageRule.containers
+    ? "Grouped by container, then by its filing order." : where || "Grouped by the storage filing order.";
 }
 
 /** The storage rows: creatures (artifacts last), spells (artifacts last), then lands by mana colour.
@@ -473,7 +477,7 @@ function packContainerGroups(view, sorted) {
   const { containers, placed, container: fallbackName } = view.storageRule;
   const fallback = containers.find(c => c.name === fallbackName)?.id ?? null;
   const groups = new Map([...containers.map(c => [c.id, { name: c.name, rule: c.rule, sections: c.sections, rows: [] }]),
-    [null, { name: "Somewhere else", rule: "name", sections: {}, rows: [] }]]);
+    [null, { unmatched: true, name: "Somewhere else", rule: "name", sections: {}, rows: [] }]]);
   for (const row of sorted) {
     const id = Object.hasOwn(placed, row.name) ? placed[row.name] : fallback;
     (groups.get(id) || groups.get(null)).rows.push(row);
@@ -482,6 +486,8 @@ function packContainerGroups(view, sorted) {
     const count = group.rows.reduce((total, row) => total + row.qty, 0);
     return el("div", { class: "pack-container-group" },
       el("h4", {}, group.name, el("span", { class: "pack-section-count", text: ` · ${plural(count, "card")}` })),
+      el("p", { class: "pack-container-remaining", "data-pack-remaining": "" }),
+      group.unmatched ? el("p", { class: "sub", text: "These cards match no configured storage container, or have no recorded location and no default container." }) : null,
       packRuleGroups(view, group.rows, group.rule, "h5", group.sections));
   });
 }
@@ -798,6 +804,12 @@ async function packMarkBuilt(view) {
 function packProgress(view) {
   packChooserSync(view);
   packViewerSync(view);
+  for (const group of view.results?.querySelectorAll(".pack-container-group") || []) {
+    const remaining = (view.ticks || []).filter(t => t.tile && !t.done && group.contains(t.node))
+      .reduce((total, t) => total + t.count, 0);
+    const label = group.querySelector("[data-pack-remaining]");
+    if (label) label.textContent = remaining ? `${plural(remaining, "card")} left in this step` : "All cards in this group ticked";
+  }
   if (!view.bar) return;
   packBulkProgress(view);
   const ticks = view.ticks || [];

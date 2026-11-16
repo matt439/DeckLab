@@ -194,3 +194,7 @@
 .box-check-printing-count { margin-top: var(--s-1); }
 .box-check-printing-count span { overflow-wrap: anywhere; }
 .box-check-printing .sub { margin: var(--s-1) 0 0; }
+
+.pack-order-help { flex-basis: 100%; margin: 0; }
+.pack-container-remaining { font-weight: var(--fw-semibold); margin: var(--s-1) 0 var(--s-3); }
+.pack-container-group > h4 { overflow-wrap: anywhere; }

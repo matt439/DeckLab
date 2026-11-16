@@ -53,6 +53,7 @@ or accessibility pass.
 Useful variations:
 
 ```powershell
+python scripts/ui_review.py --suite ui-priorities
 python scripts/ui_review.py --check
 python scripts/ui_review.py --smoke
 python scripts/ui_review.py --suite capture
