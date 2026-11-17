@@ -33,6 +33,11 @@ function deckConsideringSection(data) {
     section.append(emptyBox("No cards being considered. They stay with the deck without counting in its lists.", add));
     return section;
   }
+  if (typeof smallSwapSuggestionsOffered === "function" && smallSwapSuggestionsOffered(data)) {
+    const suggest = el("button", { type: "button", class: "btn btn-quiet", text: "Suggest a small swap…",
+      onclick: () => { if (here() && suggest.isConnected) openSmallSwapSuggestions(data); } });
+    section.append(suggest);
+  }
   section.append(el("p", { class: "sub", text: "Cards that might go in. They don't count in the lists, the table or packing." }),
     el("div", {}, info.lines.map((line, index) => {
       const free = consideringFreeWords(line);

@@ -73,7 +73,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E2-S16` | DECISION | could | L | Implementation built, including Quick edit and new-deck drafts. Left: same-profile resume, competing drafts and save/discard across the household's real devices; fixtures cannot qualify touch/Safari or device durability. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes, on the P1 redesign since 2026-11-05 ([evidence](decklab/safari/EVIDENCE.md)). |
-| `E2-S33` | OPEN | could | M | Suggest the smallest useful swap for a 60-card deck's goal: one by default, up to two as one idea, from free on-hand Considering cards; explain the trade-off, then review or Test this change. |
 
 ## Deck Lab: collection, orders and buying
 

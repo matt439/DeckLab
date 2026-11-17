@@ -476,6 +476,23 @@ table.data tfoot .total-cost { font-weight: var(--fw-semibold); text-align: left
 .deck-considering-row .menu-button { min-width: var(--tap); justify-content: center; }
 .deck-considering-row .menu-caret { display: none; }
 .deck-considering-row .menu { top: calc(100% + var(--s-1)); right: 0; }
+
+/* Goal-based Considering suggestions: keep protected names and review controls usable on phones. */
+.small-swap-keep-details { margin-block: var(--s-3); }
+.small-swap-keep-details > summary { min-height: var(--tap); padding-block: var(--s-2); cursor: pointer; }
+.small-swap-protected { min-width: 0; margin: var(--s-2) 0; padding: var(--s-2) var(--s-3); border: 1px solid var(--border); }
+.small-swap-protected legend { padding-inline: var(--s-1); font-size: var(--fs-sm); color: var(--ink-2); }
+.small-swap-keep { display: flex; align-items: center; gap: var(--s-2); min-height: var(--tap); margin: 0; }
+.small-swap-keep input { width: 18px; height: 18px; flex: 0 0 18px; }
+.small-swap-keep span { min-width: 0; overflow-wrap: anywhere; }
+.small-swap-message { margin-block: var(--s-3); }
+.small-swap-results { display: grid; gap: var(--s-3); }
+.small-swap-proposal { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.small-swap-cards > .card-row { min-width: 0; }
+.small-swap-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-3); }
+.small-swap-actions .btn { flex: 1 1 10rem; white-space: normal; }
+.small-swap-goal, .small-swap-quantity { width: 100%; max-width: 100%; }
+
 /* EDHREC ideas (deck-edhrec.js): the filters wrap on a phone, the Page choice stays narrow, and each category's rows sit under its heading. */
 .edhrec-filters { flex-wrap: wrap; margin: var(--s-2) 0; }
 .edhrec-page .field { max-width: 24rem; margin-bottom: var(--s-2); }

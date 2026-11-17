@@ -64,7 +64,7 @@ Each epic has a journey in [journeys.md](journeys.md) and its stories in [storie
 | Epic | Title | What it covers | Built | Partial | Missing | Not wanted |
 |---|---|---|---|---|---|---|
 | E1 | Find, plan and choose decks | The library (`#/library`), deck ideas, cover pictures, the deck page's banner and Overview, choosing what to play | 20 | 0 | 0 | 0 |
-| E2 | Build and edit a deck | New deck, the editor and the phone Quick edit, Planned and Play-now lists, owned vs needed, history; `deck pull/push/new/tables` | 23 | 2 | 1 | 1 |
+| E2 | Build and edit a deck | New deck, the editor and the phone Quick edit, Planned and Play-now lists, owned vs needed, history; `deck pull/push/new/tables` | 24 | 2 | 0 | 1 |
 | E3 | Test a deck | Stats, Practice, Forge matchups (`#/matchups`, `#/matchup`), field rank, Test this change (`#/variant`), the simulations setting | 38 | 4 | 0 | 0 |
 | E4 | Get ready, play and learn | The Packing plan (`#/assembly`), tokens to grab, How to play, practice hands, the Game log (`#/play`) and sideboard plans | 26 | 1 | 0 | 3 |
 | E5 | Decide what to buy | Missing cards and estimated costs, the purchase queue on `#/shopping`, AU shop checks, buylists, `watchlist` and `order add --fulfils` | 33 | 0 | 1 | 2 |
@@ -78,7 +78,7 @@ Each epic has a journey in [journeys.md](journeys.md) and its stories in [storie
 ## Headline counts
 
 - **10 personas:** two primary, three secondary (User5, the space members and the self-hoster), one supplementary, one non-human actor and three anti-personas.
-- **11 epics, 398 stories:** 352 built, 21 partial, 8 missing and 17 not wanted (generated, with the epic rows above, from the story headers by `python scripts/audit_stories.py --write`; the lint workflow checks them).
+- **11 epics, 398 stories:** 353 built, 21 partial, 7 missing and 17 not wanted (generated, with the epic rows above, from the story headers by `python scripts/audit_stories.py --write`; the lint workflow checks them).
 - **Must and should stories:** Matt has 126 built, 4 partial (E11-S02, E11-S28, E11-S30, E11-S62) and 1 missing (E8-S25); User1 has 33 built, 1 partial (E2-S22) and 1 missing (E5-S15, deferred); Claude Code has 25 built; User5 4 built and the space members 5; the Commander table 1 built. The self-hoster has 2 should stories built and 2 partial (E11-S79 and E11-S84, with their external gates retained); the rest are could. (Recounted from the story headers on 2026-11-11.)
 
 Deck Lab already does most of what Matt and User1 need. Private by default and guarded member departure are built and live since 2026-10-19. The visual redesign (E11-S30) stays first, followed by the expanded reserve of deck-building, collection, buying, play and self-hosting work reviewed on 2026-10-28. [TODO.md](../../TODO.md) owns their order and readiness; each story owns its first slice and later gates. The other must and should gaps are the physical-device follow-up (E2-S22), the signed-in off-page check (E11-S02) and User2's testing session (E11-S28), which need the people involved; and User1's purchase requests (E5-S15), which are deferred. Stand-in suggestions, combo detection, official-list change detection, the Forge upgrade check, the prebuilt Forge release and Linux support are already built.

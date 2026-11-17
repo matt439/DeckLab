@@ -21,6 +21,15 @@ equal-share reference and explicit draw/clock-stop denominators. Page/profile,
 route, connected-control and request guards protect late replies and actions.
 The shared activity pill treats pods as coordinators, never two-seat scores.
 
+`deck-small-swaps.js` follows `deck-considering.js`. An editable saved casual
+60-card Planned list offers **Suggest a small swap…** under Considering.
+The side sheet keeps goal/protected-card controls above separate alternative
+proposals, with one copy selected initially and a live two-copy preview when
+available. Read-only Suggest and explicit Review/Test actions retain their
+page, profile, route, sheet, footer, request and quantity owners. Review creates
+a linked local Considering/Planned draft; normal editor checks and Save remain
+the only deck write path. The form and action wrapping live in `deck.css`.
+
 Library title, colour-identity and archetype filters use only its already authorized
 summaries. Native Includes choices require every chosen WUBRG colour; known `[]`
 is colourless and null/malformed/unreadable stays unknown. Archetypes match whole

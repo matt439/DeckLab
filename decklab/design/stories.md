@@ -36,7 +36,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 27 | 23 | 2 | 1 | 1 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 27 | 24 | 2 | 0 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 42 | 38 | 4 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 26 | 1 | 0 | 3 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 36 | 33 | 0 | 1 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 87 | 68 | 11 | 4 | 4 |
-| **Total** | **398** | **352** | **21** | **8** | **17** |
+| **Total** | **398** | **353** | **21** | **7** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -385,7 +385,7 @@ First slice: the Scryfall link in `decklab/web/card-viewer.js`, with a server-bu
 
 Covers making a deck and keeping it right: New deck and Start from, the full editor (from 600px) and the phone's Quick edit, Paste a list, the Planned and Play-now lists, owned vs needed against the space's pool and its other built decks, keeping the write-up current, history and undo, and the command-line route Claude Code uses (`deck pull`/`push`/`new`/`tables`). Drafts stay on the device they were started on unless the editor (full or Quick, a new deck's too) keeps one for later on the PC for the same profile (E2-S16), and the Play-now list's substitutes are hand-written (Packing's physical stand-ins, E4-S21, never change a list). Rename and retirement, with restore from History, are on the deck page (E1-S19). Legality badges on casual decks are deliberately not wanted.
 
-Open: E2-S16, E2-S22, E2-S33.
+Open: E2-S16, E2-S22.
 
 Built (2026-11-11): the existing card viewer offers server-built shown-printing Scryfall links (exact-name search fallback), EDHREC in Commander contexts and a bookmarkable card address. Your copies loads lazily only for an authorized collection and lists owned printing/finish/count plus recorded-or-unset storage location, never notes, orders or prices. Independent copy guards run before validation/snapshot access. Card addresses open the existing modal over the current page (Library for a fresh opening), wait for a profile, retain the correct underlay and suppress stale profile/route/card replies.126 targeted fixtures pass with one qualification skip;13 contract/exact-URL golden checks and193 broader permission/search/printing/route checks pass after narrowing four misleading substring assertions. Eight strict synthetic native captures completed cleanly at data/ui-review/20261110T185450Z-96436dce; representative images were inspected. No write, migration, external lookup fetch or actual member data was used. Safari/touch acceptance remains separate.
 
@@ -821,7 +821,7 @@ Built 2026-11-11 for offline files: deck exports retain foil/etched and bare-set
 
 Evidence:235 broad export/import/group/scan/filing/deck-page checks and33 latest focused checks pass (overlap, one guarded DB skip). Disposable-PostgreSQL cases cover original raw bytes, one audit per import, no deck rows and explicit problem selection/refusal; real DB qualification awaits CI. Source links in collection_import_formats.py identify published/firsthand headers and developer presets, never personal rows. URL imports, external-ID lookup and storage-location import policy remain excluded; no outbound import, new schema or actual inventory write occurs. From the product review of 2026-11-10.
 
-**E2-S33** · Matt · could · M · missing
+**E2-S33** · Matt · could · M · built
 
 As a player improving an existing casual 60-card deck, I want Deck Lab to suggest the smallest change that addresses my goal using cards I can play tonight, so that I can learn what the change does without rebuilding the deck.
 
@@ -836,7 +836,13 @@ Requested 2026-11-17: "suggest two swaps I can actually play tonight", clarified
 
 Dependencies already built: Considering (E2-S23, E2-S26), free-copy replacement checks (E3-S25) and the editor's explicit Test this change flow (E3-S11, E3-S30). Those provide candidates, availability and testing; none recommends goal-based cuts and additions together. Commander cut evidence (E2-S28) is a separate feature.
 
-First slice: fixture-backed read-only recommendations for "get going sooner" on a saved 60-card list, comparing its expensive spells with cheaper free Considering alternatives while respecting protected cards and quantities. Show a proposed cut/add pair and its trade-off, or a clear no-suggestion reason, with no automatic write or run; then connect explicit review to the existing draft/test flow. Broader goals follow within this story. Coding can use synthetic decks and pools; real deck changes, Forge runs and physical table/device acceptance remain separate checks.
+Built (2026-11-17): the Planned list's Cards tab offers **Suggest a small swap…** under Considering on an editable saved casual deck with exactly 60 main-deck cards. Choose Get going sooner, Draw more cards or Find more answers, protect cuts with Keep these cards, then explicitly Suggest. The read-only POST `/api/deck/small-swaps` returns up to three alternative ideas, each one cut/add copy by default and optionally two copies of that same idea. Mana value, broad card type and existing role tags provide bounded reasons and trade-offs; these are hypotheses, never measured improvements. Different-card synergy packages are not inferred.
+
+The deck's own space's physical copies supply candidates after incoming cards, other built/intact holds, all selected-list sections and current physical stand-ins are accounted for. Unknown list cards or incomplete inventory withhold suggestions. Casual copy exceptions are respected without a format/ban-list filter. Public deck/collection switches do not disclose private free-copy deductions; only actual own-space viewers or scripts receive them. Each addition retains its concrete Considering printing, finish and category.
+
+Review in editor and Test this change fetch the current saved deck and refuse a changed hash, then create one linked local Planned/Considering draft. Existing unsaved changes require explicit replacement, and normal draft restore, Undo, rebase, check/Save and test permissions remain in charge. Page/profile/route/sheet/footer/request/quantity guards reject stale callbacks. A suggestion never saves, starts a game or changes inventory. The initial implementation is checked with synthetic API, fixture-pool, UI and rendered-browser scenarios; no household data write, actual Forge run or deployment is used. Physical device/table acceptance remains unverified. See [HISTORY.md](../HISTORY.md#small-swaps-from-considering-2026-11-17-e2-s33).
+
+Evidence: `lib/decks/small_swaps.py`, `lib/api/small_swaps.py`, `web/deck-small-swaps.js`; `test_small_swaps.py`, `test_small_swaps_api.py`, `test_deck_small_swaps_ui.py`, `test_deck_small_swaps_draft_ui.py` and the headless `small-swaps` review suite. The 217 focused fixture checks and 12 strict native cases pass; source, story-count and public-repo audits pass.
 
 ---
 
