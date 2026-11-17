@@ -32,6 +32,7 @@ Usage:
     api.swaps.suggest_draft_swaps(body)   # POST /api/deck/swaps: the same for the editor's Play-now list
     api.swaps.suggest_replacements("casual/gruul-ramp", card="Shock")  # GET /api/deck/replacements: free pool cards for a listed card
     api.swaps.suggest_dual_lands("casual/gruul-ramp")  # GET /api/deck/dual-lands: free dual lands for a short colour
+    api.small_swaps.suggest_small_swaps(body)  # POST /api/deck/small-swaps: read-only Considering suggestions
     api.role_cards.role_cards("commander/giada-angels")  # GET /api/deck/role-cards: free pool cards for each Stats role
     api.save_deck(body)                   # POST /api/deck/save: the new text and table, one change
     api.create_deck(body)                 # POST /api/decks: a new deck, one change (201)

@@ -36,7 +36,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 26 | 23 | 2 | 0 | 1 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 27 | 24 | 2 | 0 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 42 | 38 | 4 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 26 | 1 | 0 | 3 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 36 | 33 | 0 | 1 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 87 | 68 | 11 | 4 | 4 |
-| **Total** | **397** | **352** | **21** | **7** | **17** |
+| **Total** | **398** | **353** | **21** | **7** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -820,6 +820,31 @@ As a deck builder moving lists between Deck Lab and other tools, I want exports 
 Built 2026-11-11 for offline files: deck exports retain foil/etched and bare-set printing details, with an explicit scoped Copy with categories action that round-trips tags. Collection import recognizes Archidekt, Dragon Shield, supported Delver presets, TCGplayer layouts and headerless quantity/name/set/number lists through the existing guarded preview/one-change apply. Comma/tab/semicolon and separator preambles preserve original line numbers, source groups and raw text. Unknown conditions/languages stay blank, contradictory finishes and ID-only layouts require review, and unknown layouts list every accepted format. Paid-price/folder/location values are never interpreted, summed or put in inventory fields; raw provenance remains private.
 
 Evidence:235 broad export/import/group/scan/filing/deck-page checks and33 latest focused checks pass (overlap, one guarded DB skip). Disposable-PostgreSQL cases cover original raw bytes, one audit per import, no deck rows and explicit problem selection/refusal; real DB qualification awaits CI. Source links in collection_import_formats.py identify published/firsthand headers and developer presets, never personal rows. URL imports, external-ID lookup and storage-location import policy remain excluded; no outbound import, new schema or actual inventory write occurs. From the product review of 2026-11-10.
+
+**E2-S33** · Matt · could · M · built
+
+As a player improving an existing casual 60-card deck, I want Deck Lab to suggest the smallest change that addresses my goal using cards I can play tonight, so that I can learn what the change does without rebuilding the deck.
+
+- Given an existing 60-card deck, when I ask for suggestions, then I state what I want to improve and which cards are off-limits; no suggestion cuts an off-limits card.
+- Given the deck's Considering list, when additions are suggested, then they start from that list and use only enough free copies physically on hand in the deck's own space, excluding incoming cards and copies held by other built decks or intact products. The resulting list keeps its size and follows casual deck rules (normally at most four copies except basic lands, with no format or ban-list filter).
+- Given a useful recommendation, then it proposes explicit cuts and additions with quantities: one copy out and one in by default, up to two out and two in when they test one idea or a small package. Two copies of the same card are one idea; the cap is not a target, and no suitable change is a valid answer.
+- Given a proposal, then it explains how it addresses the stated goal and what is given up, as an expectation to try rather than a measured improvement. For example, replacing two expensive spells with two free Preordains could smooth early draws at the cost of late-game punch.
+- Given a proposal, then I can try it at the table or explicitly review it through the existing editor and Test this change flow. Asking for suggestions never starts games or saves a deck; applying a reviewed draft still uses normal check/Save and existing test permissions.
+- Given a viewer who cannot see the deck's space's inventory, then no availability-based suggestion is returned; existing deck visibility, edit and inventory-read rules apply, and no other space's cards or hidden deck names are exposed.
+
+Requested 2026-11-17: "suggest two swaps I can actually play tonight", clarified as the smallest useful change, one by default and two when they work together. Three-card changes and broader deck rebuilding are outside the first scope.
+
+Dependencies already built: Considering (E2-S23, E2-S26), free-copy replacement checks (E3-S25) and the editor's explicit Test this change flow (E3-S11, E3-S30). Those provide candidates, availability and testing; none recommends goal-based cuts and additions together. Commander cut evidence (E2-S28) is a separate feature.
+
+Built (2026-11-17): the Planned list's Cards tab offers **Suggest a small swap…** under Considering on an editable saved casual deck with exactly 60 main-deck cards. Choose Get going sooner, Draw more cards or Find more answers, protect cuts with Keep these cards, then explicitly Suggest. The read-only POST `/api/deck/small-swaps` returns up to three alternative ideas, each one cut/add copy by default and optionally two copies of that same idea. Mana value, broad card type and existing role tags provide bounded reasons and trade-offs; these are hypotheses, never measured improvements. Different-card synergy packages are not inferred.
+
+The deck's own space's physical copies supply candidates after incoming cards, other built/intact holds, all selected-list sections and current physical stand-ins are accounted for. Unknown list cards or incomplete inventory withhold suggestions. Casual copy exceptions are respected without a format/ban-list filter. Public deck/collection switches do not disclose private free-copy deductions; only actual own-space viewers or scripts receive them. Each addition retains its concrete Considering printing, finish and category.
+
+Review fixes (2026-11-17): the mana gate checks cost symbols as well as card colours, so devoid cannot hide an off-colour requirement. Mandatory colourless, snow and unknown cost symbols are withheld until their sources can be qualified. Considering candidates pass the editor's new Planned-line checks before ranking and deduplication, so malformed printings, unsupported finishes and non-playable printings cannot hide valid alternatives. Setless source details stay unchanged for the linked move. Six additional regression checks pass with the 85-check focused suite; the original native/browser and physical-device boundaries remain.
+
+Review in editor and Test this change fetch the current saved deck and refuse a changed hash, then create one linked local Planned/Considering draft. Existing unsaved changes require explicit replacement, and normal draft restore, Undo, rebase, check/Save and test permissions remain in charge. Page/profile/route/sheet/footer/request/quantity guards reject stale callbacks. A suggestion never saves, starts a game or changes inventory. The initial implementation is checked with synthetic API, fixture-pool, UI and rendered-browser scenarios; no household data write, actual Forge run or deployment is used. Physical device/table acceptance remains unverified. See [HISTORY.md](../HISTORY.md#small-swaps-from-considering-2026-11-17-e2-s33).
+
+Evidence: `lib/decks/small_swaps.py`, `lib/api/small_swaps.py`, `web/deck-small-swaps.js`; `test_small_swaps.py`, `test_small_swaps_api.py`, `test_deck_small_swaps_ui.py`, `test_deck_small_swaps_draft_ui.py` and the headless `small-swaps` review suite. The 217 focused fixture checks and 12 strict native cases pass; source, story-count and public-repo audits pass.
 
 ---
 

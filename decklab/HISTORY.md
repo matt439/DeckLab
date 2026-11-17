@@ -1,5 +1,48 @@
 # Deck Lab: history
 
+## Small swaps from Considering (2026-11-17; E2-S33)
+
+The Planned Cards tab of an editable saved casual 60-card deck offers
+**Suggest a small swap…** under Considering. Choose Get going sooner, Draw more
+cards or Find more answers, optionally protect cards, then explicitly Suggest.
+Up to three alternative cut/add ideas explain their expected benefit and
+trade-off, with one copy selected initially and two copies of the same idea
+available only when capacities permit. These use mana value, card type and
+existing role tags; they do not predict wins or infer different-card synergy
+packages.
+
+The read-only endpoint uses only the deck's own Considering cards and physical
+copies free after incoming cards, built/intact holds, all list sections and
+current physical stand-ins. Incomplete availability withholds suggestions.
+Casual copy limits and printed exceptions apply without format/ban filtering.
+Only actual own-space viewers or scripts can read these private hold deductions.
+
+Review in editor and Test this change check the current saved hash, preserve
+printing/finish/category, and make a linked local Planned/Considering draft.
+Existing drafts need explicit replacement. Normal editor restore, Undo, rebase,
+checks, Save and test permissions remain in charge; Suggest never writes or
+starts games. Async ownership includes page, profile, route, sheet, footer,
+request and selected quantity. Validation: 217 focused fixture checks pass,
+including real editor restore/Undo/check/save payloads and linked conflict
+rebase; all 12 strict native Chromium cases pass at 320/393/820/1280px in both
+themes, including empty/retry and existing-draft Keep/Replace. Representative
+screenshots were inspected; process cleanup completed. The native receipt is
+in `data/ui-review/20261117T031018Z-e770015a`. Ruff, source-length, story-count
+and public-repo audits pass. No household write, actual Forge run or deployment
+was performed; physical table/device acceptance remains.
+
+Review fixes (2026-11-17): candidate mana costs are checked as well as card
+colours, so devoid cannot hide an off-colour requirement. Mandatory colourless,
+snow and unknown cost symbols are withheld because this shortlist does not
+qualify their sources. Considering rows pass the editor's new Planned-line
+checks before ranking and deduplication; malformed printings, unsupported
+finishes and non-playable printings cannot suppress valid alternatives. The
+original source details, including setless rows, still identify the linked
+Considering move. Six new regression checks cover these boundaries; all 85
+focused checks and Ruff, source-length, story-count and public-repo audits pass.
+No native browser/device check, household write, Forge run or deployment was
+performed for these fixes.
+
 ## Sideboard plan list counts, not ownership (2026-11-15)
 
 The sideboard planner now labels quantities as copies in the selected list rather than

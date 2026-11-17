@@ -175,6 +175,7 @@ ACCESS = MappingProxyType({
     ('POST', 'deck/cuts'): 'deck',
     ('POST', 'deck/bracket-replacements'): 'deck-edit',
     ('POST', 'deck/swaps'): 'deck',
+    ('POST', 'deck/small-swaps'): 'deck',
     ('POST', 'deck/retire'): 'deck-edit',
     ('POST', 'deck/rename/preview'): 'deck-edit',
     ('POST', 'deck/rename'): 'deck-edit',
@@ -437,6 +438,7 @@ def route_tables():
     """Fresh handler bindings, so request-time patches and lazy imports retain one owner."""
     from decklab.lib.api import role_ranges
     from decklab.lib.api import space_download
+    from decklab.lib.api import small_swaps
     from decklab.lib.api import (accessories, accessory_undo, activity, arrivals, activity_mixed_undo, activity_undo, assembly, commander_candidates, assembly_completion, assembly_standins, assembly_ticks, box_check, box_repair, collection, compare, comparison_lists, considering, collection_edit, collection_locations, collection_scan, collection_trade, cover, deck_drafts, deck_printings, dice, edhrec, editor, history,
                                  library_forge, maintenance, opponents, play_pods, play_records, play_tonight, precon_coverage, precons, products, product_tokens, rankings, receipts, reference_facts, rename, retirement, role_cards, server_restart, shopping, shopping_order_changes, shopping_orders, shopping_queue, shopping_queue_combined, shopping_queue_missing, swaps, token_cards, token_plan, tokens, tokens_scan, variant_queue, visits, wishlist_ideas, wishlist_undo)
     from decklab.lib.api.common import MAX_BODY
@@ -612,6 +614,7 @@ def route_tables():
         ("deck", "cuts"): (deck_cuts.preview_cuts, deck_cuts.MAX_BODY),
         ("deck", "bracket-replacements"): (bracket_fixes.replacements, bracket_fixes.MAX_BODY),
         ("deck", "swaps"): swaps.suggest_draft_swaps,      # a dry run: nothing is written
+        ("deck", "small-swaps"): small_swaps.suggest_small_swaps,  # read-only recommendations
         ("deck", "retire"): retirement.retire_deck,
         ("deck", "rename", "preview"): rename.preview_rename,
         ("deck", "rename"): rename.rename_deck,

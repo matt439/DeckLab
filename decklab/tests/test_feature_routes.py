@@ -12,6 +12,7 @@ from decklab.lib.api import card_combos, card_details
 from decklab.lib.api import deck_cuts, edhrec
 from decklab.lib.api import bracket_fixes
 from decklab.lib.api import forge_pods
+from decklab.lib.api import small_swaps
 from decklab.lib.api import (accessories, activity, activity_undo, assembly, assembly_completion, assembly_ticks, collection, compare, comparison_lists, cover, editor, history, play_records,
                              precon_coverage, precon_trial, receipts, shopping, shopping_order_changes, shopping_orders, shopping_queue, tokens)
 from decklab.tests.test_server import ServerTestCase, WRITE
@@ -53,6 +54,7 @@ GETS = (
      {"file": "TestDinos_TST", "space": "user2"}),
 )
 POSTS = (
+    ("/api/deck/small-swaps", small_swaps, "suggest_small_swaps"),
     ("/api/forge/pods/plan", forge_pods, "plan_pods"),
     ("/api/forge/pods/run", forge_pods, "run_pods"),
     ("/api/forge/pods/stop", forge_pods, "stop_pods"),

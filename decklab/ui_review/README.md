@@ -79,10 +79,18 @@ python scripts/ui_review.py --suite first-use --smoke --strict-console
 python scripts/ui_review.py --suite member-tools --smoke --strict-console
 python scripts/ui_review.py --suite card-viewer-details --smoke --strict-console
 python scripts/ui_review.py --suite deck-cuts --strict-console
+python scripts/ui_review.py --suite small-swaps --strict-console
 python scripts/ui_review.py --smoke --suite capture --strict-console
 python scripts/ui_review.py --output C:/Temp/decklab-ui-review-01
 python scripts/ui_review.py --browser "C:/Program Files/Google/Chrome/Application/chrome.exe"
 ```
+
+The opt-in `small-swaps` suite exercises 12 synthetic Considering suggestion
+cases across 320, 393, 820 and 1280px in both themes, including empty/retry states.
+It checks protected cards, live one/two-copy proposals, explicit Review/Test
+navigation, linked local drafts and existing-draft Keep/Replace. Suggestion POSTs
+are intercepted as read-only replies; no deck save or Forge run is allowed.
+Representative phone/desktop screenshots still require visual inspection.
 
 The opt-in `precon-bonus` suite exercises six synthetic bonus-card reviews across
 phone, tablet and desktop widths in both themes. Native checkbox clicks, exact

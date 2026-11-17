@@ -231,6 +231,8 @@ class RouteAccessTests(PermissionTestCase):
             if event == "call" and frame.f_code in watched:
                 observed.append(frame.f_code.co_name)
         body = {"profile": who, "space": "user3", "id": DECK}
+        if route == ("deck", "small-swaps"):
+            body = {"profile": who, "id": DECK, "version": "target", "goal": "earlier", "protected": []}
         if route in (("forge", "pods", "plan"), ("forge", "pods", "run")):
             # Pods validate their bounded four-seat envelope before inspecting
             # visibility. Supply that envelope so this remains an access probe,
