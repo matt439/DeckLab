@@ -1,5 +1,20 @@
 # Deck Lab: history
 
+## Live shrink warning and history evidence (2026-11-18; E11-S87, E3-S50)
+
+HomeOps enabled `database.shrink_warn` on the live Linux server, retaining the
+agreed more-than-25% and at-least-5-row thresholds. The production nightly
+shrink comparison used the actual successful dumps from 2026-11-17 and
+2026-11-18, returned `(True, None)` and logged no sharp shrink; `db status`
+was clean. This checks the production read-only step and does not claim a new
+scheduled nightly run. Configuration and its pre-change backup remain private
+and mode 0600. E11-S87 is complete.
+
+The live home-deck history scan returned complete answers but no earlier
+standard-sample entries or comparison steps. Two current lists had older-engine
+results muted without figures. E3-S50 remains partial until suitable saved
+history exists for the browser check; no revisions or games were manufactured.
+
 ## Small swaps from Considering (2026-11-17; E2-S33)
 
 The Planned Cards tab of an editable saved casual 60-card deck offers

@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 20 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 87 | 68 | 11 | 4 | 4 |
-| **Total** | **398** | **353** | **21** | **7** | **17** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 87 | 69 | 10 | 4 | 4 |
+| **Total** | **398** | **354** | **20** | **7** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1536,6 +1536,12 @@ As a deck builder tuning a deck over many edits, I want a short timeline of the 
 - Given the search stops at a bound, then the timeline says it isn't every list.
 
 Built (2026-11-12): `GET /api/gauntlet/history` (`decklab/lib/api/gauntlet_history.py`) reuses `gauntlet_before`'s revision walk and bounds, which now date each list by the oldest revision of its newest unbroken run (a revision whose list can't be read ends a run, so a date is never pushed back over revisions that didn't hold that list). It answers today's list and up to 8 earlier lists with standard-sample results, newest first, each with its saved date, figure, range and opponents; a list tested only under older keys is muted without a figure. Each step between neighbours names the cards added and taken out and compares only the opponents both share (`no_shared` when there are none), and when a bound left out a list with run notes the timeline says it isn't every list. The Testing tab's Against popular decks gains **Show earlier lists** (`web/gauntlet.js`). Fixture tests only. Left: a live check of Show earlier lists against saved standard-sample runs on the server, for a deck with several saved lists.
+
+Live data checked (2026-11-18): the home-deck history endpoints all returned
+`complete: true`, one current list and no earlier standard-sample entries or
+comparison steps. Two current lists had older-engine results, muted without a
+figure. There is no suitable saved history for the requested multi-list browser
+check yet; no deck revisions or games were created to manufacture that evidence.
 
 **E3-S51** · Matt · could · S · built
 
@@ -6802,7 +6808,7 @@ As Matt, leaving Deck Lab running on the spare PC for months, I want status and 
 
 Built (2026-11-12): `python -m decklab.db status`, `homenet status` (Windows and Linux) and the nightly's log show each disk's free space once, however many folders are on it, and the sizes of the backups, Forge results, gauntlet, shops and card data folders under those fixed labels, never a path. A disk below config.json's `disk_space.warn_below_gb` (default 10 GB) warns, and the nightly sends a `disk space` heartbeat step that never fails the night. A folder that can't be read, or whose walk hits its file or time limit, is unknown, never zero, and `db status` prints the disk lines even when the database can't be reached.
 
-**E11-S87** · Matt · should · M · partial
+**E11-S87** · Matt · should · M · built
 
 As Matt, relying on the nightly backups, I want the nightly to warn when the collection, decks, token cards, orders, wishlists or accessories shrank sharply since the previous good dump, so that a mistaken bulk removal or bad import is noticed while the daily dumps from before it still exist.
 
@@ -6810,7 +6816,15 @@ As Matt, relying on the nightly backups, I want the nightly to warn when the col
 - Given the warning, then it gives whole-table counts only, never a space's or a row's contents.
 - Given a watched table missing from either dump, then it says the table couldn't be compared.
 
-Built (2026-11-12), off by default: `decklab/db/shrink.py` compares each watched table's whole-table count (collection_card, deck, token_card, purchase_order, wishlist_entry, accessory) in the newest good dump with the newest good dump at least 20 hours older, chosen by time so a manual or pre-update backup in between doesn't hide a loss. A table that shrank by more than 25% and at least 5 rows (proposed; `shrink_warn_percent` and `shrink_warn_rows` change them) gets a WARNING line in `db status` and db.log, and the nightly's `shrink` heartbeat step is sent as failed without failing the night. A table missing from either dump is reported as couldn't be compared. None of this runs until config.json's `database.shrink_warn` is true. Decided (Matt, 2026-11-13): the watched tables and thresholds as proposed, and the heartbeat carries the table and its counts. Built (2026-11-13): a shrink's heartbeat message names each shrunk table with its from and to counts and the earlier dump's date (whole-table counts only, bounded), still a warning that never fails the night (`test_db_shrink`). Left: set config.json's `database.shrink_warn` to true on the server PC (a live setting, Matt's or Claude's with his OK).
+Built (2026-11-12), off by default: `decklab/db/shrink.py` compares each watched table's whole-table count (collection_card, deck, token_card, purchase_order, wishlist_entry, accessory) in the newest good dump with the newest good dump at least 20 hours older, chosen by time so a manual or pre-update backup in between doesn't hide a loss. A table that shrank by more than 25% and at least 5 rows (`shrink_warn_percent` and `shrink_warn_rows` change them) gets a WARNING line in `db status` and db.log, and the nightly's `shrink` heartbeat step is sent as failed without failing the night. A table missing from either dump is reported as couldn't be compared. None of this runs until config.json's `database.shrink_warn` is true. Decided (Matt, 2026-11-13): the watched tables and thresholds as proposed, and the heartbeat carries the table and its counts. Built (2026-11-13): a shrink's heartbeat message names each shrunk table with its from and to counts and the earlier dump's date (whole-table counts only, bounded), still a warning that never fails the night (`test_db_shrink`).
+
+Enabled and checked on the live Linux server (2026-11-18, authorised through
+HomeOps): `database.shrink_warn` is true, with the agreed thresholds unchanged.
+The production `nightly._shrink_check()` compared the actual successful dumps
+of 2026-11-17 and 2026-11-18 and returned `(True, None)`; `db.log` recorded that
+no watched table shrank sharply and `db status` was clean. This was the real
+read-only comparison step, not a newly completed scheduled nightly run. The
+private configuration and its pre-change backup remain mode 0600.
 
 **E11-S88** · Matt · could · S · built
 
