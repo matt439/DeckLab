@@ -47,13 +47,13 @@ An index of open work, one row per item; each row points to the doc that owns th
 - **`E11-S28`: User2's user-testing session.** Confirm his device, then use the prepared [checklist](decklab/design/user-testing-user2.md).
 - **`E3-S49`: Same commander's real results.** The Commander catalogue was rebuilt on the server (2026-11-18). The first real Same commander run and inspection remain queued after the replay, with `FG#4`'s real-game work.
 - **`E3-S50`: earlier lists on live data.** The 2026-11-18 live scan found no earlier standard-sample entries for the home decks. Check Show earlier lists when a deck has several tested lists; retain the gap without manufacturing revisions.
-- **`FG#2`: Forge 2.0.16's replay.** Released, on the server and checked there (2026-11-14); its replay (33 matchups, 13,120 games) was stopped after 3,199 for the server's Windows boot. Finish it on an idle server (HomeOps `replay.ps1` plays only what's missing), then read its results; the side-build speed A/B (PLAN.md, Later) waits for an idle PC.
+- **`FG#2`: Forge 2.0.16's separate speed A/B.** The live replay completed and was reviewed on 2026-11-18: no current missing games. Only the separately planned side-build speed/winner comparison remains (PLAN.md, Later); no A/B build, run or adoption is scheduled.
 - **`E9-S11`: qualify four-player pods.** Implementation, win shares and Start guidance are built and fixture-tested (2026-11-16). After `FG#2`, with Matt's OK on an idle PC, check a small real rotated pod, Stop and resume, then the page on a phone and iPad. No real games or deployment were performed by the implementation task.
 - **`E3-S40`: XMage on the live server.** Pinned 1.4.63 installed, private `xmage_dir` configured and bridge verified (2026-11-18). After `FG#2`, cross-check bounded real casual/Commander samples for unsupported cards and separate results ([owner](decklab/design/cross-simulator.md#setup-and-use)).
 
 **Activation:** migrations `0012` and `0013` were applied and the server restarted on committed code on 2026-10-19, so the privacy code and guarded member removal are live. No visibility choice or real member removal has been made.
 
-**Date and PC gates:** `FG#2`'s server replay and side-build speed A/B wait for an idle PC. Forge games (`FG#2`, `FG#3`) run one at a time in the main session, on an idle PC, with Matt's OK. Their pause doesn't prevent fixture-based development above.
+**Date and PC gates:** `FG#2`'s separate side-build speed A/B needs a concrete idle window; its server replay is complete. Forge games (`FG#2`, `FG#3`) run one workflow at a time on an idle PC, with Matt's OK. These gates don't prevent fixture-based development above.
 
 ## Deck Lab: access and privacy
 
@@ -101,7 +101,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E3-S23` | DECISION | could | M | Field membership, saved choices, home-admin preview/save and fail-closed selection built. Left: a real-browser saved choice used by a real run; this needs a separately authorised live policy/run acceptance session. |
 | `FG#4` | DECISION | should | M+pc | Both live catalogues rebuilt 2026-11-18 (243/260 Commander, 1,332/1,650 constructed). Left after replay: measure Commander throughput and first standard run per Commander deck. |
 | `E11-S28` | DECISION | should | M | Run the user-testing session with User2 from the prepared [checklist](decklab/design/user-testing-user2.md) (confirm his device first), then the follow-up review and stories. |
-| `FG#2` | DECISION | should | L+pc | Forge 2.0.16 released, on the server and checked there; replay 3,199 of 13,120 games, stopped 2026-11-14. Left: finish it (plays only what's missing), read its results, and the side-build speed A/B (2.0.16 left out #11314/#11981). |
+| `FG#2` | DECISION | should | L+pc | Forge 2.0.16 live replay completed/reviewed 2026-11-18; no current missing games. Left: execute the separately planned side-build speed/winner A/B (PLAN.md, Later), with no automatic adoption. |
 | `FG#3` | DEFERRED | could | M+pc | More experiment games (AI profiles, team-pump fix, override sets), decided with `FG#2`'s replay; the clean `fiery` test ran 2026-10-21 (C4 does what `fiery` does). |
 | `E3-S40` | DECISION | should | M+pc | Pinned XMage 1.4.63 installed/configured; bridge verified 2026-11-18. Left after `FG#2`: bounded real casual/Commander checks for unsupported cards and separate results. |
 

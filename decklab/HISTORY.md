@@ -1,5 +1,28 @@
 # Deck Lab: history
 
+## Live Forge replay completed and reviewed (2026-11-18; FG#2)
+
+The live replay gate passed at 09:47 local time: `replay --dry-run` reported
+zero missing games for the current eligible matchups. The saved-result review
+covered 32 current home matchups and 12,920 games, including 65 timeouts.
+Ten historical failed batches remain recorded; the final review found no
+actual game errors or latest native failures. These are the current eligible
+lists, rather than a claim that every list in the older replay plan still
+exists unchanged.
+
+The resumed replay saved 9,621 of its 9,921 requested games. Two bounded,
+process-local recoveries at 2 GiB/four workers filled the remaining 300 games
+in 522.038 s and 32.003 s. Live heap/worker defaults stayed unchanged. An
+isolated reproduction of exact seed 506 still ran out of memory at both
+1 GiB and 2 GiB; it wrote no statistics and changed no source. The retained
+failure and these recovery timings establish neither a memory fix nor an
+A/B speed benefit.
+
+The obsolete Forge 2.0.15 installation was removed after the replay review,
+exact-target/reference checks and current-backup guards. `FG#2` now retains
+only the separately planned side-build speed/winner comparison in PLAN.md's
+Later list. The plan starts no build or game and makes no adoption decision.
+
 ## Replay reports returned partial failures (2026-11-18)
 
 When Forge saved some games and returned a native failure instead of raising,

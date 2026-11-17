@@ -20,7 +20,7 @@ The database move is finished: phase 5b is built, and the week of side-by-side c
    - **Deck rename, retirement and restoration are built** (E1-S19, completed 2026-10-16). More > Rename deck reviews the title and derived id, keeps immutable history and resolves reserved earlier addresses for sources, games and matchups. Cards, build status and kit stay unchanged; packing checks require reconfirmation. Rename needs migration 0010; older schemas retain existing reads and saves. An editable unbuilt deck can be retired with a reason and restored from History under its current id, retaining its earlier addresses.
    - (Settled in phase 4: deck pages and the library now hide another space's counts, token chips and table from viewers who can't see that space's inventory.)
 2. **AI fixes, round 1** (merged, installed and measured 2026-10-20/21; [forge-trial/ai-round1-results.md](forge-trial/ai-round1-results.md)): `etb-harmless-1` adopted in The Free Peoples' pilot on 2026-10-21, the others not. Replayed and cleaned up the same day; done. The earlier backlog (AI profiles, the team-pump fix and the other override sets) follows as `FG#3`.
-3. **Forge 2.0.16** (released 2026-11-11): the fork's `decklab` branch has it merged in, and `2.0.16-decklab-029c9518f` is built, checked (`engine-check`, `upgrade-check --dir`, then `upgrade-check` installed: card log, warm worker and overrides all passed) and installed on the development PC (2026-11-13). Its release is published, and the live server runs it since 2026-11-14 (`upgrade-check` passed there; the replay of 33 matchups, 13,120 games, played 3,199 before it was stopped that morning). Left: finish the replay and read its results, and the side-build speed A/B in the Later list, since 2.0.16 left out the speed PRs.
+3. **Forge 2.0.16**: `2.0.16-decklab-029c9518f` is released, installed and checked. The live replay completed and was reviewed on 2026-11-18: all current eligible matchups have their required games, and `replay --dry-run` reports none missing. The review covers 32 current home matchups and 12,920 saved games; historical failures and timeouts remain explicit in HISTORY.md. Only the separate side-build speed/winner A/B in the Later list remains under `FG#2`.
 4. ~~**Round-robin rankings** of all decks.~~ **Done 2026-10-15** (E3-S10): Matchups has a Rankings view for each format, with ratings, likely rank ranges, unsettled lists and exclusion reasons. Disconnected groups have separate ranks; current lists outside the field remain visible.
 5. **4-player Commander pods** on the page (E9-S11, E9-S21, E9-S22): implemented and fixture-tested 2026-11-16. Testing's Four-player pods reviews four visible Commander lists with similar declared target brackets, starts rotated cold batches under the shared worker budget, and shows separate win shares with 95% ranges. Explicit recovery keeps completed games. Left after `FG#2`: a small real-engine qualification on an idle PC with Matt's OK, then phone/iPad acceptance; no real Forge run or deployment was part of implementation.
 6. **Testing sideboard plans.**
@@ -64,7 +64,44 @@ Each finished feature in [HISTORY.md](HISTORY.md) also lists its "known low issu
 - ~~card pictures on the Receipts page~~: done 2026-10-13 in the UI redesign (UI-REVIEW.md WP6): each pending part is a grid of its rows' pictures with a tick each (the recorded printing, else the card's default picture in a dashed frame that says so), tokens with their front and back, a product's cards by deck and section, 3 a row on a phone; a tap opens the row's sheet;
 - **AI fixes, round 1:** measured 2026-10-20/21, `etb-harmless-1` adopted for TFP, replayed 2026-10-21 (item 2 above; [forge-trial/ai-round1-results.md](forge-trial/ai-round1-results.md)).
 - **more experiment games, on an idle PC** (`FG#3`): the team-pump fix (`team-pump-1`: Rabbits +4.1 points against Vampires, still without its mirror test), the six AI-profile arms (Rabbits on Reckless and on DLAggro, Gruul and Angels on Reckless, Izzet on DLControl, Mono-Black Midrange on Cautious: about 1,100 to 3,200 games a pair where the report gives a number), and the override sets `etb`, `hints`, `tgt`, `flash`, `etb-flagged` and `tgt-gift`. About 2-4 hours of idle PC (an estimate). Also worth a look then: Rabbits vs Vampires ran 1.49x faster with every game patch off (B7-off; one fresh-pool round against B2's warm ones, which each had a clock stop while B7-off's had none). The runs go through `experiment` (the combined run's specs are in its `inputs/exp-*.json`). Adopting anything afterwards re-keys the matchups of the lists it touches, which then need a `replay`, so adoptions are best decided together;
-- **Forge 2.0.16** (released 2026-11-11; built, checked and installed on the development PC 2026-11-13, see the Now list): it left out the speed PRs R17 would have built in a side build (#11314, #11981 and #11366, all still open), so the side-build A/B below is due, on an idle PC. In the merge, Deck Lab's patches were made again on 2.0.16's reworked attack and eval code, and the fork now counts a decision cut short at 2.0.16's AI deadline (`AITimeoutTracker`) as an AI timeout. The upgrade: rebase the fork's `decklab` branch (`C:\Projects\forge`, which since 2026-10-11 holds Deck Lab's changes to `AbstractMulligan`, `AiController`, `AiAttackController` and `Match`, and its AI fixes) onto the 2.0.16 tag, resolve conflicts, build and install it with its `decklab/install.py` (README.md, "Deck Lab's own Forge", has the steps; `python -m decklab.lib.forge upgrade-check --plan forge-2.0.16` prints them; before the install, `upgrade-check --dir <scratch folder>` runs the same checks on the scratch build, noting nothing for the installed one, E11-S45), then `python -m decklab.lib.forge upgrade-check` (built 2026-10-21, E11-S15): `cardlog-check`, `serve-check` and the card-script overrides' upstream check (`overrides check`; `overrides make` when one no longer fits, since an override isn't used while Forge's script differs from the one it was made from), with one summary and `replay --dry-run`'s games and rough time; and a `replay` of every matchup, since the engine changes. If 2.0.16 isn't out by 2026-12-15, or leaves out #11314 and #11981, run the one-off side-build A/B in [forge-trial/sim-wave3-contract.md](forge-trial/sim-wave3-contract.md) §13.
+- **Forge 2.0.16 side-build speed/winner A/B** (`FG#2`; plan recorded 2026-11-18,
+  following [sim-wave3-contract.md §13](forge-trial/sim-wave3-contract.md#13-r17-decided-to-wait-for-forge-2016)).
+  The release and live replay are complete. This is a separate experiment;
+  no build, game, automatic adoption or live-engine change is scheduled.
+
+  1. Pin baseline `2.0.16-decklab-029c9518f` and its exact artifacts. At
+     preparation time, recheck upstream PRs #11314, #11981 and #11366 and pin
+     the applicable candidate revisions; do not assume their old open/merge
+     state. Build the candidate beside the baseline in scratch, keeping the
+     same Deck Lab patches, copied classes, card log, pilots and overrides.
+     Retain source/artifact hashes and pass `upgrade-check --dir` on each
+     staged build (card-log, fresh/warm-worker and override checks).
+  2. Freeze the exact saved lists and identities behind the existing owner
+     labels: Rabbits v Vampires, 800 games per engine, and Giada v Finneas,
+     400 per engine. Review exact saved ids/hashes before running; a changed
+     list requires a fresh plan. Match seeds, seat schedule, AI/pilot and
+     override settings between arms. Commander timeouts can change decisions,
+     so matching requested seeds alone never proves exact paired replay.
+  3. Use the same idle machine and identical resources for both arms,
+     initially the current eight-worker, 1 GiB-per-worker caps. Treat the
+     known memory-failing seed as a failure to report, not a silent omission.
+     If both arms are instead tested at 2 GiB/four workers, record that as a
+     separate matched setting and require at least 16 GiB available RAM.
+     Never compare unlike resource settings or change the live defaults.
+  4. The initial replay estimate (9,921 games in about 5 h 10 min) gives
+     roughly 75 minutes for 2,400 A/B game attempts at that pooled mix's
+     estimated rate. This is provisional, not measured A/B throughput.
+     Before booking a window, derive rates from the selected pairs' saved
+     runtimes and add builds, staged checks and slow tails; review the
+     concrete idle window and stop limit with Matt. Stop cleanly on the
+     limit, memory pressure or failed qualification and retain partial work.
+  5. Keep both arms' receipts, raw logs and game outputs isolated from live
+     matchups, field, ratings and gauntlet. Compare completed winner shares
+     with uncertainty, AI/clock timeouts, errors, memory failures, wall time
+     and throughput. Incomplete evidence is not a speed or winner benefit.
+     Review the result before any adoption decision; adoption would require
+     its own qualified deployment and replay plan.
+
 
 ## Design
 
