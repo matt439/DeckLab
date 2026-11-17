@@ -1,5 +1,18 @@
 # Deck Lab: history
 
+## Replay reports returned partial failures (2026-11-18)
+
+When Forge saved some games and returned a native failure instead of raising,
+`forge replay` previously counted that matchup as complete and exited 0. It now
+reports the latest run's failure or shortfall, excludes it from the completed
+matchup count and exits 1. Text and JSON retain the games actually saved, and
+the next replay still plays only the missing games. Historical failed batches
+and recovered partial chunks do not invalidate a successful later run.
+
+Guarded fixture checks cover partial results, native failures, returned stops,
+malformed returns and successful top-ups. This source correction does not change
+saved results, engine settings or the live installation.
+
 ## Live setup and bounded operational checks (2026-11-18)
 
 HomeOps rebuilt both gauntlet catalogues successfully: Commander has 243

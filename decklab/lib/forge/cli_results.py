@@ -179,6 +179,27 @@ def _print_replay_plan(plan, workers):
         print(_replay_time(_replay_estimate(plan, workers), workers))
 
 
+def _replay_problem(item, result, run):
+    """A returned run can retain games and still have failed without raising."""
+    played = run["played"]
+    if type(played) is not int or played < 0:
+        raise shared.ForgeError("The replay's saved game count could not be confirmed.")
+    missing = max(0, item["games"] - played, item["target"] - shared.saved._counted(result))
+    why = run.get("error") or run.get("failure")
+    if not why and run.get("failed"):
+        why = "Forge reported failed batches"
+    if not why and run.get("stopped"):
+        why = "the run stopped before replay completion"
+    if not missing and not why:
+        return None
+    words = [f"saved {played:,} of {item['games']:,} requested games"]
+    if missing:
+        words.append(f"{missing:,} still missing")
+    if why:
+        words.append(str(why))
+    return "; ".join(words)
+
+
 def _replay(plan, results_dir, local, at_once, log_dir=None, log_every=1):
     """Play plan's games (_replay_plan), at_once matchups at a time, every run in one
     pool.session(local=local) (the server's pool when it's up: replay runs, by REPLAY_BY, are
@@ -188,6 +209,7 @@ def _replay(plan, results_dir, local, at_once, log_dir=None, log_every=1):
     run at its next progress call (each raises common.Stopped, and stops as the page's Stop
     does: its finished games are saved), waits for them all, and is raised again, with
     saved_games. Returns {"played": [(item, result)], "busy": [item], "failed": [(item, why)]}.
+    A returned partial or failed run is in both played (its retained games) and failed.
     log_dir and log_every (wave 3, --logs-dir and --log-every): runner.run's log tee. A run
     stopped otherwise (wave 3: the harness's DECKLAB_STOP_FILE) stops the replay as Ctrl+C
     does: no other matchup starts, and KeyboardInterrupt is raised with saved_games."""
@@ -218,6 +240,9 @@ def _replay(plan, results_dir, local, at_once, log_dir=None, log_every=1):
                 result = shared.runner.run(item["a"], item["b"], item["games"], by=REPLAY_BY, progress=progress_for(item),
                                     results_dir=results_dir, pool=session, exact=True, log_dir=log_dir,
                                     log_every=log_every)
+                same_key = result["key"] == item["key"]
+                run = result["runs"][-1]
+                problem = _replay_problem(item, result, run)
             except shared.ForgeError as e:
                 with lock:
                     if str(e) == shared.runner.BUSY:
@@ -238,12 +263,14 @@ def _replay(plan, results_dir, local, at_once, log_dir=None, log_every=1):
                     out["failed"].append((item, f"an error in Deck Lab ({type(e).__name__})"))
                 continue
             with lock:
-                if result["key"] != item["key"]:
+                if not same_key:
                     out["failed"].append((item, "its games were saved with another engine than the card log's "
                                                 "(the card log may have stopped being usable)"))
                 else:
                     out["played"].append((item, result))
-                saved_games[0] += result["runs"][-1]["played"]
+                    if problem:
+                        out["failed"].append((item, problem))
+                saved_games[0] += run["played"]
 
     interrupted = False
     with shared.pool.session(local=local) as session:
@@ -292,7 +319,8 @@ def _cmd_replay(args):
     runs can use the card log now, so it never fills the plain engine's results. --dry-run
     lists the matchups and games without Java (against the card log's engine as it would be
     built now), with about how long they'd take (_replay_estimate), and plays nothing. Exit
-    code 1 when a matchup failed; one playing already is left for next time (listed)."""
+    code 1 when a matchup failed or returned incomplete, even with saved games; one playing already is left for
+    next time (listed)."""
     if args.results_dir is not None and not shared.Path(args.results_dir).is_dir():
         raise shared._CliError(f"There's no folder called {args.results_dir}.")
     if args.dry_run:
@@ -332,7 +360,9 @@ def _cmd_replay(args):
                           "failed": [{"key": item["key"], "why": why} for item, why in out["failed"]]},
                          ensure_ascii=False))
     else:
-        print(f"Replayed {len(out['played'])} of {len(plan)} matchups: {played:,} games.")
+        failed_keys = {item["key"] for item, _ in out["failed"]}
+        completed = sum(item["key"] not in failed_keys for item, _ in out["played"])
+        print(f"Replayed {completed} of {len(plan)} matchups: {played:,} games.")
         for item, why in out["failed"]:
             print(f"  failed: {_replay_name(item)}: {why}")
         if out["busy"]:
