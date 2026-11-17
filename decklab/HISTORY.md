@@ -31,6 +31,18 @@ in `data/ui-review/20261117T031018Z-e770015a`. Ruff, source-length, story-count
 and public-repo audits pass. No household write, actual Forge run or deployment
 was performed; physical table/device acceptance remains.
 
+Review fixes (2026-11-17): candidate mana costs are checked as well as card
+colours, so devoid cannot hide an off-colour requirement. Mandatory colourless,
+snow and unknown cost symbols are withheld because this shortlist does not
+qualify their sources. Considering rows pass the editor's new Planned-line
+checks before ranking and deduplication; malformed printings, unsupported
+finishes and non-playable printings cannot suppress valid alternatives. The
+original source details, including setless rows, still identify the linked
+Considering move. Six new regression checks cover these boundaries; all 85
+focused checks and Ruff, source-length, story-count and public-repo audits pass.
+No native browser/device check, household write, Forge run or deployment was
+performed for these fixes.
+
 ## Sideboard plan list counts, not ownership (2026-11-15)
 
 The sideboard planner now labels quantities as copies in the selected list rather than

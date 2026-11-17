@@ -4,8 +4,8 @@ from collections import Counter
 from decklab.lib import cards, decks, pool
 from decklab.lib.decks import small_swaps
 
-from . import guard
-from .card_lookup import _line_json, _resolve
+from . import drafts, guard
+from .card_lookup import _line_json, _pickable, _resolve
 from .common import ApiError, _keys, _parse_body
 from .settings import _writer
 from .swaps import VERSIONS, _deck, _space_pool
@@ -46,6 +46,16 @@ def _on_hand(p, deck_id, demand):
     return {name: max(qty - sum(n for _, n in p.on_the_way.get(name, ()))
                       - max(demand.get(name, 0), own_holds.get(name, 0)), 0)
             for name, qty in free.items()}
+
+
+def _has_playable_printing(line):
+    """Keep the source finish even where the editor could choose a different default."""
+    card = cards.card(line.name)
+    return card is not None and any(
+        (not line.set or set_code == line.set) and (not line.number or number == line.number)
+        and (printing := cards.printing(set_code, number)) is not None
+        and _pickable(printing) and line.finish in printing["finishes"]
+        for set_code, number in card["printings"])
 
 
 def suggest_small_swaps(body):
@@ -99,11 +109,20 @@ def suggest_small_swaps(body):
         return _answer(summary, deck, version, goal, reason=INCOMPLETE)
     available = _on_hand(p, summary["id"], demand)
     considering = []
+    validator = drafts._Draft(deck.kind, space=deck.space)
     for line in deck.considering:
         name = _resolve(line.name)
         if name is not None:
-            considering.append(decks.DeckLine(line.quantity, name, line.set, line.number,
-                                               line.finish, line.category))
+            raw = {"name": name, "qty": line.quantity, "set": line.set, "number": line.number,
+                   "finish": line.finish, "category": line.category}
+            # Check as a new Planned line before ranking/deduplication, so a malformed legacy
+            # Considering row cannot hide a valid alternative. Keep the original source details:
+            # validation may choose a default printing for a setless line, but the linked move
+            # must still match the exact Considering row the user saved.
+            if drafts._read_line(validator, raw, {"list": "target", "section": "Deck"}) is not None:
+                candidate = decks.DeckLine(line.quantity, name, line.set, line.number, line.finish, line.category)
+                if _has_playable_printing(candidate):
+                    considering.append(candidate)
     proposals = []
     for idea in small_swaps.recommend(normalized, considering, available, cards.card, goal, protected):
         added = idea["add"]

@@ -81,6 +81,31 @@ class RecommendationTests(unittest.TestCase):
                 self.assertEqual(self.run_goal(), [])
                 self.setUp()
 
+    def test_devoid_does_not_hide_off_colour_mana_requirements(self):
+        candidate = self.cards["Small draw"]
+        candidate.update(colors=[], mana_cost="{1}{B}",
+                         oracle_text="Devoid (This card has no color.)")
+        self.assertEqual(self.run_goal(), [])
+        # The same colourless spell remains eligible when its actual cost uses this deck's blue.
+        candidate["mana_cost"] = "{1}{U}"
+        self.assertTrue(self.run_goal())
+
+    def test_unqualified_colourless_snow_and_unknown_costs_are_withheld(self):
+        self.cards["Small draw"]["colors"] = []
+        for cost in ("{1}{C}", "{S}", "{U}{S}", "{Q}", "{U}extra"):
+            with self.subTest(cost=cost):
+                self.cards["Small draw"]["mana_cost"] = cost
+                self.assertEqual(self.run_goal(), [])
+
+    def test_supported_generic_hybrid_and_phyrexian_costs_still_fit(self):
+        self.cards["Late answer"]["colors"] = ["B"]
+        for cost, colours in (("{0}", []), ("{1}{U}", ["U"]), ("{U/B}", ["U", "B"]),
+                              ("{2/U}", ["U"]), ("{U/P}", ["U"]), ("{U/B/P}", ["U", "B"]),
+                              ("{C/U}", ["U"])):
+            with self.subTest(cost=cost):
+                self.cards["Small draw"].update(mana_cost=cost, colors=colours)
+                self.assertTrue(self.run_goal())
+
     def test_creature_slots_are_not_silently_replaced_for_a_role_goal(self):
         self.source = {"Deck": [DeckLine(4, "Big body"), DeckLine(56, "Island")]}
         self.assertEqual(self.run_goal("draw"), [])

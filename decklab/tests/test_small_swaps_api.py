@@ -4,7 +4,7 @@ import json
 from collections import Counter
 from unittest import mock
 
-from decklab.lib import pool
+from decklab.lib import cards, pool
 from decklab.lib.api import guard, small_swaps
 from decklab.tests.test_api import _write
 from decklab.tests.test_collection_edit import ROLES
@@ -77,6 +77,56 @@ class SmallSwapTests(SwapsTestCase):
         self.assertEqual(self.suggest()["proposals"], [])
         self.write("small-test", deck_text(MAIN, rest=CONSIDERING.replace("227", "9999")))
         self.assertEqual(self.suggest()["proposals"], [])
+
+    def test_invalid_printing_cannot_hide_another_printing_of_the_same_idea(self):
+        invalid = "4 Llanowar Elves (FDN) 9999 #Other"
+        valid = "1 Llanowar Elves (FDN) 227 *F* #Draw"
+        for lines in ((invalid, valid), (valid, invalid)):
+            with self.subTest(lines=lines):
+                self.write("small-test", deck_text(MAIN, rest="\n## Considering\n\n```\n" +
+                                                   "\n".join(lines) + "\n```\n"))
+                before = self.text(DECK_ID)
+                [proposal] = self.suggest()["proposals"]
+                added = proposal["adds"][0]
+                self.assertEqual((added["number"], added["finish"], added["category"], proposal["max_qty"]),
+                                 ("227", "foil", "Draw", 1))
+                self.assertEqual(self.text(DECK_ID), before)
+
+    def test_invalid_candidates_do_not_consume_the_three_proposal_slots(self):
+        considering = """\n## Considering
+
+```
+2 Black Lotus (LEA) 9999
+2 Elvish Mystic (CMM) 9999
+2 Llanowar Elves (FDN) 9999
+2 Sol Ring (ECC) 57
+```
+"""
+        self.write("small-test", deck_text(MAIN, rest=considering))
+        self.p.owned.update({"Black Lotus": 2, "Elvish Mystic": 2, "Sol Ring": 2})
+        card_of = cards.card
+
+        def ramp_tag(name):
+            card = card_of(name)
+            return dict(card, roles=["ramp"]) if name == "Black Lotus" else card
+
+        with mock.patch.object(cards, "card", side_effect=ramp_tag):
+            [proposal] = self.suggest()["proposals"]
+        self.assertEqual((proposal["adds"][0]["name"], proposal["max_qty"]), ("Sol Ring", 2))
+
+    def test_considering_must_pass_new_playable_line_checks_before_ranking(self):
+        for alternative in ("2 Llanowar Elves (ZZZ)", "2 Llanowar Elves *E*",
+                            "2 Llanowar Elves (FDN) *E*", "2 Llanowar Elves (FDN) 227 *E*",
+                            "2 Llanowar Elves (WC00) nl239"):
+            with self.subTest(alternative=alternative):
+                self.write("small-test", deck_text(MAIN, rest="\n## Considering\n\n```\n" +
+                                                   alternative + "\n```\n"))
+                self.assertEqual(self.suggest()["proposals"], [])
+        # A setless source stays setless, so the linked editor move can still find its exact row.
+        self.write("small-test", deck_text(MAIN, rest="\n## Considering\n\n```\n2 Llanowar Elves #Draw\n```\n"))
+        [proposal] = self.suggest()["proposals"]
+        added = proposal["adds"][0]
+        self.assertEqual((added["set"], added["number"], added["category"]), (None, None, "Draw"))
 
     def test_off_limits_and_no_considering_have_useful_empty_answers(self):
         answer = self.suggest(protected=["ghalta, primal hunger"])

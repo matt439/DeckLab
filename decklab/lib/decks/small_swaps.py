@@ -6,6 +6,7 @@ copies may try the same idea when both the list and the pool have room. Nothing 
 """
 from collections import Counter
 from math import inf
+import re
 
 from . import swaps
 
@@ -24,6 +25,27 @@ def _simple_spell(card):
     return (card is not None and swaps.primary_type(card) not in (None, "land")
             and len(card.get("faces") or ()) <= 1 and bool(card.get("mana_cost"))
             and "{X}" not in card["mana_cost"])
+
+
+def _supported_cost(card, colours):
+    """Check mana symbols too: devoid changes a card's colours, not its mana cost.
+
+    This shortlist does not qualify colourless or snow sources. Mandatory {C}/{S}
+    and unknown symbols are withheld; ordinary hybrid and Phyrexian alternatives
+    keep their normal coloured, generic or life-payment options.
+    """
+    cost = card["mana_cost"]
+    if re.fullmatch(r"(?:\{[^{}]+\})+", cost) is None:
+        return False
+    for symbol in re.findall(r"\{([^{}]+)\}", cost):
+        if re.fullmatch(r"[0-9]+", symbol) or symbol in colours:
+            continue
+        if re.fullmatch(r"2/[WUBRG]|[WUBRG](?:/[WUBRG])?/P", symbol):
+            continue
+        if re.fullmatch(r"[WUBRGC]/[WUBRGC]", symbol) and set(symbol.split("/")) & colours:
+            continue
+        return False
+    return True
 
 
 def _copies(card):
@@ -100,7 +122,8 @@ def recommend(source, considering, available, card_of, goal, protected=()):
     found = []
     for index, line in enumerate(considering):
         added = card_of(line.name)
-        if not _simple_spell(added) or not swaps.castable(added, colours, "casual"):
+        if (not _simple_spell(added) or not swaps.castable(added, colours, "casual")
+                or not _supported_cost(added, colours)):
             continue
         capacity = min(2, line.quantity, available.get(line.name, 0), _copies(added) - counts[line.name])
         if capacity < 1:
