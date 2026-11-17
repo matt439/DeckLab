@@ -1391,7 +1391,12 @@ Decided (Matt, 2026-11-09): implement as much as possible overnight and open a p
 
 Built (2026-11-09): the Testing tab's deliberate saved-list matchup check, command-line card-swap checks, separate immutable engine results and native XMage bridge. Guarded fixtures, disposable native casual/Commander games and headless Chromium checks passed. The [owner](cross-simulator.md) records exact qualification and limits; optional installation on the live server and household-device acceptance remain separate.
 
-Left (Matt, 2026-11-14, tracked in TODO.md): XMage isn't set up on any PC yet (no `xmage_dir`, no built bridge). After `FG#2`'s replay, with Matt's OK on idle server time: install the pinned 1.4.63 release on the Linux server, set `xmage_dir` in its private config, run `python -m decklab.xmage build` and `describe`, then cross-check a few real home decks (casual and Commander) to see which household cards XMage refuses, and read the two engines' results side by side.
+Live setup checked (2026-11-18, through HomeOps): the pinned XMage 1.4.63
+archive matched its documented SHA-256, was installed in a separate tools
+directory, and its bridge was built and verified. The private `xmage_dir` is
+configured. No XMage service or real comparison was started. Left after
+`FG#2`'s replay: bounded real casual and Commander comparisons, explicit
+unsupported-card findings and the two engines' separate results side by side.
 
 **E3-S41** · Matt · could · M · built
 
@@ -6381,7 +6386,16 @@ Evidence:
 - `decklab/lib/homenet/service.py`, `decklab/lib/homenet/linux_facts.py`, `decklab/lib/systemd.py`, `decklab/lib/api/server_restart.py`, `decklab/lib/hometime.py`, `decklab/smoke.py`, `decklab/update.py`, `scripts/decklab`; `decklab/tests/test_linux_services.py`, `decklab/tests/test_linux_ops.py`, `decklab/tests/test_smoke.py`
 - `SELF-HOSTING.md` ("From a Windows server to a Linux one", step 12's Linux steps)
 
-Qualified in WSL2 Ubuntu 26.04 (2026-11-02, a throwaway install with systemd, PostgreSQL 18, Tesseract 5.5 and OpenJDK 21): the database setup, backups, restore and the 1,897 database integration tests; the release Forge install, cardlog-check, upgrade-check and real Forge games, from the command line and the background service's warm pool; the systemd user service and nightly timer; `systemd-inhibit` under a polkit rule from the user service; `decklab.update`; and the smoke test and doctor. Its findings were fixed the same day (scanning's second Tesseract pass and faint set lines, the doctor's backup folders, `db status`'s failed dumps, Forge's default folder, and wording). Gap: still to qualify on the real Linux server PC: real suspend and wake (magic packet and the root wake timer), phones against it, and Tesseract on real card photos. Not built: Linux core pinning, parent-death safety for Forge started from a terminal, the profiles' sync retrying once the database comes up, and the gate's own wake time.
+Qualified in WSL2 Ubuntu 26.04 (2026-11-02, a throwaway install with systemd, PostgreSQL 18, Tesseract 5.5 and OpenJDK 21): the database setup, backups, restore and the 1,897 database integration tests; the release Forge install, cardlog-check, upgrade-check and real Forge games, from the command line and the background service's warm pool; the systemd user service and nightly timer; `systemd-inhibit` under a polkit rule from the user service; `decklab.update`; and the smoke test and doctor. Its findings were fixed the same day (scanning's second Tesseract pass and faint set lines, the doctor's backup folders, `db status`'s failed dumps, Forge's default folder, and wording). At that point, real-server suspend/wake, phone access and actual card photos remained unqualified; the dated live evidence below records subsequent checks. Not built: Linux core pinning, parent-death safety for Forge started from a terminal, the profiles' sync retrying once the database comes up, and the gate's own wake time.
+
+Live Linux evidence reviewed (2026-11-18): the journal records deep sleep from
+2026-11-17 22:28:37 until 2026-11-18 03:29:03, when the installed system wake
+timer fired. The following nightly ran from 03:30:02 to 04:08:10 and exited 0.
+A smoke run without Forge passed 13 checks, with one configuration restart
+warning and Forge deliberately skipped while the replay ran. The initial
+Scryfall timeout passed a focused retry (6/6 checks). Installed Tesseract passed
+synthetic readiness only. Real phone access, real card/token photographs and a
+timed request through the wake gate remain acceptance gaps.
 
 **E11-S59** · Matt · could · L · partial
 
@@ -6401,7 +6415,13 @@ Evidence:
 - `decklab/web/core.js` (the wake hop); `decklab/tests/test_wake_hop_ui.py`
 - `decklab/README.md` and `SELF-HOSTING.md`, "Sleeping and waking on request"
 
-Gap: not yet set up for real: the gate and its tunnel on the NAS, the service token and the Worker's secrets and deploy, the PC's BIOS and adapter settings, and a real wake timed end to end on the server PC.
+Live state reviewed (2026-11-18): the NAS gate, its tunnel, the Worker and its
+existing Access integration are installed. The server's journal proves a deep
+sleep ending at 03:29:03 when its installed wake timer fired, followed by the
+successful scheduled nightly (E11-S58). This proves the installed timer path;
+it does not time a magic-packet request through the gate. Left: qualify the
+updated hardened NAS stack (E11-S75) and a real request wake end to end, with
+the signed-in/device checks kept separate.
 
 **E11-S60** · Matt · should · M · built
 
@@ -6469,6 +6489,13 @@ Evidence:
 
 Gap: All four acceptance criteria are built and tested (with one deliberate exception to "connections only from Deck Lab itself": the home page may also read the configured wake gate's origin). What is left is the story's own "check real browsers and scanning (E7-S32) before shipping": Matt, on Safari/iPad/phone after the server is updated, watching the console for "Refused to..." lines, and confirming wake-on-request still opens the gate from a home page. Card scanning (E7-S32) needs the same check under the policy. From the product review of 2026-11-10.
 
+Live HTTP checks (2026-11-18) confirmed the content policy,
+`X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer` through both
+the direct home listener and the NAS gate. These are response checks only.
+The desktop browser qualification could not start because automation could not
+establish the current URL safely; Safari, device scanning, browser-console and
+home-page wake-hop acceptance remain open.
+
 **E11-S64** · Matt · could · S · partial
 
 As Matt, opening Deck Lab on a phone and the iPad, I want the page's scripts and stylesheets kept by the browser and sent compressed, so that a page load doesn't ask the server PC about some 190 files, each read and hashed again.
@@ -6484,6 +6511,11 @@ Evidence:
 - `decklab/tests/test_server_static_cache.py`
 
 Gap: Left: time a phone's and the iPad's load before and after on the live server (the gain is still unmeasured on a device); status partial until then. Accessory pictures, card images and API answers keep their caching. `private`, never `public`, so Cloudflare keeps nothing outside the login. From the product review of 2026-11-10.
+
+Live HTTP checks (2026-11-18) verified gzip and immutable caching for a current
+versioned asset through the direct home listener and NAS gate. No phone/iPad
+cold or repeat load was timed. The pre-change device baseline is unavailable,
+so there is no measured before/after gain to report.
 
 **E11-S65** · Matt · could · M · built
 
@@ -6640,6 +6672,13 @@ As Matt, leaving the wake gate running on the NAS, I want it to drop stalled con
 Code built 2026-11-11: the gate bounds accepted connections before creating handlers (32 by default), sets a 10-second idle socket timeout and releases capacity after timeout/error/close. Its compose service uses a non-root UID/GID, read-only root, no capabilities/no-new-privileges and disabled bytecode writes. The optional off-Linux script_secret mechanism requires one exact key header when configured, alongside every original loopback/listener/flag/no-viewer check; default compatibility and Linux's same-user rule remain unchanged. Supported smoke/member-maintenance clients propagate a configured key only to loopback; doctor validates it and the public leak guard recognizes it. No secret or live setting was generated or changed.
 
 Evidence: actual disposable socket tests for silent/partial-header/stalled-body expiry, overload rejection and recovery use fake WOL. Focused groups 107 and 55 pass (overlapping, one platform skip); broader 114 server/access/lifecycle checks had one obsolete E11-S78 status expectation, corrected and rechecked. Source-length and whitespace guards pass. Actual updated non-root NAS/WOL acceptance remains pending with E11-S59; optional-secret activation is an operator choice. From the product review of 2026-11-10, compared with Deck Lotus's named API keys.
+
+Live deployment inspected (2026-11-18): the NAS still runs the earlier source
+and compose stack, without the current connection bounds and container
+hardening. A silent connection remained open beyond 12 seconds. HomeOps
+prepared an authenticated deployment path; Docker administration requires
+operator authentication, so no updated stack was deployed or qualified in
+this check. Real non-root operation, bounded connections and WOL remain open.
 
 Awaiting: decision
 

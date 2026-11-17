@@ -1,5 +1,38 @@
 # Deck Lab: history
 
+## Live setup and bounded operational checks (2026-11-18)
+
+HomeOps rebuilt both gauntlet catalogues successfully: Commander has 243
+playable lists of 260 (67 core, 128 upgraded, 48 precon), and constructed has
+1,332 of 1,650. Commander throughput and first standard runs for the 14 home
+Commander decks (28,000 planned games) remain queued after the Forge replay.
+These are build and plan results, not completed simulation evidence (`FG#4`).
+
+The pinned XMage 1.4.63 archive matched its documented SHA-256. The separate
+installation, private `xmage_dir` and compiled bridge were verified. No XMage
+service or real cross-check ran; bounded casual/Commander samples and explicit
+unsupported-card findings remain after the replay (`E3-S40`).
+
+The live Linux journal records deep sleep from 2026-11-17 22:28:37 to
+2026-11-18 03:29:03, when the installed wake timer fired. The following nightly
+ran 03:30:02–04:08:10 and exited 0. Smoke without Forge passed 13 checks with
+one configuration restart warning; Forge stayed skipped during the replay.
+An initial Scryfall timeout passed a focused retry (6/6 checks). Tesseract
+synthetic readiness passed, while real photos, phone access and a timed request
+through the gate remain open (`E11-S58`, `E11-S59`, `E7-S32`).
+
+Live HTTP requests through the home listener and NAS gate verified CSP,
+nosniff, no-referrer, gzip and immutable caching of a current versioned asset.
+They do not establish Safari behavior or device load times. The pre-change
+device baseline is unavailable. Desktop browser automation could not establish
+the current URL safely, so no browser acceptance or field-policy save is
+claimed (`E11-S63`, `E11-S64`, `E3-S23`).
+
+The NAS still runs the earlier gate source and compose stack; a silent socket
+stayed open beyond 12 seconds. HomeOps prepared authenticated deployment, but
+Docker administration needs operator authentication. Updated non-root
+operation, connection bounds and actual WOL remain unqualified (`E11-S75`).
+
 ## Live shrink warning and history evidence (2026-11-18; E11-S87, E3-S50)
 
 HomeOps enabled `database.shrink_warn` on the live Linux server, retaining the

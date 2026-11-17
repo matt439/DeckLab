@@ -75,6 +75,13 @@ equally from both engines. XMage seeded replay is explicitly unproven.
 
 ## Setup and use
 
+Live Linux setup verified through HomeOps (2026-11-18): the pinned 1.4.63
+archive below matched its SHA-256, `xmage_dir` was configured privately, and the
+bridge was built and verified. No network service or real comparison was
+started. Actual casual/Commander comparisons and unsupported-card findings
+remain queued after the Forge replay; installation alone does not establish
+card coverage or agreement between engines.
+
 An existing qualified Deck Lab Forge installation and a full JDK are required.
 XMage is optional and disabled when `xmage_dir` is unset. Nothing below changes
 the household database or installs services.
