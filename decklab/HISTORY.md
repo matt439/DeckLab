@@ -1,5 +1,28 @@
 # Deck Lab: history
 
+## Real pods and Same commander results (2026-11-18; E9-S11, E3-S49)
+
+After the completed replay gate, HomeOps qualified a real 16-game pod sample.
+All 16 saved games had winners, with no draws, clock/AI timeouts or failures;
+the summary matched the raw outcomes. Four rotations gave each deck four
+games in each seat. Stop retained one completed game and removed the job;
+resume kept that outcome, used a fresh seed for the partial batch's remaining
+three games, and finished without duplicating it. E9-S11 remains partial for
+the actual phone/iPad chooser, progress pill and result views.
+
+Same commander covered all four matching catalogue entries, representing
+three distinct lists, with at least ten games per entry and no failure,
+dropped entry or game error. There were 40 new unique saved games: one shared
+20-game key for two identical precon entries, plus two ten-game keys. The
+view's 60 attributed entry-games count the shared result under both precons;
+they are not 60 unique games. Coverage and results were inspected, completing
+E3-S49's live-result gap. This does not claim general household device checks.
+
+The bounded throughput probe separately played 40 fresh games against four
+distinct opponents in 120 seconds of native wall time (20 games/minute).
+It is a guide for that sample, not a completed standard run or a guarantee
+for every Commander matchup. The full standard-run queue is still in progress.
+
 ## Live Forge replay completed and reviewed (2026-11-18; FG#2)
 
 The live replay gate passed at 09:47 local time: `replay --dry-run` reported

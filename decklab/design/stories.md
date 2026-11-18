@@ -37,7 +37,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 27 | 24 | 2 | 0 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 42 | 38 | 4 | 0 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 42 | 39 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 26 | 1 | 0 | 3 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 36 | 33 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 23 | 0 | 0 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 87 | 69 | 10 | 4 | 4 |
-| **Total** | **398** | **354** | **20** | **7** | **17** |
+| **Total** | **398** | **355** | **19** | **7** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1520,7 +1520,7 @@ First slice: command line only with a fixed game count: `run_unpaired` in `deckl
 
 Built (2026-11-11; Matt approved OPEN feature defaults): explicit CLI `--size-change` with a fixed `--games N` or `--quick` plays both versions against the same opponents/count on one verified engine, with independent domain-separated seed streams. A same-size change stays paired. Constructed below60 and Commander other than100 are refused; the CLI also bounds work to1,000 cards and100,000 games per arm. The independent balanced MOVER95% difference has a separate default5-point equivalence margin, one fixed final look and explicit wide-range/more-games wording. Arms have their own validated `unpaired` result kind and isolated experiments directory; checkpoint reuse avoids duplicate completed games. Normal enumeration and per-card consumers reject this kind.12 control/CLI/math fixtures and two production-runner/disposable-fake-process checks pass, with195 broader legacy/qualification/engine checks passing before the final narrow guards. No actual game, saved household result or deck was touched.
 
-**E3-S49** · Matt · could · M · partial
+**E3-S49** · Matt · could · M · built
 
 As a Commander deck builder, I want to test my deck head to head against the popular builds of its own commander (EDHREC's core and upgraded average decks, and a published precon with the same commander, when the catalogue has them), so that I know whether my take plays better than the common one, without treating those lists as advice.
 
@@ -1529,7 +1529,17 @@ As a Commander deck builder, I want to test my deck head to head against the pop
 - Given a trial deck (E3-S39), then its own precon is never one of its opponents.
 - Given the catalogue holds no deck with that commander, then the choice says so instead of starting an empty run.
 
-Built (2026-11-12): a Commander deck's Against popular decks offers **Which decks: A balanced sample | Same commander**. Same commander plays every playable catalogue deck whose commanders match the deck's (a partner pair in either order, a double-faced commander by its front face, case ignored), core, upgraded and precon alike, most popular first (`sample.same_commander`, `commander_key`, `commanders_of`; `forge.gauntlet.same_commander`). Its sample id hashes the commander key, so it never matches a balanced or All sample's, and once played it's saved like any other sample. `GET /api/gauntlet?commander=same` and `POST /api/gauntlet/run` read the commanders from the deck's own Commander section, never from the request; any other value, a 60-card deck, a deck without a commander, and a size, colour, style, tier or saved sample sent with it get 400, after a hidden deck's 404. A trial's own precon is left out. With no matching deck the choice says so and is disabled, and a run is refused instead of starting empty. The CLI has `gauntlet plan|play|view <deck> --same-commander`. Tests: `decklab/tests/test_gauntlet_same_commander.py` (20, sample to Node-DOM UI), with the neighbouring gauntlet modules passing. No real game was played and no catalogue was built. Left: real results wait for `FG#4`, the server's Commander catalogue and real Same commander Forge games.
+Built (2026-11-12): a Commander deck's Against popular decks offers **Which decks: A balanced sample | Same commander**. Same commander plays every playable catalogue deck whose commanders match the deck's (a partner pair in either order, a double-faced commander by its front face, case ignored), core, upgraded and precon alike, most popular first (`sample.same_commander`, `commander_key`, `commanders_of`; `forge.gauntlet.same_commander`). Its sample id hashes the commander key, so it never matches a balanced or All sample's, and once played it's saved like any other sample. `GET /api/gauntlet?commander=same` and `POST /api/gauntlet/run` read the commanders from the deck's own Commander section, never from the request; any other value, a 60-card deck, a deck without a commander, and a size, colour, style, tier or saved sample sent with it get 400, after a hidden deck's 404. A trial's own precon is left out. With no matching deck the choice says so and is disabled, and a run is refused instead of starting empty. The CLI has `gauntlet plan|play|view <deck> --same-commander`. Tests: `decklab/tests/test_gauntlet_same_commander.py` (20, sample to Node-DOM UI), with the neighbouring gauntlet modules passing. That implementation check used fixtures; live results were qualified separately below.
+
+Live coverage qualified through HomeOps (2026-11-18, after the replay gate):
+the rebuilt catalogue supplied four matching entries representing three
+distinct lists. The run saved 40 new unique games, with no failure, dropped
+entry or game error, and every matching entry had at least ten games. Two
+identical precon entries shared one 20-game result key; the other two keys
+had ten games each. The view attributes 60 entry-games because that shared
+precon result appears under both entries; those are not 60 unique games.
+Saved coverage and the result view were inspected. This completes the real
+result gap; general household touch/Safari acceptance remains in E11-S30.
 
 **E3-S50** · Matt · could · M · partial
 
@@ -4324,12 +4334,19 @@ explicit recovery, all-four visibility and member export/removal guards. The
 game counts are 16, 32, 64 and 128; the starting choices are Planned lists.
 This does not claim the targets certify equal power or predict a social table.
 
-Awaiting: decision
+Live engine qualification passed through HomeOps (2026-11-18, after the
+replay gate): 16 saved games produced 16 winners, with no draw, clock timeout,
+AI timeout or failure. The summary was checked against the raw saved outcomes.
+Four rotations put each deck in each seat for four games. A real Stop left
+one completed game saved, reported stopped and removed its coordinator job.
+Resume preserved that game (seed 1,000,000), retried the first batch as attempt
+1 with seed 2,000,000 for its remaining three games, and finished the planned
+sample without duplicating the retained outcome.
 
-After `FG#2`, with Matt's OK on an idle PC, qualify the installed engine on a
-small real pod: check rotated seats, statistics, Stop and resume. Then check
-the chooser and result on a household phone and iPad. No real games, server
-deployment, migration or privacy-switch change was performed by this build.
+Awaiting: phone, ipad
+
+Left: check the chooser, progress pill and results on the actual household
+phone and iPad. API/engine evidence does not qualify those touch/browser views.
 
 **E9-S12** · Matt · should · S · built
 
