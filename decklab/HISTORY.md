@@ -1,5 +1,38 @@
 # Deck Lab: history
 
+## Remote acceptance finished with explicit engine gaps (2026-11-18)
+
+The HomeOps queue finished at 15:42:18 local time. All 14 Commander standard
+budgets reached 20 opponents × 100 games, with 28,000 saved games. Thirteen
+qualified meaningfully. Syr Elenora's full 2,000-game budget recorded no
+commander casts; its stock/effective Forge script declares
+`AI:RemoveDeck:All`, and production marks all 20 matchups nonmeaningful. Its
+API headline and ranges stay null with the generic thin-evidence note.
+The memory retry added no games and cannot repair that native limitation.
+`FG#4` remains open only for meaningful Syr Elenora AI/script/pilot
+qualification. No script flag or household deck was changed to force a result.
+
+After the queue, the full live smoke passed all 16 checks with no warnings,
+failures or skips. The running/latest build checks were clean; the following
+health report had zero problems or warnings and the job pools/slots were idle.
+The local source fixes remain undeployed. Physical phones, card/token photos,
+browser policy/field-save acceptance, genuine earlier-list history and timed
+hardened-gate wake remain separate gaps. NAS deployment is explicitly deferred
+until the owner is home to authenticate.
+
+The corrected XMage source at `1687e40ac8770ad4e27c2ae86541df1460bd7e96`
+passed a separate isolated positive check at 15:46:15 in 72.894 seconds:
+casual and Commander each completed two Forge and two XMage games, eight
+games total. Independent review matched frozen plans, engine identities and
+outcomes, with no missing games, failures, timeouts or unsupported cards in
+that bounded sample. Engine results and estimates stayed separate; agreement
+was not compared and no combined win rate was formed. This establishes
+bounded execution, not deck strength, rules correctness or reproducible
+XMage seeds. The live bridge hashes and both earlier partial/unsupported
+receipts stayed unchanged. `E3-S40` retains deployment and live qualification;
+Galion's absence and Thranduil's incomplete adventure identity remain genuine
+limitations of the pinned engine. No acceptance jobs remain running.
+
 ## Gauntlet CLI reports incomplete runs (2026-11-18)
 
 `gauntlet play` now returns a failure status when its fixed budget is still

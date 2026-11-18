@@ -43,15 +43,23 @@ The database move is finished: phase 5b is built, and the week of side-by-side c
     - **Done:** Deck Lab starts at logon (`homenet install --at-logon`, 2026-10-13). Running with nobody logged on isn't needed (Matt, 2026-10-13: he's the PC's only user and never logs off, so it's either logged on or off); the backup's catch-up run after the PC was off covers the rest.
     - **Commander nights:** the household aims for Bracket 2 (Matt, 2026-10-13). Recording the usual night's expectations is built (E9-S20, 2026-10-16): one audited home-only note, edited by home admins in Settings and shown on home Commander pages. Name is required; venue, household target, published range, house rules and checked date remain optional and unknown until entered. It seeds no current venue facts and enforces no house rules; migration 0011 stores the revision and clear tombstone.
     - **Private by default:** phases 1–4 of [design/member-template.md §4](design/member-template.md#4-what-shipped-and-the-remaining-build-order) are built and Matt confirms User5's invite was sent (2026-10-18). Visibility storage, public readers/owner controls, Activity, history, Forge privacy and public kit are built in code (2026-10-18). Member export, exact preview, guarded audited apply, durable recovery and departure admission are built in code. Migrations 0012 and 0013 were applied and the server restarted on committed code on 2026-10-19, so privacy and guarded member departure are live; nothing is switched Public yet and no member has been removed. Public means read-only to everyone signed in, and only the owner can change visibility; no live switches are flipped as part of building this. Each control waits for its reader checks, not the check week's end. E10-S41 (per-deck public) stays deferred until requested. The template owns the slices and dependencies; TODO.md owns their order. Decisions A–K remain settled.
-12. **The gauntlet on the live server** (`FG#4`; Against popular decks is the lead feature, Matt, 2026-11-03): both server-local catalogues are built and bounded Commander throughput is measured (2026-11-18). The first standard runs (`gauntlet play <deck-id> --standard`, 20 opponents × 100 games) per Commander deck are in progress after the completed replay gate, one workflow at a time on the authorised idle server. Full coverage and saved outcomes still need review before completion. Whether the nightly task should top up stale or untested decks on the standard sample remains Matt's separate call.
+12. **The gauntlet on the live server** (`FG#4`; Against popular decks is the lead feature, Matt, 2026-11-03): both server-local catalogues are built, bounded Commander throughput is measured, and all 14 first standard budgets (`gauntlet play <deck-id> --standard`, 20 opponents × 100 games each) are filled (2026-11-18). Thirteen qualified meaningfully; the remaining scope is meaningful Syr Elenora engine qualification below. Whether the nightly should top up stale or untested decks on the standard sample remains Matt's separate call.
 
     Live progress (2026-11-18, through HomeOps): both catalogue builds exited 0.
     Commander has 243 playable lists of 260 (67 core, 128 upgraded, 48 precon);
     constructed has 1,332 of 1,650. A bounded probe played 40 fresh games
     against four distinct opponents in 120 seconds of native wall time:
     20 games/minute for that sample, not a guaranteed rate for all matchups.
-    First standard runs for the 14 home Commander decks (28,000 planned games)
-    are in progress; the catalogue and probe do not establish full coverage.
+    All 14 standard budgets finished with 28,000 saved games. Thirteen decks
+    qualified meaningfully. Syr Elenora's 2,000-game budget is complete, but
+    its stock/effective Forge script declares `AI:RemoveDeck:All`, the games
+    recorded zero commander casts and production marks all 20 matchups
+    nonmeaningful. The API correctly leaves its headline and ranges null,
+    with a generic thin-evidence note. Filled budgets do not qualify that
+    deck's AI behavior; the memory retry played no additional games and
+    cannot repair this script limitation. `FG#4` stays open only for a
+    dedicated native AI/script/pilot qualification, preserving the household
+    deck and existing script flag until a qualified change is established.
 
 Each finished feature in [HISTORY.md](HISTORY.md) also lists its "known low issues, left open". None of them is planned; fix one when it gets in the way.
 

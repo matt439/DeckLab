@@ -1105,6 +1105,13 @@ Fail-closed slice (2026-10-29): saved choices that can't be read no longer lapse
 
 Remaining (2026-11-11): a saved field choice used in an actual browser and real run. TODO's recorded setup receipt lists 0017 as applied by 2026-10-30; this goal performed no live migration or policy change. Disposable PostgreSQL checks belong to required CI and do not establish that live acceptance. Existing config removals record no human reason, so the view does not invent one. The separately denied E1-S12 temporary correction/poor-AI caveat remains stopped.
 
+Acceptance prepared (2026-11-18): a temporary opponent exclusion, real run
+and restoration were authorised. Browser controls could not safely establish
+the current URL, so the policy was left untouched. The browser preview/save,
+policy-backed real run and restoration remain unqualified.
+
+Awaiting: browser
+
 First slice (reserve review, 2026-10-28): a read-only Who's in the field view using the existing membership and exclusion calculations, filtered through the viewer's deck visibility before returning names or counts. Cover current lists, explicit exclusions, poor-AI reasons and missing results with fixtures. Follow with revision-checked, audited home-admin membership changes that invalidate the field view but start no games; do not change the household's real field during development. E3-S19's chosen-opponent runs are a later dependent slice, not a second membership implementation.
 
 **E3-S24** · Matt · could · S · built
@@ -1392,11 +1399,22 @@ Decided (Matt, 2026-11-09): implement as much as possible overnight and open a p
 Built (2026-11-09): the Testing tab's deliberate saved-list matchup check, command-line card-swap checks, separate immutable engine results and native XMage bridge. Guarded fixtures, disposable native casual/Commander games and headless Chromium checks passed. The [owner](cross-simulator.md) records exact qualification and limits; optional installation on the live server and household-device acceptance remain separate.
 
 Live setup checked (2026-11-18, through HomeOps): the pinned XMage 1.4.63
-archive matched its documented SHA-256, was installed in a separate tools
-directory, and its bridge was built and verified. The private `xmage_dir` is
-configured. No XMage service or real comparison was started. Left after
-`FG#2`'s replay: bounded real casual and Commander comparisons, explicit
-unsupported-card findings and the two engines' separate results side by side.
+archive matched its documented SHA-256; the private `xmage_dir` and original
+bridge were configured and verified without installing an XMage service.
+Two live attempts retained partial/unsupported receipts. Name-mapping fixes
+were committed locally and qualified in isolation, leaving the live bridge
+and those earlier receipts unchanged.
+
+The corrected isolated build completed eight positive games: two Forge and
+two XMage games in each of casual and Commander. Independent review matched
+frozen plans, engine identities and completed outcomes, with no missing games,
+failures, timeouts or unsupported cards in that small sample. Results stayed
+separate; no agreement or combined win rate was claimed, and XMage seeded
+reproducibility remains unproven. This qualifies bounded execution, not deck
+strength or rules correctness. Galion is genuinely absent from the pinned
+engine and Thranduil's implementation lacks the requested adventure identity.
+Left: deploy the corrected bridge through the normal update path and repeat
+bounded live qualification, preserving explicit unsupported-card limits.
 
 **E3-S41** · Matt · could · M · built
 
@@ -6414,6 +6432,12 @@ Scryfall timeout passed a focused retry (6/6 checks). Installed Tesseract passed
 synthetic readiness only. Real phone access, real card/token photographs and a
 timed request through the wake gate remain acceptance gaps.
 
+At session end, after the real-game queue, full live smoke passed all 16
+checks with no warnings, failures or skips. Running/latest build checks were
+clean and the final health report had no problems or warnings, with jobs and
+worker slots idle. The physical-phone/photo and hardened-gate wake gaps above
+remain; the clean smoke does not replace them.
+
 **E11-S59** · Matt · could · L · partial
 
 As Matt, serving Deck Lab from a spare PC that uses power all day, I want the PC to sleep when nobody is using it and wake whenever anyone opens Deck Lab, at home or through decklab.example.com, so that it costs little to run without anyone having to switch it on.
@@ -6697,7 +6721,10 @@ prepared an authenticated deployment path; Docker administration requires
 operator authentication, so no updated stack was deployed or qualified in
 this check. Real non-root operation, bounded connections and WOL remain open.
 
-Awaiting: decision
+Deployment is deferred until the owner is home to authenticate NAS
+administration. The existing stack remains in place until that session.
+
+Awaiting: nas authentication
 
 **E11-S76** · Matt · could · M · built
 
