@@ -1,5 +1,17 @@
 # Deck Lab: history
 
+## Gauntlet CLI reports incomplete runs (2026-11-18)
+
+`gauntlet play` now returns a failure status when its fixed budget is still
+short or a matchup played by that invocation reports a native failure or
+stop, even when the coordinator returned without a dropped opponent. JSON
+keeps the saved note and view and adds explicit completion details; the
+terminal says that completed games were saved. Running again tops up only
+the missing games. Shared catalogue entries count a matchup's missing games
+once, and historical failed batches do not make a later completed run or
+already-complete no-op fail. This changes CLI reporting, not saved games or
+the field coordinator's partial-result behavior.
+
 ## XMage exact printed names and adventure faces (2026-11-18)
 
 The pinned XMage release stores several printed names without their diacritics,
