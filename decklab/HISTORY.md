@@ -27,6 +27,13 @@ deliberately unsupported opponent and compiled index checks, so name admission
 and refusal can be checked without playing games. Guarded fixture checks cover
 that qualification boundary. New artifacts retain separate source/build identities.
 
+The isolated pinned runtime passed ten coverage-only cases and six compiled
+name-index checks, with no played games. Four actual synthetic request/response
+pairs are retained for guarded protocol regressions. The three implemented
+adventures are admitted; Galion is absent, and the pinned Thranduil class lacks
+its requested adventure face, so both full lists remain refused rather than
+substituted. The live installation and its earlier receipts remain unchanged.
+
 ## Real pods and Same commander results (2026-11-18; E9-S11, E3-S49)
 
 After the completed replay gate, HomeOps qualified a real 16-game pod sample.

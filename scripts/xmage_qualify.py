@@ -19,7 +19,7 @@ DIACRITIC_NAMES = (
     "Song of Eärendil", "Soothing of Sméagol")
 ADVENTURE_NAMES = (
     "Beorn, Reluctant Host // Till and Tend", "Bilbo Baggins, Burglar // Take a Glance",
-    "Bilbo, Luckwearer // Burglar's Plot", "Thranduil, Sindarin Liege // Silvan Rally")
+    "Bilbo, Luckwearer // Burglar's Plot")
 # Every selected case has an unsupported opponent, so even successful baseline admission cannot start a game.
 PREFLIGHT_CASES = {
     "preflight-diacritics": (True, DIACRITIC_NAMES),
@@ -31,6 +31,7 @@ PREFLIGHT_CASES = {
     "preflight-adventure-back-only": (False, ("Till and Tend",)),
     "preflight-invented-accent": (False, ("Fórest",)),
     "preflight-unimplemented": (False, ("Galion, Elvenking's Butler",)),
+    "preflight-incomplete-adventure": (False, ("Thranduil, Sindarin Liege // Silvan Rally",)),
 }
 
 
@@ -96,9 +97,19 @@ def fixtures():
     return result
 
 
+def verify_preflight_request(manifest):
+    """Refuse a changed coverage-only plan before its native process can start."""
+    expected = [_row("Forest", 59), _row(PREFLIGHT_SENTINEL)]
+    decks = manifest.get("decks") or []
+    if (manifest.get("format") != "casual" or len(decks) != 2 or decks[1].get("id") != "opponent"
+            or decks[1].get("commander") or decks[1].get("main") != expected):
+        raise AssertionError("A coverage-only request lost its no-game sentinel.")
+
+
 def verify_preflight(name, manifest, result):
     """Require exact coverage and a nonplayed response, rather than accepting any unsupported result."""
     supported, requested = PREFLIGHT_CASES[name]
+    verify_preflight_request(manifest)
     coverage = result.get("coverage") or []
     if len(coverage) != 2 or [row.get("deck_id") for row in coverage] != ["baseline", "opponent"]:
         raise AssertionError("Both exact preflight lists need coverage evidence.")
@@ -110,12 +121,11 @@ def verify_preflight(name, manifest, result):
             raise AssertionError("The exact canonical list was not admitted unchanged.")
     elif baseline.get("status") != "unsupported" or baseline.get("missing") != list(requested):
         raise AssertionError("The refused exact card names were not preserved.")
-    if result.get("status") != "unsupported" or any(
+    games = result.get("games")
+    if result.get("status") != "unsupported" or not isinstance(games, list) or len(games) != 1 or any(
             g.get("status") != "unsupported" or g.get("winner") is not None or g.get("turns") != 0
-            for g in result.get("games", [])):
+            for g in games):
         raise AssertionError("A coverage-only request started or credited a game.")
-    if manifest["decks"][1]["main"][-1]["name"] != PREFLIGHT_SENTINEL:
-        raise AssertionError("A coverage-only request lost its no-game sentinel.")
 
 
 def check_name_index(installed, output):
@@ -183,6 +193,8 @@ def qualify(home, build_dir, output, selected=None, *, name_index_check=False):
         receipt["name_index"] = check_name_index(installed, output)
     for name in names:
         manifest, expected = cases[name]
+        if name in PREFLIGHT_CASES:
+            verify_preflight_request(manifest)
         request = json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
         if name == "duplicate-key":
             request = request.replace(b'"schema":1', b'"schema":1,"schema":1', 1)
@@ -242,7 +254,7 @@ def main():
     parser.add_argument("--output", required=True)
     parser.add_argument("--case", action="append", choices=sorted(fixtures()))
     parser.add_argument("--name-index-check", action="store_true",
-                        help="Check compiled exact-name, class mismatch and collision handling without games.")
+                        help="Add no-game compiled name-index checks; use --case to exclude ordinary game fixtures.")
     args = parser.parse_args()
     qualify(args.home, args.build_dir, args.output, args.case, name_index_check=args.name_index_check)
 
