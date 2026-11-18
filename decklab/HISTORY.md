@@ -1,5 +1,20 @@
 # Deck Lab: history
 
+## XMage exact printed names and adventure faces (2026-11-18)
+
+The pinned XMage release stores several printed names without their diacritics,
+and its adventure cards expose their spell through a separate accessor. The
+bridge now accepts ten explicitly verified canonical names only when the exact
+upstream implementation class matches, and validates both ordered adventure
+names. It never strips accents from arbitrary input. Ambiguous names or aliases,
+class mismatches, wrong faces and unimplemented cards remain refused; captured
+lists, request hashes and original missing-card names stay unchanged.
+
+The explicit native qualification tool includes coverage-only cases with a
+deliberately unsupported opponent and compiled index checks, so name admission
+and refusal can be checked without playing games. Guarded fixture checks cover
+that qualification boundary. New artifacts retain separate source/build identities.
+
 ## Real pods and Same commander results (2026-11-18; E9-S11, E3-S49)
 
 After the completed replay gate, HomeOps qualified a real 16-game pod sample.

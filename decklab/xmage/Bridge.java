@@ -39,6 +39,19 @@ public final class Bridge {
     private static final AtomicBoolean EMITTED = new AtomicBoolean();
     private static final Map<String, Object> RESULT = new LinkedHashMap<>();
     private static final EngineLog LOG = new EngineLog();
+    // Canonical printed names verified against this pinned release's exact implementation classes.
+    // Never fold arbitrary request names: e.g. "Fórest" is not an alias for "Forest".
+    private static final Map<String, NameAlias> NAME_ALIASES = Map.ofEntries(
+            alias("Andúril, Flame of the West", "Anduril, Flame of the West", "mage.cards.a.AndurilFlameOfTheWest"),
+            alias("Éomer, Marshal of Rohan", "Eomer, Marshal of Rohan", "mage.cards.e.EomerMarshalOfRohan"),
+            alias("Éowyn, Fearless Knight", "Eowyn, Fearless Knight", "mage.cards.e.EowynFearlessKnight"),
+            alias("Éowyn, Lady of Rohan", "Eowyn, Lady of Rohan", "mage.cards.e.EowynLadyOfRohan"),
+            alias("Arwen Undómiel", "Arwen Undomiel", "mage.cards.a.ArwenUndomiel"),
+            alias("Círdan the Shipwright", "Cirdan the Shipwright", "mage.cards.c.CirdanTheShipwright"),
+            alias("Galadriel of Lothlórien", "Galadriel of Lothlorien", "mage.cards.g.GaladrielOfLothlorien"),
+            alias("Lórien Revealed", "Lorien Revealed", "mage.cards.l.LorienRevealed"),
+            alias("Song of Eärendil", "Song of Earendil", "mage.cards.s.SongOfEarendil"),
+            alias("Soothing of Sméagol", "Soothing of Smeagol", "mage.cards.s.SoothingOfSmeagol"));
 
     private Bridge() { }
 
@@ -186,14 +199,15 @@ public final class Bridge {
 
         List<ExpansionSet> sets = new ArrayList<>(Sets.getInstance().values());
         sets.sort(Comparator.comparing(ExpansionSet::getCode));
-        Map<String, Printing> catalogue = new HashMap<>();
+        NameIndex<Printing> catalogue = new NameIndex<>();
         for (ExpansionSet set : sets) {
             if (set.getSetType().isCustomSet()) continue;
             if (request.format.equals("commander") && !set.getSetType().isEternalLegal()) continue;
             for (ExpansionSet.SetCardInfo info : set.getSetCardInfo()) {
-                catalogue.putIfAbsent(info.getName(), new Printing(set.getCode(), info));
+                catalogue.add(info.getName(), info.getCardClass().getName(), new Printing(set.getCode(), info));
             }
         }
+        NAME_ALIASES.values().forEach(alias -> alias.bind(catalogue));
         List<Map<String, Object>> coverage = new ArrayList<>();
         Deck[] decks = new Deck[2];
         for (int side = 0; side < 2; side++) {
@@ -248,7 +262,7 @@ public final class Bridge {
         RESULT.put("status", "completed");
     }
 
-    private static Deck loadDeck(JsonObject input, Map<String, Printing> catalogue, String format,
+    private static Deck loadDeck(JsonObject input, NameIndex<Printing> catalogue, String format,
                                  List<Map<String, Object>> coverage) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("deck_id", input.get("id").getAsString());
@@ -264,14 +278,16 @@ public final class Bridge {
                 JsonObject requested = element.getAsJsonObject();
                 String name = requested.get("name").getAsString();
                 Printing printing = catalogue.get(name);
-                if (printing == null && name.contains(" // ")) printing = catalogue.get(name.split(" // ", 2)[0]);
+                if (printing == null && !catalogue.ambiguous(name) && name.contains(" // ")) {
+                    printing = catalogue.get(name.split(" // ", 2)[0]);
+                }
                 if (printing == null) { missing.add(name); continue; }
                 int quantity = requested.get("quantity").getAsInt();
                 for (int number = 0; number < quantity; number++) {
                     Card card = CardImpl.createCard(printing.info.getCardClass(), new CardSetInfo(
                             printing.info.getName(), printing.set, printing.info.getCardNumber(),
                             printing.info.getRarity(), printing.info.getGraphicInfo()));
-                    if (card == null || card.isNightCard() || !fullName(card).equals(name)) {
+                    if (card == null || card.isNightCard() || !sameCardName(card, name)) {
                         if (!missing.contains(name)) missing.add(name);
                         break;
                     }
@@ -300,6 +316,9 @@ public final class Bridge {
     }
 
     private static String fullName(Card card) {
+        if (card instanceof AdventureCard) {
+            return card.getName() + " // " + ((AdventureCard) card).getSpellCard().getName();
+        }
         if (card instanceof CardWithHalves) {
             CardWithHalves halves = (CardWithHalves) card;
             return halves.getLeftHalfCard().getName() + " // " + halves.getRightHalfCard().getName();
@@ -307,6 +326,56 @@ public final class Bridge {
         if (card.getSecondCardFace() != null) return card.getName() + " // " + card.getSecondCardFace().getName();
         if (card.isFlipCard()) return card.getName() + " // " + card.getFlipCardName();
         return card.getName();
+    }
+
+    private static boolean sameCardName(Card card, String requested) {
+        String actual = fullName(card);
+        if (actual.equals(requested)) return true;
+        NameAlias alias = NAME_ALIASES.get(requested);
+        return alias != null && alias.engineName.equals(actual)
+                && alias.implementation.equals(card.getClass().getName());
+    }
+
+    private static Map.Entry<String, NameAlias> alias(String canonical, String engineName, String implementation) {
+        return Map.entry(canonical, new NameAlias(canonical, engineName, implementation));
+    }
+
+    private static final class NameAlias {
+        final String canonical, engineName, implementation;
+
+        NameAlias(String canonical, String engineName, String implementation) {
+            this.canonical = canonical;
+            this.engineName = engineName;
+            this.implementation = implementation;
+        }
+
+        <T> void bind(NameIndex<T> index) {
+            T printing = index.get(engineName);
+            if (printing != null && implementation.equals(index.identity(engineName))) {
+                index.add(canonical, implementation, printing);
+            }
+        }
+    }
+
+    private static final class NameIndex<T> {
+        private final Map<String, T> entries = new HashMap<>();
+        private final Map<String, String> identities = new HashMap<>();
+        private final Set<String> collisions = new HashSet<>();
+
+        void add(String name, String identity, T value) {
+            if (collisions.contains(name)) return;
+            String previous = identities.putIfAbsent(name, identity);
+            if (previous != null && !previous.equals(identity)) {
+                entries.remove(name);
+                collisions.add(name);
+            } else {
+                entries.putIfAbsent(name, value);
+            }
+        }
+
+        T get(String name) { return collisions.contains(name) ? null : entries.get(name); }
+        String identity(String name) { return collisions.contains(name) ? null : identities.get(name); }
+        boolean ambiguous(String name) { return collisions.contains(name); }
     }
 
     private static String sha(Path file) throws Exception {

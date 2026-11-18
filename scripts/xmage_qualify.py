@@ -12,6 +12,27 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from decklab.xmage import describe
 
+PREFLIGHT_SENTINEL = "No Such Deck Lab Preflight Opponent"
+DIACRITIC_NAMES = (
+    "Andúril, Flame of the West", "Éomer, Marshal of Rohan", "Éowyn, Fearless Knight", "Éowyn, Lady of Rohan",
+    "Arwen Undómiel", "Círdan the Shipwright", "Galadriel of Lothlórien", "Lórien Revealed",
+    "Song of Eärendil", "Soothing of Sméagol")
+ADVENTURE_NAMES = (
+    "Beorn, Reluctant Host // Till and Tend", "Bilbo Baggins, Burglar // Take a Glance",
+    "Bilbo, Luckwearer // Burglar's Plot", "Thranduil, Sindarin Liege // Silvan Rally")
+# Every selected case has an unsupported opponent, so even successful baseline admission cannot start a game.
+PREFLIGHT_CASES = {
+    "preflight-diacritics": (True, DIACRITIC_NAMES),
+    "preflight-adventures": (True, ADVENTURE_NAMES),
+    "preflight-exact-name": (True, ("Sol Ring",)),
+    "preflight-double-faced": (True, ("Delver of Secrets // Insectile Aberration",)),
+    "preflight-wrong-adventure-back": (False, ("Beorn, Reluctant Host // Grizzly Bears",)),
+    "preflight-adventure-front-only": (False, ("Beorn, Reluctant Host",)),
+    "preflight-adventure-back-only": (False, ("Till and Tend",)),
+    "preflight-invented-accent": (False, ("Fórest",)),
+    "preflight-unimplemented": (False, ("Galion, Elvenking's Butler",)),
+}
+
 
 def _row(name, quantity=1):
     return {"name": name, "quantity": quantity}
@@ -51,6 +72,9 @@ def fixtures():
         "timeout": ("commander", [_row("Forest", 99)], commander,
                     [_row("Forest", 99)], commander, "timeout"),
     }
+    for name, (_, requested) in PREFLIGHT_CASES.items():
+        cases[name] = ("casual", [_row("Forest", 60 - len(requested))] + [_row(n) for n in requested], [],
+                       [_row("Forest", 59), _row(PREFLIGHT_SENTINEL)], [], "unsupported")
     result = {}
     for name, (format_, main, leaders, opponent, other_leaders, expected) in cases.items():
         result[name] = ({"schema": 1, "format": format_, "seed": 1501, "games": 1,
@@ -72,7 +96,80 @@ def fixtures():
     return result
 
 
-def qualify(home, build_dir, output, selected=None):
+def verify_preflight(name, manifest, result):
+    """Require exact coverage and a nonplayed response, rather than accepting any unsupported result."""
+    supported, requested = PREFLIGHT_CASES[name]
+    coverage = result.get("coverage") or []
+    if len(coverage) != 2 or [row.get("deck_id") for row in coverage] != ["baseline", "opponent"]:
+        raise AssertionError("Both exact preflight lists need coverage evidence.")
+    baseline, opponent = coverage
+    if opponent.get("status") != "unsupported" or opponent.get("missing") != [PREFLIGHT_SENTINEL]:
+        raise AssertionError("The deliberate opponent sentinel was not refused.")
+    if supported:
+        if baseline.get("status") != "supported" or baseline.get("missing") or baseline.get("cards") != 60:
+            raise AssertionError("The exact canonical list was not admitted unchanged.")
+    elif baseline.get("status") != "unsupported" or baseline.get("missing") != list(requested):
+        raise AssertionError("The refused exact card names were not preserved.")
+    if result.get("status") != "unsupported" or any(
+            g.get("status") != "unsupported" or g.get("winner") is not None or g.get("turns") != 0
+            for g in result.get("games", [])):
+        raise AssertionError("A coverage-only request started or credited a game.")
+    if manifest["decks"][1]["main"][-1]["name"] != PREFLIGHT_SENTINEL:
+        raise AssertionError("A coverage-only request lost its no-game sentinel.")
+
+
+def check_name_index(installed, output):
+    """Exercise the compiled pure name index and class-bound aliases without constructing an engine or game."""
+    source = r'''
+import java.lang.reflect.*;
+public final class NameIndexChecks {
+  static Class<?> index, alias;
+  static Constructor<?> indexCtor, aliasCtor;
+  static Method add, get, ambiguous, bind;
+  static Object fresh() throws Exception { return indexCtor.newInstance(); }
+  static void put(Object i, String name, String identity, Object value) throws Exception { add.invoke(i,name,identity,value); }
+  static Object read(Object i, String name) throws Exception { return get.invoke(i,name); }
+  static void require(boolean value) { if (!value) throw new AssertionError("Name identity check failed"); }
+  public static void main(String[] args) throws Exception {
+    index=Class.forName("decklab.xmage.Bridge$NameIndex"); alias=Class.forName("decklab.xmage.Bridge$NameAlias");
+    indexCtor=index.getDeclaredConstructor(); aliasCtor=alias.getDeclaredConstructor(String.class,String.class,String.class);
+    add=index.getDeclaredMethod("add",String.class,String.class,Object.class); get=index.getDeclaredMethod("get",String.class);
+    ambiguous=index.getDeclaredMethod("ambiguous",String.class); bind=alias.getDeclaredMethod("bind",index);
+    for (AccessibleObject a : new AccessibleObject[]{indexCtor,aliasCtor,add,get,ambiguous,bind}) a.setAccessible(true);
+    Object first=new Object(), second=new Object(), i=fresh();
+    put(i,"Forest","ForestClass",first);put(i,"Forest","ForestClass",second);
+    require(read(i,"Forest")==first && read(i,"Fórest")==null);
+    put(i,"Forest","AnotherClass",second);put(i,"Forest","ForestClass",first);
+    require(read(i,"Forest")==null && (Boolean)ambiguous.invoke(i,"Forest"));
+    Object a=aliasCtor.newInstance("Canonical É","Engine E","ExpectedClass");
+    i=fresh();put(i,"Engine E","ExpectedClass",first);bind.invoke(a,i);require(read(i,"Canonical É")==first);
+    i=fresh();put(i,"Engine E","WrongClass",first);bind.invoke(a,i);require(read(i,"Canonical É")==null);
+    i=fresh();put(i,"Engine E","ExpectedClass",first);put(i,"Engine E","WrongClass",second);
+    bind.invoke(a,i);require(read(i,"Canonical É")==null);
+    i=fresh();put(i,"Engine E","ExpectedClass",first);put(i,"Canonical É","WrongClass",second);
+    bind.invoke(a,i);require(read(i,"Canonical É")==null && (Boolean)ambiguous.invoke(i,"Canonical É"));
+    System.out.println("{\"checks\":6,\"passed\":true,\"games_started\":0}");
+  }
+}
+'''
+    java = Path(installed["command"][0])
+    compiler = java.with_name("javac.exe" if sys.platform == "win32" else "javac")
+    with tempfile.TemporaryDirectory(prefix="decklab-xmage-name-index-") as temporary:
+        path = Path(temporary) / "NameIndexChecks.java"
+        path.write_text(source, encoding="utf-8")
+        subprocess.run([str(compiler), "--release", "17", "-encoding", "UTF-8", str(path)], check=True,
+                       capture_output=True, timeout=30)
+        classpath = str(path.parent) + (";" if sys.platform == "win32" else ":") + installed["command"][-2]
+        completed = subprocess.run([str(java), "-Xmx128m", "-cp", classpath, "NameIndexChecks"], check=True,
+                                   capture_output=True, timeout=30)
+    result = json.loads(completed.stdout)
+    if result != {"checks": 6, "passed": True, "games_started": 0}:
+        raise AssertionError("The compiled name index did not pass every no-game identity check.")
+    (output / "name-index.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    return result
+
+
+def qualify(home, build_dir, output, selected=None, *, name_index_check=False):
     installed = describe(home, build_dir=build_dir)
     if not installed["ready"]:
         raise ValueError(installed["problem"])
@@ -82,6 +179,8 @@ def qualify(home, build_dir, output, selected=None):
     names = selected or list(cases)
     receipt = {"schema": 1, "engine": {key: value for key, value in installed.items()
                                       if key != "command"}, "cases": []}
+    if name_index_check:
+        receipt["name_index"] = check_name_index(installed, output)
     for name in names:
         manifest, expected = cases[name]
         request = json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
@@ -112,6 +211,8 @@ def qualify(home, build_dir, output, selected=None):
         if name in {"missing-card", "wrong-dfc-back"}:
             if not result["coverage"][0]["missing"]:
                 raise AssertionError("An unsupported name was not preserved in preflight.")
+        if name in PREFLIGHT_CASES:
+            verify_preflight(name, manifest, result)
         if expected == "completed":
             game = result["games"][0]
             if (game["starting_player"] != 1 or game["number"] != 2 or game["errors"] != 0
@@ -140,8 +241,10 @@ def main():
     parser.add_argument("--build-dir")
     parser.add_argument("--output", required=True)
     parser.add_argument("--case", action="append", choices=sorted(fixtures()))
+    parser.add_argument("--name-index-check", action="store_true",
+                        help="Check compiled exact-name, class mismatch and collision handling without games.")
     args = parser.parse_args()
-    qualify(args.home, args.build_dir, args.output, args.case)
+    qualify(args.home, args.build_dir, args.output, args.case, name_index_check=args.name_index_check)
 
 
 if __name__ == "__main__":
