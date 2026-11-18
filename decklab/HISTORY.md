@@ -34,6 +34,16 @@ adventures are admitted; Galion is absent, and the pinned Thranduil class lacks
 its requested adventure face, so both full lists remain refused rather than
 substituted. The live installation and its earlier receipts remain unchanged.
 
+Combined local validation at clean commit
+`1687e40ac8770ad4e27c2ae86541df1460bd7e96`: the default guarded fixture suite
+ran 14,218 tests in 1,408.213 seconds, with 13,734 passed, 484 skipped and no
+failures or errors (exit 0). The tracked tree was clean and unchanged before
+and after. This is the local Windows fixture gate; CI and Linux database
+integration remain separate qualifications. The ten no-game XMage coverage
+cases and six compiled index checks above were separate native checks with
+the fixed artifact. Positive real XMage games have not yet run, and the live
+fixes have not been deployed.
+
 ## Real pods and Same commander results (2026-11-18; E9-S11, E3-S49)
 
 After the completed replay gate, HomeOps qualified a real 16-game pod sample.
