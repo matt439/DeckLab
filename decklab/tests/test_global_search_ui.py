@@ -86,16 +86,18 @@ class GlobalSearchUiTests(unittest.TestCase):
         self.run_js(r'''
           start(); box().input.focus(); await type("elv");
           const data = structuredClone(ANSWER);
-          Object.assign(data.groups[1].items[0], { decks: 2, free: 1 });
+          Object.assign(data.groups[1].items[0], { decks: 2, free: 1, decks_complete: false });
           data.groups[1].items.push({ name: "Plains", owned: 3, incoming: 0, in_use: null, free: null, basic: true, card: null });
           data.groups[2].items = [{ name: "Elvish Mystic", decks: 1, free: 0, basic: false, card: MYSTIC },
-            { name: "Lone Card", decks: 0, free: 0, basic: false, card: { name: "Lone Card", type_line: "Instant" } },
+            { name: "Lone Card", decks: 0, free: 0, basic: false, decks_complete: true, card: { name: "Lone Card", type_line: "Instant" } },
+            { name: "Unknown", decks: 0, free: 0, decks_complete: false, card: { name: "Unknown", type_line: "Aura" } },
             { name: "Forest", basic: true, card: { name: "Forest", type_line: "Basic Land — Forest" } },
             { name: "Hidden", card: { name: "Hidden", type_line: "Sorcery" } }];
           await answer(data);
           const meta = box().results.querySelectorAll(".gs-item").slice(1).map((b) => b.querySelector(".gs-meta").textContent);
-          same(meta, ["in 2 decks · 1 free · 1 on the way", "3 owned · in decks not tracked",
+          same(meta, ["in 2 decks · deck check incomplete · 1 free · 1 on the way", "3 owned · in decks not tracked",
             "in 1 deck · none free · Creature — Elf Druid", "in no decks · none free · Instant",
+            "deck check incomplete · none free · Aura",
             "in decks not tracked · Basic Land — Forest", "Sorcery"]);
         ''')
 

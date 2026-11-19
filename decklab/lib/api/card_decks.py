@@ -6,8 +6,8 @@ anyone else gets the Collection page's 403, word for word (space_param and guard
 nothing tells a hidden space from a missing one. Inside it, a deck the viewer may not see (E10-S30's
 guard.deck_reader; a product deck's name to a viewer outside home's records, inventory_views.named_holder) is
 never named or counted: it is left out of both lists, with no "one of the home decks" line. Its copies still
-leave the shelf, so "free" is the Collection page's (owned less every built deck's and intact product's copies,
-pool.load_pool), the same number the Card list's In decks column and the global search give.
+leave the shelf. "Free" deducts built decks, intact products and active loans. Loans contribute a
+lent count only and are never included in the deck lists.
 
 Nothing is written.
 """
@@ -31,37 +31,45 @@ def _name(name):
 
 def _lists(summary, unresolved):
     """Each saved list's copies of every non-basic card, the Planned list first, then the Play-now list (the
-    Considering list is neither); a list that can't be read is left out."""
+    Considering list is neither), and whether every list could be read."""
+    if summary.get("error"):
+        return [], False
     found = []
+    complete = True
     for version in ("target", "owned"):
         if version not in summary.get("versions", ()):
             continue
         try:
             sections = decks.load_deck(summary["id"], version)
         except (decks.DeckNotFound, decks.DeckFileError, OSError):
+            complete = False
             continue
         found.append(pool._count_sections(sections, summary["id"], unresolved))
-    return found
+    return found, complete
 
 
 def deck_use(p, summaries, names, space, sees=None, records=None):
-    """{name: {"holds", "wants", "owned", "incoming", "free"}} for each exact non-basic card name in names, in
+    """Deck matches, counts and completeness for each exact non-basic card name in names, in
     space's pool p over the deck summaries (decks.list_decks()), as card_decks answers one card (uncut lists).
 
     Each deck's lists are read at most once, however many names are asked about, so a search's shown results
     cost one read of the space's decks. A deck the viewer may not see (sees: guard.deck_reader(); records:
-    guard.sees_home_records()) is never in holds or wants, but its copies still leave the shelf."""
+    guard.sees_home_records()) is excluded from the matches and completeness check. Its copies still leave
+    the shelf."""
     from .inventory_views import named_holder
     sees = guard.deck_reader() if sees is None else sees
     records = guard.sees_home_records() if records is None else records
-    use, holding, unresolved, read = {}, {}, {}, {}
+    use, holding, unresolved = {}, {}, {}
     for name in names:
-        holds, held = [], 0
+        holds, held, lent = [], 0, 0
         for deck in p.in_use:
             copies = deck.cards[name]
             if not copies:
                 continue
             held += copies
+            if deck.why == "lent out":
+                lent += copies
+                continue
             holding.setdefault(name, set()).add(deck.id)
             if named_holder(deck.id, sees, records):
                 holds.append({"id": deck.id, "title": deck.title, "why": deck.why, "copies": copies})
@@ -69,30 +77,30 @@ def deck_use(p, summaries, names, space, sees=None, records=None):
         incoming = sum(qty for _, qty in p.on_the_way.get(name, []))
         owned = max(0, p.owned[name] - incoming)
         use[name] = {"holds": holds, "wants": [], "owned": owned, "incoming": incoming,
-                     "free": max(0, owned - held)}
+                     "free": max(0, owned - held), **({"lent": lent} if lent else {})}
     order = {"building": 0, "idea": 1}
+    decks_complete = True
     for summary in summaries:
         deck_id = summary["id"]
-        if summary.get("space", spaces.HOME) != space or summary.get("error"):
-            continue
         try:
-            kind = spaces.split_deck_id(deck_id)[1]
+            deck_space, kind, _ = spaces.split_deck_id(deck_id)
         except ValueError:
             continue
         # Deck files only: a product's list is what came in the box, not a want; an intact one holds.
         # A trial deck (E3-S39) is a precon not owned: trying it out wants nothing of the shelf.
-        if kind not in decks.KINDS or not sees(summary) or summary.get("trial"):
+        if deck_space != space or kind not in decks.KINDS or summary.get("trial") or not sees(summary):
             continue
+        lists, complete = _lists(summary, unresolved)
+        decks_complete = decks_complete and complete
         for name in use:
             if deck_id in holding.get(name, ()):
                 continue
-            if deck_id not in read:
-                read[deck_id] = _lists(summary, unresolved)
-            copies = next((counts[name] for counts in read[deck_id] if counts[name]), 0)
+            copies = next((counts[name] for counts in lists if counts[name]), 0)
             if copies:
                 use[name]["wants"].append({"id": deck_id, "title": summary.get("title") or deck_id,
                                            "status": summary.get("status"), "copies": copies})
     for found in use.values():
+        found["decks_complete"] = decks_complete
         found["wants"].sort(key=lambda d: (order.get(d["status"], 2), d["title"].casefold(), d["id"]))
     return use
 
@@ -100,7 +108,8 @@ def deck_use(p, summaries, names, space, sees=None, records=None):
 def card_decks(name, space=None):
     """{"name" (exact), "space", "basic", "holds": [{"id", "title", "why" ("built" or "intact product"),
     "copies"}], "wants": [{"id", "title", "status", "copies"}], "more" (a list was cut at MAX_DECKS),
-    "owned", "incoming", "free"}.
+    "owned", "incoming", "free", "lent" (active loan copies, if any),
+    "decks_complete" (all eligible visible lists could be read)}.
 
     holds: the decks whose physical copies are the card's (built decks first, then intact products, each by
     title), as the pool counts them; wants: the space's other decks whose Planned list (else its Play-now list)
@@ -131,6 +140,9 @@ def card_decks(name, space=None):
     found = deck_use(p, summaries, [exact], space)[exact]
     holds, wants = found["holds"], found["wants"]
     answer.update(holds=holds[:MAX_DECKS], wants=wants[:MAX_DECKS],
+                  decks_complete=found["decks_complete"],
                   more=len(holds) > MAX_DECKS or len(wants) > MAX_DECKS,
                   owned=found["owned"], incoming=found["incoming"], free=found["free"])
+    if "lent" in found:
+        answer["lent"] = found["lent"]
     return answer

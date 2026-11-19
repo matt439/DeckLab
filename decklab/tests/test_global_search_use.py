@@ -10,13 +10,12 @@ from unittest import mock
 from decklab.lib import access
 from decklab.lib.api import card_decks as cd
 from decklab.lib.api import global_search as gs, guard
-from decklab.tests.test_api import _write
-from decklab.tests.test_card_decks import two_lists
-from decklab.tests.test_global_search import GlobalSearchTestCase
+from decklab.tests.test_api import BROKEN, _write
+from decklab.tests.test_card_decks import CardDecksTestCase, two_lists
 from decklab.tests.test_inventory_privacy import hides_every_deck
 
 
-class ShortUseTests(GlobalSearchTestCase):
+class ShortUseTests(CardDecksTestCase):
 
     def search(self, profile, q="elv"):
         with self.at_home(profile):
@@ -29,6 +28,7 @@ class ShortUseTests(GlobalSearchTestCase):
             with self.at_home("matt"):
                 full = cd.card_decks(name)
             self.assertEqual(item["decks"], len(full["holds"]) + len(full["wants"]), name)
+            self.assertTrue(item["decks_complete"], name)
             self.assertEqual(item["free"], full["free"], name)
         # Llanowar Elves: the Beginner Box's two decks hold it, two unbuilt decks want it; 3 free.
         self.assertEqual((mine["Llanowar Elves"]["decks"], mine["Llanowar Elves"]["free"]), (4, 3))
@@ -36,6 +36,7 @@ class ShortUseTests(GlobalSearchTestCase):
     def test_other_cards_say_their_wanting_decks_and_none_free(self):
         other = self.search("matt")["cards"]["items"][0]
         self.assertEqual((other["decks"], other["free"], other["basic"]), (0, 0, False))
+        self.assertTrue(other["decks_complete"])
         _write(self.box.magic / "decks" / "casual" / "a-want.md",
                two_lists("A Want", "building", f"2 {other['name']}", f"1 {other['name']}"))
         again = next(i for i in self.search("matt")["cards"]["items"] if i["name"] == other["name"])
@@ -62,11 +63,28 @@ class ShortUseTests(GlobalSearchTestCase):
         for item in groups["cards"]["items"]:
             self.assertEqual(item.get("decks"), 0, item["name"])
 
+    def test_a_visible_list_failure_preserves_known_matches_and_free_counts_for_shown_cards(self):
+        _write(self.box.magic / "decks" / "casual" / "broken-list.md", BROKEN)
+        groups = self.search("matt")
+        elves = next(i for i in groups["collection"]["items"] if i["name"] == "Llanowar Elves")
+        self.assertEqual((elves["decks"], elves["free"], elves["decks_complete"]), (4, 3, False))
+        other = groups["cards"]["items"][0]
+        self.assertEqual((other["decks"], other["free"], other["decks_complete"]), (0, 0, False))
+
+    def test_an_out_of_space_broken_list_is_excluded_even_if_public(self):
+        _write(self.box.magic / "people" / "user2" / "decks" / "casual" / "broken-list.md", BROKEN)
+        with mock.patch.object(guard, "public_deck_spaces", return_value=["user2"]):
+            groups = self.search("matt")
+        elves = next(i for i in groups["collection"]["items"] if i["name"] == "Llanowar Elves")
+        self.assertEqual((elves["decks"], elves["free"], elves["decks_complete"]), (4, 3, True))
+
     def test_a_deck_the_viewer_may_not_see_is_never_counted(self):
+        _write(self.box.magic / "decks" / "casual" / "broken-list.md", BROKEN)
         with self.at_home("matt"), mock.patch.object(guard, "deck_reader", hides_every_deck):
             groups = self.groups(gs.search_view("elv"))
         elves = next(i for i in groups["collection"]["items"] if i["name"] == "Llanowar Elves")
         self.assertEqual((elves["decks"], elves["free"]), (0, 3))      # their copies are still off the shelf
+        self.assertTrue(elves["decks_complete"])
         for secret in ("fdn-beginner-box", "product/", "gruul", "elf-commander", "one of"):
             self.assertNotIn(secret, json.dumps(groups))
 
@@ -78,7 +96,7 @@ class ShortUseTests(GlobalSearchTestCase):
         for found in (answer, stranger):
             for group in found["groups"]:
                 for item in group["items"]:
-                    for field in ("decks", "free", "basic"):
+                    for field in ("decks", "decks_complete", "free", "basic"):
                         self.assertNotIn(field, item)
         with self.as_("user2"), mock.patch.object(guard, "sees_inventory", return_value=False):
             hidden = gs.search_view("elv")
@@ -87,13 +105,14 @@ class ShortUseTests(GlobalSearchTestCase):
             self.assertNotIn("decks", item)
             self.assertNotIn("free", item)
 
-    def test_an_unreadable_deck_list_leaves_the_fields_out(self):
+    def test_an_unreadable_deck_library_leaves_the_fields_out(self):
         groups = [{"id": "cards", "items": [{"name": "Llanowar Elves", "card": None}]}]
         with self.at_home("matt"):
             p = gs.pool.load_pool()
             with mock.patch.object(gs.decks, "list_decks", side_effect=OSError("x")):
                 gs._deck_use("home", p, groups)
         self.assertNotIn("decks", groups[0]["items"][0])
+        self.assertNotIn("decks_complete", groups[0]["items"][0])
 
 
 if __name__ == "__main__":

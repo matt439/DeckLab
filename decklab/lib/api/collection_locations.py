@@ -13,7 +13,7 @@ rows' keys are collection_edit._picture_key's. Only the space's own people get t
 (rows_view and every write check guard.require_sees_inventory / require_space_write first).
 
 Both counts follow the space's storage setup (E8-S25, lib/storage_setting.py): its containers,
-each row's free copies (not held by a built deck or an intact product: collection_edit._storage)
+each row's free copies after deducting deck, product and loan counts (collection_edit._storage)
 going to the container its recorded location matches (state/space_storage.match), or with none
 recorded to the default container. With nothing saved, home has its built-in 4-row storage box
 (capacity config.json's "storage_box_capacity", CAPACITY when it isn't set) and any other space
@@ -160,7 +160,7 @@ def _counts(space, rows, storage, key, record):
         if "held" in held and held["held"] is None:          # a basic land: its copies in decks aren't known
             out["_basic"] += copies
             continue
-        free = max(0, copies - (held.get("held") or 0))
+        free = max(0, copies - (held.get("held") or 0) - held.get("lent", 0))
         location = found.get((row["set"], row["collector_number"], row["finish"]), "")
         ident = space_storage.match(record, location)
         if ident is not None:

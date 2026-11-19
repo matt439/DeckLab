@@ -9,16 +9,16 @@ Decided (Matt, 2026-10-31): three sources, grouped in this order:
 - "collection" ("In your collection"): the viewer's own space's collection, only when it may see that
   space's inventory (guard.sees_inventory; home's for a script naming nobody), matched on the card name,
   matched as "cards" matches a name (cards.search_names' order: starts, word starts, the words typed in
-  order, anywhere), each with the Collection page's counts (owned, incoming, in_use and free, as pool.load_pool works them
-  out; null in_use and free for a tracked basic land) and never a holder's name;
+  order, anywhere), each with the Collection page's counts (owned, incoming, in_use, free and lent when
+  positive; null in_use and free for a tracked basic land) and never a holder's name or loan details;
 - "cards" ("Other cards"): every Scryfall card in the local card index (cards.search_names, paper cards),
   leaving out every name the viewer's collection holds, so an owned card never shows as another card.
 
 To a viewer who may see the space's inventory, each card shown under "collection" and "cards" also carries
 its deck use in short form (E1-S29): "decks", how many of the space's decks the viewer may see hold or want
-it (card_decks.deck_use, the card viewer's line), and under "cards" its "free" copies (none: it isn't
-owned) and "basic". A basic land has no "decks": its copies in decks aren't tracked. A deck the viewer may
-not see is never counted. Only the results shown are worked out, and to anyone else the fields are absent.
+it (card_decks.deck_use, the card viewer's line), "decks_complete", whether all eligible visible lists were
+read, and under "cards" its "free" copies (none: it isn't owned) and "basic". A basic land has no "decks":
+its copies in decks aren't tracked. Only the results shown are worked out, and to anyone else the fields are absent.
 
 Each group gives at most `limit` items (5 by default), its "total" (counted up to TOTAL_CAP) and "more".
 With `group`, only that group comes back, up to 50 items (its See all). The text is at most MAX_QUERY
@@ -128,7 +128,7 @@ def _decks(space, q, limit):
 
 def _collection(space, key, limit):
     """The collection group and every name the collection holds (left out of Other cards)."""
-    from .collection import _holders, _special_basics, recorded_printings
+    from .collection import _lent_copies, _special_basics, recorded_printings
     try:
         p = pool.load_pool() if space == spaces.HOME else pool.load_pool(space)
         special, special_incoming = _special_basics(space)
@@ -137,7 +137,6 @@ def _collection(space, key, limit):
         group = _group("collection", [], 0, limit)
         group.update(space=space, error=UNREADABLE)
         return group, set(), None
-    sees = guard.deck_reader()
     names = set(p.owned) | set(special) | set(special_incoming)
     matched = []
     typed = cards._words(key)
@@ -151,10 +150,12 @@ def _collection(space, key, limit):
         basic = decks.is_basic_land(name)
         incoming = special_incoming[name] if basic else sum(qty for _, qty in p.on_the_way.get(name, []))
         owned = special[name] if basic else max(0, p.owned[name] - incoming)
-        in_use = None if basic else sum(h["quantity"] for h in _holders(p, name, sees))
+        lent = _lent_copies(p, name) if not basic else 0
+        in_use = None if basic else sum(holder.cards[name] for holder in p.in_use if holder.why != "lent out")
         card = cards.card(name)
         items.append({"name": name, "owned": owned, "incoming": incoming, "in_use": in_use,
-                      "free": None if in_use is None else max(0, owned - in_use), "basic": basic,
+                      "free": None if in_use is None else max(0, owned - in_use - lent), "basic": basic,
+                      **({"lent": lent} if lent else {}),
                       "card": _card_json(card, recorded.get(name) or _shown_printing(card)) if card else None})
     group = _group("collection", items, len(matched), limit)
     group["space"] = space
@@ -162,8 +163,8 @@ def _collection(space, key, limit):
 
 
 def _deck_use(space, p, groups):
-    """Each shown card's short deck use (the module's docstring), for an inventory reader of space; an
-    unreadable deck list leaves the fields out."""
+    """Each shown card's short deck use, for an inventory reader of space. An unreadable deck library
+    leaves the fields out. An individual list's read failure leaves the known counts intact."""
     from .card_decks import deck_use
     shown = [item for group in groups if group["id"] in ("collection", "cards") for item in group["items"]]
     for item in shown:
@@ -180,6 +181,7 @@ def _deck_use(space, p, groups):
         found = None if item["basic"] else use.get(item["name"])
         if found is not None:
             item["decks"] = len(found["holds"]) + len(found["wants"])
+            item["decks_complete"] = found["decks_complete"]
             item.setdefault("free", found["free"])
 
 

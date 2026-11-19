@@ -139,7 +139,7 @@ def collection_view(q=None, color=None, type=None, role=None, mv=None,
     W/U/B/R/G in any order is "within those colours" (the card's identity is a subset, so
     colourless cards fit every choice, as in a Commander deck's colours), and C is colourless
     identity only (_identity_choice). mv is exact mana value. availability is
-    all/free/incoming/held. Basic land allocations are not tracked, so their free_now and held values are null.
+    all/free/incoming/held/lent/spare. Basic land allocations are not tracked, so their free_now and held values are null.
     space (home by default) is whose pool; the answer also has "space",
     "spaces" ([{"id", "name"}] of those it may see, home first, named "Home") and "editable"
     (whether this visitor may change that collection), and where it may, "scan"
@@ -148,7 +148,7 @@ def collection_view(q=None, color=None, type=None, role=None, mv=None,
     only the home profiles, a person's only that person, whatever the role;
     E10-S29), and the same 403 for a space that doesn't exist (space_param).
     A row's holders name only decks the visitor may see (_holders), its
-    incoming is a count, and the warnings leave out what it may not be told
+    incoming is a count, active loans contribute only a lent count, and the warnings leave out what it may not be told
     (library.visible_warnings, visible_unresolved).
     """
     from . import guard
@@ -158,8 +158,8 @@ def collection_view(q=None, color=None, type=None, role=None, mv=None,
                            ((q, "q"), (color, "color"), (type, "type"), (role, "role")))
     color = _identity_choice(color)
     availability = availability or "all"
-    if availability not in ("all", "free", "incoming", "held", "spare"):
-        raise ApiError(400, "availability must be all, free, incoming, held or spare")
+    if availability not in ("all", "free", "incoming", "held", "lent", "spare"):
+        raise ApiError(400, "availability must be all, free, incoming, held, lent or spare")
     page, limit = _integer(page, "page", 1, 10000), _integer(limit, "limit", 24, 100)
     viewer = guard.viewer() if availability == "spare" else None
     same_space = viewer is not None and viewer.get("space", spaces.HOME) == space
@@ -238,12 +238,12 @@ def _holder(deck, quantity, sees):
     return {"id": None, "title": guard.hidden_deck(deck.id), "quantity": quantity}
 
 
-def _holders(p, name, sees):
+def _holders(p, name, sees, *, include_loans=True):
     """_holder of each deck holding name, the hidden ones merged into one per space's words
     (copies summed), so their count isn't told either."""
     shown, hidden = [], {}
     for d in p.in_use:
-        if not d.cards[name]:
+        if not d.cards[name] or (not include_loans and d.why == "lent out"):
             continue
         holder = _holder(d, d.cards[name], sees)
         if holder["id"] is not None:
@@ -253,6 +253,10 @@ def _holders(p, name, sees):
         else:
             hidden[holder["title"]] = holder
     return shown + list(hidden.values())
+
+
+def _lent_copies(p, name):
+    return sum(holder.cards[name] for holder in p.in_use if holder.why == "lent out")
 
 
 def _collection(p, special, special_incoming, q, color, type, role, mv, availability, page, limit,
@@ -267,9 +271,10 @@ def _collection(p, special, special_incoming, q, color, type, role, mv, availabi
         basic = decks.is_basic_land(name)
         incoming = special_incoming[name] if basic else sum(qty for _, qty in p.on_the_way.get(name, []))
         owned = special[name] if basic else max(0, p.owned[name] - incoming)
-        holders = _holders(p, name, sees) if not basic else []
+        holders = _holders(p, name, sees, include_loans=False) if not basic else []
         held = sum(d["quantity"] for d in holders) if not basic else None
-        free = max(0, owned - held) if held is not None else None
+        lent = _lent_copies(p, name) if not basic else 0
+        free = max(0, owned - held - lent) if held is not None else None
         if card:
             roles.update(card.get("roles", []))
             types.update(card.get("type_line", "").split(" — ")[0].split())
@@ -286,13 +291,14 @@ def _collection(p, special, special_incoming, q, color, type, role, mv, availabi
         if mv is not None and (not card or card["cmc"] != mv):
             continue
         if availability == "free" and not free or availability == "incoming" and not incoming \
-                or availability == "held" and not held:
+                or availability == "held" and not held or availability == "lent" and not lent:
             continue
         spare = spares["rows"].get(name) if availability == "spare" else None
         if availability == "spare" and not spare:
             continue
         rows.append({"name": name, "owned": owned, "incoming": incoming, "held": held,
                      "free_now": free, "holders": holders, "basic": basic,
+                     **({"lent": lent} if lent else {}),
                      "resolved": card is not None, "card": card, **({"spares": spare} if spare else {})})
     total = len(rows)
     # A page past the end (an old address, a smaller page size, a shrunken collection) shows the last one.

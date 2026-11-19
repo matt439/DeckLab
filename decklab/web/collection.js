@@ -11,12 +11,12 @@
  *
  * Find cards uses a lab card grid and casual rows, each with its own viewer group so hidden
  * layouts do not duplicate swipe items; its filters apply as they're typed, and the address follows them (replaceState).
- * The viewer's words for a card say how many are owned, free and in which decks, with "Edit copies".
+ * The viewer's words for a card say how many are owned, lent, free and in which decks, with "Edit copies".
  * The Card list is a dense table of the rows, sortable and paged, with a filter for rows whose
  * condition or language isn't recorded and each row's estimated price (its own printing and finish,
  * collection_edit._prices; the sort puts unpriced rows last both ways) and an "In storage only" filter
- * (collection_edit._storage: each row's copies in built decks and intact products, a guess where the
- * decks' lists name another printing); a row's thumbnail opens the viewer (its own group) and its
+ * (collection_edit._storage: each row's loans and copies in built decks and intact products, a guess where
+ * the decks' lists name another printing); a row's thumbnail opens the viewer (its own group) and its
  * name selects its printing/finish preview in the lab, with Edit copies opening the existing row sheet.
  * Casual rows open the viewer with recorded notes and an Edit copies action when permitted. "Set condition &
  * language…" sets one condition and/or language on every row shown, in one change (collection-bulk.js).
@@ -49,7 +49,8 @@ const COL_LANGUAGES = [["", "Not recorded"], ["en", "English"], ["ja", "Japanese
   ["he", "Hebrew"], ["la", "Latin"], ["grc", "Ancient Greek"], ["ar", "Arabic"],
   ["sa", "Sanskrit"], ["ph", "Phyrexian"], ["qya", "Quenya"]];
 const COL_FILTER_KEYS = ["q", "color", "type", "role", "mv", "availability", "page"];
-const COL_AVAILABILITY = [["all", "All"], ["free", "Free now"], ["incoming", "On the way"], ["held", "In decks"], ["spare", "Spare"]];
+const COL_AVAILABILITY = [["all", "All"], ["free", "Free now"], ["incoming", "On the way"], ["held", "In decks"],
+  ["lent", "Lent out"], ["spare", "Spare"]];
 const COL_IMPORT_MAX = 4 * 1024 * 1024;     // bytes: the server's limit (collection_edit.MAX_IMPORT; 20,000 rows)
 const COL_NOTES_MAX = 500;
 const COL_ROWS_PAGE = 100;                  // Card list rows a page
@@ -252,16 +253,19 @@ function colWithoutHints(storage) {
   })) };
 }
 
-/** A row's copies in decks: {held (null for a basic land: not tracked), guess}, held 0 when none. */
+/** A printing's deck, loan and storage counts. Deck and storage counts are null for basic lands. */
 function colHeld(cv, row) {
   const s = cv.storage && cv.storage.rows[colKey(row)];
-  return s ? { held: s.held == null ? null : Number(s.held) || 0, guess: s.guess === true } : { held: 0, guess: false };
+  const held = s && s.held == null ? null : Number(s?.held) || 0;
+  const lent = Number.isSafeInteger(s?.lent) && s.lent > 0 ? s.lent : 0;
+  const free = held == null ? null : Math.max(0, Number(row.quantity || 0) - held - lent);
+  return { held, lent, free, guess: s?.guess === true };
 }
 
 /** Whether some of a row's copies may be in the storage box (a basic land's always may). */
 function colInStorage(cv, row) {
-  const { held } = colHeld(cv, row);
-  return held == null || Number(row.quantity || 0) > held;
+  const { free } = colHeld(cv, row);
+  return free == null || free > 0;
 }
 
 /** A row's estimate in the configured currency (its own printing and finish), or null when there's none. */
@@ -658,11 +662,13 @@ function colFindEmpty(cv, filtered, total = 0) {
       }}), el("span", {class: "lib-start-line", text: line})))) : null);
 }
 
-/** "3 owned · 2 free" (or "· all in decks"); "1 on the way" alone for a card with none owned yet. */
+/** The name-level count shown on both the casual row and lab tile. */
 function colCountWords(row) {
   if (Number.isSafeInteger(row.spares?.spare) && row.spares.spare > 0) return `${row.spares.spare} spare`;
   if (!row.owned) return row.incoming ? `${row.incoming} on the way` : "";
   if (row.basic || row.free_now == null) return `${row.owned} owned`;
+  if (row.lent > 0) return [`${row.owned} owned`, row.held > 0 ? `${row.held} in decks` : null,
+    `${row.lent} lent out`, `${row.free_now} free`].filter(Boolean).join(" · ");
   return `${row.owned} owned · ${row.free_now ? `${row.free_now} free` : "all in decks"}`;
 }
 
@@ -674,6 +680,7 @@ function colFindCaption(cv, row) {
   return el("span", { class: "col-viewer-words" },
     el("span", { class: "col-viewer-counts", text: [row.owned ? `${row.owned} owned` : "None owned yet",
       !row.basic && row.owned && row.free_now != null ? `${row.free_now} free now` : null,
+      row.lent > 0 ? `${row.lent} lent out` : null,
       row.incoming ? `${row.incoming} on the way` : null].filter(Boolean).join(" · ") }),
     row.spares ? el("span", {class: "col-viewer-note", text: row.spares.reason
       + (row.spares.printing_uncertain ? " Printing assignment is unconfirmed; check the deck boxes." : "")}) : null,
@@ -709,7 +716,8 @@ function colFindRows(cv, cards) {
     const caption = colFindCaption(cv, row), words = colCountWords(row) || "None owned";
     const extra = [row.incoming && row.owned ? `${row.incoming} on the way` : null,
       row.basic ? "Deck allocation not tracked" : null,
-      !row.basic && !(row.owned && row.free_now === 0 && row.held === row.owned) && Number.isFinite(row.held) && row.held > 0 ? `${row.held} in decks` : null].filter(Boolean);
+      !row.basic && !row.lent && !(row.owned && row.free_now === 0 && row.held === row.owned)
+        && Number.isFinite(row.held) && row.held > 0 ? `${row.held} in decks` : null].filter(Boolean);
     const open = row.card ? (event) => { if (colActive(cv)) openCard(row.card, event.currentTarget); }
       : cv.editable ? () => openCopiesSheet(cv, row.name) : null;
     const node = el(open ? "button" : "div", { class: "col-find-open", type: open ? "button" : null,

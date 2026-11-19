@@ -69,7 +69,7 @@ class CollectionForecastUiTests(unittest.TestCase):
     def test_current_box_is_unchanged_and_forecast_is_explicitly_conditional(self):
         self.run_js(r'''
           const cv=draw();assert(visible());
-          assert.equal(cv.boxNote.textContent,'Storage box: about 3 of 10 cards (the copies not in built decks or products kept intact).');
+          assert.equal(cv.boxNote.textContent,'Storage box: about 3 of 10 cards (free copies).');
           assert(note().textContent.includes('5 known pending card copies'));
           assert(note().textContent.includes('If only those candidates were filed in the box: about 8 cards against 10 places.'));
           assert(note().textContent.includes('does not predict final occupancy or guarantee'));

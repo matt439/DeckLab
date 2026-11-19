@@ -88,7 +88,7 @@ class CollectionLocationsUiTests(unittest.TestCase):
           draw(setup([box]));
           let note = main.querySelector('.col-storage-box');
           assert.equal(note.textContent,
-            `Storage box: about 3 of ${num(2400)} cards (the copies not in built decks or products kept intact).`);
+            `Storage box: about 3 of ${num(2400)} cards (free copies).`);
           draw(setup([box, binder, {...binder, id: 'shelf', name: 'Shelf', capacity: null, cards: 12}], {elsewhere: 2}));
           note = main.querySelector('.col-storage-box');
           const lines = note.querySelectorAll('.col-storage-line').map(span => span.textContent);
@@ -108,7 +108,7 @@ class CollectionLocationsUiTests(unittest.TestCase):
             + " binder) aren't counted.");
           draw(setup([{...binder, id: 'binder2', name: 'Ultimate Guard binder'}], {unplaced: 3}));
           assert.equal(main.querySelector('.col-storage-box').textContent, 'Ultimate Guard binder: about 310 of 360 cards'
-            + " (the copies not in built decks or products kept intact). Cards with no location recorded (3 cards)"
+            + " (free copies). Cards with no location recorded (3 cards)"
             + " aren't counted in the Ultimate Guard binder.");
           draw(setup([binder], {elsewhere: 4}));
           assert(main.querySelector('.col-storage-box').textContent.endsWith(

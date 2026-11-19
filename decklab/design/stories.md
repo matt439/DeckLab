@@ -35,18 +35,18 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 21 | 20 | 0 | 1 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 21 | 21 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 27 | 24 | 2 | 0 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 45 | 39 | 4 | 2 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 26 | 1 | 0 | 3 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 39 | 33 | 0 | 4 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 26 | 24 | 0 | 0 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 38 | 36 | 1 | 1 | 0 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 38 | 37 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 20 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 88 | 70 | 10 | 4 | 4 |
-| **Total** | **408** | **357** | **20** | **14** | **17** |
+| **Total** | **408** | **359** | **20** | **12** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -381,14 +381,14 @@ First slice: the Scryfall link in `decklab/web/card-viewer.js`, with a server-bu
 
 <a id="e1-s32"></a>
 
-**E1-S32** · Matt · should · S · missing
+**E1-S32** · Matt · should · S · built
 
 As a deck builder looking up a card, I want to know when Deck Lab could only check some of my lists, so I can decide whether a spare copy really has no planned use.
 
 - Given a readable list that wants the card and another visible list that fails to load, when I look in the card viewer or global search, then I see the known match and a short note that the check is incomplete.
 - Given no matches, then “In no decks” requires a complete check of the visible lists. A hidden or out-of-space list cannot add a match or trigger the incomplete-check warning. The viewer still sees their permitted free count after physical holdings are deducted.
 
-Gap: `card_decks._lists` skips unreadable lists and `deck_use` returns the same empty lists for a failed check and a true zero. First slice: carry completeness through both readers and cover a positive match, a true zero, a visible read failure and a hidden broken list in card-use and UI fixtures.
+Built (2026-11-20): the card viewer and global search show **Deck check incomplete** when an eligible visible list fails to load. Known matches and permitted free-copy counts remain visible. **In no decks** requires a complete check. The card-use API and UI fixtures cover readable matches, empty results, visible read failures, and hidden and out-of-space lists.
 
 ---
 
@@ -3840,14 +3840,14 @@ Built 2026-11-15 with synthetic fixture/browser evidence only. Real camera/foil/
 
 <a id="e7-s42"></a>
 
-**E7-S42** · Matt · should · S · missing
+**E7-S42** · Matt · should · S · built
 
 As someone looking for a physical card, I want Collection to distinguish a copy lent out from one in a deck box, so I know where to look and how many copies I can use now.
 
 - Given two owned copies with one on loan and none in a deck, then my Collection shows one lent and one free. For a mix of deck, loan and loose copies, the counts reconcile to the owned printing and the free count excludes loans.
 - Given a loan and no deck holding the card, then the card viewer and global search count zero decks and still deduct the loan from free copies. Only the space's own people see loan details. Broad collection and search results carry no borrower names or notes. Cards with untracked or uncertain assignments keep those qualifications.
 
-Gap: `inventory/ops_loans.holder` already separates exact loaned printings, but `api/collection_edit._storage` adds them to deck holdings, and `web/collection-rows.js` labels the total “in decks”. First slice: trace one loan-only printing through the Card list and Find cards counts and filters. Use synthetic mixed, returned and restricted-view cases to check the wording and totals.
+Built (2026-11-20): Card list reserves active loans by exact printing and shows lent, deck and free counts separately. Find cards offers **Lent out**, and storage totals exclude lent copies. The card viewer and global search deduct loans from free copies and count only actual decks as deck matches. Broad results carry quantities only. Fixtures cover mixed holdings, returns, restricted viewers and uncertain printing assignments.
 
 ---
 

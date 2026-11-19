@@ -139,7 +139,7 @@ function drawColStorageBox(cv) {
   cv.boxNote.className = box.over ? "box box-warn col-storage-box" : "sub col-storage-box";
   cv.boxNote.textContent = box.over
     ? `The storage box is over capacity: about ${num(box.cards)} cards for about ${num(box.capacity)} places.${counted}`
-    : `Storage box: about ${num(box.cards)} of ${num(box.capacity)} cards (the copies not in built decks or products kept intact).${counted}`;
+    : `Storage box: about ${num(box.cards)} of ${num(box.capacity)} cards (free copies).${counted}`;
 }
 
 /** A container's name inside a sentence: "Storage box" as "storage box", but a name with a capital
@@ -172,7 +172,7 @@ function colStorageLines(cv, setup, shown) {
     : c.capacity !== null ? `${c.name}: about ${num(c.cards)} of ${num(c.capacity)} cards`
     : `${c.name}: about ${plural(c.cards, "card")}`;
   const basics = setup.not_counted ? ` Basic lands (${plural(setup.not_counted, "card")}) aren't counted.` : "";
-  const what = " (the copies not in built decks or products kept intact).";
+  const what = " (free copies).";
   cv.boxNote.className = shown.some((c) => c.over) ? "box box-warn col-storage-box" : "sub col-storage-box";
   if (shown.length === 1) {
     // One container keeps the single box's sentences: "The storage box is over capacity", "outside the box".
@@ -191,7 +191,7 @@ function colStorageLines(cv, setup, shown) {
     + (setup.unplaced ? ` Cards with no location recorded (${plural(setup.unplaced, "card")}) aren't in any of these.` : "");
   clear(cv.boxNote).append(
     ...shown.map((c) => el("span", { class: "col-storage-line", text: c.over ? line(c) : `${line(c)}.` })),
-    el("span", { class: "col-storage-line", text: `Counts are the copies not in built decks or products kept intact.${notes}` }));
+    el("span", { class: "col-storage-line", text: `Counts show free copies in each container.${notes}` }));
 }
 
 // ---------------------------------------------------- pending storage scenario

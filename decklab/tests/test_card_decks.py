@@ -10,7 +10,7 @@ from unittest import mock
 from decklab.lib import feature_routes
 from decklab.lib.api import card_decks as cd
 from decklab.lib.api import collection, guard
-from decklab.tests.test_api import _write
+from decklab.tests.test_api import BROKEN, _write
 from decklab.tests.test_global_search import GlobalSearchTestCase
 from decklab.tests.test_inventory_privacy import hides_every_deck
 
@@ -52,6 +52,10 @@ def two_lists(title, status, planned, play_now, built_version=None):
 
 
 class CardDecksTestCase(GlobalSearchTestCase):
+
+    def setUp(self):
+        super().setUp()
+        (self.box.magic / "decks" / "casual" / "broken.md").unlink()
 
     def ask(self, profile, name="Llanowar Elves", space=None):
         with self.at_home(profile):
@@ -106,6 +110,38 @@ class AnswerTests(CardDecksTestCase):
         wants = {d["id"]: d["copies"] for d in self.ask("matt")["wants"]}
         self.assertEqual(wants["casual/a-stand-in"], 2)
         self.assertEqual({d["id"]: d["copies"] for d in self.ask("matt", "Elvish Mystic")["wants"]}["casual/a-stand-in"], 3)
+
+    def test_an_unreadable_visible_summary_leaves_known_matches_and_free_copies(self):
+        self.assertTrue(self.ask("matt")["decks_complete"])
+        _write(self.box.magic / "decks" / "casual" / "broken-list.md", BROKEN)
+        answer = self.ask("matt")
+        self.assertFalse(answer["decks_complete"])
+        self.assertEqual([d["id"] for d in answer["wants"]], ["casual/gruul-test", "commander/elf-commander"])
+        self.assertEqual(answer["free"], 3)
+        self.assertNotIn("broken-list", json.dumps(answer))
+
+    def test_a_failed_planned_list_keeps_a_readable_play_now_match(self):
+        _write(self.box.magic / "decks" / "casual" / "partial-list.md",
+               two_lists("Partial List", "idea", "2 Aerie Mystics", "1 Aerie Mystics"))
+        load = cd.decks.load_deck
+
+        def load_partial(deck_id, version):
+            if deck_id == "casual/partial-list" and version == "target":
+                raise cd.decks.DeckFileError("unreadable list")
+            return load(deck_id, version)
+
+        with mock.patch.object(cd.decks, "load_deck", side_effect=load_partial):
+            answer = self.ask("matt", "Aerie Mystics")
+        self.assertFalse(answer["decks_complete"])
+        self.assertEqual(answer["wants"], [{"id": "casual/partial-list", "title": "Partial List",
+                                           "status": "idea", "copies": 1}])
+
+    def test_a_card_with_no_matches_gets_a_definite_zero_only_after_a_complete_check(self):
+        before = self.ask("matt", "Rhystic Study")
+        _write(self.box.magic / "decks" / "casual" / "broken-list.md", BROKEN)
+        after = self.ask("matt", "Rhystic Study")
+        self.assertEqual((before["holds"], before["wants"], before["decks_complete"]), ([], [], True))
+        self.assertEqual((after["holds"], after["wants"], after["decks_complete"]), ([], [], False))
 
     def test_each_list_stops_at_max_decks_and_more_says_so(self):
         with mock.patch.object(cd, "MAX_DECKS", 1):
@@ -193,12 +229,14 @@ class PrivacyTests(CardDecksTestCase):
     def test_a_deck_the_viewer_may_not_see_is_never_named_or_counted(self):
         # A collection public apart from its decks: the decks aren't named, counted or summed as "one of";
         # their copies are still off the shelf, so free stays the Card list's.
+        _write(self.box.magic / "decks" / "casual" / "broken-list.md", BROKEN)
         public = mock.patch.object(guard, "inventory_spaces", lambda profile=False: ["home", "user2"])
         with self.as_("user2"), public, mock.patch.object(guard, "deck_reader", hides_every_deck):
             answer = cd.card_decks("Llanowar Elves", "home")
         self.assertEqual((answer["holds"], answer["wants"], answer["free"]), ([], [], 3))
+        self.assertTrue(answer["decks_complete"])
         text = json.dumps(answer)
-        for secret in ("fdn-beginner-box", "product/", "gruul", "elf-commander", "one of", "Beginner"):
+        for secret in ("fdn-beginner-box", "product/", "gruul", "elf-commander", "one of", "Beginner", "broken-list"):
             self.assertNotIn(secret, text)
 
     def test_user1_sees_home_s_decks(self):

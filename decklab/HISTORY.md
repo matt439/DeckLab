@@ -1,5 +1,16 @@
 # Deck Lab: history
 
+## Card use checks and lent copies (2026-11-20, E1-S32, E7-S42)
+
+The card viewer and global search keep known matches and free-copy counts
+when a visible list cannot be read. They show that the check is incomplete.
+A zero-deck result requires a completed check of eligible visible lists.
+
+Collection shows how many copies are lent, in decks and free. The Card list
+reserves active loans by printing before assigning deck copies, and Find cards
+can filter for lent copies. Card use and storage counts deduct active loans.
+Borrower details stay in the private Loans list.
+
 ## Sync profiles when PostgreSQL becomes ready (2026-11-20, E11-S93)
 
 The background server syncs the current configured profiles on its first

@@ -10,7 +10,8 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 1. Start with [played games with no strength figure](decklab/design/stories.md#e3-s52) (`E3-S52`). The Popular decks board can say “Not tested” for a completed 2,000-game sample. A synthetic board result reproduces it.
 2. Then fix [one shop copy offered twice](decklab/design/stories.md#e5-s39) (`E5-S39`). Two queue rows can promise the same last copy. The first case uses an exact-printing request and a flexible one.
-3. For a small independent task, take [lent copies shown as in decks](decklab/design/stories.md#e7-s42) (`E7-S42`). The inventory already knows which copies are on loan. The remaining `OPEN` rows below each have a first slice and acceptance cases in their story.
+
+The remaining `OPEN` rows each have a first slice and acceptance cases in their story.
 
 **Sessions and decisions.** Pick these up when the named people, devices or systems are available. Each row below points to the owner and records the remaining check.
 
@@ -35,7 +36,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E1-S32` | OPEN | should | S | [Show when an unreadable visible deck makes a card-use search incomplete.](decklab/design/stories.md#e1-s32) |
 | `E2-S16` | DECISION | could | L | Implementation built, including Quick edit and new-deck drafts. Left: same-profile resume, competing drafts and save/discard across the household's real devices; fixtures cannot qualify touch/Safari or device durability. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes, on the P1 redesign since 2026-11-05 ([evidence](decklab/safari/EVIDENCE.md)). |
 | `E8-S03` | OPEN | could | S | [Load small accessory thumbnails in the list and the full picture in detail.](decklab/design/stories.md#e8-s03) |
@@ -50,7 +50,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E5-S39` | OPEN | should | M | [Allocate a shop's counted stock once across competing queue rows.](decklab/design/stories.md#e5-s39) |
 | `E5-S40` | OPEN | should | M | [Compare each successive copy's price across shops when planning a split purchase.](decklab/design/stories.md#e5-s40) |
 | `E5-S41` | OPEN | should | S | [Count every ready copy in shop-plan coverage, including cards unavailable everywhere.](decklab/design/stories.md#e5-s41) |
-| `E7-S42` | OPEN | should | S | [Show which copies are lent out, in a deck or free in the Collection.](decklab/design/stories.md#e7-s42) |
 | `E7-S32` | DECISION | could | L | Card/token scanning and reviewed one-change import built. Left: 10–20 real photos on each household phone, including foils, sleeves, old cards and token cards; actual photos/devices are needed. |
 
 ## Deck Lab: Commander nights
