@@ -71,7 +71,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E3-S30` | OPEN | could | M | [Choose a saved gauntlet sample in the editor's Test this change sheet.](decklab/design/stories.md#e3-s30) |
 | `E3-S52` | OPEN | should | S | [Show played opponents and games when Forge cannot give a strength figure.](decklab/design/stories.md#e3-s52) |
 | `E3-S53` | OPEN | should | M | [Show distinct games and matchup keys when catalogue entries share results.](decklab/design/stories.md#e3-s53) |
-| `E3-S54` | OPEN | could | S | [Show the chance of drawing both named cards by the chosen turn.](decklab/design/stories.md#e3-s54) |
 | `E3-S50` | WAITING | could | M | Check Show earlier lists in a browser once several tested lists exist for a deck. The 2026-11-18 scan found none. |
 | `E3-S23` | DECISION | could | M | Temporary exclusion/run/restoration authorised 2026-11-18; browser controls unavailable, live policy untouched. Left: real-browser preview/save, real policy-backed run and restoration. |
 | `FG#4` | DECISION | should | M+pc | All 14 standard budgets filled 2026-11-18; 13 qualified meaningfully. Left: Syr Elenora AI/script qualification (0 commander casts; all 20 matchups nonmeaningful). Preserve deck and script flag. |

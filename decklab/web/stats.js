@@ -747,14 +747,21 @@ function chanceOfAtLeastOne(size, hits, n) {
   return 1 - none;
 }
 
+/** For two distinct names, add each name's chance and subtract the chance of either name. */
+function chanceOfBoth(size, first, second, n) {
+  if (n < 2 || first <= 0 || second <= 0) return 0;
+  return Math.max(0, chanceOfAtLeastOne(size, first, n) + chanceOfAtLeastOne(size, second, n)
+    - chanceOfAtLeastOne(size, first + second, n));
+}
+
 /** How many cards a player has seen by the start of a turn's main phase: the opening seven and one draw a
  * turn, except the first when on the play. Never more than the library holds. */
 function cardsSeenBy(turn, onPlay, size) {
   return Math.min(size, 7 + turn - (onPlay ? 1 : 0));
 }
 
-/** A deck's "Chance to draw": pick a card, or several as a group (any of them counts), a turn and play or
- * draw, and the exact chance of seeing at least one by then. Worked out on the page from the shown list's
+/** A deck's "Chance to draw": pick cards, a turn and play or draw. See the chance of drawing any of the
+ * selected cards and, for two names, the chance of drawing both. Worked out on the page from the shown list's
  * main deck (data.sections.Deck): a Commander's commander and a companion start outside the library, the
  * sideboard isn't drawn from. It ignores mulligans and card draw, and says so. null for a Beginner Box half,
  * which is never played on its own, and for a list too small to deal seven from. */
@@ -826,6 +833,7 @@ function drawOddsPanel(data) {
     explain("How is this worked out?",
       `It's the exact chance that the cards seen by then include at least one of those ticked: the opening seven, ` +
       `then one draw each turn (none on turn 1 on the play), from a library of ${plural(size, "card")} shuffled at random.`,
+      "With two names ticked, Both cards counts hands that see at least one copy of each name by then.",
       commander ? "In Commander the commander starts in the command zone, so the library is the rest of the deck. " +
         "At a multiplayer table nobody skips their first draw: choose On the draw." : null,
       "It ignores mulligans and any extra cards drawn, searched for or looked at, so a real game usually finds them a little sooner."));
@@ -838,21 +846,29 @@ function drawOddsPanel(data) {
     }
     const hits = copies(ticked);
     const seen = cardsSeenBy(turn, onPlay, size);
+    const pair = ticked.length === 2 ? ticked : null;
+    const either = (n) => chanceOfAtLeastOne(size, hits, n);
+    const both = pair && ((n) => chanceOfBoth(size, pair[0].qty, pair[1].qty, n));
     const what = ticked.length === 1 ? `the ${plural(hits, "copy", "copies")} of ${ticked[0].name}`
       : `the ${ticked.length} cards ticked (${plural(hits, "copy", "copies")} in all)`;
     const draws = seen - 7;
+    const seatLabel = onPlay ? "on the play" : "on the draw";
+    const oddsRow = (label, probability) => el("tr", {}, el("th", { scope: "row", text: label }),
+      Array.from({ length: ODDS_TABLE_TURNS }, (_, i) => el("td", {
+        class: i + 1 === turn ? "is-current" : null,
+        text: pctShort(probability(cardsSeenBy(i + 1, onPlay, size))) })));
     result.append(el("div", { class: "tiles" },
-      tile(`By turn ${turn}`, pct(chanceOfAtLeastOne(size, hits, seen)), onPlay ? "on the play" : "on the draw")),
+      tile(`${pair ? "Either card by" : "By"} turn ${turn}`, pct(either(seen)), seatLabel),
+      both ? tile(`Both cards by turn ${turn}`, pct(both(seen)), seatLabel) : null),
       el("p", { text: `The chance of seeing at least one of ${what} in your first ${seen} cards: the opening seven` +
         (draws > 0 ? ` and ${plural(draws, "draw")}` : "") + `, from ${plural(size, "card")}. Mulligans and extra card draw aren't counted.` }),
+      pair ? el("p", { text: `Both cards means seeing ${pair[0].name} and ${pair[1].name} in those same ${seen} cards.` }) : null,
       el("div", { class: "odds-table-wrap" }, el("table", { class: "odds-table" },
         el("caption", { class: "sr-only", text: "The chance by each turn" }),
         el("thead", {}, el("tr", {}, el("th", { scope: "row", text: "Turn" }),
           Array.from({ length: ODDS_TABLE_TURNS }, (_, i) => el("th", { scope: "col", text: String(i + 1) })))),
-        el("tbody", {}, el("tr", {}, el("th", { scope: "row", text: "Chance" }),
-          Array.from({ length: ODDS_TABLE_TURNS }, (_, i) => el("td", {
-            class: i + 1 === turn ? "is-current" : null,
-            text: pctShort(chanceOfAtLeastOne(size, hits, cardsSeenBy(i + 1, onPlay, size))) })))))));
+        el("tbody", {}, oddsRow(pair ? "Either card" : "Chance", either),
+          both ? oddsRow("Both cards", both) : null))));
   }
   show();
   return panel;

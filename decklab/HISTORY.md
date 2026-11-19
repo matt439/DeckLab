@@ -1,5 +1,12 @@
 # Deck Lab: history
 
+## Chance of drawing both cards (2026-11-20, E3-S54)
+
+Select two names in Stats to see the chance of drawing either card and the
+chance of drawing at least one copy of each by the chosen turn. Both figures
+also appear in the by-turn table. They use the selected play or draw setting
+and the displayed list's main deck, combining printings of the same name.
+
 ## Remote acceptance finished with explicit engine gaps (2026-11-18)
 
 The HomeOps queue finished at 15:42:18 local time. All 14 Commander standard

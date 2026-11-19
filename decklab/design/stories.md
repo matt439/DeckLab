@@ -37,7 +37,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 21 | 20 | 0 | 1 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 27 | 24 | 2 | 0 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 45 | 38 | 4 | 3 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 45 | 39 | 4 | 2 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 26 | 1 | 0 | 3 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 39 | 33 | 0 | 4 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 26 | 23 | 0 | 1 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 88 | 69 | 10 | 5 | 4 |
-| **Total** | **408** | **354** | **20** | **17** | **17** |
+| **Total** | **408** | **355** | **20** | **16** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1632,14 +1632,14 @@ Gap: E3-S49 records the 40/60 case. `forge/gauntlet.view` and `_group` add per-e
 
 <a id="e3-s54"></a>
 
-**E3-S54** · Matt · could · S · missing
+**E3-S54** · Matt · could · S · built
 
 As a deck builder choosing two cards that work together, I want the chance of drawing both by a chosen turn, so I can judge how often I will have the pair in hand.
 
 - Given exactly two distinct card names selected in Stats, then I can read the chance of seeing at least one copy of each under the displayed list, turn and play/draw assumptions. The existing chance of seeing either card remains available.
 - Given one copy of each in a 99-card library and seven cards seen, then the unrounded probability is `7 × 6 / (99 × 98)`. Multiple copies of one name, either list version and cards starting outside the library are accounted for.
 
-Gap: `web/stats.js` pools the selected copies in `chanceOfAtLeastOne`. First slice: add the two-name probability to `drawOddsPanel` and check it against a small exhaustively enumerated library and the singleton example. Use the panel's existing natural-draw assumptions.
+Built (2026-11-20): Chance to draw shows both **Either card** and **Both cards** when exactly two names are selected. The selected turn and the by-turn table share the same natural-draw assumptions. The shown list supplies the library and merges printings of each name. `test_stats_draw_odds.py` covers every draw size of a small enumerated library, the 99-card singleton example, both list versions and cards outside the library.
 
 ---
 
