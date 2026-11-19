@@ -25,45 +25,20 @@ ready rows no read shop has in stock, with each shop's reason, and "plan" the fe
 (shop_plan.plan: every combination of read shops, weighed by cards and postage). Nothing here changes the queue,
 records an order or stores a price paid; Shopping's guard (home's records) already ran.
 
-An exact row counts only a listing of its printing (set, collector number and finish, nonfoil
-when blank); when the snapshot has in-stock listings it can't tell the printing of, or the row
-names no printing, the printing is unconfirmed. Any other row takes lib/shops.pick's choice: the
-cheapest in-stock nonfoil, else the cheapest in-stock listing; at a shop that counts its stock,
-when that listing has too few copies, the next cheapest in-stock listings of the same scope (nonfoil
-when the choice is) fill the rest ("more", each with the copies taken), and "line_aud" adds them up
-(None when one of them shows no price). "short" says the whole scope still has too few.
+An exact row matches only its set, collector number and finish (nonfoil when blank).
+Flexible rows retain the shop matcher's nonfoil preference. Each counted listing is allocated once
+across the ready rows, and optional add-ons use the remaining supply. The plan works from the same
+listing evidence and allocates it afresh for each group of shops.
 """
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from decklab.lib import shops
 
-from . import shop_plan, shop_prices
+from . import shop_plan, shop_prices, shop_stock
 
 READY = "ready"
 ADD_ON_STATES = ("long_term", "waiting_for_stock", "waiting_for_reprint")
 ROW_FIELDS = ("queue_row", "name", "quantity", "state", "for", "printing", "set", "collector_number", "finish")
-
-
-def _price(value):
-    if value is None or isinstance(value, bool):
-        return None
-    try:
-        price = Decimal(str(value))
-    except (InvalidOperation, ValueError):
-        return None
-    return price if price.is_finite() and price >= 0 else None
-
-
-def _quantity(row):
-    try:
-        quantity = int(str(row.get("quantity") or "").strip())
-    except ValueError:
-        return 0
-    return max(quantity, 0)
-
-
-def _money(value):
-    return f"{value.quantize(Decimal('0.01'))}"
 
 
 def _printing_unknown(listing):
@@ -85,22 +60,21 @@ def _unconfirmed(row, entry, preference=shops._UNSET_PREFERENCE):
     return any(_printing_unknown(item) and (item.get("stock") or 0) > 0 for item in listings)
 
 
-def line(row, adapter, data, preference=shops._UNSET_PREFERENCE):
-    """One queue row at one shop: its status and, in stock, the listing and what it costs."""
+def _match(row, adapter, data, preference):
+    """One shop's observed status and the available listing tiers the queue row may use."""
     shown = {key: row.get(key) for key in ROW_FIELDS}
     shown["is_token"] = bool(row.get("is_token"))
     if not data:
         shown.update(status="unread", fetched_at=None)
-        return shown
+        return shown, []
     if shown["is_token"]:
         shown.update(status="token", fetched_at=None)
-        return shown
-    preference = shops.listing_preference() if preference is shops._UNSET_PREFERENCE else preference
+        return shown, []
     entry = shops._by_name(data.get("cards"), str(row.get("name") or ""))
     if _unconfirmed(row, entry, preference):
         shown.update(status="unconfirmed", fetched_at=(entry or {}).get("at") or data.get("fetched_at"),
                      partial=bool((entry or {}).get("partial")))
-        return shown
+        return shown, []
     matched = shops.match(row, data, preference)
     shown.update(status=matched["status"], fetched_at=matched["fetched_at"], carried=matched["carried"],
                  partial=bool(matched.get("partial")), shop_sets=list(matched.get("shop_sets") or ()))
@@ -108,68 +82,49 @@ def line(row, adapter, data, preference=shops._UNSET_PREFERENCE):
         if key in matched:
             shown[key] = matched[key]
     if matched["status"] != "in_stock":
-        return shown
-    quantity = _quantity(row)
-    stock = matched.get("stock") or 0
-    price = _price(matched.get("price_aud"))
-    first = {"set": matched["set"], "collector_number": matched["collector_number"], "finish": matched["finish"],
-             "price_aud": matched["price_aud"] if price is not None else None,
-             "stock": stock if adapter.counts_stock else None, "url": matched["url"],
-             "condition": matched.get("condition"), "language": matched.get("language")}
+        return shown, []
+    name = str(row.get("name") or "").casefold()
     if not adapter.counts_stock:
-        shown.update(listing=first, more=[], stock=None, copies=quantity, short=False,
-                     line_aud=_money(price * quantity) if price is not None else None)
-        return shown
-    used = [(first, price, min(quantity, stock))]
-    left = quantity - used[0][2]
-    for extra in _more_listings(row, entry, matched, preference) if left > 0 else ():
-        take = min(left, extra.get("stock") or 0)
-        extra_price = _price(extra.get("price"))
-        used.append(({"set": extra.get("set"), "collector_number": extra.get("number"), "finish": extra.get("finish"),
-                      "price_aud": extra.get("price") if extra_price is not None else None,
-                      "stock": extra.get("stock") or 0, "url": extra.get("url"),
-                      **shops.listing_preferences.words(extra)}, extra_price, take))
-        left -= take
-        if left <= 0:
-            break
-    copies = sum(taken for _, _, taken in used)
-    for listing, _, taken in used:
-        listing["copies"] = taken
-    priced = all(each is not None for _, each, _ in used)
-    shown.update(listing=first, more=[listing for listing, _, _ in used[1:]],
-                 stock=sum(listing["stock"] for listing, _, _ in used), copies=copies, short=copies < quantity,
-                 line_aud=_money(sum((each * taken for _, each, taken in used), Decimal(0))) if priced else None)
-    return shown
+        price = shop_stock.money(matched.get("price_aud"))
+        listing = {key: matched[key] for key in ("set", "collector_number", "finish", "url")}
+        listing.update(price_aud=matched["price_aud"] if price is not None else None, stock=None,
+                       condition=matched.get("condition"), language=matched.get("language"))
+        key = (adapter.key, name, listing["set"], listing["collector_number"], listing["finish"], price)
+        return shown, [shop_stock.Offer(key, listing, price, None)]
+    return shown, _counted_offers(row, adapter.key, name, entry, matched, preference)
 
 
-def _more_listings(row, entry, chosen, preference=shops._UNSET_PREFERENCE):
-    """Other eligible in-stock variants, cheapest first. Exact rows keep their
-    printing/finish; any-printing rows keep the existing nonfoil preference."""
-    if not isinstance(entry, dict):
-        return []
-    preference = shops.listing_preference() if preference is shops._UNSET_PREFERENCE else preference
-    listings = [item for item in entry.get("listings") or () if isinstance(item, dict) and (item.get("stock") or 0) > 0]
-    listings = shops.listing_preferences.filter_listings(listings, preference)
+def _counted_offers(row, shop, name, entry, matched, preference):
+    listings = [(index, item) for index, item in enumerate(entry.get("listings") or ())
+                if isinstance(item, dict) and (item.get("stock") or 0) > 0
+                and shops.listing_preferences.fits(item, preference)]
     if row.get("printing") == "exact":
-        listings = shops._rows.own(row, listings)
-    if chosen.get("finish") == "nonfoil":
-        listings = [item for item in listings if item.get("finish") == "nonfoil"]
-    same = (chosen.get("set"), str(chosen.get("collector_number") or ""), chosen.get("finish"), chosen.get("url"),
-            chosen.get("condition"), chosen.get("language"), chosen.get("price_aud"))
-    rest = [item for item in listings if (item.get("set"), str(item.get("number") or ""), item.get("finish"), item.get("url"),
-                                        *shops.listing_preferences.words(item).values(), item.get("price")) != same]
-    return sorted(rest, key=lambda item: (_price(item.get("price")) is None, _price(item.get("price")) or 0,
-                                          str(item.get("set") or ""), str(item.get("number") or "")))
+        exact = {id(item) for item in shops._rows.own(row, (item for _, item in listings))}
+        listings = [(index, item) for index, item in listings if id(item) in exact]
+    if matched.get("finish") == "nonfoil":
+        listings = [(index, item) for index, item in listings if item.get("finish") == "nonfoil"]
+    offers = []
+    for index, item in listings:
+        price = shop_stock.money(item.get("price"))
+        stock = item["stock"]
+        listing = {"set": item.get("set"), "collector_number": item.get("number"), "finish": item.get("finish"),
+                   "price_aud": item.get("price") if price is not None else None, "stock": stock,
+                   "url": item.get("url"), **shops.listing_preferences.words(item)}
+        offers.append(shop_stock.Offer((shop, name, index), listing, price, stock))
+    return sorted(offers, key=lambda offer: (str(offer.listing.get("set") or ""),
+                                             str(offer.listing.get("collector_number") or "")))
 
 
 def _totals(lines):
-    priced = [Decimal(item["line_aud"]) for item in lines if item.get("line_aud") is not None]
-    return {"total_aud": _money(sum(priced, Decimal(0))) if priced else None,
-            "priced": len(priced), "unpriced": len(lines) - len(priced),
+    priced = sum(item["line_aud"] is not None for item in lines)
+    known = sum((shop_stock.money(item["known_aud"]) for item in lines), Decimal(0))
+    has_known = any(item["unpriced_copies"] < item["copies"] for item in lines)
+    return {"total_aud": shop_stock.text(known) if has_known else None,
+            "priced": priced, "unpriced": len(lines) - priced,
             "cards": sum(item.get("copies") or 0 for item in lines)}
 
 
-def basket(adapter, data, rows, rules=None, preference=shops._UNSET_PREFERENCE):
+def basket(adapter, data, ready, add_ons, matched, offers, rules):
     """One shop's basket over the queue rows (ready and add-on states only), with its postage
     (shop_plan.postage) and the add-ons that reach its free-postage threshold, each marked "lifts"."""
     summary = shops.summary(data) if data else None
@@ -182,22 +137,32 @@ def basket(adapter, data, rows, rules=None, preference=shops._UNSET_PREFERENCE):
         shown.update(_totals([]))
         shown.update(add_ons_totals=_totals([]), postage=None, reach=None, partial=0)
         return shown
-    for row in rows:
-        state = row.get("state")
-        if state != READY and state not in ADD_ON_STATES:
-            continue
-        item = line(row, adapter, data, preference)
-        add_on = state != READY
-        item["add_on"] = add_on
-        if item["status"] == "in_stock":
-            shown["add_ons" if add_on else "rows"].append(item)
-        elif not add_on and item["status"] in ("unconfirmed", "unknown", "not_checked"):
+    shop = adapter.key
+    assigned = shop_stock.allocate(ready, [shop], offers)
+    reserved = shop_stock.used(assigned)
+    optional = shop_stock.allocate(add_ons, [shop], offers, reserved)
+    for rows, allocation, prefix, other in ((ready, assigned, "rows", reserved),
+                                            (add_ons, optional, "add_ons", reserved + shop_stock.used(optional))):
+        for row in rows:
+            key = row.get("queue_row")
+            if key in allocation:
+                chosen = allocation[key]
+                item = shop_stock.line(matched[shop][key], chosen)
+                options = offers[shop][key]
+                item["stock"] = sum(offer.stock for offer, _ in chosen) if adapter.counts_stock else None
+                own = {offer.key: copies for offer, copies in chosen}
+                item["shared_stock"] = adapter.counts_stock and any(
+                    other[offer.key] > own.get(offer.key, 0) for offer in options)
+                shown[prefix].append(item)
+    for row in ready:
+        item = matched[shop][row.get("queue_row")]
+        if item["status"] in ("unconfirmed", "unknown", "not_checked"):
             shown[item["status"]].append(item)
     shown.update(_totals(shown["rows"]))
     shown["add_ons_totals"] = _totals(shown["add_ons"])
     shown["partial"] = sum(bool(item.get("partial")) for key in ("rows", "add_ons", "unconfirmed")
                            for item in shown[key])
-    total = shop_plan.money(shown["total_aud"])
+    total = shop_stock.money(shown["total_aud"])
     shown["postage"] = shop_plan.postage((rules or {}).get(adapter.key), total, shown["unpriced"])
     reached = shop_plan.reach(shown["add_ons"], shown["postage"]["short_by_aud"]) if shown["rows"] else None
     shown["reach"] = reached
@@ -215,24 +180,39 @@ def build(rows, captured, revision=None, rules=None, adapters=None):
     if not found:
         return None
     adapters = list(shops.enabled_adapters() if adapters is None else adapters)   # config.json's shops (E11-S53)
-    rows = [row for row in rows or () if isinstance(row, dict)]
+    ready = [row for row in rows or () if isinstance(row, dict) and row.get("state") == READY]
+    add_ons = [row for row in rows or () if isinstance(row, dict) and row.get("state") in ADD_ON_STATES]
     preference = shop_prices.preference(captured)
-    baskets = [basket(adapter, found.get(adapter.key), rows, rules, preference) for adapter in adapters]
-    unavailable = []
-    for row in rows:
-        if row.get("state") != READY:
-            continue
-        at = [line(row, adapter, found.get(adapter.key), preference) for adapter in adapters]
-        if any(item["status"] == "in_stock" for item in at):
-            continue
-        shown = {key: row.get(key) for key in ROW_FIELDS}
-        shown["is_token"] = bool(row.get("is_token"))
-        shown["shops"] = [{"shop": adapter.name, "status": item["status"], "fetched_at": item.get("fetched_at"),
-                           "partial": bool(item.get("partial")), "shop_sets": item.get("shop_sets") or []}
-                          for adapter, item in zip(adapters, at)]
-        unavailable.append(shown)
+    matches, offers = {}, {}
+    for adapter in adapters:
+        matches[adapter.key], offers[adapter.key] = {}, {}
+        for row in ready + add_ons:
+            key = row.get("queue_row")
+            item, candidates = _match(row, adapter, found.get(adapter.key), preference)
+            item["add_on"] = row.get("state") != READY
+            matches[adapter.key][key], offers[adapter.key][key] = item, candidates
+    baskets = [basket(adapter, found.get(adapter.key), ready, add_ons, matches, offers, rules) for adapter in adapters]
+    facts = {row.get("queue_row"): {adapter.key: _fact(adapter, matches[adapter.key][row.get("queue_row")])
+                                    for adapter in adapters} for row in ready}
+    plan = shop_plan.plan(baskets, rules, ready, add_ons, matches, offers, facts)
+    available_rows = {item["queue_row"] for basket in baskets for item in basket["rows"]}
+    if plan:
+        available_rows.update(item["queue_row"] for shop in plan["by_price"]["shops"] for item in shop["rows"])
+    unavailable = [_unavailable(row, facts[row.get("queue_row")]) for row in ready
+                   if row.get("queue_row") not in available_rows]
     return {"queue_revision": revision, "shops": baskets, "unavailable": unavailable,
-            "postage_read": rules is not None, "plan": shop_plan.plan(baskets, rules)}
+            "postage_read": rules is not None, "plan": plan}
+
+
+def _fact(adapter, item):
+    return {"shop": adapter.name, "status": item["status"], "fetched_at": item.get("fetched_at"),
+            "partial": bool(item.get("partial")), "shop_sets": item.get("shop_sets") or []}
+
+
+def _unavailable(row, facts):
+    return {**{key: row.get(key) for key in ROW_FIELDS}, "is_token": bool(row.get("is_token")),
+            "shops": [{**fact, "status": "allocated" if fact["status"] == "in_stock" else fact["status"]}
+                      for fact in facts.values()]}
 
 
 def enrich(answer, *, data):

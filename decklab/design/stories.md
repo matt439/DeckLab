@@ -39,14 +39,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 27 | 24 | 2 | 0 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 45 | 39 | 4 | 2 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 26 | 1 | 0 | 3 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 39 | 33 | 0 | 4 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 39 | 36 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 26 | 24 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 38 | 37 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 20 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 88 | 70 | 10 | 4 | 4 |
-| **Total** | **408** | **359** | **20** | **12** | **17** |
+| **Total** | **408** | **362** | **20** | **9** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -2709,36 +2709,36 @@ Built (2026-11-12): `GET /api/shopping` has a `token_addons` field (`decklab/lib
 
 <a id="e5-s39"></a>
 
-**E5-S39** · Matt · should · M · missing
+**E5-S39** · Matt · should · M · built
 
 As the buyer, I want a shop's last copy allocated to only one queue row, so the list I take to the shop can actually be filled.
 
 - Given an exact-printing row and an any-printing row competing for one counted listing, then the basket covers at most one copy. If another printing can fill the flexible row, the exact request keeps its eligible copy and both rows can be filled.
 - Given optional add-ons, copied shop lists or an order prefill, then their offered quantities respect the same allocation. A shop that reports only “in stock” keeps its existing qualification about unknown quantities.
 
-Gap: `api/shop_baskets.basket` matches each row separately. First slice: use a synthetic shop with one counted listing and two queue rows in `test_shop_baskets.py`, then carry the shared stock limit through the plan and the quantities offered for copying or review.
+Built (2026-11-20): the basket and plan share each counted listing's stock across the eligible queue rows. When both rows can be filled, a flexible row can take another printing to leave the sought printing for an exact request. Copy and order review use the actual allocation, and optional add-ons use the stock left by the ready rows. Fixtures cover counted stock, unknown quantities and split-plan order review.
 
 <a id="e5-s40"></a>
 
-**E5-S40** · Matt · should · M · missing
+**E5-S40** · Matt · should · M · built
 
 As the buyer, I want Shopping to compare the price of each remaining copy, so I can see when splitting one card across two shops costs less.
 
 - Given two requested copies, one shop with eligible copies at A$1 and A$20, another with two at A$5 each, and zero postage, then By price and the recommended plan both show A$6 with one copy from each shop.
 - Given a postage charge, a stock limit or an unknown price, then each displayed plan shows the quantities and known charges it actually used. The recommendation still gives priority to covering the most requested copies.
 
-Gap: `api/shop_plan._assign` sorts shops by their first unit price and takes that shop's available copies together. First slice: compare successive price tiers across shops for one row in `test_shop_plan.py`, including zero and nonzero postage and limited stock. Use synthetic retailer observations.
+Built (2026-11-20): the planner considers each available price tier within each shop combination. It compares coverage and known charges using the allocated copies and their postage. Unknown prices are shown separately. At zero postage, the A$1 and A$5 copies form the A$6 split in the fixture. Postage is applied to each combination's copy allocation, which is selected by eligible stock and unit prices.
 
 <a id="e5-s41"></a>
 
-**E5-S41** · Matt · should · S · missing
+**E5-S41** · Matt · should · S · built
 
 As the buyer, I want the shop plan to count every ready copy I asked for, so I can see what I still need after following it.
 
 - Given one ready copy in stock and two ready copies unavailable at every checked shop, then coverage reads “1 of 3” and the two missing copies are identifiable. A failed shop check remains distinguishable from a confirmed lack of stock.
 - Given optional long-term add-ons, then they are outside that denominator. With no ready copies in stock, Shopping still gives the unmet count and the available reasons.
 
-Gap: `api/shop_baskets.build` collects unavailable rows, but `api/shop_plan.plan` derives demand from in-stock basket lines. First slice: supply the full ready-row demand to the plan and verify mixed, empty and all-unavailable cases through `web/shopping-plan.js`.
+Built (2026-11-20): coverage counts every ready copy. The plan lists unmet quantities and distinguishes confirmed lack of stock from incomplete checks, including when zero copies are covered. Long-term add-ons stay outside coverage. Synthetic API and UI tests cover mixed, empty and all-unavailable plans.
 
 ---
 

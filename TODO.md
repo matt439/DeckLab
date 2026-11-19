@@ -9,7 +9,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 **Ready work (audited 2026-11-20).** The previous queue had 19 `DECISION` rows, nine `DEFERRED` rows and zero `OPEN` rows. The audit identified 12 items that can start with fixtures. The redesign is at household device acceptance. Against popular decks remains the lead feature.
 
 1. Start with [played games with no strength figure](decklab/design/stories.md#e3-s52) (`E3-S52`). The Popular decks board can say “Not tested” for a completed 2,000-game sample. A synthetic board result reproduces it.
-2. Then fix [one shop copy offered twice](decklab/design/stories.md#e5-s39) (`E5-S39`). Two queue rows can promise the same last copy. The first case uses an exact-printing request and a flexible one.
 
 The remaining `OPEN` rows each have a first slice and acceptance cases in their story.
 
@@ -47,9 +46,6 @@ The remaining `OPEN` rows each have a first slice and acceptance cases in their 
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
-| `E5-S39` | OPEN | should | M | [Allocate a shop's counted stock once across competing queue rows.](decklab/design/stories.md#e5-s39) |
-| `E5-S40` | OPEN | should | M | [Compare each successive copy's price across shops when planning a split purchase.](decklab/design/stories.md#e5-s40) |
-| `E5-S41` | OPEN | should | S | [Count every ready copy in shop-plan coverage, including cards unavailable everywhere.](decklab/design/stories.md#e5-s41) |
 | `E7-S32` | DECISION | could | L | Card/token scanning and reviewed one-change import built. Left: 10–20 real photos on each household phone, including foils, sleeves, old cards and token cards; actual photos/devices are needed. |
 
 ## Deck Lab: Commander nights

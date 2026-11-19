@@ -1,5 +1,14 @@
 # Deck Lab: history
 
+## Shop stock, copy prices and plan coverage (2026-11-20, E5-S39 to E5-S41)
+
+Shopping allocates each counted listing's stock once across competing rows.
+The planner compares successive unit prices across shops, applies postage to
+the selected copies, and carries their quantities and printings into copy and
+order review. Optional add-ons use remaining stock. Coverage includes every
+ready copy, with unmet quantities and separate wording for stock and check
+failures.
+
 ## Card use checks and lent copies (2026-11-20, E1-S32, E7-S42)
 
 The card viewer and global search keep known matches and free-copy counts
