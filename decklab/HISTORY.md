@@ -1,5 +1,11 @@
 # Deck Lab: history
 
+## Search past deliveries by card or token (2026-11-20, E6-S30)
+
+Shopping's Order history can find a recorded card or either face of a token.
+Matching orders show the item's quantity and component status beside the
+link to delivery details. Clearing the search restores the full history.
+
 ## Chance of drawing both cards (2026-11-20, E3-S54)
 
 Select two names in Stats to see the chance of drawing either card and the

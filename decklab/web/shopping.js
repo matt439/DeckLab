@@ -726,14 +726,57 @@ function shopLongTerm(rows, view = null) {
   });
 }
 
-/** A past order in the history: its title and date, what it held, and its delivery details. */
-function shopPastOrder(order, view = null) {
+/** A past order in the history, with any matching items beside its delivery details. */
+function shopPastOrder(order, view, matches = []) {
   const total = (order.components || []).reduce((sum, c) => sum + (c.quantity || 0), 0);
   return el("li", { class: "shop-past" },
     el("a", { href: `#/receipt?order=${encodeURIComponent(order.id)}` },
       el("strong", { text: shopOrderTitle(order) }),
-      el("small", { text: [order.ordered_on ? shopDay(order.ordered_on) : null, plural(total, "card")].filter(Boolean).join(" · ") })),
+      el("small", { text: [order.ordered_on ? shopDay(order.ordered_on) : null, plural(total, "card")].filter(Boolean).join(" · ") }),
+      matches.map(({ item, component }) => el("small", { class: "shop-past-match",
+        text: `${num(item.quantity)} × ${item.name} · ${SHOPPING_STATES[component.status]}` }))),
     order.status === "cancelled" ? status("plain", "Cancelled") : null, shopOrderEditButton(order, view));
+}
+
+/** Search the recorded names, including both faces of a paired token, in the loaded history. */
+function shopOrderHistory(orders, view) {
+  const results = el("ul", { class: "shop-pasts", id: "shop-past-orders" });
+  const feedback = el("p", { class: "sub", role: "status", "aria-atomic": "true" });
+  const search = el("input", { type: "search", id: "shop-past-search", autocomplete: "off",
+    "aria-controls": "shop-past-orders", oninput: redraw });
+  const reset = el("button", { type: "button", class: "btn btn-quiet", text: "Clear search", onclick: () => {
+    search.value = "";
+    search.focus();
+    redraw();
+  } });
+
+  function redraw() {
+    const query = search.value.trim().toLowerCase();
+    const rows = [];
+    for (const order of orders) {
+      const matches = [];
+      if (query) {
+        for (const component of order.components || []) {
+          for (const item of component.items || []) {
+            if (item.name.toLowerCase().includes(query)) matches.push({ item, component });
+          }
+        }
+        if (!matches.length) continue;
+      }
+      rows.push(shopPastOrder(order, view, matches));
+    }
+    reset.hidden = !search.value;
+    feedback.textContent = query ? (rows.length ? `${plural(rows.length, "matching order")}` : "No matching orders.") : "";
+    add(clear(results), rows);
+  }
+
+  redraw();
+  return el("details", { class: "shop-history" },
+    el("summary", { text: `Order history · ${plural(orders.length, "order")}` }),
+    el("div", { class: "shop-past-filter" },
+      el("label", { class: "field", for: "shop-past-search" }, el("span", { text: "Search by card or token name" }), search),
+      reset),
+    feedback, results);
 }
 
 /** A section with its heading, a count when there's more than one thing in it, and one line saying what it is. */
@@ -849,9 +892,7 @@ function drawShopping(data) {
     jumpSlot,
     pageEmpty,
     layoutSlot,
-    history.length ? el("details", { class: "shop-history" },
-      el("summary", { text: `Order history · ${plural(history.length, "order")}` }),
-      el("ul", { class: "shop-pasts" }, history.map(order => shopPastOrder(order, view)))) : null);
+    history.length ? shopOrderHistory(history, view) : null);
   view.root = root;
   $("#main").append(root);
   const redraw = view.redraw;

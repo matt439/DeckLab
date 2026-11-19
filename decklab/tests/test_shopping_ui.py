@@ -115,6 +115,65 @@ class ShoppingInteractionTests(unittest.TestCase):
           assert.equal(main.querySelector("#shop-to-buy"), null);
         """)
 
+    def test_order_history_searches_card_names_and_both_token_faces_locally(self):
+        self.run_js("""
+          state.may = {admin: false, orders: false, receipts: false, see_inventory: ["home"]};
+          const reads = [];
+          api = async path => {
+            reads.push(path);
+            return {...empty, orders: [
+              order({id: "2026-10-08-first", status: "received", components: [
+                component({status: "received", items: [{name: "<b>Spell</b>", quantity: 2}]}),
+                component({id: "extra", status: "cancelled", items: [{name: "Other Spell", quantity: 1}]}),
+                component({id: "tokens", kind: "tokens", status: "received", items: [
+                  {name: "Clue // Treasure", quantity: 3}]}),
+              ]}),
+              order({id: "2026-10-07-second", status: "cancelled", components: [
+                component({status: "cancelled", items: [{name: "Spell", quantity: 4}]})]}),
+              order({id: "2026-10-06-third", status: "received", components: [
+                component({status: "received", items: [{name: "Land", quantity: 1}]})]}),
+              order({id: "2026-10-05-pending", components: [
+                component({items: [{name: "Spell", quantity: 5}]})]}),
+            ]};
+          };
+          apiWrite = async () => { throw new Error("History search must not write."); };
+          await showShopping(routeToken);
+
+          const history = main.querySelector(".shop-history");
+          history.setAttribute("open", "");
+          const search = history.querySelector("#shop-past-search");
+          const type = query => { search.value = query; search.fire("input"); };
+          const rows = () => history.querySelectorAll(".shop-past").map(row => row.querySelector("a"));
+          const matches = () => history.querySelectorAll(".shop-past-match").map(node => node.textContent);
+          const feedback = history.querySelector("[role=status]");
+          assert.equal(rows().length, 3);
+          same(matches(), []);
+
+          type("  SPELL ");
+          same(matches(), ["2 × <b>Spell</b> · Received", "1 × Other Spell · Cancelled", "4 × Spell · Cancelled"]);
+          assert.equal(history.querySelector("b"), null);
+          same(rows().map(link => link.getAttribute("href")),
+            ["#/receipt?order=2026-10-08-first", "#/receipt?order=2026-10-07-second"]);
+          assert.equal(feedback.textContent, "2 matching orders");
+
+          for (const face of ["Clue", "treasure"]) {
+            type(face);
+            same(matches(), ["3 × Clue // Treasure · Received"]);
+            assert.equal(rows().length, 1);
+          }
+          type("Unrecorded");
+          assert.equal(rows().length, 0);
+          assert.equal(feedback.textContent, "No matching orders.");
+
+          history.querySelector(".shop-past-filter").querySelector("button").click();
+          assert.equal(document.activeElement, search);
+          assert.equal(search.value, "");
+          assert.equal(rows().length, 3);
+          same(matches(), []);
+          assert.equal(history.getAttribute("open"), "");
+          same(reads, ["/api/shopping"]);
+        """)
+
     def test_a_member_sees_delivery_details_not_receive_or_done(self):
         self.run_js("""
           state.may = {admin: false, receipts: false, orders: false, see_inventory: ["home"]};

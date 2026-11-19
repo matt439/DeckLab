@@ -50,7 +50,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `E5-S39` | OPEN | should | M | [Allocate a shop's counted stock once across competing queue rows.](decklab/design/stories.md#e5-s39) |
 | `E5-S40` | OPEN | should | M | [Compare each successive copy's price across shops when planning a split purchase.](decklab/design/stories.md#e5-s40) |
 | `E5-S41` | OPEN | should | S | [Count every ready copy in shop-plan coverage, including cards unavailable everywhere.](decklab/design/stories.md#e5-s41) |
-| `E6-S30` | OPEN | could | S | [Find a past delivery by card or token name and see the matching component's status.](decklab/design/stories.md#e6-s30) |
 | `E7-S42` | OPEN | should | S | [Show which copies are lent out, in a deck or free in the Collection.](decklab/design/stories.md#e7-s42) |
 | `E7-S32` | DECISION | could | L | Card/token scanning and reviewed one-change import built. Left: 10–20 real photos on each household phone, including foils, sleeves, old cards and token cards; actual photos/devices are needed. |
 

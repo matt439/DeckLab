@@ -40,13 +40,13 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E3: Test a deck](#e3-test-a-deck) | 45 | 39 | 4 | 2 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 26 | 1 | 0 | 3 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 39 | 33 | 0 | 4 | 2 |
-| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 26 | 23 | 0 | 1 | 2 |
+| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 26 | 24 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 38 | 36 | 1 | 1 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 20 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 88 | 69 | 10 | 5 | 4 |
-| **Total** | **408** | **355** | **20** | **16** | **17** |
+| **Total** | **408** | **356** | **20** | **15** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -3149,14 +3149,14 @@ Evidence:
 
 <a id="e6-s30"></a>
 
-**E6-S30** · Matt · could · S · missing
+**E6-S30** · Matt · could · S · built
 
 As the person checking a delivery, I want to find a past order by card or token name, so I can locate its original record without opening orders one by one.
 
 - Given several past orders, when I search for a card or either printed face of a recorded token, then matching orders show the matched item, quantity and component status with a way to open the existing order detail.
 - Given a cancelled component, then its match is labelled cancelled. Clearing the search restores the full history, and a search with no matches says so.
 
-Gap: `lib/purchases.py` supplies component items, while `web/shopping.js` renders the folded past-order list by seller, topic and date. First slice: filter the already permitted Shopping response locally, with synthetic delivered and cancelled components and a paired token. Searching needs no further request or order change.
+Built (2026-11-20): the folded Order history in Shopping filters the loaded records by card or token name. Matches show the recorded quantity and component status with the existing delivery link. The search includes either face of a paired token, announces when no order matches and can be cleared to restore the history. `test_shopping_ui.py` covers delivered and cancelled components, paired tokens and local-only filtering.
 
 ---
 
