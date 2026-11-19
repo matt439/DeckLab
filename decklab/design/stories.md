@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 20 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 88 | 69 | 10 | 5 | 4 |
-| **Total** | **408** | **356** | **20** | **15** | **17** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 88 | 70 | 10 | 4 | 4 |
+| **Total** | **408** | **357** | **20** | **14** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -6548,7 +6548,7 @@ Evidence:
 - `decklab/lib/homenet/service.py`, `decklab/lib/homenet/linux_facts.py`, `decklab/lib/systemd.py`, `decklab/lib/api/server_restart.py`, `decklab/lib/hometime.py`, `decklab/smoke.py`, `decklab/update.py`, `scripts/decklab`; `decklab/tests/test_linux_services.py`, `decklab/tests/test_linux_ops.py`, `decklab/tests/test_smoke.py`
 - `SELF-HOSTING.md` ("From a Windows server to a Linux one", step 12's Linux steps)
 
-Qualified in WSL2 Ubuntu 26.04 (2026-11-02, a throwaway install with systemd, PostgreSQL 18, Tesseract 5.5 and OpenJDK 21): the database setup, backups, restore and the 1,897 database integration tests; the release Forge install, cardlog-check, upgrade-check and real Forge games, from the command line and the background service's warm pool; the systemd user service and nightly timer; `systemd-inhibit` under a polkit rule from the user service; `decklab.update`; and the smoke test and doctor. Its findings were fixed the same day (scanning's second Tesseract pass and faint set lines, the doctor's backup folders, `db status`'s failed dumps, Forge's default folder, and wording). At that point, real-server suspend/wake, phone access and actual card photos remained unqualified; the dated live evidence below records subsequent checks. Not built: Linux core pinning, parent-death safety for Forge started from a terminal, the profiles' sync retrying once the database comes up, and the gate's own wake time.
+Qualified in WSL2 Ubuntu 26.04 (2026-11-02, a throwaway install with systemd, PostgreSQL 18, Tesseract 5.5 and OpenJDK 21): the database setup, backups, restore and the 1,897 database integration tests; the release Forge install, cardlog-check, upgrade-check and real Forge games, from the command line and the background service's warm pool; the systemd user service and nightly timer; `systemd-inhibit` under a polkit rule from the user service; `decklab.update`; and the smoke test and doctor. Its findings were fixed the same day (scanning's second Tesseract pass and faint set lines, the doctor's backup folders, `db status`'s failed dumps, Forge's default folder, and wording). At that point, real-server suspend/wake, phone access and actual card photos remained unqualified; the dated live evidence below records subsequent checks. E11-S93 covers the profile sync after PostgreSQL starts late. Linux core pinning, parent-death safety for Forge started from a terminal and timing the hardened gate's real wake remain open.
 
 Live Linux evidence reviewed (2026-11-18): the journal records deep sleep from
 2026-11-17 22:28:37 until 2026-11-18 03:29:03, when the installed system wake
@@ -7090,11 +7090,11 @@ Built (2026-11-12): `decklab/lib/stats/__init__.py` and `goldfish/cli.py` catch 
 
 <a id="e11-s93"></a>
 
-**E11-S93** · Self-hoster · should · S · missing
+**E11-S93** · Self-hoster · should · S · built
 
 As a self-hoster whose database starts after Deck Lab, I want my configured profiles to become available when PostgreSQL comes up, so I can use the app without a manual sync or restart.
 
 - Given the background server starts while PostgreSQL is unreachable, when a later health check first finds it ready, then the server runs the existing profile sync against the current configuration. Subsequent healthy checks do not repeat a successful sync.
 - Given a foreground server or shutdown before recovery, then no deferred sync starts. An ordinary sync refusal or failure still gives the operator its existing diagnostic.
 
-Gap: `lib/server_run._database_check` attaches sync to the first probe only, although `lib/dbstatus.start` continues checking. E11-S58 records this startup case separately from its phone and wake checks. First slice: exercise unreachable → healthy → healthy and stop-before-recovery in the server lifecycle fixtures with a mock sync.
+Built (2026-11-20): the background server runs the existing profile sync against the current configuration on the first usable PostgreSQL check. The periodic checker can supply that result after a startup outage. Foreground runs and shutdown before recovery skip the sync. A sync refusal retains its server-log diagnostic. `test_server_lifecycle.py` covers repeated healthy checks, refusal, stopping before recovery, and recovery through the real checker thread with a mock database.

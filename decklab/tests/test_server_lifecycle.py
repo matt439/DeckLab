@@ -653,8 +653,8 @@ class MainTests(unittest.TestCase):
 
     def test_the_database_check_runs_between_the_url_line_and_has_stopped(self):
         # Started after the URL line (with background False: this server has a console) and
-        # stopped first thing on the way out (before the server closes, so its first check
-        # can't sync profiles after that), whether serving ends normally or fails.
+        # stopped first thing on the way out (before the server closes), whether serving ends
+        # normally or fails.
         for failure in (KeyboardInterrupt(), RuntimeError("serving failed")):
             with self.subTest(failure=type(failure).__name__):
                 self.log.clear()
@@ -707,11 +707,16 @@ class DatabaseCheckTests(unittest.TestCase):
     def setUp(self):
         self.log = []
         self.first = None
+        self.after_check = None
         self.sync = mock.Mock(return_value={"added": ["matt"], "changed": [], "removed": []})
         self.stop = mock.Mock()
+
+        def start(first, *, after_check):
+            self.first, self.after_check = first, after_check
+
         from decklab.db import profiles_sync
         for target, name, value in ((server_http, "log", self.log.append),
-                                    (server_run.dbstatus, "start", lambda first: setattr(self, "first", first)),
+                                    (server_run.dbstatus, "start", start),
                                     (server_run.dbstatus, "stop", self.stop),
                                     (server_run.venv, "reason", lambda: None),
                                     (profiles_sync, "sync", self.sync)):
@@ -719,9 +724,13 @@ class DatabaseCheckTests(unittest.TestCase):
             patch.start()
             self.addCleanup(patch.stop)
 
-    def snapshot(self, error=None, pending=0):
-        return {"ok": error is None, "error": error, "detail": None, "pending_migrations": pending,
-                "last_backup": None, "backup_stale": True}
+    def check(self, error=None, pending=0, *, usable=None):
+        snapshot = server_run.dbstatus._result(error, pending=pending, usable=usable)
+        if self.first is not None:
+            self.first(snapshot)
+            self.first = None
+        if self.after_check is not None:
+            self.after_check(snapshot)
 
     def lines(self):
         return [line[20:] for line in self.log]                # without the time stamp
@@ -729,7 +738,7 @@ class DatabaseCheckTests(unittest.TestCase):
     def test_the_background_server_syncs_profiles_after_the_first_check(self):
         stop = server_run._database_check(True)
         self.assertEqual(self.log, [])                         # nothing until the first check
-        self.first(self.snapshot())
+        self.check()
         self.assertEqual(self.lines(), ["Database: reachable.", "Database: profiles added matt; changed none; "
                                                                 "removed none."])
         from decklab.lib.state import pg
@@ -739,23 +748,49 @@ class DatabaseCheckTests(unittest.TestCase):
 
     def test_a_console_server_never_syncs(self):
         server_run._database_check(False)
-        self.first(self.snapshot(server_run.dbstatus.MIGRATIONS_PENDING, 1))
+        self.check(server_run.dbstatus.MIGRATIONS_PENDING, 1)
+        self.check()
         self.assertEqual(self.lines(), ["Database: reachable, 1 migration pending (python -m decklab.db migrate)."])
         self.sync.assert_not_called()
 
     def test_an_unreachable_database_is_one_line_and_no_sync(self):
         server_run._database_check(True)
-        self.first(self.snapshot(server_run.dbstatus.NOT_REACHABLE))
+        self.check(server_run.dbstatus.NOT_REACHABLE)
         self.assertEqual(self.lines(), ["Database: the PostgreSQL connection could not be verified "
                                        "(decklab/data/logs/db.log says why)."])
         self.sync.assert_not_called()
 
+    def test_deferred_sync_runs_once_when_a_check_is_usable(self):
+        dbstatus = server_run.dbstatus
+        server_run._database_check(True)
+        self.check(dbstatus.NO_ANSWER)
+        self.check(dbstatus.CHECK_FAILED)
+        self.check(dbstatus.MIGRATIONS_PENDING, 1, usable=False)
+        self.sync.assert_not_called()
+        self.check()
+        self.check()
+        from decklab.lib.state import pg
+        self.sync.assert_called_once_with(timeout=pg.REQUEST_TIMEOUT, options=pg.REQUEST_OPTIONS)
+        self.assertEqual(len(self.log), 2)
+        self.assertIn("nothing answered", self.log[0])
+        self.assertIn("profiles added matt", self.log[1])
+
     def test_a_failed_sync_is_one_line(self):
         self.sync.side_effect = ValueError("profile id home is kept for the audit trail\nsecond line")
         server_run._database_check(True)
-        self.first(self.snapshot())
-        self.assertEqual(self.lines(), ["Database: reachable.",
-                                        "Database: profiles not synced: profile id home is kept for the audit trail"])
+        self.check(server_run.dbstatus.NO_ANSWER)
+        self.check()
+        self.check()
+        self.sync.assert_called_once()
+        self.assertEqual(self.lines()[1:], ["Database: profiles not synced: profile id home is kept for the audit trail"])
+
+    def test_stopping_before_recovery_prevents_sync(self):
+        stop = server_run._database_check(True)
+        self.check(server_run.dbstatus.NOT_REACHABLE)
+        stop()
+        self.check()
+        self.sync.assert_not_called()
+        self.assertEqual(len(self.log), 1)
 
     def test_the_venv_reason_is_logged_at_once(self):
         with mock.patch.object(server_run.venv, "reason", lambda: "there's no .venv in the repo"):
@@ -765,9 +800,40 @@ class DatabaseCheckTests(unittest.TestCase):
     def test_nothing_is_logged_once_stopped(self):
         stop = server_run._database_check(True)
         stop()
-        self.first(self.snapshot())
+        self.check()
         self.assertEqual(self.log, [])
+        self.sync.assert_not_called()
 
+
+class DatabaseCheckThreadTests(unittest.TestCase):
+
+    def test_the_background_checker_syncs_after_a_later_refresh(self):
+        from decklab.db import profiles_sync
+
+        dbstatus = server_run.dbstatus
+        completed = threading.Event()
+        calls = []
+
+        def refresh(dbname):
+            calls.append("refresh")
+            return dbstatus._result(dbstatus.NO_ANSWER if len(calls) == 1 else None)
+
+        def sync(**kwargs):
+            calls.append("sync")
+            completed.set()
+            return {"added": [], "changed": [], "removed": []}
+
+        with mock.patch.object(dbstatus, "refresh", refresh), \
+                mock.patch.object(dbstatus, "REFRESH_SECONDS", 0.01), \
+                mock.patch.object(profiles_sync, "sync", sync), \
+                mock.patch.object(server_run.venv, "reason", return_value=None), \
+                mock.patch.object(server_http, "log"):
+            stop = server_run._database_check(True)
+            try:
+                self.assertTrue(completed.wait(5))
+            finally:
+                stop()
+        self.assertEqual(calls[:3], ["refresh", "refresh", "sync"])
 
 
 @unittest.skipUnless(WINDOWS and Path(sys.executable).with_name("pythonw.exe").exists(),

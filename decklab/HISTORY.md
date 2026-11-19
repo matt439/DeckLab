@@ -1,5 +1,12 @@
 # Deck Lab: history
 
+## Sync profiles when PostgreSQL becomes ready (2026-11-20, E11-S93)
+
+The background server syncs the current configured profiles on its first
+usable database check. When PostgreSQL starts later, the periodic checker
+can trigger the sync once it is ready. A sync failure keeps its server-log
+diagnostic.
+
 ## Search past deliveries by card or token (2026-11-20, E6-S30)
 
 Shopping's Order history can find a recorded card or either face of a token.

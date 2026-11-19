@@ -72,26 +72,29 @@ def _load_index():
 def _database_check(background):
     """The database's start-up checks, without holding up the start: logs why .venv's
     packages (psycopg) aren't in use when they aren't, starts dbstatus's checker thread
-    (the footer's "database" block, once a minute), and after its first check logs one line
-    saying how the database is and, for the background server only, copies config.json's
-    profiles into the database (profiles_sync, with the state store's timeouts). Nothing here is fatal: card pages work
-    without the database. Migrations are never applied here. Returns the callable that stops
-    it all; nothing is logged once that's called."""
+    (the footer's "database" block, once a minute), and logs the first result. The background
+    server syncs config.json's profiles on the first usable check, which can happen later.
+    Card pages work without the database. Migrations are never applied here. Returns the
+    callable that stops the checks and prevents further sync attempts and logging."""
     reason = venv.reason()
     if reason:
         server_http.log(f"{_stamp()} Database: .venv's packages aren't in use ({reason}).")
     lock = threading.Lock()
-    stopped = []
+    stopped = attempted = False
 
     def say(text):
         with lock:
             if not stopped:
                 server_http.log(f"{_stamp()} Database: {text}")
 
-    def first(snapshot):
-        say(dbstatus.describe(snapshot) + ".")
-        if not background or snapshot["error"] in (dbstatus.NOT_REACHABLE, dbstatus.PSYCOPG_MISSING):
+    def sync_once(snapshot):
+        nonlocal attempted
+        if not snapshot["usable"] or snapshot["error"] == dbstatus.CHECK_FAILED:
             return
+        with lock:
+            if stopped or attempted:
+                return
+            attempted = True
         try:
             from decklab.db import profiles_sync
             from decklab.lib.state import pg
@@ -105,11 +108,13 @@ def _database_check(background):
         say(f"profiles {profiles_sync.describe(summary)}.")
 
     def stop():
+        nonlocal stopped
         with lock:
-            stopped.append(True)
+            stopped = True
         dbstatus.stop()
 
-    dbstatus.start(first)
+    dbstatus.start(lambda snapshot: say(dbstatus.describe(snapshot) + "."),
+                   after_check=sync_once if background else None)
     return stop
 
 

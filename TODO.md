@@ -84,7 +84,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E11-S93` | OPEN | should | S | [Sync profiles when PostgreSQL becomes reachable after background startup.](decklab/design/stories.md#e11-s93) |
 | `E11-S30` | DECISION | should | L | [UI implementation and Chromium review](decklab/design/visual-polish-completion-2026-11-07.md) complete; household Safari/touch, software keyboards, screen reader and real-art acceptance remain. |
 | `E11-S31` | DECISION | could | M | Global search in the top bar ([stories.md](decklab/design/stories.md#e11-s31)) is built and its `/` decided (2026-10-31): Matt checks the iPad field and phone sheet on devices. |
 | `E11-S58` | DECISION | should | L | Full live smoke passed 16/16 with no warnings/failures/skips and a clean idle build (2026-11-18). Left: actual phones/card photographs and timed hardened-gate wake. |
