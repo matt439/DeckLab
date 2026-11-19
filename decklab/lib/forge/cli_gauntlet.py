@@ -292,6 +292,42 @@ def _plan(args):
     return 0
 
 
+def _completion(note, found, budget):
+    """Current fixed-budget coverage and failures, without counting shared keys twice."""
+    target = int(budget.removeprefix("fixed:"))
+    remaining, incomplete = {}, []
+    for opponent in found["opponents"]:
+        missing = max(0, target - opponent["games"])
+        if missing:
+            incomplete.append(opponent["id"])
+            key = opponent["key"]
+            remaining[key] = max(remaining.get(key, 0), missing)
+    failed = dict(note.get("dropped") or {})
+    if note.get("error") or note.get("stopped"):
+        failed["run"] = note.get("error") or "The run stopped before completion."
+    # Old failed batches stay in a matchup's history. Only keys actually played by
+    # this invocation can report a new native failure; completed no-ops stay valid.
+    folder = _g().results_dir()
+    for key, played in (note.get("per_opponent") or {}).items():
+        if not played:
+            continue
+        result = shared.saved.load(key, folder)
+        runs = (result or {}).get("runs") or []
+        run = runs[-1] if runs else {}
+        why = run.get("error") or run.get("failure")
+        if not why and (run.get("failed") or run.get("stopped")):
+            why = "Forge reported a failed or stopped run."
+        count, asked = run.get("played"), run.get("asked")
+        if type(count) is not int or count < 0:
+            why = why or "The saved run's completed games could not be confirmed."
+        elif type(asked) is int and count < asked:
+            why = why or f"Forge saved {count:,} of {asked:,} requested games."
+        if why:
+            failed[key] = str(why)
+    return {"complete": not remaining and not failed, "remaining_games": sum(remaining.values()),
+            "incomplete_opponents": incomplete, "failed": failed}
+
+
 def _play(args):
     a = _deck(args)
     chosen = _house_sample(args, a)
@@ -313,14 +349,18 @@ def _play(args):
     note = _g().run(a, chosen, args.budget, inflight=args.inflight, progress=report, by=args.by, local=args.local,
                     seed_base=args.seed_base, **log)
     found = _g().view(a, chosen)
+    completion = _completion(note, found, args.budget)
     if args.json:
-        print(shared.json.dumps({"note": note, "view": found}, ensure_ascii=False))
+        print(shared.json.dumps({"note": note, "view": found, "completion": completion}, ensure_ascii=False))
     else:
         print(f"Played {note['played']:,} games in {note['wall_s']:.0f} s.")
-        for key, why in (note.get("dropped") or {}).items():
+        for key, why in completion["failed"].items():
             print(f"  ! {why} ({key[:12]})")
         _print_view(a, found)
-    return 1 if note.get("dropped") else 0
+    if not completion["complete"]:
+        print(f"Run incomplete: {completion['remaining_games']:,} games still missing; "
+              f"{len(completion['failed'])} reported failures. Completed games were saved.", file=shared.sys.stderr)
+    return 0 if completion["complete"] else 1
 
 
 def _view(args):

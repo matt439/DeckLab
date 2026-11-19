@@ -20,9 +20,9 @@ The database move is finished: phase 5b is built, and the week of side-by-side c
    - **Deck rename, retirement and restoration are built** (E1-S19, completed 2026-10-16). More > Rename deck reviews the title and derived id, keeps immutable history and resolves reserved earlier addresses for sources, games and matchups. Cards, build status and kit stay unchanged; packing checks require reconfirmation. Rename needs migration 0010; older schemas retain existing reads and saves. An editable unbuilt deck can be retired with a reason and restored from History under its current id, retaining its earlier addresses.
    - (Settled in phase 4: deck pages and the library now hide another space's counts, token chips and table from viewers who can't see that space's inventory.)
 2. **AI fixes, round 1** (merged, installed and measured 2026-10-20/21; [forge-trial/ai-round1-results.md](forge-trial/ai-round1-results.md)): `etb-harmless-1` adopted in The Free Peoples' pilot on 2026-10-21, the others not. Replayed and cleaned up the same day; done. The earlier backlog (AI profiles, the team-pump fix and the other override sets) follows as `FG#3`.
-3. **Forge 2.0.16** (released 2026-11-11): the fork's `decklab` branch has it merged in, and `2.0.16-decklab-029c9518f` is built, checked (`engine-check`, `upgrade-check --dir`, then `upgrade-check` installed: card log, warm worker and overrides all passed) and installed on the development PC (2026-11-13). Its release is published, and the live server runs it since 2026-11-14 (`upgrade-check` passed there; the replay of 33 matchups, 13,120 games, played 3,199 before it was stopped that morning). Left: finish the replay and read its results, and the side-build speed A/B in the Later list, since 2.0.16 left out the speed PRs.
+3. **Forge 2.0.16**: `2.0.16-decklab-029c9518f` is released, installed and checked. The live replay completed and was reviewed on 2026-11-18: all current eligible matchups have their required games, and `replay --dry-run` reports none missing. The review covers 32 current home matchups and 12,920 saved games; historical failures and timeouts remain explicit in HISTORY.md. Only the separate side-build speed/winner A/B in the Later list remains under `FG#2`.
 4. ~~**Round-robin rankings** of all decks.~~ **Done 2026-10-15** (E3-S10): Matchups has a Rankings view for each format, with ratings, likely rank ranges, unsettled lists and exclusion reasons. Disconnected groups have separate ranks; current lists outside the field remain visible.
-5. **4-player Commander pods** on the page (E9-S11, E9-S21, E9-S22): implemented and fixture-tested 2026-11-16. Testing's Four-player pods reviews four visible Commander lists with similar declared target brackets, starts rotated cold batches under the shared worker budget, and shows separate win shares with 95% ranges. Explicit recovery keeps completed games. Left after `FG#2`: a small real-engine qualification on an idle PC with Matt's OK, then phone/iPad acceptance; no real Forge run or deployment was part of implementation.
+5. **4-player Commander pods** on the page (E9-S11, E9-S21, E9-S22): implemented and fixture-tested 2026-11-16. Testing's Four-player pods reviews four visible Commander lists with similar declared target brackets, starts rotated cold batches under the shared worker budget, and shows separate win shares with 95% ranges. After the replay gate, real qualification passed on 2026-11-18: 16 saved winners, all four seat rotations, raw/summary agreement and actual Stop/resume preserving completed games. Left: chooser, progress pill and results on the household phone and iPad (E9-S11).
 6. **Testing sideboard plans.**
 7. **Tokens extras**: how many of each a game needs, tokens made for the opponent, and dice and counters. (Rows with no printing show labelled example art since the UI redesign.)
 8. **Accessories extras**: thumbnails in lists. Device picture upload is built (2026-10-15, E8-S02), with product storage controls and a product kit command (E8-S11/E8-S18; HISTORY.md). Separate sleeves per deck within a product is dropped: superseded by item 11.
@@ -43,20 +43,74 @@ The database move is finished: phase 5b is built, and the week of side-by-side c
     - **Done:** Deck Lab starts at logon (`homenet install --at-logon`, 2026-10-13). Running with nobody logged on isn't needed (Matt, 2026-10-13: he's the PC's only user and never logs off, so it's either logged on or off); the backup's catch-up run after the PC was off covers the rest.
     - **Commander nights:** the household aims for Bracket 2 (Matt, 2026-10-13). Recording the usual night's expectations is built (E9-S20, 2026-10-16): one audited home-only note, edited by home admins in Settings and shown on home Commander pages. Name is required; venue, household target, published range, house rules and checked date remain optional and unknown until entered. It seeds no current venue facts and enforces no house rules; migration 0011 stores the revision and clear tombstone.
     - **Private by default:** phases 1–4 of [design/member-template.md §4](design/member-template.md#4-what-shipped-and-the-remaining-build-order) are built and Matt confirms User5's invite was sent (2026-10-18). Visibility storage, public readers/owner controls, Activity, history, Forge privacy and public kit are built in code (2026-10-18). Member export, exact preview, guarded audited apply, durable recovery and departure admission are built in code. Migrations 0012 and 0013 were applied and the server restarted on committed code on 2026-10-19, so privacy and guarded member departure are live; nothing is switched Public yet and no member has been removed. Public means read-only to everyone signed in, and only the owner can change visibility; no live switches are flipped as part of building this. Each control waits for its reader checks, not the check week's end. E10-S41 (per-deck public) stays deferred until requested. The template owns the slices and dependencies; TODO.md owns their order. Decisions A–K remain settled.
-12. **The gauntlet on the live server** (`FG#4`; Against popular decks is the lead feature, Matt, 2026-11-03): each PC has its own catalogue and results folder, so the Linux spare PC needs `python -m decklab.lib.forge gauntlet build` (both formats; about 5 minutes of EDHREC requests for Commander) before its pages show anything but "aren't set up". Then measure its parallel Commander throughput (the dev PC played about 40 games a minute, 4 opponents × 10 games, 2026-11-02) so the page's estimates have a measured rate, and play a first standard run (`gauntlet play <deck-id> --standard`, 20 opponents × 100 games) per Commander deck, overnight where the estimate says so. Real Forge games, so one at a time, on an idle PC, with Matt's OK. Whether the nightly task should top up stale or untested decks on the standard sample is still Matt's call, once the throughput is known.
+12. **The gauntlet on the live server** (`FG#4`; Against popular decks is the lead feature, Matt, 2026-11-03): both server-local catalogues are built, bounded Commander throughput is measured, and all 14 first standard budgets (`gauntlet play <deck-id> --standard`, 20 opponents × 100 games each) are filled (2026-11-18). Thirteen qualified meaningfully; the remaining scope is meaningful Syr Elenora engine qualification below. Whether the nightly should top up stale or untested decks on the standard sample remains Matt's separate call.
+
+    Live progress (2026-11-18, through HomeOps): both catalogue builds exited 0.
+    Commander has 243 playable lists of 260 (67 core, 128 upgraded, 48 precon);
+    constructed has 1,332 of 1,650. A bounded probe played 40 fresh games
+    against four distinct opponents in 120 seconds of native wall time:
+    20 games/minute for that sample, not a guaranteed rate for all matchups.
+    All 14 standard budgets finished with 28,000 saved games. Thirteen decks
+    qualified meaningfully. Syr Elenora's 2,000-game budget is complete, but
+    its stock/effective Forge script declares `AI:RemoveDeck:All`, the games
+    recorded zero commander casts and production marks all 20 matchups
+    nonmeaningful. The API correctly leaves its headline and ranges null,
+    with a generic thin-evidence note. Filled budgets do not qualify that
+    deck's AI behavior; the memory retry played no additional games and
+    cannot repair this script limitation. `FG#4` stays open only for a
+    dedicated native AI/script/pilot qualification, preserving the household
+    deck and existing script flag until a qualified change is established.
+
 Each finished feature in [HISTORY.md](HISTORY.md) also lists its "known low issues, left open". None of them is planned; fix one when it gets in the way.
 
 ### Details
 
 - ~~round-robin rankings of all decks~~: done 2026-10-15 (E3-S10). The read-only Rankings view on `#/matchups` uses current saved results and exact current field membership, separates disconnected rating groups and shows unrated or excluded lists with reasons. It starts no Forge games;
-- 4-player Commander pods are implemented on the page (2026-11-16); real qualification and device acceptance remain in E9-S11. The old combined run's M6 is prototype evidence only, not qualification of this implementation;
+- 4-player Commander pods are implemented on the page (2026-11-16) and real rotated games, statistics and Stop/resume passed on 2026-11-18; actual phone/iPad acceptance remains in E9-S11. The old combined run's M6 is prototype evidence only;
 - testing sideboard plans;
 - tokens: how many of each a game needs (counted from game logs, perhaps), telling tokens made for the opponent apart, and dice and counters as a second kind of inventory (an owned row with no printing recorded shows example art of a token with that name, labelled, since 2026-10-13);
 - accessories: small thumbnails rather than full pictures in lists. Device picture upload, product keep-intact/break-up controls and the product kit command are built (2026-10-15, E8-S02/E8-S11/E8-S18). Separate sleeves per deck within a product was dropped on 2026-10-13: sleeves may now be shared, item 11;
 - ~~card pictures on the Receipts page~~: done 2026-10-13 in the UI redesign (UI-REVIEW.md WP6): each pending part is a grid of its rows' pictures with a tick each (the recorded printing, else the card's default picture in a dashed frame that says so), tokens with their front and back, a product's cards by deck and section, 3 a row on a phone; a tap opens the row's sheet;
 - **AI fixes, round 1:** measured 2026-10-20/21, `etb-harmless-1` adopted for TFP, replayed 2026-10-21 (item 2 above; [forge-trial/ai-round1-results.md](forge-trial/ai-round1-results.md)).
 - **more experiment games, on an idle PC** (`FG#3`): the team-pump fix (`team-pump-1`: Rabbits +4.1 points against Vampires, still without its mirror test), the six AI-profile arms (Rabbits on Reckless and on DLAggro, Gruul and Angels on Reckless, Izzet on DLControl, Mono-Black Midrange on Cautious: about 1,100 to 3,200 games a pair where the report gives a number), and the override sets `etb`, `hints`, `tgt`, `flash`, `etb-flagged` and `tgt-gift`. About 2-4 hours of idle PC (an estimate). Also worth a look then: Rabbits vs Vampires ran 1.49x faster with every game patch off (B7-off; one fresh-pool round against B2's warm ones, which each had a clock stop while B7-off's had none). The runs go through `experiment` (the combined run's specs are in its `inputs/exp-*.json`). Adopting anything afterwards re-keys the matchups of the lists it touches, which then need a `replay`, so adoptions are best decided together;
-- **Forge 2.0.16** (released 2026-11-11; built, checked and installed on the development PC 2026-11-13, see the Now list): it left out the speed PRs R17 would have built in a side build (#11314, #11981 and #11366, all still open), so the side-build A/B below is due, on an idle PC. In the merge, Deck Lab's patches were made again on 2.0.16's reworked attack and eval code, and the fork now counts a decision cut short at 2.0.16's AI deadline (`AITimeoutTracker`) as an AI timeout. The upgrade: rebase the fork's `decklab` branch (`C:\Projects\forge`, which since 2026-10-11 holds Deck Lab's changes to `AbstractMulligan`, `AiController`, `AiAttackController` and `Match`, and its AI fixes) onto the 2.0.16 tag, resolve conflicts, build and install it with its `decklab/install.py` (README.md, "Deck Lab's own Forge", has the steps; `python -m decklab.lib.forge upgrade-check --plan forge-2.0.16` prints them; before the install, `upgrade-check --dir <scratch folder>` runs the same checks on the scratch build, noting nothing for the installed one, E11-S45), then `python -m decklab.lib.forge upgrade-check` (built 2026-10-21, E11-S15): `cardlog-check`, `serve-check` and the card-script overrides' upstream check (`overrides check`; `overrides make` when one no longer fits, since an override isn't used while Forge's script differs from the one it was made from), with one summary and `replay --dry-run`'s games and rough time; and a `replay` of every matchup, since the engine changes. If 2.0.16 isn't out by 2026-12-15, or leaves out #11314 and #11981, run the one-off side-build A/B in [forge-trial/sim-wave3-contract.md](forge-trial/sim-wave3-contract.md) §13.
+- **Forge 2.0.16 side-build speed/winner A/B** (`FG#2`; plan recorded 2026-11-18,
+  following [sim-wave3-contract.md §13](forge-trial/sim-wave3-contract.md#13-r17-decided-to-wait-for-forge-2016)).
+  The release and live replay are complete. This is a separate experiment;
+  no build, game, automatic adoption or live-engine change is scheduled.
+
+  1. Pin baseline `2.0.16-decklab-029c9518f` and its exact artifacts. At
+     preparation time, recheck upstream PRs #11314, #11981 and #11366 and pin
+     the applicable candidate revisions; do not assume their old open/merge
+     state. Build the candidate beside the baseline in scratch, keeping the
+     same Deck Lab patches, copied classes, card log, pilots and overrides.
+     Retain source/artifact hashes and pass `upgrade-check --dir` on each
+     staged build (card-log, fresh/warm-worker and override checks).
+  2. Freeze the exact saved lists and identities behind the existing owner
+     labels: Rabbits v Vampires, 800 games per engine, and Giada v Finneas,
+     400 per engine. Review exact saved ids/hashes before running; a changed
+     list requires a fresh plan. Match seeds, seat schedule, AI/pilot and
+     override settings between arms. Commander timeouts can change decisions,
+     so matching requested seeds alone never proves exact paired replay.
+  3. Use the same idle machine and identical resources for both arms,
+     initially the current eight-worker, 1 GiB-per-worker caps. Treat the
+     known memory-failing seed as a failure to report, not a silent omission.
+     If both arms are instead tested at 2 GiB/four workers, record that as a
+     separate matched setting and require at least 16 GiB available RAM.
+     Never compare unlike resource settings or change the live defaults.
+  4. The initial replay estimate (9,921 games in about 5 h 10 min) gives
+     roughly 75 minutes for 2,400 A/B game attempts at that pooled mix's
+     estimated rate. This is provisional, not measured A/B throughput.
+     Before booking a window, derive rates from the selected pairs' saved
+     runtimes and add builds, staged checks and slow tails; review the
+     concrete idle window and stop limit with Matt. Stop cleanly on the
+     limit, memory pressure or failed qualification and retain partial work.
+  5. Keep both arms' receipts, raw logs and game outputs isolated from live
+     matchups, field, ratings and gauntlet. Compare completed winner shares
+     with uncertainty, AI/clock timeouts, errors, memory failures, wall time
+     and throughput. Incomplete evidence is not a speed or winner benefit.
+     Review the result before any adoption decision; adoption would require
+     its own qualified deployment and replay plan.
+
 
 ## Design
 
@@ -246,7 +300,7 @@ In practice, `forge` here means the JDK's own `java.exe -jar forge-gui-desktop-2
   - **Since wave 3:** Deck Lab's card-script overrides (R10) fix some of these: Forge loads an edited copy of the card's script over its own. Adopted: Fiery Annihilation (2026-10-03: cast for 0% of drawn copies before, 92% with it), Devout Decree and Beast Within (2026-10-04: their `AI:RemoveDeck:All` is gone, so the AI now casts them). The AI limits read the deployed scripts, so those cards are no longer listed. Experiment sets are only played in experiments (see the wave 3 entry).
 - **Commander:** tested in Milestone 0.
   - 1v1 Commander (`-f Commander` with 2 decks) takes about 2 s per game and replays exactly.
-  - 4-player pods work but take about a minute per game (median 38 s, some over 3 minutes) and don't replay exactly. Size pod jobs in tens of games per worker, rotate seats between batches, and treat the results as statistics. (The combined run's M6, 2026-10-03, with 12 plain Forge processes, 200 pods: 0.41 minutes a pod on average, median 0.34, longest 1.81; not on the page yet.)
+  - 4-player pods work but take about a minute per game (median 38 s, some over 3 minutes) and don't replay exactly. Size pod jobs in tens of games per worker, rotate seats between batches, and treat the results as statistics. (The combined run's M6, 2026-10-03, with 12 plain Forge processes, 200 pods: 0.41 minutes a pod on average, median 0.34, longest 1.81; prototype evidence only; the current page and live qualification are recorded in E9-S11.)
 
 **Per-card stats (Milestone 8):** the page reports:
 - the win rate when a card was drawn compared with when it wasn't;

@@ -75,6 +75,28 @@ equally from both engines. XMage seeded replay is explicitly unproven.
 
 ## Setup and use
 
+Live Linux setup verified through HomeOps (2026-11-18): the pinned 1.4.63
+archive below matched its SHA-256, `xmage_dir` was configured privately, and
+the original bridge was built and verified. No network service was installed.
+Two live attempts retained partial/unsupported receipts; these and the live
+bridge hashes remain unchanged.
+
+The locally committed name/adventure fixes at
+`1687e40ac8770ad4e27c2ae86541df1460bd7e96` were compiled separately. Ten
+coverage-only cases and six compiled index checks passed without games. A
+subsequent isolated positive check completed two Forge and two XMage games
+for each of casual and Commander (eight total, 72.894 seconds). Independent
+review matched exact frozen plans, engine identities and outcomes, with no
+missing games, failures, timeouts or unsupported cards in that sample.
+Results and estimates remained separate: agreement was not compared and no
+combined win rate was formed. This is bounded execution evidence, not deck
+strength or rules correctness; XMage seeded reproducibility remains unproven.
+
+The fixed artifact has not been deployed live. Deploy through the normal
+update path and repeat bounded live qualification before closing that gate.
+Galion is absent from the pinned release, and Thranduil's implementation lacks
+its requested adventure identity; both remain refused without substitutions.
+
 An existing qualified Deck Lab Forge installation and a full JDK are required.
 XMage is optional and disabled when `xmage_dir` is unset. Nothing below changes
 the household database or installs services.

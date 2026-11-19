@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "engine": "xmage",
+  "version": "1.4.63-dev (2026-10-31 09-42)",
+  "source_revision": "79aec614fc29d0c3eebd10fff0d5c1b40852bd52",
+  "engine_sha256": "596c4ca03d3be39230714bf28672543d30109c9c8eb8396d6f0ecdec20a67805",
+  "reproducible": false,
+  "ai": "MAD skill 6; one simulation thread",
+  "coverage": [
+    {
+      "deck_id": "baseline",
+      "missing": [],
+      "errors": [],
+      "cards": 60,
+      "status": "supported"
+    },
+    {
+      "deck_id": "opponent",
+      "missing": [
+        "No Such Deck Lab Preflight Opponent"
+      ],
+      "errors": [],
+      "cards": 59,
+      "status": "unsupported"
+    }
+  ],
+  "games": [
+    {
+      "arm": "baseline",
+      "number": 2,
+      "seed": 1501,
+      "starting_player": 1,
+      "status": "unsupported",
+      "winner": null,
+      "turns": 0,
+      "errors": 0
+    }
+  ],
+  "request_sha256": "a4f2b28f01626d29c878ec5a6cb0cf29abe713fbaa5017bd629323339a2ed9e7",
+  "bridge_sha256": "56f42a4e14522484d0333a7b7e5928e89f4c02c8ec82c305eeff02948c23eb67",
+  "bridge_source_sha256": "17bbb671960da8e1dc9c643b8831a92b22e5a44efadab5c948c2f98727866fcb",
+  "identity_sha256": "2ce84b37e1c3b47acec1a20675ee03a1dafa26c52527626bc087de309fd7edcc",
+  "format": "casual",
+  "seed": 1501,
+  "rules": "casual-1v1-20-life-no-format-or-ban-list-london-no-free-mulligan",
+  "status": "unsupported"
+}

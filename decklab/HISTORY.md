@@ -1,5 +1,189 @@
 # Deck Lab: history
 
+## Remote acceptance finished with explicit engine gaps (2026-11-18)
+
+The HomeOps queue finished at 15:42:18 local time. All 14 Commander standard
+budgets reached 20 opponents × 100 games, with 28,000 saved games. Thirteen
+qualified meaningfully. Syr Elenora's full 2,000-game budget recorded no
+commander casts; its stock/effective Forge script declares
+`AI:RemoveDeck:All`, and production marks all 20 matchups nonmeaningful. Its
+API headline and ranges stay null with the generic thin-evidence note.
+The memory retry added no games and cannot repair that native limitation.
+`FG#4` remains open only for meaningful Syr Elenora AI/script/pilot
+qualification. No script flag or household deck was changed to force a result.
+
+After the queue, the full live smoke passed all 16 checks with no warnings,
+failures or skips. The running/latest build checks were clean; the following
+health report had zero problems or warnings and the job pools/slots were idle.
+The local source fixes remain undeployed. Physical phones, card/token photos,
+browser policy/field-save acceptance, genuine earlier-list history and timed
+hardened-gate wake remain separate gaps. NAS deployment is explicitly deferred
+until the owner is home to authenticate.
+
+The corrected XMage source at `1687e40ac8770ad4e27c2ae86541df1460bd7e96`
+passed a separate isolated positive check at 15:46:15 in 72.894 seconds:
+casual and Commander each completed two Forge and two XMage games, eight
+games total. Independent review matched frozen plans, engine identities and
+outcomes, with no missing games, failures, timeouts or unsupported cards in
+that bounded sample. Engine results and estimates stayed separate; agreement
+was not compared and no combined win rate was formed. This establishes
+bounded execution, not deck strength, rules correctness or reproducible
+XMage seeds. The live bridge hashes and both earlier partial/unsupported
+receipts stayed unchanged. `E3-S40` retains deployment and live qualification;
+Galion's absence and Thranduil's incomplete adventure identity remain genuine
+limitations of the pinned engine. No acceptance jobs remain running.
+
+## Gauntlet CLI reports incomplete runs (2026-11-18)
+
+`gauntlet play` now returns a failure status when its fixed budget is still
+short or a matchup played by that invocation reports a native failure or
+stop, even when the coordinator returned without a dropped opponent. JSON
+keeps the saved note and view and adds explicit completion details; the
+terminal says that completed games were saved. Running again tops up only
+the missing games. Shared catalogue entries count a matchup's missing games
+once, and historical failed batches do not make a later completed run or
+already-complete no-op fail. This changes CLI reporting, not saved games or
+the field coordinator's partial-result behavior.
+
+## XMage exact printed names and adventure faces (2026-11-18)
+
+The pinned XMage release stores several printed names without their diacritics,
+and its adventure cards expose their spell through a separate accessor. The
+bridge now accepts ten explicitly verified canonical names only when the exact
+upstream implementation class matches, and validates both ordered adventure
+names. It never strips accents from arbitrary input. Ambiguous names or aliases,
+class mismatches, wrong faces and unimplemented cards remain refused; captured
+lists, request hashes and original missing-card names stay unchanged.
+
+The explicit native qualification tool includes coverage-only cases with a
+deliberately unsupported opponent and compiled index checks, so name admission
+and refusal can be checked without playing games. Guarded fixture checks cover
+that qualification boundary. New artifacts retain separate source/build identities.
+
+The isolated pinned runtime passed ten coverage-only cases and six compiled
+name-index checks, with no played games. Four actual synthetic request/response
+pairs are retained for guarded protocol regressions. The three implemented
+adventures are admitted; Galion is absent, and the pinned Thranduil class lacks
+its requested adventure face, so both full lists remain refused rather than
+substituted. The live installation and its earlier receipts remain unchanged.
+
+Combined local validation at clean commit
+`1687e40ac8770ad4e27c2ae86541df1460bd7e96`: the default guarded fixture suite
+ran 14,218 tests in 1,408.213 seconds, with 13,734 passed, 484 skipped and no
+failures or errors (exit 0). The tracked tree was clean and unchanged before
+and after. This is the local Windows fixture gate; CI and Linux database
+integration remain separate qualifications. The ten no-game XMage coverage
+cases and six compiled index checks above were separate native checks with
+the fixed artifact. Positive real XMage games have not yet run, and the live
+fixes have not been deployed.
+
+## Real pods and Same commander results (2026-11-18; E9-S11, E3-S49)
+
+After the completed replay gate, HomeOps qualified a real 16-game pod sample.
+All 16 saved games had winners, with no draws, clock/AI timeouts or failures;
+the summary matched the raw outcomes. Four rotations gave each deck four
+games in each seat. Stop retained one completed game and removed the job;
+resume kept that outcome, used a fresh seed for the partial batch's remaining
+three games, and finished without duplicating it. E9-S11 remains partial for
+the actual phone/iPad chooser, progress pill and result views.
+
+Same commander covered all four matching catalogue entries, representing
+three distinct lists, with at least ten games per entry and no failure,
+dropped entry or game error. There were 40 new unique saved games: one shared
+20-game key for two identical precon entries, plus two ten-game keys. The
+view's 60 attributed entry-games count the shared result under both precons;
+they are not 60 unique games. Coverage and results were inspected, completing
+E3-S49's live-result gap. This does not claim general household device checks.
+
+The bounded throughput probe separately played 40 fresh games against four
+distinct opponents in 120 seconds of native wall time (20 games/minute).
+It is a guide for that sample, not a completed standard run or a guarantee
+for every Commander matchup. The full standard-run queue is still in progress.
+
+## Live Forge replay completed and reviewed (2026-11-18; FG#2)
+
+The live replay gate passed at 09:47 local time: `replay --dry-run` reported
+zero missing games for the current eligible matchups. The saved-result review
+covered 32 current home matchups and 12,920 games, including 65 timeouts.
+Ten historical failed batches remain recorded; the final review found no
+actual game errors or latest native failures. These are the current eligible
+lists, rather than a claim that every list in the older replay plan still
+exists unchanged.
+
+The resumed replay saved 9,621 of its 9,921 requested games. Two bounded,
+process-local recoveries at 2 GiB/four workers filled the remaining 300 games
+in 522.038 s and 32.003 s. Live heap/worker defaults stayed unchanged. An
+isolated reproduction of exact seed 506 still ran out of memory at both
+1 GiB and 2 GiB; it wrote no statistics and changed no source. The retained
+failure and these recovery timings establish neither a memory fix nor an
+A/B speed benefit.
+
+The obsolete Forge 2.0.15 installation was removed after the replay review,
+exact-target/reference checks and current-backup guards. `FG#2` now retains
+only the separately planned side-build speed/winner comparison in PLAN.md's
+Later list. The plan starts no build or game and makes no adoption decision.
+
+## Replay reports returned partial failures (2026-11-18)
+
+When Forge saved some games and returned a native failure instead of raising,
+`forge replay` previously counted that matchup as complete and exited 0. It now
+reports the latest run's failure or shortfall, excludes it from the completed
+matchup count and exits 1. Text and JSON retain the games actually saved, and
+the next replay still plays only the missing games. Historical failed batches
+and recovered partial chunks do not invalidate a successful later run.
+
+Guarded fixture checks cover partial results, native failures, returned stops,
+malformed returns and successful top-ups. This source correction does not change
+saved results, engine settings or the live installation.
+
+## Live setup and bounded operational checks (2026-11-18)
+
+HomeOps rebuilt both gauntlet catalogues successfully: Commander has 243
+playable lists of 260 (67 core, 128 upgraded, 48 precon), and constructed has
+1,332 of 1,650. Commander throughput and first standard runs for the 14 home
+Commander decks (28,000 planned games) remain queued after the Forge replay.
+These are build and plan results, not completed simulation evidence (`FG#4`).
+
+The pinned XMage 1.4.63 archive matched its documented SHA-256. The separate
+installation, private `xmage_dir` and compiled bridge were verified. No XMage
+service or real cross-check ran; bounded casual/Commander samples and explicit
+unsupported-card findings remain after the replay (`E3-S40`).
+
+The live Linux journal records deep sleep from 2026-11-17 22:28:37 to
+2026-11-18 03:29:03, when the installed wake timer fired. The following nightly
+ran 03:30:02–04:08:10 and exited 0. Smoke without Forge passed 13 checks with
+one configuration restart warning; Forge stayed skipped during the replay.
+An initial Scryfall timeout passed a focused retry (6/6 checks). Tesseract
+synthetic readiness passed, while real photos, phone access and a timed request
+through the gate remain open (`E11-S58`, `E11-S59`, `E7-S32`).
+
+Live HTTP requests through the home listener and NAS gate verified CSP,
+nosniff, no-referrer, gzip and immutable caching of a current versioned asset.
+They do not establish Safari behavior or device load times. The pre-change
+device baseline is unavailable. Desktop browser automation could not establish
+the current URL safely, so no browser acceptance or field-policy save is
+claimed (`E11-S63`, `E11-S64`, `E3-S23`).
+
+The NAS still runs the earlier gate source and compose stack; a silent socket
+stayed open beyond 12 seconds. HomeOps prepared authenticated deployment, but
+Docker administration needs operator authentication. Updated non-root
+operation, connection bounds and actual WOL remain unqualified (`E11-S75`).
+
+## Live shrink warning and history evidence (2026-11-18; E11-S87, E3-S50)
+
+HomeOps enabled `database.shrink_warn` on the live Linux server, retaining the
+agreed more-than-25% and at-least-5-row thresholds. The production nightly
+shrink comparison used the actual successful dumps from 2026-11-17 and
+2026-11-18, returned `(True, None)` and logged no sharp shrink; `db status`
+was clean. This checks the production read-only step and does not claim a new
+scheduled nightly run. Configuration and its pre-change backup remain private
+and mode 0600. E11-S87 is complete.
+
+The live home-deck history scan returned complete answers but no earlier
+standard-sample entries or comparison steps. Two current lists had older-engine
+results muted without figures. E3-S50 remains partial until suitable saved
+history exists for the browser check; no revisions or games were manufactured.
+
 ## Small swaps from Considering (2026-11-17; E2-S33)
 
 The Planned Cards tab of an editable saved casual 60-card deck offers

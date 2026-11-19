@@ -119,7 +119,7 @@ class ReplayTests(test_forge.ForgeCase):
 
     def stand_in_run(self, a, b, games, *, by, progress=None, results_dir=None, pool=None, exact=False, **kwargs):
         """runner.run's stand-in: today's engine's result of a and b gets games more games, unless self.modes
-        says otherwise for a's id ("busy", "fail", "elsewhere", or "stop": play until progress raises, which it
+        says otherwise for a's id ("busy", "fail", "elsewhere", a returned partial/failure, or "stop": play until progress raises, which it
         calls self.late seconds after the test's Ctrl+C at first, as a run still queued in the pool might)."""
         with self.lock:
             self.calls.append({"a": a["id"], "b": b["id"], "games": games, "by": by, "pool": pool, "exact": exact,
@@ -150,10 +150,24 @@ class ReplayTests(test_forge.ForgeCase):
             key = forge.engine.key(a, b, self.eng)
             have = forge.saved._counted(forge.load(key, results_dir) or {})
             ids = [s["id"] for s in sorted([a, b], key=lambda e: e["card_sha"])]
-            saved = self.save("0" * 63 + "1" if mode == "elsewhere" else key, *ids, have + games,
+            played = games // 2 if mode in ("partial", "partial-failure", "short-total", "stopped-return") else games
+            saved = self.save("0" * 63 + "1" if mode == "elsewhere" else key, *ids, have + played,
                               fmt=forge.fmt_for(a["kind"]), engine=forge.engine.result_fields(self.eng)["engine"])
-            saved["runs"][-1]["played"] = games
-            progress(games, games, {})
+            saved["runs"][-1].update(asked=games, played=played, failed=0, failure=None, error=None)
+            if mode == "short-total":
+                saved["runs"][-1]["played"] = games
+            if mode == "stopped-return":
+                saved["runs"][-1]["stopped"] = True
+            if mode in ("partial-failure", "reported-failure"):
+                saved["runs"][-1].update(failed=1, failure="Forge stopped with an error")
+            if mode == "historical-failure":
+                saved["failed"] = [{"n": 0, "first": 0, "games": 1, "error": "Earlier failed attempt"}]
+                saved["runs"][-1]["partial"] = 8       # recovered partial chunks do not make this run incomplete
+            (self.results / f"{saved['key']}.json").write_text(json.dumps(saved), encoding="utf-8")
+            forge.saved._read_cache.clear()
+            progress(played, games, {})
+            if mode == "malformed-return":
+                saved["runs"] = []
             return saved
         finally:
             with self.lock:
@@ -312,6 +326,89 @@ class ReplayTests(test_forge.ForgeCase):
         code, out, _ = self.replay()
         self.assertEqual(code, 1)
         self.assertIn("its games were saved with another engine than the card log's", out)
+
+    def test_a_returned_partial_failure_keeps_games_and_resumes_only_the_shortfall(self):
+        self.earlier_results()
+        self.modes["casual/blue"] = "partial-failure"
+        code, out, err = self.replay()
+        self.assertEqual(code, 1, err)
+        self.assertIn("Replayed 2 of 3 matchups: 700 games.\n", out)
+        self.assertIn("saved 100 of 200 requested games", out)
+        self.assertIn("Forge stopped with an error", out)
+        key = self.today("casual/blue", "casual/red")
+        partial = forge.saved.load(key, self.results)
+        self.assertEqual(forge.saved._counted(partial), 100)
+        original_games = partial["batches"][0]["games"][:]
+        code, plan, _ = self.replay("--dry-run", "--json")
+        self.assertEqual((code, json.loads(plan)["games"]), (0, 100))
+        self.assertEqual(json.loads(plan)["planned"][0]["key"], key)
+        self.modes.clear()
+        code, out, err = self.replay("--json")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(json.loads(out)["played"], [{"key": key, "games": 100}])
+        self.assertEqual(json.loads(out)["failed"], [])
+        finished = forge.saved.load(key, self.results)
+        self.assertEqual(forge.saved._counted(finished), 200)
+        self.assertEqual(finished["batches"][0]["games"][:100], original_games)
+        self.assertEqual(json.loads(self.replay("--dry-run", "--json")[1])["games"], 0)
+
+    def test_a_returned_shortfall_without_failure_is_nonzero_in_json(self):
+        self.save("4" * 64, "casual/blue", "casual/red", 200)
+        self.modes["casual/blue"] = "partial"
+        code, out, err = self.replay("--json")
+        self.assertEqual(code, 1, err)
+        found = json.loads(out)
+        key = self.today("casual/blue", "casual/red")
+        self.assertEqual(found["played"], [{"key": key, "games": 100}])
+        self.assertEqual(len(found["failed"]), 1)
+        self.assertEqual(found["failed"][0]["key"], key)
+        self.assertIn("100 still missing", found["failed"][0]["why"])
+        self.assertEqual(json.loads(self.replay("--dry-run", "--json")[1])["games"], 100)
+
+    def test_latest_failure_is_reported_even_when_every_game_was_saved(self):
+        self.save("4" * 64, "casual/blue", "casual/red", 200)
+        self.modes["casual/blue"] = "reported-failure"
+        code, out, err = self.replay("--json")
+        self.assertEqual(code, 1, err)
+        found = json.loads(out)
+        self.assertEqual(found["played"][0]["games"], 200)
+        self.assertIn("Forge stopped with an error", found["failed"][0]["why"])
+        self.assertEqual(json.loads(self.replay("--dry-run", "--json")[1])["games"], 0)
+
+    def test_historical_failed_batches_do_not_taint_a_successful_replay(self):
+        self.save("4" * 64, "casual/blue", "casual/red", 200)
+        self.modes["casual/blue"] = "historical-failure"
+        code, out, err = self.replay("--json")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(json.loads(out)["failed"], [])
+        self.assertEqual(json.loads(out)["played"][0]["games"], 200)
+
+    def test_saved_total_is_checked_even_when_run_reports_every_requested_game(self):
+        self.save("4" * 64, "casual/blue", "casual/red", 200)
+        self.modes["casual/blue"] = "short-total"
+        code, out, err = self.replay("--json")
+        self.assertEqual(code, 1, err)
+        self.assertIn("100 still missing", json.loads(out)["failed"][0]["why"])
+        self.assertEqual(json.loads(self.replay("--dry-run", "--json")[1])["games"], 100)
+
+    def test_a_returned_stopped_run_is_not_reported_as_complete(self):
+        self.save("4" * 64, "casual/blue", "casual/red", 200)
+        self.modes["casual/blue"] = "stopped-return"
+        code, out, err = self.replay("--json")
+        self.assertEqual(code, 1, err)
+        found = json.loads(out)
+        self.assertEqual(found["played"][0]["games"], 100)
+        self.assertIn("stopped", found["failed"][0]["why"])
+
+    def test_a_malformed_return_is_a_failure_instead_of_a_silent_worker_exit(self):
+        self.save("4" * 64, "casual/blue", "casual/red", 200)
+        self.modes["casual/blue"] = "malformed-return"
+        code, out, _ = self.replay("--json")
+        self.assertEqual(code, 1)
+        found = json.loads(out)
+        self.assertEqual(found["played"], [])
+        self.assertEqual(len(found["failed"]), 1)
+        self.assertIn("an error in Deck Lab", found["failed"][0]["why"])
 
     def test_ctrl_c_stops_every_run_and_each_saves_its_games(self):
         self.earlier_results()

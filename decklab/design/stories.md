@@ -37,7 +37,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 27 | 24 | 2 | 0 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 42 | 38 | 4 | 0 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 42 | 39 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 26 | 1 | 0 | 3 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 36 | 33 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 23 | 0 | 0 | 2 |
@@ -45,8 +45,8 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 20 | 0 | 1 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 87 | 68 | 11 | 4 | 4 |
-| **Total** | **398** | **353** | **21** | **7** | **17** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 87 | 69 | 10 | 4 | 4 |
+| **Total** | **398** | **355** | **19** | **7** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1105,6 +1105,13 @@ Fail-closed slice (2026-10-29): saved choices that can't be read no longer lapse
 
 Remaining (2026-11-11): a saved field choice used in an actual browser and real run. TODO's recorded setup receipt lists 0017 as applied by 2026-10-30; this goal performed no live migration or policy change. Disposable PostgreSQL checks belong to required CI and do not establish that live acceptance. Existing config removals record no human reason, so the view does not invent one. The separately denied E1-S12 temporary correction/poor-AI caveat remains stopped.
 
+Acceptance prepared (2026-11-18): a temporary opponent exclusion, real run
+and restoration were authorised. Browser controls could not safely establish
+the current URL, so the policy was left untouched. The browser preview/save,
+policy-backed real run and restoration remain unqualified.
+
+Awaiting: browser
+
 First slice (reserve review, 2026-10-28): a read-only Who's in the field view using the existing membership and exclusion calculations, filtered through the viewer's deck visibility before returning names or counts. Cover current lists, explicit exclusions, poor-AI reasons and missing results with fixtures. Follow with revision-checked, audited home-admin membership changes that invalidate the field view but start no games; do not change the household's real field during development. E3-S19's chosen-opponent runs are a later dependent slice, not a second membership implementation.
 
 **E3-S24** · Matt · could · S · built
@@ -1391,7 +1398,23 @@ Decided (Matt, 2026-11-09): implement as much as possible overnight and open a p
 
 Built (2026-11-09): the Testing tab's deliberate saved-list matchup check, command-line card-swap checks, separate immutable engine results and native XMage bridge. Guarded fixtures, disposable native casual/Commander games and headless Chromium checks passed. The [owner](cross-simulator.md) records exact qualification and limits; optional installation on the live server and household-device acceptance remain separate.
 
-Left (Matt, 2026-11-14, tracked in TODO.md): XMage isn't set up on any PC yet (no `xmage_dir`, no built bridge). After `FG#2`'s replay, with Matt's OK on idle server time: install the pinned 1.4.63 release on the Linux server, set `xmage_dir` in its private config, run `python -m decklab.xmage build` and `describe`, then cross-check a few real home decks (casual and Commander) to see which household cards XMage refuses, and read the two engines' results side by side.
+Live setup checked (2026-11-18, through HomeOps): the pinned XMage 1.4.63
+archive matched its documented SHA-256; the private `xmage_dir` and original
+bridge were configured and verified without installing an XMage service.
+Two live attempts retained partial/unsupported receipts. Name-mapping fixes
+were committed locally and qualified in isolation, leaving the live bridge
+and those earlier receipts unchanged.
+
+The corrected isolated build completed eight positive games: two Forge and
+two XMage games in each of casual and Commander. Independent review matched
+frozen plans, engine identities and completed outcomes, with no missing games,
+failures, timeouts or unsupported cards in that small sample. Results stayed
+separate; no agreement or combined win rate was claimed, and XMage seeded
+reproducibility remains unproven. This qualifies bounded execution, not deck
+strength or rules correctness. Galion is genuinely absent from the pinned
+engine and Thranduil's implementation lacks the requested adventure identity.
+Left: deploy the corrected bridge through the normal update path and repeat
+bounded live qualification, preserving explicit unsupported-card limits.
 
 **E3-S41** · Matt · could · M · built
 
@@ -1515,7 +1538,7 @@ First slice: command line only with a fixed game count: `run_unpaired` in `deckl
 
 Built (2026-11-11; Matt approved OPEN feature defaults): explicit CLI `--size-change` with a fixed `--games N` or `--quick` plays both versions against the same opponents/count on one verified engine, with independent domain-separated seed streams. A same-size change stays paired. Constructed below60 and Commander other than100 are refused; the CLI also bounds work to1,000 cards and100,000 games per arm. The independent balanced MOVER95% difference has a separate default5-point equivalence margin, one fixed final look and explicit wide-range/more-games wording. Arms have their own validated `unpaired` result kind and isolated experiments directory; checkpoint reuse avoids duplicate completed games. Normal enumeration and per-card consumers reject this kind.12 control/CLI/math fixtures and two production-runner/disposable-fake-process checks pass, with195 broader legacy/qualification/engine checks passing before the final narrow guards. No actual game, saved household result or deck was touched.
 
-**E3-S49** · Matt · could · M · partial
+**E3-S49** · Matt · could · M · built
 
 As a Commander deck builder, I want to test my deck head to head against the popular builds of its own commander (EDHREC's core and upgraded average decks, and a published precon with the same commander, when the catalogue has them), so that I know whether my take plays better than the common one, without treating those lists as advice.
 
@@ -1524,7 +1547,17 @@ As a Commander deck builder, I want to test my deck head to head against the pop
 - Given a trial deck (E3-S39), then its own precon is never one of its opponents.
 - Given the catalogue holds no deck with that commander, then the choice says so instead of starting an empty run.
 
-Built (2026-11-12): a Commander deck's Against popular decks offers **Which decks: A balanced sample | Same commander**. Same commander plays every playable catalogue deck whose commanders match the deck's (a partner pair in either order, a double-faced commander by its front face, case ignored), core, upgraded and precon alike, most popular first (`sample.same_commander`, `commander_key`, `commanders_of`; `forge.gauntlet.same_commander`). Its sample id hashes the commander key, so it never matches a balanced or All sample's, and once played it's saved like any other sample. `GET /api/gauntlet?commander=same` and `POST /api/gauntlet/run` read the commanders from the deck's own Commander section, never from the request; any other value, a 60-card deck, a deck without a commander, and a size, colour, style, tier or saved sample sent with it get 400, after a hidden deck's 404. A trial's own precon is left out. With no matching deck the choice says so and is disabled, and a run is refused instead of starting empty. The CLI has `gauntlet plan|play|view <deck> --same-commander`. Tests: `decklab/tests/test_gauntlet_same_commander.py` (20, sample to Node-DOM UI), with the neighbouring gauntlet modules passing. No real game was played and no catalogue was built. Left: real results wait for `FG#4`, the server's Commander catalogue and real Same commander Forge games.
+Built (2026-11-12): a Commander deck's Against popular decks offers **Which decks: A balanced sample | Same commander**. Same commander plays every playable catalogue deck whose commanders match the deck's (a partner pair in either order, a double-faced commander by its front face, case ignored), core, upgraded and precon alike, most popular first (`sample.same_commander`, `commander_key`, `commanders_of`; `forge.gauntlet.same_commander`). Its sample id hashes the commander key, so it never matches a balanced or All sample's, and once played it's saved like any other sample. `GET /api/gauntlet?commander=same` and `POST /api/gauntlet/run` read the commanders from the deck's own Commander section, never from the request; any other value, a 60-card deck, a deck without a commander, and a size, colour, style, tier or saved sample sent with it get 400, after a hidden deck's 404. A trial's own precon is left out. With no matching deck the choice says so and is disabled, and a run is refused instead of starting empty. The CLI has `gauntlet plan|play|view <deck> --same-commander`. Tests: `decklab/tests/test_gauntlet_same_commander.py` (20, sample to Node-DOM UI), with the neighbouring gauntlet modules passing. That implementation check used fixtures; live results were qualified separately below.
+
+Live coverage qualified through HomeOps (2026-11-18, after the replay gate):
+the rebuilt catalogue supplied four matching entries representing three
+distinct lists. The run saved 40 new unique games, with no failure, dropped
+entry or game error, and every matching entry had at least ten games. Two
+identical precon entries shared one 20-game result key; the other two keys
+had ten games each. The view attributes 60 entry-games because that shared
+precon result appears under both entries; those are not 60 unique games.
+Saved coverage and the result view were inspected. This completes the real
+result gap; general household touch/Safari acceptance remains in E11-S30.
 
 **E3-S50** · Matt · could · M · partial
 
@@ -1536,6 +1569,12 @@ As a deck builder tuning a deck over many edits, I want a short timeline of the 
 - Given the search stops at a bound, then the timeline says it isn't every list.
 
 Built (2026-11-12): `GET /api/gauntlet/history` (`decklab/lib/api/gauntlet_history.py`) reuses `gauntlet_before`'s revision walk and bounds, which now date each list by the oldest revision of its newest unbroken run (a revision whose list can't be read ends a run, so a date is never pushed back over revisions that didn't hold that list). It answers today's list and up to 8 earlier lists with standard-sample results, newest first, each with its saved date, figure, range and opponents; a list tested only under older keys is muted without a figure. Each step between neighbours names the cards added and taken out and compares only the opponents both share (`no_shared` when there are none), and when a bound left out a list with run notes the timeline says it isn't every list. The Testing tab's Against popular decks gains **Show earlier lists** (`web/gauntlet.js`). Fixture tests only. Left: a live check of Show earlier lists against saved standard-sample runs on the server, for a deck with several saved lists.
+
+Live data checked (2026-11-18): the home-deck history endpoints all returned
+`complete: true`, one current list and no earlier standard-sample entries or
+comparison steps. Two current lists had older-engine results, muted without a
+figure. There is no suitable saved history for the requested multi-list browser
+check yet; no deck revisions or games were created to manufacture that evidence.
 
 **E3-S51** · Matt · could · S · built
 
@@ -4313,12 +4352,19 @@ explicit recovery, all-four visibility and member export/removal guards. The
 game counts are 16, 32, 64 and 128; the starting choices are Planned lists.
 This does not claim the targets certify equal power or predict a social table.
 
-Awaiting: decision
+Live engine qualification passed through HomeOps (2026-11-18, after the
+replay gate): 16 saved games produced 16 winners, with no draw, clock timeout,
+AI timeout or failure. The summary was checked against the raw saved outcomes.
+Four rotations put each deck in each seat for four games. A real Stop left
+one completed game saved, reported stopped and removed its coordinator job.
+Resume preserved that game (seed 1,000,000), retried the first batch as attempt
+1 with seed 2,000,000 for its remaining three games, and finished the planned
+sample without duplicating the retained outcome.
 
-After `FG#2`, with Matt's OK on an idle PC, qualify the installed engine on a
-small real pod: check rotated seats, statistics, Stop and resume. Then check
-the chooser and result on a household phone and iPad. No real games, server
-deployment, migration or privacy-switch change was performed by this build.
+Awaiting: phone, ipad
+
+Left: check the chooser, progress pill and results on the actual household
+phone and iPad. API/engine evidence does not qualify those touch/browser views.
 
 **E9-S12** · Matt · should · S · built
 
@@ -6375,7 +6421,22 @@ Evidence:
 - `decklab/lib/homenet/service.py`, `decklab/lib/homenet/linux_facts.py`, `decklab/lib/systemd.py`, `decklab/lib/api/server_restart.py`, `decklab/lib/hometime.py`, `decklab/smoke.py`, `decklab/update.py`, `scripts/decklab`; `decklab/tests/test_linux_services.py`, `decklab/tests/test_linux_ops.py`, `decklab/tests/test_smoke.py`
 - `SELF-HOSTING.md` ("From a Windows server to a Linux one", step 12's Linux steps)
 
-Qualified in WSL2 Ubuntu 26.04 (2026-11-02, a throwaway install with systemd, PostgreSQL 18, Tesseract 5.5 and OpenJDK 21): the database setup, backups, restore and the 1,897 database integration tests; the release Forge install, cardlog-check, upgrade-check and real Forge games, from the command line and the background service's warm pool; the systemd user service and nightly timer; `systemd-inhibit` under a polkit rule from the user service; `decklab.update`; and the smoke test and doctor. Its findings were fixed the same day (scanning's second Tesseract pass and faint set lines, the doctor's backup folders, `db status`'s failed dumps, Forge's default folder, and wording). Gap: still to qualify on the real Linux server PC: real suspend and wake (magic packet and the root wake timer), phones against it, and Tesseract on real card photos. Not built: Linux core pinning, parent-death safety for Forge started from a terminal, the profiles' sync retrying once the database comes up, and the gate's own wake time.
+Qualified in WSL2 Ubuntu 26.04 (2026-11-02, a throwaway install with systemd, PostgreSQL 18, Tesseract 5.5 and OpenJDK 21): the database setup, backups, restore and the 1,897 database integration tests; the release Forge install, cardlog-check, upgrade-check and real Forge games, from the command line and the background service's warm pool; the systemd user service and nightly timer; `systemd-inhibit` under a polkit rule from the user service; `decklab.update`; and the smoke test and doctor. Its findings were fixed the same day (scanning's second Tesseract pass and faint set lines, the doctor's backup folders, `db status`'s failed dumps, Forge's default folder, and wording). At that point, real-server suspend/wake, phone access and actual card photos remained unqualified; the dated live evidence below records subsequent checks. Not built: Linux core pinning, parent-death safety for Forge started from a terminal, the profiles' sync retrying once the database comes up, and the gate's own wake time.
+
+Live Linux evidence reviewed (2026-11-18): the journal records deep sleep from
+2026-11-17 22:28:37 until 2026-11-18 03:29:03, when the installed system wake
+timer fired. The following nightly ran from 03:30:02 to 04:08:10 and exited 0.
+A smoke run without Forge passed 13 checks, with one configuration restart
+warning and Forge deliberately skipped while the replay ran. The initial
+Scryfall timeout passed a focused retry (6/6 checks). Installed Tesseract passed
+synthetic readiness only. Real phone access, real card/token photographs and a
+timed request through the wake gate remain acceptance gaps.
+
+At session end, after the real-game queue, full live smoke passed all 16
+checks with no warnings, failures or skips. Running/latest build checks were
+clean and the final health report had no problems or warnings, with jobs and
+worker slots idle. The physical-phone/photo and hardened-gate wake gaps above
+remain; the clean smoke does not replace them.
 
 **E11-S59** · Matt · could · L · partial
 
@@ -6395,7 +6456,13 @@ Evidence:
 - `decklab/web/core.js` (the wake hop); `decklab/tests/test_wake_hop_ui.py`
 - `decklab/README.md` and `SELF-HOSTING.md`, "Sleeping and waking on request"
 
-Gap: not yet set up for real: the gate and its tunnel on the NAS, the service token and the Worker's secrets and deploy, the PC's BIOS and adapter settings, and a real wake timed end to end on the server PC.
+Live state reviewed (2026-11-18): the NAS gate, its tunnel, the Worker and its
+existing Access integration are installed. The server's journal proves a deep
+sleep ending at 03:29:03 when its installed wake timer fired, followed by the
+successful scheduled nightly (E11-S58). This proves the installed timer path;
+it does not time a magic-packet request through the gate. Left: qualify the
+updated hardened NAS stack (E11-S75) and a real request wake end to end, with
+the signed-in/device checks kept separate.
 
 **E11-S60** · Matt · should · M · built
 
@@ -6463,6 +6530,13 @@ Evidence:
 
 Gap: All four acceptance criteria are built and tested (with one deliberate exception to "connections only from Deck Lab itself": the home page may also read the configured wake gate's origin). What is left is the story's own "check real browsers and scanning (E7-S32) before shipping": Matt, on Safari/iPad/phone after the server is updated, watching the console for "Refused to..." lines, and confirming wake-on-request still opens the gate from a home page. Card scanning (E7-S32) needs the same check under the policy. From the product review of 2026-11-10.
 
+Live HTTP checks (2026-11-18) confirmed the content policy,
+`X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer` through both
+the direct home listener and the NAS gate. These are response checks only.
+The desktop browser qualification could not start because automation could not
+establish the current URL safely; Safari, device scanning, browser-console and
+home-page wake-hop acceptance remain open.
+
 **E11-S64** · Matt · could · S · partial
 
 As Matt, opening Deck Lab on a phone and the iPad, I want the page's scripts and stylesheets kept by the browser and sent compressed, so that a page load doesn't ask the server PC about some 190 files, each read and hashed again.
@@ -6478,6 +6552,11 @@ Evidence:
 - `decklab/tests/test_server_static_cache.py`
 
 Gap: Left: time a phone's and the iPad's load before and after on the live server (the gain is still unmeasured on a device); status partial until then. Accessory pictures, card images and API answers keep their caching. `private`, never `public`, so Cloudflare keeps nothing outside the login. From the product review of 2026-11-10.
+
+Live HTTP checks (2026-11-18) verified gzip and immutable caching for a current
+versioned asset through the direct home listener and NAS gate. No phone/iPad
+cold or repeat load was timed. The pre-change device baseline is unavailable,
+so there is no measured before/after gain to report.
 
 **E11-S65** · Matt · could · M · built
 
@@ -6635,7 +6714,17 @@ Code built 2026-11-11: the gate bounds accepted connections before creating hand
 
 Evidence: actual disposable socket tests for silent/partial-header/stalled-body expiry, overload rejection and recovery use fake WOL. Focused groups 107 and 55 pass (overlapping, one platform skip); broader 114 server/access/lifecycle checks had one obsolete E11-S78 status expectation, corrected and rechecked. Source-length and whitespace guards pass. Actual updated non-root NAS/WOL acceptance remains pending with E11-S59; optional-secret activation is an operator choice. From the product review of 2026-11-10, compared with Deck Lotus's named API keys.
 
-Awaiting: decision
+Live deployment inspected (2026-11-18): the NAS still runs the earlier source
+and compose stack, without the current connection bounds and container
+hardening. A silent connection remained open beyond 12 seconds. HomeOps
+prepared an authenticated deployment path; Docker administration requires
+operator authentication, so no updated stack was deployed or qualified in
+this check. Real non-root operation, bounded connections and WOL remain open.
+
+Deployment is deferred until the owner is home to authenticate NAS
+administration. The existing stack remains in place until that session.
+
+Awaiting: nas authentication
 
 **E11-S76** · Matt · could · M · built
 
@@ -6802,7 +6891,7 @@ As Matt, leaving Deck Lab running on the spare PC for months, I want status and 
 
 Built (2026-11-12): `python -m decklab.db status`, `homenet status` (Windows and Linux) and the nightly's log show each disk's free space once, however many folders are on it, and the sizes of the backups, Forge results, gauntlet, shops and card data folders under those fixed labels, never a path. A disk below config.json's `disk_space.warn_below_gb` (default 10 GB) warns, and the nightly sends a `disk space` heartbeat step that never fails the night. A folder that can't be read, or whose walk hits its file or time limit, is unknown, never zero, and `db status` prints the disk lines even when the database can't be reached.
 
-**E11-S87** · Matt · should · M · partial
+**E11-S87** · Matt · should · M · built
 
 As Matt, relying on the nightly backups, I want the nightly to warn when the collection, decks, token cards, orders, wishlists or accessories shrank sharply since the previous good dump, so that a mistaken bulk removal or bad import is noticed while the daily dumps from before it still exist.
 
@@ -6810,7 +6899,15 @@ As Matt, relying on the nightly backups, I want the nightly to warn when the col
 - Given the warning, then it gives whole-table counts only, never a space's or a row's contents.
 - Given a watched table missing from either dump, then it says the table couldn't be compared.
 
-Built (2026-11-12), off by default: `decklab/db/shrink.py` compares each watched table's whole-table count (collection_card, deck, token_card, purchase_order, wishlist_entry, accessory) in the newest good dump with the newest good dump at least 20 hours older, chosen by time so a manual or pre-update backup in between doesn't hide a loss. A table that shrank by more than 25% and at least 5 rows (proposed; `shrink_warn_percent` and `shrink_warn_rows` change them) gets a WARNING line in `db status` and db.log, and the nightly's `shrink` heartbeat step is sent as failed without failing the night. A table missing from either dump is reported as couldn't be compared. None of this runs until config.json's `database.shrink_warn` is true. Decided (Matt, 2026-11-13): the watched tables and thresholds as proposed, and the heartbeat carries the table and its counts. Built (2026-11-13): a shrink's heartbeat message names each shrunk table with its from and to counts and the earlier dump's date (whole-table counts only, bounded), still a warning that never fails the night (`test_db_shrink`). Left: set config.json's `database.shrink_warn` to true on the server PC (a live setting, Matt's or Claude's with his OK).
+Built (2026-11-12), off by default: `decklab/db/shrink.py` compares each watched table's whole-table count (collection_card, deck, token_card, purchase_order, wishlist_entry, accessory) in the newest good dump with the newest good dump at least 20 hours older, chosen by time so a manual or pre-update backup in between doesn't hide a loss. A table that shrank by more than 25% and at least 5 rows (`shrink_warn_percent` and `shrink_warn_rows` change them) gets a WARNING line in `db status` and db.log, and the nightly's `shrink` heartbeat step is sent as failed without failing the night. A table missing from either dump is reported as couldn't be compared. None of this runs until config.json's `database.shrink_warn` is true. Decided (Matt, 2026-11-13): the watched tables and thresholds as proposed, and the heartbeat carries the table and its counts. Built (2026-11-13): a shrink's heartbeat message names each shrunk table with its from and to counts and the earlier dump's date (whole-table counts only, bounded), still a warning that never fails the night (`test_db_shrink`).
+
+Enabled and checked on the live Linux server (2026-11-18, authorised through
+HomeOps): `database.shrink_warn` is true, with the agreed thresholds unchanged.
+The production `nightly._shrink_check()` compared the actual successful dumps
+of 2026-11-17 and 2026-11-18 and returned `(True, None)`; `db.log` recorded that
+no watched table shrank sharply and `db status` was clean. This was the real
+read-only comparison step, not a newly completed scheduled nightly run. The
+private configuration and its pre-change backup remain mode 0600.
 
 **E11-S88** · Matt · could · S · built
 

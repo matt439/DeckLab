@@ -300,6 +300,88 @@ class CliTests(GauntletCase):
             out.flush()
         return code, out.buffer.getvalue().decode("utf-8"), err.getvalue()
 
+    def returned_run(self, *, short=0, **flags):
+        """A native runner that saves games before returning an incomplete/failed run."""
+        original = runner.run
+
+        def run(a, b, games, **kwargs):
+            played = max(0, games - short) if b["id"] == IDS[0] else games
+            result = original(a, b, played, **kwargs)
+            if b["id"] == IDS[0]:
+                record = {"asked": games, "played": played, "failed": 0, "failure": None,
+                          "error": None, "stopped": False, **flags}
+                result["runs"][-1].update(record)
+                with self.gfake.lock:
+                    self.gfake.store[result["key"]]["runs"][-1].update(record)
+            return result
+        return mock.patch.object(runner, "run", run)
+
+    def test_play_reports_a_returned_partial_run_and_resumes_only_missing_games(self):
+        args = ("play", "casual/alpha", "--size", "4", "--budget", "fixed:100", "--json")
+        with self.returned_run(short=12):
+            code, out, err = self.run_cli(*args)
+        self.assertEqual(code, 1, err)
+        result = json.loads(out)
+        self.assertEqual((result["note"]["played"], result["view"]["games"]), (388, 388))
+        self.assertEqual(result["completion"]["remaining_games"], 12)
+        self.assertFalse(result["completion"]["complete"])
+        self.assertEqual(result["completion"]["incomplete_opponents"], [IDS[0]])
+        self.assertIn("Completed games were saved", err)
+        # The partial games and note remain real evidence, rather than being discarded.
+        self.assertEqual(field.last_note(self.alpha, self.gauntlet_dir)["played"], 388)
+        calls = len(self.gfake.calls)
+        code, out, err = self.run_cli(*args)
+        self.assertEqual(code, 0, err)
+        result = json.loads(out)
+        self.assertTrue(result["completion"]["complete"])
+        self.assertEqual(result["view"]["games"], 400)
+        self.assertEqual([(c[0], c[1]) for c in self.gfake.calls[calls:]], [(IDS[0], 12)])
+
+    def test_play_reports_current_native_failure_even_when_saved_budget_is_met(self):
+        for flags in ({"failed": 1, "failure": "Forge stopped with an error"},
+                      {"error": "The run failed"}, {"stopped": True}):
+            with self.subTest(flags=flags):
+                self.gfake.store.clear()
+                with self.returned_run(**flags):
+                    code, out, err = self.run_cli("play", "casual/alpha", "--size", "4",
+                                                  "--budget", "100", "--json")
+                self.assertEqual(code, 1, err)
+                result = json.loads(out)
+                self.assertEqual(result["view"]["games"], 400)
+                self.assertFalse(result["completion"]["complete"])
+                self.assertEqual(result["completion"]["remaining_games"], 0)
+                self.assertEqual(len(result["completion"]["failed"]), 1)
+
+    def test_shared_catalogue_keys_count_missing_games_once_and_accept_completed_noop(self):
+        original = CATALOGUE["decks"][0]
+        alias_id = original["id"] + "-alias"
+        alias = dict(original, id=alias_id, title="The same list in another precon")
+        cat = dict(CATALOGUE, decks=[original, alias])
+        note = {"played": 0, "planned": 24, "wall_s": 0.1, "per_opponent": {},
+                "dropped": {}, "error": None, "stopped": False}
+        with mock.patch.object(gauntlet, "_load_catalogue", return_value=cat):
+            opponent = gauntlet.entries("constructed", [IDS[0]])[0]
+            self.gfake.add_games(self.alpha, opponent, 88)
+            key = FakeField.key(self.alpha, opponent)
+            # A recovered old failure must not make a later complete/no-op command fail.
+            self.gfake.store[key]["failed"] = [{"error": "An earlier failed batch"}]
+            with mock.patch.object(gauntlet, "run", return_value=note):
+                code, out, err = self.run_cli("play", "casual/alpha", "--size", "2",
+                                              "--budget", "100", "--json")
+            self.assertEqual(code, 1, err)
+            completion = json.loads(out)["completion"]
+            self.assertEqual(completion["remaining_games"], 12)
+            self.assertEqual(sorted(completion["incomplete_opponents"]), sorted([IDS[0], alias_id]))
+            self.gfake.add_games(self.alpha, opponent, 12)
+            calls = len(self.gfake.calls)
+            code, out, err = self.run_cli("play", "casual/alpha", "--size", "2", "--budget", "100", "--json")
+            self.assertEqual(code, 0, err)
+            result = json.loads(out)
+            self.assertEqual(result["view"]["games"], 200)  # one physical result attributed to two entries
+            self.assertTrue(result["completion"]["complete"])
+            self.assertEqual(result["completion"]["remaining_games"], 0)
+            self.assertEqual(len(self.gfake.calls), calls)
+
     def test_build_only_the_formats_its_sources_serve(self):
         from decklab.lib.gauntlet import catalogue as built
         calls = []
