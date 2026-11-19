@@ -97,7 +97,7 @@ function libGauntletLine(d) {
   if (!f) return null;
   return el("span", { class: "deck-forge lib-gauntlet" + (f.stale ? " is-stale" : "") },
     winRateFigure(f.rate, { size: "tile", caption: LIB_GT_CAPTION, what: libGauntletWords(f),
-      games: f.stale ? null : n.games }),
+      games: f.stale ? null : gtRateGames(n) }),
     libGauntletFresh(f, { size: "casual" }));
 }
 
@@ -109,11 +109,12 @@ function libGauntletRowCell(d) {
   if (n === undefined) return cell;
   if (!f) {
     const words = n && n.state === "unreadable" ? "Forge can't read this list"
-      : n && n.state === "stale_older" ? "No up-to-date result against popular decks" : "Not tested against popular decks";
+      : n && n.state === "stale_older" ? "No up-to-date result against popular decks"
+      : n?.games ? `${gtCoverage(n)}. ${gtRateUnavailable(n)}` : "Not tested against popular decks";
     cell.append(el("span", { class: "deck-row-untested", role: "img", "aria-label": words, text: "—" }));
     return cell;
   }
-  add(cell, [winRateFigure(f.rate, { what: libGauntletWords(f), games: f.stale ? null : n.games, barred: true }),
+  add(cell, [winRateFigure(f.rate, { what: libGauntletWords(f), games: f.stale ? null : gtRateGames(n), barred: true }),
     rangeBar(f.rate, { compact: true, decorative: true }),
     libGauntletFresh(f, { size: "row", compact: true })]);
   return cell;
@@ -130,25 +131,32 @@ function libDetailGauntlet(d) {
   const parts = [el("p", { class: "lib-detail-label", text: LIB_GT_CAPTION })];
   if (f && hero && !f.stale) {
     parts.push(el("div", { class: "lib-detail-forge-figure" },
-      winRateFigure(f.rate, { size: "hero", what: LIB_GT_WHAT, games: n.games, barred: true }),
+      winRateFigure(f.rate, { size: "hero", what: LIB_GT_WHAT, games: gtRateGames(n), barred: true }),
       libGauntletFresh(f, { size: "panel" })),
     rangeBar(f.rate, { axis: true, decorative: true }));
   } else if (f && hero) {
     parts.push(gtBeforeLine(n));                                  // the board's words (gauntlet.js)
   } else if (f) {
     parts.push(el("div", { class: "lib-detail-forge-figure" + (f.stale ? " is-stale" : "") },
-      winRateFigure(f.rate, { what: libGauntletWords(f), games: f.stale ? null : n.games }),
+      winRateFigure(f.rate, { what: libGauntletWords(f), games: f.stale ? null : gtRateGames(n) }),
       libGauntletFresh(f, { size: "panel" })));
   } else if (n && n.state === "stale_older") {
     parts.push(gtOlderLine(n, { note: !hero }));
+  } else if (n?.games) {
+    parts.push(el("p", { class: "lib-detail-forge-note", text: gtCoverage(n) }),
+      el("p", { class: "lib-detail-forge-note", text: gtRateUnavailable(n) }));
   } else {
     parts.push(el("p", { class: "lib-detail-forge-note", text: n && n.state === "unreadable"
       ? "Forge can't read this list." : "Not tested against popular decks yet." }));
   }
-  if (f && !f.stale && n.state === "partial" && n.of) {
+  const evidence = f && !f.stale ? gtRateEvidence(n) : null;
+  if (f && !f.stale && (n.overall?.matchups || evidence)) {
+    parts.push(el("p", { class: "lib-detail-forge-note", text: gtCoverage(n) }));
+  } else if (f && !f.stale && n.state === "partial" && n.of) {
     parts.push(el("p", { class: "lib-detail-forge-note",
       text: `Against ${num(n.played)} of the ${plural(n.of, "popular deck")} so far.` }));
   }
+  if (evidence) parts.push(el("p", { class: "lib-detail-forge-note", text: evidence }));
   parts.push(link);
   return el("div", { class: "lib-detail-forge lib-gauntlet" + (hero ? "" : " lib-gauntlet-second"), role: "group",
     "aria-label": "Against popular decks" }, parts);

@@ -15,6 +15,7 @@ import json
 import re
 import unittest
 
+from decklab.tests import test_editor_panes_ui as panes
 from decklab.tests.test_web import NODE, _function, _run_page, _styles, _text
 
 SCRIPT = _text("variant.js")
@@ -239,13 +240,13 @@ class VariantScriptTests(unittest.TestCase):
         sheet = _function(SCRIPT, "vtOpenTestSheet")
         # Asked once as it opens; offered only when the server says the sample is available, with its size.
         self.assertIn("estimateFor(VT_POPULAR).then(", sheet)
-        self.assertIn("if (sheet.closed || !est || !est.available || !est.opponents) return;", sheet)
+        self.assertIn("if (!current() || !est?.available || !est.opponents) return;", sheet)
         self.assertIn('popular.ok ? radio("vt-against", VT_POPULAR, `Popular decks (${plural(popular.size, "deck")}, a sample)`',
                       sheet)
         # Start sends "gauntlet" itself (the server resolves the standard sample); a deck stays {id, version}.
         self.assertIn('const against = named(pick.against) ? { id: pick.against, version: "target" } : pick.against;', sheet)
         # A late estimate answer for an earlier choice never redraws the sheet.
-        self.assertIn("if (sheet.closed || against !== pick.against) return;", sheet)
+        self.assertIn("const selected = () => current() && request === asked;", sheet)
         self.assertIn('const VT_POPULAR = "gauntlet";', SCRIPT)
 
     def test_one_scale_coloured_by_verdict(self):
@@ -258,6 +259,111 @@ class VariantScriptTests(unittest.TestCase):
                                 self.NAMES)
         self.assertEqual(span, "0.15")
         self.assertEqual(kinds, "good,crit,even")
+
+
+@unittest.skipUnless(NODE, "needs Node.js")
+class VariantSavedSampleSheetTests(unittest.TestCase):
+    def run_js(self, scenario):
+        panes.EditorPanesUiTests.run_js(self, r'''
+          const sid='sample:000000000039', custom='gauntlet:'+sid;
+          const requests=[],writes=[];
+          const estimate=(against,opponents,extra={})=>({against,opponents,available:opponents>0,...extra});
+          let savedEstimate=async()=>estimate(custom,1);
+          let launched=async()=>({test:{test:'a'.repeat(64)}});
+          api=async path=>{
+            if(!path.startsWith('/api/variant/estimate?'))return {};
+            const q=new URLSearchParams(path.split('?')[1]);
+            const against=q.get('against');
+            requests.push([q.get('id'),q.get('version'),against]);
+            if(against===custom)return savedEstimate();
+            return estimate(against,against==='field'?3:2);
+          };
+          apiWrite=async (path,body)=>{writes.push({path,body});return launched();};
+          load=(path,token,show)=>{assert.equal(path,'/api/deck/edit?id=casual%2Fsample');show(view());};
+          state.library={decks:[]};state.simulations={may_start:true};syncRunsPill=()=>{};
+          const drain=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
+          const data={catalogue:{},sample:{id:sid,saved:true,decks:2},is_standard:false};
+          const context={id:'casual/sample',version:'owned',canTestChange:true};
+          function openTest() {
+            const handoff=gtTrySampleChange(context,data);
+            assert(handoff.textContent.includes('Try a change against this sample'));
+            location.hash=handoff.querySelector('a').getAttribute('href');
+            showEditor(parseHash().params,routeToken);
+            const ed=editor;
+            setQty(ed.lists.Deck[0].uid,3);
+            setQty(ed.lists.Deck[1].uid,57);
+            const draft=JSON.stringify(draftBody());
+            ed.dom.forgeTest.vt.button.click();
+            const dialog=document.querySelector('.vt-sheet')||document.querySelector('dialog');
+            return {ed,draft,dialog,start:button(dialog,'Start')};
+          }
+        ''' + scenario)
+
+    def test_the_current_testing_sample_is_selected_and_only_start_sends_it(self):
+        self.run_js(r'''
+          assert.equal(gtTrySampleChange(context,{...data,is_standard:true}),null);
+          assert.equal(gtTrySampleChange(context,{...data,sample:{id:sid,saved:false}}),null);
+          assert.equal(gtTrySampleChange({...context,canTestChange:false},data),null);
+          const {ed,draft,dialog,start}=openTest();
+          assert(start.disabled);assert.equal(writes.length,0);await drain();
+          assert.equal(ed.version,'owned');
+          same(requests.map(r=>r.slice(0,2)),[['casual/sample','owned'],['casual/sample','owned'],['casual/sample','owned']]);
+          same(requests.map(r=>r[2]),['field','gauntlet',custom]);
+          assert(dialog.querySelector('input[value="'+custom+'"]').getAttribute('checked')!==null);
+          assert(dialog.textContent.includes('Saved sample from Testing (1 deck)'));
+          assert(!start.disabled);assert.equal(writes.length,0);
+          start.click();start.click();await drain();
+          assert.equal(writes.length,1);
+          assert.equal(writes[0].path,'/api/variant/run');
+          assert.equal(writes[0].body.id,ed.id);
+          assert.equal(writes[0].body.version,'owned');
+          assert.equal(writes[0].body.against,custom);
+          assert.equal(JSON.stringify(draftBody()),draft);
+          assert(dialog.textContent.includes('The test has started'));
+          const see=button(dialog,'See the test'),hash=location.hash;
+          start.fire('click');await drain();assert.equal(writes.length,1);
+          closeAllSheets();
+          assert(!dialog.isConnected);
+          see.fire('click');assert.equal(location.hash,hash);
+        ''')
+
+    def test_unavailable_sample_or_estimate_keeps_the_draft_and_blocks_start(self):
+        self.run_js(r'''
+          for(const message of ["There's no saved gauntlet sample with that id.",
+              "That popular-decks sample is for commander decks, not constructed.", "Fixture estimate request failed."]) {
+            savedEstimate=async()=>{
+              if(message.startsWith('Fixture'))throw Error(message);
+              return estimate(custom,0,{problem:message});
+            };
+            const {ed,draft,dialog,start}=openTest();
+            await drain();
+            assert(dialog.textContent.includes(message));
+            assert(start.disabled);start.fire('click');
+            assert.equal(writes.length,0);assert.equal(editor,ed);
+            assert.equal(JSON.stringify(draftBody()),draft);
+            button(dialog,'Cancel').click();
+          }
+        ''')
+
+    def test_refused_start_keeps_the_draft_and_drops_an_earlier_estimate(self):
+        self.run_js(r'''
+          let initial;
+          savedEstimate=()=>new Promise(resolve=>{initial=resolve;});
+          const {ed,draft,dialog,start}=openTest();
+          await drain();
+          dialog.querySelector('input[value="gauntlet"]').fire('change');await drain();
+          savedEstimate=async()=>estimate(custom,1);
+          dialog.querySelector('input[value="'+custom+'"]').fire('change');await drain();
+          initial(estimate(custom,0,{problem:'Old estimate'}));await drain();
+          assert(!dialog.textContent.includes('Old estimate'));assert(!start.disabled);
+          launched=async()=>{throw new ApiError(403,'Fixture start refusal');};
+          start.click();await drain();
+          assert(dialog.textContent.includes('Fixture start refusal'));assert(!start.disabled);
+          assert.equal(writes.length,1);assert.equal(writes[0].body.against,custom);
+          assert.equal(editor,ed);assert.equal(JSON.stringify(draftBody()),draft);
+          location.hash='#/library';routeToken++;
+          start.fire('click');await drain();assert.equal(writes.length,1);
+        ''')
 
 
 if __name__ == "__main__":

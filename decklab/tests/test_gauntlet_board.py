@@ -16,7 +16,7 @@ from pathlib import Path
 from unittest import mock
 
 from decklab.lib import feature_routes
-from decklab.lib.api import gauntlet_board, gauntlet_page, guard
+from decklab.lib.api import gauntlet_board, gauntlet_page, guard, library_gauntlet
 from decklab.lib.forge import gauntlet as real_gauntlet       # before any sandbox stands in for forge
 from decklab.tests.test_api import GRUUL as GRUUL_TEXT, _write
 from decklab.tests.test_gauntlet_api import (ELVES, GRUUL, POPULAR, R_ELVES, SAMPLE, WAIT, FakeGauntlet,
@@ -102,6 +102,33 @@ class BoardTestCase(GauntletApiTestCase):
 
     def ids(self, answer):
         return [row["deck"]["id"] for row in answer["rows"]]
+
+
+class BoardEvidenceTests(BoardTestCase):
+
+    def test_played_but_flagged_coverage_reaches_the_board_and_library(self):
+        members = [
+            (
+                {"id": f"gauntlet:fixture/{i}", "title": f"Fixture {i}"},
+                {"key": str(i), "n": 100, "numbers": {"value": 0.5, "low": 0.4, "high": 0.6},
+                 "lead": "even", "not_meaningful": True, "problem": None},
+            )
+            for i in range(20)
+        ]
+        sha = self.sha(GRUUL)
+        with mock.patch.object(self.g, "view", side_effect=real_gauntlet.view), \
+                mock.patch.object(real_gauntlet, "_members", side_effect=lambda entry, *_: (
+                    [], members if entry["card_sha"] == sha else []
+                )):
+            rows = {row["deck"]["id"]: row for row in self.board()["rows"]}
+            library = self.call("matt", library_gauntlet.library_gauntlet_view)["decks"]
+
+        for row in (rows[GRUUL], library[GRUUL]):
+            self.assertEqual((row["state"], row["played"], row["of"], row["games"]), ("done", 20, 20, 2000))
+            self.assertEqual(row["overall"], {"rate": None, "low": None, "high": None,
+                                              "rate_unavailable": "not_meaningful"})
+        self.assertIsNone(rows[GRUUL]["hardest"])
+        self.assertEqual((rows[TWO]["state"], rows[TWO]["games"], rows[TWO]["overall"]), ("untested", 0, None))
 
 
 class BoardPrivacyTests(BoardTestCase):

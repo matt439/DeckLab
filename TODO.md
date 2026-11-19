@@ -6,11 +6,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **The only ordering in this file.** Keep every `DECISION` row here. Keep this block to the current aim and the next few actions; results go in their owners (HISTORY.md for what shipped).
 
-**Ready work (audited 2026-11-20).** The previous queue had 19 `DECISION` rows, nine `DEFERRED` rows and zero `OPEN` rows. The audit identified 12 items that can start with fixtures. The redesign is at household device acceptance. Against popular decks remains the lead feature.
-
-1. Start with [played games with no strength figure](decklab/design/stories.md#e3-s52) (`E3-S52`). The Popular decks board can say “Not tested” for a completed 2,000-game sample. A synthetic board result reproduces it.
-
-The remaining `OPEN` rows each have a first slice and acceptance cases in their story.
+**Ready work (2026-11-20).** All 12 rows from the 2026-11-20 audit are complete. Against popular decks remains the lead feature. The redesign is at household device acceptance.
 
 **Sessions and decisions.** Pick these up when the named people, devices or systems are available. Each row below points to the owner and records the remaining check.
 
@@ -61,9 +57,6 @@ The remaining `OPEN` rows each have a first slice and acceptance cases in their 
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
-| `E3-S30` | OPEN | could | M | [Choose a saved gauntlet sample in the editor's Test this change sheet.](decklab/design/stories.md#e3-s30) |
-| `E3-S52` | OPEN | should | S | [Show played opponents and games when Forge cannot give a strength figure.](decklab/design/stories.md#e3-s52) |
-| `E3-S53` | OPEN | should | M | [Show distinct games and matchup keys when catalogue entries share results.](decklab/design/stories.md#e3-s53) |
 | `E3-S50` | WAITING | could | M | Check Show earlier lists in a browser once several tested lists exist for a deck. The 2026-11-18 scan found none. |
 | `E3-S23` | DECISION | could | M | Temporary exclusion/run/restoration authorised 2026-11-18; browser controls unavailable, live policy untouched. Left: real-browser preview/save, real policy-backed run and restoration. |
 | `FG#4` | DECISION | should | M+pc | All 14 standard budgets filled 2026-11-18; 13 qualified meaningfully. Left: Syr Elenora AI/script qualification (0 commander casts; all 20 matchups nonmeaningful). Preserve deck and script flag. |

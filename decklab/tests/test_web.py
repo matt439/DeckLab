@@ -727,7 +727,7 @@ class WebFileTests(unittest.TestCase):
         families = {row["name"] for row in found["sheetClosers"]} - {"closeAllSheets"} - scoped
         self.assertEqual(families - set(found["closeCalls"]), set())
         self.assertEqual(found["closeCalls"], ["shopCloseQueueSheets", "closeReprintSheets", "colCloseSheets",
-            "closeDeckOpponentSheets", "closeDeckRetirementSheets", "closeAssemblySheets", "closeProductStorageSheets",
+            "closeDeckOpponentSheets", "closeVariantTestSheets", "closeDeckRetirementSheets", "closeAssemblySheets", "closeProductStorageSheets",
             "closeTokenPlanSheets", "closeLifeCounter", "closePodLifeCounter", "closeAccessorySheets",
             "closeReceiptSheets", "closeWishlistSheets", "closeEdhrecSheets"])
         for name in ("chooseProfile", "drawWho", "route"):

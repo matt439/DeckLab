@@ -1,6 +1,8 @@
 """Forge CLI gauntlet commands (decklab/design/gauntlet.md sections 3, 5 and 6): build the
 catalogue, list and show its decks, draw a sample, and plan, play and view a house deck against
 it. Building fetches from EDHREC and MTGJSON politely and only from here, never from a page."""
+from collections import Counter
+
 from . import cli_evaluate as evaluate
 from . import cli_output as output
 from . import cli_shared as shared
@@ -380,8 +382,15 @@ def _rate(row):
     return f"{output._pct(row['rate'])} ({output._pct(row['low'], 0)}-{output._pct(row['high'], 0)})"
 
 
+def _coverage(opponents, games, group, separator=", "):
+    if group.get("matchups") is not None:
+        return (f"{opponents} catalogue entries, {group['matchups']} distinct matchups, "
+                f"{games:,} distinct games, {group['entry_games']:,} games across catalogue entries")
+    return f"{opponents} opponent{'s' if opponents != 1 else ''}{separator}{games:,} games"
+
+
 def _group_line(g):
-    parts = [_rate(g), f"{g['opponents']} opponent{'s' if g['opponents'] != 1 else ''}", f"{g['games']:,} games"]
+    parts = [_rate(g), _coverage(g["opponents"], g["games"], g, "; ")]
     if g.get("spread") and g["opponents"] > 1:
         parts.append(f"spread {output._pct(g['spread'][0], 0)}-{output._pct(g['spread'][1], 0)}")
     if g.get("note"):
@@ -391,8 +400,9 @@ def _group_line(g):
 
 def _print_view(a, found, by=None):
     """gauntlet view's lines: the groups (or one grouping), then the opponents, hardest first."""
-    print(f"{a['title']} ({a['version']}) against {found['sample']}: {len(found['opponents'])} opponents, "
-          f"{found['games']:,} games")
+    opponents = found["opponents"]
+    coverage = _coverage(len(opponents), found["games"], found.get("overall") or {})
+    print(f"{a['title']} ({a['version']}) against {found['sample']}: {coverage}")
     names = list(GROUP_TITLES) if by is None else [] if by == "opponent" else [by]
     for name in names:
         print(f"  {GROUP_TITLES[name]}:")
@@ -400,12 +410,19 @@ def _print_view(a, found, by=None):
             print(_group_line(g))
     if by in (None, "opponent"):
         print("  Opponents, hardest first:")
-        for o in found["opponents"]:
+        keys = Counter(o.get("key") for o in opponents)
+        for o in opponents:
             rate = o.get("rate")
             words = (f"{output._pct(rate['value'])} ({output._pct(rate['low'], 0)}-{output._pct(rate['high'], 0)})"
                      if rate else "-")
             extra = [f"{o['games']:,} games", f"{o.get('identity') or 'colourless'}", str(o.get("style")),
                      str(o.get("tier"))]
+            source = (o.get("source") or {}).get("kind")
+            if source:
+                extra.append(f"source: {source}")
+            key = o.get("key")
+            if key and keys[key] > 1:
+                extra.append(f"shared matchup {key[:12]}")
             if _g().verdict(o.get("lead")):
                 extra.append(_g().verdict(o["lead"]))
             if o.get("not_meaningful"):

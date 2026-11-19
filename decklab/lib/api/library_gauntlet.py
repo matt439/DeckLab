@@ -6,7 +6,9 @@ load and a board load of the same viewer build once). Saved games only: it never
     library_gauntlet_view()
                         {"formats": {"commander" | "constructed": {"state": "ok" | "no_catalogue" | "error",
                                                                    "size": the standard sample's decks or None}},
-                         "decks": {deck id: {"format", "state", "overall": {rate, low, high} or None, "played",
+                         "decks": {deck id: {"format", "state",
+                                             "overall": {rate, low, high, optional evidence counts and rate_unavailable}
+                                                        or None, "played",
                                              "of", "games", "updated", "before": {rate, low, high, updated} or None,
                                              "older": {reason, opponents, of, overall, updated, earlier} or None,
                                              "trial": True for a trial deck (E3-S39: "Not owned")}},

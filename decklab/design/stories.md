@@ -37,7 +37,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 21 | 21 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 27 | 24 | 2 | 0 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 45 | 39 | 4 | 2 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 45 | 42 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 26 | 1 | 0 | 3 |
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 39 | 36 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 26 | 24 | 0 | 0 | 2 |
@@ -46,7 +46,7 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 88 | 70 | 10 | 4 | 4 |
-| **Total** | **408** | **363** | **20** | **8** | **17** |
+| **Total** | **408** | **366** | **19** | **6** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1246,7 +1246,7 @@ Evidence:
 
 <a id="e3-s30"></a>
 
-**E3-S30** · Matt · could · M · partial
+**E3-S30** · Matt · could · M · built
 
 As a deck builder testing a swap, I want Test this change to play against a gauntlet sample, so that I know whether the change helps against outside decks as well as the household's.
 
@@ -1257,7 +1257,7 @@ Built (2026-11-05): the command line. `forge variant --gauntlet <sample id>|stan
 
 Built (2026-11-05): the page. The editor's Test this change sheet offers **Popular decks (N decks, a sample)**, the format's standard sample, once `GET /api/variant/estimate?against=gauntlet` says it's available (a catalogue built on the PC; never a mirror or a trial's own precon). `POST /api/variant/run {"against": "gauntlet"}` (or `"gauntlet:<sample id>"`) saves the standard sample and starts the command line's own test (the same id) in the gauntlet's results folder, and the view, the deck's Tests of changes list, Stop and Play more find it there (`lib/api/variant_page.py`). Its opponents are public sparring decks, always shown and never linked to the matchup page. The test page adds **By group** (`web/variant.js` `vtGroups`): a small table each for colour, number of colours, style and tier, each group's bar on the page's one scale, under the caveat that every range covers those sampled opponents only. Tests: `decklab/tests/test_variant_gauntlet_api.py`, `test_web_variant.py`. See [HISTORY.md](../HISTORY.md#test-this-change-against-popular-decks-2026-11-05-e3-s30). Known limits: no browser or device check; the sheet offers only the standard sample (a saved sample by id is the API's and the command line's).
 
-Gap (audited 2026-11-20): the saved-sample choice in the first criterion is missing from the editor. First slice: offer the saved sample from the current deck's Testing view in Test this change. Use the existing `gauntlet:<sample id>` estimate and require an explicit start. Cover a valid custom sample, a missing or wrong-format sample, and a refused start with API and editor fixtures. A failed estimate keeps the edit available.
+Built (2026-11-20): **Try a change against this sample** on the deck's Testing tab opens the editor for that list and offers **Saved sample from Testing**. Starting that comparison requires a current successful estimate and an explicit Start. A missing sample, wrong format, failed estimate or refused start keeps the draft. Variant estimates and starts apply the Testing view's Same commander sample rules. API and editor fixtures exercise those cases and navigation away during an estimate or start.
 
 **E3-S31** · Matt · could · M · built
 
@@ -1610,25 +1610,25 @@ Built (2026-11-12): `decklab/lib/forge/views.py`'s `clock(games, side)` gives th
 
 <a id="e3-s52"></a>
 
-**E3-S52** · Matt · should · S · missing
+**E3-S52** · Matt · should · S · built
 
 As a deck builder reading the Popular decks board, I want to see when games were played but Forge could not give a strength figure, so I can tell whether running more games would answer my question.
 
 - Given 20 opponents with 100 saved games each and every result flagged as nonmeaningful, then the board and library detail report the played coverage and why the figure is unavailable. They show neither a percentage nor the invitation for an untested list.
 - Given some usable opponents, then the figure still uses only eligible results. A new list with zero games and a list with games in only one seat each get wording that describes their own evidence.
 
-Gap: `forge/gauntlet.view` retains played counts even when `_group` has no rate. `web/gauntlet-board.js` and `web/library-gauntlet.js` can render that result as untested. First slice: reproduce the all-flagged result in the board fixture, carry the reason through the summary and check the same states in the library. FG#4 owns the engine investigation.
+Built (2026-11-20): the Popular decks board, Library detail and deck Testing tab show saved coverage and the reason when a rate is unavailable. Results flagged by Forge, results with games in only one seat and zero-game lists have distinct messages. Mixed samples label the evidence used for the rate. Synthetic fixtures cover the 20-opponent, 2,000-game flagged result. FG#4 owns the engine investigation.
 
 <a id="e3-s53"></a>
 
-**E3-S53** · Matt · should · M · missing
+**E3-S53** · Matt · should · M · built
 
 As a player comparing my Commander deck with published lists, I want to know how many distinct games support the result when two catalogue entries use the same list.
 
 - Given four catalogue entries sharing three matchup keys with 40 saved games, when the entries attribute 60 games between them, then the result shows 40 distinct games and retains all four entries with their source and per-entry coverage.
 - Given repeated keys within a group, then each distinct matchup contributes once to the group's evidence minimums, strength estimate, uncertainty range and turn statistics. Showing the same results under a second source cannot narrow the range. A list may still appear in each colour or style it belongs to.
 
-Gap: E3-S49 records the 40/60 case. `forge/gauntlet.view` and `_group` add per-entry counts, while `cli_gauntlet._completion` already compares saved matchup keys. First slice: show both counts in the read-only CLI and Testing summary. Add a second source for the same synthetic result and check that the source list grows while the group's statistics match the single-source fixture.
+Built (2026-11-20): the Testing summary and read-only CLI show distinct matchups and games alongside coverage attributed to catalogue entries when a result is shared. Per-entry rows retain their source, games and shared key. Each key contributes once within a group to its evidence minimum, estimate, uncertainty and turn statistics. The 40/60 fixture retains four entries over three matchup keys and checks statistics against the single-source result.
 
 <a id="e3-s54"></a>
 

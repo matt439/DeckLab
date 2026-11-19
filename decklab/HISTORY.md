@@ -1,5 +1,21 @@
 # Deck Lab: history
 
+## Popular decks coverage and saved samples (2026-11-20, E3-S30, E3-S52, E3-S53)
+
+Popular decks shows saved opponents and games when the results cannot produce
+a win rate. It distinguishes games Forge flagged, games in only one seat and a
+list with zero games. If only some results can support a rate, the page gives
+the coverage used for that figure.
+
+Each saved matchup contributes once to the rate, range and turn statistics for
+its group. The Testing summary and CLI identify shared results while keeping
+each catalogue entry's source and coverage.
+
+Choose **Try a change against this sample** on a saved custom sample to open
+the editor for that list and select it in **Test this change**. The sheet
+requires an estimate and an explicit Start. Unavailable samples and refused
+starts leave the draft available.
+
 ## Small pictures in Sleeves & boxes (2026-11-20, E8-S03)
 
 List tiles load WebP thumbnails up to 256 pixels on the longest side. The

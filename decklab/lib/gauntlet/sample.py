@@ -68,6 +68,7 @@ BUCKETS = tuple(WUBRG) + PAIRS + SHARDS + WEDGES + (FOUR_PLUS, "")
 TIER_ORDER = ("core", "upgraded", "medium", "hard", "very hard", "easy", "precon")
 
 _SAMPLE_ID = re.compile(r"sample:([0-9a-f]{12})")
+NOT_SAVED = "There's no saved gauntlet sample with that id."
 
 
 def _ordered(letters):

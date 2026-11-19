@@ -201,10 +201,12 @@ function gbRow(view, row) {
   const rate = o && o.rate != null ? gtRate(o.rate, o.low, o.high) : null;
   const facts = row.trial || d.trial ? [ptrNotOwnedChip()] : [];     // precon-trial.js: a precon trial (E3-S39)
   if (row.state === "unreadable") facts.push(el("p", { class: "gb-state", text: row.problem || "Forge can't read this list." }));
+  else if (!rate && row.games) facts.push(el("p", { class: "gb-state", text: gtRateUnavailable(row) }));
   else if (!rate && !row.before && !row.older) facts.push(el("p", { class: "gb-state", text: "Not tested against popular decks yet." }));
+  if (row.games || rate) facts.push(el("p", { class: "gb-meta" }, simNumbers(gtCoverage(row))));
   if (rate) {
-    facts.push(el("p", { class: "gb-meta" }, simNumbers(`${row.played} of ${row.of} opponents · ` +
-      `${thousands(row.games || 0)} game${row.games === 1 ? "" : "s"}`)));
+    const evidence = gtRateEvidence(row);
+    if (evidence) facts.push(el("p", { class: "gb-meta", text: evidence }));
     const h = row.hardest;
     if (h && h.rate != null) facts.push(el("p", { class: "gb-meta gb-hardest" }, simNumbers(`Hardest: ${h.title} ${simPoints(h.rate)}%`)));
   }
@@ -215,7 +217,7 @@ function gbRow(view, row) {
   return el("li", { class: "gb-row", "data-deck": d.id, "data-state": row.state },
     el("div", { class: "gb-name" }, el("h3", { class: "gb-title", text: d.title }), facts),
     rate ? el("div", { class: "gb-score" },
-      winRateFigure(rate, { what: "Win rate against popular decks", games: row.games || null, barred: true }),
+      winRateFigure(rate, { what: "Win rate against popular decks", games: gtRateGames(row) || null, barred: true }),
       rangeBar(rate, { compact: true, decorative: true }), freshnessBadge(row.updated, { size: "row" }))
       : history ? el("div", { class: "gb-score gb-score-historical" }, history) : null,
     el("div", { class: "gb-actions" }, gbPlaying(row),

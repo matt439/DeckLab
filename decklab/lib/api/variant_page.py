@@ -105,11 +105,21 @@ def _gauntlet_sample(forge, base, value, save):
     """(the sample dict, None) for "gauntlet" (the format's standard sample, saved only when save, as
     forge variant --gauntlet standard saves it) or "gauntlet:<sample id>", or (None, a plain sentence)
     when there's no catalogue, no such sample or it's of the other format."""
+    from decklab.lib.gauntlet.sample import NOT_SAVED, commanders_of, is_own_sample
+
     vg = _vg(forge)
     g = vg._g()
     fmt = g.format_of(base)
     try:
-        chosen = g.standard(fmt, save=save) if value == GAUNTLET else g.sample(vg.sample_of(value))
+        if value == GAUNTLET:
+            chosen = g.standard(fmt, save=save)
+        else:
+            try:
+                chosen = g.sample(vg.sample_of(value))
+            except ValueError:
+                return None, NOT_SAVED
+            if not is_own_sample(chosen, commanders_of(base)):
+                return None, NOT_SAVED
     except (ValueError, forge.ForgeError) as e:
         return None, _public(e)
     if chosen.get("format") != fmt:
