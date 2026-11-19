@@ -120,8 +120,9 @@ class CollectionFindLayoutUiTests(unittest.TestCase):
           assert.equal(captionFor(opener(0)).querySelector('.col-viewer-decks'), null);
           const lab = main.querySelector('.col-find-lab').querySelectorAll('.card-tile');
           assert(lab[1].textContent.includes('1 in decks \u00b7 1 lent out \u00b7 2 free'));
-          assert.equal(viewerUseWords({owned: 2, lent: 1, free: 1}), 'In no decks \u00b7 1 lent out \u00b7 1 free');
-          assert.equal(gsCounts({owned: 2, in_use: 0, decks: 0, lent: 1, free: 1}), 'in no decks \u00b7 1 lent out \u00b7 1 free');
+          assert.equal(viewerUseWords({owned: 2, lent: 1, free: 1, decks_complete: true}), 'In no decks \u00b7 1 lent out \u00b7 1 free');
+          assert.equal(gsCounts({owned: 2, decks: 0, lent: 1, free: 1, decks_complete: true}),
+            'in no decks \u00b7 1 lent out \u00b7 1 free');
           assert.equal(gsCounts({owned: 2, in_use: 0, lent: 1, free: 1}), '1 free \u00b7 1 lent out');
         """)
 

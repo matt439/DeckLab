@@ -15,6 +15,7 @@ class WishlistInteractionTests(unittest.TestCase):
           state.profiles = [{id: "user1", name: "User1"}, {id: "matt", name: "Matt"}];
           state.profile = state.profiles[0];
           location.hash = "#/wishlist";
+          closeVariantTestSheets = () => {};
           const entry = (card, extra = {}) => ({name: card.name, set: "fdn", number: "1",
             card, have: {owned: 0, on_the_way: 0}, notes: "A useful recommendation.",
             source: "magic/buylists/2026-10-01-user1-suggestions.md", ...extra});

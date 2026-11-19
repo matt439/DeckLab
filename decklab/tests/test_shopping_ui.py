@@ -15,7 +15,7 @@ class ShoppingInteractionTests(unittest.TestCase):
           state.profiles = [{id: "user1", name: "User1", plays_as: "wife"}, {id: "matt", name: "Matt", plays_as: "user"}];
           state.profile = state.profiles[0];
           location.hash = "#/shopping";
-          closeEditor = () => {}; stopMatchupRefresh = () => {};
+          closeEditor = () => {}; stopMatchupRefresh = () => {}; closeVariantTestSheets = () => {};
           const empty = {to_buy: [], orders: [], checks: [], warnings: []};
           const component = (extra = {}) => ({id: "cards", kind: "cards", status: "pending",
             quantity: 3, rows: 2, path: "magic/orders/private.csv", ...extra});
