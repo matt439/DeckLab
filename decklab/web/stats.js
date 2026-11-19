@@ -857,7 +857,7 @@ function drawOddsPanel(data) {
       Array.from({ length: ODDS_TABLE_TURNS }, (_, i) => el("td", {
         class: i + 1 === turn ? "is-current" : null,
         text: pctShort(probability(cardsSeenBy(i + 1, onPlay, size))) })));
-    result.append(el("div", { class: "tiles" },
+    add(result, [el("div", { class: "tiles" },
       tile(`${pair ? "Either card by" : "By"} turn ${turn}`, pct(either(seen)), seatLabel),
       both ? tile(`Both cards by turn ${turn}`, pct(both(seen)), seatLabel) : null),
       el("p", { text: `The chance of seeing at least one of ${what} in your first ${seen} cards: the opening seven` +
@@ -868,7 +868,7 @@ function drawOddsPanel(data) {
         el("thead", {}, el("tr", {}, el("th", { scope: "row", text: "Turn" }),
           Array.from({ length: ODDS_TABLE_TURNS }, (_, i) => el("th", { scope: "col", text: String(i + 1) })))),
         el("tbody", {}, oddsRow(pair ? "Either card" : "Chance", either),
-          both ? oddsRow("Both cards", both) : null))));
+          both ? oddsRow("Both cards", both) : null)))]);
   }
   show();
   return panel;
