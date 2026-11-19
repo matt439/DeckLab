@@ -32,7 +32,7 @@ This reference explains running, configuring and using a self-hosted Deck Lab in
 
 ## Start it
 
-To update a server PC that only takes updates, `python -m decklab.update` fast-forwards the checkout, reinstalls psycopg when it changed, backs up and migrates, installs the expected Forge release, restarts the server and runs the smoke test (SELF-HOSTING.md, "Updating"). It follows `main` by default; `config.json`'s `"update": {"channel": "release"}` (or `--channel release`, which overrides the setting) makes it move only to the newest stable `vX.Y.Z` tag on `main`, never to a commit between releases and never back to an older one (`lib/update_channel.py`). A home admin's Settings, About, says how many updates are waiting on that channel (commits, or newer releases) as git last fetched them, without fetching. A release's GitHub notes are drafted from the `decklab/HISTORY.md` entries added since the previous tag (`scripts/release_notes.py`). Moving to another PC: SELF-HOSTING.md, "Moving Deck Lab to another PC".
+To update a server PC that only takes updates, `python -m decklab.update` fast-forwards the checkout, reinstalls Python packages when needed, backs up and migrates, installs the expected Forge release, restarts the server and runs the smoke test (SELF-HOSTING.md, "Updating"). It follows `main` by default; `config.json`'s `"update": {"channel": "release"}` (or `--channel release`, which overrides the setting) makes it move only to the newest stable `vX.Y.Z` tag on `main`, never to a commit between releases and never back to an older one (`lib/update_channel.py`). A home admin's Settings, About, says how many updates are waiting on that channel (commits, or newer releases) as git last fetched them, without fetching. A release's GitHub notes are drafted from the `decklab/HISTORY.md` entries added since the previous tag (`scripts/release_notes.py`). Moving to another PC: SELF-HOSTING.md, "Moving Deck Lab to another PC".
 
 To check a whole install end to end (database roles, backups, card lookups, the network, a throwaway server's page and API, the background server and nightly task, the tunnel and one real Forge game), run `python -m decklab.smoke` (SELF-HOSTING.md, "Check the whole install"). It's read-only, takes under a minute, and is meant for a server PC after setup and after each `git pull`, where the full test suite is too slow.
 
@@ -872,10 +872,11 @@ after an actual hidden-kit refusal is still open.
   downloads at most two things per link (the page and its picture). Pages may be up to 2 MB and
   pictures up to 4 MB; only JPEG, PNG and WebP pictures between 16 and 6,000 pixels a side are
   kept, recognised by their contents. A fetched picture waits in `decklab/data/accessories/staged/`
-  for up to an hour; saving stores it with the row, in the same change. Pictures are served at
-  `/accessory-img/<id>.<ext>?v=<the first 8 hex digits of its sha256>`: `v` is required (a wrong or
-  missing one is a 404), and the answer is cached privately for a week (`Cache-Control: private`),
-  so no shared cache (Cloudflare's) can answer for the owner check.
+  for up to an hour; saving stores it with the row, in the same change. **Sleeves & boxes** lists
+  use WebP thumbnails up to 256 pixels on the longest side. Opening a tile loads the original.
+  Both come from `/accessory-img/<id>.<ext>?v=<picture version>` and the list adds `&size=thumb`.
+  A wrong or missing `v` gives 404. The server checks picture access on every request, even
+  when the browser asks whether its private cached copy is still current.
 - **Choosing a deck's sleeves and box:** a building or built deck's page (its Overview) shows a Sleeves tile and a Deck box
   tile (picture, name, and "75 needed · 100 owned · 25 spare" or "15 sleeves short"; for the box,
   "Holds 100 · 1 box owned" or "Too small: holds 80, 100 cards here") with

@@ -42,11 +42,11 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 39 | 36 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 26 | 24 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 38 | 37 | 1 | 0 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 20 | 0 | 1 | 2 |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 21 | 0 | 0 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 88 | 70 | 10 | 4 | 4 |
-| **Total** | **408** | **362** | **20** | **9** | **17** |
+| **Total** | **408** | **363** | **20** | **8** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -3855,8 +3855,6 @@ Built (2026-11-20): Card list reserves active loans by exact printing and shows 
 
 The physical side of home's shared pool: each built deck and each product kept intact is in one sleeve design and one deck box, every other card sits unsleeved in the storage box, and moving a card between decks means changing its sleeve. Deck Lab records the sleeves, deck boxes and playmats (each Matt's, User1's or shared, and since E8-S26 each member's own, for their own decks) on the Sleeves & boxes page, a built deck's Sleeves and Deck box lines and an intact product's kit, warns when a holder has too few sleeves or a box that is full or too small, and lets one sleeve design sleeve several holders. Choosing a deck's kit needs the right to edit that deck; an owner may make their kit public (read-only), and members never see private kit. Accessory prices are not wanted.
 
-Open: E8-S03.
-
 **E8-S01** · Matt · must · M · built
 
 As Matt, who owns several packs of sleeves, deck boxes and a playmat, I want to record each accessory I own once, with its picture, how many sleeves or boxes I have and how many cards a box holds, so that Deck Lab can tell me whether a deck's kit is enough without me counting by hand.
@@ -3891,18 +3889,14 @@ Evidence:
 
 <a id="e8-s03"></a>
 
-**E8-S03** · Matt · could · S · missing
+**E8-S03** · Matt · could · S · built
 
 As Matt, opening Sleeves & boxes on the phone in a shop, I want the list to load quickly, so that I can check what sleeves I have before buying more.
 
 - Given the accessories list, when it opens on a phone, then each tile loads a small thumbnail rather than the full picture.
 - Given a tile, when I open it, then the full picture is shown.
 
-Evidence:
-- `decklab/web/accessories.js`: accessoryThumb (shows the row's one stored picture)
-- `decklab/lib/api/accessories.py`: image_file (serves the one stored picture, no size option)
-
-Gap: list tiles fetch the original image bytes. First slice: serve the list a thumbnail and keep the original in detail. With a large synthetic portrait, check that the tile image is at most 256 pixels on its longer edge and transfers fewer bytes. Cover crop, replacement, removal and the existing viewer-specific access check.
+Built (2026-11-20): Sleeves & boxes list tiles request WebP thumbnails up to 256 pixels on the longest side. The detail keeps the original and saved crop. The thumbnail cache reuses encoded previews by source digest after each request's existing viewer and picture-version checks. Fixtures cover a 768 × 1280 portrait, crop, replacement, removal and permission revocation.
 
 **E8-S04** · User1 · must · M · built
 

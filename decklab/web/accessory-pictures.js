@@ -125,7 +125,8 @@ function drawPicture(ctx) {
     onclick: () => { if (accSheetHere(ctx) && !ctx.busy) onclick(); } });
   if (pic.mode === "staged" || pic.mode === "upload") {
     ctx.picture.append(el("figure", { class: "acc-preview" },
-      accessoryThumb({ image_url: accWithCrop(pic.preview_url, pic.crop), label: "" }, null, pic.mode === "upload"),
+      accessoryThumb({ image_url: accWithCrop(pic.preview_url, pic.crop), label: "" }, null,
+        { localPreview: pic.mode === "upload" }),
       el("figcaption", { class: "sub", text: (pic.mode === "upload" ? "The photo chosen on this device"
         : `The picture found (${pic.width} × ${pic.height})`) + (pic.crop ? ", cropped" : "") })),
     el("div", { class: "acc-picture-actions" },

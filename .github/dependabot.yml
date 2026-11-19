@@ -16,7 +16,7 @@ updates:
     patterns: ["*"]
     multi-ecosystem-group: "upkeep"
 
-  # psycopg, the one Python dependency (decklab/requirements.txt).
+  # Python requirements for PostgreSQL and accessory thumbnails (decklab/requirements.txt).
   - package-ecosystem: "pip"
     directory: "/decklab"
     patterns: ["*"]

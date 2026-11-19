@@ -1,8 +1,8 @@
-# Deck Lab's one dependency outside the standard library: the PostgreSQL client
-# used by decklab.db only (see decklab/README.md, "Database"). Install it into
-# the repo's .venv, never the system Python:
+# Deck Lab's pinned packages for PostgreSQL and accessory thumbnails. Install them
+# into the repo's .venv:
 #   python -m venv .venv
 #   .venv\Scripts\python -m pip install -r decklab/requirements.txt   (Windows)
 #   .venv/bin/python -m pip install -r decklab/requirements.txt       (Linux and macOS)
 # Pinned, since psycopg's binary wheels follow Python releases (PLAN.md, "Risks of the move").
 psycopg[binary]==3.3.6
+Pillow==13.0.0

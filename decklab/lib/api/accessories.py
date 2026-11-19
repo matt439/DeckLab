@@ -7,7 +7,7 @@ by feature_routes.dispatch and the server's /accessory-img/ route.
     POST /api/accessories/fetch      fetch_picture(body): stage a picture from a link
     POST /api/accessories/save       save_accessory(body): add, edit or remove a row
     POST /api/accessories/assign     assign_accessory(body): set a holder's sleeves or deck box
-    image_file(name, version), staged_image(name)    the bytes behind /accessory-img/...
+    image_file(name, version, thumbnail=False), staged_image(name)    the bytes behind /accessory-img/...
 
 Every write is one inventory operation through inventory.apply, whichever backend holds the
 inventory (lib/inventory/ops_accessories.py): accessory.add, accessory.edit and accessory.remove
@@ -47,7 +47,7 @@ decks part's revision (Inventory.decks_revision).
 """
 import traceback
 
-from decklab.lib import accessories, accessory_fetch, accessory_upload, inventory
+from decklab.lib import accessories, accessory_fetch, accessory_thumbnail, accessory_upload, inventory
 from decklab.lib.inventory import audit, ops_accessories, rules
 from decklab.lib.state import StateError
 from decklab.lib.state import rules as state_rules
@@ -621,11 +621,11 @@ def _require_writable_row(rid, inv, profile, *, strict=True):
         raise ApiError(404, f"No accessory {rid} in the accessories list")
 
 
-def image_file(name, version):
+def image_file(name, version, *, thumbnail=False):
     """(bytes, content type) for GET /accessory-img/<name>?v=<version>: a picture the inventory
     has and some row of accessories.csv names, of a row the viewer sees, whose first bytes match
-    its extension; version must be the first 8 hex digits of its sha256
-    (accessories.image_version), so an address names one picture's bytes.
+    its extension. The version must match accessories.image_version. For a thumbnail request,
+    the source bytes are checked the same way before resizing.
     ApiError 404 otherwise, so an orphan or any other picture is never served; 403 for a visitor
     who may not see the accessories (guard.sees_accessories)."""
     guard.require_sees_accessories()
@@ -651,6 +651,14 @@ def image_file(name, version):
     ext = name.rsplit(".", 1)[1]
     if accessory_fetch.sniff(data) != ext:
         raise ApiError(404, "Not found")
+    if thumbnail:
+        try:
+            preview = accessory_thumbnail.make(data, ext, meta.sha256)
+        except ImportError:
+            raise ApiError(503, "Accessory thumbnails are unavailable") from None
+        if preview is None:
+            raise ApiError(404, "Not found")
+        return preview, IMAGE_TYPES["webp"]
     return data, IMAGE_TYPES[ext]
 
 

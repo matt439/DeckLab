@@ -105,6 +105,34 @@ class AccessoriesUiTests(unittest.TestCase):
           assert.equal(details.querySelector('[data-action="remove"]'), null);
         """)
 
+    def test_tiles_request_thumbnails_and_open_the_original_with_the_same_crop(self):
+        self.run_js(self.ACCESSORIES + """
+          state.remote = false;
+          const original = '/accessory-img/portrait.png?v=0123abcd';
+          const crop = '0.1,0.2,0.5,0.6';
+          const photo = {...otterSleeves, owner: 'matt', image: 'portrait.png', crop, image_url: `${original}#crop=${crop}`};
+          for (const editable of [true, false]) {
+            clear(main);
+            drawAccessories({...data, items: [{...photo, editable}]}, routeToken);
+            const tile = main.querySelector('.acc-tile');
+            const thumb = tile.querySelector('img');
+            assert.equal(thumb.getAttribute('src'), `${original}&size=thumb&viewer=matt`);
+            assert(tile.querySelector('.acc-crop'));
+            assert.equal(thumb.style.left, '-20%');
+            tile.click();
+            const sheet = sheets()[0];
+            const full = sheet.querySelector('img');
+            assert.equal(full.getAttribute('src'), `${original}&viewer=matt`);
+            assert(sheet.querySelector('.acc-crop'));
+            assert.equal(full.style.left, thumb.style.left);
+            sheet.querySelector('.sheet-close').click();
+          }
+          state.remote = true;
+          clear(main);
+          drawAccessories({...data, items: [{...photo, editable: false}]}, routeToken);
+          assert.equal(main.querySelector('.acc-tile').querySelector('img').getAttribute('src'), `${original}&size=thumb`);
+        """)
+
     def test_accessory_edit_conflict_reapplies_onto_the_latest(self):
         self.run_js(self.ACCESSORIES + """
           clear(main);

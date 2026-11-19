@@ -1,5 +1,12 @@
 # Deck Lab: history
 
+## Small pictures in Sleeves & boxes (2026-11-20, E8-S03)
+
+List tiles load WebP thumbnails up to 256 pixels on the longest side. The
+detail loads the original and applies its saved crop. Previews are reused
+after access and version checks. Pillow generates the thumbnails and the
+updater installs the pinned dependency when needed.
+
 ## Shop stock, copy prices and plan coverage (2026-11-20, E5-S39 to E5-S41)
 
 Shopping allocates each counted listing's stock once across competing rows.

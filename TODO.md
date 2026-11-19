@@ -37,7 +37,6 @@ The remaining `OPEN` rows each have a first slice and acceptance cases in their 
 |---|---|---|---|---|
 | `E2-S16` | DECISION | could | L | Implementation built, including Quick edit and new-deck drafts. Left: same-profile resume, competing drafts and save/discard across the household's real devices; fixtures cannot qualify touch/Safari or device durability. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes, on the P1 redesign since 2026-11-05 ([evidence](decklab/safari/EVIDENCE.md)). |
-| `E8-S03` | OPEN | could | S | [Load small accessory thumbnails in the list and the full picture in detail.](decklab/design/stories.md#e8-s03) |
 
 ## Deck Lab: collection, orders and buying
 

@@ -1,6 +1,8 @@
 """Local accessory pictures: isolated file-backed saves, privacy, validation and HTTP limits."""
 import base64
+from collections import OrderedDict
 import hashlib
+from io import BytesIO
 import json
 import shutil
 import struct
@@ -156,6 +158,50 @@ class AccessoryUploadTests(AccessoriesApiTestCase):
         self.assertEqual(self.view()["items"][0]["image"], "")
         self.assertFalse(any((self.magic / "accessories" / "images").iterdir()))
 
+    def test_thumbnail_tracks_replacement_and_removal_but_crop_uses_the_same_image(self):
+        thumbnails = api_acc.accessory_thumbnail
+        self.enterContext(mock.patch.object(thumbnails, "_cache", OrderedDict()))
+        encode = self.enterContext(mock.patch.object(thumbnails, "_encode", wraps=thumbnails._encode))
+        first, replacement = png(768, 1280), png(640, 1024)
+        self.add(image=uploaded(first))
+        name = f"{BLACK}.png"
+        original_thumb = api_acc.image_file(name, version(first), thumbnail=True)
+        encode.assert_called_once_with(first, "png")
+        crop = "0.15,0.2,0.5,0.5"
+        self.save(sha256=self.view()["sha256"], action="edit", id=BLACK, row={"crop": crop}, image="keep")
+        self.assertTrue(self.view()["items"][0]["image_url"].endswith(f"#crop={crop}"))
+        self.assertEqual(api_acc.image_file(name, version(first), thumbnail=True), original_thumb)
+        encode.assert_called_once_with(first, "png")
+        self.save(sha256=self.view()["sha256"], action="edit", id=BLACK, row={}, image=uploaded(replacement))
+        with self.assertRaises(ApiError) as old:
+            api_acc.image_file(name, version(first), thumbnail=True)
+        self.assertEqual(old.exception.status, 404)
+        self.assertNotEqual(api_acc.image_file(name, version(replacement), thumbnail=True), original_thumb)
+        self.assertEqual(encode.call_args_list, [mock.call(first, "png"), mock.call(replacement, "png")])
+        self.assertEqual(api_acc.image_file(name, version(replacement)), (replacement, "image/png"))
+        self.save(sha256=self.view()["sha256"], action="edit", id=BLACK, row={}, image=None)
+        self.assertIsNone(self.view()["items"][0]["image_url"])
+        with self.assertRaises(ApiError) as removed:
+            api_acc.image_file(name, version(replacement), thumbnail=True)
+        self.assertEqual(removed.exception.status, 404)
+
+    def test_thumbnail_preserves_phone_orientation_and_loads_webp(self):
+        from PIL import Image
+
+        with Image.new("RGB", (640, 400), "blue") as image, BytesIO() as output:
+            exif = image.getexif()
+            exif[274] = 6  # 90 degrees clockwise, as the browser displays the original
+            image.save(output, "JPEG", exif=exif)
+            jpeg_photo = output.getvalue()
+        for picture, ext, size in ((jpeg_photo, "jpg", (160, 256)), (EXTENDED_WEBP, "webp", (32, 24))):
+            with self.subTest(ext=ext):
+                answer = self.add(image=uploaded(picture))
+                thumb, content_type = api_acc.image_file(f"{answer['changed_id']}.{ext}", version(picture), thumbnail=True)
+                self.assertEqual(content_type, "image/webp")
+                with Image.open(BytesIO(thumb)) as image:
+                    self.assertEqual(image.size, size)
+                    self.assertFalse(image.getexif())
+
     def test_upload_has_only_strict_base64_without_filename_mime_path_or_token(self):
         valid = uploaded(png())["upload"]
         invalid = [True, [], {"bytes": valid}, {"upload": valid, "name": "photo.png"},
@@ -285,6 +331,46 @@ class AccessoryUploadTests(AccessoriesApiTestCase):
 
 
 class AccessoryUploadHttpTests(ServerTestCase):
+    def test_thumbnail_is_smaller_and_revalidates_only_for_an_authorized_viewer(self):
+        from PIL import Image
+        from decklab.lib.api import guard
+
+        picture = png(768, 1280)
+        images = self.box.magic / "accessories" / "images"
+        images.mkdir(parents=True, exist_ok=True)
+        name = "synthetic-portrait.png"
+        (images / name).write_bytes(picture)
+        csv_path = self.box.magic / "accessories.csv"
+        csv_path.write_text(",".join(accessories.FIELDS) + "\n"
+                            f"synthetic-portrait,sleeves,user1,,Matte,,100,,{name},,,,\n", encoding="utf-8")
+        self.addCleanup(shutil.rmtree, images, True)
+        self.addCleanup(csv_path.unlink, missing_ok=True)
+        original = f"/accessory-img/{name}?v={version(picture)}"
+        thumbnail = original + "&size=thumb"
+        with mock.patch.object(accessories, "PATH", csv_path), mock.patch.object(accessories, "IMAGES", images):
+            viewer = {"X-Deck-Lab-Viewer": "matt"}
+            with mock.patch.object(guard, "public_owners", return_value={"user1"}):
+                status, headers, thumb = self.request("GET", thumbnail, headers=viewer)
+                self.assertEqual(status, 200)
+                self.assertEqual((headers["Content-Type"], headers["Cache-Control"]), ("image/webp", "private, no-cache"))
+                self.assertLess(len(thumb), len(picture))
+                with Image.open(BytesIO(thumb)) as image:
+                    self.assertEqual((image.size, image.format), ((154, 256), "WEBP"))
+                status, full_headers, body = self.request("GET", original, headers=viewer)
+                self.assertEqual((status, body), (200, picture))
+                self.assertNotEqual(full_headers["ETag"], headers["ETag"])
+                self.assertEqual(self.request("HEAD", thumbnail, headers=viewer)[::2], (200, b""))
+                self.assertEqual(self.request("GET", thumbnail + "&size=thumb", headers=viewer)[0], 400)
+                cached = {**viewer, "If-None-Match": headers["ETag"]}
+                self.assertEqual(self.request("GET", thumbnail, headers=cached)[::2], (304, b""))
+                with mock.patch.object(api_acc.accessory_thumbnail, "make", side_effect=ImportError):
+                    self.assertEqual(self.request("GET", thumbnail, headers=viewer)[0], 503)
+                    self.assertEqual(self.request("GET", original, headers=viewer)[::2], (200, picture))
+            with mock.patch.object(api_acc.accessory_thumbnail, "make") as generate:
+                self.assertEqual(self.request("GET", thumbnail, headers=cached)[0], 404)
+                generate.assert_not_called()
+            self.assertEqual(self.request("GET", thumbnail + "&viewer=user1")[0], 200)
+
     def test_save_route_accepts_upload_body_larger_than_editor_limit(self):
         picture = complete_jpeg(length=api.MAX_EDIT_BODY)
         body = json.dumps({"profile": "matt", "action": "add", "sha256": None,
