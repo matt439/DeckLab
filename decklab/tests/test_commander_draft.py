@@ -133,3 +133,80 @@ class DraftSelectionTests(TestCase):
         self.assertIn("95.6%", picks["Synergy card"]["reason"])
         for mana in (1, 3, 6):
             self.assertTrue(any(name.startswith(f"Card {mana}-") for name in picks))
+
+    def test_payoffs_break_ties_against_incidental_subtypes_and_upkeep_tax(self):
+        self.card("Sai, Master Thopterist", "U", "Legendary Creature — Human Artificer",
+                  oracle_text="Whenever you cast an artifact spell, create a 1/1 colorless Thopter artifact creature token with flying.")
+        self.card("Energy Flux", "U", "Enchantment", roles=["removal"],
+                  oracle_text='All artifacts have "At the beginning of your upkeep, sacrifice this artifact unless you pay {2}."')
+        self.card("Myr Retriever", kind="Artifact Creature — Myr")
+        for i in range(70):
+            self.card(f"Human {i}", kind="Creature — Human Artificer")
+        def picks(locks=()):
+            return {p["name"]: p for p in self.draft(locks, ["Sai, Master Thopterist"])["picks"]}
+
+        result = picks()
+        self.assertIn("Casting this artifact", result["Myr Retriever"]["reason"])
+        self.assertNotIn("Energy Flux", result)
+        self.assertTrue(picks(["Energy Flux"])["Energy Flux"]["locked"])
+        self.cards = {n: c for n, c in self.cards.items() if not n.startswith("Human ")}
+        self.assertIn("pay {2}", picks()["Energy Flux"]["reason"])
+
+    def test_restricted_cast_and_opponents_graveyard_give_no_blanket_reason(self):
+        self.card("Feather, the Redeemed", "RW", "Legendary Creature — Angel",
+                  oracle_text="Whenever you cast an instant or sorcery spell that targets a creature you control, exile that card instead.")
+        self.card("Wrath of God", "W", "Sorcery", oracle_text="Destroy all creatures. They can't be regenerated.")
+        result = self.draft(names=["Feather, the Redeemed"])
+        wrath = next(p for p in result["picks"] if p["name"] == "Wrath of God")
+        self.assertNotIn("commander's ability", wrath["reason"])
+
+        self.card("Graveyard lead", "B", "Legendary Creature",
+                  oracle_text="Whenever one or more cards leave your graveyard, draw a card.")
+        self.card("Recover", oracle_text="{1}: Return this card from your graveyard to your hand.")
+        self.card("Opponent only", oracle_text="Exile target card from an opponent's graveyard.")
+        self.card("Prohibition", oracle_text="You can't cast spells from your graveyard.")
+        self.card("Delve creature", kind="Creature", keywords=["Delve"])
+        result = {p["name"]: p for p in self.draft(names=["Graveyard lead"])["picks"]}
+        for name in ("Recover", "Delve creature"):
+            self.assertIn("out of your graveyard", result[name]["reason"])
+        for name in ("Opponent only", "Prohibition"):
+            self.assertNotIn("out of your graveyard", result[name]["reason"])
+
+    def test_typal_payoff_and_power_threshold_are_specific(self):
+        self.card("Zombie lead", "B", "Legendary Creature — Human",
+                  oracle_text="Whenever you draw a card, Zombies you control get +1/+1 until end of turn.")
+        self.card("Zombie", kind="Creature — Zombie")
+        self.card("Human", kind="Creature — Human")
+        result = {p["name"]: p for p in self.draft(names=["Zombie lead"])["picks"]}
+        self.assertIn("Zombie creature type", result["Zombie"]["reason"])
+        self.assertNotIn("benefits", result["Human"]["reason"])
+        self.card("Power lead", "G", "Legendary Creature",
+                  oracle_text="Whenever you cast a creature spell, gain 1 life. If that spell's power is 4 or greater, draw a card.")
+        self.card("Big", kind="Creature", power="4")
+        self.card("Variable", kind="Creature", power="*")
+        result = {p["name"]: p for p in self.draft(names=["Power lead"])["picks"]}
+        self.assertIn("printed power", result["Big"]["reason"])
+        self.assertNotIn("printed power", result["Variable"]["reason"])
+
+    def test_draw_payoff_keeps_a_cheap_cycling_zombie_and_its_token_support(self):
+        self.card("Temmet", "B", "Legendary Creature — Zombie",
+                  oracle_text="Whenever you draw a card, Zombies you control get +1/+1 until end of turn.")
+        self.card("Gempalm Polluter", "B", "Creature — Zombie", cmc=6, oracle_text="Cycling {B}{B}")
+        self.card("Swampcycler", "B", "Creature — Zombie", cmc=6, oracle_text="Swampcycling {2}")
+        self.card("Expensive cycler", "B", "Creature — Zombie", cmc=6, oracle_text="Cycling {4}")
+        self.card("Amass", oracle_text="At the beginning of your upkeep, you lose 1 life and amass Zombies 1.")
+        self.card("Token maker", oracle_text="Create a 2/2 black Zombie creature token.")
+        self.card("Opponent's tokens", oracle_text="Each opponent creates a 2/2 black Zombie creature token.")
+        self.card("Gift", oracle_text="Create a 2/2 black Zombie creature token under an opponent's control.")
+        for i in range(20):
+            self.card(f"Big {i}", "B", "Creature — Zombie", cmc=5)
+        for i in range(70):
+            self.card(f"Small {i}", cmc=2)
+        result = {p["name"]: p for p in self.draft(names=["Temmet"])["picks"]}
+        self.assertIn("Cycling it for {B}{B}", result["Gempalm Polluter"]["reason"])
+        self.assertNotIn("Swampcycler", result)
+        self.assertNotIn("Expensive cycler", result)
+        self.assertIn("amass", result["Amass"]["reason"])
+        self.assertIn("create creature tokens", result["Token maker"]["reason"])
+        for name in ("Opponent's tokens", "Gift"):
+            self.assertNotIn("commander rewards", result[name]["reason"])

@@ -4837,6 +4837,8 @@ As a Commander player building from my collection, I want to pick a commander or
 
 Built (2026-11-20): Collection's **Commanders we could build → Build from cards free tonight** opens the new editor's preview. Picks show their reasons, role coverage, land sources and open slots. Roles can overlap. Spell selection uses creature types shared with the commander or locks, available cached EDHREC inclusion, and mana values. The normal deck checks remain available for the resulting list. See [Commander draft selection](../lib/decks/commander_draft.py) and its [request and selection tests](../tests/test_commander_draft.py).
 
+Selection also considers specific abilities in the commander’s rules text. Examples include artifact casts, creatures meeting a printed power threshold, creating matching tokens, and cards leaving the player's graveyard. A five-precon [study of ten public pools](commander-starter-study.md) records which picks changed, which role gaps remained and where the revised draft still passed useful cards.
+
 ---
 
 ## E10: Members, access and privacy

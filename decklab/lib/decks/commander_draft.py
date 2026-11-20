@@ -1,6 +1,7 @@
 """Build a reviewable Commander list from this evening's pool (E9-S39)."""
 from collections import Counter
 
+from .commander_draft_plan import spell_reasons
 from .commander_pool import _entry, _in_category
 from .role_pool import fits
 
@@ -123,15 +124,22 @@ def build(names, locked, free, card_of, rules, mass_land_denial=None, affinity_o
     role_cats = [c for c in cats if c.get("roles")]
     matches = {e["name"]: [c for c in role_cats if _in_category(c, e)] for e in spells}
     tribes = {e["name"]: sorted(theme & _tribes(e["card"])) for e in spells}
+    plans, drawbacks, cheap_cyclers = spell_reasons(leads, spells)
+    bands = {e["name"]: mana_band(e["card"]) for e in spells}
+    weights = {"0-2": 2, "3-4": 2, "5+": 1}
 
     def rank(e):
         short = [c for c in matches[e["name"]] if counts[c["category"]] < c["target"]]
         shared = tribes[e["name"]]
         # Give low and mid-curve spells twice the share of expensive spells as a starting mix.
-        band = mana_band(e["card"])
-        pressure = curve[band] / {"0-2": 2, "3-4": 2, "5+": 1}.get(band, 1)
+        band = bands[e["name"]]
+        pressure = curve[band] / weights.get(band, 1)
         share = affinity.get(e["name"])
-        score = (-len(short), -len(shared), -(share or 0), band == "unknown", pressure,
+        # Within the same role coverage, leave room for cheaper plays when the top end is full.
+        full = band == "unknown" or (band == "5+" and e["name"] not in cheap_cyclers
+                                     and curve[band] * 5 >= target - land_goal + len(names))
+        score = (e["name"] in drawbacks, -len(short), full, -(share or 0), e["name"] not in plans,
+                 band == "unknown", pressure, -len(shared),
                  e["card"].get("cmc") or 0, e["name"].casefold())
         return score, short, shared
 
@@ -142,12 +150,17 @@ def build(names, locked, free, card_of, rules, mass_land_denial=None, affinity_o
         reasons = []
         if short:
             reasons.append("Fills " + ", ".join(c["label"] for c in short) + ".")
+        if e["name"] in plans:
+            reasons.append(plans[e["name"]])
         if shared:
             reasons.append("Shares a creature type: " + ", ".join(shared) + ".")
         if affinity.get(e["name"]):
             reasons.append(f"Included in {affinity[e['name']]:g}% of decks in the cached EDHREC sample for these commanders.")
-        why = " ".join(reasons) or f"Fills a spell slot in the {mana_band(e['card'])} mana-value group."
-        pick(e, why)
+        if not reasons:
+            reasons.append(f"Fills a spell slot in the {mana_band(e['card'])} mana-value group.")
+        if e["name"] in drawbacks:
+            reasons.append(drawbacks[e["name"]])
+        pick(e, " ".join(reasons))
         spells.remove(e)
     if spell_slots > distinct_slots:
         chosen = {p["name"]: p for p in picks if not p["land"]}

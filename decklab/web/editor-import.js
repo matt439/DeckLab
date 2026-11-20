@@ -364,7 +364,7 @@ function openTonightDraft(params) {
   const refresh = el("button", { type: "button", class: "btn", text: "Preview draft" });
   const accept = el("button", { type: "button", class: "btn btn-primary", text: "Use this draft", hidden: true });
   sheet.body.append(el("h3", { text: [name, partner].filter(Boolean).join(" and ") }),
-    el("p", { class: "sub", text: "Picks fill missing roles first, then favour shared creature types, cards in cached EDHREC decks, and a mix of mana costs. You can change the picks and check combos and the deck’s bracket in the editor." }),
+    el("p", { class: "sub", text: "Picks fill missing roles and look for cards that support the commander’s abilities. The preview explains each pick. You can change the list and check combos and its bracket in the editor." }),
     el("label", { class: "field" }, el("span", { text: "Theme cards to keep" }), locks), status, result);
   sheet.foot.append(el("button", { type: "button", class: "btn", text: "Cancel", onclick: () => sheet.close() }), refresh, accept);
   let request = 0, preview = null;
@@ -421,7 +421,7 @@ function drawTonightDraft(host, draft) {
   const picks = draft.picks.map(row => el("li", {}, el("strong", { text: `${row.quantity} × ${row.name}` }),
     ` — ${row.reason}`, row.assumed_basic && row.locked ? " Uses the assumed ordinary basic-land supply." : ""));
   clear(host);
-  if (draft.warnings?.length) host.append(warningsBox(draft.warnings, "Commander draft notes"));
+  add(host, [warningsBox(draft.warnings || [], "Commander draft notes")]);
   host.append(el("h3", { text: "Role coverage" }),
     el("p", { class: "sub" }, "Includes commanders. A card can cover several roles.",
       draft.source ? el("span", {}, " Targets from ", el("a", { href: draft.source.url, target: "_blank", rel: "noopener", text: draft.source.title }), ".") : ""),

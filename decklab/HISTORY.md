@@ -1,5 +1,11 @@
 # Deck Lab: history
 
+## Commander starter picks tested against public decks (2026-11-20, E9-S39)
+
+The starter recognises some specific commander abilities and explains which picks support them. It considers printed power for creature-cast rewards, relevant spell types, cards that can leave the player's graveyard, and creatures or tokens of a rewarded type. It also recognises a blanket artifact upkeep tax when building around artifact casts.
+
+The [public precon study](design/commander-starter-study.md) compares the old and revised drafts for five commanders in two competing pools each. It includes the cases where the revised builder still passed a useful card. Run `python -m scripts.study_commander_starters` with the public caches to repeat the comparison.
+
 ## Compare which decks to finish first (2026-11-20, E5-S42)
 
 In Shopping, **Compare deck groups** shows how many copies are here, on the way and still to buy for each alternative. The two groups can overlap. Each gets the same pool and saved shop checks, with each physical copy counted once within a group.
