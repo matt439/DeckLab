@@ -44,7 +44,7 @@ class CollectionColumnsUiTests(unittest.TestCase):
           const headers = table().querySelectorAll('th');
           assert(['Name', 'Card'].includes(headers[1].textContent.trim()));
           same(headers.slice(2).map(node => node.textContent.trim()), ['Colour identity', 'Type', 'Printing', 'Finish',
-            'Copies', 'Condition', 'Language', 'In decks', '~A$ each', 'Notes']);
+            'Copies', 'Condition', 'Language', 'Availability', '~A$ each', 'Notes']);
           assert(headers.every(node => node.getAttribute('scope') === 'col'));
           for (const key of rows.map(colKey)) {
             for (const cls of ['colour', 'type', 'printing', 'finish', 'qty', 'condition', 'language', 'held', 'price']) {
@@ -120,6 +120,24 @@ class CollectionColumnsUiTests(unittest.TestCase):
           const held = cell('fdn|1|foil', 'held');
           assert(/1 in decks/.test(held.textContent)); assert(/3 free/.test(held.textContent));
           assert(!held.textContent.includes('?')); assert(!held.textContent.includes('Printing allocation uncertain'));
+        """)
+
+    def test_lent_copies_are_separate_and_fully_lent_rows_leave_the_storage_filter(self):
+        self.run_js(r"""
+          const mixed = 'fdn|1|foil', loan = 'fdn|2|etched', allLent = 'fdn|3|nonfoil';
+          const allocation = {...storage.rows,
+            [mixed]: {held: 2, lent: 1, guess: true}, [loan]: {held: 0, lent: 1, guess: false},
+            [allLent]: {held: 0, lent: 1, guess: false}};
+          const cv = draw({storage: {rows: allocation, error: null}});
+          assert.equal(cell(mixed, 'held').querySelector('.col-held').textContent, '2 in decks? \u00b7 1 lent out \u00b7 1 free');
+          assert.equal(cell(loan, 'held').textContent, '1 lent out \u00b7 1 free');
+          assert.equal(cell(allLent, 'held').textContent, '1 lent out \u00b7 0 free');
+          colSelectRow(cv, mixed);
+          assert(main.querySelector('.col-preview-storage').textContent.includes('printing uncertain) \u00b7 1 lent out \u00b7 1 free'));
+          cv.storageBox.checked = true; cv.storageBox.fire('change');
+          assert(record(mixed)); assert(record(loan)); assert(!record(allLent));
+          colChanged(cv, {sha256: 's2', rows, storage}, '');
+          assert.equal(cell(allLent, 'held').textContent, 'In storage');
         """)
 
     def test_columns_use_only_loaded_metadata_without_mutating_canonical_rows_or_hash(self):

@@ -446,7 +446,11 @@ function viewerUseWords(data) {
     ...(data.wants || []).map((d) => `${d.title} wants ${num(d.copies)}`)];
   const rest = Math.max(0, decks.length - VIEWER_USE_DECKS);
   const more = rest ? `, and ${num(rest)}${data.more ? "+" : ""} more deck${rest === 1 && !data.more ? "" : "s"}` : "";
-  const parts = [decks.length ? `In decks: ${decks.slice(0, VIEWER_USE_DECKS).join(", ")}${more}` : "In no decks"];
+  const parts = [];
+  if (decks.length) parts.push(`In decks: ${decks.slice(0, VIEWER_USE_DECKS).join(", ")}${more}`);
+  if (data.decks_complete === false) parts.push("Deck check incomplete");
+  else if (!decks.length && data.decks_complete === true) parts.push("In no decks");
+  if (data.lent > 0) parts.push(`${num(data.lent)} lent out`);
   if (data.owned || data.free) parts.push(`${num(data.free)} free`);
   else if (!data.incoming) parts.push("none in the collection");
   if (data.incoming) parts.push(`${num(data.incoming)} on the way`);

@@ -9,8 +9,8 @@ another PC). In order, stopping at the first failure:
      release channel (--channel release, or config.json's "update": {"channel": "release"}) with
      the newest stable vX.Y.Z tag on that upstream instead, never a commit between tags and never
      back to an older release (lib/update_channel.py)
-  3. reinstall psycopg into the .venv when requirements.txt changed (or doesn't match); on Windows
-     the running server is stopped first, since it keeps psycopg's DLLs locked
+  3. reinstall the .venv's packages when requirements.txt changed (or doesn't match); on Windows
+     the running server is stopped first, since it keeps packages' DLLs locked
   4. with migrations pending: the running server is stopped (on every system, so nothing is written
      after the dump and a restore of it loses no write), then a backup (python -m decklab.db
      backup), then python -m decklab.db migrate; step 6 starts the server again
@@ -50,7 +50,7 @@ CONFIG = ROOT / "decklab" / "config.json"
 REQUIREMENTS = "decklab/requirements.txt"
 MIGRATIONS = "decklab/db/migrations/"
 _SPAWN = {"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}
-# Windows keeps a running server's psycopg DLLs locked, so it's stopped while pip replaces them;
+# Windows keeps a running server's package DLLs locked, so it's stopped while pip replaces them;
 # Linux and macOS replace a loaded .so file without trouble, so the server keeps running there
 # until step 6's restart loads the new one.
 PIP_NEEDS_STOP = os.name == "nt"
@@ -413,7 +413,7 @@ def before_pull(args):
             ("\n  ..." if len(lines) > 30 else ""))
         files = changed_files(old, new)
         if REQUIREMENTS in files:
-            say("  requirements.txt changed: psycopg will be reinstalled")
+            say("  requirements.txt changed: Python packages will be reinstalled")
         new_migrations = [f for f in files if f.startswith(MIGRATIONS) and f.endswith(".sql")]
         if new_migrations:
             say(f"  {len(new_migrations)} migration files changed: the server stopped, a backup, then migrate")
@@ -466,7 +466,7 @@ def way_back(old, done):
                          "the dump. Start it with python -m decklab.lib.homenet start"
                          + (" (it then runs the pulled code)." if old and "pulled" in done else "."))
         else:
-            lines.append("Deck Lab was stopped to replace psycopg: python -m decklab.lib.homenet start.")
+            lines.append("Deck Lab was stopped to replace Python packages. Run python -m decklab.lib.homenet start.")
     if old and "pulled" in done:
         back = [f"To go back to the code from before: python -m decklab.lib.homenet stop, git reset --hard {old[:12]}"]
         if "migrated" in done:
@@ -493,18 +493,18 @@ def _after_pull(args, old, done):
     warnings = []
     running = server_answers()
     reinstalled = False
-    if REQUIREMENTS in files or psycopg_mismatch():
+    if REQUIREMENTS in files or requirements_mismatch():
         reinstalled = True
         pip = venv_python()
         if pip is None:
-            raise Failed("There's no .venv to install psycopg into: SELF-HOSTING.md step 3")
+            raise Failed("Make the .venv for Python packages using SELF-HOSTING.md step 3.")
         stop = running and PIP_NEEDS_STOP
         if stop:
             require_idle(args)
-            step([python, "-m", "decklab.lib.homenet", "stop"], "Stop Deck Lab to replace psycopg", timeout=120)
+            step([python, "-m", "decklab.lib.homenet", "stop"], "Stop Deck Lab to replace Python packages", timeout=120)
             done.add("server-stopped")
         try:
-            step([str(pip), "-m", "pip", "install", "-r", str(ROOT / REQUIREMENTS)], "Reinstall psycopg", timeout=900)
+            step([str(pip), "-m", "pip", "install", "-r", str(ROOT / REQUIREMENTS)], "Reinstall Python packages", timeout=900)
         except Failed:
             if stop:
                 step([python, "-m", "decklab.lib.homenet", "start"], "Start Deck Lab again", timeout=120)
@@ -590,20 +590,23 @@ def require_idle(args):
         raise Failed("Deck Lab is busy: " + "; ".join(busy) + ". Let these finish, or use --force to interrupt them; saved games are kept.")
 
 
-def psycopg_mismatch():
-    """Whether the .venv's psycopg isn't the version requirements.txt pins. Read from its metadata,
-    never imported, so this process doesn't load (and lock) the DLLs pip may have to replace."""
+def requirements_mismatch():
+    """Check installed versions without importing packages and locking their DLLs."""
     import importlib.metadata
     from decklab import smoke
     from decklab.lib import venv
     if venv.activate():
         return False            # no usable .venv: the smoke test says so
-    want = smoke.pinned((ROOT / REQUIREMENTS).read_text(encoding="utf-8"), "psycopg")
-    try:
-        have = importlib.metadata.version("psycopg")
-    except importlib.metadata.PackageNotFoundError:
-        return True
-    return bool(want) and have != want
+    requirements = (ROOT / REQUIREMENTS).read_text(encoding="utf-8")
+    for package in ("psycopg", "Pillow"):
+        want = smoke.pinned(requirements, package)
+        if want:
+            try:
+                if importlib.metadata.version(package) != want:
+                    return True
+            except importlib.metadata.PackageNotFoundError:
+                return True
+    return False
 
 
 def server_restart_required():

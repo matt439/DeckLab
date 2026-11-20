@@ -106,6 +106,38 @@ class BasketTests(unittest.TestCase):
                          [("Wanted", "fdn", "3.00")])
         self.assertEqual([item["name"] for item in built["unavailable"]], ["Other Printing"])
 
+    def test_ready_exact_request_keeps_the_last_copy_a_flexible_row_also_matches(self):
+        rows = [row("Sol Ring", 1), row("Sol Ring", 2, printing="exact", set="FDN", collector_number="0227"),
+                row("Sol Ring", 3, state="long_term")]
+        built = self.build(rows, mtgmate({"Sol Ring": entry(listing("1.00", 1))}))
+        mtg = self.basket(built, "mtgmate")
+        self.assertEqual([(item["queue_row"], item["copies"]) for item in mtg["rows"]], [(2, 1)])
+        self.assertEqual(mtg["add_ons"], [])
+        self.assertEqual(built["unavailable"][0]["shops"][0]["status"], "allocated")
+        plan = built["plan"]
+        self.assertEqual((plan["recommended"]["cards"], plan["wanted"]), (1, 2))
+        self.assertEqual([(item["queue_row"], item["copies"]) for item in plan["recommended"]["uncovered"]], [(1, 1)])
+
+    def test_flexible_and_optional_requests_only_get_remaining_counted_stock(self):
+        rows = [row("Sol Ring", 1, quantity="2"),
+                row("Sol Ring", 2, printing="exact", set="fdn", collector_number="227"),
+                row("Sol Ring", 3, state="long_term", quantity="3"),
+                row("Sol Ring", 4, state="waiting_for_stock")]
+        cards = {"Sol Ring": entry(listing("1.00", 1), listing("2.00", 3, set_code="cmm"))}
+        mtg = self.basket(self.build(rows, mtgmate(cards)), "mtgmate")
+        self.assertEqual([(item["queue_row"], item["listing"]["set"], item["copies"], item["line_aud"])
+                          for item in mtg["rows"] + mtg["add_ons"]],
+                         [(1, "cmm", 2, "4.00"), (2, "fdn", 1, "1.00"), (3, "cmm", 1, "2.00")])
+        self.assertTrue(mtg["add_ons"][0]["shared_stock"])
+
+    def test_available_only_shop_preserves_the_unknown_count_for_overlapping_requests(self):
+        rows = [row("Sol Ring", 1, quantity="2"), row("Sol Ring", 2, printing="exact", set="fdn", collector_number="227")]
+        built = self.build(rows, gp=games_portal({"Sol Ring": entry(listing("1.25", 1), at=GP_AT)}))
+        gp = self.basket(built, "gamesportal")
+        self.assertEqual([(item["copies"], item["stock"], item["listing"]["stock"]) for item in gp["rows"]],
+                         [(2, None, None), (1, None, None)])
+        self.assertEqual(built["plan"]["by_price"]["stock_unknown"], ["Games Portal"])
+
     def test_an_exact_printing_the_snapshot_cant_tell_is_unconfirmed_not_claimed(self):
         rows = [row("Blank Printing", 1, printing="exact", set="fdn", collector_number="1", finish="nonfoil"),
                 row("No Set Recorded", 2, printing="exact")]
@@ -165,8 +197,10 @@ class BasketTests(unittest.TestCase):
 
     def test_a_filling_listing_without_a_price_leaves_the_line_unpriced(self):
         cards = {"Elves": entry(listing("0.40", 1), listing(None, 2, set_code="m19"))}
-        line = self.basket(self.build([row("Elves", 1, quantity="3")], mtgmate(cards)), "mtgmate")["rows"][0]
-        self.assertEqual((line["copies"], line["line_aud"], line["more"][0]["price_aud"]), (3, None, None))
+        mtg = self.basket(self.build([row("Elves", 1, quantity="3")], mtgmate(cards)), "mtgmate")
+        line, = mtg["rows"]
+        self.assertEqual((line["copies"], line["line_aud"], line["more"][0]["price_aud"], line["known_aud"],
+                          mtg["total_aud"], mtg["unpriced"]), (3, None, None, "0.40", "0.40", 1))
 
     def test_an_exact_row_is_never_filled_from_another_printing(self):
         exact = dict(printing="exact", set="fdn", collector_number="227", finish="nonfoil", quantity="3")

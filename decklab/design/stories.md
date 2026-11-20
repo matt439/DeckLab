@@ -35,18 +35,18 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
-| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 20 | 20 | 0 | 0 | 0 |
+| [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 21 | 21 | 0 | 0 | 0 |
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 27 | 24 | 2 | 0 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 42 | 39 | 3 | 0 | 0 |
+| [E3: Test a deck](#e3-test-a-deck) | 45 | 42 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 26 | 1 | 0 | 3 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 36 | 33 | 0 | 1 | 2 |
-| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 25 | 23 | 0 | 0 | 2 |
-| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 37 | 36 | 1 | 0 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 20 | 0 | 1 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 39 | 36 | 0 | 1 | 2 |
+| [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 26 | 24 | 0 | 0 | 2 |
+| [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 38 | 37 | 1 | 0 | 0 |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 21 | 0 | 0 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
-| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 87 | 69 | 10 | 4 | 4 |
-| **Total** | **398** | **355** | **19** | **7** | **17** |
+| [E11: Run and trust the system](#e11-run-and-trust-the-system) | 88 | 70 | 10 | 4 | 4 |
+| **Total** | **408** | **366** | **19** | **6** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -379,6 +379,17 @@ Gap: `decklab/web/card-viewer.js` has no outbound link, list of own copies by pr
 
 First slice: the Scryfall link in `decklab/web/card-viewer.js`, with a server-built `scryfall_url` from `decklab/lib/api/card_lookup.py` for a card without a printing.
 
+<a id="e1-s32"></a>
+
+**E1-S32** · Matt · should · S · built
+
+As a deck builder looking up a card, I want to know when Deck Lab could only check some of my lists, so I can decide whether a spare copy really has no planned use.
+
+- Given a readable list that wants the card and another visible list that fails to load, when I look in the card viewer or global search, then I see the known match and a short note that the check is incomplete.
+- Given no matches, then “In no decks” requires a complete check of the visible lists. A hidden or out-of-space list cannot add a match or trigger the incomplete-check warning. The viewer still sees their permitted free count after physical holdings are deducted.
+
+Built (2026-11-20): the card viewer and global search show **Deck check incomplete** when an eligible visible list fails to load. Known matches and permitted free-copy counts remain visible. **In no decks** requires a complete check. The card-use API and UI fixtures cover readable matches, empty results, visible read failures, and hidden and out-of-space lists.
+
 ---
 
 ## E2: Build and edit a deck
@@ -570,6 +581,8 @@ Evidence:
 
 **E2-S16** · Matt · could · L · partial
 
+Awaiting: phone, ipad
+
 As a multi-device deck builder, I want to pick up an unsaved edit on another device, so that I can start on the iPad and finish at the PC.
 
 - Given an unsaved draft on one device, when I open the same deck and list on another device as the same profile, then I am offered that draft.
@@ -636,6 +649,8 @@ Evidence:
 <a id="e2-s22"></a>
 
 **E2-S22** · User1 · must · M · partial
+
+Awaiting: phone, ipad
 
 As a themed-deck player who uses Deck Lab mostly on a phone (and Matt on a tablet), I want the pages, especially saving an edit, the Quick edit's keyboard and menus, swiping in the card viewer and Receive delivery, safe areas and Add to Home Screen, checked and passing on the real iPhone 15 Pro, iPhone 17 Pro and M2 11-inch iPad test devices, so that I can trust a save made on my phone and use Deck Lab like an app.
 
@@ -1229,6 +1244,8 @@ Evidence:
 - `decklab/lib/api/forge_runs.py`: the Running list's `gauntlet` kind
 - `decklab/tests/test_gauntlet_api.py`, `decklab/tests/test_gauntlet_ui.py`
 
+<a id="e3-s30"></a>
+
 **E3-S30** · Matt · could · M · built
 
 As a deck builder testing a swap, I want Test this change to play against a gauntlet sample, so that I know whether the change helps against outside decks as well as the household's.
@@ -1239,6 +1256,8 @@ As a deck builder testing a swap, I want Test this change to play against a gaun
 Built (2026-11-05): the command line. `forge variant --gauntlet <sample id>|standard` (or `--against gauntlet:<sample id>`) plays the changed list on the base list's own gauntlet games (the same seeds and seats) in the gauntlet's results folder, never the field's. Its answer gives the paired difference against the whole sample and by colour, number of colours, style and tier (an opponent the catalogue didn't tag counts as Unknown), saying it covers those sampled opponents only (`forge/variants_gauntlet.py`; `variants.view`'s `groups` and `note`). Tests: `decklab/tests/test_variant_gauntlet.py`. See [HISTORY.md](../HISTORY.md#variant-tests-against-a-gauntlet-sample-2026-11-05-e3-s30-slice).
 
 Built (2026-11-05): the page. The editor's Test this change sheet offers **Popular decks (N decks, a sample)**, the format's standard sample, once `GET /api/variant/estimate?against=gauntlet` says it's available (a catalogue built on the PC; never a mirror or a trial's own precon). `POST /api/variant/run {"against": "gauntlet"}` (or `"gauntlet:<sample id>"`) saves the standard sample and starts the command line's own test (the same id) in the gauntlet's results folder, and the view, the deck's Tests of changes list, Stop and Play more find it there (`lib/api/variant_page.py`). Its opponents are public sparring decks, always shown and never linked to the matchup page. The test page adds **By group** (`web/variant.js` `vtGroups`): a small table each for colour, number of colours, style and tier, each group's bar on the page's one scale, under the caveat that every range covers those sampled opponents only. Tests: `decklab/tests/test_variant_gauntlet_api.py`, `test_web_variant.py`. See [HISTORY.md](../HISTORY.md#test-this-change-against-popular-decks-2026-11-05-e3-s30). Known limits: no browser or device check; the sheet offers only the standard sample (a saved sample by id is the API's and the command line's).
+
+Built (2026-11-20): **Try a change against this sample** on the deck's Testing tab opens the editor for that list and offers **Saved sample from Testing**. Starting that comparison requires a current successful estimate and an explicit Start. A missing sample, wrong format, failed estimate or refused start keeps the draft. Variant estimates and starts apply the Testing view's Same commander sample rules. API and editor fixtures exercise those cases and navigation away during an estimate or start.
 
 **E3-S31** · Matt · could · M · built
 
@@ -1561,6 +1580,8 @@ result gap; general household touch/Safari acceptance remains in E11-S30.
 
 **E3-S50** · Matt · could · M · partial
 
+Awaiting: tested list history
+
 As a deck builder tuning a deck over many edits, I want a short timeline of the deck's popular-decks figure for each earlier list that has standard-sample games, with what changed between them, so that I can see which edits actually helped.
 
 - Given a deck with several tested earlier lists, then its Testing tab lists up to eight of them, newest first, each with its date, figure, range and opponents counted.
@@ -1586,6 +1607,39 @@ As a deck builder reading Against popular decks, I want the typical round the de
 - Given a Commander deck, then it's labelled "simulated Forge games, 1v1, turns each", with a note that the gauntlet isn't a four-player pod.
 
 Built (2026-11-12): `decklab/lib/forge/views.py`'s `clock(games, side)` gives the median and middle half of the rounds of games won and of games lost. It leaves out draws, timeouts, errors and games without a round count, counts them, and gives no median below five games. `field._row` keeps each pair's round tally. The gauntlet attaches a clock to each opponent and pools the games (never the medians) for each group and the overall figure, labelled "simulated Forge games, turns each" (Commander: "1v1, turns each", with a note that it isn't a four-player pod), and `GET /api/gauntlet` passes them on. The Testing tab's Against popular decks shows the overall line under the headline and a line on each group and opponent, each with its left-out count; when no game was won or lost, the overall box says so and still counts them. Fixture tests only. Not covered: the Overview's gauntlet summary and the Popular decks board.
+
+<a id="e3-s52"></a>
+
+**E3-S52** · Matt · should · S · built
+
+As a deck builder reading the Popular decks board, I want to see when games were played but Forge could not give a strength figure, so I can tell whether running more games would answer my question.
+
+- Given 20 opponents with 100 saved games each and every result flagged as nonmeaningful, then the board and library detail report the played coverage and why the figure is unavailable. They show neither a percentage nor the invitation for an untested list.
+- Given some usable opponents, then the figure still uses only eligible results. A new list with zero games and a list with games in only one seat each get wording that describes their own evidence.
+
+Built (2026-11-20): the Popular decks board, Library detail and deck Testing tab show saved coverage and the reason when a rate is unavailable. Results flagged by Forge, results with games in only one seat and zero-game lists have distinct messages. Mixed samples label the evidence used for the rate. Synthetic fixtures cover the 20-opponent, 2,000-game flagged result. FG#4 owns the engine investigation.
+
+<a id="e3-s53"></a>
+
+**E3-S53** · Matt · should · M · built
+
+As a player comparing my Commander deck with published lists, I want to know how many distinct games support the result when two catalogue entries use the same list.
+
+- Given four catalogue entries sharing three matchup keys with 40 saved games, when the entries attribute 60 games between them, then the result shows 40 distinct games and retains all four entries with their source and per-entry coverage.
+- Given repeated keys within a group, then each distinct matchup contributes once to the group's evidence minimums, strength estimate, uncertainty range and turn statistics. Showing the same results under a second source cannot narrow the range. A list may still appear in each colour or style it belongs to.
+
+Built (2026-11-20): the Testing summary and read-only CLI show distinct matchups and games alongside coverage attributed to catalogue entries when a result is shared. Per-entry rows retain their source, games and shared key. Each key contributes once within a group to its evidence minimum, estimate, uncertainty and turn statistics. The 40/60 fixture retains four entries over three matchup keys and checks statistics against the single-source result.
+
+<a id="e3-s54"></a>
+
+**E3-S54** · Matt · could · S · built
+
+As a deck builder choosing two cards that work together, I want the chance of drawing both by a chosen turn, so I can judge how often I will have the pair in hand.
+
+- Given exactly two distinct card names selected in Stats, then I can read the chance of seeing at least one copy of each under the displayed list, turn and play/draw assumptions. The existing chance of seeing either card remains available.
+- Given one copy of each in a 99-card library and seven cards seen, then the unrounded probability is `7 × 6 / (99 × 98)`. Multiple copies of one name, either list version and cards starting outside the library are accounted for.
+
+Built (2026-11-20): Chance to draw shows both **Either card** and **Both cards** when exactly two names are selected. The selected turn and the by-turn table share the same natural-draw assumptions. The shown list supplies the library and merges printings of each name. `test_stats_draw_odds.py` covers every draw size of a small enumerated library, the 99-card singleton example, both list versions and cards outside the library.
 
 ---
 
@@ -2653,6 +2707,39 @@ As Matt, choosing a shop basket, I want Shopping to list the token cards my buil
 
 Built (2026-11-12): `GET /api/shopping` has a `token_addons` field (`decklab/lib/api/shopping_token_addons.py`), built from the tokens' existing gaps reader and sent only to home-record readers. Each basket that was read gets the collapsed note "Token cards your decks make but you don't have (not checked at this shop)", listing each token with how many decks want it and a Copy names action (`web/shopping-baskets.js`). A token already on order, one only the opponent gets, and one with only a differing stand-in owned (as the Tokens page's gaps reader) are left out. Nothing is queued or added to Record this order, no price or stock is claimed, and a failed token reader leaves the baskets answering without the note. Tests: `test_shopping_token_addons`, `test_shopping_token_addons_ui`.
 
+<a id="e5-s39"></a>
+
+**E5-S39** · Matt · should · M · built
+
+As the buyer, I want a shop's last copy allocated to only one queue row, so the list I take to the shop can actually be filled.
+
+- Given an exact-printing row and an any-printing row competing for one counted listing, then the basket covers at most one copy. If another printing can fill the flexible row, the exact request keeps its eligible copy and both rows can be filled.
+- Given optional add-ons, copied shop lists or an order prefill, then their offered quantities respect the same allocation. A shop that reports only “in stock” keeps its existing qualification about unknown quantities.
+
+Built (2026-11-20): the basket and plan share each counted listing's stock across the eligible queue rows. When both rows can be filled, a flexible row can take another printing to leave the sought printing for an exact request. Copy and order review use the actual allocation, and optional add-ons use the stock left by the ready rows. Fixtures cover counted stock, unknown quantities and split-plan order review.
+
+<a id="e5-s40"></a>
+
+**E5-S40** · Matt · should · M · built
+
+As the buyer, I want Shopping to compare the price of each remaining copy, so I can see when splitting one card across two shops costs less.
+
+- Given two requested copies, one shop with eligible copies at A$1 and A$20, another with two at A$5 each, and zero postage, then By price and the recommended plan both show A$6 with one copy from each shop.
+- Given a postage charge, a stock limit or an unknown price, then each displayed plan shows the quantities and known charges it actually used. The recommendation still gives priority to covering the most requested copies.
+
+Built (2026-11-20): the planner considers each available price tier within each shop combination. It compares coverage and known charges using the allocated copies and their postage. Unknown prices are shown separately. At zero postage, the A$1 and A$5 copies form the A$6 split in the fixture. Postage is applied to each combination's copy allocation, which is selected by eligible stock and unit prices.
+
+<a id="e5-s41"></a>
+
+**E5-S41** · Matt · should · S · built
+
+As the buyer, I want the shop plan to count every ready copy I asked for, so I can see what I still need after following it.
+
+- Given one ready copy in stock and two ready copies unavailable at every checked shop, then coverage reads “1 of 3” and the two missing copies are identifiable. A failed shop check remains distinguishable from a confirmed lack of stock.
+- Given optional long-term add-ons, then they are outside that denominator. With no ready copies in stock, Shopping still gives the unmet count and the available reasons.
+
+Built (2026-11-20): coverage counts every ready copy. The plan lists unmet quantities and distinguishes confirmed lack of stock from incomplete checks, including when zero copies are covered. Long-term add-ons stay outside coverage. Synthetic API and UI tests cover mixed, empty and all-unavailable plans.
+
 ---
 
 ## E6: Record orders and receive cards
@@ -3059,6 +3146,17 @@ Evidence:
 - `decklab/lib/api/precons.py`: product_list_view (GET /api/precons/product); `decklab/lib/api/shopping_orders.py`: _bonus_fix
 - `decklab/web/shopping-orders.js`: Fill from a published list, the bonus tick, bonusOffer
 - `decklab/tests/test_sealed.py`
+
+<a id="e6-s30"></a>
+
+**E6-S30** · Matt · could · S · built
+
+As the person checking a delivery, I want to find a past order by card or token name, so I can locate its original record without opening orders one by one.
+
+- Given several past orders, when I search for a card or either printed face of a recorded token, then matching orders show the matched item, quantity and component status with a way to open the existing order detail.
+- Given a cancelled component, then its match is labelled cancelled. Clearing the search restores the full history, and a search with no matches says so.
+
+Built (2026-11-20): the folded Order history in Shopping filters the loaded records by card or token name. Matches show the recorded quantity and component status with the existing delivery link. The search includes either face of a paired token, announces when no order matches and can be cleared to restore the history. `test_shopping_ui.py` covers delivered and cancelled components, paired tokens and local-only filtering.
 
 ---
 
@@ -3581,6 +3679,8 @@ Validation includes 296 affected checks and twelve synthetic Chromium width/them
 
 **E7-S32** · Matt · could · L · partial
 
+Awaiting: phone
+
 As a person adding a stack of new cards, I want to scan them with my phone's camera into the collection, so that I don't need another app's export to add cards.
 
 - Given the Collection page on a phone, when Scan cards is chosen, then each card held to the camera is recognised with its set and collector number, and added to a pending list.
@@ -3738,11 +3838,22 @@ As someone with physical cards but no recorded list, I want a small-batch starti
 Built 2026-11-15 with synthetic fixture/browser evidence only. Real camera/foil/sleeve recognition and physical Safari remain unqualified. Future direction: a server-backed resumable batch with stable batch identity and exactly-once completion, followed by a real-photo evaluation before expanding beyond one card per photo.
 
 
+<a id="e7-s42"></a>
+
+**E7-S42** · Matt · should · S · built
+
+As someone looking for a physical card, I want Collection to distinguish a copy lent out from one in a deck box, so I know where to look and how many copies I can use now.
+
+- Given two owned copies with one on loan and none in a deck, then my Collection shows one lent and one free. For a mix of deck, loan and loose copies, the counts reconcile to the owned printing and the free count excludes loans.
+- Given a loan and no deck holding the card, then the card viewer and global search count zero decks and still deduct the loan from free copies. Only the space's own people see loan details. Broad collection and search results carry no borrower names or notes. Cards with untracked or uncertain assignments keep those qualifications.
+
+Built (2026-11-20): Card list reserves active loans by exact printing and shows lent, deck and free counts separately. Find cards offers **Lent out**, and storage totals exclude lent copies. The card viewer and global search deduct loans from free copies and count only actual decks as deck matches. Broad results carry quantities only. Fixtures cover mixed holdings, returns, restricted viewers and uncertain printing assignments.
+
+---
+
 ## E8: Sleeves, boxes and storage
 
 The physical side of home's shared pool: each built deck and each product kept intact is in one sleeve design and one deck box, every other card sits unsleeved in the storage box, and moving a card between decks means changing its sleeve. Deck Lab records the sleeves, deck boxes and playmats (each Matt's, User1's or shared, and since E8-S26 each member's own, for their own decks) on the Sleeves & boxes page, a built deck's Sleeves and Deck box lines and an intact product's kit, warns when a holder has too few sleeves or a box that is full or too small, and lets one sleeve design sleeve several holders. Choosing a deck's kit needs the right to edit that deck; an owner may make their kit public (read-only), and members never see private kit. Accessory prices are not wanted.
-
-Open: E8-S03.
 
 **E8-S01** · Matt · must · M · built
 
@@ -3776,18 +3887,16 @@ Evidence:
 - `decklab/lib/accessory_upload.py`: decode
 - `decklab/tests/test_accessory_upload_ui.py`, `decklab/tests/test_api_accessory_upload.py`
 
-**E8-S03** · Matt · could · S · missing
+<a id="e8-s03"></a>
+
+**E8-S03** · Matt · could · S · built
 
 As Matt, opening Sleeves & boxes on the phone in a shop, I want the list to load quickly, so that I can check what sleeves I have before buying more.
 
 - Given the accessories list, when it opens on a phone, then each tile loads a small thumbnail rather than the full picture.
 - Given a tile, when I open it, then the full picture is shown.
 
-Evidence:
-- `decklab/web/accessories.js`: accessoryThumb (shows the row's one stored picture)
-- `decklab/lib/api/accessories.py`: image_file (serves the one stored picture, no size option)
-
-Gap: there are no thumbnails; tiles, the picker and the deck page all load the full picture. The need has no budget (bytes or seconds on a phone) to test against.
+Built (2026-11-20): Sleeves & boxes list tiles request WebP thumbnails up to 256 pixels on the longest side. The detail keeps the original and saved crop. The thumbnail cache reuses encoded previews by source digest after each request's existing viewer and picture-version checks. Fixtures cover a 768 × 1280 portrait, crop, replacement, removal and permission revocation.
 
 **E8-S04** · User1 · must · M · built
 
@@ -5412,6 +5521,8 @@ Evidence:
 
 **E11-S02** · Matt · should · S · partial
 
+Awaiting: phone
+
 As Matt, the household admin, I want members away from home to be told plainly when Deck Lab's PC is off or the server isn't started, so that they don't think it's broken.
 
 - Given the server isn't running, when User1 opens decklab.example.com after signing in, then she sees a page saying Deck Lab is off (503, retrying by itself every 30 seconds), not a raw Cloudflare error; an `/api/` request gets a 503 JSON answer with reason `off`.
@@ -5831,6 +5942,8 @@ Decided (Matt, 2026-10-13): when the PC is off, a friendly "Deck Lab is off" mes
 
 **E11-S28** · Matt · should · M · partial
 
+Awaiting: member session
+
 As Matt, I want to watch User2, an experienced Magic player using Deck Lab for the first time, do everyday jobs in it, so that I can find where a first-time user needs clearer navigation, wording or feedback.
 
 - Given the session is being prepared, when the checklist is written, then it uses User2's usual device and browser (confirmed with him, not assumed), plain goal-based prompts without click-by-click instructions, and an observable success condition for each task; tasks may assume Magic fluency.
@@ -5873,6 +5986,8 @@ Evidence:
 <a id="e11-s30"></a>
 
 **E11-S30** · Matt · should · L · partial
+
+Awaiting: phone, ipad, screen reader
 
 2026-11-07: the [visual-polish implementation and Chromium review](visual-polish-completion-2026-11-07.md) are complete, including remaining page/state families, receipt pointer/footer recovery, local reload persistence and actual 200% page zoom. This supersedes older component styling, not household acceptance: Safari/touch, software keyboards, screen readers, varied real art and production durability remain. The story stays partial.
 
@@ -5990,6 +6105,8 @@ Decided (Matt, 2026-10-31): Collection's colour filter matches **colour identity
 <a id="e11-s31"></a>
 
 **E11-S31** · Matt · could · M · partial
+
+Awaiting: phone, ipad
 
 As Matt, I want one search in the top bar that finds a deck or a card from any page, so that I don't have to open Decks or Collection first to find something.
 
@@ -6278,6 +6395,8 @@ Evidence:
 
 **E11-S49** · Matt · could · M · partial
 
+Awaiting: release publication
+
 As Matt, publishing Deck Lab for people who don't use git, I want versioned release zips of Deck Lab, so that an install can be made and updated without a git checkout and still knows its version.
 
 - Given a version tag on main, when the release workflow runs, then it publishes a zip of the application (no private files), its `.sha256` and a version manifest (version, commit, the migrations it holds).
@@ -6361,6 +6480,8 @@ Decided (Matt, 2026-11-03): no push notices. The in-app notices (the arrival not
 
 **E11-S55** · Matt · could · M · partial
 
+Awaiting: screen reader
+
 As the household admin whose members use phones and whose pages serve beginners, I want Deck Lab's pages checked for accessibility as one pass, so that every control can be reached, named and read by anyone, in both densities and themes.
 
 - Given every page in both densities and both themes, when the audit runs, then it records for each: text and chip contrast against WCAG AA, every control's accessible name, focus order and visible focus, and behaviour under reduced motion; the findings go in a dated file under `decklab/design/`, with a story per fix slice.
@@ -6421,7 +6542,7 @@ Evidence:
 - `decklab/lib/homenet/service.py`, `decklab/lib/homenet/linux_facts.py`, `decklab/lib/systemd.py`, `decklab/lib/api/server_restart.py`, `decklab/lib/hometime.py`, `decklab/smoke.py`, `decklab/update.py`, `scripts/decklab`; `decklab/tests/test_linux_services.py`, `decklab/tests/test_linux_ops.py`, `decklab/tests/test_smoke.py`
 - `SELF-HOSTING.md` ("From a Windows server to a Linux one", step 12's Linux steps)
 
-Qualified in WSL2 Ubuntu 26.04 (2026-11-02, a throwaway install with systemd, PostgreSQL 18, Tesseract 5.5 and OpenJDK 21): the database setup, backups, restore and the 1,897 database integration tests; the release Forge install, cardlog-check, upgrade-check and real Forge games, from the command line and the background service's warm pool; the systemd user service and nightly timer; `systemd-inhibit` under a polkit rule from the user service; `decklab.update`; and the smoke test and doctor. Its findings were fixed the same day (scanning's second Tesseract pass and faint set lines, the doctor's backup folders, `db status`'s failed dumps, Forge's default folder, and wording). At that point, real-server suspend/wake, phone access and actual card photos remained unqualified; the dated live evidence below records subsequent checks. Not built: Linux core pinning, parent-death safety for Forge started from a terminal, the profiles' sync retrying once the database comes up, and the gate's own wake time.
+Qualified in WSL2 Ubuntu 26.04 (2026-11-02, a throwaway install with systemd, PostgreSQL 18, Tesseract 5.5 and OpenJDK 21): the database setup, backups, restore and the 1,897 database integration tests; the release Forge install, cardlog-check, upgrade-check and real Forge games, from the command line and the background service's warm pool; the systemd user service and nightly timer; `systemd-inhibit` under a polkit rule from the user service; `decklab.update`; and the smoke test and doctor. Its findings were fixed the same day (scanning's second Tesseract pass and faint set lines, the doctor's backup folders, `db status`'s failed dumps, Forge's default folder, and wording). At that point, real-server suspend/wake, phone access and actual card photos remained unqualified; the dated live evidence below records subsequent checks. E11-S93 covers the profile sync after PostgreSQL starts late. Linux core pinning, parent-death safety for Forge started from a terminal and timing the hardened gate's real wake remain open.
 
 Live Linux evidence reviewed (2026-11-18): the journal records deep sleep from
 2026-11-17 22:28:37 until 2026-11-18 03:29:03, when the installed system wake
@@ -6439,6 +6560,8 @@ worker slots idle. The physical-phone/photo and hardened-gate wake gaps above
 remain; the clean smoke does not replace them.
 
 **E11-S59** · Matt · could · L · partial
+
+Awaiting: timed wake
 
 As Matt, serving Deck Lab from a spare PC that uses power all day, I want the PC to sleep when nobody is using it and wake whenever anyone opens Deck Lab, at home or through decklab.example.com, so that it costs little to run without anyone having to switch it on.
 
@@ -6515,6 +6638,8 @@ Decided (Matt, 2026-11-13): no history rewrite. The leftover check of README's `
 
 **E11-S63** · Matt · could · S · partial
 
+Awaiting: browser, phone, ipad, timed wake
+
 As Matt, the household admin, I want Deck Lab's pages and API answers to refuse being framed and to carry a strict content policy, so that another site can't put the real page in a frame and borrow a signed-in person's clicks.
 
 - Given any answer from the server, when its headers are read, then it has `X-Frame-Options: DENY` and a `Content-Security-Policy` with `frame-ancestors 'none'`; the `/sym` answer keeps its own stricter policy.
@@ -6538,6 +6663,8 @@ establish the current URL safely; Safari, device scanning, browser-console and
 home-page wake-hop acceptance remain open.
 
 **E11-S64** · Matt · could · S · partial
+
+Awaiting: phone, ipad
 
 As Matt, opening Deck Lab on a phone and the iPad, I want the page's scripts and stylesheets kept by the browser and sent compressed, so that a page load doesn't ask the server PC about some 190 files, each read and hashed again.
 
@@ -6954,3 +7081,14 @@ As Matt running `python -m decklab.lib.stats` or `goldfish` at the PC, I want a 
 - Given a Commander deck in `goldfish --all`, then its mulligan column shows "kept fewer than 7", the page's figure, and 60-card decks keep today's rate.
 
 Built (2026-11-12): `decklab/lib/stats/__init__.py` and `goldfish/cli.py` catch a missing or unreadable deck, a missing Play-now list and a pairing's `--owned` (one line, exit 1; `--all` skips the deck with a note on stderr), and an unreachable database (exit 2), as does `decklab/lib/tokens`. goldfish's headline gains `kept_fewer_than_7` beside the unchanged `mulligan_rate`, and the `--all` table's mull% uses it for setups with a free first mulligan, as the page does. Tests: `decklab/tests/test_deck_cli_errors.py` (23).
+
+<a id="e11-s93"></a>
+
+**E11-S93** · Self-hoster · should · S · built
+
+As a self-hoster whose database starts after Deck Lab, I want my configured profiles to become available when PostgreSQL comes up, so I can use the app without a manual sync or restart.
+
+- Given the background server starts while PostgreSQL is unreachable, when a later health check first finds it ready, then the server runs the existing profile sync against the current configuration. Subsequent healthy checks do not repeat a successful sync.
+- Given a foreground server or shutdown before recovery, then no deferred sync starts. An ordinary sync refusal or failure still gives the operator its existing diagnostic.
+
+Built (2026-11-20): the background server runs the existing profile sync against the current configuration on the first usable PostgreSQL check. The periodic checker can supply that result after a startup outage. Foreground runs and shutdown before recovery skip the sync. A sync refusal retains its server-log diagnostic. `test_server_lifecycle.py` covers repeated healthy checks, refusal, stopping before recovery, and recovery through the real checker thread with a mock database.

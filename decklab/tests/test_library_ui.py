@@ -294,6 +294,30 @@ class LibraryShelfTests(_Shelf):
           assert.equal(main.querySelectorAll(".deck-row-untested").length, 0);
         """)
 
+    def test_popular_decks_detail_distinguishes_played_without_a_figure_from_untested(self):
+        self.run_js("""
+          as("matt", MAY.admin);
+          const d = { id: "commander/giada", kind: "commander" };
+          const row = { format: "commander", of: 20 };
+          state.libraryGauntlet = { profile: "matt", formats: { commander: { state: "ok" } },
+            decks: { [d.id]: row } };
+          for (const [reason, played, games, expected] of [
+            ["not_meaningful", 20, 2000, "Deck Lab flagged a commander as unplayable in every played matchup."],
+            ["both_seats", 1, 100, "games on the play and on the draw"],
+          ]) {
+            Object.assign(row, { state: played === 20 ? "done" : "partial", played, games,
+              overall: { rate: null, rate_unavailable: reason } });
+            const detail = libDetailGauntlet(d);
+            assert(detail.textContent.includes(`${played} of 20 opponents · ${gamesWords(games)}`));
+            assert(detail.textContent.includes(expected));
+            assert(!detail.textContent.includes("Not tested"));
+            assert(!detail.querySelector(".wr"));
+            assert(libGauntletRowCell(d).querySelector(".deck-row-untested").getAttribute("aria-label").includes(expected));
+          }
+          delete state.libraryGauntlet.decks[d.id];
+          assert(libDetailGauntlet(d).textContent.includes("Not tested against popular decks yet."));
+        """)
+
     def test_popular_decks_figures_tiles_rows_detail_and_sort(self):
         # E3-S36: /api/library/gauntlet's standing, once per draw: a Commander tile's Forge line, its lab row's cell
         # ("—" untested), its detail pane's hero with the way to its Testing tab; a muted figure from before the

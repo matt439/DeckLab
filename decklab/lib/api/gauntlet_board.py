@@ -13,7 +13,8 @@ Imported when first asked for, by feature_routes.dispatch.
                          "state": "untested" | "partial" | "done" | "stale_list" | "stale_older" |
                                   "unreadable",
                          "problem": None or why an unreadable row has no figure,
-                         "overall": {"rate", "low", "high"} or None, "played", "of", "games", "updated",
+                         "overall": {"rate", "low", "high", optional evidence counts and rate_unavailable}
+                                    or None, "played", "of", "games", "updated",
                          "hardest": {"title", "tier", "style", "rate", "low", "high", "verdict",
                                      "source"} or None (a gauntlet deck: public data),
                          "before": {"rate", "low", "high", "updated"} or None,
@@ -116,8 +117,11 @@ def _figure(found, *extra):
 def _row_of(summary, entry, fields):
     """A board row from _summary_of's fields."""
     older = fields.get("older")
+    overall = fields.get("overall")
+    evidence = ("rate_unavailable", "matchups", "played_matchups", "entry_games", "rated_matchups", "rated_games")
+    figure = _figure(overall, *(key for key in evidence if key in (overall or {})))
     notes = [n for n in fields.get("notes") or () if n in HISTORY_NOTES]
-    return dict(_blank(summary, entry), state=fields["state"], overall=_figure(fields.get("overall")),
+    return dict(_blank(summary, entry), state=fields["state"], overall=figure,
                 played=fields["played"], of=fields["of"], games=fields["games"], updated=fields.get("updated"),
                 hardest=(fields.get("hardest") or [None])[0], before=_figure(fields.get("before"), "updated"),
                 older=None if not older else {"reason": older.get("reason"), "opponents": older.get("opponents"),

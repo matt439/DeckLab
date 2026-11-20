@@ -5,7 +5,7 @@ and the deck page's "Tests of changes" list. Every class here starts with "vt-".
 A test plays a changed version of a list on its saved list's own games (the same shuffles), so only
 games where the change mattered differ, and says whether the change is better, worse or makes little
 difference: against one deck, against the field (every other deck of the format), or against popular
-decks (the format's standard gauntlet sample, E3-S30: the page then adds the difference by colour, number
+decks (the standard or a saved gauntlet sample, E3-S30: the page then adds the difference by colour, number
 of colours, style and tier, saying it covers those sampled opponents only). The server works
 everything out (GET /api/variant, /api/variants, /api/variant/estimate); the page shows it.
 
@@ -35,6 +35,7 @@ const VT_LIVE = ["queued", "running"];
 const VT_SIDEBOARD = "Sideboard changes aren't tested (games are best of one)";
 const VT_SIZE = "Keep the same number of cards to test a change";
 const VT_POPULAR = "gauntlet";      // the server's "popular decks": the format's standard sample (E3-S30)
+const vtTestSheets = new Set();
 
 
 // ------------------------------------------------------------------ shared words and parts
@@ -864,16 +865,35 @@ function vtOpenTestFromRoute(params, id) {
   else toast(found.why || "This draft makes no change to test.");
 }
 
+/** The Testing page can hand this editor a saved non-standard sample, scoped to this deck and list. */
+function vtSavedSampleChoice(ed) {
+  const { path, params } = parseHash();
+  const sample = params.get("gsample");
+  if (path === "edit" && params.get("id") === ed.id && params.get("v") === ed.version &&
+      GT_SAMPLE_RE.test(sample)) return `${VT_POPULAR}:${sample}`;
+  return null;
+}
+
+function closeVariantTestSheets() {
+  for (const sheet of vtTestSheets) sheet.close();
+}
+
 async function vtOpenTestSheet() {
   const ed = editor;
   if (!ed || !vtTestState(ed).ok) return;
-  const sheet = openSheet("Test this change", { wide: true });
+  const sheet = openSheet("Test this change", { wide: true, onClose: () => vtTestSheets.delete(sheet) });
+  vtTestSheets.add(sheet);
   sheet.dialog.classList.add("vt-sheet");
+  const token = routeToken, hash = location.hash;
+  const current = () => !sheet.closed && sheet.dialog.isConnected && editor === ed && routeToken === token && location.hash === hash &&
+    state.profile?.id === ed.profile;
   const kind = currentKind();
-  const pick = { against: "field", mode: null, estimate: null };
+  const savedSample = vtSavedSampleChoice(ed);
+  const sampleCaption = el("span", { text: "Saved sample from Testing" });
+  const pick = { against: savedSample || "field", mode: null, estimate: null };
   const againstHost = el("div", { class: "vt-sheet-part" });
   const howHost = el("div", { class: "vt-sheet-part" });
-  const problem = el("p", { class: "vt-error", hidden: true });
+  const problem = el("p", { class: "vt-error", role: "status", hidden: true });
   add(sheet.body, [vtChips(vtDraftChanges(ed)),
     el("h3", { text: "Test against" }), againstHost,
     howHost, problem, runsAllowed() ? null : el("p", { class: "run-blocked", text: runGate().why })]);
@@ -881,11 +901,13 @@ async function vtOpenTestSheet() {
   if (!library) {
     try {
       library = cacheLibrary(await api("/api/decks"));
-      if (!library) return;
+      if (!library || !current()) return;
     } catch (e) {
       // Not an empty library: say so, with Try again (the sheet opened afresh), and no Start.
-      if (sheet.closed) return;
-      clear(sheet.body).append(loadFailed("The decks to test against", e, () => { sheet.close(); vtOpenTestSheet(); }));
+      if (!current()) return;
+      clear(sheet.body).append(loadFailed("The decks to test against", e, () => {
+        if (current()) { sheet.close(); vtOpenTestSheet(); }
+      }));
       sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() }]);
       return;
     }
@@ -897,10 +919,18 @@ async function vtOpenTestSheet() {
   others.map((d) => el("option", { value: d.id, text: d.title })));
   const radio = (name, value, text, checked, onchange) => el("label", { class: "vt-choice" },
     el("input", { type: "radio", name, value, checked: checked || null, onchange }), el("span", {}, text));
-  // The field's size and whether it can be tested against, from its estimate; popular decks' (E3-S30: the
-  // format's standard sample, offered only once its estimate says it's available) from their own.
+  // The standard sample is offered when its estimate says it's available. The handed-off sample stays
+  // visible when unavailable so its estimate can explain the problem.
   const field = { size: 0, ok: true }, popular = { size: 0, ok: false };
-  const named = (value) => value !== "field" && value !== VT_POPULAR;
+  const named = (value) => value !== "field" && value !== VT_POPULAR && value !== savedSample;
+  let asked = 0, fieldAsked = 0, starting = false;
+  const sampleReady = () => pick.estimate?.available && pick.estimate.against === savedSample && pick.estimate.opponents > 0;
+  const canStart = () => runsAllowed() && !starting && (pick.against !== savedSample || sampleReady());
+  sheetActions(sheet, [{ text: "Start", kind: "primary", value: "start", onclick: start, disabled: !canStart() },
+    { text: "Cancel", onclick: () => sheet.close() }]);
+  const startButton = sheet.foot.querySelector('[data-action="start"]');
+  const syncStart = () => { startButton.disabled = !canStart(); };
+
   function drawAgainst() {
     const choose = (value) => () => { pick.against = value; select.disabled = !named(value); refresh(); };
     add(clear(againstHost), [
@@ -908,6 +938,7 @@ async function vtOpenTestSheet() {
         pick.against === "field", choose("field")),
       popular.ok ? radio("vt-against", VT_POPULAR, `Popular decks (${plural(popular.size, "deck")}, a sample)`,
         pick.against === VT_POPULAR, choose(VT_POPULAR)) : null,
+      savedSample ? radio("vt-against", savedSample, sampleCaption, pick.against === savedSample, choose(savedSample)) : null,
       others.length ? radio("vt-against", "deck", "One deck:", named(pick.against),
         () => { pick.against = select.value; select.disabled = false; refresh(); }) : null,
       others.length ? select : null]);
@@ -915,11 +946,27 @@ async function vtOpenTestSheet() {
     const fieldInput = againstHost.querySelector('input[value="field"]');
     if (fieldInput && !field.ok) fieldInput.disabled = true;
   }
-  const estimateFor = (against) => api(`/api/variant/estimate?id=${encodeURIComponent(ed.id)}&version=${ed.version}` +
-    `&against=${encodeURIComponent(against)}`);
+  async function estimateFor(against) {
+    const fieldRequest = against === "field" ? ++fieldAsked : 0;
+    const est = await api(`/api/variant/estimate?id=${encodeURIComponent(ed.id)}&version=${ed.version}` +
+      `&against=${encodeURIComponent(against)}`);
+    if (fieldRequest && fieldRequest === fieldAsked && current()) {
+      field.size = est.opponents;
+      field.ok = est.available;
+      drawAgainst();
+    }
+    return est;
+  }
+  const showProblem = (text, waiting = false) => {
+    problem.textContent = text || "";
+    problem.hidden = !text;
+    problem.classList.toggle("vt-error", !waiting);
+  };
+  // With a saved sample selected first, still fill in the field's own choice.
+  if (savedSample) estimateFor("field").catch(() => {});
   // Asked once as the sheet opens: whether popular decks can be offered at all (a catalogue built on the PC).
   estimateFor(VT_POPULAR).then((est) => {
-    if (sheet.closed || !est || !est.available || !est.opponents) return;
+    if (!current() || !est?.available || !est.opponents) return;
     popular.ok = true;
     popular.size = est.opponents;
     if (pick.against === "field" && !field.ok) {       // nothing else to offer first
@@ -944,57 +991,62 @@ async function vtOpenTestSheet() {
     clear(howHost).append(runChoiceControl(options, pick.mode, (mode) => { pick.mode = mode; }, { label: "How long to play" }).node);
   }
   async function refresh() {
-    const against = pick.against;
+    const against = pick.against, request = ++asked;
+    const selected = () => current() && request === asked;
+    pick.estimate = null;
+    showProblem(against === savedSample ? "Checking the saved sample…" : null, true);
+    syncStart();
     try {
       const est = await estimateFor(against);
-      if (sheet.closed) return;
-      if (against === "field") {        // the field's size and state, kept even when another choice came since
-        field.size = est.opponents;
-        field.ok = est.available;
-      }
-      if (against !== pick.against) {   // a later choice's answer wins
-        if (against === "field") drawAgainst();
-        return;
-      }
+      if (!selected()) return;
       pick.estimate = est;
-      problem.hidden = true;
-      if (against === "field") {
-        drawAgainst();
-        if (!est.available) {
-          if (popular.ok) { pick.against = VT_POPULAR; drawAgainst(); refresh(); return; }
-          if (others.length) { pick.against = others[0].id; drawAgainst(); refresh(); return; }
-          problem.hidden = false;
-          problem.textContent = est.problem || "There's no deck to test against.";
-        }
+      showProblem(null);
+      if (against === "field" && !est.available) {
+        if (popular.ok) { pick.against = VT_POPULAR; drawAgainst(); refresh(); return; }
+        if (others.length) { pick.against = others[0].id; drawAgainst(); refresh(); return; }
+        showProblem(est.problem || "There's no deck to test against.");
+      } else if (against === savedSample) {
+        sampleCaption.textContent = sampleReady() ? `Saved sample from Testing (${plural(est.opponents, "deck")})`
+          : "Saved sample from Testing";
+        if (!sampleReady()) showProblem(est.problem || "This saved sample is unavailable.");
       } else if (against === VT_POPULAR && !est.available) {
-        problem.hidden = false;
-        problem.textContent = est.problem || "There are no popular decks to test against.";
+        showProblem(est.problem || "There are no popular decks to test against.");
       }
       drawHow(est);
     } catch (e) {
-      if (sheet.closed || against !== pick.against) return;
+      if (!selected()) return;
+      if (against === savedSample) showProblem(e.message || "Couldn't check the saved sample.");
       drawHow(null);
+    } finally {
+      if (selected()) syncStart();
     }
   }
   drawAgainst();
   drawHow(null);
   refresh();
-  sheetActions(sheet, [{ text: "Start", kind: "primary", onclick: () => start(), disabled: !runsAllowed() },
-    { text: "Cancel", onclick: () => sheet.close() }]);
   async function start() {
+    if (!current() || !startButton.isConnected || !canStart()) return;
     const against = named(pick.against) ? { id: pick.against, version: "target" } : pick.against;
+    starting = true;
+    syncStart();
+    showProblem(null);
     try {
       const answer = await apiWrite("/api/variant/run", { id: ed.id, version: ed.version, list: sendList(ed.lists),
         against, mode: pick.mode || "ahead" });
       const id = answer.test && answer.test.test;
       if (typeof syncRunsPill === "function") syncRunsPill(true);     // runs-pill.js: the top bar's run activity
+      if (!current()) return;
       clear(sheet.body).append(el("p", { text: "The test has started. It goes on while you keep editing, and its page shows how it's going." }),
         vtChips(vtDraftChanges(ed)));
       sheetActions(sheet, [{ text: "Keep editing", kind: "primary", onclick: () => sheet.close() },
-        id ? { text: "See the test", onclick: () => { sheet.close(); location.hash = `#/variant?test=${id}`; } } : null]);
+        id ? { text: "See the test", onclick: () => {
+          if (current()) { sheet.close(); location.hash = `#/variant?test=${id}`; }
+        } } : null]);
     } catch (e) {
-      problem.hidden = false;
-      problem.textContent = e.message;
+      if (current()) showProblem(e.message);
+    } finally {
+      starting = false;
+      if (current()) syncStart();
     }
   }
 }

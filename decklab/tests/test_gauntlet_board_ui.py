@@ -138,6 +138,31 @@ class GauntletBoardUiTests(unittest.TestCase):
           assert.equal(writes.length,0);
         """)
 
+    def test_results_without_rates_show_coverage_and_the_reason(self):
+        self.run_js("""
+          api=async()=>board('commander',[
+            tested('commander/f','Flagged',.5,{overall:{rate:null,rate_unavailable:'not_meaningful'}}),
+            row('commander/p','One seat',{state:'partial',played:1,games:100,
+              overall:{rate:null,rate_unavailable:'both_seats'}}),
+            tested('commander/m','Mixed',.5,{state:'partial',played:3,games:300,
+              overall:{rate:.5,low:.4,high:.6,rated_matchups:1,played_matchups:3,rated_games:100}}),
+            row('commander/u','Untested')]);
+          open();await settle();
+          const [flagged,oneSeat,mixed,untested]=main.querySelectorAll('.gb-row');
+          assert(flagged.textContent.includes('20 of 20 opponents · 2,000 games'));
+          assert(flagged.textContent.includes('Deck Lab flagged a commander as unplayable in every played matchup.'));
+          assert(oneSeat.textContent.includes('1 of 20 opponents · 100 games'));
+          assert(oneSeat.textContent.includes('games on the play and on the draw'));
+          for(const played of [flagged,oneSeat]) {
+            assert(!played.querySelector('.wr'));
+            assert(!played.textContent.includes('Not tested'));
+          }
+          assert(mixed.textContent.includes('3 of 20 opponents · 300 games'));
+          assert(mixed.textContent.includes('Win rate uses games from 1 of 3 played matchups.'));
+          assert(mixed.querySelector('.wr').getAttribute('aria-label').includes('100 games'));
+          assert(untested.textContent.includes('Not tested against popular decks yet.'));
+        """)
+
     def test_play_asks_then_sends_the_list_on_screen_and_shows_the_servers_refusal(self):
         self.run_js("""
           const calls=[];api=async url=>{calls.push(url);return board('commander',[tested('commander/c','Commander C',.6)]);};

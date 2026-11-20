@@ -1,5 +1,68 @@
 # Deck Lab: history
 
+## Popular decks coverage and saved samples (2026-11-20, E3-S30, E3-S52, E3-S53)
+
+Popular decks shows saved opponents and games when the results cannot produce
+a win rate. It distinguishes games Forge flagged, games in only one seat and a
+list with zero games. If only some results can support a rate, the page gives
+the coverage used for that figure.
+
+Each saved matchup contributes once to the rate, range and turn statistics for
+its group. The Testing summary and CLI identify shared results while keeping
+each catalogue entry's source and coverage.
+
+Choose **Try a change against this sample** on a saved custom sample to open
+the editor for that list and select it in **Test this change**. The sheet
+requires an estimate and an explicit Start. Unavailable samples and refused
+starts leave the draft available.
+
+## Small pictures in Sleeves & boxes (2026-11-20, E8-S03)
+
+List tiles load WebP thumbnails up to 256 pixels on the longest side. The
+detail loads the original and applies its saved crop. Previews are reused
+after access and version checks. Pillow generates the thumbnails and the
+updater installs the pinned dependency when needed.
+
+## Shop stock, copy prices and plan coverage (2026-11-20, E5-S39 to E5-S41)
+
+Shopping allocates each counted listing's stock once across competing rows.
+The planner compares successive unit prices across shops, applies postage to
+the selected copies, and carries their quantities and printings into copy and
+order review. Optional add-ons use remaining stock. Coverage includes every
+ready copy, with unmet quantities and separate wording for stock and check
+failures.
+
+## Card use checks and lent copies (2026-11-20, E1-S32, E7-S42)
+
+The card viewer and global search keep known matches and free-copy counts
+when a visible list cannot be read. They show that the check is incomplete.
+A zero-deck result requires a completed check of eligible visible lists.
+
+Collection shows how many copies are lent, in decks and free. The Card list
+reserves active loans by printing before assigning deck copies, and Find cards
+can filter for lent copies. Card use and storage counts deduct active loans.
+Borrower details stay in the private Loans list.
+
+## Sync profiles when PostgreSQL becomes ready (2026-11-20, E11-S93)
+
+The background server syncs the current configured profiles on its first
+usable database check. When PostgreSQL starts later, the periodic checker
+can trigger the sync once it is ready. A sync failure keeps its server-log
+diagnostic.
+
+## Search past deliveries by card or token (2026-11-20, E6-S30)
+
+Shopping's Order history can find a recorded card or either face of a token.
+Matching orders show the item's quantity and component status beside the
+link to delivery details. Clearing the search restores the full history.
+
+## Chance of drawing both cards (2026-11-20, E3-S54)
+
+Select two names in Stats to see the chance of drawing either card and the
+chance of drawing at least one copy of each by the chosen turn. Both figures
+also appear in the by-turn table. They use the selected play or draw setting
+and the displayed list's main deck, combining printings of the same name.
+
 ## Remote acceptance finished with explicit engine gaps (2026-11-18)
 
 The HomeOps queue finished at 15:42:18 local time. All 14 Commander standard

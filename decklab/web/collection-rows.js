@@ -112,7 +112,7 @@ function drawColRowList(cv) {
   cv.unrecordedLabel.textContent = `Condition or language not recorded: ${plural(unrecorded, "row")}`;
   cv.unrecordedChoice.hidden = !unrecorded;
   if (!unrecorded) { cv.unrecordedOnly = false; cv.unrecorded.checked = false; }
-  // In storage only: offered only when the copies in decks could be worked out.
+  // In storage only: offered only when copy availability could be worked out.
   const stored = cv.storage && !cv.storage.error ? rows.filter((row) => colInStorage(cv, row)) : null;
   if (cv.storageChoice) {
     cv.storageLabel.textContent = stored ? `In storage only (${plural(stored.length, "row")})` : "";
@@ -237,7 +237,7 @@ function colRowTable(cv, rows) {
       el("th", { scope: "col", class: "col-column-type col-th-type", text: "Type" }),
       sortable("set", "col-wide"), el("th", { scope: "col", class: "col-th-finish", text: "Finish" }),
       sortable("quantity", "num"), sortable("condition", "col-wide"), sortable("language", "col-wide"),
-      el("th", { scope: "col", class: "col-th-held", text: "In decks" }), sortable("price", "num"),
+      el("th", { scope: "col", class: "col-th-held", text: "Availability" }), sortable("price", "num"),
       el("th", { scope: "col", class: "col-notes col-th-notes", text: "Notes" }))),
     el("tbody", {}, rows.map((row) => colRowLine(cv, row)))));
 }
@@ -304,12 +304,13 @@ function colUnknown(words) {
 
 /** These remain allocated copy counts, separate from saved packing-list hints. */
 function colStorageWords(cv, row) {
-  if (!cv.storage || cv.storage.error) return colWithLocation(cv, row, "Copies in decks not known");
-  const { held, guess } = colHeld(cv, row);
+  if (!cv.storage || cv.storage.error) return colWithLocation(cv, row, "Copy availability not known");
+  const { held, lent, free, guess } = colHeld(cv, row);
   if (held == null) return colWithLocation(cv, row, "Basic land: deck allocation not tracked");
-  if (!held) return colWithLocation(cv, row, "In storage");
-  return colWithLocation(cv, row, `${plural(held, "copy", "copies")} in decks${guess ? " (printing uncertain)" : ""}`
-    + ` \u00b7 ${Math.max(0, Number(row.quantity) - held)} free`);
+  if (!held && !lent) return colWithLocation(cv, row, "In storage");
+  const counts = [held ? `${plural(held, "copy", "copies")} in decks${guess ? " (printing uncertain)" : ""}` : null,
+    lent ? `${num(lent)} lent out` : null, `${num(free)} free`];
+  return colWithLocation(cv, row, counts.filter(Boolean).join(" \u00b7 "));
 }
 
 const COL_PACKING_HINT_WORDS = "Saved packing lists may differ from the boxes and current deck lists. "
@@ -522,12 +523,14 @@ function colTypeCell(card) {
 /** Counts stay unchanged; the lab's static marker leads to full hints in the selected preview. */
 function colHeldCell(cv, row) {
   const cell = el("td", { class: "col-td-held" });
-  if (!cv.storage || cv.storage.error) return add(cell, [colUnknown("Copies in decks not known")]);
-  const { held, guess } = colHeld(cv, row);
+  if (!cv.storage || cv.storage.error) return add(cell, [colUnknown("Copy availability not known")]);
+  const { held, lent, free, guess } = colHeld(cv, row);
   if (held == null) return add(cell, [el("span", { text: "Not tracked", title: "Basic land: deck allocation not tracked" })]);
-  if (!held) return add(cell, [el("span", { text: "In storage" })]);
-  const words = `${num(held)} in decks${guess ? "?" : ""} \u00b7 ${num(Math.max(0, Number(row.quantity) - held))} free`;
-  return add(cell, [el("span", { class: `col-held${guess ? " col-held-guess" : ""}`,
+  if (!held && !lent) return add(cell, [el("span", { text: "In storage" })]);
+  const counts = [held ? `${num(held)} in decks${guess ? "?" : ""}` : null,
+    lent ? `${num(lent)} lent out` : null, `${num(free)} free`];
+  const words = counts.filter(Boolean).join(" \u00b7 ");
+  return add(cell, [el("span", { class: `col-held${guess ? " col-held-guess" : ""}${lent ? " col-held-loans" : ""}`,
     title: colStorageWords(cv, row) + (guess ? `. ${COL_GUESS_WORDS}` : "") }, simNumbers(words)),
     guess ? el("span", { class: "sr-only", text: "Printing allocation uncertain." }) : null,
     colPackingMarker(colListedHolders(cv, row)?.holders || [])]);

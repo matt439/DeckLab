@@ -252,10 +252,10 @@ def describe(snapshot):
     return snapshot["error"]
 
 
-def start(first=None, dbname=None):
-    """Start the checker thread (stopping one already running): it checks at once, calls
-    first(snapshot) after that first check when given, then checks every REFRESH_SECONDS
-    until stop(). Returns at once."""
+def start(first=None, dbname=None, *, after_check=None):
+    """Start the checker thread (stopping one already running). It checks at once, calls
+    first(snapshot) when given, then checks every REFRESH_SECONDS until stop(). An optional
+    after_check(snapshot) runs after every check, including the first. Returns at once."""
     global _running
     stop()
     event = threading.Event()
@@ -267,15 +267,20 @@ def start(first=None, dbname=None):
             _log(f"the check failed: {type(e).__name__}: {e}")
             return _result(CHECK_FAILED, f"{type(e).__name__}: {e}")
 
+    def report(callback, result, activity):
+        if callback is None or event.is_set():
+            return
+        try:
+            callback(result)
+        except Exception as e:                      # noqa: BLE001 (the thread must keep checking)
+            _log(f"the {activity} failed: {type(e).__name__}: {e}")
+
     def loop():
         result = safe_refresh()
-        if first is not None and not event.is_set():
-            try:
-                first(result)
-            except Exception as e:                  # noqa: BLE001
-                _log(f"the start-up report failed: {type(e).__name__}: {e}")
+        report(first, result, "start-up report")
+        report(after_check, result, "health-check callback")
         while not event.wait(REFRESH_SECONDS):
-            safe_refresh()
+            report(after_check, safe_refresh(), "health-check callback")
 
     thread = threading.Thread(target=loop, name="database-status", daemon=True)
     with _lock:

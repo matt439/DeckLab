@@ -117,6 +117,7 @@ function closeAllSheets() {
   closeReprintSheets();
   colCloseSheets();
   closeDeckOpponentSheets();
+  closeVariantTestSheets();
   closeDeckRetirementSheets();
   closeAssemblySheets();
   closeProductStorageSheets();

@@ -19,8 +19,8 @@ function shopBasketOrderPrinting(listing) {
   return {set: listing.set.toLowerCase(), collector_number: listing.collector_number, finish: listing.finish};
 }
 
-/** The plan buys the same cheapest-first prefix that shop_plan._cost totals. A stock-unknown
- * shop has a single listing for every counted copy. Never spread copies by average price. */
+/** A current plan supplies its own allocated listing tiers. Older plans supply a prefix count.
+ * A shop without counted stock has a single listing for the proposed copies. */
 function shopBasketOrderPrefix(item, copies) {
   const total = shopBasketOrderCopies(item?.copies);
   if (!total || copies > total || !Array.isArray(item.more)) return null;
@@ -52,7 +52,8 @@ function shopBasketOrderSeed(view, selected, basket) {
     if (!Number.isSafeInteger(number) || number < 1 || seen.has(number) || !count) return null;
     seen.add(number);
     const matches = view.data.to_buy.filter(row => row.queue_row === number);
-    const sources = basket.rows.filter(row => row.queue_row === number);
+    const sources = selected !== basket && Object.hasOwn(chosen, "listing") ? [chosen]
+      : basket.rows.filter(row => row.queue_row === number);
     if (matches.length !== 1 || sources.length !== 1) return null;
     const queued = matches[0], source = sources[0], queuedCopies = shopBasketOrderCopies(queued.quantity);
     if (queued.state !== "ready" || source.state !== "ready" || chosen.state !== "ready" || source.status !== "in_stock"

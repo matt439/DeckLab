@@ -27,6 +27,7 @@ import hashlib
 import json
 
 from decklab.lib import cards, decks, inventory, spaces
+from decklab.lib.min_cost_flow import min_cost_flow
 
 from . import reserve
 from .rows import label
@@ -38,47 +39,6 @@ _RANK_WEIGHT, _MOVE_WEIGHT, _TWO_SIDED_WEIGHT = 100, 10, 1
 
 def _two_sided(row):
     return bool(row["back"]) and cards.fold(row["back"]) != cards.fold(row["front"])
-
-
-def _min_cost_flow(n, edges, source, sink):
-    """Successive shortest paths (Bellman-Ford as SPFA, so costs may be anything) on a small graph: edges
-    [(u, v, capacity, cost)]. Returns the flow on each edge, in edges' order; the flow is maximal,
-    and of least cost among maximal flows."""
-    graph = [[] for _ in range(n)]
-    arcs = []           # [to, capacity left, cost, index of the reverse arc]
-    for u, v, cap, cost in edges:
-        graph[u].append(len(arcs))
-        arcs.append([v, cap, cost, len(arcs) + 1])
-        graph[v].append(len(arcs))
-        arcs.append([u, 0, -cost, len(arcs) - 1])
-    while True:
-        dist, back, queued = [None] * n, [None] * n, [False] * n
-        dist[source] = 0
-        queue = collections.deque([source])
-        while queue:
-            u = queue.popleft()
-            queued[u] = False
-            for a in graph[u]:
-                v, cap, cost, _ = arcs[a]
-                if cap > 0 and (dist[v] is None or dist[u] + cost < dist[v]):
-                    dist[v], back[v] = dist[u] + cost, a
-                    if not queued[v]:
-                        queued[v] = True
-                        queue.append(v)
-        if dist[sink] is None:
-            break
-        push, v = None, sink
-        while v != source:
-            a = back[v]
-            push = arcs[a][1] if push is None else min(push, arcs[a][1])
-            v = arcs[arcs[a][3]][0]
-        v = sink
-        while v != source:
-            a = back[v]
-            arcs[a][1] -= push
-            arcs[arcs[a][3]][1] += push
-            v = arcs[arcs[a][3]][0]
-    return [arcs[2 * i + 1][1] for i in range(len(edges))]
 
 
 def _candidates(need, inv):
@@ -166,7 +126,7 @@ def plan(inv, built, space=spaces.HOME, warnings=None, *, products=None):
             edges.append((1 + n, 1 + len(needs) + row, 1, cost))
     for i, row in enumerate(inv.rows):
         edges.append((1 + len(needs) + i, sink, capacities[i], 0))
-    flow = _min_cost_flow(sink + 1, edges, source, sink)
+    flow = min_cost_flow(sink + 1, edges, source, sink)
 
     given = {d["id"]: {} for d in found}             # deck -> {row: cards}
     packs = {d["id"]: [] for d in found}

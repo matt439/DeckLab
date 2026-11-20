@@ -864,7 +864,8 @@ class Handler(BaseHTTPRequestHandler):
         """An accessory's picture: /accessory-img/<id>.<ext>?v=<hash> (a
         picture accessories.csv names, from the inventory; v is required and
         must match accessories.image_version, so an address
-        names one picture's bytes in the current address epoch. Every saved
+        names one picture in the current address epoch. Optional size=thumb
+        serves a small preview of that picture. Every saved
         picture is private/no-cache with an ETag: authorization runs before
         revalidation, so revoking Public takes effect on the next request.
         Or /accessory-img/staged/<token>.<ext> (a fetched
@@ -884,7 +885,7 @@ class Handler(BaseHTTPRequestHandler):
         from decklab.lib.api import guard
         self._allow(*GET)
         if len(parts) == 1:
-            params = self._query(query, ("v", "viewer"))
+            params = self._query(query, ("v", "viewer", "size"))
         elif parts[0] == "staged":
             params = self._query(query, ("viewer",))
         else:
@@ -896,11 +897,14 @@ class Handler(BaseHTTPRequestHandler):
         with access.viewing(named):
             guard.require_sees_accessories()        # before the name is looked at: 403 for any name
             if len(parts) == 1:
+                size = params.get("size")
+                if size not in (None, "thumb"):
+                    raise api.ApiError(400, "Bad query parameter value")
                 if "v" not in params:
                     raise api.ApiError(404, "Not found")
                 if not re.fullmatch(r"[0-9a-f]{8}", params["v"]):
                     raise api.ApiError(400, "Bad query parameter value")
-                data, content_type = accessories_api.image_file(parts[0], params["v"])
+                data, content_type = accessories_api.image_file(parts[0], params["v"], thumbnail=size == "thumb")
                 cache = "private, no-cache"
             elif parts[0] == "staged":
                 data, content_type = accessories_api.staged_image(parts[1])

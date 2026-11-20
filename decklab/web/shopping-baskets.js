@@ -15,6 +15,8 @@ const SHOP_BASKET_WORDS = {
   unknown: "couldn't be read", not_checked: "not checked", unconfirmed: "printing not confirmed",
   unread: "no saved check", not_matched: "listed, but not matched to your printing",
   not_eligible: "no listing meets the household condition/language preference",
+  allocated: "matching copies allocated to other rows", short: "too few matching copies",
+  outside_plan: "matching stock at a shop outside this plan",
   token: "token cards aren't checked at this shop",
 };
 
@@ -60,11 +62,14 @@ function shopBasketArt(view, row) {
 
 /** Quantity/name and the already-computed line total; plans reuse only this header, not shop evidence. */
 function shopBasketItemHead(row, view = null, {copies = row.copies, showTotal = true} = {}) {
-  const total = shopBasketAud(row.line_aud);
+  const partial = row.unpriced_copies > 0 && row.unpriced_copies < copies ? shopBasketAud(row.known_aud) : null;
+  const total = shopBasketAud(row.line_aud) || partial;
   return el("div", {class: "shop-basket-item-head"}, shopBasketArt(view, row),
     el("span", {class: "shop-basket-name", text: `${copies} × ${row.name}`}),
     showTotal ? el("span", {class: "shop-basket-line-total"},
-      el("small", {text: "Row total"}), el(total ? "strong" : "span", {text: total || "Not known"})) : null);
+      el("small", {text: partial ? "Known row subtotal" : "Row total"}),
+      el(total ? "strong" : "span", {text: total || "Not known"}),
+      partial ? el("small", {text: `plus ${plural(row.unpriced_copies, "copy", "copies")} without a price`}) : null) : null);
 }
 
 function shopBasketActions(...controls) {
@@ -81,7 +86,8 @@ function shopBasketLine(row, basket, view = null) {
   const each = price ? `${price} each` : "price not shown";
   const more = Array.isArray(row.more) ? row.more.filter(item => item && item.set) : [];
   const counted = Number.isInteger(row.stock) ? row.stock : listing.stock;
-  const stock = basket.counts_stock ? (row.short ? `only ${counted} of ${row.quantity} in stock`
+  const stock = basket.counts_stock ? (row.shared_stock ? `${row.copies} of ${row.quantity} allocated from shared stock`
+    : row.short ? `only ${counted} of ${row.quantity} in stock`
     : more.length ? `${counted} in stock across ${more.length + 1} listings` : `${listing.stock} in stock`)
     : "in stock (count not shown)";
   const also = more.map(item => {
@@ -255,8 +261,11 @@ function shopBaskets(view) {
   if (!baskets || !seesHomeInventory(state.may) || !Array.isArray(baskets.shops)) return null;
   const stale = shopBasketsCurrent(view) ? null
     : el("p", {class: "note note-warn", role: "status", text: "The queue changed since these baskets were worked out. Refresh Shopping to update them."});
+  const plan = typeof shopBasketPlan === "function" ? shopBasketPlan(view) : null;
+  const explained = new Set(plan ? (baskets.plan.recommended.uncovered || []).filter(row => row.shops?.length)
+    .map(row => row.queue_row) : []);
   return shopSection("shop-baskets", "Baskets", 0,
     "Proposed from each shop's saved daily check: the ready cards in stock there, and each shop's postage as set in Settings. Check the shop before ordering.",
-    stale, typeof shopBasketPlan === "function" ? shopBasketPlan(view) : null, el("div", {class: "shop-baskets"}, baskets.shops.filter(Boolean).map(basket => shopBasket(view, basket))),
-    shopBasketsUnavailable(baskets.unavailable || [], view));
+    stale, plan, el("div", {class: "shop-baskets"}, baskets.shops.filter(Boolean).map(basket => shopBasket(view, basket))),
+    shopBasketsUnavailable((baskets.unavailable || []).filter(row => !explained.has(row.queue_row)), view));
 }

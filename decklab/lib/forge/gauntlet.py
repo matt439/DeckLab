@@ -316,10 +316,12 @@ def _rate(numbers):
 def _opponent(deck, row):
     """One sampled opponent's row of the view: "verdict" its lead in words (verdict()), "updated"
     when its games were last added to."""
+    rate = _rate(row["numbers"]) if not row["not_meaningful"] else None
+    lead = row["lead"] if rate else None
     return {"id": deck["id"], "title": deck["title"], "tier": deck.get("tier"),
             "identity": deck.get("identity") or "", "colours": deck.get("colours") or "",
             "style": (deck.get("style") or {}).get("primary"), "key": row["key"], "games": row["n"],
-            "rate": _rate(row["numbers"]), "lead": row["lead"], "verdict": verdict(row["lead"]),
+            "rate": rate, "lead": lead, "verdict": verdict(lead),
             "not_meaningful": row["not_meaningful"], "problem": row["problem"], "updated": row.get("updated"),
             **({"stalled": row["stalled_all"]} if row.get("stalled_all", {}).get("caution") else {}),
             "clock": views.clock_of(None if row["not_meaningful"] else row.get("turns")),
@@ -331,49 +333,83 @@ TALLY = {"ahead": "ahead", "slightly ahead": "ahead", "about even": "even", "beh
 
 
 def _tally(opponents):
-    """{"ahead", "even", "behind", "unsettled"}: how many opponents' verdicts are each (none counted
-    without games)."""
+    """{"ahead", "even", "behind", "unsettled"} across distinct matchups with a verdict."""
     out = {"ahead": 0, "even": 0, "behind": 0, "unsettled": 0}
-    for o in opponents:
+    for o in _distinct_rows(opponents):
         key = TALLY.get(o.get("verdict"))
         if key:
             out[key] += 1
     return out
 
 
+def _distinct_rows(rows):
+    """One row per saved matchup key. Rows whose key couldn't be found stay separate."""
+    seen = set()
+    for row in rows:
+        key = row.get("key")
+        if key is None or key not in seen:
+            yield row
+        if key is not None:
+            seen.add(key)
+
+
 def _group(key, label, members, extra=None):
     """One group's row: {"key", "label", "opponents", "games", "rate", "low", "high", "spread",
-    "note", "clock"} over members [(catalogue entry, field._rows row)]. "clock" (E3-S51) is
-    views.clock_of over the members' games pooled (never their medians averaged), leaving out the
-    opponents whose results don't mean something, as the rate does."""
-    counted = [r["numbers"] for _, r in members if r["numbers"] and not r["not_meaningful"]]
-    of = sum(1 for _, r in members if not r["not_meaningful"])
+    "note", "clock"} over members [(catalogue entry, field._rows row)]. "opponents" counts the
+    entries, and "games" counts each matchup key once. When keys repeat, "matchups" is the distinct
+    count, "played_matchups" has games, and "entry_games" attributes the games to every entry.
+    The strength figure and pooled turn counts each use a saved matchup once and skip results
+    flagged as not meaningful. "rated_matchups" and "rated_games" are given when only some
+    played matchups contribute to the figure."""
+    rows = [row for _, row in members]
+    distinct = list(_distinct_rows(rows))
+    eligible = [row for row in distinct if not row["not_meaningful"]]
+    counted = [row["numbers"] for row in eligible if row["numbers"]]
+    of = len(eligible)
     try:
         average = seqstats.field_average(counted, of=of) if counted else None
     except NotImplementedError:
         average = None
     values = [n["value"] for n in counted if n.get("value") is not None]
     notes = [extra] if extra else []
-    played = sum(1 for _, row in members if row.get("n") and not row["not_meaningful"])
-    games = sum(row["n"] for _, row in members if not row["not_meaningful"])
+    played = sum(1 for row in eligible if row["n"])
+    played_distinct = sum(1 for row in distinct if row["n"])
+    games = sum(row["n"] for row in eligible)
+    saved_games = sum(row["n"] for row in distinct)
+    evidence = {}
+    if len(distinct) < len(rows):
+        keyed = [row for row in distinct if row["key"] is not None]
+        evidence.update(matchups=len(keyed), played_matchups=sum(1 for row in keyed if row["n"]),
+                        entry_games=sum(row["n"] for row in rows))
+    if average is not None and len(values) < played_distinct:
+        evidence.update(played_matchups=played_distinct, rated_matchups=len(values),
+                        rated_games=sum(row["n"] for row in eligible if (row["numbers"] or {}).get("value") is not None))
+    if average is None and saved_games:
+        if not played:
+            evidence["rate_unavailable"] = "not_meaningful"
+        elif counted and not values:
+            evidence["rate_unavailable"] = "both_seats"
+        else:
+            evidence["rate_unavailable"] = "unavailable"
     thin = played < reliability.MIN_GROUP_OPPONENTS or games < reliability.MIN_GROUP_GAMES
     if thin:
         notes.append(f"Too few compared opponents/games: need at least {reliability.MIN_GROUP_OPPONENTS} opponents and {reliability.MIN_GROUP_GAMES} games.")
-    stalled = reliability.merge_stalled([row for _, row in members])
+    stalled = reliability.merge_stalled(distinct)
     if stalled["caution"]:
         notes.append(stalled["words"])
-    if len(members) < 2:
+    if len(distinct) < 2:
         notes.insert(0, ONE)
-    elif average and average.get("partial"):
+    if "rated_matchups" in evidence:
+        notes.append(f"based on {len(values)} of {played_distinct} played matchups")
+    elif len(distinct) >= 2 and average and average.get("partial"):
         notes.append(f"based on {average['counted']} of {of} opponents with games on the play and on the draw")
-    return {"key": key, "label": label, "opponents": len(members), "games": sum(r["n"] for _, r in members),
-            **({"thin": True} if thin else {}),
+    return {"key": key, "label": label, "opponents": len(rows), "games": saved_games,
+            **evidence, **({"thin": True} if thin else {}),
             "rate": field._r((average or {}).get("value")), "low": field._r((average or {}).get("low")),
             "high": field._r((average or {}).get("high")),
             "spread": [field._r(min(values)), field._r(max(values))] if values else None,
             "note": "; ".join(notes),
-            "clock": views.clock_of(views.pool_turns(row.get("turns") for _, row in members
-                                                     if not row["not_meaningful"]))}
+            "clock": views.clock_of(views.pool_turns(row.get("turns") for row in eligible))}
 
 
 def _in_order(found, order):
@@ -411,7 +447,7 @@ def view(deck_entry, chosen, keep=None, cat=None, exclude_ids=()):
     "opponents": [rows, hardest first (lowest range low)], "groups" (_groups), "overall" (a group
     row over every opponent: the equal-weight average), "played" (opponents with games), "of" (the
     sample's opponents in the catalogue now), "tally" (_tally), "updated" (the newest opponent's
-    "updated", or None), "games", "note" (the caveat: these sampled opponents only), "notes" (decks
+    "updated", or None), "games" (distinct saved games), "note" (the caveat: these sampled opponents only), "notes" (decks
     gone from the catalogue, a rebuilt catalogue), "clock_label" and "clock_note" (E3-S51: what
     the opponents', groups' and overall "clock" (views.clock_of) count, and for Commander that the
     gauntlet isn't a pod, else None)}. cat as draw's (the sample's format's). ValueError
@@ -432,11 +468,12 @@ def view(deck_entry, chosen, keep=None, cat=None, exclude_ids=()):
     opponents = [_opponent(deck, row) for deck, row in members]
     opponents.sort(key=lambda o: (o["rate"] is None, (o["rate"] or {}).get("low") or 0, o["title"].casefold()))
     dates = [o["updated"] for o in opponents if isinstance(o.get("updated"), str)]
+    overall = _group("all", "All these opponents", members)
     return {"deck": deck_entry["id"], "sample": chosen["id"], "format": fmt, "opponents": opponents,
-            "groups": _groups(members), "overall": _group("all", "All these opponents", members),
+            "groups": _groups(members), "overall": overall,
             "played": sum(1 for r in rows if r["n"]), "of": len(members), "tally": _tally(opponents),
-            "updated": max(dates) if dates else None, "games": sum(r["n"] for r in rows),
-            "note": CAVEAT.format(m=len(members)), "notes": notes,
+            "updated": max(dates) if dates else None, "games": overall["games"],
+            "note": CAVEAT.format(m=overall.get("matchups", len(members))), "notes": notes,
             "clock_label": views.CLOCK_LABEL[fmt],
             "clock_note": views.CLOCK_POD_NOTE if fmt == "commander" else None}
 
@@ -455,7 +492,9 @@ def _members(deck_entry, chosen, keep, cat):
     pairs, missing = _picked(cat, chosen.get("decks") or [])
     pairs = _unmirrored(deck_entry, pairs)
     rows = field._rows(deck_entry, [e for _, e in pairs], results_dir(), keep)
-    return missing, [(deck, row) for (deck, _), row in zip(pairs, rows)]
+    # A run can save between reads of the same result. Attribute the same snapshot to every entry.
+    snapshots = {row["key"]: row for row in _distinct_rows(rows) if row["key"] is not None}
+    return missing, [(deck, snapshots.get(row["key"], row)) for (deck, _), row in zip(pairs, rows)]
 
 
 # ============================================================ before and after (E3-S34)

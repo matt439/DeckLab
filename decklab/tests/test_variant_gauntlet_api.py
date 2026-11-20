@@ -21,6 +21,9 @@ from decklab.tests.test_variant_api import GREEN_ID, SWAPPED, VariantApiCase, bo
 from decklab.tests.test_variant_gauntlet import CATALOGUE, SAMPLE
 
 AGAINST = "gauntlet:" + SAMPLE["id"]
+CUSTOM_ID = "sample:000000000039"
+MISSING_ID = "sample:000000000040"
+COMMANDER_ID = "sample:000000000041"
 
 
 class GauntletApiCase(VariantApiCase):
@@ -114,13 +117,53 @@ class EstimateTests(GauntletApiCase):
         self.assertIn("no saved gauntlet sample", missing["problem"])
 
     def test_a_sample_of_the_other_format(self):
-        self.samples["sample:commander000"] = dict(SAMPLE, id="sample:commander000", format="commander")
-        answer = api.variant_estimate(GREEN_ID, "target", "gauntlet:sample:commander000")
+        self.samples[COMMANDER_ID] = dict(SAMPLE, id=COMMANDER_ID, format="commander")
+        answer = api.variant_estimate(GREEN_ID, "target", "gauntlet:" + COMMANDER_ID)
         self.assertFalse(answer["available"])
         self.assertIn("commander", answer["problem"])
 
+    def test_another_commanders_sample_looks_missing(self):
+        self.samples[COMMANDER_ID] = dict(SAMPLE, id=COMMANDER_ID, format="commander",
+                                          commander=["Ghalta, Primal Hunger"])
+        other = api.variant_estimate(GREEN_ID, "target", "gauntlet:" + COMMANDER_ID)
+        missing = api.variant_estimate(GREEN_ID, "target", "gauntlet:" + MISSING_ID)
+        self.assertEqual((other["available"], other["opponents"], other["problem"]), (False, 0, missing["problem"]))
+
 
 class RunTests(GauntletApiCase):
+    def test_saved_custom_sample_uses_only_its_opponents_and_keeps_its_id(self):
+        self.samples[CUSTOM_ID] = dict(SAMPLE, id=CUSTOM_ID, size=1, decks=["gauntlet:forge/duels/red-burn"])
+        against = "gauntlet:" + CUSTOM_ID
+        estimate = api.variant_estimate(GREEN_ID, "target", against)
+        self.assertEqual((estimate["against"], estimate["available"], estimate["opponents"]), (against, True, 1))
+        test = self.start_popular(against)["test"]["test"]
+        done = self.wait_done(test)
+        self.assertEqual(self.calls[-1]["against"], against)
+        self.assertEqual(self.calls[-1]["results_dir"], self.folder)
+        self.assertEqual(done["sample"], CUSTOM_ID)
+        self.assertEqual([o["title"] for o in done["opponents"]], ["Red Burn"])
+        self.assertEqual(self.saved, [])
+
+    def test_refuses_a_changed_or_missing_sample_at_start(self):
+        self.samples[CUSTOM_ID] = dict(SAMPLE, id=CUSTOM_ID)
+        against = "gauntlet:" + CUSTOM_ID
+        self.assertTrue(api.variant_estimate(GREEN_ID, "target", against)["available"])
+        self.samples[CUSTOM_ID]["format"] = "commander"
+        with self.assertRaises(api.ApiError) as raised:
+            self.start_popular(against)
+        self.assertEqual(raised.exception.status, 400)
+        self.assertIn("commander", str(raised.exception))
+
+        self.samples[CUSTOM_ID]["commander"] = ["Ghalta, Primal Hunger"]
+        with self.assertRaises(api.ApiError) as hidden:
+            self.start_popular(against)
+        del self.samples[CUSTOM_ID]
+        with self.assertRaises(api.ApiError) as missing:
+            self.start_popular(against)
+        self.assertEqual((hidden.exception.status, str(hidden.exception)), (400, str(missing.exception)))
+        self.assertEqual(self.calls, [])
+        self.assertEqual(self.saved, [])
+
 
     def test_a_run_is_the_command_lines_test_in_the_gauntlets_folder(self):
         view = self.start_popular()

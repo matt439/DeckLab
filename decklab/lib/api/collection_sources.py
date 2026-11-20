@@ -87,7 +87,9 @@ def annotate(storage, holders, by_name, *, sees, records):
         return visible[holder.id]
 
     for name, rows in by_name.items():
-        if sum(holder.cards.get(name, 0) for holder, *_ in evidence) > sum(int(row["quantity"]) for row in rows):
+        capacity = sum(int(row["quantity"]) - projected["rows"].get(_row_key(row), {}).get("lent", 0)
+                       for row in rows)
+        if sum(holder.cards.get(name, 0) for holder, *_ in evidence) > capacity:
             continue                   # Capped legacy counts cannot choose which holder's demand fits.
         for row in rows:
             entry = projected["rows"].get(_row_key(row))

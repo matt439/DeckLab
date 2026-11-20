@@ -1,8 +1,9 @@
-"""The Stats tab's "Chance to draw" panel (E3-S24), over the real page scripts and DOM double.
+"""The Stats tab's "Chance to draw" panel (E3-S24 and E3-S54) over the real page scripts and DOM double.
 
 No network, server, database or card data is needed.
 """
 import json
+from itertools import combinations
 from math import comb
 import subprocess
 import unittest
@@ -56,6 +57,22 @@ class DrawOddsTests(unittest.TestCase):
           assert.equal(cardsSeenBy(20, false, 20), 20);
         """)
 
+    def test_chance_of_both_matches_every_draw_size_from_a_small_library(self):
+        library = "AABCCCC"
+        expected = []
+        for seen in range(len(library) + 1):
+            draws = list(combinations(library, seen))
+            expected.append(sum("A" in draw and "B" in draw for draw in draws) / len(draws))
+        self.run_js(f"""
+          const want = {json.dumps(expected)};
+          want.forEach((value, n) => {{
+            const got = chanceOfBoth(7, 2, 1, n);
+            assert(Math.abs(got - value) < 1e-12, got + ' vs ' + value);
+          }});
+          assert(Math.abs(chanceOfBoth(99, 1, 1, 7) - (7 * 6) / (99 * 98)) < 1e-12);
+          assert.equal(chanceOfBoth(99, 0, 1, 7), 0);
+        """)
+
     def test_a_card_and_a_group_by_a_chosen_turn_on_the_play_or_draw(self):
         one = f"{at_least_one(60, 4, 9) * 100:.1f}%"
         draw = f"{at_least_one(60, 4, 10) * 100:.1f}%"
@@ -77,19 +94,49 @@ class DrawOddsTests(unittest.TestCase):
           tick(panel, 'Shock');
           assert.equal(chance(panel), {json.dumps(group)});
           assert(panel.textContent.includes('the 2 cards ticked (8 copies in all)'));
+          assert(panel.textContent.includes('Both cards means seeing Llanowar Elves and Shock'));
+          assert.equal(panel.querySelector('.odds-result').querySelectorAll('.value')[1].textContent,
+            pct(chanceOfBoth(60, 4, 4, 10)));
           const turn = panel.querySelector('.odds-turn').querySelector('input');
           turn.value = '5'; turn.fire('input');
           assert.equal(chance(panel), {json.dumps(turn5)});
+          assert.equal(panel.querySelector('.odds-result').querySelectorAll('.value')[1].textContent,
+            pct(chanceOfBoth(60, 4, 4, 12)));
           turn.value = '99'; turn.fire('input'); turn.fire('change');
           assert.equal(turn.value, '5');
           assert.equal(chance(panel), {json.dumps(turn5)});
           const current = panel.querySelector('.odds-table').querySelectorAll('td')[4];
           assert.equal(current.getAttribute('class'), 'is-current');
+          tick(panel, 'Grizzly Bears');
+          assert(!panel.textContent.includes('Both cards by turn'));
           button(panel, 'All lands').click();
           assert.equal(chance(panel), {json.dumps(lands)});
           button(panel, 'Clear').click();
           assert(panel.querySelector('.odds-result').textContent.includes('Tick a card'));
           assert(panel.textContent.includes('It ignores mulligans'));
+        """)
+
+    def test_the_pair_uses_the_displayed_list_and_excludes_non_library_cards(self):
+        self.run_js("""
+          const build = (version, copies) => ({...deck('commander', 'commander/elves', {
+            Commander: [{qty: 1, name: 'Commander card', card: elf}],
+            Companion: [{qty: 1, name: 'Companion card', card: elf}],
+            Sideboard: [{qty: 1, name: 'Sideboard card', card: elf}],
+            Deck: [{qty: 1, name: 'Sol Ring', card: bolt}, {qty: copies, name: 'Forest', card: land},
+              {qty: 98 - copies, name: 'Grizzly Bears', card: elf}]}), version, versions: ['target', 'current']});
+          const results = [['target', 2], ['current', 1]].map(([version, forest]) => {
+            const panel = drawOddsPanel(build(version, forest));
+            const nameList = panel.querySelector('.odds-cards').textContent;
+            assert(!/Commander card|Companion card|Sideboard card/.test(nameList));
+            button(panel, 'On the play').click();
+            const turn = panel.querySelector('.odds-turn').querySelector('input');
+            turn.value = '1'; turn.fire('input');
+            tick(panel, 'Sol Ring');
+            tick(panel, 'Forest');
+            assert(panel.textContent.includes('in your first 7 cards'));
+            return panel.querySelector('.odds-result').querySelectorAll('.value')[1].textContent;
+          });
+          same(results, ['0.8%', '0.4%']);
         """)
 
     def test_commander_draws_from_the_99_and_defaults_to_the_draw(self):

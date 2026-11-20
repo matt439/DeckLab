@@ -51,7 +51,7 @@ from urllib.parse import quote
 
 from decklab.lib import jobs, permissions
 from decklab.lib.gauntlet import is_gauntlet_id, trial_excluded, without
-from decklab.lib.gauntlet.sample import STANDARD, is_own_sample
+from decklab.lib.gauntlet.sample import NOT_SAVED, STANDARD, is_own_sample
 
 from . import common, field_page, forge_runs, gauntlet_before, guard
 from .common import MAX_BODY, MAX_EDIT_BODY, ApiError, _keys, _parse_body, _public, _SHA_RE
@@ -210,9 +210,6 @@ def _same_count(fmt, cat, commanders, exclude):
     from decklab.lib.gauntlet.sample import same_commander
     left = [d for d in same_commander((cat or {}).get("decks") or [], commanders) if d.get("id") not in set(exclude)]
     return {"commanders": list(commanders), "decks": len(left)}
-
-
-NOT_SAVED = "There's no saved gauntlet sample with that id."
 
 
 def _draw(g, fmt, choices, save, cat=None, own=()):

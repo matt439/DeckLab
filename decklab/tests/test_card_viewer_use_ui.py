@@ -61,7 +61,7 @@ class ViewerUseLineTests(unittest.TestCase):
           const shut = () => { viewerDom.dialog.open = false; viewerClosed(); };
           const line = () => viewerDom.use;
           const shown = () => (line().hidden || line().classList.contains("is-loading") ? null : line().textContent);
-          const answer = (extra = {}) => ({name: "Llanowar Elves", space: "home", basic: false, more: false,
+          const answer = (extra = {}) => ({name: "Llanowar Elves", space: "home", basic: false, more: false, decks_complete: true,
             holds: [{id: "casual/elf-stompy", title: "Elf Stompy", why: "built", copies: 1},
                     {id: "product/fdn-beginner-box/cats", title: "Cats", why: "intact product", copies: 1}],
             wants: [{id: "casual/gruul-test", title: "Gruul Test", status: "building", copies: 6}],
@@ -99,6 +99,7 @@ class ViewerUseLineTests(unittest.TestCase):
           location.hash = "#/deck?id=casual/gruul-test";
           const words = (extra) => viewerUseWords(answer(extra));
           assert.equal(words({holds: [], wants: [], owned: 0, free: 0}), "In no decks \\u00b7 none in the collection");
+          assert.equal(words({holds: [], wants: [], decks_complete: undefined}), "3 free");
           assert.equal(words({holds: [], wants: [], owned: 0, free: 0, incoming: 2}), "In no decks \\u00b7 2 on the way");
           assert.equal(words({incoming: 1}),
                        "In decks: Elf Stompy holds 1, Cats holds 1, Gruul Test wants 6 \\u00b7 3 free \\u00b7 1 on the way");
@@ -110,6 +111,18 @@ class ViewerUseLineTests(unittest.TestCase):
           show([{name: "Forest", type_line: "Basic Land — Forest"}]);
           await flush();
           assert.equal(shown(), "Basic land: its copies in decks aren't tracked.");
+        """)
+
+    def test_incomplete_check_shows_known_matches_and_free_copies_without_a_false_zero(self):
+        self.run_js("""
+          location.hash = "#/deck?id=casual/gruul-test";
+          answers[path("Llanowar Elves")] = answer({decks_complete: false, holds: []});
+          show([elves]); await flush();
+          assert.equal(shown(), "In decks: Gruul Test wants 6 \\u00b7 Deck check incomplete \\u00b7 3 free");
+          shut();
+          answers[path("Llanowar Elves")] = answer({decks_complete: false, holds: [], wants: []});
+          show([elves]); await flush();
+          assert.equal(shown(), "Deck check incomplete \\u00b7 3 free");
         """)
 
     def test_a_members_deck_and_collection_page_ask_for_their_own_space(self):

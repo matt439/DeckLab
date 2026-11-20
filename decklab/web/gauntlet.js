@@ -48,6 +48,7 @@ function gauntletSection(data) {
   const named = params.get("gsample");
   // sample: a saved sample the address names (&gsample=), asked for by its id until a choice changes.
   const ctx = { section, content, token: routeToken, id: s.id, version: data.version, answer: null, choice: null,
+    canTestChange: Boolean(state.profile) && !s.read_only && deckSpaceOf(s.id) === ownSpace(),
     sample: named && GT_SAMPLE_RE.test(named) ? named : null, lost: false, budget: null, by: "colour", open: false,
     timer: 0, busy: false, asked: 0 };
   gtRefresh(ctx);
@@ -116,10 +117,23 @@ function gtAddress(ctx, a) {
   if (!gtHere(ctx) || typeof parseHash !== "function") return;
   const { path, params } = parseHash();
   if (path !== "deck" || params.get("id") !== ctx.id) return;
-  const id = a.catalogue && a.sample && a.sample.saved && !a.is_standard ? a.sample.id : null;
+  const id = gtSavedSampleId(a);
   if (id) params.set("gsample", id); else params.delete("gsample");
   const hash = `#/deck?${params.toString()}`;
   if (hash !== location.hash) history.replaceState(history.state, "", hash);
+}
+
+function gtSavedSampleId(a) {
+  const sample = a.sample;
+  return a.catalogue && sample?.saved && !a.is_standard && GT_SAMPLE_RE.test(sample.id) ? sample.id : null;
+}
+
+function gtTrySampleChange(ctx, a) {
+  const id = gtSavedSampleId(a);
+  if (!id || !ctx.canTestChange || !canBuildDecks()) return null;
+  return el("p", { class: "gt-small" }, el("a", { class: "btn btn-quiet btn-inline",
+    href: `${editHref(ctx.id, ctx.version)}&gsample=${encodeURIComponent(id)}`,
+    text: "Try a change against this sample" }));
 }
 
 function gtDraw(ctx, a) {
@@ -144,6 +158,7 @@ function gtDraw(ctx, a) {
     el("p", { class: "sub", text: "How this list does against popular decks from outside the house, from Forge's AI " +
       "playing them (best of one). They never count in Rankings." }),
     gtStandardLine(ctx, a),
+    gtTrySampleChange(ctx, a),
     // Results first at every width (E3-S33); from 1,600 px the play box sits to their right.
     played || gtPlaying(a)
       ? el("div", { class: "gt-layout" },
@@ -211,23 +226,62 @@ function gtTallyWords(t) {
 /** "20 popular Commander decks". */
 function gtDecksWords(a) { return plural(a.of || 0, `popular ${GT_FORMATS[a.format] || "Forge"} deck`); }
 
+function gtGamesCoverage(games, entryGames) {
+  const distinct = `${thousands(games)} distinct game${games === 1 ? "" : "s"}`;
+  return entryGames > games ? `${distinct} · ${gamesWords(entryGames)} across catalogue entries`
+    : gamesWords(games);
+}
+
+function gtCoverage(a) {
+  const o = a.overall;
+  const entries = o?.matchups ? "catalogue entries" : "opponents";
+  const matchups = o?.matchups ? ` · ${o.played_matchups} of ${o.matchups} distinct matchups` : "";
+  return `${a.played} of ${a.of} ${entries}${matchups} · ${gtGamesCoverage(a.games, o?.entry_games)}`;
+}
+
+/** Why saved games could not produce a strength figure. */
+function gtRateUnavailable(a) {
+  switch (a.overall?.rate_unavailable) {
+    case "not_meaningful": return "Deck Lab flagged a commander as unplayable in every played matchup.";
+    case "both_seats": return "A win rate needs games on the play and on the draw against the same opponent.";
+    default: return "These games could not produce a win rate.";
+  }
+}
+
+function gtRateGames(a) { return a.overall?.rated_games ?? a.games; }
+
+function gtRateEvidence(a) {
+  const o = a.overall;
+  return o?.rated_matchups == null ? null
+    : `Win rate uses games from ${o.rated_matchups} of ${o.played_matchups} played matchups.`;
+}
+
 /** The headline over the sample's opponents (the view's or the summary's overall, played, of, games, tally and
  * updated): the equal-weight win rate as a hero figure in ink with its range bar and age, how many it's ahead of,
  * even with and behind, and how many are tested so far. Null before any opponent has games. */
 function gtHeadline(a, { cls = "gt-headline" } = {}) {
+  if (!a.played) return null;
   const o = a.overall;
-  if (!o || o.rate == null || !a.played) return null;
+  if (o?.rate == null) {
+    return el("div", { class: cls },
+      el("p", { class: "gt-headline-what", text: gtCoverage(a) }),
+      el("p", { class: "gt-small", text: gtRateUnavailable(a) }));
+  }
   const rate = gtRate(o.rate, o.low, o.high);
   const tally = gtTallyWords(a.tally);
+  const decks = gtDecksWords(o.matchups ? { ...a, of: o.matchups } : a);
+  const evidence = gtRateEvidence(a);
   return el("div", { class: cls },
-    el("p", { class: "gt-headline-what", text: `Against ${gtDecksWords(a)}:` }),
+    el("p", { class: "gt-headline-what", text: `Against ${decks}:` }),
     el("div", { class: "gt-figure" },
-      winRateFigure(rate, { size: "hero", what: `Win rate against these ${gtDecksWords(a)}`, games: a.games || null,
+      winRateFigure(rate, { size: "hero", what: `Win rate against these ${decks}`, games: gtRateGames(a) || null,
         barred: true }),
       freshnessBadge(a.updated)),
     rangeBar(rate, { axis: true, decorative: true }),
     tally ? el("p", { class: "gt-tally", text: tally }) : null,
-    a.played < a.of ? el("p", { class: "gt-small", text: `${a.played} of ${a.of} opponents tested so far.` }) : null);
+    o.matchups || evidence ? el("p", { class: "gt-small", text: gtCoverage(a) })
+      : a.played < a.of ? el("p", { class: "gt-small", text: `${a.played} of ${a.of} opponents tested so far.` }) : null,
+    evidence ? el("p", { class: "gt-small", text: evidence }) : null);
 }
 
 // ------------------------------------------------------------------ E3-S51: the clock
@@ -505,37 +559,46 @@ function gtGroupRow(g) {
   const what = `Win rate against ${g.label}`;
   const spread = Array.isArray(g.spread) && g.spread[0] != null
     ? `from ${Math.round(g.spread[0] * 100)}% to ${Math.round(g.spread[1] * 100)}% by opponent` : null;
-  const thin = g.thin || g.opponents < 2;
+  const thin = g.thin || (g.matchups ?? g.opponents) < 2;
+  const opponents = g.matchups ? `${plural(g.opponents, "catalogue entry", "catalogue entries")} · ` +
+    plural(g.matchups, "distinct matchup") : plural(g.opponents, "opponent");
   return el("li", { class: thin ? "gt-group gt-muted" : "gt-group" },
     el("span", { class: "gt-name", text: g.label }),
     el("span", { class: "gt-barline" },
       rangeBar(rate, { compact: true, muted: thin, decorative: true }),
       el("span", { class: "gt-pct" }, winRateFigure(rate, { what, barred: true }))),
-    el("span", { class: "gt-meta", text: metaWords(plural(g.opponents, "opponent"), gamesWords(g.games), spread, g.note) }),
+    el("span", { class: "gt-meta", text: metaWords(opponents, gtGamesCoverage(g.games, g.entry_games), spread, g.note) }),
     gtClockLine(g.clock));
 }
 
 /** One row per sampled opponent, hardest first (the server's order: the lowest range first), with where it's from. */
 function gtRows(a) {
-  const played = (a.opponents || []).filter((o) => o.games && o.rate && o.rate.value != null);
-  const waiting = (a.opponents || []).filter((o) => !played.includes(o));
+  const opponents = a.opponents || [];
+  const played = opponents.filter((o) => o.games);
+  const waiting = opponents.filter((o) => !o.games);
+  const uses = new Map();
+  for (const o of opponents) {
+    if (o.key) uses.set(o.key, (uses.get(o.key) || 0) + 1);
+  }
   return [
     el("h3", { text: "Against each deck, lowest observed first" }),
     el("ul", { class: "gt-rows" }, played.map((o) => {
       const what = `Win rate against ${o.title}`;
-      const chips = [o.not_meaningful ? status("crit", "Not meaningful") : null,
+      const chips = [o.not_meaningful ? status("crit", "Not meaningful")
+        : !o.rate ? status("warn", "Needs games on the play and on the draw") : null,
         o.stalled?.words ? el("span", {class:"note note-warn",text:o.stalled.words}) : null,
         o.moved ? status("info", "Moved") : null].filter(Boolean);
       const before = gtFigureWords(o.before);
+      const shared = uses.get(o.key) > 1 ? `Shared matchup ${o.key.slice(0, 12)}` : null;
       return el("li", { class: o.not_meaningful ? "gt-row gt-muted" : "gt-row" },
         el("span", { class: "gt-name", text: o.title }),
-        el("span", { class: "gt-barline" },
+        o.rate ? el("span", { class: "gt-barline" },
           rangeBar(o.rate, { compact: true, muted: o.not_meaningful, decorative: true }),
-          el("span", { class: "gt-pct" }, winRateFigure(o.rate, { what, barred: true }))),
+          el("span", { class: "gt-pct" }, winRateFigure(o.rate, { what, barred: true }))) : null,
         el("span", { class: "gt-meta" },
           deckColourPieces((o.identity || "").split("")).pips(16),
           el("span", { text: metaWords(o.verdict ? capitalise(o.verdict) : null, GT_STYLES[o.style] || o.style,
-            GT_TIERS[o.tier] || o.tier, gamesWords(o.games), before ? `Before: ${before}` : null, o.problem) }), chips,
+            GT_TIERS[o.tier] || o.tier, gamesWords(o.games), shared, before ? `Before: ${before}` : null, o.problem) }), chips,
           freshnessBadge(o.updated, { size: "row" })),
         gtClockLine(o.clock), gtSource(o.source));
     })),

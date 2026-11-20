@@ -501,10 +501,10 @@ class UpdatePsycopgTests(unittest.TestCase):
         return steps
 
     def test_linux_keeps_the_server_running_while_pip_replaces_psycopg(self):
-        self.assertEqual(self.run_after_pull(False), ["Reinstall psycopg"])
+        self.assertEqual(self.run_after_pull(False), ["Reinstall Python packages"])
 
     def test_windows_stops_it_first(self):
-        self.assertEqual(self.run_after_pull(True), ["Stop Deck Lab to replace psycopg", "Reinstall psycopg"])
+        self.assertEqual(self.run_after_pull(True), ["Stop Deck Lab to replace Python packages", "Reinstall Python packages"])
 
 
 class UpdateRestartTests(unittest.TestCase):
@@ -515,7 +515,7 @@ class UpdateRestartTests(unittest.TestCase):
                 mock.patch.object(update, "changed_files", return_value=list(files)), \
                 mock.patch.object(update, "git", return_value="abc"), \
                 mock.patch.object(update, "server_answers", return_value=True), \
-                mock.patch.object(update, "psycopg_mismatch", return_value=False), \
+                mock.patch.object(update, "requirements_mismatch", return_value=False), \
                 mock.patch.object(update, "server_restart_required", return_value=required), \
                 mock.patch.object(update, "step", side_effect=lambda argv, what, timeout=None: steps.append(what)), \
                 mock.patch("decklab.lib.venv.activate", return_value=None), \

@@ -7,7 +7,7 @@ Every snapshot and rule is supplied here; no shop, snapshot file or configured d
 import unittest
 from unittest import mock
 
-from decklab.lib import access, state
+from decklab.lib import access, shops, state
 from decklab.lib.api import shop_baskets, shop_plan, shop_postage
 from decklab.lib.state import Actor, Conflict, Invalid, memory
 from decklab.lib.state import shop_postage as rules_postage
@@ -131,6 +131,51 @@ class PlanTests(unittest.TestCase):
         self.assertEqual((lines["mtgmate"]["copies"], lines["gamesportal"]["copies"], lines["gamesportal"]["line_aud"]),
                          (1, 2, "4.00"))
 
+    def test_each_price_tier_competes_across_counted_shops_and_postage_changes_recommendation(self):
+        rows = [row("Sol Ring", 1, quantity="2")]
+        snapshots = {
+            "mtgmate": mtgmate({"Sol Ring": entry(listing("1.00", 1), listing("20.00", 1, set_code="cmm"))}),
+            "gamesportal": games_portal({"Sol Ring": entry(listing("5.00", 2, set_code="m19"))}),
+        }
+        counted = [mock.patch.object(shops.ADAPTERS[key], "counts_stock", True) for key in snapshots]
+        with counted[0], counted[1]:
+            free = shop_baskets.build(rows, snapshots, "q1", rules(mtg=("0", None), gp=("0", None)))["plan"]
+            paid = shop_baskets.build(rows, snapshots, "q1", rules(mtg=("6", None), gp=("0", None)))["plan"]
+        for plan in (free["by_price"], free["recommended"], paid["by_price"]):
+            self.assertEqual(plan["cards_aud"], "6.00")
+            self.assertEqual([(shop["key"], shop["rows"][0]["listing"]["set"], shop["cards"])
+                              for shop in plan["shops"]], [("mtgmate", "fdn", 1), ("gamesportal", "m19", 1)])
+        self.assertEqual((free["recommended"]["total_aud"], paid["by_price"]["total_aud"],
+                          paid["recommended"]["keys"], paid["recommended"]["total_aud"]),
+                         ("6.00", "12.00", ["gamesportal"], "10.00"))
+
+    def test_plan_can_reassign_a_counted_shop_copy_and_recalculate_optional_supply(self):
+        rows = [row("Sol Ring", 1), row("Sol Ring", 2, printing="exact", set="fdn", collector_number="227"),
+                row("Sol Ring", 3, state="long_term"), row("Giant Growth", 4)]
+        mtg = mtgmate({"Sol Ring": entry(listing("1.00", 1), listing("7.00", 1, set_code="cmm")),
+                       "Giant Growth": entry(listing("1.00", 1))})
+        gp = games_portal({"Sol Ring": entry(listing("2.00", 1)), "Giant Growth": entry()})
+        with mock.patch.object(shops.ADAPTERS["gamesportal"], "counts_stock", True):
+            built = build(rows, mtg, gp, rules(mtg=("1.00", "8.00"), gp=("1.00", "8.00")))
+        self.assertEqual([item["queue_row"] for item in basket(built, "gamesportal")["rows"]], [2])
+        self.assertEqual(basket(built, "mtgmate")["add_ons"], [])
+        best = built["plan"]["recommended"]
+        self.assertEqual((best["cards"], best["total_aud"]), (3, "6.00"))
+        first, second = best["shops"]
+        self.assertEqual([item["queue_row"] for item in first["rows"]], [2, 4])
+        self.assertEqual([(item["queue_row"], item["listing"]["set"]) for item in second["rows"]], [(1, "fdn")])
+        self.assertEqual([(item["queue_row"], item["copies"]) for item in first["add_ons"]], [(3, 1)])
+        self.assertEqual(first["postage"]["reach"], {"rows": [3], "reaches": True, "total_aud": "7.00"})
+        self.assertEqual(second["add_ons"], [])
+
+    def test_unknown_price_retains_known_partial_charges_and_full_coverage_wins(self):
+        rows = [row("Sol Ring", 1, quantity="2")]
+        mtg = mtgmate({"Sol Ring": entry(listing("1.00", 1), listing(None, 1, set_code="cmm"))})
+        gp = games_portal({"Sol Ring": entry()})
+        plan = build(rows, mtg, gp, rules(mtg=("3", None), gp=("0", None)))["plan"]["recommended"]
+        self.assertEqual((plan["cards"], plan["cards_aud"], plan["unpriced_copies"], plan["total_aud"]), (2, "1.00", 1, "4.00"))
+        self.assertEqual(plan["shops"][0]["rows"][0]["known_aud"], "1.00")
+
     def test_add_ons_in_the_plan_reach_the_threshold_of_the_shop_it_uses(self):
         rows = [row("Sol Ring", 1), row("Arcane Signet", 2, state="long_term")]
         built = build(rows, mtgmate({"Sol Ring": entry(listing("40.00", 5)), "Arcane Signet": entry(listing("15.00", 2))}),
@@ -138,8 +183,24 @@ class PlanTests(unittest.TestCase):
         shop, = built["plan"]["recommended"]["shops"]
         self.assertEqual(shop["postage"]["reach"], {"rows": [2], "total_aud": "15.00", "reaches": True})
 
-    def test_no_plan_without_a_ready_row_in_stock(self):
+    def test_all_unavailable_still_has_a_plan_with_reasons_and_no_shops(self):
         built = build([row("Gone", 1)], mtgmate({"Gone": entry(listing(stock=0))}), postage=rules())
+        plan = built["plan"]
+        self.assertEqual((plan["wanted"], plan["recommended"]["cards"], plan["recommended"]["shops"], plan["options"]), (1, 0, [], []))
+        self.assertEqual([fact["status"] for fact in plan["recommended"]["uncovered"][0]["shops"]], ["out_of_stock", "unread"])
+
+    def test_all_ready_demand_counts_and_failed_shop_check_stays_distinct(self):
+        rows = [row("Sol Ring", 1), row("Gone", 2, quantity="2"), row("Later", 3, quantity="4", state="long_term")]
+        mtg = mtgmate({"Sol Ring": entry(listing(stock=1)), "Gone": entry(listing(stock=0)), "Later": entry(listing(stock=4))})
+        gp = games_portal({"Gone": entry(status="error", at="2026-11-01T02:30:00+11:00")})
+        plan = build(rows, mtg, gp)["plan"]
+        self.assertEqual((plan["wanted"], plan["recommended"]["cards"]), (3, 1))
+        missing, = plan["recommended"]["uncovered"]
+        self.assertEqual((missing["name"], missing["copies"], [fact["status"] for fact in missing["shops"]]),
+                         ("Gone", 2, ["out_of_stock", "unknown"]))
+
+    def test_optional_rows_alone_do_not_create_a_plan(self):
+        built = build([row("Later", 1, state="long_term")], mtgmate({"Later": entry(listing())}))
         self.assertIsNone(built["plan"])
 
 

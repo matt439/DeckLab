@@ -399,6 +399,7 @@ button.col-casual-open { cursor: pointer; }
   .col-row-lab .col-th-notes { width: 9rem; }
   .col-row-lab .col-type-text { display: block; overflow: hidden; text-overflow: ellipsis; }
   .col-row-lab .col-held { display: inline; font-size: inherit; line-height: inherit; white-space: nowrap; }
+  .col-row-lab .col-held-loans { white-space: normal; }
   .col-row-lab .col-td-held { font-family: var(--font); font-size: var(--fs-meta); }
   .col-row-lab .col-table tbody tr[data-selected] > .col-td-name {
     box-shadow: inset 2px 0 var(--accent), inset 0 1px 0 var(--accent-line), inset 0 -1px 0 var(--accent-line);

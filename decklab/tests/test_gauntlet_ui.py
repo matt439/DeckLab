@@ -224,6 +224,33 @@ class GauntletUiTests(unittest.TestCase):
           assert.equal(again.querySelector('.gt-tally').textContent,'Ahead of 1 · behind 1 · not settled against 1');
         """)
 
+    def test_shared_results_show_distinct_counts_and_every_source_in_testing(self):
+        self.run_js("""
+          const a=played(), shared='0123456789abcdef';
+          const [first,second,third]=a.opponents;
+          Object.assign(first,{games:20,key:shared});
+          Object.assign(second,{games:10,key:'second'});
+          Object.assign(third,{games:10,key:'third'});
+          a.opponents.push({...first,id:'gauntlet:mtgjson/alias',title:'Same list in another source',
+            source:{kind:'mtgjson'}});
+          const coverage={opponents:4,matchups:3,played_matchups:3,games:40,entry_games:60};
+          Object.assign(a,{played:4,of:4,games:40,overall:{...coverage,rate:.5,low:.4,high:.6}});
+          Object.assign(a.groups.colour[0],coverage);
+          answers=[a];const node=await draw();
+          const head=node.querySelector('.gt-headline');
+          assert(head.textContent.includes('4 of 4 catalogue entries · 3 of 3 distinct matchups'));
+          assert(head.textContent.includes('40 distinct games · 60 games across catalogue entries'));
+          assert(node.querySelector('.gt-groups').textContent.includes('40 distinct games · 60 games across catalogue entries'));
+          const rows=node.querySelectorAll('.gt-row');
+          assert.equal(rows.length,4);
+          for(const i of [0,3]) {
+            assert(rows[i].textContent.includes('20 games'));
+            assert(rows[i].textContent.includes('Shared matchup 0123456789ab'));
+          }
+          assert(rows[0].textContent.includes('Average deck from EDHREC'));
+          assert(rows[3].textContent.includes('Wizards precon, from MTGJSON'));
+        """)
+
     def test_a_run_before_any_games_shows_only_the_play_box(self):
         self.run_js("""
           answers=[base({status:'running',job:{status:'running',done:0,total:100,ahead:0,pairs:{}},budgets:{}})];

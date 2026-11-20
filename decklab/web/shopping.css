@@ -340,11 +340,14 @@
 /* The order history, folded. */
 .shop-history { margin-top: var(--s-6); padding-top: var(--s-4); border-top: 1px solid var(--border); }
 .shop-history > summary { display: flex; align-items: center; min-height: var(--tap); cursor: pointer; font-weight: var(--fw-semibold); }
+.shop-past-filter { display: flex; flex-wrap: wrap; align-items: end; gap: var(--s-2); max-width: 32rem; margin-top: var(--s-2); }
+.shop-past-filter .field { flex: 1 1 15rem; margin: 0; }
 .shop-pasts { list-style: none; padding: 0; margin: var(--s-2) 0 0; display: grid; gap: 0 var(--s-5); grid-template-columns: minmax(0, 1fr); }
 .shop-past { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); border-bottom: 1px solid var(--border); }
 .shop-past a { display: grid; flex: 1; min-width: 0; min-height: var(--tap); padding: var(--s-2) 0; color: inherit; text-decoration: none; }
 .shop-past a:hover strong { text-decoration: underline; }
 .shop-past small { color: var(--ink-2); font-size: var(--fs-sm); }
+.shop-past .shop-past-match { overflow-wrap: anywhere; }
 
 /* A delivery's whole contents, in a sheet. */
 .shop-contents { display: grid; gap: var(--s-1); }

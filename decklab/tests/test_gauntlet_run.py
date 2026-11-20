@@ -17,7 +17,7 @@ import threading
 from pathlib import Path
 from unittest import mock
 
-from decklab.lib.forge import cli, common, engine, field, gauntlet, lists, runner, saved
+from decklab.lib.forge import cli, common, engine, field, gauntlet, lists, runner, saved, views
 from decklab.tests.test_forge_field import FakeField, FieldTestCase
 
 
@@ -206,6 +206,27 @@ class RunTests(GauntletCase):
 
 class ViewTests(GauntletCase):
 
+    def test_one_seat_and_flagged_results_count_as_played_without_affecting_strength(self):
+        one_seat = self.gfake.add_games(self.alpha, self.opponent(IDS[0]), 100)
+        for game in one_seat["batches"][0]["games"]:
+            game["first"] = 0
+        found = gauntlet.view(self.alpha, self.sample)
+        self.assertEqual((found["played"], found["games"]), (1, 100))
+        self.assertIsNone(found["overall"]["rate"])
+        self.assertEqual(found["overall"]["rate_unavailable"], "both_seats")
+        flagged = self.gfake.add_games(self.alpha, self.opponent(IDS[1]), 100, rate=0.1)
+        self.gfake.add_games(self.alpha, self.opponent(IDS[2]), 100, rate=0.8)
+        with mock.patch.object(views, "_not_meaningful", side_effect=lambda result: result["key"] == flagged["key"]):
+            found = gauntlet.view(self.alpha, self.sample)
+        rates = {row["id"]: row["rate"] for row in found["opponents"]}
+        self.assertEqual((found["played"], found["games"]), (3, 300))
+        self.assertIsNone(rates[IDS[0]])
+        self.assertIsNone(rates[IDS[1]])
+        self.assertEqual(found["overall"]["rate"], rates[IDS[2]]["value"])
+        self.assertNotIn("rate_unavailable", found["overall"])
+        self.assertEqual((found["overall"]["rated_matchups"], found["overall"]["played_matchups"],
+                          found["overall"]["rated_games"]), (1, 3, 100))
+
     def test_the_groups(self):
         rates = {IDS[0]: 0.8, IDS[1]: 0.3, IDS[2]: 0.5, IDS[3]: 0.6}
         for deck_id, rate in rates.items():
@@ -377,10 +398,52 @@ class CliTests(GauntletCase):
             code, out, err = self.run_cli("play", "casual/alpha", "--size", "2", "--budget", "100", "--json")
             self.assertEqual(code, 0, err)
             result = json.loads(out)
-            self.assertEqual(result["view"]["games"], 200)  # one physical result attributed to two entries
+            self.assertEqual(result["view"]["games"], 100)
+            self.assertEqual(result["view"]["overall"]["entry_games"], 200)
             self.assertTrue(result["completion"]["complete"])
             self.assertEqual(result["completion"]["remaining_games"], 0)
             self.assertEqual(len(self.gfake.calls), calls)
+
+    def test_view_counts_distinct_games_and_keeps_each_entry_and_its_source(self):
+        native = CATALOGUE["decks"][1]
+        alias = dict(native, id="gauntlet:precon/shared", title="Same list in another source", tier="precon",
+                     source={"kind": "mtgjson"})
+        cat = dict(CATALOGUE, decks=[*CATALOGUE["decks"][:3], alias])
+        for deck_id, games, rate in zip(IDS, (10, 20, 10), (0.9, 0.2, 0.5)):
+            result = self.gfake.add_games(self.alpha, self.opponent(deck_id), games, rate=rate)
+            for game in result["batches"][0]["games"]:
+                game["rounds"] = 4 + IDS.index(deck_id) * 3
+        single_sample = dict(self.sample, decks=IDS[:3], size=3)
+        both_sources = dict(self.sample, decks=[*IDS[:3], alias["id"]])
+        self.samples[both_sources["id"]] = both_sources
+        cli_args = ("view", "casual/alpha", "--sample", both_sources["id"])
+        with mock.patch.object(gauntlet.reliability, "MIN_GROUP_GAMES", 50):
+            baseline = gauntlet.view(self.alpha, single_sample)
+            with mock.patch.object(gauntlet, "_load_catalogue", return_value=cat):
+                code, out, err = self.run_cli(*cli_args, "--json")
+                self.assertEqual(code, 0, err)
+                found = json.loads(out)
+                code, words, err = self.run_cli(*cli_args)
+        self.assertEqual(code, 0, err)
+        self.assertEqual((found["played"], found["of"], found["games"]), (4, 4, 40))
+        self.assertEqual(sum(row["games"] for row in found["opponents"]), 60)
+        overall = found["overall"]
+        self.assertEqual((overall["matchups"], overall["played_matchups"], overall["entry_games"]), (3, 3, 60))
+        self.assertTrue(overall["thin"])
+        for name in ("rate", "low", "high", "spread", "clock", "thin"):
+            self.assertEqual(overall[name], baseline["overall"][name], name)
+            self.assertEqual(found["groups"]["colour"][0][name], baseline["groups"]["colour"][0][name], name)
+        self.assertEqual(found["tally"], baseline["tally"])
+        tiers = {row["key"]: row for row in found["groups"]["tier"]}
+        self.assertEqual((tiers["hard"]["games"], tiers["precon"]["games"]), (20, 20))
+        by_id = {row["id"]: row for row in found["opponents"]}
+        self.assertEqual(by_id[native["id"]]["key"], by_id[alias["id"]]["key"])
+        self.assertEqual([by_id[deck["id"]]["source"]["kind"] for deck in (native, alias)], ["forge", "mtgjson"])
+        self.assertIn("4 catalogue entries, 3 distinct matchups, 40 distinct games, 60 games across catalogue entries",
+                      words)
+        self.assertEqual(words.count("shared matchup " + by_id[alias["id"]]["key"][:12]), 2)
+        self.assertIn("source: mtgjson", words)
+        self.assertEqual(self.gfake.calls, [])
 
     def test_build_only_the_formats_its_sources_serve(self):
         from decklab.lib.gauntlet import catalogue as built

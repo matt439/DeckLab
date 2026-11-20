@@ -244,12 +244,17 @@ function gsItem(box, group, item) {
 
 /** A card's deck use in short form (E1-S29, the card viewer's use line shortened): "in 2 decks · 1 free",
  * "in no decks · none free"; a basic land "in decks not tracked", as the Card list says; "" when the server
- * sent none (a viewer outside the space's inventory, or a deck list it couldn't read). */
+ * sent none (a viewer outside the space's inventory, or a deck library it couldn't read). */
 function gsUse(item) {
   if (item.basic === true) return "in decks not tracked";
   if (item.decks == null) return "";
-  const decks = item.decks ? `in ${plural(item.decks, "deck")}` : "in no decks";
-  return `${decks} · ${item.free ? `${num(item.free)} free` : "none free"}`;
+  const parts = [];
+  if (item.decks) parts.push(`in ${plural(item.decks, "deck")}`);
+  if (item.decks_complete === false) parts.push("deck check incomplete");
+  else if (!item.decks && item.decks_complete === true) parts.push("in no decks");
+  if (item.lent > 0) parts.push(`${num(item.lent)} lent out`);
+  parts.push(item.free ? `${num(item.free)} free` : "none free");
+  return parts.join(" · ");
 }
 
 /** "in 2 decks · 3 free · 1 on the way" ("3 free · 2 in decks" without the decks' count); a tracked basic land
@@ -257,7 +262,8 @@ function gsUse(item) {
 function gsCounts(item) {
   const parts = item.basic || item.free == null ? [`${item.owned} owned`, item.basic ? "in decks not tracked" : null]
     : item.decks != null ? [gsUse(item)]
-      : [`${item.free} free`, item.in_use ? `${item.in_use} in decks` : null];
+      : [`${item.free} free`, item.in_use ? `${item.in_use} in decks` : null,
+        item.lent > 0 ? `${num(item.lent)} lent out` : null];
   if (item.incoming) parts.push(`${item.incoming} on the way`);
   return parts.filter(Boolean).join(" · ");
 }

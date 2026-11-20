@@ -104,6 +104,28 @@ class CollectionFindLayoutUiTests(unittest.TestCase):
           ]);
         """)
 
+    def test_loan_counts_in_find_cards_viewer_and_global_search(self):
+        self.run_js(r"""
+          const loan = record('Lent copy', {owned: 2, incoming: 0, held: 0, lent: 1, free_now: 1, holders: []});
+          const mixed = record('Mixed copies', {incoming: 0, held: 1, lent: 1, free_now: 2});
+          const allLent = record('All lent', {owned: 1, incoming: 0, held: 0, lent: 1, free_now: 0, holders: []});
+          drawFind({cards: [loan, mixed, allLent]}, 'availability=lent');
+          same(casualRows().map(node => node.querySelector('.col-find-meta').textContent), [
+            '2 owned \u00b7 1 lent out \u00b7 1 free',
+            '4 owned \u00b7 1 in decks \u00b7 1 lent out \u00b7 2 free',
+            '1 owned \u00b7 1 lent out \u00b7 0 free'
+          ]);
+          assert.equal(main.querySelector('[data-value=lent]').getAttribute('aria-pressed'), 'true');
+          assert(captionFor(opener(0)).textContent.includes('1 lent out'));
+          assert.equal(captionFor(opener(0)).querySelector('.col-viewer-decks'), null);
+          const lab = main.querySelector('.col-find-lab').querySelectorAll('.card-tile');
+          assert(lab[1].textContent.includes('1 in decks \u00b7 1 lent out \u00b7 2 free'));
+          assert.equal(viewerUseWords({owned: 2, lent: 1, free: 1, decks_complete: true}), 'In no decks \u00b7 1 lent out \u00b7 1 free');
+          assert.equal(gsCounts({owned: 2, decks: 0, lent: 1, free: 1, decks_complete: true}),
+            'in no decks \u00b7 1 lent out \u00b7 1 free');
+          assert.equal(gsCounts({owned: 2, in_use: 0, lent: 1, free: 1}), '1 free \u00b7 1 lent out');
+        """)
+
     def test_identity_pips_use_loaded_identity_and_keep_unknown_distinct_from_colourless(self):
         self.run_js(r"""
           drawFind();
@@ -231,8 +253,8 @@ class CollectionFindLayoutUiTests(unittest.TestCase):
           assert.equal(cv.query.get('q'), 'exact'); const count = paths.length; flushTimers(); assert.equal(paths.length, count);
           const availability = main.querySelector('[aria-label=Show]');
           assert(availability.classList.contains('col-availability'));
-          same(availability.querySelectorAll('button').map(node => node.dataset.value), ['all', 'free', 'incoming', 'held', 'spare']);
-          for (const [index, value] of ['all', 'free', 'incoming', 'held'].entries()) {
+          same(availability.querySelectorAll('button').map(node => node.dataset.value), ['all', 'free', 'incoming', 'held', 'lent', 'spare']);
+          for (const [index, value] of ['all', 'free', 'incoming', 'held', 'lent'].entries()) {
             const choice = availability.querySelectorAll('button')[index]; choice.click();
             assert.equal(cv.query.get('availability'), value === 'all' ? null : value);
             assert.equal(choice.getAttribute('aria-pressed'), 'true');

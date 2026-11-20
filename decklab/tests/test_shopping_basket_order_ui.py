@@ -50,6 +50,19 @@ class ShoppingBasketOrderTests(unittest.TestCase):
           seed = shopBasketOrderSeed(view, selected, basket); assert.equal(seed.cards[0].quantity, 2);
         """)
 
+    def test_plan_seeds_its_actual_printing_allocation_instead_of_the_standalone_basket(self):
+        self.seed_js("""
+          const flexible = {...queued, queue_row: 2, quantity: 2}; view.data.to_buy.push(flexible);
+          const actual = {...item, queue_row: 2, quantity: '2', copies: 1,
+            listing: listing(1, {set: 'cmm', collector_number: '12'}), more: []};
+          const selected = {key: 'mtgmate', shop: 'MTGMate', rows: [actual]};
+          view.data.baskets.plan = {recommended: {shops: [selected]}};
+          const seed = shopBasketOrderSeed(view, selected, basket);
+          same(seed.cards.map(card => [card.set, card.collector_number, card.quantity]), [['cmm', '12', 1]]);
+          same(seed.fulfils, [{row: 2, quantity: 1}]);
+          actual.carried = true; assert.equal(shopBasketOrderSeed(view, selected, basket), null);
+        """)
+
     def test_stale_private_or_uncertain_input_has_no_handoff_and_never_partially_seeds(self):
         self.seed_js("""
           for (const patch of [{read: false}, {rows: [{...item, carried: true}]}, {rows: [{...item, copies: 6}]},

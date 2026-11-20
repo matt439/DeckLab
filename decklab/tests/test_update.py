@@ -139,6 +139,20 @@ class ExtractTests(unittest.TestCase):
         self.assertEqual(update.file_sha256(path), hashlib.sha256(data).hexdigest())
 
 
+class RequirementsTests(unittest.TestCase):
+    def test_missing_or_stale_package_requires_install_even_without_a_new_pull(self):
+        from importlib.metadata import PackageNotFoundError
+        from decklab import smoke
+
+        requirements = (update.ROOT / update.REQUIREMENTS).read_text(encoding="utf-8")
+        versions = {package: smoke.pinned(requirements, package) for package in ("psycopg", "Pillow")}
+        self.assertTrue(all(versions.values()))
+        for pillow, mismatch in ((versions["Pillow"], False), ("0.0.0", True), (PackageNotFoundError("Pillow"), True)):
+            with self.subTest(pillow=pillow), mock.patch("decklab.lib.venv.activate", return_value=None), \
+                    mock.patch("importlib.metadata.version", side_effect=[versions["psycopg"], pillow]):
+                self.assertEqual(update.requirements_mismatch(), mismatch)
+
+
 class StopBeforeBackupTests(unittest.TestCase):
     """E11-S70: with migrations pending, the running server is stopped before the backup, on
     every system, and started again afterwards; a failure says it is stopped."""
@@ -164,7 +178,7 @@ class StopBeforeBackupTests(unittest.TestCase):
                 mock.patch.object(update, "changed_files", return_value=list(files)), \
                 mock.patch.object(update, "git", return_value="abc"), \
                 mock.patch.object(update, "server_answers", return_value=running), \
-                mock.patch.object(update, "psycopg_mismatch", return_value=False), \
+                mock.patch.object(update, "requirements_mismatch", return_value=False), \
                 mock.patch.object(update, "server_restart_required", return_value=False), \
                 mock.patch.object(update, "busy_work", return_value=list(busy) if not isinstance(busy, Exception) else [],
                                   side_effect=busy if isinstance(busy, Exception) else None), \
@@ -218,12 +232,12 @@ class StopBeforeBackupTests(unittest.TestCase):
         self.assertEqual(steps, [self.BACKUP, self.MIGRATE])
         self.assertNotIn("server-stopped", done)
 
-    def test_a_server_already_stopped_for_psycopg_is_stopped_once(self):
+    def test_a_server_already_stopped_for_packages_is_stopped_once(self):
         steps, _, _ = self.run_update(needs_stop=True, files=[update.REQUIREMENTS])
-        self.assertEqual(steps, ["Stop Deck Lab to replace psycopg", "Reinstall psycopg", self.BACKUP, self.MIGRATE,
+        self.assertEqual(steps, ["Stop Deck Lab to replace Python packages", "Reinstall Python packages", self.BACKUP, self.MIGRATE,
                                  self.RESTART])
         steps, _, _ = self.run_update(needs_stop=False, files=[update.REQUIREMENTS])      # Linux: pip never stops it
-        self.assertEqual(steps, ["Reinstall psycopg", self.STOP, self.BACKUP, self.MIGRATE, self.RESTART])
+        self.assertEqual(steps, ["Reinstall Python packages", self.STOP, self.BACKUP, self.MIGRATE, self.RESTART])
 
     def test_no_restart_still_starts_a_server_stopped_for_the_migration(self):
         steps, done, _ = self.run_update(no_restart=True)
@@ -243,7 +257,7 @@ class StopBeforeBackupTests(unittest.TestCase):
         self.assertIn("Deck Lab is stopped: it was stopped before the backup", text)
         self.assertIn("python -m decklab.lib.homenet start", text)
         self.assertNotIn("decklab.db restore", text)                    # there's nothing to restore
-        self.assertNotIn("replace psycopg", text)
+        self.assertNotIn("replace Python packages", text)
 
     def test_a_failed_migration_says_so_too_and_when_the_code_alone_may_go_back(self):
         steps, done, raised = self.run_update(fail=self.MIGRATE, done={"pulled"})
@@ -264,9 +278,9 @@ class StopBeforeBackupTests(unittest.TestCase):
         self.assertEqual(steps, [self.STOP])
         self.assertEqual(done & {"server-stopped", "migrated", "backup-failed"}, set())
 
-    def test_the_psycopg_stop_keeps_its_own_way_back(self):
+    def test_the_package_stop_keeps_its_own_way_back(self):
         text = update.way_back("0123456789abcdef", {"server-stopped"})
-        self.assertEqual(text, "Deck Lab was stopped to replace psycopg: python -m decklab.lib.homenet start.")
+        self.assertEqual(text, "Deck Lab was stopped to replace Python packages. Run python -m decklab.lib.homenet start.")
 
     def test_the_documents_state_the_early_stop_and_the_rule(self):
         root = Path(update.__file__).resolve().parents[1]

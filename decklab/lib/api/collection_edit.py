@@ -279,16 +279,15 @@ def _prices(rows):
 
 
 def _storage(space, rows, prices):
-    """The Card list's "In storage only" (E7-S28): {"rows": {_picture_key(row): {"held", "guess"}},
-    "error"}. held: the row's copies built decks and intact products hold (pool.InUse), null for a
-    basic land (their copies in decks aren't tracked); the rest are in storage. The decks count copies
-    by name, so each name's are given first to the rows of the printings the decks' Printings in box
-    lines record (recorded, only on a row with some: how many of held those are, exactly), then to those the decks' lists name, then
-    the rest to its cheapest rows (prices: _prices; unpriced ones last), with guess true on a row that
-    got some of those when another row could have (more rows with room than copies left to place). A row with none held has no entry. collection_sources adds visible, uncontested
-    saved-list hints as listed_holders and leaves the rest unattributed; these aren't verified physical-printing assignments.
-    The rows are already only for viewers who may see this space's inventory. error: why there are
-    no counts (the pool can't be read), else None."""
+    """Card list allocation counts by printing (E7-S28, E7-S42). Held counts built decks and intact
+    products and is null for untracked basics. Lent counts active loans by exact printing.
+    Both reduce the copies in storage. For each card name, deck allocations follow Printings in box
+    records first, then saved list hints, then the cheapest available printings (unpriced last).
+    The recorded count is exact. Guess is true when another row might have held the same copies.
+    A nonbasic row with neither held nor lent copies has no entry. Collection sources adds visible,
+    uncontested hints as listed_holders and leaves the remaining deck copies unattributed.
+    The rows are already only for viewers who may see this space's inventory.
+    Error says why counts are unavailable, or is None."""
     answer = {"rows": {}, "error": None}
     if not rows:
         return answer
@@ -296,15 +295,27 @@ def _storage(space, rows, prices):
         return {"rows": {}, "error": "The card data isn't ready yet."}
     try:
         p = pool.load_pool() if space == spaces.HOME else pool.load_pool(space)
+        holders, lent = [], Counter()
+        for holder in p.in_use:
+            if holder.why == "lent out":
+                for printing, count in holder.recorded.items():
+                    lent["|".join(printing[1:]).lower()] += count
+            else:
+                holders.append(holder)
         by_name = {}
+        capacity = {}
         for row in rows:
             name = cards.resolve(row["name"]) or row["name"]
+            key = _picture_key(row)
             if decks.is_basic_land(name):
-                answer["rows"][_picture_key(row)] = {"held": None, "guess": False}
+                answer["rows"][key] = {"held": None, "guess": False}
             else:
                 by_name.setdefault(name, []).append(row)
+                capacity[key] = max(0, int(row["quantity"]) - lent[key])
+                if lent[key]:
+                    answer["rows"][key] = {"held": 0, "guess": False, "lent": lent[key]}
         held, hinted, recorded = Counter(), Counter(), Counter()
-        for deck in p.in_use:
+        for deck in holders:
             held.update(deck.cards)
             # A Printings in box record says where a card's copies are; its saved list's hints don't.
             exact = {key[0] for key, copies in deck.recorded.items() if copies > 0}
@@ -319,15 +330,15 @@ def _storage(space, rows, prices):
             for source in (recorded, hinted):
                 for row in named:
                     key = _picture_key(row)
-                    take = min(left, int(row["quantity"]) - given.get(key, 0),
+                    take = min(left, capacity[key] - given.get(key, 0),
                                source[(name, row["set"].lower(), row["collector_number"], row["finish"] or "nonfoil")])
                     if take > 0:
                         given[key] = given.get(key, 0) + take
                         left -= take
                         if source is recorded:
                             exact[key] = take
-            room = [r for r in named if int(r["quantity"]) > given.get(_picture_key(r), 0)]
-            spare = sum(int(r["quantity"]) - given.get(_picture_key(r), 0) for r in room)
+            room = [r for r in named if capacity[_picture_key(r)] > given.get(_picture_key(r), 0)]
+            spare = sum(capacity[_picture_key(r)] - given.get(_picture_key(r), 0) for r in room)
             # A guess only when there's a choice: more rows with room, and fewer copies to place than room.
             choice = len(room) > 1 and left < spare
             guessed = set()
@@ -337,13 +348,13 @@ def _storage(space, rows, prices):
                 if not left:
                     break
                 key = _picture_key(row)
-                take = min(left, int(row["quantity"]) - given.get(key, 0))
+                take = min(left, capacity[key] - given.get(key, 0))
                 given[key] = given.get(key, 0) + take
                 left -= take
                 if choice:
                     guessed.add(key)
             for key, copies in given.items():
-                answer["rows"][key] = {"held": copies, "guess": key in guessed}
+                answer["rows"].setdefault(key, {}).update(held=copies, guess=key in guessed)
                 if exact.get(key):
                     answer["rows"][key]["recorded"] = exact[key]
     except (ValueError, OSError, csv.Error, RuntimeError) as error:
@@ -354,7 +365,7 @@ def _storage(space, rows, prices):
         sees, records = guard.deck_reader(), guard.sees_home_records()
     except VISIBILITY_READ_ERRORS:
         return anonymous(answer)
-    return annotate(answer, p.in_use, by_name, sees=sees, records=records)
+    return annotate(answer, holders, by_name, sees=sees, records=records)
 
 
 def _extras(space, shown):

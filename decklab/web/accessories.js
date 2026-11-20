@@ -60,10 +60,12 @@ function accWithCrop(url, crop = "") {
  * server knows whose pictures to show (a person with their own space their own, a home member their own and the shared ones); an address per
  * viewer also keeps a shared iPad's browser cache from showing one profile's picture to another. Through the
  * tunnel the login decides, so nothing is added. Comparisons of two pictures use accWithCrop, not this. */
-function accImgSrc(url) {
-  const bare = accWithCrop(url);
-  if (state.remote || !state.profile || !bare.startsWith("/accessory-img/")) return bare;
-  return `${bare}${bare.includes("?") ? "&" : "?"}viewer=${encodeURIComponent(state.profile.id)}`;
+function accImgSrc(url, thumbnail = false) {
+  let src = accWithCrop(url);
+  if (!src.startsWith("/accessory-img/")) return src;
+  if (thumbnail) src += `${src.includes("?") ? "&" : "?"}size=thumb`;
+  if (state.remote || !state.profile) return src;
+  return `${src}${src.includes("?") ? "&" : "?"}viewer=${encodeURIComponent(state.profile.id)}`;
 }
 
 // Stroke icons for a deck box or playmat with no picture (24 px, drawn in currentColor).
@@ -96,7 +98,7 @@ function accThumbPlaceholder(ref, label, small) {
 /** A row's (or a Ref's) picture in a square box of px (none: as wide as its container), only its crop
  * when it has one. The name is always shown beside it as text, so the picture is decorative; a picture
  * that won't load shows "No picture" (or, in a small box, the name's first letter) instead. */
-function accessoryThumb(ref, px, localPreview = false) {
+function accessoryThumb(ref, px, { localPreview = false, thumbnail = false } = {}) {
   // Nothing chosen (no ref, or only words for the slot such as {label: "Sleeves"}): a dashed empty slot.
   if (!ref || !(ref.value || ref.id || ref.name || ref.image_url)) {
     return el("span", { class: px ? "acc-thumb acc-slot-none" : "acc-thumb acc-thumb-fill acc-slot-none",
@@ -112,7 +114,7 @@ function accessoryThumb(ref, px, localPreview = false) {
   if (typeof url === "string" && (url.startsWith("/accessory-img/")
       || localPreview && /^data:image\/(?:jpeg|png|webp);base64,/.test(accWithCrop(url)))) {
     const crop = accCropOf(url);
-    const img = el("img", { src: accImgSrc(url), alt: "", loading: "lazy", decoding: "async", width: px || 240,
+    const img = el("img", { src: accImgSrc(url, thumbnail), alt: "", loading: "lazy", decoding: "async", width: px || 240,
       height: px || 240, onerror: () => { (frame || img).hidden = true; fallback.hidden = false; } });
     fallback.hidden = true;
     let frame = null;
@@ -338,7 +340,7 @@ function accCard(view, item) {
         text: over ? `${h.title} · too many to fit` : h.title })
         : status("plain", capitalise(h.title));
     })].filter(Boolean);
-  const body = [accessoryThumb(item, null),
+  const body = [accessoryThumb(item, null, { thumbnail: true }),
     el("span", { class: "acc-tile-words" },
       el("span", { class: "acc-tile-name", title: name, text: name }),
       el("span", { class: "acc-tile-meta", text: accMetaWords(item) }))];
@@ -384,7 +386,7 @@ function accProductsPanel(view) {
           const ref = product[field];
           const words = ref ? ref.label || ref.name || ref.value || "" : "None chosen";
           return el("div", { class: "acc-product-pick" },
-            accessoryThumb(ref, 56),
+            accessoryThumb(ref, 56, { thumbnail: true }),
             el("span", { class: "acc-holder-words" },
               el("small", { text: ACC_KINDS[field].one }),
               el("span", { class: ref ? null : "acc-none-words", text: words }),
