@@ -186,15 +186,28 @@ class ForgeSelectionTests(unittest.TestCase):
         self.write("field/sha-Constructed.json", note)
         self.write("field/mixed-Constructed-sample.json", {"runs": [
             {"deck": {"id": "sample/casual/one"}, "per_opponent": {"b" * 64: 2}}]})
-        variant = {"test": "c" * 64, "version": 1, "base": {"id": "sample/casual/one"},
+        variant = {"test": "c" * 64, "base": {"id": "sample/casual/one"},
                    "opponents": [{"id": "sample/casual/two"}], "against": "field:sample:Constructed"}
-        self.write("paired/tests/" + "c" * 64 + ".json", variant)
-        files, _ = space_forge.snapshot(SPACE, self.root)
-        self.assertEqual(set(files), {key + ".json", "field/sha-Constructed-sample.json",
-                                     "paired/tests/" + "c" * 64 + ".json"})
-        variant["opponents"].append({"id": "other/casual/shared"})
-        self.write("paired/tests/" + "c" * 64 + ".json", variant)
-        self.assertNotIn("paired/tests/" + "c" * 64 + ".json", space_forge.snapshot(SPACE, self.root)[0])
+        path = "paired/tests/" + variant["test"] + ".json"
+        for version in (1, 2):
+            with self.subTest(version=version):
+                self.write(path, dict(variant, version=version))
+                files, _ = space_forge.snapshot(SPACE, self.root)
+                self.assertEqual(set(files), {key + ".json", "field/sha-Constructed-sample.json", path})
+                mixed = [*variant["opponents"], {"id": "other/casual/shared"}]
+                self.write(path, dict(variant, version=version, opponents=mixed))
+                self.assertNotIn(path, space_forge.snapshot(SPACE, self.root)[0])
+
+    def test_unrecognised_variant_summary_versions_are_preserved(self):
+        key = "c" * 64
+        variant = {"test": key, "base": {"id": "sample/casual/one"},
+                   "opponents": [{"id": "sample/casual/two"}], "against": "field:sample:Constructed"}
+        for fields in ({}, {"version": 3}, {"version": True}, {"version": 2.0}, {"version": "2"}):
+            with self.subTest(fields=fields):
+                self.write(f"paired/tests/{key}.json", {**variant, **fields})
+                files, meta = space_forge.snapshot(SPACE, self.root)
+                self.assertEqual(files, {})
+                self.assertEqual(meta["unknown"], 1)
 
     def test_variant_side_prefix_is_owned_but_empty_provenance_is_unknown(self):
         key = "a" * 64
