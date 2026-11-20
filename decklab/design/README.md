@@ -14,6 +14,7 @@ A formal, user-centred design model of Deck Lab, first written on 2026-10-13: wh
 | README.md | This page: the method, the index, how to keep it up to date |
 | [personas.md](personas.md) | Who Deck Lab is for (and isn't), each with goals, facts, assumptions and a critique |
 | [journeys.md](journeys.md) | Scenarios and a journey map for each epic, step by step, with the pain points |
+| [Building decks with a partially recorded collection](playing-with-a-partial-collection.md) | Adoption hypothesis, a deck-level checklist to try with a player, and ideas for reducing physical collection upkeep |
 | [stories.md](stories.md) | The user stories, by epic, each with acceptance criteria, a priority and a status |
 | [visual-design.md](visual-design.md) | The look Deck Lab is moving to (Matt's pick of 2026-10-24, "P1": casual on the phone, a lab on the desktop): tokens, the density switch, components, per-page notes, open questions and the rollout slices of E11-S30 |
 | [rendered-ui-review-2026-11-07.md](rendered-ui-review-2026-11-07.md) | Rendered review of 2026-11-07: four reproduced findings, synthetic screenshot/API evidence, receipt observations, explicit coverage limits and the pending continuation |

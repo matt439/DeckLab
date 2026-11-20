@@ -36,7 +36,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 ## Deck Lab: collection, orders and buying
 
-**Owner:** [design/stories.md](decklab/design/stories.md), E5, E6 and E7.
+**Owner:** [design/stories.md](decklab/design/stories.md), E5, E6 and E7. [Design discussion on building decks with a partially recorded collection](decklab/design/playing-with-a-partial-collection.md).
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
