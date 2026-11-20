@@ -43,6 +43,24 @@ class AssemblyFinishUiTests(unittest.TestCase):
           same(body,{decks:[{id:'casual/a',version:'target'}],fingerprint:'first-plan',confirmed:true});
         """)
 
+    def test_direct_empty_deck_plan_explains_what_to_add_and_cannot_finish(self):
+        self.run_js("""
+          const d=item(); d.steps=[];
+          const data=plan([d]); data.ready=false;
+          data.list_issue='Add main-deck cards to Elves before building.';
+          data.completion.can_mark_built=false; data.completion.reason=data.list_issue;
+          location.hash='#/assembly?deck=casual%2Fa&version=target';
+          let writes=0;
+          mockApi(()=>{writes++; throw Error('Empty list tried to build');});
+          drawAssembly(data,routeToken); await settle();
+          const v=packingProgressView;
+          assert(v.results.textContent.includes(data.list_issue));
+          assert.equal(reason(v).textContent,data.list_issue);
+          assert(!v.root.textContent.includes('Every card is here'));
+          assert(!v.root.textContent.includes('Cards checked'));
+          assert(builtBlocked()); builtButton().click(); await settle(); assert.equal(writes,0);
+        """)
+
     def test_blocked_primary_is_focusable_and_reveals_original_hidden_duplicate_task(self):
         self.run_js("""
           window.matchMedia('(min-width: 1000px)').matches=false;const v=openFinish(two());await settle();

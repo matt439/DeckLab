@@ -728,7 +728,7 @@ class WebFileTests(unittest.TestCase):
         self.assertEqual(families - set(found["closeCalls"]), set())
         self.assertEqual(found["closeCalls"], ["shopCloseQueueSheets", "closeReprintSheets", "colCloseSheets",
             "closeDeckOpponentSheets", "closeVariantTestSheets", "closeDeckRetirementSheets", "closeAssemblySheets", "closeProductStorageSheets",
-            "closeTokenPlanSheets", "closeLifeCounter", "closePodLifeCounter", "closeAccessorySheets",
+            "closeTokenPlanSheets", "closePlayDeleteSheets", "closeLifeCounter", "closePodLifeCounter", "closeAccessorySheets",
             "closeReceiptSheets", "closeWishlistSheets", "closeEdhrecSheets"])
         for name in ("chooseProfile", "drawWho", "route"):
             body = _function(_text("app.js"), name)

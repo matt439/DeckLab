@@ -46,6 +46,26 @@ class TokenScanUiTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "ok")
 
+    def test_discard_prompts_on_the_list_and_review_and_profile_cleanup_removes_the_batch(self):
+        self.run_js("""
+          const ctx = openTokenScan(draw());
+          ctx.name.value = 'Treasure'; addTypedToken(ctx); ctx.pending[0].quantity = 3;
+          ctx.sheet.dialog.fire('cancel');
+          assert(ctx.sheet.dialog.textContent.includes('3 token cards'));
+          button(ctx.sheet.dialog, 'Keep scanning').click();
+          assert.equal(ctx.pending[0].quantity, 3);
+          reviewTokenScan(ctx);
+          ctx.sheet.dialog.querySelector('.sheet-close').click();
+          assert.equal(ctx.sheet.heading.textContent, 'Discard this batch?');
+          button(ctx.sheet.dialog, 'Discard batch').click();
+          assert(ctx.sheet.closed);
+          const next = openTokenScan(draw()); assert.equal(next.pending.length, 0);
+          next.name.value = 'Rabbit'; addTypedToken(next); foot(next,'cancel').click();
+          closeAllSheets(); assert(next.sheet.closed);
+          const member = openTokenScan(draw({space:'user2',rows:[]}, ['user2',MAY.user2], 'user2'));
+          assert.equal(member.pending.length,0); assert(!document.body.textContent.includes('3 token cards'));
+        """)
+
     def test_photos_fill_the_pending_list_and_add_sends_one_change(self):
         self.run_js("""
           const view = draw();
@@ -178,6 +198,18 @@ class TokenScanUiTests(unittest.TestCase):
           back.value = 'Nonsense'; back.fire('change');
           assert(ctx.list.textContent.includes('"Nonsense" isn\\'t a token'), ctx.list.textContent);
           assert.equal(foot(ctx, 'review').disabled, true);             // fixed before it can be added
+        """)
+
+    def test_tenth_photo_candidate_can_be_chosen_with_an_empty_batch(self):
+        self.run_js("""
+          const ctx = openTokenScan(draw());
+          const proposals = Array.from({length:10}, (_,i) => proposal('Fish','tblb',String(i+1),'number'));
+          drawTokenScanResult(ctx,{message:'Choose a printing', proposals});
+          assert.equal(ctx.pending.length,0);
+          assert.equal(ctx.result.querySelectorAll('.col-scan-pick').length,8);
+          const other = ctx.result.querySelector('details'); other.open = true; other.fire('toggle');
+          button(other,'Fish (TBLB 10)').click();
+          same(ctx.pending.map(c=>[c.front,c.set,c.collector_number,c.quantity]),[['Fish','tblb','10',1]]);
         """)
 
     def test_a_server_that_cant_read_photos_offers_only_the_typed_name(self):

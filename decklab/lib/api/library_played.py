@@ -11,7 +11,7 @@ names the other side. A deck played on both sides (a mirror) counts the game onc
 side recorded under a deck's old id (a renamed deck) counts for the deck it now is.
 
 "played" is None for every deck when the games can't be read (the database down, a login
-that isn't set up): the page then says nothing rather than "Not played at home yet".
+that isn't set up): the page then omits the 1v1 history.
 
 deck_played(deck_id) is the deck page's (deck_view's "played", the Overview's Last played
 line): the same {"last", "games"} for one deck, plus "since", what its list has changed

@@ -8,6 +8,7 @@ it: E5-S28's Queue these, shopping_queue_combined.py), with the inventory revisi
 POST /api/shopping/queue with action "add_many" (shopping_queue.save_queue_state, which checks
 the revision first) saves the reviewed cards as one audited watchlist.add_many change: any
 nonfoil printing, the chosen state (To buy or Long-term), the deck as source and title as "for".
+An optional selected list names the rows to write; the full review is checked even when buying a subset.
 A card whose identical request is already queued (any nonfoil printing, "for" the deck's title)
 raises that row instead, which keeps its own state: the review names that state as the card's
 "joins", the viewer sends it back, and it is part of what must still agree.
@@ -192,13 +193,36 @@ def _reviewed(value):
     return sorted(result, key=lambda pair: pair[0].casefold())
 
 
+def reviewed_selection(data):
+    """Keep the complete reviewed list for conflict detection and the buyer's subset for the write."""
+    reviewed = _reviewed(data["cards"])
+    names = {name for name, _, _ in reviewed}
+    selected = data.get("selected", list(names))
+    if (not isinstance(selected, list) or not 1 <= len(selected) <= len(names)
+            or not all(isinstance(name, str) and name in names for name in selected)
+            or len(set(selected)) != len(selected)):
+        raise ApiError(400, "Select one or more different cards from the review")
+    return reviewed, set(selected)
+
+
+def selected_rows(review, reviewed, selected, changed):
+    if not review["ready"]:
+        raise inventory.Conflict(changed)
+    adding = [row for row in review["rows"] if row["copies"]]
+    found = sorted(((row["name"], row["copies"], row["joins"]) for row in adding), key=lambda card: card[0].casefold())
+    if found != reviewed:
+        raise inventory.Conflict(changed)
+    return [row for row in adding if row["name"] in selected]
+
+
 class _MissingQueue:
     """The reviewed cards, checked again from the snapshot the change is made on."""
     kind = "watchlist.add_many"
 
-    def __init__(self, deck_id, state, reviewed):
+    def __init__(self, deck_id, state, reviewed, selected):
         self.deck_id, self.state, self.reviewed = deck_id, state, reviewed
-        self.params = {"deck": deck_id, "state": state, "cards": [list(card) for card in reviewed]}
+        self.selected = selected
+        self.params = {"deck": deck_id, "state": state, "cards": [list(card) for card in reviewed if card[0] in selected]}
         self.rows = None
 
     def run(self, inv):
@@ -206,14 +230,8 @@ class _MissingQueue:
             raise inventory.Conflict(CHANGED)
         with inventory.pinned(inv):
             review = _proposal(self.deck_id)
-        if not review["ready"]:
-            raise inventory.Conflict(CHANGED)
-        adding = [row for row in review["rows"] if row["copies"]]
-        found = sorted(((row["name"], row["copies"], row["joins"]) for row in adding), key=lambda card: card[0].casefold())
-        if found != self.reviewed:
-            raise inventory.Conflict(CHANGED)
-        self.rows = adding
-        values = [_values(row, review["deck"], self.state) for row in adding]
+        self.rows = selected_rows(review, self.reviewed, self.selected, CHANGED)
+        values = [_values(row, review["deck"], self.state) for row in self.rows]
         return inventory.Op("watchlist.add_many", {"rows": values, "repo": str(config.REPO)}).run(inv)
 
 
@@ -223,9 +241,9 @@ def add_many(profile, data, expect):
     if not isinstance(state, str) or state not in STATES:
         raise ApiError(400, "state must be ready (To buy) or long_term (Long-term)")
     deck_id = _deck_id(data["deck"])
-    reviewed = _reviewed(data["cards"])
+    reviewed, selected = reviewed_selection(data)
     _require_cards()
-    operation = _MissingQueue(deck_id, state, reviewed)
+    operation = _MissingQueue(deck_id, state, reviewed, selected)
     try:
         inv = inventory.current()
         if inv.revision != expect:

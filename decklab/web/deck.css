@@ -210,6 +210,12 @@
   column-gap: var(--s-4);
 }
 .deck-tiles { padding-top: var(--s-2); }
+.queue-missing-row:has(.queue-missing-check) {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center;
+}
+.queue-missing-check { display: grid; place-items: center; min-width: var(--tap); min-height: var(--tap); cursor: pointer; }
+.queue-missing-sheet .sheet-foot { flex: none; }
+.queue-missing-sheet .sheet-body { min-height: 0; }
 @media (min-width: 1000px) {
   .deck-tiles { grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); }
 }

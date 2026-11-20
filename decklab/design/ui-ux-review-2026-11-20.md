@@ -2,6 +2,10 @@
 
 20 November 2026 · public checkout `b113430`
 
+The [implementation follow-up](../HISTORY.md#deck-building-shopping-and-game-log-ui-fixes-2026-11-20) records the fixes. In the follow-up Chromium fixture with both warnings present, the first deck title moved from y=1,127 to 575 on the 393px phone, from 1,033 to 675 on the tablet, and from 891 to 593 on the desktop. The order paste sheet also fit at 320, 393 and 430px with a card row added.
+
+All nine browser suites listed below passed in the follow-up, along with the guarded Windows fixture suite. The findings below describe the original checkout. The [household walkthrough](#verification-and-the-next-household-session) remains open.
+
 ## What to fix first
 
 A player can follow **Ready to build** all the way to a refusal, ask to queue the missing cards in front of them and see different cards offered for review, or type a new card name and have the previous one selected. These problems affect what players put in a deck, what they intend to buy and whether they can trust the collection.

@@ -154,6 +154,29 @@ class DeckPageUiTests(unittest.TestCase):
           assert(availabilityBanner(page, {view: {tab: 'overview'}}).textContent.includes('Ready once 2 cards arrive'));
         """)
 
+    def test_empty_idea_directs_the_player_to_add_cards_for_the_selected_list(self):
+        self.run_js("""
+          state.may = null;
+          const page = makePage();
+          page.version = 'owned';
+          page.summary.status = 'idea';
+          page.sections = {};
+          page.owned.rows = [];
+          page.owned.totals.missing = 0;
+          location.hash = '#/deck?id=casual%2Ftest&v=owned';
+          drawDeck(page, deckViewOf(parseHash().params));
+          const head = main.querySelector('.deck-page-head');
+          const actions = head.querySelectorAll('.btn-primary');
+          same(actions.map(a => a.textContent), ['Add cards']);
+          assert.equal(actions[0].getAttribute('href'), editHref(page.summary.id, 'owned'));
+          assert.equal(head.querySelector('.deck-build'), null);
+          assert(!main.textContent.includes('Ready to build'));
+          assert(panel('overview').textContent.includes('no main-deck cards yet'));
+          tab('cards').click();
+          assert(panel('cards').textContent.includes('This list has no cards yet.'));
+          assert.equal(main.querySelector('#sec-owned'), null);
+        """)
+
     def test_viewer_who_may_not_see_the_collection_gets_no_marks(self):
         self.run_js("""
           const page = makePage(); delete page.owned; delete page.tokens; delete page.table;

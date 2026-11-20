@@ -1,5 +1,16 @@
 # Deck Lab: history
 
+## Deck building, shopping and game log UI fixes (2026-11-20)
+
+The [20 November UI review](design/ui-ux-review-2026-11-20.md) followed physical cards from collection entry through building, shopping and playing.
+
+- Changing the card name clears the previous printing in Add card and the manual scanner. Scanning lets you choose from all matching printings before adding a copy, and asks before discarding a pending batch. Card list search accepts a set and collector number together.
+- An empty idea opens with **Add cards**. Assembly explains which deck needs main-deck cards. The Commander editor checks each guided commander choice and can start a draft from the player's collection. A commander on the way can start a plan. **Build from cards free tonight** needs both commanders of a pair physically available.
+- **Copy missing cards** copies quantities for the list on screen. From Play-now, **Review Planned list shortages** names the switch before it opens. Buyers can choose which rows to queue. Refreshing a changed purchase queue keeps the order form, identifies affected allocations and requires a new preview.
+- Personal **Cards to get** is visible on Decks and offers a retry and relevant links when counting fails. Global search clears old results as soon as the query changes and names the card browsing limit. The account panel supports Tab, Shift+Tab and Escape.
+- Stale availability stays visible on Decks while the full explanation and admin commands expand on demand. Order paste, Commander verdicts and Testing badges fit narrow screens.
+- **Start a pod** and **Record a pod** are beside the duel controls. The Game log filter works with a pod-only history. Library and Overview label their 1v1 statistics. Testing keeps keyboard focus on the selected view and shows remaining games and estimated time before starting a run. After a failed game deletion, the original sheet retains the reason and lets the player review the current record before trying again.
+
 ## Commander starter picks tested against public decks (2026-11-20, E9-S39)
 
 The starter recognises some specific commander abilities and explains which picks support them. It considers printed power for creature-cast rewards, relevant spell types, cards that can leave the player's graveyard, and creatures or tokens of a rewarded type. It also recognises a blanket artifact upkeep tax when building around artifact casts.

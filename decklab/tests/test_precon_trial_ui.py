@@ -213,7 +213,7 @@ class PreconTrialUiTests(unittest.TestCase):
           const notice = deckOverviewPlayed(data);
           main.append(notice);
           const words = notice.textContent;
-          assert(words.includes("You don't own this precon.") && !words.includes('Played at home'), words);
+          assert(words.includes("You don't own this precon.") && !words.includes('1v1 games'), words);
           assert.equal(notice.querySelector('a').getAttribute('href'), '#/deck?id=commander%2Fghalta-test-dinos&v=target&tab=matchups&part=gauntlet');
           const bought = notice.querySelectorAll('a').find((a) => a.textContent === 'Bought it? Add a precon');
           assert.equal(bought.getAttribute('href'), '#/collection?open=precon');
@@ -247,7 +247,7 @@ class PreconTrialUiTests(unittest.TestCase):
           assert.equal(button(readOnly, 'Keep as a deck idea'), null);
           assert.equal(button(readOnly, 'Remove trial'), null);
           const idea = deckOverviewPlayed({summary: {...TRIAL, trial: null}, played: {games: 0}});
-          assert(idea.textContent.includes('Not played at home yet'));
+          assert(idea.textContent.includes('No 1v1 games recorded yet'));
         """)
 
     def test_library_group_picker_and_board_marks(self):

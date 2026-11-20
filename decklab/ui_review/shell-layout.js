@@ -61,6 +61,7 @@ function matrix(routes, smoke) {
     for(const width of widths) add(`back-${width}`,width,width===820?1106:746);
     for(const width of (smoke ? [600] : [320,600,820,1000,1440]))
       add(`back-root200-${width}`,width,746,routes.member_variant,'user2',{root200:true});
+    add('account-admin',1440,830,routes.populated_library,'matt');
     if(!smoke) {
       add('landscape-740',740,360);
       for(const width of [600,820]) add(`brand-${width}`,width,1106,routes.populated_library,'matt');
@@ -93,9 +94,34 @@ async function keyboardChecks(page, result, review) {
   await page.waitForFunction(() => document.querySelector('#avatar-button')?.getAttribute('aria-expanded')==='true');
   result.avatarMenu = { metrics:await measure(page,result.spec.width),
     snapshot:await page.locator('#avatar-menu').ariaSnapshot() };
+  const panel = page.locator('#avatar-menu');
+  const controls = panel.locator('button:visible:enabled,a[href]:visible');
+  const focused = control => control.evaluate(node => node === document.activeElement);
+  const count = await controls.count();
+  assert(await focused(controls.first()),'The first account control should take focus on opening');
+  assert.equal(await panel.locator('#menu-settings').isVisible(),result.spec.profile === 'matt');
+  for(let i=1;i<count;i++) {
+    await page.keyboard.press('Tab');
+    assert(await focused(controls.nth(i)),`Tab missed account control ${i+1}`);
+  }
+  await page.keyboard.press('Tab');
+  assert(await panel.isHidden(),'Tab beyond the last account control should close the panel');
+  assert(!await page.evaluate(() => document.activeElement === document.body),'Tab lost focus after the panel');
+  await page.locator('#avatar-button').focus();
+  await page.keyboard.press('Enter');
+  await controls.last().focus();
+  for(let i=count-2;i>=0;i--) {
+    await page.keyboard.press('Shift+Tab');
+    assert(await focused(controls.nth(i)),`Shift+Tab missed account control ${i+1}`);
+  }
+  await page.keyboard.press('Shift+Tab');
+  assert(await panel.isHidden() && await focused(page.locator('#avatar-button')),'Shift+Tab should exit to the avatar');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab');
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => document.querySelector('#avatar-button')?.getAttribute('aria-expanded')==='false');
   result.avatarMenu.returnedFocus = await page.evaluate(() => document.activeElement?.id);
+  assert.equal(result.avatarMenu.returnedFocus,'avatar-button');
   result.keyboard_checked = true;
 }
 

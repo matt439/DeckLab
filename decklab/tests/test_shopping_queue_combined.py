@@ -26,12 +26,12 @@ class _Queue(_Fixture):
         with access.using({"profile": profile, "email": "", "remote": True}):
             return sqc.review_combined(json.dumps({"profile": profile, "decks": decks}))
 
-    def save(self, review, decks, profile="matt", state="ready", cards=None):
+    def save(self, review, decks, profile="matt", state="ready", cards=None, **changes):
         if cards is None:
             cards = [{"name": row["name"], "copies": row["copies"], "joins": row["joins"]}
                      for row in review["rows"] if row["copies"]]
         data = {"profile": profile, "action": "add_combined", "expect": review["revision"], "decks": decks,
-                "state": state, "cards": cards}
+                "state": state, "cards": cards, **changes}
         with access.using({"profile": profile, "email": "", "remote": True}):
             return shopping_queue.save_queue_state(json.dumps(data))
 
@@ -117,6 +117,15 @@ class QueueTheseTests(_Queue, unittest.TestCase):
         fresh = self.review(ALPHA_BETA)
         self.refused(409, lambda: self.save(fresh, ALPHA_BETA, cards=[{"name": RIDER, "copies": 3, "joins": None}]))
         self.refused(409, lambda: self.save(fresh, BETA_GAMMA))
+
+    def test_a_combined_review_can_queue_only_selected_rows(self):
+        self.case.deck("gamma", "Gamma", "idea",
+                       "Commander\n1 Ghalta, Primal Hunger\nDeck\n5 Llanowar Elves\n5 Elvish Mystic\n", kind="commander")
+        review = self.review(BETA_GAMMA)
+        self.assertGreater(review["totals"]["cards"], 1)
+        result = self.save(review, BETA_GAMMA, selected=["Elvish Mystic"])
+        self.assertEqual(result["cards"], 1)
+        self.assertEqual([row["name"] for row in self.queued("Beta + Gamma")], ["Elvish Mystic"])
 
     def test_bad_requests_are_refused(self):
         review = self.review(ALPHA_BETA)

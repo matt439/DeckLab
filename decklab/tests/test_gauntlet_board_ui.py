@@ -27,6 +27,8 @@ class GauntletBoardUiTests(unittest.TestCase):
             rate:.22,low:.15,high:.3,verdict:'weak',source:'edhrec'},...extra});
           const board=(format='commander',rows=[],extra={})=>({format,state:'ok',build_command:null,
             sample:{id:'sample:abcdefabcdef',size:20,tiers:['core']},default_budget:'fixed:100',note:null,notes:[],rows,...extra});
+          const plan=(newGames,extra={})=>({deck:deck('commander/c','Commander C'),is_standard:true,sample:{decks:20},
+            default_budget:'fixed:100',budgets:{'fixed:100':{games:100,new_games:newGames,minutes:[480,600]}},...extra});
           const button=(scope,text)=>scope.querySelectorAll('button').find(b=>b.textContent===text);
           const settle=async()=>{for(let i=0;i<10;i++)await Promise.resolve();};
           const writes=[];apiWrite=async(path,body)=>{writes.push([path,body]);return {};};
@@ -71,10 +73,12 @@ class GauntletBoardUiTests(unittest.TestCase):
           assert.equal(pending.length,1);assert(pending[0].url.startsWith('/api/gauntlet/board'));
           button(main,'Matchups').click();
           same(replaced,['#/matchups?view=matchups']);assert.equal(storage.get('decklab.testing.view'),'matchups');
+          assert.equal(document.activeElement,button(main,'Matchups'));
           assert(pending[0].signal.aborted);
           pending[0].resolve(board('commander',[tested('commander/c','Late answer',.5)]));await settle();
           assert(!main.textContent.includes('Late answer'));assert(!main.textContent.includes('cancelled'));
           button(main,'Popular decks').click();
+          assert.equal(document.activeElement,button(main,'Popular decks'));
           same(replaced,['#/matchups?view=matchups','#/matchups?view=popular']);
           assert.equal(pending.length,2);
         """)
@@ -165,23 +169,61 @@ class GauntletBoardUiTests(unittest.TestCase):
 
     def test_play_asks_then_sends_the_list_on_screen_and_shows_the_servers_refusal(self):
         self.run_js("""
-          const calls=[];api=async url=>{calls.push(url);return board('commander',[tested('commander/c','Commander C',.6)]);};
-          const asked=[];ask=async(title,paragraphs,choices)=>{asked.push([title,paragraphs,choices.map(c=>c.text)]);return 'play';};
+          const calls=[];api=async url=>{calls.push(url);return url.startsWith('/api/gauntlet?') ? plan(1499)
+            : board('commander',[tested('commander/c','Commander C',.6)]);};
           open();await settle();
           button(main.querySelector('.gb-row'),'Play').click();await settle();
-          assert.equal(asked[0][0],'Play Commander C against popular decks?');
-          assert(asked[0][1][0].includes('20 popular decks, about 100 games each'));
-          assert(asked[0][1][0].includes("The deck's Testing tab says how long."));
-          same(asked[0][2],['Play','Cancel']);
-          same(writes,[['/api/gauntlet/run',{id:'commander/c',version:'target',expected_card_sha:'commander/c'}]]);
-          assert.equal(calls.length,2);
+          const dialog=()=>document.querySelector('dialog');
+          assert.equal(dialog().querySelector('h2').textContent,'Play Commander C against popular decks?');
+          assert(dialog().textContent.includes('1,499 new games'));
+          assert(dialog().textContent.includes('about 8–10 hours'));assert(dialog().textContent.includes('overnight'));
+          assert.equal(writes.length,0);
+          same(calls,['/api/gauntlet/board?format=commander','/api/gauntlet?id=commander%2Fc&version=target&profile=matt']);
+          button(dialog(),'Play').click();await settle();
+          same(writes,[['/api/gauntlet/run',{id:'commander/c',version:'target',expected_card_sha:'commander/c',budget:'fixed:100'}]]);
+          assert.equal(calls.length,3);
           apiWrite=async()=>{const e=new Error('4 popular-deck runs are already waiting. Try again when one has finished.');e.status=503;throw e;};
           button(main.querySelector('.gb-row'),'Play').click();await settle();
+          button(dialog(),'Play').click();await settle();
           same(toasts,['4 popular-deck runs are already waiting. Try again when one has finished.']);
-          assert.equal(calls.length,3);
+          assert.equal(calls.length,5);
           // Cancel writes nothing.
-          ask=async()=>'cancel';const before=writes.length;
-          button(main.querySelector('.gb-row'),'Play').click();await settle();assert.equal(writes.length,before);
+          button(main.querySelector('.gb-row'),'Play').click();await settle();
+          button(dialog(),'Cancel').click();await settle();assert.equal(toasts.length,1);
+        """)
+
+    def test_zero_additional_work_or_a_changed_list_does_not_offer_a_run(self):
+        self.run_js("""
+          let answer=plan(0);
+          api=async url=>url.startsWith('/api/gauntlet?') ? answer : board('commander',[tested('commander/c','Commander C',.6)]);
+          open();await settle();
+          const review=async()=>{button(main.querySelector('.gb-row'),'Play').click();await settle();return document.querySelector('dialog');};
+          let dialog=await review();
+          assert(dialog.textContent.includes('Nothing new to play'));assert(!button(dialog,'Play'));button(dialog,'Close').click();
+          answer=plan(100,{deck:deck('commander/c','Commander C','changed')});
+          dialog=await review();assert(dialog.textContent.includes('This list changed'));assert(!button(dialog,'Play'));
+          assert.equal(writes.length,0);
+        """)
+
+    def test_failed_or_abandoned_estimates_cannot_start_a_run(self):
+        self.run_js("""
+          let reply;
+          api=async url=>url.startsWith('/api/gauntlet?') ? new Promise((resolve,reject)=>{reply={resolve,reject};})
+            : board('commander',[row('commander/c','Commander C')]);
+          open();await settle();button(main.querySelector('.gb-row'),'Play').click();
+          const dialog=document.querySelector('dialog');assert(!button(dialog,'Play'));
+          reply.reject(new ApiError(503,'Try again in a moment.'));await settle();
+          assert(!button(dialog,'Play'));button(dialog,'Try again').click();
+          button(dialog,'Cancel').click();reply.resolve(plan(50));await settle();
+          assert(!document.querySelector('dialog'));assert.equal(writes.length,0);
+          // The route and profile switchers close a pending or already-loaded private estimate.
+          button(main.querySelector('.gb-row'),'Play').click();
+          closeAllSheets();reply.resolve(plan(123));await settle();
+          assert(!document.querySelector('dialog'));assert.equal(writes.length,0);
+          button(main.querySelector('.gb-row'),'Play').click();reply.resolve(plan(123));await settle();
+          const formerPlay=button(document.querySelector('dialog'),'Play');
+          closeAllSheets();state.profile={id:'user1'};formerPlay.click();await settle();
+          assert(!document.querySelector('dialog'));assert.equal(writes.length,0);
         """)
 
     def test_no_play_when_the_gate_refuses_or_a_run_already_waits_or_plays(self):

@@ -127,7 +127,10 @@ function colFields(ctx, row) {
     notes: el("input", { id: id("notes"), type: "text", maxlength: Math.max(COL_NOTES_MAX, value("notes").length),
       value: value("notes"), autocomplete: "off" }) };
   ctx.printingNote = el("small", { class: "field-hint", "aria-live": "polite" });
-  name.addEventListener("input", () => colSuggestNames(ctx));
+  name.addEventListener("input", () => {
+    colResetPrintings(ctx);
+    colSuggestNames(ctx);
+  });
   name.addEventListener("change", () => loadColPrintings(ctx, name.value));
   const field = (key, label, input, ...after) => el("label", { class: `field col-field-${key}`, for: input.id },
     el("span", { text: label }), input, ...after);
@@ -153,16 +156,29 @@ function colFields(ctx, row) {
 /** Card names for the name box (the editor's search), a moment after typing stops. */
 function colSuggestNames(ctx) {
   clearTimeout(ctx.suggestTimer);
+  const seq = ++ctx.nameSeq;
+  clear(ctx.datalist);
   const q = ctx.inputs.name.value.trim();
   if (q.length < 2) return;
   ctx.suggestTimer = setTimeout(async () => {
-    const seq = ++ctx.nameSeq;
     try {
       const answer = await api(`/api/cards/search?q=${encodeURIComponent(q)}&limit=8`);
       if (seq !== ctx.nameSeq || ctx.sheet.closed || !boxCollectionEditorHere(ctx)) return;
       clear(ctx.datalist).append(...(answer.cards || []).map((c) => el("option", { value: c.name })));
     } catch (e) { /* suggestions are a help only; the printing lookup says what's wrong */ }
   }, 200);
+}
+
+function colResetPrintings(ctx) {
+  ++ctx.printSeq;
+  ctx.printingName = "";
+  ctx.chosen = -1;
+  ctx.printings = [];
+  clear(ctx.strip).append(el("p", { class: "sub", text: ctx.inputs.name.value.trim()
+    ? "Find the card's printings to choose your copy." : "Choose the card first." }));
+  clear(ctx.picture);
+  ctx.printingNote.textContent = "";
+  colFillFinishes(ctx);
 }
 
 /** A printings answer as [{set, set_name, collector_number, finishes, released, img_small}], whichever shape
@@ -184,40 +200,39 @@ function colPrintingList(answer) {
 async function loadColPrintings(ctx, typed, keep = null) {
   if (!boxCollectionEditorHere(ctx)) return;
   const name = String(typed || "").trim();
+  colResetPrintings(ctx);
   if (!name) return;
-  const seq = ++ctx.printSeq;
+  const seq = ctx.printSeq;
+  const currentLookup = () => seq === ctx.printSeq && ctx.inputs.name.value.trim() === name
+    && !ctx.sheet.closed && boxCollectionEditorHere(ctx);
   clear(ctx.strip).append(loadingBox("Looking up its printings…"));
-  ctx.printingNote.textContent = "";
   let answer;
   try {
     try {
       answer = await api(`/api/printings?name=${encodeURIComponent(name)}`);
     } catch (e) {
-      if (!boxCollectionEditorHere(ctx)) return;
+      if (!currentLookup()) return;
       // An older server has only the editor's printing picker.
       if (!(e instanceof ApiError) || e.status !== 404 || /card/i.test(e.message)) throw e;
       answer = await api(`/api/cards/printings?name=${encodeURIComponent(name)}`);
     }
   } catch (error) {
-    if (seq !== ctx.printSeq || ctx.sheet.closed || !boxCollectionEditorHere(ctx)) return;
+    if (!currentLookup()) return;
     // A name that isn't a card's (400, 404) is an empty answer; anything else failed, and may work again.
     const unknown = error instanceof ApiError && (error.status === 400 || error.status === 404);
     clear(ctx.strip).append(unknown ? el("p", { class: "sub", text: "No printings found. Check the spelling." })
       : loadFailed("Its printings", error, () => loadColPrintings(ctx, ctx.inputs.name.value, keep)));
     ctx.printingNote.textContent = ctx.boxRepair ? "Close this review and search Collection for the exact card manually."
       : unknown ? error.message : "";
-    ctx.printings = [];
-    ctx.chosen = -1;
-    colFillFinishes(ctx);
     return;
   }
-  if (seq !== ctx.printSeq || ctx.sheet.closed || !boxCollectionEditorHere(ctx)) return;
+  if (!currentLookup()) return;
   if (ctx.boxRepair && !boxCollectionPrintings(answer, ctx.boxRepair.difference.name)) {
-    ctx.printings = []; ctx.chosen = -1; colFillFinishes(ctx);
     clear(ctx.strip).append(el("p", { class: "sub", text: "The exact card name couldn't be checked. Close this sheet and search Collection manually." }));
     return;
   }
   if (answer.name && answer.name !== ctx.inputs.name.value) ctx.inputs.name.value = answer.name;   // Scryfall's exact name
+  ctx.printingName = ctx.inputs.name.value.trim();
   ctx.printings = colPrintingList(answer);
   const current = keep || (ctx.row && ctx.row.name === answer.name ? ctx.row : null);
   if (!ctx.boxRepair && current && current.set && !ctx.printings.some((p) => p.set === current.set && p.collector_number === current.collector_number)) {
@@ -236,6 +251,7 @@ async function loadColPrintings(ctx, typed, keep = null) {
  * many, and "Bigger pictures…" (cards-ui.js pickPrinting). */
 function drawColStrip(ctx) {
   const name = ctx.inputs.name.value.trim();
+  const seq = ctx.printSeq;
   const words = tokFold(ctx.stripFilter);
   const shown = ctx.printings.map((p, i) => [p, i]).filter(([p, i]) => i === ctx.chosen || !words
     || tokFold(`${p.set} ${p.set_name} ${p.collector_number}`).includes(words));
@@ -244,6 +260,7 @@ function drawColStrip(ctx) {
     return el("button", { type: "button", class: "col-strip-tile", "aria-pressed": String(i === ctx.chosen),
       title: p.set_name || null, "aria-label": `${words}${p.set_name ? `, ${p.set_name}` : ""}${p.released ? `, ${String(p.released).slice(0, 4)}` : ""}`,
       onclick: () => {
+        if (seq !== ctx.printSeq) return;
         if (ctx.boxRepair && (ctx.busy || ctx.sheet.closed || !boxCollectionEditorHere(ctx))) return;
         ctx.chosen = i; drawColStrip(ctx); colFillFinishes(ctx);
       } },
@@ -259,7 +276,7 @@ function drawColStrip(ctx) {
   add(clear(ctx.strip), [
     ctx.printings.length ? el("div", { class: "col-strip-tools" }, filter,
       el("button", { type: "button", class: "btn col-sheet-mutate", text: "Bigger pictures…",
-        onclick: () => colPickBig(ctx, name) })) : null,
+        onclick: () => { if (seq === ctx.printSeq) colPickBig(ctx, name); } })) : null,
     ctx.printings.length ? el("div", { class: "col-strip", role: "group", "aria-label": `Printings of ${name}` }, tiles)
       : emptyBox("No printings found. Check the card's name.", el("button", { type: "button", class: "btn",
         text: "Change the name", onclick: () => { if (!ctx.sheet.closed) ctx.inputs.name.focus(); } }))]);
@@ -271,6 +288,7 @@ function drawColStrip(ctx) {
 /** The bigger printing picker (cards-ui.js pickPrinting): its choice becomes the strip's. */
 async function colPickBig(ctx, name) {
   if (ctx.sheet.closed || !colActive(ctx.cv) || !boxCollectionEditorHere(ctx)) return;
+  const seq = ctx.printSeq;
   const p = ctx.printings[ctx.chosen];
   const finish = ctx.finishBox.querySelector('[aria-pressed="true"]');
   let picker, picked;
@@ -278,7 +296,7 @@ async function colPickBig(ctx, name) {
     picked = await pickPrinting(name, { current: p ? { set: p.set, number: p.collector_number, finish: finish ? finish.dataset.value : "nonfoil" } : null,
       onOpen: sheet => { picker = sheet; colSheets.add(sheet); } });
   } finally { if (picker) colSheets.delete(picker); }
-  if (!picked || !picked.set || ctx.sheet.closed || !colActive(ctx.cv) || !boxCollectionEditorHere(ctx)) return;
+  if (!picked || !picked.set || seq !== ctx.printSeq || ctx.sheet.closed || !colActive(ctx.cv) || !boxCollectionEditorHere(ctx)) return;
   let at = ctx.printings.findIndex((o) => o.set === picked.set && o.collector_number === picked.number);
   if (at < 0) {
     ctx.printings.unshift({ set: picked.set, set_name: picked.set_name || "", collector_number: picked.number,
@@ -307,6 +325,7 @@ function colSheetPicture(ctx) {
 /** The chosen printing's finishes, as a segmented choice. */
 function colFillFinishes(ctx, keep = null) {
   const chosen = ctx.printings[ctx.chosen];
+  colSyncSaveButton(ctx);
   const now = ctx.finishBox.querySelector('[aria-pressed="true"]');
   const wanted = keep || (now ? now.dataset.value : null);
   clear(ctx.finishBox);
@@ -317,11 +336,17 @@ function colFillFinishes(ctx, keep = null) {
   ctx.finishBox.append(colSegmented(chosen.finishes.map((f) => [f, COL_FINISH_WORDS[f] || f]), value, null, "Finish"));
 }
 
+function colSyncSaveButton(ctx) {
+  const save = ctx.sheet.foot.querySelector('[data-action="save"]');
+  if (save) save.disabled = ctx.busy || !ctx.printings[ctx.chosen] || ctx.printingName !== ctx.inputs.name.value.trim();
+}
+
 function colSheetBusy(ctx, busy) {
   ctx.busy = busy;
   ctx.form.setAttribute("aria-busy", String(busy));
   for (const control of ctx.form.querySelectorAll(".col-sheet-mutate")) control.disabled = busy;
   for (const button of ctx.sheet.foot.querySelectorAll("button")) button.disabled = busy;
+  colSyncSaveButton(ctx);
 }
 
 function colProblem(ctx, key, words) {
@@ -338,7 +363,7 @@ function colFormRow(ctx) {
   const name = text(i.name);
   if (!name) return colProblem(ctx, "name", "Give the card's name.");
   const chosen = ctx.printings[ctx.chosen];
-  if (!chosen) {
+  if (!chosen || ctx.printingName !== i.name.value.trim()) {
     return colProblem(ctx, ctx.printings.length ? "printing" : "name",
       ctx.printings.length ? "Choose the printing you have." : "Find the card's printings first (Find its printings).");
   }

@@ -49,7 +49,7 @@ function gsBox(inSheet) {
   const form = el("form", { class: "gs-form", role: "search", onsubmit: (e) => { e.preventDefault(); gsFirst(box); } },
     gsIcon(), input, hint);
   const box = { inSheet, input, hint, status, results, form, root: el("div", { class: "gs-box" }, form, status, results),
-    timer: 0, text: "", answer: null };
+    timer: 0, answer: null };
   input.addEventListener("input", () => gsTyped(box));
   input.addEventListener("keydown", (e) => gsFieldKey(box, e));
   input.addEventListener("focus", () => { if (box.answer && box.input.value.trim()) gsShow(box, true); });
@@ -105,14 +105,8 @@ function syncGlobalSearch() {
 
 /** Forget a box's text and answer (another person chose, or the sheet closed). */
 function gsReset(box) {
-  gsSeq += 1;
-  clearTimeout(box.timer);
   box.input.value = "";
-  box.text = "";
-  box.answer = null;
-  clear(box.results);
-  box.status.textContent = "";
-  gsShow(box, false);
+  gsTyped(box);
 }
 
 function gsShow(box, on) {
@@ -163,29 +157,31 @@ function gsResultsKey(box, e) {
     if (next < 0) box.input.focus();
     else if (items[Math.min(next, items.length - 1)]) items[Math.min(next, items.length - 1)].focus();
   } else if (e.key === "Escape" && !box.inSheet) {
-    e.preventDefault(); gsShow(box, false); box.input.focus();
+    e.preventDefault(); box.input.focus(); gsShow(box, false);
   }
 }
 
 /** Enter in the field: the first result (after the answer to this text has come). */
 function gsFirst(box) {
-  const first = box.answer && box.text === box.input.value.trim() ? box.results.querySelector(".gs-item") : null;
+  const first = box.answer?.q === box.input.value.trim() ? box.results.querySelector(".gs-item") : null;
   if (first) first.click();
 }
 
 // --------------------------------------------------------------- asking
 
 function gsTyped(box) {
+  const seq = ++gsSeq, text = box.input.value.trim();
   clearTimeout(box.timer);
-  const text = box.input.value.trim();
-  if (!text) { gsReset(box); return; }
-  box.timer = setTimeout(() => gsAsk(box, text), GS_DEBOUNCE);
+  box.answer = null;
+  clear(box.results);
+  gsShow(box, false);
+  box.status.textContent = text ? "Searching…" : "";
+  if (text) box.timer = setTimeout(() => gsAsk(box, text, seq), GS_DEBOUNCE);
 }
 
 /** Ask for text; draw the answer only while it's still this box's text, person and open search. */
-async function gsAsk(box, text) {
-  const seq = ++gsSeq, profile = state.profile?.id;
-  box.text = text;
+async function gsAsk(box, text, seq) {
+  const profile = state.profile?.id;
   const current = () => seq === gsSeq && profile === state.profile?.id && box.input.value.trim() === text
     && box.root.isConnected;
   let answer;
@@ -221,7 +217,12 @@ function gsDraw(box, answer) {
       el("h3", { class: "gs-head", id: headId, text: group.label }));
     if (group.error) part.append(el("p", { class: "gs-note", text: group.error }));
     if (group.items.length) part.append(el("ul", { class: "gs-list" }, group.items.map((item) => el("li", {}, gsItem(box, group, item)))));
-    if (group.more) part.append(gsSeeAll(box, group, answer.q));
+    if (group.more) {
+      part.append(gsSeeAll(box, group, answer.q));
+      if (group.id === "cards" && group.total > GS_SEE_ALL) {
+        part.append(el("p", { class: "gs-note", text: "Refine your search to find more specific matches." }));
+      }
+    }
     box.results.append(part);
   }
   const total = groups.reduce((n, g) => n + g.items.length, 0);
@@ -281,19 +282,22 @@ function gsSeeAll(box, group, q) {
     if (group.space && group.space !== ownSpace()) params.set("space", group.space);
     return el("a", { class: "gs-all gs-pick", href: `#/collection?${params}`, onclick: () => gsDone(box), text: words });
   }
-  return el("button", { type: "button", class: "gs-all gs-pick", text: words, onclick: (e) => gsAllCards(e.currentTarget, q) });
+  const browse = group.total > GS_SEE_ALL ? `Browse first ${GS_SEE_ALL} of ${group.total}${group.capped ? "+" : ""}` : words;
+  return el("button", { type: "button", class: "gs-all gs-pick", text: browse,
+    onclick: (e) => gsAllCards(box, e.currentTarget, q) });
 }
 
 /** Other cards' See all: the card viewer over up to GS_SEE_ALL of them. */
-async function gsAllCards(trigger, q) {
+async function gsAllCards(box, trigger, q) {
   const profile = state.profile?.id;
+  const current = () => profile === state.profile?.id && trigger.isConnected && !box.results.hidden && box.input.value.trim() === q;
   try {
     const answer = await api(`/api/search?${new URLSearchParams({ q, group: "cards", limit: String(GS_SEE_ALL) })}`);
-    if (profile !== state.profile?.id) return;
+    if (!current()) return;
     const found = ((answer.groups || [])[0] || { items: [] }).items.map((item) => item.card).filter(Boolean);
     if (found.length) openCardViewer(found, 0, { trigger });
   } catch (error) {
-    toast(error.message || "The cards couldn't be loaded.");
+    if (current()) toast(error.message || "The cards couldn't be loaded.");
   }
 }
 

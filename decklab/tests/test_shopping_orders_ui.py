@@ -166,8 +166,8 @@ class ShoppingOrderInteractionTests(unittest.TestCase):
             assert(!sheet.closed); assert.equal(field(sheet, "notes").value, "Don't discard this");
             assert(sheet.body.textContent.includes("couldn't be saved"));
             assert.equal(sheet.foot.querySelectorAll("button").some(button => button.textContent === "Save order"), false);
-            assert.equal(action(sheet, "Preview order").disabled, code === 409);
-            if (code === 409) assert(button(sheet.body, "Refresh Shopping"));
+            assert(!action(sheet, code === 409 ? "Refresh Shopping" : "Preview order").disabled);
+            if (code === 409) assert(!sheet.foot.textContent.includes("Preview order"));
             assert.equal(writes.length, 2); sheet.close();
           }
         """)
@@ -181,6 +181,63 @@ class ShoppingOrderInteractionTests(unittest.TestCase):
           assert.equal(main.querySelector(".shop-order-add").disabled, false);
           assert.equal(document.body.querySelector(".shop-order-preview"), null);
           main.querySelector(".shop-order-add").click(); assert(!latest().closed);
+        """)
+
+    def test_pasted_order_refresh_keeps_fields_and_only_rebinds_unchanged_allocations(self):
+        self.order_js("""
+          data.to_buy.push(row("Beta", {queue_row: 2}), row("Gamma", {queue_row: 3}));
+          const writes = [], reads = [];
+          apiWrite = async (path, body) => {
+            writes.push([path, body]);
+            if (writes.length === 1) throw new ApiError(409, "Inventory changed");
+            return previewAnswer;
+          };
+          api = async path => {
+            reads.push(path);
+            if (reads.length === 1) throw new ApiError(503, "Try again");
+            return {...empty, queue_revision: "revision-2", to_buy: [row("Delta", {queue_row: 1}),
+              row("Alpha", {quantity: 3, queue_row: 2}), row("Beta", {quantity: 4, queue_row: 3})]};
+          };
+          const sheet = openOrder();
+          type(sheet, "seller", "Example Shop"); type(sheet, "ordered_on", "2026-11-15");
+          type(sheet, "id", "my-order"); type(sheet, "notes", "Hold for pickup");
+          paste(sheet, "2 Alpha (FDN) 2 foil\\n1 Beta (M11) 149");
+          for (const box of sheet.body.querySelectorAll("[data-order-fulfils]")) box.checked = true;
+          sheet.body.querySelector("[data-order-fulfils-quantity=1]").value = "2";
+          action(sheet, "Preview order").click(); await settle();
+          action(sheet, "Refresh Shopping").click(); await settle();
+          assert(!sheet.foot.textContent.includes("Preview order"));
+          action(sheet, "Refresh Shopping").click(); await settle();
+          same(reads, ["/api/shopping", "/api/shopping"]); assert(!sheet.closed);
+          const notice = sheet.body.querySelector("[role=status]");
+          assert(notice.textContent.includes("Beta") && notice.textContent.includes("4 queued"));
+          assert(notice.textContent.includes("Gamma") && notice.textContent.includes("no longer"));
+          assert(!sheet.body.querySelector("[data-order-fulfils=1]").checked);
+          assert(sheet.body.querySelector("[data-order-fulfils=2]").checked);
+          assert(!sheet.body.querySelector("[data-order-fulfils=3]").checked);
+          assert.equal(sheet.foot.querySelectorAll("button").some(b => b.textContent === "Save order"), false);
+          action(sheet, "Preview order").click(); await settle();
+          const [path, body] = writes[1];
+          assert.equal(path, "/api/shopping/order/preview"); assert.equal(body.expect, "revision-2");
+          same(body.record, {id: "my-order", seller: "Example Shop", ordered_on: "2026-11-15", notes: "Hold for pickup"});
+          same(body.cards, writes[0][1].cards); assert.equal(body.cards.rows.length, 2);
+          same(body.fulfils, [{row: 2, quantity: 2}]); assert(action(sheet, "Save order"));
+        """)
+
+    def test_refresh_reply_after_close_or_profile_change_does_not_redraw_or_reopen(self):
+        self.order_js("""
+          for (const close of [true, false]) {
+            clear(main); state.profile = {id: "matt", role: "admin", space: "home"};
+            apiWrite = async () => {throw new ApiError(409, "Inventory changed");};
+            let resolve; api = () => new Promise(done => {resolve = done;});
+            const sheet = openOrder(), root = main.querySelector(".shop-page"); paste(sheet);
+            action(sheet, "Preview order").click(); await settle(); action(sheet, "Refresh Shopping").click();
+            if (close) sheet.close(); else state.profile = {id: "user1", role: "member", space: "home"};
+            resolve({...empty, queue_revision: "revision-2"}); await settle();
+            assert(root.isConnected); assert.equal(main.querySelectorAll(".shop-page").length, 1);
+            assert(sheet.body.querySelector("[role=status]").hidden);
+            sheet.close();
+          }
         """)
 
     def test_csv_quoted_names_details_and_unclosed_quotes(self):

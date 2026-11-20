@@ -115,19 +115,25 @@ def _needed(space):
     chosen = [{key: row[key] for key in ("id", "title")} for row in summaries]
     if not chosen:
         return {"ready": True, "decks": [], "rows": []}
-    if any(row.get("error") or "target" not in row.get("versions", []) for row in summaries):
+    unreadable = [deck for deck, row in zip(chosen, summaries)
+                  if row.get("error") or "target" not in row.get("versions", [])]
+    if unreadable:
         return {"ready": False, "decks": chosen, "rows": [],
+                "check_decks": unreadable,
                 "reason": "Every saved deck needs a readable Planned list before this combined list can be counted."}
     supply = pool.load_pool(space)
     if supply.warnings or supply.unresolved:
-        return {"ready": False, "decks": chosen, "rows": [], "reason": "Your collection needs checking before missing cards can be counted."}
+        return {"ready": False, "decks": chosen, "rows": [], "check_collection": True,
+                "reason": "Your collection needs checking before missing cards can be counted."}
     lists = {row["id"]: decks.load_deck(row["id"], "target") for row in summaries}
     excluded = set().union(*(pool.self_ids(row["id"]) for row in summaries))
     results = {deck_id: pool.compare(sections, supply, excluded, prices=False) for deck_id, sections in lists.items()}
     merged = {(deck_id, section): lines for deck_id, sections in lists.items() for section, lines in sections.items()}
     combined = pool.compare(merged, supply, excluded, prices=False)
-    if combined.get("unresolved") or any(result.get("unresolved") for result in results.values()):
-        return {"ready": False, "decks": chosen, "rows": [], "reason": "Some deck cards aren't recognized, so this list cannot be counted completely."}
+    unrecognized = [deck for deck in chosen if results[deck["id"]].get("unresolved")]
+    if combined.get("unresolved") or unrecognized:
+        return {"ready": False, "decks": chosen, "rows": [], "check_decks": unrecognized,
+                "reason": "Some deck cards aren't recognized, so this list cannot be counted completely."}
     rows = []
     for row in combined["rows"]:
         if row["missing"] > 0:

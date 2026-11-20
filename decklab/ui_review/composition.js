@@ -5,6 +5,44 @@ const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const { run } = require('./common.js');
 
+async function checkPlayNowShortages(review, page, context, spec) {
+  const id = new URLSearchParams(spec.route.split('?')[1]).get('id');
+  const base = await review.readFixture(context, '/api/deck?id=' + encodeURIComponent(id));
+  const line = base.sections.Deck[0];
+  const playNow = {...base, version:'owned', versions:['target','owned'],
+    sections:{Deck:[{...line, name:'Opt', qty:4, card:{...line.card, name:'Opt'}}]},
+    owned:{...base.owned, rows:[{...base.owned.rows[0], name:'Opt', need:4, missing:3}],
+      totals:{...base.owned.totals, missing:3}}};
+  const rows = [['Elvish Mystic',4],['Llanowar Elves',1]].map(([name,copies]) =>
+    ({name,missing:copies,copies,queued:0,joins:null}));
+  await page.route('**/api/deck?*', route => route.fulfill({json:playNow}));
+  await page.route('**/api/deck/swaps?*', route => route.fulfill({json:{cards:[]}}));
+  await page.route('**/api/shopping/queue/missing', route => route.fulfill({json:{
+    ready:true, deck:{id,title:base.summary.title}, revision:'fixture', rows, totals:{copies:5,cards:2}}}));
+  await page.goto(review.pageUrl('/#/deck?id='+encodeURIComponent(id)+'&v=owned&tab=cards&filter=missing',spec.theme));
+  const copy = page.getByRole('button',{name:'Copy missing cards',exact:true});
+  await copy.waitFor();
+  await page.evaluate(() => Object.defineProperty(navigator,'clipboard',{value:{writeText:async text => { window.copiedMissing = text; }}}));
+  await copy.click();
+  assert.equal(await page.evaluate(() => window.copiedMissing), '3 Opt\n');
+  assert.equal(await page.getByRole('button',{name:'Queue missing cards…',exact:true}).count(),0);
+  await page.getByRole('button',{name:'Review Planned list shortages',exact:true}).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('checkbox',{name:'Queue Elvish Mystic'}).uncheck();
+  assert(!await dialog.getByRole('checkbox',{name:'Queue Opt'}).count());
+  assert(await dialog.getByRole('button',{name:'Queue 1 copy (To buy)',exact:true}).isEnabled());
+  const cancel = dialog.getByRole('button',{name:'Cancel',exact:true});
+  if (spec.coarse) {
+    const point = await cancel.evaluate(button => {
+      const box = button.getBoundingClientRect(), x = box.x + box.width / 2, y = box.y + box.height / 2;
+      return { x, y, reachable:button.contains(document.elementFromPoint(x, y)) };
+    });
+    assert(point.reachable, 'Queue footer is obscured');
+    await page.touchscreen.tap(point.x, point.y);
+  } else await cancel.click();
+  await dialog.waitFor({state:'hidden'});
+}
+
 async function measure(page) {
   return page.evaluate(() => {
     const box = node => {
@@ -112,8 +150,46 @@ run('composition', async review => {
       }
       result.savedDeck = { before, after:digest(await review.readFixture(context,deckPath)) };
       assert.equal(result.savedDeck.before,result.savedDeck.after,'Read-only composition changed the saved deck');
+      if (spec.route === routes.empty_deck) {
+        const action = page.locator('.deck-head-actions .btn-primary');
+        assert.equal(await action.count(), 1);
+        assert.equal(await action.innerText(), 'Add cards');
+        assert.equal(await page.getByRole('link', {name:'Build deck', exact:true}).count(), 0);
+        assert(await page.getByText('This list has no main-deck cards yet.', {exact:true}).isVisible());
+        await page.getByRole('tab', {name:'Cards', exact:true}).click();
+        assert(await page.getByText('This list has no cards yet.', {exact:true}).isVisible());
+        assert.equal(await page.locator('#sec-owned').count(), 0);
+        const id = new URLSearchParams(spec.route.split('?')[1]).get('id');
+        await action.click();
+        await page.waitForSelector('.edit-page');
+        assert.equal(new URLSearchParams(new URL(page.url()).hash.split('?')[1]).get('id'), id);
+        await page.goto(review.pageUrl('/#/assembly?deck=' + encodeURIComponent(id),spec.theme));
+        const finish = page.locator('.pack-built');
+        await page.waitForSelector('.pack-completion-message');
+        assert.equal(await finish.getAttribute('aria-disabled'), 'true');
+        assert.match(await page.locator('.pack-completion-message').innerText(), /Add main-deck cards/);
+        assert(!/Every card is here|Cards checked/.test(await page.locator('#main').innerText()));
+      }
+      if (spec.route === routes.casual && spec.theme === 'light') {
+        await checkPlayNowShortages(review,page,context,spec);
+        result.checkedPlayNowShortages = true;
+      }
       assert.equal(result.metrics.innerWidth,spec.width);
       assert(result.metrics.scrollWidth <= result.metrics.clientWidth, 'Document-wide overflow');
+      if (spec.route === routes.commander && spec.width === 393 && !spec.scrollTo) {
+        await page.setViewportSize({ width: 320, height: spec.height });
+        await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+        const rules = page.locator('.deck-overview-stats .verdict').filter({ hasText: 'Deck rules' });
+        result.enlargedVerdict = await rules.evaluate(tile => ({
+          label: tile.querySelector('.verdict-value').textContent,
+          clientWidth: tile.clientWidth, scrollWidth: tile.scrollWidth,
+          pageWidth: document.documentElement.scrollWidth, viewport: document.documentElement.clientWidth,
+        }));
+        const v = result.enlargedVerdict;
+        assert.equal(v.label, 'Followed');
+        assert(v.scrollWidth <= v.clientWidth && v.pageWidth <= v.viewport,
+          'Commander verdict overflows at 320px with doubled text');
+      }
       assert.equal(result.page_errors.length,0,'Uncaught page error');
       assert(!result.http_errors.some(r => r.category === 'unexpected_http_error'),'Unexpected fixture HTTP failure');
       result.status = 'captured';

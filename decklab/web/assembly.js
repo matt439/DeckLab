@@ -659,12 +659,12 @@ function renderAssemblyPlan(view, data) {
     return;
   }
   const standins = data.decks.reduce((sum, deck) => sum + (deck.standins?.rows || []).reduce((n, row) => n + row.qty, 0), 0);
-  const statusText = !data.counts_confirmed ? "Resolve the inventory warnings before relying on this plan."
+  const statusText = data.list_issue || (!data.counts_confirmed ? "Resolve the inventory warnings before relying on this plan."
     : data.ready ? standins ? `Ready to pack with ${plural(standins, "stand-in")}. Check the physical cards below.`
       : "Every card is here. Pull them below."
     : [data.totals.waiting ? `${plural(data.totals.waiting, "copy", "copies")} still on the way` : null,
       data.totals.missing ? `${plural(data.totals.missing, "copy", "copies")} not available for this plan` : null]
-      .filter(Boolean).join("; ") + ".";
+      .filter(Boolean).join("; ") + ".");
   add(view.results, [el("p", { class: data.ready ? "box box-good" : "box box-warn", text: statusText }),
     warningsBox(data.warnings, "Inventory needs attention"), packOverlapNotice(view), assemblyTakeAlong(view, data),
     // Decks in the same sleeves (one design may sleeve several decks): a note, never a block.

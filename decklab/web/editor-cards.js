@@ -66,6 +66,7 @@ function addPart(onPaste = editorSearchPaste) {
 
 function drawAddTo() {
   const ed = editor;
+  clearCommanderPick(ed.ac);
   if (!ed.dom.addTo) return;
   const focused = document.activeElement && ed.dom.addTo.contains(document.activeElement)
     ? document.activeElement.dataset.focus : null;
@@ -145,6 +146,7 @@ function cardSearch() {
     title: "Enter or a click adds 1 copy; Shift adds 4; “4 bolt” adds 4. Alt+Enter shows the card big. Search o:treasure t:creature, o:\"draw a card\", -o:discard or -t:land; mana value mv<=2, mv>=5 or mv=3." });
   ac.list = el("ul", { id: "ac-list", class: "ac-list", "aria-label": "Cards found", hidden: true });
   ac.live = el("p", { class: "sr-only", role: "status", "aria-live": "polite" });
+  ac.commanderNote = el("p", { class: "sub", role: "status", hidden: true });
   ac.more = el("button", { type: "button", class: "btn btn-quiet ac-more", hidden: true, text: "More",
     onclick: () => { if (editorSearchResultsCurrent(ac) && !ac.morePending && ac.page < ac.pages) { ac.page += 1; lookUp(ac, parseQuery(ac.input.value).q, true); } } });
   ac.moreError = el("p", { class: "ac-more-error sub", role: "status", hidden: true });
@@ -193,7 +195,7 @@ function cardSearch() {
   ac.wrap = el("div", { class: "ac-wrap" },
     el("div", { class: "ac" }, el("label", { for: "ac-input", class: "sr-only", text: "Card name" }), ac.input),
     ac.filters, ac.note, addTip(), el("p", { id: "ac-help", class: "sr-only", text: "Arrow keys choose a result. Enter adds it; Shift adds four. Alt+Enter opens the card. Tab reaches each result action. o: searches rules text, t: the type line; -o: and -t: leave matches out. Mana value: mv<=2, mv>=5 or mv=3." }),
-    ac.live, ac.list, ac.moreError, ac.more);
+    ac.live, ac.commanderNote, ac.list, ac.moreError, ac.more);
   drawSearchControls(ac);
   showResults(ac);
   ac.initializing = false;
@@ -446,8 +448,16 @@ function showResults(ac) {
 
 /** The "Added ✓" a result showed belongs to that search: a new one (typing, a filter, Escape) drops it. */
 function clearAdded(ac) {
+  clearCommanderPick(ac);
   ac.addedAt = null;
   clearTimeout(ac.addedTimer);
+}
+
+function clearCommanderPick(ac) {
+  if (!ac?.commanderNote) return;
+  ac.commanderPick = null;
+  ac.commanderNote.hidden = true;
+  ac.commanderNote.textContent = "";
 }
 
 /** "Llanowar Elves" with the typed part marked: the text as typed, else each typed word where a word of
@@ -693,6 +703,45 @@ function searchKey(ac, e) {
   }
 }
 
+/** Check the exact choice against the public card rules. A later search, section or draft owns its own choice. */
+async function checkCommanderPick(ac, card, index, count) {
+  const commanders = () => ac.owner.lists.Commander || [];
+  const lines = commanders();
+  const originalCount = lines.length;
+  const partner = lines[0]?.name;
+  const note = ac.commanderNote;
+  const choice = ac.commanderPick = {};
+  note.hidden = false;
+  if (count > 1 || lines.some(line => line.name === card.name)) {
+    note.textContent = "Choose one copy of each commander.";
+    return;
+  }
+  if (lines.length > 1 || lines.some(line => line.qty > 1)) {
+    note.textContent = "A deck can have at most two commanders. Remove a commander before choosing another.";
+    return;
+  }
+  const seq = ac.seq;
+  const current = () => ac.commanderPick === choice && ac.seq === seq && editorSearchCanAct(ac)
+    && editorSearchResultsCurrent(ac) && ac.items[index] === card && ac.query === parseQuery(ac.input.value).q
+    && ac.owner.addSection === "Commander" && commanders().length === originalCount
+    && commanders()[0]?.name === partner && !commanders().some(line => line.qty > 1);
+  const params = new URLSearchParams({ name: card.name });
+  if (partner) params.set("partner", partner);
+  note.textContent = `Checking whether ${card.name} can lead this deck…`;
+  let answer;
+  try {
+    answer = await api(`/api/commanders/eligibility?${params}`);
+  } catch (error) {
+    answer = {reason: `Commander check failed: ${error.message} Choose the card again to retry.`};
+  }
+  if (!current()) {
+    if (ac.commanderPick === choice) clearCommanderPick(ac);
+    return;
+  }
+  if (answer?.eligible === true) addPickedResult(ac, card, index, count);
+  else note.textContent = answer?.reason || "This card couldn't be confirmed as a commander.";
+}
+
 /** Add result i: n copies (a count typed first, or Shift's 4), else 1. The result says "Added ✓ (now 3)"
  * and the text is selected, so the next name replaces it. */
 function pick(ac, i, n = null) {
@@ -700,7 +749,12 @@ function pick(ac, i, n = null) {
   const c = ac.items[i];
   const { q } = parseQuery(ac.input.value);
   if (!c || ac.query !== q) return;
-  const line = addCard(c, editor.addSection, n || 1);
+  if (editor.addSection === "Commander") return checkCommanderPick(ac, c, i, n || 1);
+  addPickedResult(ac, c, i, n || 1);
+}
+
+function addPickedResult(ac, c, i, count) {
+  const line = addCard(c, editor.addSection, count);
   if (!editorSearchCurrent(ac)) return;
   const words = `Added ✓ (now ${line.qty})`;
   const added = { i, words, name: c.name, query: ac.query };
@@ -903,7 +957,9 @@ function addCard(c, section, n = 1) {
     // after it go into the 99, not the Commander section.
     ed.addSection = "Deck";
     if (ed.dom.addTo) drawAddTo();
-    toast(`${c.name} is the commander. New cards go to ${sectionTitle("Deck")} now.`);
+    const leaders = lines.length === 2 ? `${lines.map(item => item.name).join(" and ")} are the commanders`
+      : `${c.name} is the commander`;
+    toast(`${leaders}. New cards go to ${sectionTitle("Deck")} now.`);
   }
   syncSections();
   changed();

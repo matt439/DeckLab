@@ -77,6 +77,18 @@ class CollectionLayoutUiTests(unittest.TestCase):
           edit.click(); assert.equal(opened.length, 1);
         """)
 
+    def test_search_matches_the_displayed_printing_and_the_number_sign_variant(self):
+        self.run_js("""
+          const cv = draw({rows: [row('Lightning Bolt', 149, {set: 'm11'}),
+            row('Counterspell', 149, {set: 'tst'}), row('Forest', 249, {set: 'm11'})]});
+          for (const query of ['M11 149', 'm11 #149', 'M11#149']) {
+            search(query); same(tableRows().map(tr => tr.getAttribute('data-key')), ['m11|149|nonfoil']);
+            same(colShownRows(cv).map(r => r.name), ['Lightning Bolt']);
+          }
+          search('M11'); assert.equal(tableRows().length, 2);
+          search('counters'); same(colShownRows(cv).map(r => r.name), ['Counterspell']);
+        """)
+
     def test_selection_tracks_sorts_and_saves_and_clears_when_filtered_or_removed(self):
         self.run_js("""
           const cv = draw(), key = 'fdn|1|foil'; colSelectRow(cv, key);

@@ -105,6 +105,25 @@ async function checkDisclosures(page, spec) {
   return result;
 }
 
+async function checkBoardControls(page, width) {
+  if (width === 320) {
+    await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+    const extent = await page.locator('.gb-score-historical .fresh').first().evaluate(badge => ({
+      right: badge.getBoundingClientRect().right, page: document.documentElement.scrollWidth,
+      viewport: document.documentElement.clientWidth,
+    }));
+    assert(extent.right <= extent.viewport && extent.page <= extent.viewport, 'The enlarged stale badge overflows the phone');
+  }
+  const views = page.getByRole('group', {name:'Results view'});
+  const matchups = views.getByRole('button', {name:'Matchups', exact:true});
+  await matchups.focus();
+  await page.keyboard.press('Enter');
+  assert(await matchups.evaluate(node => document.activeElement === node), 'Selecting Matchups lost focus');
+  await page.keyboard.press('Tab');
+  assert(await views.getByRole('button', {name:'Rankings'}).evaluate(node => document.activeElement === node),
+    'Tab did not advance from the selected view');
+}
+
 function matrix(routes) {
   const specs = [];
   for (const theme of ['light', 'dark']) {
@@ -182,6 +201,7 @@ async function capture(review, spec, index) {
     await page.screenshot({ path: path.join(review.out, result.png), fullPage: spec.fullPage !== false,
       animations: 'disabled', timeout: 30000 });
     result.disclosures_checked = await checkDisclosures(page, spec);
+    if (spec.name.startsWith('board-')) await checkBoardControls(page, spec.width);
     if (spec.wishlist === 'zoom') result.wishlist.cancel = await checkWishlistCancel(page);
     if (spec.coarse && spec.receipt) assert(result.metrics.blankTarget.height >= 44, 'Receipt recovery target is too short');
     if (spec.root200) {

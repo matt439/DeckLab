@@ -36,7 +36,7 @@ function drawCollectionRows(data, space, token = null) {
   const saved = String(local.get("collection.rowsSort") || "name:1").split(":");
   cv.sort = { key: COL_SORTS[saved[0]] ? saved[0] : "name", dir: saved[1] === "-1" ? -1 : 1 };
   const search = el("input", { id: "col-row-search", type: "search", autocomplete: "off", spellcheck: "false",
-    placeholder: "Card name or set", oninput: () => { cv.search = search.value; cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS; drawColRowList(cv); } });
+    placeholder: "Name, set or set and number", oninput: () => { cv.search = search.value; cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS; drawColRowList(cv); } });
   cv.rowSearch = search;
   cv.unrecorded = el("input", { type: "checkbox", id: "col-unrecorded",
     onchange: () => { cv.unrecordedOnly = cv.unrecorded.checked; cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS; drawColRowList(cv); } });
@@ -78,7 +78,9 @@ function drawCollectionRows(data, space, token = null) {
 /** The rows the search and the "in storage" and "not recorded" filters show, sorted. */
 function colShownRows(cv) {
   const words = tokFold(cv.search || "");
-  const rows = (cv.rows || []).filter((row) => (!words || tokFold(row.name).includes(words) || tokFold(row.set).includes(words))
+  const printing = words.replace(/\s*#\s*/g, " ").replace(/\s+/g, " ");
+  const rows = (cv.rows || []).filter((row) => (!words || tokFold(row.name).includes(words) || tokFold(row.set).includes(words)
+    || printing === tokFold((row.set || "") + " " + (row.collector_number ?? "")))
     && (!cv.unrecordedOnly || colUnrecorded(row)) && (!cv.storageOnly || colInStorage(cv, row)) && colLocationMatches(cv, row));
   const { key, dir } = cv.sort;
   if (key === "price") {

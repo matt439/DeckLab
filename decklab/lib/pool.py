@@ -628,6 +628,12 @@ def free_copies(pool, exclude=()):
     return out
 
 
+def physical_free_copies(pool, free):
+    """Loose copies in storage today, from the same snapshot's free_copies (which includes arrivals)."""
+    incoming = Counter({name: sum(qty for _, qty in rows) for name, rows in pool.on_the_way.items()})
+    return free - incoming
+
+
 def _printing_label(price):
     """"NCC 316" for the priced printing, plus the finish when it isn't non-foil."""
     if price is None:

@@ -8,13 +8,13 @@ function editorImportOwner(ed, sheet) {
     hash: location.hash, signature: listSignature(ed.lists), readOnly: !!ed.readOnly};
 }
 
-function editorImportHere(owner, control = null, unchanged = true) {
+function editorImportHere(owner, control = null, unchanged = true, topmost = true) {
   const {ed, sheet} = owner;
   return editorKeyboardCurrent(ed) && ed.dom.page === owner.page && owner.token === routeToken && owner.profile === state.profile?.id
     && owner.frame === keyboardEditorFrame(ed) && owner.hash === location.hash && !ed.saving && !ed.asking && !ed.leaving
     && !!ed.readOnly === owner.readOnly
     && (!unchanged || owner.signature === listSignature(ed.lists)) && !sheet.closed && sheet.dialog.isConnected
-    && [...document.querySelectorAll("dialog[open]")].at(-1) === sheet.dialog
+    && (!topmost || [...document.querySelectorAll("dialog[open]")].at(-1) === sheet.dialog)
     && (!control || control.isConnected && sheet.dialog.contains(control) && !control.disabled);
 }
 

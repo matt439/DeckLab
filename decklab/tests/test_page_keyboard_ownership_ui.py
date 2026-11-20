@@ -104,6 +104,9 @@ class LibraryKeyboardOwnershipTests(unittest.TestCase):
           blockedLibrary({key:'k'},document.body,'avatar with body fallback target');
           const arrow=menu.fire('keydown',{key:'ArrowDown',target:auto});
           assert(!arrow.defaultPrevented);assert.equal(document.activeElement,auto,'no new theme-group arrow binding');
+          const tab=menu.fire('keydown',{key:'Tab',target:auto});
+          assert(!tab.defaultPrevented);assert(!menu.hidden,'Tab can reach the next account control');
+          menu.fire('focusout',{target:auto,relatedTarget:light});assert(!menu.hidden);
           auto.click();assert.equal(choices,1);assert(!menu.hidden,'native theme action keeps popover open');
           const escape=menu.fire('keydown',{key:'Escape',target:auto});assert(escape.defaultPrevented);
           assert(menu.hidden);assert.equal(document.activeElement,anchor);assert(!keyboardMenuOpen());

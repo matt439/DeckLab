@@ -12,7 +12,7 @@ from unittest import mock
 
 from decklab.lib import access, inventory
 from decklab.lib.inventory.model import DeckRevision
-from decklab.lib.api import deck_page, guard, library_played
+from decklab.lib.api import commander_lineup, deck_page, guard, library_played
 from decklab.lib.api import play_pods as pods
 from decklab.lib.api import play_records as play
 from decklab.tests.test_api import ApiTestCase, ELF_COMMANDER, _write
@@ -95,6 +95,10 @@ class LibraryPlayedTests(MixedFixture, ApiTestCase):
             self.assertEqual(self.played(["commander/pod-a", "casual/gruul-test"]), {
                 "commander/pod-a": {"last": None, "games": 0},
                 "casual/gruul-test": {"last": "2026-10-08", "games": 2}})
+            self.assertEqual(library_played.deck_played("commander/pod-a"), {"last": None, "games": 0, "since": None})
+            lineup = commander_lineup.lineup_view()
+            deck = next(row for group in lineup["groups"].values() for row in group if row["id"] == "commander/pod-a")
+            self.assertEqual(deck["last_played"], "2026-10-27")
 
     def test_damaged_records_and_mirrors(self):
         damaged = self.game_on("2026-10-26", "casual/gruul-test", "casual/other")

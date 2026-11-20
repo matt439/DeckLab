@@ -160,7 +160,7 @@ function shopComparePair(pair, view) {
         if (!shopQueueActive(view)) return;
         shopCombinedCarry = {profile: view.profile, chosen: pair.decks.map(deck => deck.id)};
         route();
-      });
+      }, view);
     }}));
   return card;
 }

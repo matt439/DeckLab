@@ -19,7 +19,7 @@
 const COL_SCAN_SIDE = 2000;             // pixels on a photo's long side (decklab/design/scanning-spike.md)
 const COL_SCAN_QUALITY = 0.85;          // JPEG quality of the photo sent
 const COL_SCAN_MAX = 4 * 1024 * 1024;   // bytes: the server's limit (collection_scan.MAX_PHOTO)
-const COL_SCAN_CHOICES = 8;             // printings offered at most for one card
+const COL_SCAN_CHOICES = 8;             // initial choices and retained proposals per unresolved photo
 const COL_SCAN_UNSURE_MAX = 50;         // bounded proposal metadata only; never photo bytes
 const COL_SCAN_OFF = "Photos can't be read on this server, so type each card's name instead.";
 
@@ -54,6 +54,48 @@ function scanAvailable(data) {
   return !(data && data.scan && data.scan.available === false);
 }
 
+/** Confirm a user dismissal without replacing the scan form or losing its unsaved inputs. */
+function guardScanBatch(sheet, here, describe, saving) {
+  const route = location.hash, title = sheet.heading.textContent;
+  let question, buttons, previous;
+  function keep() {
+    if (!here() || location.hash !== route) { sheet.close(); return; }
+    question.remove(); buttons.remove(); question = null;
+    sheet.heading.textContent = title;
+    sheet.body.hidden = sheet.foot.hidden = false;
+    (previous && sheet.dialog.contains(previous) ? previous : sheet.dialog.querySelector(".sheet-close")).focus();
+  }
+  sheet.beforeDismiss = () => {
+    if (!here() || location.hash !== route) return true;
+    if (saving?.()) return false;
+    if (question) { keep(); return false; }
+    const description = describe();
+    if (!description) return true;
+    previous = document.activeElement;
+    sheet.heading.textContent = "Discard this batch?";
+    sheet.body.hidden = sheet.foot.hidden = true;
+    const note = el("p", {text: description});
+    question = el("div", {class: "sheet-body"}, note);
+    const retain = el("button", {type: "button", class: "btn btn-primary", text: "Keep scanning", onclick: keep});
+    buttons = el("div", {class: "sheet-foot"}, retain,
+      el("button", {type: "button", class: "btn btn-discard", text: "Discard batch", onclick: () => {
+        // A photo may have finished while the question was open. Show the updated count first.
+        const latest = here() && describe();
+        if (latest && latest !== note.textContent) { note.textContent = latest; retain.focus(); return; }
+        sheet.close();
+      }}));
+    sheet.body.parentNode.append(question, buttons);
+    retain.focus();
+    return false;
+  };
+}
+
+function scanBatchDescription(rows, label, unresolved = 0) {
+  const count = rows.reduce((total, row) => total + row.quantity, 0);
+  const parts = [count ? plural(count, label) : "", unresolved ? plural(unresolved, "unresolved photo") : ""].filter(Boolean);
+  return parts.length ? `This batch contains ${parts.join(" and ")}. Discarding it clears the batch.` : "";
+}
+
 /** Open the sheet (where the visitor may change this collection), with the pending cards brought back from
  * the import sheet, if any. Returns its context, or null. */
 function openScanSheet(cv, pending = []) {
@@ -63,6 +105,7 @@ function openScanSheet(cv, pending = []) {
   const ctx = { cv, sheet, pending: colScanCopy(pending), busy: false, picking: false, seq: 0, last: null,
     reads: scanAvailable(cv.data), defaults: {condition: "", language: "", finish: ""},
     unsure: [], nextPhoto: 0, currentUnsure: null, resolving: null, space: cv.space, profile: cv.profile };
+  guardScanBatch(sheet, () => colScanHere(ctx), () => scanBatchDescription(ctx.pending, "card", ctx.unsure.length));
   ctx.input = el("input", { id: id("photo"), type: "file", accept: "image/*", capture: "environment", class: "col-file" });
   ctx.input.addEventListener("change", () => {
     const file = ctx.input.files && ctx.input.files[0];
@@ -70,6 +113,11 @@ function openScanSheet(cv, pending = []) {
   });
   ctx.name = el("input", { id: id("name"), type: "text", autocomplete: "off", spellcheck: "false",
     placeholder: "The card's exact name" });
+  ctx.name.addEventListener("input", () => {
+    if (!ctx.lookingUpName) return;
+    ctx.seq++; ctx.lookingUpName = false;
+    clear(ctx.result); clear(ctx.message);
+  });
   ctx.name.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); findScanName(ctx); } });
   ctx.message = el("div", { class: "col-sheet-message", role: "status", "aria-live": "polite" });
   ctx.result = el("div", { class: "col-scan-result" });
@@ -168,6 +216,7 @@ function drawScanUnsure(ctx) {
     const find = el("button", {type: "button", class: "btn btn-quiet", text: "Find by name…", disabled: ctx.busy,
       "aria-label": `Find photo ${entry.id} by name`, onclick: event => {
         if (!colScanControlHere(ctx, event.currentTarget) || !ctx.unsure.includes(entry)) return;
+        ctx.seq++; ctx.lookingUpName = false;
         ctx.currentUnsure = ctx.resolving = entry; ctx.last = null; clear(ctx.result);
         ctx.name.value = entry.proposals[0]?.name || "";
         ctx.result.append(el("p", {class: "sub", text: `Type the name for photo ${entry.id}, then choose its printing.`}));
@@ -219,6 +268,7 @@ async function scanPhoto(ctx, file) {
     colScanSay(ctx, "warn", `Check these holds ${COL_SCAN_UNSURE_MAX} photos. Resolve or skip some before taking another photo.`); return;
   }
   const seq = ++ctx.seq;
+  ctx.lookingUpName = false;
   ctx.busy = true;
   ctx.input.disabled = true;
   ctx.currentUnsure = ctx.resolving = ctx.last = null;
@@ -256,6 +306,7 @@ function colScanProposal(source) {
 /** One answer: the one printing read with its name is added (the others offered instead); else the choices to
  * pick from (reprints sharing the number read are all "name and number", so none of them is certain). */
 function drawScanResult(ctx, answer) {
+  ctx.lookingUpName = false;
   ctx.currentUnsure = ctx.resolving = null;
   const proposals = (answer.proposals || []).slice(0, COL_SCAN_CHOICES).map(colScanProposal);
   let sure = proposals[0]?.how === "name and number" && proposals[1]?.how !== "name and number";
@@ -284,6 +335,10 @@ function drawScanResult(ctx, answer) {
   if (!others.length) return;
   ctx.result.append(el("p", { class: "sub", text: sure ? "Not that one? Choose the printing instead:" : "Choose its printing:" }),
     colScanChoices(ctx, others, sure, proposals, unsure));
+  if (answer.proposals.length > COL_SCAN_CHOICES) {
+    const rest = answer.proposals.slice(COL_SCAN_CHOICES).map(colScanProposal);
+    ctx.result.append(otherScanPrintings(() => colScanChoices(ctx, rest, sure, proposals, unsure)));
+  }
 }
 
 /** Buttons for printings: each adds its card (replacing the one just added, when instead), with choices (the
@@ -310,11 +365,21 @@ function colScanChoices(ctx, printings, instead, choices = printings, unsure = n
     } }, `${colScanLabel(p)}${p.set_name ? ` · ${p.set_name}` : ""}${p.owned ? ` · ${num(p.owned)} listed` : ""}`)));
 }
 
+/** Expand the full set only on request, so heavily reprinted cards have a short initial list. */
+function otherScanPrintings(draw) {
+  const more = el("details", {}, el("summary", {text: "Other printings…"}));
+  more.addEventListener("toggle", () => {
+    if (more.open && more.children.length === 1) more.append(draw());
+  });
+  return more;
+}
+
 /** A typed name: its printings (an exact name only), to choose from. */
 async function findScanName(ctx) {
   const name = ctx.name.value.trim();
   if (ctx.busy || !colScanHere(ctx) || !name) return;
   const seq = ++ctx.seq;
+  ctx.lookingUpName = true;
   const unsure = ctx.resolving && ctx.unsure.includes(ctx.resolving) ? ctx.resolving : null;
   ctx.currentUnsure = unsure;
   clear(ctx.result);
@@ -322,7 +387,7 @@ async function findScanName(ctx) {
   clear(ctx.message).append(loadingBox(`Finding ${name}…`));
   try {
     const answer = await api(`/api/printings?name=${encodeURIComponent(name)}`);
-    if (!colScanHere(ctx, seq)) return;
+    if (!colScanHere(ctx, seq) || ctx.name.value.trim() !== name) return;
     const printings = (answer.printings || []).filter((p) => (p.finishes || []).length).map((p) => ({ name: answer.name,
       set: p.set, set_name: p.set_name, collector_number: p.collector_number, language: unsure?.language || "", finishes: [...p.finishes],
       finish: p.finishes.includes("nonfoil") ? "nonfoil" : p.finishes[0] }));
@@ -331,6 +396,9 @@ async function findScanName(ctx) {
     ctx.last = null;
     ctx.result.append(el("p", { class: "sub", text: `Choose the printing of ${answer.name}:` }),
       colScanChoices(ctx, printings.slice(0, COL_SCAN_CHOICES), false, printings, unsure));
+    if (printings.length > COL_SCAN_CHOICES) {
+      ctx.result.append(otherScanPrintings(() => colScanChoices(ctx, printings.slice(COL_SCAN_CHOICES), false, printings, unsure)));
+    }
     ctx.name.value = "";
   } catch (error) {
     if (colScanHere(ctx, seq)) colScanSay(ctx, "warn", error.status === 404
@@ -509,7 +577,7 @@ function drawScanPending(ctx) {
 
 function drawScanFoot(ctx) {
   const cards = ctx.pending.reduce((n, c) => n + c.quantity, 0);
-  sheetActions(ctx.sheet, [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.close() },
+  sheetActions(ctx.sheet, [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.dismiss() },
     cards ? {text: "Download pending batch", value: "download", disabled: ctx.busy || ctx.picking || ctx.unsure.length > 0,
       onclick: event => { if (colScanControlHere(ctx, event.currentTarget)) downloadScanBatch(ctx); }} : null,
     cards || ctx.unsure.length ? { text: cards ? `Review ${plural(cards, "card")}` : "Review", kind: "primary", value: "review",
@@ -545,6 +613,8 @@ function reviewScan(ctx) {
   const importing = openImportSheet(cv);
   if (importing) {
     importing.scanned = colScanCopy(ctx.pending);
+    guardScanBatch(importing.sheet, () => colActive(cv) && !importing.sheet.closed,
+      () => scanBatchDescription(importing.scanned, "card"), () => importing.busy);
     previewImport(importing, `scan-${day}.csv`, text);
   }
   return importing;

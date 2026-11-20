@@ -3,15 +3,15 @@ pairs of them) ranked by how much of a Commander deck the rest of its free pool 
 counted by the Command Zone template's role targets. Writes nothing; imported when first needed, by
 feature_routes.dispatch.
 
-    GET /api/commanders/candidates?space=<id>&limit=<n>     candidates_view()
+    GET /api/commanders/candidates?space=<id>&limit=<n>&q=<name>    candidates_view()
     GET /api/commanders/candidate?name=<card>&partner=<card>&space=<id>
                                                             candidate_view(): one candidate's (or pair's)
                                                             free cards by name (E9-S28's second slice)
 
 What counts is lib/decks/commander_pool.py's. The answer is the space's inventory's
 (guard.require_sees_inventory: the Collection page's 403, "That collection isn't public.", for a space the
-viewer may not see or that doesn't exist). Free copies are pool.free_copies': owned or on the way, less
-what built decks and intact products hold.
+viewer may not see or that doesn't exist). Role coverage uses pool.free_copies, including arrivals.
+Each card's stock separates loose physical copies from those still on the way.
 
 E9-S28's third slice: pairs of free cards that may be two commanders together (partners, partner with,
 partner—[text] such as Friends forever, Choose a Background with a Background, Doctor's companion with a
@@ -77,15 +77,43 @@ def _rules():
     return _Rules()
 
 
-def _faces(row, free):
-    return [{"name": n, "free": free.get(n, 0), "card": _card_json(c, _shown_printing(c))}
+def eligibility_view(name=None, partner=None):
+    """The guided editor checks only public card rules, including an optional existing commander."""
+    _require_cards()
+    names = [_name(name, "name")]
+    if partner not in (None, ""):
+        names.append(_name(partner, "partner"))
+    choices = [cards.card(n) for n in names]
+    for n, card in zip(names, choices):
+        if card is None:
+            raise ApiError(404, f"No card named {n} was found.")
+        if card.get("commander_legality") != "legal":
+            return {"eligible": False, "reason": f"{n} isn't legal in Commander."}
+    rules = _rules()
+    if len(choices) == 1:
+        if rules.commander._is_background(choices[0]):
+            return {"eligible": False, "reason": 'First add a commander with “Choose a Background”.'}
+        if not rules.may_lead(choices[0]):
+            return {"eligible": False, "reason": f"{names[0]} can't lead a Commander deck."}
+    elif names[0] == names[1] or not rules.pair_rule(*choices):
+        return {"eligible": False, "reason": f"{names[0]} and {names[1]} can't be commanders together."}
+    return {"eligible": True}
+
+
+def _copies(name, free, physical):
+    return {"free": physical[name], "incoming": free[name] - physical[name]}
+
+
+def _faces(row, free, physical):
+    return [{"name": n, **_copies(n, free, physical), "card": _card_json(c, _shown_printing(c))}
             for n in row["names"] for c in [cards.card(n)]]
 
 
-def candidates_view(space=None, limit=None):
+def candidates_view(space=None, limit=None, q=None):
     """GET /api/commanders/candidates: {"space", "candidates" (single candidates and pairs, best first by
     the same coverage, at most limit; each with "kind" ("single" or "pair"), "names", "faces" ([{"name",
-    "free", "card"}], one a name), its first face's "card" and "free" copies, and a pair's "pairing"),
+    "free" (physical), "incoming", "card"}], one a name), its first face's "card" and "free" copies,
+    and a pair's "pairing"). With q, match the name before limiting results, exact name first.
     "total" (how many there are), "pairs" ({"found", "left_out", "untried"}: commander_pool.pairs' caps),
     "held" (held rows, best first, at most commander_pool.MAX_HELD, each with "held_by": [{"id", "title",
     "quantity"}], a deck the viewer may not see by its space's words and no id), "held_total", "source"
@@ -94,24 +122,31 @@ def candidates_view(space=None, limit=None):
     space = space_param(space)
     guard.require_sees_inventory(space)
     limit = _integer(limit, "limit", commander_pool.LIMIT, MAX_LIMIT)
+    if q is not None and (not isinstance(q, str) or len(q) > MAX_NAME or _CONTROL_RE.search(q)):
+        raise ApiError(400, "Enter part of a commander's name.")
+    query = (q or "").strip().casefold()
     _require_cards()
     p = _pool(space)
     free = pool.free_copies(p)
+    physical = pool.physical_free_copies(p, free)
     rules = _rules()
     singles = commander_pool.candidates(free, cards.card, rules.may_lead, rules.categories, rules.partners)
     paired, caps = commander_pool.pairs(free, cards.card, rules.pairable, rules.pair_rule, rules.categories,
-                                        commander_pool.MAX_PAIRABLE, commander_pool.MAX_PAIRS)
-    ranked = commander_pool.best_first(singles + paired)
+                                        commander_pool.MAX_PAIRABLE, commander_pool.MAX_PAIRS, query=query)
+    ranked = commander_pool.best_first([row for row in singles + paired if query in row["name"].casefold()])
+    if query:
+        ranked.sort(key=lambda row: row["name"].casefold() != query)
     shown = []
     for row in ranked[:limit]:
-        faces = _faces(row, free)
+        faces = _faces(row, free, physical)
         shown.append({**row, "faces": faces, "free": faces[0]["free"], "card": faces[0]["card"]})
     held_rows = commander_pool.held(p.owned, free, cards.card, rules.may_lead, rules.categories, rules.partners)
+    held_rows = [row for row in held_rows if query in row["name"].casefold()]
     from .collection import _holders
     sees = guard.deck_reader()
     held = []
     for row in held_rows[:commander_pool.MAX_HELD]:
-        faces = _faces(row, free)
+        faces = _faces(row, free, physical)
         held.append({**row, "faces": faces, "free": 0, "card": faces[0]["card"],
                      "held_by": _holders(p, row["name"], sees)})
     tagged = _tag_counts()
@@ -144,6 +179,7 @@ def candidate_view(name=None, space=None, partner=None):
     names = [_name(name, "name")] + ([_name(partner, "partner")] if partner not in (None, "") else [])
     p = _pool(space)
     free = pool.free_copies(p)
+    physical = pool.physical_free_copies(p, free)
     rules = _rules()
     held = [n for n, qty in p.owned.items() if qty > 0 and free.get(n, 0) <= 0] if len(names) == 1 else []
     found = commander_pool.cards_for(names if len(names) == 2 else names[0], free, cards.card, rules.may_lead,
@@ -155,7 +191,8 @@ def candidate_view(name=None, space=None, partner=None):
                             + (", and the two must be able to be commanders together." if len(names) == 2 else "."))
 
     def pictured(rows):
-        return [{**row, "card": _card_json(c, _shown_printing(c))} for row in rows for c in [cards.card(row["name"])]]
+        return [{**row, **_copies(row["name"], free, physical), "card": _card_json(c, _shown_printing(c))}
+                for row in rows for c in [cards.card(row["name"])]]
 
     for part in found["categories"]:
         part["cards"] = pictured(part["cards"])

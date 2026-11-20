@@ -97,6 +97,48 @@ class CommanderStartTests(unittest.TestCase):
           assert.equal(editor.history.length,0);
         ''')
 
+    def test_find_from_blank_commander_editor_then_preview_and_undo_preserves_title(self):
+        self.run_js(r'''
+          state.may = {create: [{space:'home'}], see_inventory: ['home']};
+          location.hash = '#/new?kind=commander';
+          startEditor({mode:'new', kind:'commander', restoreDraft:false});
+          const ed = editor, requests = [];
+          setField('title', 'My Commander idea');
+          const lead = {name:ghaltaCard.name, faces:[{name:ghaltaCard.name,card:ghaltaCard,free:1}],
+            categories:[], of:40, covered:0, cards:1, lands:0};
+          api = async path => {
+            requests.push(path);
+            if (path.includes('/candidate?')) return {categories:[]};
+            return {total: path.includes('q=') ? 1 : 52, candidates: path.includes('q=') ? [lead] : []};
+          };
+          apiWrite = async (path, body) => {
+            same(body, {space:'home', name:ghaltaCard.name, locked:[]});
+            return {commanders:lead.faces, target:99, picked:1, open_slots:98, open_lands:38, open_spells:60,
+              roles:[], mana_sources:[], incoming:[], picks:[{quantity:1,name:elves.name,card:elves,reason:'Provides ramp'}]};
+          };
+          const namedButton = (host, label) => host.querySelectorAll('button').find(b => b.textContent === label);
+          const start = () => namedButton(ed.dom.page, 'Build from my collection').click();
+          const before = ed.history.length;
+          start(); await Promise.resolve();
+          let sheet = [...colSheets].at(-1);
+          sheet.body.querySelector('input').value = 'ghalta';
+          sheet.body.querySelector('form').fire('submit'); await Promise.resolve();
+          assert(requests.includes('/api/commanders/candidates?q=ghalta'));
+          sheet.body.querySelector('.pcov-pick').click(); await Promise.resolve();
+          namedButton(sheet.body, 'Build from cards free tonight').click(); await Promise.resolve();
+          sheet = [...colSheets].at(-1);
+          assert(sheet.body.textContent.includes('98 open slots') && sheet.body.textContent.includes('Provides ramp'));
+          namedButton(sheet.foot, 'Use this draft').click();
+          assert.equal(ed.history.length, before+1);
+          assert.equal(ed.fields.title, 'My Commander idea');
+          same(ed.lists.Commander.map(c=>c.name), [ghaltaCard.name]);
+          same(ed.lists.Deck.map(c=>c.name), [elves.name]);
+          undoLast(); assert(!Object.values(ed.lists).flat().length);
+          assert.equal(ed.fields.title, 'My Commander idea');
+          start(); await Promise.resolve(); sheet = [...colSheets].at(-1);
+          colCloseSheets(); assert(sheet.closed); assert(!sheet.dialog.isConnected);
+        ''')
+
     def test_a_pair_goes_in_together_as_one_change(self):
         # E9-S28's third slice: #/new?kind=commander&commander=<one>&partner=<other>.
         self.run_js(r'''

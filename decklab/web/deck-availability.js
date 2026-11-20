@@ -99,6 +99,11 @@ function deckAvailability(owned) {
     priced: !owned.price_error && !(t.unpriced && t.unpriced.length), coming, held };
 }
 
+/** Check the displayed list, including basic lands that the availability table omits. */
+function deckNeedsMainCards(data) {
+  return data.sections != null && !data.sections.Deck?.length;
+}
+
 /** The banner under the head: can this list be built now? "Ready to build", "3 cards on the way", or
  * "32 missing, about A$40 · 3 held by other decks" with Show missing. The Planned list / Play-now list picker
  * is folded into it (with its explanation behind an i). A visitor who may not see the collection gets only the
@@ -106,8 +111,11 @@ function deckAvailability(owned) {
 function availabilityBanner(data, screen) {
   const sees = "owned" in data;
   const picker = data.versions.length > 1 ? versionPicker(data, screen) : null;
-  if (!sees) return picker ? el("div", { class: "deck-avail deck-avail-plain" }, picker) : null;
   const a = deckAvailability(data.owned);
+  const needsMain = deckNeedsMainCards(data);
+  if (!sees || (needsMain && !a?.missing && !a?.coming)) {
+    return picker ? el("div", { class: "deck-avail deck-avail-plain" }, picker) : null;
+  }
   const which = data.versions.length > 1 ? ` (${listName(data.version, true)})` : "";
   let kind, head, more = [], action = null;
   if (!a) {
@@ -123,7 +131,8 @@ function availabilityBanner(data, screen) {
       onclick: () => openDeckTab("cards", { filter: "missing", to: "deck-panel-cards" }) });
   } else if (a.coming > 0) {
     kind = "info";
-    head = `Ready once ${plural(a.coming, "card")} ${a.coming === 1 ? "arrives" : "arrive"}`;
+    head = needsMain ? `${plural(a.coming, "card")} on the way`
+      : `Ready once ${plural(a.coming, "card")} ${a.coming === 1 ? "arrives" : "arrive"}`;
     action = el("button", { type: "button", class: "btn deck-avail-action", text: "Show them",
       onclick: () => openDeckTab("cards", { filter: "coming", to: "deck-panel-cards" }) });
   } else {

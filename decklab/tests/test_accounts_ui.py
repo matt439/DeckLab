@@ -531,6 +531,40 @@ class AccountsUiTests(unittest.TestCase):
           assert.equal(button(main, "Retry saving history"), null);
         """)
 
+    def test_editing_card_name_invalidates_pending_lookups_and_selected_printings(self):
+        self.run_js("""
+          as("user2", MAY.user2);
+          const cv = drawCollectionRows({space: "user2", sha256: "s1", rows: [], editable: true}, "user2");
+          const ctx = openCollectionSheet(cv), name = ctx.inputs.name, add = button(ctx.sheet.foot, "Add");
+          const printing = n => ({set: "tst", collector_number: String(n), finishes: ["nonfoil"]});
+          const type = value => { name.value = value; name.fire("input"); };
+          const requests = [], writes = [];
+          api = path => new Promise(resolve => requests.push(resolve));
+          apiWrite = async (path, body) => { writes.push(body); return {ok: true, sha256: "s2", rows: [body.row]}; };
+          assert(add.disabled);
+          for (const count of [1, 2]) {
+            type("Lightning Bolt"); name.fire("change");
+            type("Counterspell");
+            requests.shift()({name: "Lightning Bolt", printings: Array.from({length: count}, (_, i) => printing(i + 1))});
+            await flush();
+            assert.equal(name.value, "Counterspell"); assert.equal(ctx.chosen, -1); assert(add.disabled);
+            assert.equal(ctx.strip.querySelectorAll(".col-strip-tile").length, 0);
+            ctx.form.fire("submit"); await flush(); assert.equal(writes.length, 0);
+          }
+          name.fire("change"); requests.shift()({name: "Counterspell", printings: [printing(3)]}); await flush();
+          assert.equal(ctx.chosen, 0); assert(!add.disabled);
+          const oldTile = ctx.strip.querySelector(".col-strip-tile");
+          type("Lightning Bolt"); assert(add.disabled); assert.equal(ctx.chosen, -1);
+          oldTile.click(); assert.equal(ctx.chosen, -1);
+          ctx.form.fire("submit"); await flush(); assert.equal(writes.length, 0);
+          name.fire("change"); requests.shift()({name: "Lightning Bolt", printings: [printing(4), printing(5)]}); await flush();
+          assert(add.disabled); assert.equal(ctx.chosen, -1);
+          ctx.strip.querySelectorAll(".col-strip-tile")[1].click(); assert(!add.disabled);
+          add.click(); await flush();
+          assert.equal(writes.length, 1); assert.equal(writes[0].row.name, "Lightning Bolt");
+          assert.equal(writes[0].row.collector_number, "5");
+        """)
+
     def test_a_conflicting_edit_is_put_back_on_top_of_the_latest_rows(self):
         self.run_js("""
           as("user2", MAY.user2);

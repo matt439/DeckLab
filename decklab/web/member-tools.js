@@ -31,17 +31,35 @@ async function downloadMemberSpace(cv) {
 async function openMemberNeeds() {
   if (!memberOwnSpace()) return null;
   const profile = state.profile, token = routeToken, hash = location.hash;
-  const sheet = openSheet({title: "Cards to get", body: [loadingBox("Counting your saved Planned decks together…")]});
+  const sheet = colOpenSheet("Cards to get");
   const current = () => !sheet.closed && state.profile === profile && token === routeToken
     && hash === location.hash && memberOwnSpace();
-  sheetActions(sheet, [{text: "Close", onclick: () => sheet.close()}]);
-  try {
-    const data = await api(colPath("/api/space/needed", ownSpace()));
-    if (!current()) return sheet;
+  const close = {text: "Close", onclick: () => sheet.close()};
+  const retry = {text: "Try again", onclick: event => {
+    if (event.currentTarget.isConnected && current()) count();
+  }};
+  async function count() {
+    sheetActions(sheet, [close]);
+    clear(sheet.body).append(loadingBox("Counting your saved Planned decks together…"));
+    let data;
+    try {
+      data = await api(colPath("/api/space/needed", ownSpace()));
+    } catch (error) {
+      if (current()) {
+        clear(sheet.body).append(loadFailed("Your cards to get", error));
+        sheetActions(sheet, [close, retry]);
+      }
+      return;
+    }
+    if (!current()) return;
     clear(sheet.body).append(el("p", {class: "sub", text: "All your saved Planned decks together, excluding trials. Each owned copy counts once; lent-out copies aren't free. This list isn't saved and includes no shop prices."}));
     if (!data.ready) {
       sheet.body.append(el("p", {class: "box box-warn", text: data.reason || "Your missing cards couldn't be counted completely."}));
-      return sheet;
+      if (data.check_collection) sheet.body.append(el("a", {href: colHash(ownSpace(), "rows"), text: "Check my collection"}));
+      if (data.check_decks?.length) sheet.body.append(el("ul", {}, data.check_decks.map(deck =>
+        el("li", {}, el("a", {href: deckHref(deck.id, "target"), text: deck.title})))));
+      sheetActions(sheet, [close, retry]);
+      return;
     }
     const rows = data.rows || [];
     if (!rows.length) sheet.body.append(el("p", {text: data.decks?.length ? "No cards are missing from these Planned lists." : "There are no saved Planned decks to count yet."}));
@@ -50,7 +68,7 @@ async function openMemberNeeds() {
       el("span", {class: "sub", text: " — "}), (row.decks || []).map((deck, index) => [index ? ", " : "",
         el("a", {href: deckHref(deck.id), text: deck.title})])))));
     const text = rows.map(row => `${row.quantity} ${row.name}`).join("\n");
-    if (text) sheetActions(sheet, [{text: "Close", onclick: () => sheet.close()},
+    if (text) sheetActions(sheet, [close,
       {text: "Copy list", kind: "primary", onclick: async event => {
         if (!current() || !event.currentTarget.isConnected) return;
         try {
@@ -64,8 +82,7 @@ async function openMemberNeeds() {
           sheet.body.append(area);area.focus();area.select();
         }
       }}]);
-  } catch(error) {
-    if (current()) clear(sheet.body).append(loadFailed("Your cards to get", error));
   }
+  await count();
   return sheet;
 }

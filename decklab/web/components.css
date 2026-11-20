@@ -528,6 +528,11 @@ summary::before {
   transform: rotate(-45deg); transition: transform .15s;
 }
 details[open] > summary::before { transform: rotate(45deg); }
+.box:has(> .warning-details:only-child) { padding-block: 0; }
+.warning-details > summary {
+  display: flex; align-items: center; min-height: var(--tap); font-weight: var(--fw-semibold);
+}
+.warning-details[open] { padding-bottom: var(--s-3); }
 @media (prefers-reduced-motion: reduce) { summary::before { transition: none; } }
 
 details.more { margin-top: var(--s-3); }

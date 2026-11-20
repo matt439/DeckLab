@@ -1,7 +1,7 @@
 "use strict";
 
 /* P1's deck Overview panels. Field and swap-test summaries use the same result components as Matchups,
-   with their own ids and one read per panel; the Played at home part comes with /api/deck itself. Nothing here starts a simulation or polls in the background.
+   with their own ids and one read per panel; the 1v1 games part comes with /api/deck itself. Nothing here starts a simulation or polls in the background.
    Late reads belong to the original screen, route and person, and never redraw a replacement page. */
 
 function deckOverviewHere(section, context) {
@@ -186,10 +186,7 @@ function deckOverviewCurve(data) {
         el("span", { class: "deck-overview-mv", text: String(bucket.mv) })))));
 }
 
-/** When the deck was last played at home (E1-S27), from the Game log's games this viewer may see (/api/deck's
- * played): "Last played 2026-10-20 · 3 games" or "Not played at home yet", then what its list changed since that
- * game (played.since, from the deck's own revisions), with a link to its Game log. Nothing when the games couldn't be read (never "not
- * played"), and no change line when the list it was played with can't be found. */
+/** Physical 1v1 games (E1-S27), with the list changes since the last game and a link to the deck's Game log. */
 function deckOverviewPlayed(data) {
   if (data.summary.trial) return ptrDeckNotice(data);         // precon-trial.js: a trial isn't played at home (E3-S39)
   const p = data.played;
@@ -199,13 +196,13 @@ function deckOverviewPlayed(data) {
     href: `#/play?id=${encodeURIComponent(data.summary.id)}`, text });
   if (!p.games || !p.last) {
     return el("div", { class: "deck-overview-played deck-played-empty" },
-      el("p", { class: "deck-played", text: "Not played at home yet" }),
+      el("p", {}, deckPlayed(data)),
       // Only a viewer the Game log would let record one with this deck (play.record) is offered to.
       el("p", {}, log(p.can_record === true ? "Record a game" : "Open the Game log")));
   }
-  const parts = [el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-played", text: "Played at home" }),
+  const parts = [el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-played", text: "1v1 games" }),
     log("Open the Game log"))];
-  parts.push(el("p", {}, factLine("deck-played", [`Last played ${p.last}`, plural(p.games, "game")])));
+  parts.push(el("p", {}, deckPlayed(data)));
   parts.push(deckPlayedSince(p.since, data.summary));
   return el("section", { class: "deck-section deck-overview-played", "aria-labelledby": "h-overview-played" }, parts);
 }

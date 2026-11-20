@@ -22,8 +22,8 @@ figure and range, then Details and Play. */
 .gb-score { display: grid; grid-column: 2; gap: var(--s-2); justify-items: end; min-width: 0; font-variant-numeric: tabular-nums; }
 .gb-score-historical { justify-items: stretch; color: var(--ink-2); font-size: var(--fs-sm); }
 .gb-score-historical .gt-before { margin: 0; }
-.gb-score-historical .gt-before-bar { flex-wrap: wrap; }
-.gb-score-historical .gt-before-bar .range-bar { flex-basis: 100%; }
+.gb-score-historical .gt-before-bar { grid-template-columns: minmax(0, 1fr); justify-items: start; }
+.gb-score .fresh { max-width: 100%; white-space: normal; }
 .gb-score .range-bar { width: 100%; }
 .gb-actions { display: flex; grid-column: 3; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s-2); }
 .gb-playing { font-size: var(--fs-sm); color: var(--ink-2); font-variant-numeric: tabular-nums; }

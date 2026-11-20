@@ -91,7 +91,7 @@ function drawImportGroups(ctx) {
   if (!plan) {
     ctx.groupReview = null;
     ctx.area.append(el("p", {class: "box box-warn", text: "The source-set review is incomplete. Choose the file again before importing it."}));
-    sheetActions(ctx.sheet, [{text: "Cancel", onclick: () => ctx.sheet.close()}]);
+    sheetActions(ctx.sheet, [{text: "Cancel", onclick: () => ctx.sheet.dismiss()}]);
     return;
   }
   const review = ctx.groupReview = {preview, ids: new Set(previous), controls: new Map(),
@@ -157,7 +157,7 @@ function drawImportGroupOutcome(ctx, review) {
     el("button", {type: "button", class: "btn", text: "Choose another file", onclick: () => {
       if (!ctx.busy && colImportGroupsHere(ctx, review)) ctx.input.click();
     }})));
-  sheetActions(ctx.sheet, [{text: "Cancel", value: "cancel", onclick: () => ctx.sheet.close()}, colScanBack(ctx),
+  sheetActions(ctx.sheet, [{text: "Cancel", value: "cancel", onclick: () => ctx.sheet.dismiss()}, colScanBack(ctx),
     {text: `Import ${plural(plan.adds.cards, "card")}`, kind: "primary", value: "import",
       disabled: ctx.busy || !!plan.problems.length || !plan.adds.cards, onclick: event => {
         if (event.currentTarget?.isConnected && ctx.sheet.foot.contains(event.currentTarget)

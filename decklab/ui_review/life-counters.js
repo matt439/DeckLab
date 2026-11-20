@@ -22,9 +22,39 @@ function payload() {
     decks:Object.fromEntries(lists.map(list=>[list.id,{player:'user',status:'built',can_record:true}]))};
 }
 
+async function backgroundDeletionReview(page, dialog) {
+  await page.evaluate(() => {
+    apiWrite = (path, body) => {
+      if (path !== '/api/play/game/delete' || body.reason !== 'Duplicate synthetic fixture') throw Error('Unexpected write');
+      return new Promise((_, reject) => { window.finishSyntheticDeletion = () => reject(Error('Synthetic game changed.')); });
+    };
+  });
+  await dialog.getByRole('button', {name:'Delete game', exact:true}).click();
+  await page.evaluate(async () => {
+    Object.defineProperty(document, 'visibilityState', {configurable:true, value:'hidden'});
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.finishSyntheticDeletion();
+    await new Promise(requestAnimationFrame);
+    delete document.visibilityState;
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  assert.match(await dialog.getByRole('status').innerText(), /Synthetic game changed/);
+  await page.route('**/api/play', route => {
+    assert.equal(route.request().method(), 'GET');
+    const fresh = payload();
+    fresh.games[0].record.notes = 'Corrected synthetic game';
+    fresh.games[0].sha256 = 'f'.repeat(64);
+    return route.fulfill({status:200, json:fresh});
+  });
+  await dialog.getByRole('button', {name:'Review current game', exact:true}).click();
+  await dialog.getByText('Corrected synthetic game', {exact:true}).waitFor();
+  assert.equal(await dialog.getByRole('textbox', {name:'Reason for deleting'}).inputValue(), 'Duplicate synthetic fixture');
+  assert(await dialog.getByRole('button', {name:'Delete game', exact:true}).isEnabled());
+}
+
 run('life-counters',async review=>{
   review.report.results=[];
-  review.report.scope='Synthetic Game-log read adapter; native counter launch, markers/Undo, optional result fields and a cancelled deletion review. Wake Lock is simulated. No record request, save/delete or physical-device acceptance.';
+  review.report.scope='Synthetic Game-log read adapter; native counter launch, markers/Undo, optional result fields and deletion review. Phone viewport includes a simulated backgrounded deletion failure. Wake Lock is simulated. No record writes or physical-device acceptance.';
   const specs=[];
   for(const mode of ['duel','pod'])for(const theme of ['light','dark'])for(const wake of ['unavailable','supported'])
     for(const width of (review.options.smoke?[393]:[393,820,1440]))
@@ -52,7 +82,14 @@ run('life-counters',async review=>{
       await page.getByRole('button',{name:'Life counter',exact:true}).waitFor();
       if(spec.mode==='duel')await page.getByRole('button',{name:'Life counter',exact:true}).click();
       else{
-        await page.getByRole('button',{name:'Record a pod game',exact:true}).click();
+        const start=page.getByRole('button',{name:'Start a pod',exact:true});
+        const record=page.getByRole('button',{name:'Record a pod',exact:true});
+        for(const action of [start,record]){
+          const box=await action.boundingBox();
+          assert(box&&box.y>=0&&box.y+box.height<=spec.height,'Pod action is outside the opening viewport');
+        }
+        await start.click();
+        assert.equal(await page.locator('#pod-result').count(),0);
         await page.getByRole('button',{name:'Start pod counter',exact:true}).click();
       }
       const counter=page.locator(spec.mode==='duel'?'.life-source-counter':'.pod-life-counter');
@@ -103,6 +140,14 @@ run('life-counters',async review=>{
         await facts.scrollIntoViewIfNeeded();
         await page.screenshot({path:path.join(review.out,result.counterFieldsPng),fullPage:false,animations:'disabled'});
         await edit.getByRole('button',{name:spec.mode==='duel'?'Back to counter':'Cancel',exact:true}).click();
+        if(spec.mode==='duel'){
+          const close=counter.getByRole('button',{name:'Close',exact:true});
+          await close.scrollIntoViewIfNeeded();
+          assert(await close.evaluate(button=>{
+            const box=button.getBoundingClientRect();
+            return button.contains(document.elementFromPoint(box.x+box.width/2,box.y+box.height/2));
+          }),'Result panel covers the duel counter Close button');
+        }
       }
       await counter.getByRole('button',{name:'Close',exact:true}).click();
       assert.equal(await counter.count(),0);
@@ -112,7 +157,13 @@ run('life-counters',async review=>{
         await deletion.getByRole('textbox',{name:'Reason for deleting',exact:true}).fill('Duplicate synthetic fixture');
         result.deletionPng=`${spec.mode}-delete-${spec.width}-${spec.theme}.png`;
         await page.screenshot({path:path.join(review.out,result.deletionPng),fullPage:false,animations:'disabled'});
-        await deletion.getByRole('button',{name:'Keep game',exact:true}).click();
+        if(spec.mode==='duel' && spec.width===393 && spec.theme==='light'){
+          await backgroundDeletionReview(page,deletion);
+          result.reviewedAfterBackground=true;
+          await page.evaluate(()=>{location.hash='#/library';});
+          await deletion.waitFor({state:'detached'});
+          assert.equal(await page.getByText('Corrected synthetic game',{exact:true}).count(),0);
+        }else await deletion.getByRole('button',{name:'Keep game',exact:true}).click();
       }
       result.wake=await page.evaluate(()=>window.reviewWake);
       if(spec.wake==='supported')assert(result.wake.requested>=1&&result.wake.released===result.wake.requested);

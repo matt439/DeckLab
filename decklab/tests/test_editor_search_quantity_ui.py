@@ -78,18 +78,46 @@ class EditorSearchQuantityUiTests(unittest.TestCase):
           assert.equal(record.group.hidden,true);assert.equal(editor.removed.length,1);
         """)
 
-    def test_commander_add_keeps_enter_increment_and_auto_section_transition(self):
+    def test_guided_commander_checks_before_switching_to_the_99(self):
         self.run_js(r"""
+          const captain={...elves,name:'Workshop Captain'};
           begin({kind:'commander',sections:['Commander','Deck','Sideboard'],
-            lists:{target:{Commander:[],Deck:[{qty:2,name:elves.name,card:elves}],Sideboard:[]},owned:null}});
+            lists:{target:{Commander:[],Deck:[{qty:2,name:captain.name,card:captain}],Sideboard:[]},owned:null}});
           editor.addSection='Commander';openAddSheet();const ac=found([elves]);
-          assert.equal(quantity(ac).group.hidden,true);ac.input.fire('keydown',{key:'Enter',shiftKey:true});
-          assert.equal(editor.lists.Commander[0].qty,4);assert.equal(editor.addSection,'Deck');
+          const requests=[];
+          api=url=>new Promise(resolve=>requests.push({params:new URLSearchParams(url.split('?')[1]),resolve}));
+          quantity(ac).addButton.click(); assert.equal(requests.length,1);
+          requests[0].resolve({eligible:false,reason:"This card can't lead a Commander deck."}); await Promise.resolve();
+          assert.equal((editor.lists.Commander || []).length,0);assert.equal(editor.addSection,'Commander');
+          assert.equal(ac.commanderNote.hidden,false);assert.match(ac.commanderNote.textContent,/can't lead/);
+          found([captain]);ac.input.fire('keydown',{key:'Enter',shiftKey:true});assert.equal(requests.length,1);
+          ac.input.fire('keydown',{key:'Enter'});assert.equal(requests[1].params.get('name'),captain.name);
+          requests[1].resolve({eligible:true}); await Promise.resolve();
+          assert.equal(editor.lists.Commander[0].qty,1);assert.equal(editor.addSection,'Deck');
           assert.equal(quantity(ac).qty.value,'2');assert(quantity(ac).context.textContent.includes('The 99'));
           assert.equal(document.activeElement,ac.input);
-          ac.input.value='3 '+elves.name;ac.input.fire('keydown',{key:'Enter'});
-          assert.equal(editor.lists.Deck[0].qty,5);assert.equal(editor.lists.Commander[0].qty,4);
-          editor.addSection='Commander';drawAddTo();assert.equal(quantity(ac).qty.value,'4');
+          ac.input.value='3 '+captain.name;ac.input.fire('keydown',{key:'Enter'});
+          assert.equal(editor.lists.Deck[0].qty,5);assert.equal(editor.lists.Commander[0].qty,1);
+          editor.addSection='Commander';drawAddTo();found([{...elves,name:'Second Captain'}]);
+          quantity(ac).addButton.click();assert.equal(requests[2].params.get('partner'),captain.name);
+          assert.equal(requests[2].params.get('name'),'Second Captain');
+          requests[2].resolve({eligible:true});await Promise.resolve();
+          same(editor.lists.Commander.map(line=>line.name).sort(),['Second Captain','Workshop Captain']);
+          assert.equal(editor.addSection,'Deck');
+        """)
+
+    def test_late_rule_answer_cannot_add_to_another_search_or_section(self):
+        self.run_js(r"""
+          begin({kind:'commander',sections:['Commander','Deck'],lists:{target:{Commander:[],Deck:[]},owned:null}});
+          editor.addSection='Commander';openAddSheet();const ac=found([elves]);
+          let done;api=()=>new Promise(resolve=>{done=resolve;});
+          quantity(ac).addButton.click();ac.input.value='New search';ac.input.fire('input');
+          done({eligible:true});await Promise.resolve();
+          assert.equal((editor.lists.Commander || []).length,0);assert.equal(ac.commanderNote.hidden,true);
+          found([elves]);quantity(ac).addButton.click();
+          editor.addSection='Deck';drawAddTo();
+          done({eligible:true});await Promise.resolve();
+          assert.equal((editor.lists.Deck || []).length,0);assert.equal((editor.lists.Commander || []).length,0);
         """)
 
     def test_stale_line_control_cannot_retarget_a_removed_replaced_or_moved_uid(self):

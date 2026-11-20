@@ -47,7 +47,7 @@ function shopCombinedQueue(view) {
     if (!shopQueueActive(view)) return;
     shopCombinedCarry = {profile: view.profile, chosen: [...combined.chosen]};
     route();
-  });
+  }, view);
 }
 
 /** The section under Missing cards across decks; absent with fewer than two decks to choose from. */

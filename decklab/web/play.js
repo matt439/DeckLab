@@ -78,7 +78,7 @@ function drawPlay(data, deckId) {
     location.hash = `#/play${event.target.value ? `?id=${encodeURIComponent(event.target.value)}` : ""}`;
   } }, el("option", { value: "", text: "Every deck" }));
   const seen = new Set();
-  for (const list of data.lists) if (!seen.has(list.id)) {
+  for (const list of [...data.lists, ...(data.pod_lists || [])]) if (!seen.has(list.id)) {
     seen.add(list.id); filter.append(el("option", { value: list.id, text: list.title, selected: list.id === deckId }));
   }
   const fromDeck = deckId && data.lists.find((list) => list.id === deckId);
@@ -91,13 +91,14 @@ function drawPlay(data, deckId) {
     pageHead({ crumb: fromDeck ? [deckHref(fromDeck.id, fromDeck.version), fromDeck.title] : null, title: routeH1("play"),
       description: "Played games, Commander pods and sideboard plans. Separate from Forge's simulations." }),
     warningsBox(data.warnings, "Some play records or deck lists could not be loaded"),
+    typeof playPodActions === "function" ? playPodActions(data, deckId) : null,
     data.lists.length && !deckId && typeof playTonightSection === "function" ? playTonightSection(data) : null,
     !deckId && typeof commanderLineupSection === "function" ? commanderLineupSection() : null,
     data.lists.length ? playQuickRecord(data, deckId) : playWithoutDecks(data),
+    seen.size && (games.length || data.pods?.length || deckId) ? el("label", { class: "field play-filter", for: "play-filter" },
+      el("span", { text: "Show games with" }), filter) : null,
     el("section", { class: "play-section", "aria-labelledby": "play-games-title" },
-      el("div", { class: "play-section-head" }, el("h2", { id: "play-games-title", text: data.pods?.length ? "Played 1v1 games" : "Played games" }),
-        data.lists.length && (data.games.length || deckId) ? el("label", { class: "field play-filter", for: "play-filter" },
-          el("span", { class: "sr-only", text: "Show games with" }), filter) : null),
+      el("div", { class: "play-section-head" }, el("h2", { id: "play-games-title", text: data.pods?.length ? "Played 1v1 games" : "Played games" })),
       games.length ? el("div", { class: "play-records" }, games.map(entry => playGameCard(entry, data)))
         : emptyBox(data.pods?.length ? "No 1v1 games have been recorded here yet."
           : deckId ? "No games with this deck yet." : playNoGamesWords(), recordButton)),
@@ -368,13 +369,12 @@ function playSnapshotDetails(snapshots, describedBy) {
         + lines.map(lineText).join("\n")).join("\n\n") }))));
 }
 
-function playGameCard(entry, data) {
+function playGameCard(entry, data, headId = `play-game-${entry.record.id}`) {
   const record = entry.record;
   const mulligans = record.sides.filter((side) => side.mulligans)
     .map((side) => `${side.player} took ${plural(side.mulligans, "mulligan")}`);
   // The heading names the game, not only its result, so a screen reader's list of headings tells the games
   // apart; the game's own buttons are described by it (E11-S55). The words shown are unchanged.
-  const headId = `play-game-${record.id}`;
   const decks = record.sides.map((side) => side.title || "a deck").join(" vs ");
   const card = el("article", { class: "panel play-record" },
     el("div", { class: "play-record-head" },

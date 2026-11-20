@@ -967,7 +967,8 @@ document.addEventListener("keydown", editorKeys);
  * and with side a panel on the right from 1,280 px (for editing a row beside its list). Closing it (the ×,
  * Escape, a tap outside it) calls onClose. Called as openSheet(title, opts) or openSheet({title, ...opts}),
  * where opts may also give body (nodes for the sheet's body) and actions (sheetActions' list). Returns
- * {dialog, heading, body, foot, closed, close(result)}. decklab/UI-KIT.md has the rules. */
+ * {dialog, heading, body, foot, closed, dismiss(), close(result)}. A beforeDismiss callback can return
+ * false to keep a user's sheet open. Explicit completion and route/profile cleanup use close(). */
 function openSheet(title, opts = {}) {
   if (title && typeof title === "object") { opts = title; title = opts.title || ""; }
   const { onClose, wide, side } = opts;
@@ -979,6 +980,17 @@ function openSheet(title, opts = {}) {
   const dialog = el("dialog", { class: "sheet" + (wide ? " sheet-wide" : "") + (side ? " sheet-side" : ""), "aria-labelledby": id },
     el("div", { class: "sheet-inner" }, el("div", { class: "sheet-head" }, heading, close), body, foot));
   const sheet = { dialog, heading, body, foot, closed: false, result: null, entry: null,
+    dismiss() {
+      if (sheet.beforeDismiss?.() === false) {
+        // Back already landed on the page underneath. Give the retained sheet its own entry again.
+        if (sheet.entry?.fromHistory) {
+          releaseSheetEntry(sheet.entry);
+          sheet.entry = pushSheetEntry(() => sheet.dismiss());
+        }
+        return;
+      }
+      sheet.close();
+    },
     close(result) { if (result !== undefined) sheet.result = result; if (dialog.open) dialog.close(); else finish(); } };
   function finish() {
     if (sheet.closed) return;
@@ -987,9 +999,12 @@ function openSheet(title, opts = {}) {
     releaseSheetEntry(sheet.entry);     // core.js: Back steps off its entry, unless Back closed it
     if (onClose) onClose(sheet.result);
   }
-  close.addEventListener("click", () => sheet.close());
+  close.addEventListener("click", () => sheet.dismiss());
+  dialog.addEventListener("cancel", event => {
+    if (sheet.beforeDismiss) { event.preventDefault(); sheet.dismiss(); }
+  });
   dialog.addEventListener("click", (e) => {
-    if (e.target === dialog) sheet.close();                                  // outside the sheet
+    if (e.target === dialog) sheet.dismiss();                                // outside the sheet
     else sheetLinkClick(e, sheet.entry, () => sheet.close());               // a link: its page takes the entry
   });
   dialog.addEventListener("close", finish);
@@ -1000,7 +1015,7 @@ function openSheet(title, opts = {}) {
   else dialog.setAttribute("open", "");
   // A history entry, so a phone's Back closes the sheet (not the page). history: false for a sheet opened while
   // the browser is moving through history (the editor's "Leave without saving?").
-  if (opts.history !== false) sheet.entry = pushSheetEntry(() => sheet.close());
+  if (opts.history !== false) sheet.entry = pushSheetEntry(() => sheet.dismiss());
   trackEditorSearchDockSheet(sheet);
   return sheet;
 }

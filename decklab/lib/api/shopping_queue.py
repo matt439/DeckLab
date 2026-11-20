@@ -112,7 +112,8 @@ def save_queue_state(body):
     required = {"state": ("row", "state"), "add": ("values",), "add_many": ("deck", "state", "cards"),
                 "add_combined": ("decks", "state", "cards"),
                 "edit": ("row", "values"), "remove": ("row", "reason")}[action]
-    _keys(data, ("profile", "expect", *required), ("action",))
+    optional = ("action", "selected") if action in ("add_many", "add_combined") else ("action",)
+    _keys(data, ("profile", "expect", *required), optional)
     profile = _writer(data)
     guard.require(profile, "orders.edit")
     guard.require_sees_home_records(profile)

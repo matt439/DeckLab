@@ -123,8 +123,8 @@ function showVersionWarning(messages, reload = false, database = [], restart = f
   host.hidden = !messages.length && !database.length && !cardData.length;
   if (database.length) host.append(el("h2", { class: "box-head", text: "Deck Lab's database" }),
     ...database.map((text) => el("p", { text })));
-  if (cardData.length) host.append(el("h2", { class: "box-head", text: "Card data" }),
-    ...cardData.map((text) => el("p", { text })));
+  if (cardData.length) host.append(el("details", { class: "warning-details" },
+    el("summary", { text: "Card data may be out of date" }), cardData.map((text) => el("p", { text }))));
   if (!messages.length) return;
   host.append(el("h2", { class: "box-head", text: "Deck Lab version" }),
     ...messages.map((text) => el("p", { text })));

@@ -107,6 +107,34 @@ class AssemblyCompletionTests(PreparationCase):
                 self.assertEqual(refused.exception.status, 409)
                 self.assertEqual(self.parsed("a").status, "building")
 
+    def test_empty_list_blocks_the_whole_plan_and_plain_basics_can_be_built(self):
+        self.deck("idea", "Empty idea", "idea", "", table=TABLE)
+        self.deck("lands", "Lands", "building", "Deck\n20 Forest\n", table=TABLE)
+        direct = assembly.assembly_view(deck="casual/idea")
+        self.assertFalse(direct["completion"]["can_mark_built"])
+        self.assertEqual(direct["list_issue"], direct["completion"]["reason"])
+        for selected in [(("idea", "target"),), (("idea", "target"), ("lands", "target"))]:
+            with self.subTest(selected=selected):
+                plan, body = self.request(*selected)
+                self.assertFalse(plan["ready"])
+                self.assertFalse(plan["completion"]["can_mark_built"])
+                reason = "Add main-deck cards to Empty idea before building."
+                self.assertEqual(plan["completion"]["reason"], reason)
+                with self.assertRaises(ApiError) as caught:
+                    self.mark(body)
+                self.assertEqual((caught.exception.status, caught.exception.message), (400, reason))
+                with self.assertRaises(ApiError) as stale:
+                    self.mark({**body, "fingerprint": "old"})
+                self.assertEqual((stale.exception.status, stale.exception.message), (409, completion.CHANGED))
+                with self.assertRaises(ApiError) as denied:
+                    self.mark({**body, "profile": "user1", "fingerprint": "old"})
+                self.assertEqual(denied.exception.status, 403)
+                self.assertEqual(self.parsed("idea").status, "idea")
+                self.assertEqual(self.parsed("lands").status, "building")
+        plan, _ = self.request(("lands", "target"))
+        self.assertTrue(plan["ready"])
+        self.assertTrue(plan["completion"]["can_mark_built"])
+
     def test_stale_deck_pool_and_selected_version_are_refused(self):
         self.deck("a", "A", "building", "Deck\n4 Llanowar Elves\n", owned="Deck\n4 Elvish Mystic\n",
                   table=TABLE)

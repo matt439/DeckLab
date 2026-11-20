@@ -31,8 +31,8 @@ SETUP = PAGE + """
   apiWrite=async(path,body)=>{writes.push([path,structuredClone(body)]);return response(body,body.preview===false);};
   route=()=>routes.push(location.hash);toast=message=>messages.push(message);
   const realSheet=openSheet;openSheet=(...args)=>{const sheet=realSheet(...args);sheets.push(sheet);return sheet;};
-  const mount=(data=packet())=>{clear(main);const section=playPodSection(data);main.append(section);return section;};
-  const launch=(data=packet())=>{const section=mount(data);buttonText(section,'Record a pod game').click();return sheets.at(-1);};
+  const mount=(data=packet())=>{clear(main);add(main,[playPodActions(data,''),playPodSection(data)]);return main;};
+  const launch=(data=packet())=>{const section=mount(data);buttonText(section,'Record a pod').click();return sheets.at(-1);};
   const controls=sheet=>({count:sheet.body.querySelector('#pod-count'),result:sheet.body.querySelector('#pod-result'),
     date:sheet.body.querySelector('#pod-date'),notes:sheet.body.querySelector('#pod-notes')});
   const set=(node,value,event='input')=>{node.value=value;node.fire(event);};
@@ -57,7 +57,7 @@ class PodUiTests(unittest.TestCase):
           assert(main.textContent.includes('Commander pods'));assert(main.textContent.includes('Played 1v1 games'));
           assert(main.textContent.includes('No 1v1 games have been recorded here yet.'));
           assert(main.textContent.includes('1 pod game recorded.'));assert(!main.textContent.includes('Head to headGames'));
-          assert(buttonText(main,'Record a pod game'));assert.equal(writes.length,0);
+          assert(buttonText(main,'Record a pod'));assert(main.querySelector('#play-filter'));assert.equal(writes.length,0);
         """)
 
     def test_new_pod_requires_explicit_preview_and_one_explicit_save(self):
@@ -73,6 +73,29 @@ class PodUiTests(unittest.TestCase):
           assert.equal(writes.length,2);assert.equal(writes[1][1].preview,false);
           assert.equal(writes[1][1].id,podId);assert.equal(writes[1][1].review_sha256,reviewSha);
           assert(edit.closed);assert(preview.closed);same(routes,['#/play']);same(messages,['Pod game saved.']);
+        """)
+
+    def test_pod_launchers_precede_duel_controls_and_history_and_filter_works_with_only_pods(self):
+        self.run_js("""
+          const a=snapshot(),b=snapshot({id:'commander/other',title:'Other deck',sha256:shaB});
+          for(const count of [0,10]){
+            const games=Array.from({length:count},(_,i)=>({record:{id:String(i),date:'2026-10-27',
+              result:'a',sides:[{...a,player:'A',mulligans:0},{...b,player:'B',mulligans:0}]},can:{sides:[true,true],result:true}}));
+            clear(main);drawPlay(packet({lists:[a,b],games,pods:[entry()]}),'');
+            const words=main.textContent;
+            assert(words.indexOf('Start a pod')<words.indexOf('Played 1v1 games'));
+            assert(words.indexOf('Record a pod')<words.indexOf("Matt's deck"));
+            buttonText(main,'Record a 1v1').click();assert.equal(document.activeElement.id,'play-quick-deck-0');
+            const filter=main.querySelector('#play-filter');assert(filter);
+            filter.fire('change',{target:{value:a.id}});assert.equal(location.hash,'#/play?id=commander%2Ftest');
+            location.hash='#/play';
+            buttonText(main,'Start a pod').click();const setup=sheets.at(-1);
+            assert.equal(controls(setup).result,null);assert(buttonText(setup.foot,'Start pod counter'));
+            assert.equal(buttonText(setup.foot,'Review pod game'),undefined);setup.close();
+            buttonText(main,'Record a pod').click();const record=sheets.at(-1);
+            assert(controls(record).result);assert(buttonText(record.foot,'Review pod game'));record.close();
+          }
+          assert.equal(writes.length,0);
         """)
 
     def test_fourth_seat_and_inactive_external_values_survive_toggling(self):
@@ -109,10 +132,10 @@ class PodUiTests(unittest.TestCase):
     def test_launcher_and_correction_require_explicit_positive_server_rights(self):
         self.run_js("""
           for(const can_record of [false,undefined,1,'true']){const section=mount(packet({pod_lists:[snapshot({can_record})]}));
-            assert.equal(buttonText(section,'Record a pod game'),undefined);}
+            assert.equal(buttonText(section,'Record a pod'),undefined);assert.equal(buttonText(section,'Start a pod'),undefined);}
           for(const can of [undefined,{}, {edit:false},{edit:1},{edit:'true'}]){
             const section=mount(packet({pods:[entry({can})],pod_lists:[]}));assert.equal(buttonText(section,'Correct this pod game'),undefined);}
-          state.profile=null;assert.equal(buttonText(mount(),'Record a pod game'),undefined);assert.equal(writes.length,0);
+          state.profile=null;assert.equal(buttonText(mount(),'Record a pod'),undefined);assert.equal(writes.length,0);
         """)
 
     def test_external_labels_and_notes_are_literal_text_and_public_generic_seats_render(self):

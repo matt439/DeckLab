@@ -43,7 +43,7 @@
 /* The Tables out of date list (library-tables.js): a box under the warnings; its list part (editor.css's
    .stale-part) without its own rule, and clear of the phone's top bar when the address scrolls to it. */
 .lib-tables { margin: var(--s-2) 0; scroll-margin-top: calc(var(--shell-top) + var(--s-3)); }
-.lib-tables > .stale-part { margin-top: 0; padding-top: 0; border-top: 0; }
+.lib-tables .stale-part { margin-top: 0; padding-top: 0; border-top: 0; }
 .lib-tables h2 { margin-top: 0; }
 .lib-tables .sources-list li { overflow-wrap: anywhere; }
 /* Game Changer and ban changes (library-official.js, E9-S36): a quiet box, its cards a plain list. */

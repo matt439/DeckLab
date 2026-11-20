@@ -4,6 +4,34 @@ const path=require('node:path');
 const assert=require('node:assert/strict');
 const {run}=require('./common.js');
 
+async function checkOrderPasteWidths(page) {
+  const initial=page.viewportSize();
+  await page.getByRole('button',{name:'New order',exact:true}).click();
+  const dialog=page.locator('dialog[open]').last();
+  await dialog.getByText('Paste a card list',{exact:true}).click();
+  const widths=[];
+  for (const added of [false,true]) {
+    if (added) {
+      await dialog.getByLabel('Cards to add').fill('2 Llanowar Elves (SFT) 1 nonfoil');
+      await dialog.getByRole('button',{name:'Add pasted cards',exact:true}).click();
+      await dialog.getByRole('button',{name:'Remove Llanowar Elves from this order'}).waitFor();
+    }
+    for (const width of [320,393,430]) {
+      await page.setViewportSize({width,height:initial.height});
+      const sizes=await dialog.evaluate(node=>{
+        const body=node.querySelector('.sheet-body'), copies=node.querySelector('[data-order-field=card_quantity]');
+        return {visible:body.clientWidth,content:body.scrollWidth,copiesRight:copies.getBoundingClientRect().right,
+          boundary:body.getBoundingClientRect().right};
+      });
+      assert(sizes.content<=sizes.visible+1 && sizes.copiesRight<=sizes.boundary+1,`Order paste overflow at ${width}px: ${JSON.stringify(sizes)}`);
+      widths.push({width,added,...sizes});
+    }
+  }
+  await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+  await page.setViewportSize(initial);
+  return widths;
+}
+
 run('shopping-reviews',async review=>{
   review.report.results=[];
   review.report.scope='Synthetic saved shop lines only: native reference checkbox/review and price-free basket order handoff. All POSTs are intercepted invented replies; no app write or vendor request.';
@@ -83,6 +111,7 @@ run('shopping-reviews',async review=>{
         await dialog.getByRole('button',{name:'Save order',exact:true}).waitFor({state:'visible'});assert.equal(result.requests.length,1);
         result.png=`${mode}-${width}-${theme}.png`;await page.screenshot({path:path.join(review.out,result.png),animations:'disabled'});
         await dialog.getByRole('button',{name:'Cancel',exact:true}).click();assert.equal(result.requests.length,1);
+        if(width===393 && theme==='light')result.orderPasteWidths=await checkOrderPasteWidths(page);
       }
       result.metrics=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth}));
       assert.equal(result.metrics.overflow,false);assert.equal(result.page_errors.length,0);assert.equal(result.route_errors.length,0);

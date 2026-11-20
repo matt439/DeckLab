@@ -38,6 +38,68 @@ class CollectionScanUiTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "ok")
 
+    def test_dismissal_protects_copies_and_unresolved_photos_until_discarded(self):
+        self.run_js("""
+          const ctx = openScanSheet(draw());
+          drawScanResult(ctx, ELVES);
+          drawScanResult(ctx, GHALTA);
+          const details = '1 card and 1 unresolved photo';
+          ctx.sheet.dialog.querySelector('.sheet-close').click();
+          assert(ctx.sheet.dialog.textContent.includes(details));
+          assert.equal(document.activeElement.textContent, 'Keep scanning');
+          button(ctx.sheet.dialog, 'Keep scanning').click();
+          assert.equal(ctx.pending.length, 1); assert.equal(ctx.unsure.length, 1);
+          const cancel = ctx.sheet.dialog.fire('cancel');
+          assert(cancel.defaultPrevented);
+          button(ctx.sheet.dialog, 'Discard batch').click();
+          assert(ctx.sheet.closed);
+          const empty = openScanSheet(draw());
+          foot(empty, 'cancel').click();
+          assert(empty.sheet.closed);
+        """)
+
+    def test_confirming_a_review_dismissal_keeps_the_scanned_list_for_correction(self):
+        self.run_js("""
+          const ctx = openScanSheet(draw());
+          addScanCard(ctx, ELVES.proposals[0]);
+          apiWrite = async () => { throw new ApiError(503, 'Try again'); };
+          const importing = reviewScan(ctx); await flush();
+          foot(importing, 'cancel').click();
+          assert(importing.sheet.dialog.textContent.includes('1 card'));
+          button(importing.sheet.dialog, 'Keep scanning').click();
+          foot(importing, 'back').click();
+          assert([...colSheets].at(-1).body.textContent.includes('Llanowar Elves (FDN 227)'));
+        """)
+
+    def test_manual_lookup_can_pick_the_tenth_printing_first(self):
+        self.run_js("""
+          const ctx = openScanSheet(draw());
+          api = async () => ({name:'Llanowar Elves', printings:Array.from({length:10}, (_,i) => ({
+            set:'fdn', set_name:'Foundations', collector_number:String(i+1), finishes:['nonfoil']}))});
+          ctx.name.value = 'Llanowar Elves'; await findScanName(ctx);
+          assert.equal(ctx.result.querySelectorAll('.col-scan-pick').length, 8);
+          const other = ctx.result.querySelector('details');
+          assert.equal(other.textContent,'Other printings…'); assert.equal(ctx.pending.length,0);
+          other.open = true; other.fire('toggle');
+          button(other, 'Llanowar Elves (FDN 10) · Foundations').click();
+          same(ctx.pending.map(c=>[c.set, c.collector_number, c.quantity]), [['fdn','10',1]]);
+        """)
+
+    def test_editing_the_manual_lookup_name_retires_its_reply_and_printing_choices(self):
+        self.run_js("""
+          const ctx = openScanSheet(draw()); let respond;
+          api = () => new Promise(resolve => respond = resolve);
+          const answer = {name:'Llanowar Elves', printings:[{set:'fdn', collector_number:'227', finishes:['nonfoil']}]};
+          ctx.name.value = answer.name;
+          const lookup = findScanName(ctx);
+          ctx.name.value = 'Opt'; ctx.name.fire('input'); respond(answer); await lookup;
+          assert.equal(ctx.name.value,'Opt'); assert.equal(ctx.result.textContent,'');
+          ctx.name.value = answer.name; api = async () => answer; await findScanName(ctx);
+          const oldChoice = ctx.result.querySelector('button');
+          ctx.name.value = 'Opt'; ctx.name.fire('input'); oldChoice.click();
+          assert.equal(ctx.pending.length,0); assert.equal(ctx.result.textContent,'');
+        """)
+
     def test_photos_fill_the_pending_list_and_review_previews_them_as_an_import(self):
         self.run_js("""
           const cv = draw();

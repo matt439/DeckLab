@@ -55,6 +55,25 @@ class PairsApiTests(base.CandidatesTestCase):
     def by_name(self, rows):
         return {r["name"]: r for r in rows}
 
+    def test_guided_picker_checks_card_rules_without_reading_a_collection(self):
+        exception = _invented("Workshop Captain", "R", "Legendary Planeswalker — Captain",
+                              "Workshop Captain can be your commander.")
+        forest = _invented("Forest", "G", "Basic Land — Forest", "")
+        banned = {**exception, "name": "Banned Captain", "commander_legality": "banned"}
+        known = {card["name"]: card for card in [exception, forest, banned, *INVENTED.values()]}
+        with mock.patch.object(api, "_pool", side_effect=AssertionError("public card rules only")), \
+             mock.patch.object(api.cards, "card", known.get):
+            for first, second, eligible in (
+                    ("Forest", None, False), ("Workshop Captain", None, True), ("Banned Captain", None, False),
+                    ("White Background", None, False), ("White Background", "Red Chooser", True),
+                    ("Blue Partner", "Green Partner", True), ("Green Partner", "Green Partner", False),
+                    ("Green Partner", "Workshop Captain", False)):
+                with self.subTest(first=first, second=second):
+                    answer = api.eligibility_view(first, second)
+                    self.assertEqual(answer["eligible"], eligible)
+                    if not eligible:
+                        self.assertTrue(answer["reason"])
+
     def test_pairs_rank_with_the_singles_over_both_colours(self):
         answer = api.candidates_view(limit="200")
         rows = self.by_name(answer["candidates"])
@@ -95,6 +114,22 @@ class PairsApiTests(base.CandidatesTestCase):
         self.assertNotIn("Green Partner", json.dumps(parts))           # the commanders aren't their own cards
         background = api.candidate_view("Red Chooser", None, "White Background")
         self.assertEqual(background["pairing"], "Choose a Background")
+
+    def test_pair_with_one_copy_still_on_the_way(self):
+        snapshot = api._pool("home")
+        snapshot.on_the_way["Blue Partner"] = [("test parcel", 1)]
+        with mock.patch.object(api, "_pool", return_value=snapshot):
+            rows = self.by_name(api.candidates_view()["candidates"])
+        pair = rows["Blue Partner and Green Partner"]
+        self.assertEqual([(face["name"], face["free"], face["incoming"]) for face in pair["faces"]],
+                         [("Blue Partner", 0, 1), ("Green Partner", 1, 0)])
+        self.assertEqual(rows["Blue Partner"]["free"], 0)
+
+    def test_name_lookup_brings_the_exact_single_ahead_of_higher_coverage_pairs(self):
+        self.assertEqual(api.candidates_view(limit="1", q="green partner")["candidates"][0]["name"], "Green Partner")
+        with mock.patch.object(commander_pool, "MAX_PAIRS", 1), mock.patch.object(commander_pool, "MAX_PAIRABLE", 2):
+            rows = api.candidates_view(limit="1", q="Red Chooser and White Background")["candidates"]
+        self.assertEqual([r["name"] for r in rows], ["Red Chooser and White Background"])
 
     def test_pairs_that_arent_one(self):
         for name, partner in (("Green Partner", "White Background"), ("White Background", "White Background"),
