@@ -143,6 +143,7 @@ function candidateActions(ctx, c) {
   const href = candidateNewDeckHref(ctx, c);
   return el("div", { class: "ccand-actions" },
     href ? el("a", { class: "btn btn-primary", href, text: "New deck from it" }) : null,
+    href && c.kind !== "held" ? el("a", { class: "btn", href: href + "&draft=tonight", text: "Build from cards free tonight" }) : null,
     el("button", { type: "button", class: "btn", text: "See EDHREC ideas…",
       onclick: () => openEdhrecSheet(null, { commander: (c.names || [c.name])[0], commander2: (c.names || [])[1] || null, space: ctx.cv.space }) }));
 }

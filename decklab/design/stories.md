@@ -43,10 +43,10 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 26 | 24 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 38 | 37 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 21 | 0 | 0 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
+| [E9: Commander nights](#e9-commander-nights) | 34 | 32 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 88 | 70 | 10 | 4 | 4 |
-| **Total** | **408** | **366** | **19** | **6** | **17** |
+| **Total** | **409** | **367** | **19** | **6** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -4811,6 +4811,19 @@ As a Commander builder checking a list in the editor, I want the bracket box to 
 - Given Compare's bracket row, then "today's lists" is in the row's heading, not appended to the label.
 
 Built (2026-11-12): the editor's bracket box drops its own "No Game Changers." when the server's reason already starts with it, and the target is its own sentence ("Target bracket: 2."), so no label shows ") (". Compare's In brief heading reads "Bracket (today's lists)" when any side is a saved revision or a precon, and `ui_review/compare-baselines.js` still finds that text. Test: `decklab/tests/test_bracket_wording_ui.py` (Node).
+
+<a id="e9-s39"></a>
+
+**E9-S39** · Matt · should · L · built
+
+As a Commander player building from my collection, I want to pick a commander or pair, keep my theme cards, and review a first draft I can sleeve tonight.
+
+- Given an eligible commander or pair, the draft aims for 100 cards including its commanders. It explains its choices and shows any open slots when the pool falls short.
+- Given a card with multiple roles, it can help each relevant role while occupying one physical slot. The selection respects colour identity, Commander legality, available copies and cards already committed elsewhere.
+- Incoming cards cannot fill tonight's deck. The preview identifies any ordinary basics it draws from the assumed supply.
+- I can lock eligible theme cards and review the resulting proposal before applying it to the editor. Applying is one local Undo step, and saving uses the existing deck editor.
+
+Built (2026-11-20): Collection's **Commanders we could build → Build from cards free tonight** opens the new editor's preview. Picks show their reasons, role coverage, land sources and open slots. Roles can overlap. Spell selection uses creature types shared with the commander or locks, available cached EDHREC inclusion, and mana values. The normal deck checks remain available for the resulting list. See [Commander draft selection](../lib/decks/commander_draft.py) and its [request and selection tests](../tests/test_commander_draft.py).
 
 ---
 

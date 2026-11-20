@@ -1,5 +1,20 @@
 # Deck Lab: history
 
+## A first Commander draft from cards free tonight (2026-11-20, E9-S39)
+
+Choose a commander or pair from **Collection → More → Commanders we could build**,
+then **Build from cards free tonight**. Lock theme cards by name, inspect why each
+card was selected, and check the land sources, role counts and open slots. The
+preview uses the space's free physical copies and the ordinary basic-land supply.
+Cards in built decks, intact products, on loan or still on the way cannot fill a slot.
+
+**Use this draft** applies the list in one undoable edit. Save uses the normal
+deck checks and history. An existing unsaved deck is preserved.
+
+Chromium checks on disposable inventory covered one commander plus 99 cards,
+two commanders plus 98, a short pool, Undo and a single saved revision. The
+same workflow passed at a desktop size and a touch-emulated phone size.
+
 ## Comparing shop baskets including postage (2026-11-20, E5-S27, E5-S40)
 
 Shopping can move some copies to a different shop or choose another eligible

@@ -248,6 +248,8 @@ function startFromPart() {
     el("p", { text: precon ? "Add cards with the search, or start from a pasted list, a precon or another deck."
       : "Add cards with the search, or start from a pasted list or another deck." }),
     el("div", { class: "actions" },
+      ed.tonight && !ed.notice && !isDirty() ? el("button", { type: "button", class: "btn", text: "Review collection draft",
+        onclick: event => { if (editor === ed && event.currentTarget.isConnected) openTonightDraft(ed.tonight); } }) : null,
       el("button", { type: "button", class: "btn", text: "Paste a list…", onclick: openPaste }),
       precon ? el("button", { type: "button", class: "btn btn-quiet", text: "A precon…", onclick: openPreconStart }) : null,
       el("button", { type: "button", class: "btn btn-quiet", text: "Another deck…", onclick: openDeckStart })));
@@ -341,4 +343,94 @@ function openDeckStart() {
     toast(`Started from ${deck.title}: ${plural(n, "card")}.`);
     return true;
   });
+}
+
+/** Review a candidate against physical copies before adding its list to the new editor. */
+function openTonightDraft(params) {
+  const ed = editor, space = params.get("space") || HOME_SPACE;
+  if (!editorKeyboardCurrent(ed) || ed.mode !== "new" || ed.space !== space ||
+      !createTargets().some(target => target.space === space)) return null;
+  if (ed.notice || ed.dirty || ed.fields.kind !== "commander") {
+    toast("Your unsaved new deck is still here. Save or discard it before building from the collection.");
+    return null;
+  }
+  const name = params.get("commander"), partner = params.get("partner");
+  const sheet = openSheet("Build from cards free tonight", { wide: true });
+  const owner = editorImportOwner(ed, sheet);
+  const locks = el("textarea", { rows: 3, placeholder: "One card name per line" });
+  locks.value = ed.tonightLocks || "";
+  const status = el("p", { role: "status", "aria-live": "polite" });
+  const result = el("div");
+  const refresh = el("button", { type: "button", class: "btn", text: "Preview draft" });
+  const accept = el("button", { type: "button", class: "btn btn-primary", text: "Use this draft", hidden: true });
+  sheet.body.append(el("h3", { text: [name, partner].filter(Boolean).join(" and ") }),
+    el("p", { class: "sub", text: "Picks fill missing roles first, then favour shared creature types, cards in cached EDHREC decks, and a mix of mana costs. You can change the picks and check combos and the deck’s bracket in the editor." }),
+    el("label", { class: "field" }, el("span", { text: "Theme cards to keep" }), locks), status, result);
+  sheet.foot.append(el("button", { type: "button", class: "btn", text: "Cancel", onclick: () => sheet.close() }), refresh, accept);
+  let request = 0, preview = null;
+  function here(control) { return editorImportHere(owner, control) && ed.snap === initial && !ed.dirty; }
+  const initial = ed.snap;
+  function invalidate() {
+    request++;
+    preview = null;
+    accept.hidden = true;
+    status.textContent = "";
+    clear(result);
+  }
+  locks.addEventListener("input", () => {
+    if (!here(locks)) return;
+    ed.tonightLocks = locks.value;
+    invalidate();
+  });
+  async function loadDraft() {
+    if (!here(refresh)) return;
+    invalidate();
+    const seq = request, written = locks.value || "";
+    const locked = written.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    status.textContent = "Finding cards free tonight…";
+    try {
+      const answer = await apiWrite("/api/commanders/draft", { space, name, ...(partner ? { partner } : {}), locked });
+      if (!here() || seq !== request || written !== (locks.value || "")) return;
+      preview = answer;
+      drawTonightDraft(result, answer);
+      status.textContent = `${answer.picked} of ${answer.target} cards outside the command zone. ${plural(answer.open_slots, "open slot")} (${answer.open_lands} lands, ${answer.open_spells} spells).`;
+      accept.hidden = false;
+    } catch (error) {
+      if (here() && seq === request) status.textContent = error.message;
+    }
+  }
+  refresh.addEventListener("click", loadDraft);
+  accept.addEventListener("click", () => {
+    if (!here(accept) || !preview || accept.hidden) return;
+    const sections = {
+      Commander: preview.commanders.map(row => ({ qty: 1, name: row.name, card: row.card })),
+      Deck: preview.picks.map(row => ({ qty: row.quantity, name: row.name, card: row.card })),
+    };
+    const title = preview.names.length === 1 ? preview.names[0].split(" // ")[0]
+      : preview.names.map(n => n.split(" // ")[0].split(",")[0]).join(" and ");
+    ed.fields.title = title.slice(0, 100);
+    sheet.close();
+    mergeLines(sections);
+    drawDetails();
+  });
+  loadDraft();
+  return sheet;
+}
+
+function drawTonightDraft(host, draft) {
+  const picks = draft.picks.map(row => el("li", {}, el("strong", { text: `${row.quantity} × ${row.name}` }),
+    ` — ${row.reason}`, row.assumed_basic && row.locked ? " Uses the assumed ordinary basic-land supply." : ""));
+  clear(host);
+  if (draft.warnings?.length) host.append(warningsBox(draft.warnings, "Commander draft notes"));
+  host.append(el("h3", { text: "Role coverage" }),
+    el("p", { class: "sub" }, "Includes commanders. A card can cover several roles.",
+      draft.source ? el("span", {}, " Targets from ", el("a", { href: draft.source.url, target: "_blank", rel: "noopener", text: draft.source.title }), ".") : ""),
+    el("ul", {}, draft.roles.map(row => el("li", { text: `${row.label}: ${row.count} of ${row.target}` }))),
+    el("h3", { text: "Mana sources" }), el("p", { text: draft.mana_sources.map(row => `${row.colour}: ${row.count}`).join(" · ") || "Colourless identity" }),
+    el("h3", { text: "Draft picks" }));
+  if (draft.affinity_source) host.append(el("p", { class: "sub" }, "Inclusion figures from ",
+    el("a", { href: draft.affinity_source, target: "_blank", rel: "noopener", text: "EDHREC" }), "."));
+  host.append(el("ul", {}, picks));
+  if (draft.incoming.length) host.append(el("details", {}, el("summary", { text: "On the way (outside this draft)" }),
+    el("ul", {}, draft.incoming.map(row => el("li", { text: `${row.quantity} × ${row.name}` })))));
 }

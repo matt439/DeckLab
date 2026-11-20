@@ -627,16 +627,23 @@ function showNewDeck(params, token) {
   }
   const kind = params.get("kind") === "commander" ? "commander" : "casual";
   clear($("#main"));
-  startEditor({ mode: "new", kind, space: params.get("space") });
+  const tonight = kind === "commander" && params.get("commander") && params.get("draft") === "tonight";
+  if (tonight) {
+    const clean = new URLSearchParams({ kind });
+    if (params.get("space")) clean.set("space", params.get("space"));
+    history.replaceState(history.state, "", `#/new?${clean}`);
+  }
+  startEditor({ mode: "new", kind, space: params.get("space"), tonight: tonight ? params : null });
   // Commanders we could build's New deck from it (E9-S28): editor-import.js puts the commander in.
-  if (kind === "commander" && params.get("commander")) startFromCommander(params.get("commander"), params.get("partner"));
+  if (!tonight && kind === "commander" && params.get("commander")) startFromCommander(params.get("commander"), params.get("partner"));
   afterRender();
+  if (tonight) openTonightDraft(params);
 }
 
 function startEditor(opts) {
   disposeEditorSearchDock(editor, { takeover: true });
   const profile = state.profile;
-  const ed = { mode: opts.mode, version: opts.version || "target", profile: profile.id, checkSeq: 0, check: null, checkError: null,
+  const ed = { mode: opts.mode, tonight: opts.tonight, version: opts.version || "target", profile: profile.id, checkSeq: 0, check: null, checkError: null,
     notice: null, lastAdded: null, flash: null, addSection: "Deck", leaving: false, asking: false,
     brackets: [], sent: {}, removed: [], pos: entryPos(), entryHash: location.hash, entryToken: routeToken,
     pendingDraftKey: opts.pendingDraftKey || null,

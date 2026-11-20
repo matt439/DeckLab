@@ -71,14 +71,14 @@ Each epic has a journey in [journeys.md](journeys.md) and its stories in [storie
 | E6 | Record orders and receive cards | `order add\|edit\|checks\|split\|cancel`, products, on the way, Receive delivery (`#/receipt`), follow-ups, keeping a product intact | 24 | 0 | 0 | 2 |
 | E7 | Keep the collection accurate | The Collection page (`#/collection`), imports and Add a precon, `collection merge`, Tokens (`#/tokens`), removals, stale tables, `db check` | 37 | 1 | 0 | 0 |
 | E8 | Sleeves, boxes and storage | Sleeves & boxes (`#/accessories`), Sleeves and Deck box lines, the Choose… picker, kit warnings, put-back steps, the storage box | 21 | 0 | 0 | 2 |
-| E9 | Commander nights | Commander checks and the minimum bracket, multiplayer practice, Forge's Commander field, getting ready for the social Commander night | 31 | 1 | 0 | 1 |
+| E9 | Commander nights | Commander checks and the minimum bracket, multiplayer practice, Forge's Commander field, getting ready for the social Commander night | 32 | 1 | 0 | 1 |
 | E10 | Members, access and privacy | Roles and spaces, the read and write rules, "Who are you?", decklab.example.com behind Cloudflare Access, Activity (`#/activity`), Visits on Settings, private by default | 34 | 1 | 1 | 2 |
 | E11 | Run and trust the system | The server and tunnel, database maintenance, audit trail, typed commands, Forge upkeep, Settings, Safari regressions, visual design and code hygiene | 70 | 10 | 4 | 4 |
 
 ## Headline counts
 
 - **10 personas:** two primary, three secondary (User5, the space members and the self-hoster), one supplementary, one non-human actor and three anti-personas.
-- **11 epics, 408 stories:** 366 built, 19 partial, 6 missing and 17 not wanted (generated, with the epic rows above, from the story headers by `python scripts/audit_stories.py --write`; the lint workflow checks them).
+- **11 epics, 409 stories:** 367 built, 19 partial, 6 missing and 17 not wanted (generated, with the epic rows above, from the story headers by `python scripts/audit_stories.py --write`; the lint workflow checks them).
 - **Must and should stories, 2026-11-20.** Matt has 140 built, 3 partial and 7 missing. User1 has 33 built, 1 partial and 1 missing. The self-hoster has 4 built and 1 missing. Claude Code has 25 built, the space members 6, User5 4 and the Commander table 1. [Coverage by persona](gap-analysis.md#coverage-per-persona)
 
 The 2026-11-20 audit checked the remaining work against its owners and the implementation. It identified 12 coding tasks that can start with fixtures, including a correction to testing a deck change against popular decks. The redesign still needs household device acceptance. The current work order and the remaining checks are in [TODO.md](../../TODO.md#now).
