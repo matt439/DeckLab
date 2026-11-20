@@ -506,7 +506,8 @@ function vtHowItWorks(data) {
   if (t.outcome === "stopped") items.push(el("li", { text: "It was stopped before its next check: the result shows the games played so far." }));
   else if (last && last.decision === "not_settled") items.push(el("li", { text: `It played the most games it plays (${thousands(last.games_per_opponent)} a deck) without a clear answer.` }));
   else if (last) items.push(el("li", { text: `It stopped at a planned check (${thousands(last.games_per_opponent)} games a deck).` }));
-  const shares = (data.opponents || []).map((o) => o.paired && o.paired.saved_share).filter((x) => x != null);
+  const shares = (data.opponents || []).filter((o) => !o.dropped && !o.shared_evidence)
+    .map((o) => o.paired?.saved_share).filter((x) => x != null);
   if (shares.length) {
     const share = shares.reduce((a, b) => a + b, 0) / shares.length;
     items.push(el("li", { text: share > 0
@@ -532,7 +533,7 @@ function vtVerdictPanel(page, data) {
   const numbers = field || one;
   // Play more: to the next check, from a stopped test too, until the last check a test makes.
   const planned = Math.max(0, ...looks.filter((l) => !l.stopped).map((l) => l.games_per_opponent));
-  const canMore = !data.error && t.outcome !== "error" && (t.outcome === "stopped" || looks.length > 0)
+  const canMore = !data.error && t.outcome !== "error" && (t.needs_recheck || t.outcome === "stopped" || looks.length > 0)
     && planned < (typeof t.against === "string" ? 1600 : 3200);
   return el("section", { class: `vt-panel vt-verdict vt-${kind}` },
     el("h2", { class: "vt-words", text: data.words || (data.status === "none" ? "This test hasn't played yet" : "No verdict yet") }),
@@ -570,15 +571,17 @@ function vtRows(data, span = vtSpan(data)) {
       "where it probably lies, and every bar uses the same scale." }),
     el("ul", { class: "vt-list" }, rows.map((o) => {
       const p = o.paired || {};
-      const name = o.title || o.id || "Opponent";
+      const ambiguous = popular && o.title && rows.some((other) => other !== o && other.title === o.title);
+      const name = ambiguous && o.id ? `${o.title} (${o.id.replace(/^gauntlet:/, "")})` : o.title || o.id || "Opponent";
       const head = o.base_key && !popular ? el("a", { href: `#/matchup?key=${o.base_key}`, text: name }) : el("span", { text: name });
       if (o.dropped) {
         return el("li", { class: "vt-row vt-row-dropped" }, el("div", { class: "vt-row-name" }, head),
           el("p", { class: "sub", text: o.dropped }));
       }
+      const games = p.n != null ? plural(p.n, "paired game") : plural(o.games || 0, "saved game");
       return el("li", { class: "vt-row" },
         el("div", { class: "vt-row-name" }, head,
-          el("span", { class: "vt-row-n", text: `${thousands(p.n || o.games || 0)} paired games` })),
+          el("span", { class: "vt-row-n", text: o.shared_evidence ? `${games} · shared matchup` : games })),
         vtDiffBar(p.delta, p.low, p.high, { label: `${name}: difference in win rate`, span }),
         el("p", { class: "sub", text: [
           p.delta != null ? `${vtPoints(p.delta)} points (${vtPoints(p.low)} to ${vtPoints(p.high)})` : "No difference yet",
@@ -782,7 +785,8 @@ function vtTestItem(t) {
     return el("li", { class: "vt-test-item" }, el("a", { href, text: words }), saved);
   }
   const against = t.against === "field" ? "the field" : t.against === "gauntlet" ? "popular decks" : t.against;
-  const how ={ stopped: "stopped early", error: "couldn't finish" }[t.verdict] || (t.delta == null ? "not settled" : null);
+  const how = t.needs_recheck ? "needs a new check" : { stopped: "stopped early", error: "couldn't finish" }[t.verdict]
+    || (t.delta == null ? "not settled" : null);
   const facts = [`against ${against}`, t.games_per_opponent ? `${thousands(t.games_per_opponent)} games a deck` : null, how];
   return el("li", { class: "vt-test-item" },
     el("a", { href, class: "vt-test-link" }, swapResult({ changes: t.changes, delta: t.delta, low: t.low, high: t.high,
@@ -921,7 +925,12 @@ async function vtOpenTestSheet() {
     el("input", { type: "radio", name, value, checked: checked || null, onchange }), el("span", {}, text));
   // The standard sample is offered when its estimate says it's available. The handed-off sample stays
   // visible when unavailable so its estimate can explain the problem.
-  const field = { size: 0, ok: true }, popular = { size: 0, ok: false };
+  let field = { opponents: 0, available: true }, popular = null;
+  function size(estimate) {
+    const decks = plural(estimate.opponents, "deck");
+    return estimate.distinct_matchups != null && estimate.distinct_matchups < estimate.opponents
+      ? `${decks}, ${plural(estimate.distinct_matchups, "distinct matchup")}` : decks;
+  }
   const named = (value) => value !== "field" && value !== VT_POPULAR && value !== savedSample;
   let asked = 0, fieldAsked = 0, starting = false;
   const sampleReady = () => pick.estimate?.available && pick.estimate.against === savedSample && pick.estimate.opponents > 0;
@@ -934,9 +943,9 @@ async function vtOpenTestSheet() {
   function drawAgainst() {
     const choose = (value) => () => { pick.against = value; select.disabled = !named(value); refresh(); };
     add(clear(againstHost), [
-      radio("vt-against", "field", field.ok ? `The field (${plural(field.size, "deck")})` : "The field (not available yet)",
+      radio("vt-against", "field", field.available ? `The field (${size(field)})` : "The field (not available yet)",
         pick.against === "field", choose("field")),
-      popular.ok ? radio("vt-against", VT_POPULAR, `Popular decks (${plural(popular.size, "deck")}, a sample)`,
+      popular ? radio("vt-against", VT_POPULAR, `Popular decks (${size(popular)}, a sample)`,
         pick.against === VT_POPULAR, choose(VT_POPULAR)) : null,
       savedSample ? radio("vt-against", savedSample, sampleCaption, pick.against === savedSample, choose(savedSample)) : null,
       others.length ? radio("vt-against", "deck", "One deck:", named(pick.against),
@@ -944,15 +953,14 @@ async function vtOpenTestSheet() {
       others.length ? select : null]);
     select.disabled = !named(pick.against);
     const fieldInput = againstHost.querySelector('input[value="field"]');
-    if (fieldInput && !field.ok) fieldInput.disabled = true;
+    if (fieldInput && !field.available) fieldInput.disabled = true;
   }
   async function estimateFor(against) {
     const fieldRequest = against === "field" ? ++fieldAsked : 0;
     const est = await api(`/api/variant/estimate?id=${encodeURIComponent(ed.id)}&version=${ed.version}` +
       `&against=${encodeURIComponent(against)}`);
     if (fieldRequest && fieldRequest === fieldAsked && current()) {
-      field.size = est.opponents;
-      field.ok = est.available;
+      field = est;
       drawAgainst();
     }
     return est;
@@ -967,9 +975,8 @@ async function vtOpenTestSheet() {
   // Asked once as the sheet opens: whether popular decks can be offered at all (a catalogue built on the PC).
   estimateFor(VT_POPULAR).then((est) => {
     if (!current() || !est?.available || !est.opponents) return;
-    popular.ok = true;
-    popular.size = est.opponents;
-    if (pick.against === "field" && !field.ok) {       // nothing else to offer first
+    popular = est;
+    if (pick.against === "field" && !field.available) {       // nothing else to offer first
       pick.against = VT_POPULAR;
       drawAgainst();
       refresh();
@@ -1002,11 +1009,11 @@ async function vtOpenTestSheet() {
       pick.estimate = est;
       showProblem(null);
       if (against === "field" && !est.available) {
-        if (popular.ok) { pick.against = VT_POPULAR; drawAgainst(); refresh(); return; }
+        if (popular) { pick.against = VT_POPULAR; drawAgainst(); refresh(); return; }
         if (others.length) { pick.against = others[0].id; drawAgainst(); refresh(); return; }
         showProblem(est.problem || "There's no deck to test against.");
       } else if (against === savedSample) {
-        sampleCaption.textContent = sampleReady() ? `Saved sample from Testing (${plural(est.opponents, "deck")})`
+        sampleCaption.textContent = sampleReady() ? `Saved sample from Testing (${size(est)})`
           : "Saved sample from Testing";
         if (!sampleReady()) showProblem(est.problem || "This saved sample is unavailable.");
       } else if (against === VT_POPULAR && !est.available) {

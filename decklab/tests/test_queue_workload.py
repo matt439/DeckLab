@@ -201,18 +201,25 @@ class SerializationTests(unittest.TestCase):
                             self.assertNotIn("ahead_work", value)
 
     def test_variant_queued_bound_refines_saved_session_work_and_fails_conservatively(self):
+        from decklab.lib.forge import variants
+
         v = types.SimpleNamespace(_keys_today=lambda *args: True, variant_entry=lambda *args: {},
-                                  _planned=lambda *args: 75)
-        run = types.SimpleNamespace(forge=types.SimpleNamespace(variants=v), base={}, cards={}, test="test")
+                                  _planned=lambda *args: 75, opponent_work=variants.opponent_work)
+        engine = types.SimpleNamespace(key=lambda base, opponent, pinned: pinned[opponent["id"]])
+        identities = {"first": "a" * 64, "second": "b" * 64, "alias": "a" * 64}
+        opponents = [{"id": name} for name in identities]
+        run = types.SimpleNamespace(forge=types.SimpleNamespace(variants=v, engine=engine), base={}, cards={}, test="test")
+        def bound(summary, complete):
+            return run_recovery._variant_work(run, opponents, summary, [200, 1600], complete, identities)
         with mock.patch.object(variant_page, "_results_of", return_value="fixture"):
-            self.assertEqual(run_recovery._variant_work(run, [{}, {}], {}, [200, 1600], False),
+            self.assertEqual(bound({}, False),
                              {"games": 75, "approximate": True})
-            self.assertEqual(run_recovery._variant_work(run, [{}, {}], {}, [200, 1600], True),
+            self.assertEqual(bound({}, True),
                              {"games": 0, "approximate": True})
             v._keys_today = lambda *args: False
-            self.assertEqual(run_recovery._variant_work(run, [{}, {}], {}, [200, 1600], False),
+            self.assertEqual(bound({}, False),
                              {"games": 6400, "approximate": True})
-            self.assertEqual(run_recovery._variant_work(run, [{}, {}], None, [200, 1600], True),
+            self.assertEqual(bound(None, True),
                              {"games": 6400, "approximate": True})
-            self.assertEqual(run_recovery._variant_work(run, [{}, {}], {}, [200, 1600], True),
+            self.assertEqual(bound({}, True),
                              {"games": 6400, "approximate": True})

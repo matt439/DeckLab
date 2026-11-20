@@ -58,11 +58,12 @@ function shopCombinedSection(view) {
   const content = el("div", {class: "shop-combined-content"});
   const choose = el("button", {type: "button", class: "btn shop-combined-choose",
     text: combined.chosen.length ? "Change decks…" : "Choose decks…", onclick: () => shopCombinedSheet(view)});
-  content.append(el("div", {class: "actions"}, choose));
+  content.append(el("div", {class: "actions"}, choose, shopCompareButton(view)));
   if (combined.busy) content.append(loadingBox("Working out what to buy…", {small: true}));
   else if (combined.error) content.append(loadFailed("What to buy for these decks", combined.error,
     () => shopCombinedLoad(view, combined.chosen)));
   else if (combined.result) add(content, [shopCombinedResult(combined.result, view)]);
+  add(content, [shopCompareContent(view)]);
   return shopSection("shop-combined", "Build decks together", 0,
     "Choose decks to build at the same time: each free copy counts once, and cards on the way count as yours.", content);
 }
@@ -96,6 +97,13 @@ function shopCombinedSheet(view) {
     const primary = sheet.foot.querySelector(".btn-primary");
     if (!ready) primary.setAttribute("aria-disabled", "true");
   };
+  shopCombinedChecklist(view, list, chosen, sync);
+  sheet.body.append(list, count);
+  sync();
+  return sheet;
+}
+
+function shopCombinedChecklist(view, list, chosen, sync) {
   for (const deck of shopCombinedChoices(view)) {
     const input = el("input", {type: "checkbox", value: deck.id, "data-combined-deck": deck.id});
     input.checked = chosen.has(deck.id);
@@ -106,9 +114,6 @@ function shopCombinedSheet(view) {
     list.append(el("label", {class: "choice"}, input, el("span", {text: deck.title}),
       deck.missing ? el("small", {text: ` · ${plural(deck.missing, "card")} missing on its own`}) : null));
   }
-  sheet.body.append(list, count);
-  sync();
-  return sheet;
 }
 
 /** Ask for the combined answer and draw it, unless Shopping has moved on meanwhile. */
@@ -152,14 +157,14 @@ function shopCombinedRedraw(view, keepFocus) {
 /** True once decks are chosen: only then does the section count as Shopping's content (an empty page
  * keeps its own empty state, with shopCombinedStart's button, until a choice is made). */
 function shopCombinedChosen(view) {
-  return Boolean(view.combined && view.combined.chosen.length);
+  return Boolean(view.combined?.chosen.length || view.compare);
 }
 
 /** The empty page's way in: Build decks together… when there are two or more decks to choose. */
 function shopCombinedStart(view) {
   if (shopCombinedChoices(view).length < SHOP_COMBINED_MIN) return null;
   return el("p", {class: "shop-combined-start-line"}, el("button", {type: "button", class: "btn btn-quiet shop-combined-start",
-    text: "Build decks together…", onclick: () => shopCombinedSheet(view)}));
+    text: "Build decks together…", onclick: () => shopCombinedSheet(view)}), shopCompareButton(view));
 }
 
 /** A deck's Cards tab, filtered to Missing only when that deck misses something on its own (a card

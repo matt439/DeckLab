@@ -65,17 +65,17 @@ def _noise(path, base, opponents, eng):
     answer = {}
     for opponent in opponents:
         wanted = sorted([base["card_sha"], opponent["card_sha"]])
+        matchup = engine.key(base, opponent, eng)
         for item in receipts:
-            if not isinstance(item, dict) or item.get("v") != VERSION or item.get("engine") != engine.result_fields(eng) or item.get("lists") != wanted or item.get("matchup") != engine.key(base, opponent, eng):
+            if not isinstance(item, dict) or item.get("v") != VERSION or item.get("engine") != engine.result_fields(eng) or item.get("lists") != wanted or item.get("matchup") != matchup:
                 continue
             pilot = item.get("pilot")
             if any((entry.get("pilot") or pilots.default_pilot()) != pilot for entry in (base, opponent)):
                 continue
             n, different, outcomes = (item.get(key) for key in ("games", "different_winners", "different_outcomes"))
             if type(n) is int and n > 0 and type(different) is int and type(outcomes) is int and 0 <= different <= outcomes <= n:
-                answer[opponent["card_sha"]] = {"games": n, "different_winners": different,
-                                               "different_outcomes": outcomes,
-                                               "winner_disagreement": different / n}
+                answer[matchup] = {"games": n, "different_winners": different, "different_outcomes": outcomes,
+                                   "winner_disagreement": different / n}
     return answer
 
 
@@ -101,7 +101,15 @@ def run_placebo(base_entry, against, mode, *, results_dir=None, noise_floor=None
     found["test"].update(outcome="control_only", decision="control_only")
     for look in found["test"].get("looks") or []:
         look["decision"] = "control_only"
-    found["noise_floor"] = floors
+    matchup_by_cards = {}
+    for row in found.get("opponents") or []:
+        cards, matchup = row["card_sha"], row.get("base_key")
+        row["noise_floor"] = floors.get(matchup)
+        if matchup_by_cards.setdefault(cards, matchup) != matchup:
+            matchup_by_cards[cards] = None
+    # Older consumers use the card hash. It identifies a receipt only when every row
+    # with those cards used the same matchup (a different pilot can change the key).
+    found["noise_floor"] = {cards: floors[key] for cards, key in matchup_by_cards.items() if key in floors}
     found["control_note"] = ("Unchanged-list paired control, saved only in experiments. Compare the observed difference with this pair's same-install engine-check winner/outcome disagreements. "
                              "Zero disagreements in a finite check are an observed result, never proof of exact zero noise or a validated decision threshold. A missing or mismatched receipt means the noise floor is unknown; no equality is claimed.")
     # Keep the interpreted receipt with the control, never alongside normal paired summaries.

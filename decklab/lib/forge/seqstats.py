@@ -494,8 +494,8 @@ def paired_field(diffs):
     if not parts:
         return None
     k = len(parts)
-    delta = sum(c for c, _ in parts) / k
-    se = math.sqrt(sum(v for _, v in parts)) / k
+    delta = math.fsum(c for c, _ in parts) / k
+    se = math.sqrt(math.fsum(v for _, v in parts)) / k
     return {"delta": delta, "low": delta - Z95 * se, "high": delta + Z95 * se, "z": delta / se, "se": se,
             "k": k, "center": delta, "var": se * se}
 

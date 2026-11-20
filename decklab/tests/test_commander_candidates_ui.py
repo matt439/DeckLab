@@ -70,6 +70,9 @@ class CommanderCandidatesUiTests(unittest.TestCase):
           const link = ctx.area.querySelector('.ccand-actions').querySelector('a');
           assert.equal(link.textContent, 'New deck from it');
           assert.equal(link.getAttribute('href'), "#/new?kind=commander&commander=Kraum%2C+Ludevic%27s+Opus");
+          const build = ctx.area.querySelector('.ccand-actions').querySelectorAll('a')[1];
+          assert.equal(build.textContent, 'Build from cards free tonight');
+          assert.equal(build.getAttribute('href'), link.getAttribute('href') + '&draft=tonight');
           // See EDHREC ideas: deck-edhrec.js's sheet for this commander and space, no deck.
           ctx.area.querySelector('.ccand-actions').querySelector('button').click(); await flush();
           assert.equal(asked[2], "/api/deck/edhrec?commander=Kraum%2C%20Ludevic's%20Opus&space=home");

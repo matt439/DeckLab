@@ -39,9 +39,25 @@ function shopPlanFigures(plan) {
     amounts.caveats ? el("p", {class: "shop-plan-caveats", text: amounts.caveats.replace(/^, /, "")}) : null);
 }
 
+/** The actual tiers assigned to this row at this shop, including any split across printings. */
+function shopPlanListings(row) {
+  if (!row.listing) return [];
+  const more = row.more || [];
+  if (!more.length) return [{...row.listing, copies: row.copies}];
+  return [row.listing, ...more];
+}
+
 function shopPlanCopyList(view, rows) {
   if (!shopBasketsCurrent(view)) return null;
-  return shopCopyRows(rows.map(row => ({...row, quantity: row.copies})));
+  return shopCopyRows(rows.flatMap(row => {
+    const listings = shopPlanListings(row);
+    if (!listings.length) return [{...row, quantity: row.copies}];
+    return listings.map(listing => {
+      const printing = shopBasketOrderPrinting(listing);
+      return printing ? {...row, ...printing, printing: "exact", quantity: listing.copies}
+        : {...row, quantity: listing.copies};
+    });
+  }));
 }
 
 function shopPlanCardWords(row) {
@@ -58,15 +74,30 @@ function shopPlanStockNote(plan) {
 
 /** Compare the actual rows and charges so identical shop names alone can't hide a distinct plan. */
 function shopPlanAllocation(plan) {
-  return JSON.stringify([plan.total_aud, plan.shops.map(shop => [shop.key, shop.subtotal_aud, shop.postage?.charged_aud,
-    (shop.rows || []).map(row => [row.queue_row, row.copies, row.line_aud])])]);
+  const shops = plan.shops.map(shop => {
+    const rows = (shop.rows || []).map(row => {
+      const tiers = shopPlanListings(row).map(item => [item.set, item.collector_number, item.finish,
+        item.price_aud, item.copies, item.condition, item.language, item.url]);
+      return [row.queue_row, row.copies, row.line_aud, tiers];
+    });
+    return [shop.key, shop.subtotal_aud, shop.postage?.charged_aud, rows];
+  });
+  return JSON.stringify([plan.total_aud, shops]);
+}
+
+function shopPlanListingWords(item) {
+  return [item.set?.toUpperCase(), item.collector_number, item.finish].filter(Boolean).join(" ") || "Printing unknown";
 }
 
 function shopPlanBreakdown(plan) {
   return el("ul", {class: "shop-basket-gaps"}, plan.shops.map(shop => {
     const postage = shopBasketAud(shop.postage?.charged_aud);
+    const cards = (shop.rows || []).flatMap(row => {
+      const tiers = shopPlanListings(row);
+      return tiers.length ? tiers.map(item => `${item.copies} × ${row.name} (${shopPlanListingWords(item)})`) : [shopPlanCardWords(row)];
+    });
     return el("li", {"data-plan-breakdown": shop.key}, el("strong", {text: shop.shop}),
-      el("span", {text: (shop.rows || []).map(shopPlanCardWords).join(", ")}),
+      el("span", {text: cards.join(", ")}),
       el("span", {text: postage ? `${postage} postage` : "Postage not known"}));
   }));
 }
@@ -86,7 +117,12 @@ function shopPlanShop(view, shop, basket) {
       el("span", {class: "sub", text: `${plural(shop.cards, "card")}, `}),
       el("strong", {text: shopBasketAud(shop.subtotal_aud) || "A$0.00"})),
     el("ul", {class: "shop-basket-rows"}, rows.map(row => el("li", {class: "shop-basket-row", "data-plan-row": row.name},
-      shopBasketItemHead(row, view)))),
+      shopBasketItemHead(row, view), shopPlanListings(row).map(item => {
+        const price = shopBasketAud(item.price_aud);
+        return el("span", {class: "shop-basket-facts"}, `${item.copies} × `,
+          shopSnapshotLink({shop: shop.shop, url: item.url}, shopPlanListingWords(item)),
+          price ? ` · ${price} each` : " · Price unknown", ` · ${shopSnapshotQuality(item)}`);
+      })))),
     shopBasketPostage(shop.postage),
     addOns.length ? el("p", {class: "shop-basket-reach", "data-plan-reach": shop.key,
       text: `Free postage if you bring forward ${addOns.map(shopPlanCardWords).join(", ")} (${shopBasketAud(shop.postage.reach.total_aud)}).`}) : null,
@@ -124,14 +160,20 @@ function shopBasketPlan(view) {
     el("h4", {text: "Each card where it's cheapest"}),
     shopPlanFigures(cheapest), el("p", {class: "sub", text: `${cheapest.cards} of ${plural(plan.wanted, "card")} covered.`}),
     shopPlanStockNote(cheapest), plan.saves_aud ? el("p", {class: "shop-plan-savings",
-      text: `The fewest-shops plan is ${shopBasketAud(plan.saves_aud)} less.`}) : null, shopPlanBreakdown(cheapest)));
+      text: `The recommended plan saves ${shopBasketAud(plan.saves_aud)} including postage.`}) : null, shopPlanBreakdown(cheapest)));
   else if (hasShops && same && best.shops.length > 1) lines.push(el("p", {class: "sub", "data-plan-by-price": cheapest.total_aud || "",
     text: "Buying each card where it's cheapest gives the same shop lists and total."}));
-  if (hasShops && !plan.weighed) lines.push(el("p", {class: "note", "data-plan-unweighed": "true",
-    text: "Some shops' postage isn't set, so this takes the fewest shops without weighing postage. Set each shop's postage in Settings."}));
+  if (hasShops && !plan.weighed) {
+    const conditional = [best, cheapest, ...(plan.options || [])].some(option => option?.shops.some(shop => shop.postage?.conditional));
+    lines.push(el("p", {class: "note", "data-plan-unweighed": "true", text: conditional
+      ? "Unpriced copies could change the postage. The plan favours fewer shops while delivery totals are uncertain."
+      : "Some shops' postage isn't set, so this takes the fewest shops without weighing postage. Set each shop's postage in Settings."}));
+  }
+  if (hasShops && plan.search_complete === false) lines.push(el("p", {class: "note", "data-plan-limited": "true",
+    text: "The planner reached its comparison limit. Another allocation could cost less."}));
   const others = (plan.options || []).filter(option => shopPlanAllocation(option) !== allocation);
   return el("div", {class: "shop-plan", "data-plan": (best.keys || []).join(",")},
-    el("h3", {text: "Fewest shops"}), lines,
+    el("h3", {text: "Recommended basket"}), lines,
     hasShops ? el("div", {class: "shop-plan-shops"}, best.shops.map(shop => shopPlanShop(view, shop, baskets.get(shop.key)))) : null,
     others.length ? el("details", {class: "more shop-plan-others"}, el("summary", {text: `Other ways (${others.length})`}),
       el("ul", {class: "shop-basket-rows"}, others.map(option => el("li", {class: "shop-plan-option", "data-plan-option": (option.keys || []).join(",")},

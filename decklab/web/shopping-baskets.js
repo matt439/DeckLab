@@ -143,6 +143,7 @@ function shopBasketPostageWords(postage) {
   if (!postage) return null;
   const flat = shopBasketAud(postage.postage_aud), over = shopBasketAud(postage.free_over_aud);
   const short = shopBasketAud(postage.short_by_aud), least = postage.at_least ? " (some rows have no price)" : "";
+  if (postage.conditional) return `Postage is ${flat} below ${over} and free from ${over}. Some copies have no price, so the charge is unknown.`;
   if (postage.free) return over && postage.postage_aud !== "0.00" ? `Free postage: over ${over}${least}.` : "Posts free.";
   const charged = flat ? `Postage ${flat}` : "Postage not known";
   return short ? `${charged}; free over ${over}, ${short} more${least}.` : `${charged}.`;

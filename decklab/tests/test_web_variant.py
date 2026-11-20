@@ -236,12 +236,29 @@ class VariantScriptTests(unittest.TestCase):
                 self.assertEqual(row["unit"][1], "true")
         self.assertEqual([(r["count"], r["unit"][0]) for r in tables[0]["rows"]], [("1", " deck"), ("2", " decks")])
 
+    def test_shared_rows_keep_their_labels_and_do_not_weight_the_pairing_savings(self):
+        opp, other = self.POPULAR["opponents"]
+        rows = [dict(opp, title="Red", paired={"saved_share": 0.8, "n": 200}),
+                dict(opp, id="gauntlet:forge/precons/red", title="Red", shared_evidence=True,
+                     paired={"saved_share": 0.8, "n": 200}),
+                dict(other, paired={"saved_share": 0.2, "n": 0}),
+                dict(other, title="Dropped", dropped="Unavailable", paired={"saved_share": 1})]
+        data = json.dumps(dict(self.POPULAR, opponents=rows, distinct_matchups=2,
+                               test=dict(self.POPULAR["test"], looks=[], outcome=None, needs_recheck=True)))
+        rendered, how, verdict = _run_page([f"vtRows({data})", f"vtHowItWorks({data})",
+                                            f"vtVerdictPanel({{}}, {data})"], self.NAMES)
+        for label in ("Red (forge/duels/red-burn)", "Red (forge/precons/red)", "200 paired games · shared matchup",
+                      "0 paired games"):
+            self.assertIn(label, rendered)
+        self.assertIn("saved about 50%", how)
+        self.assertIn("Play more", verdict)
+
     def test_the_sheet_offers_popular_decks(self):
         sheet = _function(SCRIPT, "vtOpenTestSheet")
         # Asked once as it opens; offered only when the server says the sample is available, with its size.
         self.assertIn("estimateFor(VT_POPULAR).then(", sheet)
         self.assertIn("if (!current() || !est?.available || !est.opponents) return;", sheet)
-        self.assertIn('popular.ok ? radio("vt-against", VT_POPULAR, `Popular decks (${plural(popular.size, "deck")}, a sample)`',
+        self.assertIn('popular ? radio("vt-against", VT_POPULAR, `Popular decks (${size(popular)}, a sample)`',
                       sheet)
         # Start sends "gauntlet" itself (the server resolves the standard sample); a deck stays {id, version}.
         self.assertIn('const against = named(pick.against) ? { id: pick.against, version: "target" } : pick.against;', sheet)
@@ -325,6 +342,14 @@ class VariantSavedSampleSheetTests(unittest.TestCase):
           closeAllSheets();
           assert(!dialog.isConnected);
           see.fire('click');assert.equal(location.hash,hash);
+        ''')
+
+    def test_sample_with_shared_lists_shows_its_distinct_matchup_count(self):
+        self.run_js(r'''
+          savedEstimate=async()=>estimate(custom,3,{distinct_matchups:2});
+          const {dialog,start}=openTest(); await drain();
+          assert(dialog.textContent.includes('Saved sample from Testing (3 decks, 2 distinct matchups)'));
+          assert(!start.disabled);
         ''')
 
     def test_unavailable_sample_or_estimate_keeps_the_draft_and_blocks_start(self):

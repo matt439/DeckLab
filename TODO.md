@@ -59,7 +59,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E3-S50` | WAITING | could | M | Check Show earlier lists in a browser once several tested lists exist for a deck. The 2026-11-18 scan found none. |
 | `E3-S23` | DECISION | could | M | Temporary exclusion/run/restoration authorised 2026-11-18; browser controls unavailable, live policy untouched. Left: real-browser preview/save, real policy-backed run and restoration. |
-| `FG#4` | DECISION | should | M+pc | All 14 standard budgets filled 2026-11-18; 13 qualified meaningfully. Left: Syr Elenora AI/script qualification (0 commander casts; all 20 matchups nonmeaningful). Preserve deck and script flag. |
+| `FG#4` | DECISION | should | M+pc | Ordinary pilot's cast veto traced. Run the [two-game Syr Elenora / Lu Meng control](decklab/forge-trial/syr-elenora-pilot.md) in an approved idle window, then review both cast observers. |
 | `E11-S28` | DECISION | should | M | Run the user-testing session with User2 from the prepared [checklist](decklab/design/user-testing-user2.md) (confirm his device first), then the follow-up review and stories. |
 | `FG#2` | DECISION | should | L+pc | Agree an idle window for the [side-build speed and winner comparison](decklab/PLAN.md#details). The 2.0.16 replay was complete at the 2026-11-18 review. |
 | `FG#3` | DEFERRED | could | M+pc | More experiment games (AI profiles, team-pump fix, override sets), decided with `FG#2`'s replay; the clean `fiery` test ran 2026-10-21 (C4 does what `fiery` does). |

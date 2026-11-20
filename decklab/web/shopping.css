@@ -534,3 +534,13 @@ table.shop-queue-table .shop-queue-lab-row > td { border-bottom: 0; box-shadow: 
 
 .shop-storage-over, .shop-storage-incomplete { font-size: var(--fs-body); color: var(--ink); font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
 .shop-storage-lines li { margin-block: var(--s-2); overflow-wrap: anywhere; }
+
+.shop-pair-results {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--s-3); margin-top: var(--s-3);
+}
+.shop-pair-card {
+  min-width: 0; overflow-wrap: anywhere; padding: var(--s-3);
+  border: 1px solid var(--border); border-radius: var(--r-panel);
+}
+.shop-pair-card h3 { margin-top: 0; }

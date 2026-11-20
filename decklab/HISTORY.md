@@ -1,5 +1,55 @@
 # Deck Lab: history
 
+## Commander starter picks tested against public decks (2026-11-20, E9-S39)
+
+The starter recognises some specific commander abilities and explains which picks support them. It considers printed power for creature-cast rewards, relevant spell types, cards that can leave the player's graveyard, and creatures or tokens of a rewarded type. It also recognises a blanket artifact upkeep tax when building around artifact casts.
+
+The [public precon study](design/commander-starter-study.md) compares the old and revised drafts for five commanders in two competing pools each. It includes the cases where the revised builder still passed a useful card. Run `python -m scripts.study_commander_starters` with the public caches to repeat the comparison.
+
+## Compare which decks to finish first (2026-11-20, E5-S42)
+
+In Shopping, **Compare deck groups** shows how many copies are here, on the way and still to buy for each alternative. The two groups can overlap. Each gets the same pool and saved shop checks, with each physical copy counted once within a group.
+
+Open **Cards needed** to see what an existing delivery will cover, or **Shop estimate** to see selected printings, item costs and postage. A shop reporting only availability supports one copy per distinct listing. Missing prices, stock or postage can leave the cost to finish unknown. A group can be taken into the usual queue review explicitly.
+
+## A first Commander draft from cards free tonight (2026-11-20, E9-S39)
+
+Choose a commander or pair from **Collection → More → Commanders we could build**,
+then **Build from cards free tonight**. Lock theme cards by name, inspect why each
+card was selected, and check the land sources, role counts and open slots. The
+preview uses the space's free physical copies and the ordinary basic-land supply.
+Cards in built decks, intact products, on loan or still on the way cannot fill a slot.
+
+**Use this draft** applies the list in one undoable edit. Save uses the normal
+deck checks and history. An existing unsaved deck is preserved.
+
+Chromium checks on disposable inventory covered one commander plus 99 cards,
+two commanders plus 98, a short pool, Undo and a single saved revision. The
+same workflow passed at a desktop size and a touch-emulated phone size.
+
+## Comparing shop baskets including postage (2026-11-20, E5-S27, E5-S40)
+
+Shopping can move some copies to a different shop or choose another eligible
+printing when that reaches free postage. In a three-card fixture the lowest
+item prices total A$16 delivered. Paying A$1 more for one card brings the
+delivered basket to A$11. Both options show the shops and copies they use.
+The recommended basket shows its selected listings and copies known printings
+to the shop list.
+
+An unpriced copy can leave a shop's postage unsettled when it might take the
+basket over the threshold. The page identifies that uncertainty. On a complex
+queue, it shows the best basket found and says when it reached the search limit.
+
+## Shared opponents in tests of card changes (2026-11-20, E3-S30, E3-S53)
+
+When two catalogue entries share a Forge matchup, testing a deck change
+schedules the comparison once. Both entries appear in the result. Each group
+counts the shared games once when calculating the change in win rate and its
+range. The estimate and the decision to stop use the same distinct matchups.
+
+For older tests with a potentially double-counted verdict, Deck Lab shows the
+saved games and offers a fresh check. Opening the result starts no games.
+
 ## Popular decks coverage and saved samples (2026-11-20, E3-S30, E3-S52, E3-S53)
 
 Popular decks shows saved opponents and games when the results cannot produce

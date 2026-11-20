@@ -60,7 +60,7 @@ def _unconfirmed(row, entry, preference=shops._UNSET_PREFERENCE):
     return any(_printing_unknown(item) and (item.get("stock") or 0) > 0 for item in listings)
 
 
-def _match(row, adapter, data, preference):
+def _match(row, adapter, data, preference, guaranteed_only=False):
     """One shop's observed status and the available listing tiers the queue row may use."""
     shown = {key: row.get(key) for key in ROW_FIELDS}
     shown["is_token"] = bool(row.get("is_token"))
@@ -84,17 +84,11 @@ def _match(row, adapter, data, preference):
     if matched["status"] != "in_stock":
         return shown, []
     name = str(row.get("name") or "").casefold()
-    if not adapter.counts_stock:
-        price = shop_stock.money(matched.get("price_aud"))
-        listing = {key: matched[key] for key in ("set", "collector_number", "finish", "url")}
-        listing.update(price_aud=matched["price_aud"] if price is not None else None, stock=None,
-                       condition=matched.get("condition"), language=matched.get("language"))
-        key = (adapter.key, name, listing["set"], listing["collector_number"], listing["finish"], price)
-        return shown, [shop_stock.Offer(key, listing, price, None)]
-    return shown, _counted_offers(row, adapter.key, name, entry, matched, preference)
+    return shown, _offers(row, adapter, name, entry, matched, preference, guaranteed_only)
 
 
-def _counted_offers(row, shop, name, entry, matched, preference):
+def _offers(row, adapter, name, entry, matched, preference, guaranteed_only=False):
+    """All eligible printings, retaining each listing's observed availability or counted stock."""
     listings = [(index, item) for index, item in enumerate(entry.get("listings") or ())
                 if isinstance(item, dict) and (item.get("stock") or 0) > 0
                 and shops.listing_preferences.fits(item, preference)]
@@ -106,11 +100,13 @@ def _counted_offers(row, shop, name, entry, matched, preference):
     offers = []
     for index, item in listings:
         price = shop_stock.money(item.get("price"))
-        stock = item["stock"]
+        stock = item["stock"] if adapter.counts_stock else None
         listing = {"set": item.get("set"), "collector_number": item.get("number"), "finish": item.get("finish"),
                    "price_aud": item.get("price") if price is not None else None, "stock": stock,
                    "url": item.get("url"), **shops.listing_preferences.words(item)}
-        offers.append(shop_stock.Offer((shop, name, index), listing, price, stock))
+        # An available listing guarantees one even if the shop does not report its count.
+        capacity = 1 if guaranteed_only and stock is None else stock
+        offers.append(shop_stock.Offer((adapter.key, name, index), listing, price, capacity))
     return sorted(offers, key=lambda offer: (str(offer.listing.get("set") or ""),
                                              str(offer.listing.get("collector_number") or "")))
 
@@ -172,10 +168,11 @@ def basket(adapter, data, ready, add_ons, matched, offers, rules):
     return shown
 
 
-def build(rows, captured, revision=None, rules=None, adapters=None):
+def build(rows, captured, revision=None, rules=None, adapters=None, *, guaranteed_only=False):
     """{"queue_revision", "shops": [basket, ...], "unavailable": [...], "postage_read", "plan"}, or
     None with no snapshot at all. rules: shop_postage.rules() ({key: {postage_aud, free_over_aud}},
-    None when it couldn't be read: every postage unknown)."""
+    None when it couldn't be read: every postage unknown). With guaranteed_only, each available
+    listing without a quantity supplies at most the one copy the retailer confirms."""
     found = shop_prices.by_shop(captured)
     if not found:
         return None
@@ -188,7 +185,7 @@ def build(rows, captured, revision=None, rules=None, adapters=None):
         matches[adapter.key], offers[adapter.key] = {}, {}
         for row in ready + add_ons:
             key = row.get("queue_row")
-            item, candidates = _match(row, adapter, found.get(adapter.key), preference)
+            item, candidates = _match(row, adapter, found.get(adapter.key), preference, guaranteed_only)
             item["add_on"] = row.get("state") != READY
             matches[adapter.key][key], offers[adapter.key][key] = item, candidates
     baskets = [basket(adapter, found.get(adapter.key), ready, add_ons, matches, offers, rules) for adapter in adapters]

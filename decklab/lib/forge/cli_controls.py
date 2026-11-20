@@ -51,7 +51,9 @@ def variant_control(args):
         print(found["control_note"])
         cli_evaluate._print_variant(found)
         for opponent in found.get("opponents") or []:
-            floor = found["noise_floor"].get(opponent.get("card_sha"))
+            if opponent.get("shared_evidence"):
+                continue
+            floor = opponent.get("noise_floor")
             name = opponent.get("title") or opponent.get("id")
             if floor:
                 print(f"  {name}: same-install engine-check saw {floor['different_winners']} winner and "

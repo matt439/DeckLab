@@ -102,10 +102,11 @@ def _canonical(kind, request, run, profile):
     return data
 
 
-def _variant_work(run, opponents, summary, looks, complete):
+def _variant_work(run, opponents, summary, looks, complete, engine):
     """A numeric upper bound, refined from verified saved session work only at submission."""
-    games = max(looks) * len(opponents) * 2
     v = run.forge.variants
+    work = v.opponent_work(run.base, opponents, matchup_key=lambda a, b: run.forge.engine.key(a, b, engine))
+    games = max(looks) * len(work) * 2
     try:
         if summary is not None and v._keys_today(summary, run.base, opponents):
             if complete:
@@ -165,7 +166,7 @@ def _prepare(forge, kind, run, profile, request):
         terminal = (summary or {}).get("outcome") in v.seqstats.PAIRED_VERDICTS or good >= max(looks)
         complete = terminal and (not run.extend or good > previous)
         remaining = 0 if complete else 1     # the original backend, not this receipt, allocates every saved game
-        work = _variant_work(run, opponents, summary, looks, complete)
+        work = _variant_work(run, opponents, summary, looks, complete, engine)
         extras = {"test": run.test, "looks": looks, "prior_look": previous if run.extend else 0}
     if not _visible(refs, profile):
         raise ApiError(404, "That unfinished run isn't available.")

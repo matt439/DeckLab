@@ -8,7 +8,8 @@ api.forge_runs.COORD_JOBS (key "variant:<test id>") through forge.variants.run_t
                         GET /api/variant/estimate?id=&version=&against=<deck id, "field", "gauntlet"
                         or "gauntlet:<sample id>">[&av=]:
                         {"quick": [low, high], "ahead": [low, high]} minutes (None while there's no
-                        estimator), with "max" (the games a deck each plays to at most), "opponents",
+                        estimator), with "max" (the games a deck each plays to at most), "opponents"
+                        (selected entries), "distinct_matchups" (pairs needing separate work),
                         "available" and "problem" (the field when it can't be tested against) and
                         "default" (the mode the sheet offers first)
     variant_tests(deck_id, version)
@@ -291,7 +292,7 @@ def _view(forge, test, seen=None):
         error = snap["error"]
         if not found["test"].get("looks"):
             status = "error"
-    elif not found["test"].get("looks") and found["test"].get("outcome") is None:
+    elif not found["test"].get("looks") and found["test"].get("outcome") is None and not found["test"].get("needs_recheck"):
         status = "none"
     out = dict(_current_test(found), status=status, error=error,
                job=_job_json(job.fn, snap, found) if snap is not None and snap["status"] in WAITING else None)
@@ -377,24 +378,29 @@ def variant_estimate(deck_id, version="target", against=None, against_version=No
             results_dir = _vg(forge).results_dir()
     else:
         opponents, problem = _opponents(forge, base, against_)
+    work = forge.variants.opponent_work(base, opponents or [], matchup_key=forge.matchup_key)
     field_test = against_ == "field"
     looks = forge.variants._ahead_looks(field_test)
     out = {"against": (against if popular else "field") if field_test else against_["id"],
            "available": opponents is not None,
-           "problem": problem, "opponents": len(opponents or []), "quick": None, "ahead": None,
+           "problem": problem, "opponents": len(opponents or []), "distinct_matchups": len(work),
+           "quick": None, "ahead": None,
            "max": {"quick": forge.variants.QUICK_GAMES, "ahead": looks[-1]},
            "default": "quick" if base["kind"] == "commander" else "ahead"}
     if not opponents:
         return out
 
+    saved_games = []
+    for key, entries in work:
+        try:
+            saved = forge.load(key, results_dir) if key else None
+            have = len(forge.views._games(saved or {}))
+        except forge.ForgeError:
+            have = 0
+        saved_games.append((entries[0], have))
+
     def minutes(target):
-        pairs = []
-        for o in opponents:
-            try:
-                have = len(forge.views._games(forge.load(forge.matchup_key(base, o), results_dir) or {}))
-            except forge.ForgeError:
-                have = 0
-            pairs.append((base, o, max(0, target - have) + target))
+        pairs = [(base, opponent, max(0, target - have) + target) for opponent, have in saved_games]
         try:
             return forge.estimate.minutes(pairs)
         except Exception as e:      # an estimate is extra: the sheet works without it
@@ -449,6 +455,7 @@ def _test_item(forge, summary, today, live):
             else (against or {}).get("title")
             or (against or {}).get("id"),
             "verdict": summary.get("outcome"), "words": forge.variants.verdict_words(summary) if not live else None,
+            "needs_recheck": bool(summary.get("needs_recheck")),
             "games_per_opponent": looks[-1]["games_per_opponent"] if looks else 0,
             "delta": looks[-1].get("delta") if looks else None,
             "low": looks[-1].get("low") if looks else None, "high": looks[-1].get("high") if looks else None,

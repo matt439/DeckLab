@@ -84,6 +84,88 @@ class ShoppingCombinedTests(unittest.TestCase):
           assert(!section());
         """)
 
+    def test_compare_groups_validates_choices_shows_partial_cost_and_reviews_only_one_group(self):
+        self.run_combined_js("""
+          const price = {covered: 1, wanted: 2, known_aud: "3.50", delivered_aud: null,
+            shops: [{shop: "Test Shop", cards_aud: "3.50", postage_aud: null, rows: [{name: "Opt", copies: 1,
+              printings: [{set: "TST", collector_number: "42", finish: "etched", copies: 1, price_aud: "3.50"}]}]}],
+            weighed: false, search_ran: true, search_complete: false, postage_unknown: ["Test Shop"],
+            uncovered: [{name: "Opt", copies: 1, shops: [{shop: "Test Shop", status: "short"}]}],
+            snapshots: [{shop: "Test Shop", read: true, fetched_at: "2026-11-01T10:00:00Z"}]};
+          const left = {ready: true, decks: decks.slice(0, 2), today_missing: 2, incoming: 2, buy: 0,
+            cards: [{name: "Opt", incoming: 2, buy: 0, on_the_way: [{source: "Delivery A", copies: 2}]}]};
+          const right = {ready: true, decks: [decks[0], decks[2]], today_missing: 2, incoming: 0, buy: 2, pricing: price};
+          const urls = [], reviews = [];
+          api = async url => {urls.push(url); return {left, right};};
+          openQueueCombinedSheet = chosen => reviews.push(chosen.map(deck => deck.id));
+          drawShopping(data({decks_missing: []}));
+          main.querySelector(".shop-compare-choose").click();
+          const boxes = sheet().querySelectorAll("fieldset").map(group => group.querySelectorAll("input"));
+          const toggle = box => {box.checked = !box.checked; box.fire("change");};
+          toggle(boxes[0][0]); toggle(boxes[0][1]);
+          sheet().querySelectorAll("button").find(b => b.textContent === "Copy first group to second").click();
+          assert.equal(primary().getAttribute("aria-disabled"), "true");
+          assert(sheet().textContent.includes("Choose two different groups."));
+          primary().click();
+          same(urls, []);
+          toggle(boxes[1][1]); toggle(boxes[1][2]);
+          primary().click();
+          await null; await null;
+          same(urls, ["/api/shopping/compare?left=" + encodeURIComponent("casual/alpha,casual/beta")
+            + "&right=" + encodeURIComponent("casual/alpha,commander/gamma")]);
+          const cards = section().querySelectorAll(".shop-pair-card");
+          assert.equal(cards.length, 2);
+          assert(section().textContent.includes("Alpha + Beta only needs cards already on the way."));
+          assert(cards[0].textContent.includes("Delivery A"));
+          assert(cards[0].textContent.includes("2 on the way"));
+          assert(cards[1].textContent.includes("Cost to finish unknown"));
+          assert(cards[1].textContent.includes("1 of 2 copies covered"));
+          assert(cards[1].textContent.includes("A$3.50"));
+          assert(cards[1].textContent.includes("TST 42 etched"));
+          assert(cards[1].textContent.includes("Queue review requests nonfoil copies."));
+          assert(cards[1].textContent.includes("Postage unknown at Test Shop"));
+          assert(cards[1].textContent.includes("Another basket could cost less."));
+          assert(cards[1].textContent.includes("Opt"));
+          assert.equal(cards[1].querySelector("time").getAttribute("datetime"), "2026-11-01T10:00:00Z");
+          same(reviews, []);
+          assert(!cards[0].querySelector("button"));
+          cards[1].querySelector("button").click();
+          same(reviews, [["casual/alpha", "commander/gamma"]]);
+        """)
+
+    def test_compare_summary_requires_comparable_delivered_quotes(self):
+        self.run_combined_js("""
+          const pricing = {delivered_aud: "12.30", weighed: true, search_complete: true, snapshots: [{read: true}]};
+          const left = {ready: true, decks: decks.slice(0, 2), today_missing: 1, buy: 1, pricing};
+          const right = {...left, decks: [decks[0], decks[2]], pricing: {...pricing, delivered_aud: "12.50"}};
+          const summary = extra => shopCompareSummary([left, {...right, ...extra}]);
+          assert(summary({}).includes("Alpha + Beta costs A$0.20 less"));
+          for (const patch of [{weighed: false}, {search_complete: false}, {delivered_aud: null},
+            {partial_shops: ["Test Shop"]}, {snapshots: [{read: true, unchecked: 1}]}]) {
+            assert(summary({pricing: {...right.pricing, ...patch}}).includes("do not establish which costs less"));
+          }
+          assert(summary({buy: 0, today_missing: 0}).includes("Alpha + Gamma can be built now."));
+          assert(summary({ready: false}).includes("could not be counted"));
+        """)
+
+    def test_late_comparison_cannot_replace_retry_or_redraw_after_navigation(self):
+        self.run_combined_js("""
+          const view = drawShopping(data()), ids = [decks.slice(0, 2).map(d => d.id), [decks[0].id, decks[2].id]];
+          const pending = [];
+          api = () => new Promise((resolve, reject) => pending.push({resolve, reject}));
+          const first = shopCompareLoad(view, ids), second = shopCompareLoad(view, ids.slice().reverse());
+          pending[1].reject(new ApiError(503, "Unavailable")); await second;
+          pending[0].resolve({}); await first;
+          assert(section().textContent.includes("Unavailable"));
+          section().querySelector(".shop-compare-choose").click();
+          same(sheet().querySelectorAll("fieldset")[0].querySelectorAll("input").filter(b => b.checked).map(b => b.value), ids[1]);
+          const retry = shopCompareLoad(view, ids);
+          routeToken++;
+          clear(main).append(el("p", {text: "Another screen"}));
+          pending[2].resolve({}); await retry;
+          assert.equal(main.textContent, "Another screen");
+        """)
+
     def test_unready_and_failed_answers_are_explicit(self):
         self.run_combined_js("""
           api = async () => ({...answer, ready: false, rows: [],

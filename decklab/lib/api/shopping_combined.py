@@ -103,7 +103,10 @@ def _canonical(name):
 
 
 def _combined(ids):
-    summaries = _summaries(ids)
+    return _count(_summaries(ids), pool.load_pool)
+
+
+def _count(summaries, load_supply, *, include_incoming=False):
     chosen = [_deck(summary) for summary in summaries]
     errors, lists = [], {}
     for summary in summaries:
@@ -122,7 +125,7 @@ def _combined(ids):
     if errors:
         return _unavailable("Every chosen deck needs a readable Planned list to be counted together.", chosen, errors)
     try:
-        supply = pool.load_pool()
+        supply = load_supply()
     except inventory.Unavailable:
         raise
     except Exception as error:  # noqa: BLE001 - the pool's read keeps Shopping's error boundary
@@ -155,14 +158,14 @@ def _combined(ids):
     sees = guard.deck_reader()
     rows = []
     for row in together["rows"]:
-        if row["missing"] <= 0:
+        waiting = [{"source": source, "copies": copies} for source, copies in pool.row_labels(row)["on_the_way"]]
+        if row["missing"] <= 0 and not (include_incoming and waiting):
             continue
         wanting = [{"id": deck["id"], "title": deck["title"], "need": alone[deck["id"]][row["name"]]["need"],
                     "missing_alone": alone[deck["id"]][row["name"]]["missing"]}
                    for deck in chosen if row["name"] in alone[deck["id"]]]
         held = [(holder, holder.cards[row["name"]]) for holder in supply.in_use
                 if holder.id not in own and holder.cards.get(row["name"])]
-        waiting = [{"source": source, "copies": copies} for source, copies in pool.row_labels(row)["on_the_way"]]
         rows.append({
             "name": _canonical(row["name"]),
             "need": row["need"],
@@ -175,10 +178,12 @@ def _combined(ids):
             "card": None,
         })
     rows.sort(key=lambda r: (-len(r["decks"]), -(r["missing"] - r["missing_alone"]), -r["missing"], r["name"].casefold()))
-    totals = {"cards": len(rows), "copies": sum(r["missing"] for r in rows),
+    totals = {"cards": sum(r["missing"] > 0 for r in rows), "copies": sum(r["missing"] for r in rows),
               "copies_alone": sum(deck.get("missing_alone", 0) for deck in chosen),
               # every copy on the way the chosen decks count on, also for cards they then have enough of
               "on_the_way": sum(copies for r in together["rows"] for _, copies in pool.row_labels(r)["on_the_way"])}
+    if include_incoming:
+        totals["required"] = sum(row["need"] for row in together["rows"])
     return {"ready": True, "decks": chosen, "rows": rows, "errors": [], "warnings": [], "totals": totals}
 
 

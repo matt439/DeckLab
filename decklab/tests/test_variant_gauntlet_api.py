@@ -107,6 +107,21 @@ class EstimateTests(GauntletApiCase):
         answer = api.variant_estimate(GREEN_ID, "target", AGAINST)
         self.assertEqual((answer["against"], answer["available"], answer["opponents"]), (AGAINST, True, 2))
 
+    def test_two_catalogue_labels_for_one_matchup_cost_the_same_work(self):
+        with mock.patch.object(real_forge.estimate, "minutes",
+                               side_effect=lambda pairs: (0, sum(n for _, _, n in pairs))):
+            original = api.variant_estimate(GREEN_ID, "target", AGAINST)
+            red = CATALOGUE["decks"][0]
+            alias = dict(red, id="gauntlet:forge/precons/another-red", title="Red Reprint")
+            self.catalogue = dict(CATALOGUE, decks=[*CATALOGUE["decks"], alias])
+            self.samples[SAMPLE["id"]] = dict(SAMPLE, decks=[*SAMPLE["decks"], alias["id"]])
+            with mock.patch.object(real_forge, "load", wraps=real_forge.load) as reads:
+                duplicated = api.variant_estimate(GREEN_ID, "target", AGAINST)
+        self.assertEqual((duplicated["opponents"], duplicated["distinct_matchups"]), (3, 2))
+        self.assertEqual(reads.call_count, 2)
+        for key in ("quick", "ahead", "max", "default", "distinct_matchups"):
+            self.assertEqual(duplicated[key], original[key])
+
     def test_no_catalogue_or_no_sample(self):
         self.catalogue = None
         answer = api.variant_estimate(GREEN_ID, "target", "gauntlet")

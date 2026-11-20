@@ -58,7 +58,7 @@ import time
 
 from decklab.lib import decks
 
-from . import common, deck_identity, engine, field, lifecycle, lists, runner, saved, seqstats, views
+from . import common, deck_identity, engine, field, lifecycle, lists, runner, saved, seqstats, variant_evidence, views
 from . import pool as pools
 from . import variants_gauntlet as gauntlet_tests
 from .common import STOPS, ForgeError, forge_name
@@ -83,7 +83,7 @@ NOT_A_TEST = "There's no test of a change with that id."
 QUICK_GAMES = 200               # a quick look's games a deck
 PAIRED_VERSION = 1              # a paired result's "paired_version"
 TEST_VERSION = 2                # space-scoped API field tests; paired keys are unchanged
-SUMMARY_VERSION = 1             # a summary's "version"
+SUMMARY_VERSION = 2             # looks count each pair of saved game files once
 TESTS_DIR = "tests"             # <results>/paired/tests/<test id>.json
 TEST_ID_RE = re.compile(r"[0-9a-f]{64}")
 INFLIGHT_DEFAULT = 4            # config forge_field_inflight's default
@@ -276,11 +276,14 @@ def load_summary(test, results_dir=None):
         return None
     if not isinstance(data, dict) or data.get("test") != test or not isinstance(data.get("opponents"), list):
         return None
-    return data
+    return variant_evidence.read_summary(data)
 
 
 @lifecycle.writing("summary")
 def _write_summary(summary, results_dir):
+    summary["version"] = SUMMARY_VERSION
+    if summary.get("looks"):
+        summary.pop("needs_recheck", None)
     summary["updated"] = common._now()
     path = _tests_dir(results_dir) / f"{summary['test']}.json"
     try:
@@ -380,6 +383,30 @@ def _variant_index(variant, opponent):
 
 def _base_key(base_entry, opponent):
     return engine.matchup_key(base_entry, opponent)
+
+
+def opponent_work(base_entry, opponents, *, matchup_key=None):
+    """Group sources of one fixed test by the matchup the runner would actually play.
+
+    The base and changed list are fixed, so equal base matchup keys also share the paired
+    run. Identical cards played by different pilots can still have different keys. When
+    no key is known, leave the source on its own for estimation or a normal run attempt.
+    """
+    key_for = matchup_key or _base_key
+    groups, known = [], {}
+    for opponent in opponents:
+        try:
+            key = key_for(base_entry, opponent) or None
+        except ForgeError:
+            key = None
+        if key and key in known:
+            known[key].append(opponent)
+        else:
+            entries = [opponent]
+            if key:
+                known[key] = entries
+            groups.append((key, entries))
+    return groups
 
 
 def _deck_order(eng):
@@ -522,7 +549,8 @@ def _play_pair(state, record, opponent, target):
     nu = _variant_index(variant, opponent)
     vkey = paired_key(record["base_key"], beta, variant["card_sha"], variant["dck_sha"])
     _check_key(record, "paired_key", vkey)
-    record["base_side"], record["variant_side"] = beta, nu
+    _check_key(record, "base_side", beta)
+    _check_key(record, "variant_side", nu)
     flip = paired_flip(base["seeds"]["flip"], beta, nu)
     paired = load_paired(vkey, results_dir)
     held = {g["g"] for g in _games(paired)}
@@ -561,9 +589,33 @@ def _run_kw(kw):
 
 def _opponent_record(summary, opponent):
     """The original captured record of a current or renamed opponent, without rewriting it."""
-    return next((record for record in summary["opponents"]
-                 if record["card_sha"] == opponent["card_sha"] and
-                 deck_identity.same(record["id"], opponent["id"])), None)
+    records = [record for record in summary["opponents"]
+               if record["card_sha"] == opponent["card_sha"] and record.get("version") == opponent.get("version")]
+    for record in records:
+        if record["id"] == opponent["id"]:
+            return record
+    return next((record for record in records if deck_identity.same(record["id"], opponent["id"])), None)
+
+
+def _share_checkpoint(source, destination):
+    for field_name in ("base_key", "paired_key", "base_side", "variant_side"):
+        if source.get(field_name) is not None:
+            _check_key(destination, field_name, source[field_name])
+
+
+def _play_shared(state, target, key, opponent, records):
+    """One runner for the shared results, with the same checkpoints on every captured source."""
+    first = records[0]
+    if key is not None:
+        _check_key(first, "base_key", key)
+    for record in records[1:]:
+        _share_checkpoint(record, first)
+    try:
+        _play_pair(state, first, opponent, target)
+    finally:
+        # A stop can leave a partially filled paired file. All its sources resume those games.
+        for record in records[1:]:
+            _share_checkpoint(first, record)
 
 
 def _stage(state, summary, opponents, target):
@@ -573,10 +625,12 @@ def _stage(state, summary, opponents, target):
     games it finished), then raises again. A pair run failing while the test stops (a Ctrl+C's
     Java children dying with it) is the stop, not a drop, and drops made in a stage that ends
     the test are undone, so a resumed test plays those opponents again."""
-    todo = [(o, record) for o in opponents if (record := _opponent_record(summary, o)) is not None
-            and record.get("dropped") is None]
+    active = [o for o in opponents if not _dropped(summary, o)]
+    groups = [(None, [o]) for o in active]
+    if len({o["card_sha"] for o in active}) < len(active):
+        groups = opponent_work(state["base"], active)
+    todo = [(key, entries[0], [_opponent_record(summary, o) for o in entries], 0) for key, entries in groups]
     queue_ = list(todo)
-    tries = {}                  # record id -> BUSY answers so far
     dropped_now = []
     lock = threading.Lock()
     failure = []                # the first error that ends the test (a stop, an engine change, anything else)
@@ -597,10 +651,10 @@ def _stage(state, summary, opponents, target):
             with lock:
                 if failure or not queue_:
                     return
-                opponent, record = queue_.pop(0)
+                key, opponent, records, attempts = queue_.pop(0)
             wait = None
             try:
-                _play_pair(state, record, opponent, target)
+                _play_shared(state, target, key, opponent, records)
             except ForgeError as e:
                 text = str(e)
                 if stopping.is_set() or text == ENGINE_CHANGED or text == NO_DECK_ORDER:
@@ -609,12 +663,12 @@ def _stage(state, summary, opponents, target):
                     stopping.set()
                     return
                 with lock:
-                    if text == runner.BUSY and tries.get(record["id"], 0) < len(BUSY_WAITS_S):
-                        wait = BUSY_WAITS_S[tries.get(record["id"], 0)]
-                        tries[record["id"]] = tries.get(record["id"], 0) + 1
+                    if text == runner.BUSY and attempts < len(BUSY_WAITS_S):
+                        wait = BUSY_WAITS_S[attempts]
                     else:
-                        record["dropped"] = f"couldn't be played: {text}"
-                        dropped_now.append(record)
+                        for record in records:
+                            record["dropped"] = f"couldn't be played: {text}"
+                        dropped_now.extend(records)
             except BaseException as e:      # a stop, or anything else: the test ends
                 with lock:
                     failure.append(e)
@@ -631,7 +685,7 @@ def _stage(state, summary, opponents, target):
                 stopping.set()
                 return
             with lock:
-                queue_.append((opponent, record))
+                queue_.append((key, opponent, records, attempts + 1))
 
     threads = [threading.Thread(target=work, name=f"variant-{i}", daemon=True)
                for i in range(min(state["inflight"], len(todo)) or 1)]
@@ -652,23 +706,37 @@ def _stage(state, summary, opponents, target):
         raise failure[0]        # the cause: the other pair runs only stopped because of it
 
 
+def _observation(pair, results_dir, target=None):
+    """Read one comparison in its recorded seats. At a look, use the first target base numbers."""
+    base_key, paired_key = pair
+    paired = load_paired(paired_key, results_dir)
+    if not paired or paired.get("kind") != "paired" or paired["paired"]["base_key"] != base_key:
+        return 0, None
+    paired_games = _games(paired)
+    count = len(paired_games)
+    base = saved.load(base_key, results_dir)
+    if base is None:
+        return count, None
+    base_games = _games(base)
+    if target is not None:
+        base_games = sorted(base_games, key=lambda game: game["g"])[:target]
+        numbers = {game["g"] for game in base_games}
+        paired_games = [game for game in paired_games if game["g"] in numbers]
+    seats = paired["paired"]
+    return count, seqstats.paired_diff(base_games, paired_games, seats["base_side"], seats["variant_side"])
+
+
 def _look_numbers(state, summary, opponents, target):
-    """The paired differences at target games a deck: {card_sha|id: paired_diff()} of every
-    remaining opponent, and the field's (paired_field) or None."""
-    diffs = {}
-    results_dir = state["kw"]["results_dir"]
-    for o in opponents:
-        record = _opponent_record(summary, o)
-        if record.get("dropped") is not None or record.get("paired_key") is None:
+    """One difference per independent pair of saved arms among the remaining opponents."""
+    observations = {}
+    for opponent in opponents:
+        record = _opponent_record(summary, opponent)
+        if record is None or record.get("dropped") is not None:
             continue
-        base = saved.load(record["base_key"], results_dir)
-        paired = load_paired(record["paired_key"], results_dir)
-        numbers = set(_first_numbers(base, target))
-        base_games = [g for g in _games(base) if g["g"] in numbers]
-        paired_games = [g for g in _games(paired) if g["g"] in numbers]
-        diffs[record["card_sha"] + "|" + record["id"]] = seqstats.paired_diff(
-            base_games, paired_games, record["base_side"], record["variant_side"])
-    return diffs
+        pair = variant_evidence.key(record)
+        if pair is not None and pair not in observations:
+            _, observations[pair] = _observation(pair, state["kw"]["results_dir"], target)
+    return {pair: diff for pair, diff in observations.items() if diff is not None}
 
 
 def _judge(summary, diffs, target, looks, *, stopped=False, interim=False):
@@ -754,24 +822,26 @@ def _claimed_test(base_entry, variant_cards, against, mode="ahead", *, by, progr
     limited = sorted(opponents) if against == "field" and opponents else None
     mode = _mode_value(mode)
     if extend is not None:
-        tid = extend
-        summary = load_summary(extend, results_dir)
-        if summary is None:
+        if not isinstance(extend, str) or not TEST_ID_RE.fullmatch(extend):
             raise ForgeError(NOT_A_TEST)
-        tested = (summary["base"]["card_sha"], summary["variant"]["card_sha"])
-        if tested != (base_entry["card_sha"], variant["card_sha"]):
-            raise ForgeError(LIST_CHANGED)
-        limited = summary.get("limited")
+        tid = extend
     else:
         tid = test_id(base_entry, variant, against, mode, limited,
                       field_space=(field_options or {}).get("space"))
-        summary = load_summary(tid, results_dir)
     folder = _tests_dir(results_dir)
     try:
         lock = runner._claim(folder, tid)
     except ForgeError as e:
         raise ForgeError(BUSY if str(e) == runner.BUSY else str(e)) from None
     try:
+        summary = load_summary(tid, results_dir)
+        if extend is not None:
+            if summary is None:
+                raise ForgeError(NOT_A_TEST)
+            tested = (summary["base"]["card_sha"], summary["variant"]["card_sha"])
+            if tested != (base_entry["card_sha"], variant["card_sha"]):
+                raise ForgeError(LIST_CHANGED)
+            limited = summary.get("limited")
         # Every run of the test (base top-ups and pair runs, up to inflight at once) plays in one
         # pool session, as the field's runs do: never a cold pool of each run's own.
         with pools.session(local=local) if pool is None else contextlib.nullcontext(pool) as session:
@@ -799,6 +869,9 @@ def _run_test(tid, summary, base_entry, variant, against, field_test, fmt, mode,
         opponent_entries = [o for o in opponent_entries if _opponent_record(summary, o) is not None]
         if not opponent_entries:
             raise ForgeError(NO_OPPONENTS)
+        if summary.get("needs_recheck") and not variant_evidence.recheck_covers(
+                summary, (_opponent_record(summary, o) for o in opponent_entries)):
+            raise ForgeError("The saved test's opponents have changed. Start a new test with the current opponents.")
         if extend is None and _final(summary):
             return summary      # already played to a verdict
         if extend is not None and not _keys_today(summary, base_entry, opponent_entries):
@@ -876,16 +949,20 @@ def _dropped(summary, opponent):
 
 
 def _stopped_look(state, summary, opponents, looks):
-    """A look at the games every remaining opponent's arms have in common when the test stopped
-    between looks (judged at HP_INTERIM: "stopped")."""
+    """Judge the completed prefix of base game numbers shared by all active pairs at Stop."""
     try:
-        remaining = [o for o in opponents if not _dropped(summary, o)]
-        counts = []
-        for o in remaining:
-            record = _opponent_record(summary, o)
-            paired = load_paired(record["paired_key"], state["kw"]["results_dir"]) if record.get("paired_key") else None
-            counts.append(len(_games(paired)))
-        target = min(counts) if counts else 0
+        remaining = [opponent for opponent in opponents if not _dropped(summary, opponent)]
+        pairs = {variant_evidence.key(_opponent_record(summary, opponent)) for opponent in remaining}
+        if not pairs or None in pairs:
+            return
+        completed = []
+        results_dir = state["kw"]["results_dir"]
+        for base_key, paired_key in pairs:
+            base_games = sorted(game["g"] for game in _games(saved.load(base_key, results_dir)))
+            paired_numbers = {game["g"] for game in _games(load_paired(paired_key, results_dir))}
+            prefix = next((i for i, number in enumerate(base_games) if number not in paired_numbers), len(base_games))
+            completed.append(prefix)
+        target = min(completed)
         if target <= _games_per_opponent(summary):
             return
         diffs = _look_numbers(state, summary, remaining, target)
@@ -897,16 +974,21 @@ def _stopped_look(state, summary, opponents, looks):
 def _planned(base_entry, variant, opponents, summary, last, results_dir):
     """The new games of the plan to its last look (the worst case: base top-ups included)."""
     total = 0
-    for o in opponents:
-        if _dropped(summary, o):
-            continue
-        record = _opponent_record(summary, o)
-        try:
-            base = saved.load(record.get("base_key") or _base_key(base_entry, o), results_dir)
-        except ForgeError:
-            base = None
+    active = [o for o in opponents if not _dropped(summary, o)]
+    for key, entries in opponent_work(base_entry, active):
+        record = _opponent_record(summary, entries[0])
+        base_key = key or record.get("base_key")
+        base = saved.load(base_key, results_dir) if base_key else None
         base_n = len(_games(base))
-        paired = load_paired(record["paired_key"], results_dir) if record.get("paired_key") else None
+        paired = None
+        if base:
+            try:
+                side = _index_of(base, base_entry["card_sha"])
+            except ForgeError:
+                pass    # the pair's own run handles an incompatible saved base
+            else:
+                stored_key = paired_key(base_key, side, variant["card_sha"], variant["dck_sha"])
+                paired = load_paired(stored_key, results_dir)
         wanted = set(_first_numbers(base, last))
         held = sum(1 for g in _games(paired) if g["g"] in wanted)
         total += max(0, last - base_n) + max(0, last - held)
@@ -931,6 +1013,8 @@ def verdict_words(summary, titles=None):
     games played so far"; None before any look. titles: {"against": the one opponent's title}."""
     outcome = summary.get("outcome")
     looks = summary.get("looks") or []
+    if summary.get("needs_recheck"):
+        return "Some entries in this older test share games. Run the test again to check its verdict."
     if outcome == "stopped":
         return "Stopped early: the result shows the games played so far"
     if outcome == "error" and not looks:
@@ -979,8 +1063,10 @@ def visible_summary(summary, visible=None):
     limited = summary.get("limited")
     if limited is not None:
         limited = [name for name in limited if visible(field._split_name(name)[0])]
-    return dict(summary, opponents=rows, limited=limited, looks=[], outcome=None, decision=None,
-                games_per_opponent=0, starter_mismatch={"games": 0, "of": 0})
+    result = dict(summary, opponents=rows, limited=limited, looks=[], outcome=None, decision=None,
+                  games_per_opponent=0, starter_mismatch={"games": 0, "of": 0})
+    result.pop("needs_recheck", None)
+    return result
 
 
 def view(test, results_dir=None, *, visible=None):
@@ -993,24 +1079,27 @@ def view(test, results_dir=None, *, visible=None):
     if summary is None:
         return None
     summary = visible_summary(summary, visible)
-    rows, diffs, by_group = [], [], []
+    rows, by_group, diffs = [], [], []
+    distinct_matchups = 0
+    observations, active_pairs = {}, set()
     for record in summary["opponents"]:
-        paired = diff = None
-        base = saved.load(record["base_key"], results_dir) if record.get("base_key") else None
-        if record.get("paired_key"):
-            paired = load_paired(record["paired_key"], results_dir)
-        if base is not None and paired is not None and record.get("base_side") is not None:
-            try:
-                diff = seqstats.paired_diff(_games(base), _games(paired), record["base_side"], record["variant_side"])
-            except NotImplementedError:
-                diff = None
-        if diff is not None and record.get("dropped") is None:
-            diffs.append(diff)
+        pair = variant_evidence.key(record)
+        if pair is not None and pair not in observations:
+            observations[pair] = _observation(pair, results_dir)
+        games, diff = observations.get(pair, (0, None))
+        shared = False
         if record.get("dropped") is None:
             by_group.append((record, diff))
+            if pair is not None:
+                shared = pair in active_pairs
+                active_pairs.add(pair)
+            if not shared:
+                distinct_matchups += 1
+                if diff is not None:
+                    diffs.append(diff)
         rows.append({**{k: record.get(k) for k in ("id", "version", "title", "card_sha", "base_key", "paired_key",
                                                     "dropped")},
-                     "games": len(_games(paired)), "paired": _paired_json(diff)})
+                     "games": games, "paired": _paired_json(diff), "shared_evidence": shared})
     field_numbers = None
     if isinstance(summary.get("against"), str) and diffs:
         try:
@@ -1021,12 +1110,13 @@ def view(test, results_dir=None, *, visible=None):
             field_numbers = {"delta": found.get("delta"), "low": found.get("low"), "high": found.get("high")}
     outcome = summary.get("outcome")
     out = {"test": summary, "opponents": rows, "field": field_numbers, "margin": summary.get("margin"),
-           "verdict": outcome if outcome in OUTCOMES else None, "words": verdict_words(summary)}
+           "verdict": outcome if outcome in OUTCOMES else None, "words": verdict_words(summary),
+           "distinct_matchups": distinct_matchups}
     if gauntlet_tests.is_gauntlet(summary.get("against")):
         # E3-S30: the difference by group, and the caveat that it covers these opponents only.
         out["sample"] = gauntlet_tests.sample_of(summary["against"])
         out["groups"] = gauntlet_tests.groups(by_group)
-        out["note"] = gauntlet_tests.note(len(by_group))
+        out["note"] = gauntlet_tests.note(distinct_matchups)
     return out
 
 

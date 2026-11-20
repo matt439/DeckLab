@@ -21,7 +21,7 @@ range covers those sampled opponents only.
     groups(rows)            the paired difference by group over [(record, paired_diff())]
     note(m)                 the caveat: these m sampled opponents only
 """
-from . import seqstats
+from . import seqstats, variant_evidence
 from .common import ForgeError
 
 PREFIX = "gauntlet:"
@@ -100,6 +100,7 @@ def tag(summary):
 
 def _row(key, label, members, extra=None):
     """One group's paired difference: {"key", "label", "opponents", "delta", "low", "high", "note"}."""
+    members = list(variant_evidence.distinct(members))
     diffs = [d for _, d in members if d is not None]
     try:
         found = seqstats.paired_field(diffs) if diffs else None
@@ -156,4 +157,6 @@ def groups(rows):
 
 
 def note(m):
+    if m == 1:
+        return "Each difference covers this one sampled opponent only."
     return CAVEAT.format(m=m)

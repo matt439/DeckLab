@@ -19,7 +19,7 @@ shops. When postage cannot be compared, prefer fewer shops. "by_price" uses ever
 from decimal import Decimal
 from itertools import combinations
 
-from . import shop_stock
+from . import shop_delivery, shop_stock
 from .shop_stock import CENT, money, text
 
 MAX_SHOPS = 8                   # 255 combinations at most
@@ -36,11 +36,12 @@ def postage(rules, subtotal, unpriced=0):
     flat, over = money(rules.get("postage_aud")), money(rules.get("free_over_aud"))
     subtotal = subtotal if subtotal is not None else Decimal(0)
     free = (over is not None and subtotal >= over) or flat == 0
-    charged = Decimal(0) if free else flat
+    conditional = bool(unpriced and not free and over is not None and flat)
+    charged = Decimal(0) if free else None if conditional else flat
     short = over - subtotal if over is not None and not free else None
     return {"postage_aud": text(flat), "free_over_aud": text(over), "charged_aud": text(charged),
             "free": bool(free), "short_by_aud": text(short), "at_least": bool(unpriced),
-            "known": charged is not None}
+            "known": charged is not None, "conditional": conditional}
 
 
 def reach(add_ons, short_by):
@@ -113,8 +114,7 @@ def _shop(key, items, rules, reserved, baskets, matches, add_ons, offers):
             "cards": sum(item["copies"] for item in items), "postage": rule}
 
 
-def _plan(chosen, rows, add_ons, baskets, rules, matches, offers, facts):
-    assigned = shop_stock.allocate(rows, chosen, offers)
+def _plan(chosen, assigned, rows, add_ons, baskets, rules, matches, offers, facts):
     reserved = shop_stock.used(assigned)
     bought = {key: [] for key in chosen}
     for row in rows:
@@ -129,7 +129,9 @@ def _plan(chosen, rows, add_ons, baskets, rules, matches, offers, facts):
     keys = [shop["key"] for shop in shops]
     cards = sum((money(shop["subtotal_aud"]) for shop in shops), Decimal(0))
     postage_total = sum((money(shop["postage"]["charged_aud"]) or 0 for shop in shops), Decimal(0))
-    return {"shops": shops, "keys": keys, "cards": sum(shop["cards"] for shop in shops),
+    exact = sum(sum(count for _, count in assigned.get(row["queue_row"], ())) for row in rows
+                if row.get("printing") == "exact")
+    return {"shops": shops, "keys": keys, "cards": sum(shop["cards"] for shop in shops), "exact_copies": exact,
             "uncovered": _uncovered(rows, assigned, keys, facts, offers, reserved),
             "cards_aud": text(cards), "unpriced": sum(shop["unpriced"] for shop in shops),
             "unpriced_copies": sum(shop["unpriced_copies"] for shop in shops), "postage_aud": text(postage_total),
@@ -149,24 +151,47 @@ def plan(baskets, rules, rows, add_ons, matches, offers, facts):
         return None
     rules = rules or {}
     by_key = {basket["key"]: basket for basket in baskets}
-    order = [basket["key"] for basket in baskets if basket.get("rows")][:MAX_SHOPS]
-    by_price = _plan(order, rows, add_ons, by_key, rules, matches, offers, facts)
+    order = [basket["key"] for basket in baskets if basket.get("rows")]
+    details = (rows, add_ons, by_key, rules, matches, offers, facts)
+    subsets = [tuple(order)]
+    subset_shops = order[:MAX_SHOPS]
+    subsets.extend(chosen for size in range(1, min(len(order), MAX_SHOPS + 1))
+                   for chosen in combinations(subset_shops, size))
+    baselines = []
+    for chosen in subsets:
+        assigned = shop_stock.allocate(rows, chosen, offers)
+        baselines.append((chosen, assigned, _plan(chosen, assigned, *details)))
+    by_price = baselines[0][2]
+    def coverage(plan):
+        return plan["cards"], plan["exact_copies"]
+    weighed = all(not plan["postage_unknown"] for _, _, plan in baselines if coverage(plan) == coverage(by_price))
+    achievable = {frozenset(chosen): (*coverage(plan), -plan["unpriced_copies"]) for chosen, _, plan in baselines}
+    budget = shop_delivery.Budget()
+    search_complete = len(order) <= MAX_SHOPS
     found = {}
-    for size in range(1, len(order)):
-        for chosen in combinations(order, size):
-            made = _plan(chosen, rows, add_ons, by_key, rules, matches, offers, facts)
-            found.setdefault(tuple(made["keys"]), made)
-    found.setdefault(tuple(by_price["keys"]), by_price)
+    for chosen, assigned, made in baselines:
+        if weighed and not made["postage_unknown"] and len(chosen) <= MAX_SHOPS:
+            shops = frozenset(chosen)
+            required = all(achievable.get(shops - {shop}, (0, 0, 0)) < achievable[shops] for shop in shops)
+            improved, complete = shop_delivery.optimize(chosen, rows, offers, assigned, rules,
+                                                        money(made["postage_aud"]), required, budget)
+            search_complete &= complete
+            if improved is not assigned:
+                made = _plan(chosen, improved, *details)
+        key = tuple(made["keys"])
+        if key not in found or _weigh(made) < _weigh(found[key]):
+            found[key] = made
     options = list(found.values())
-    full = [option for option in options if option["cards"] == by_price["cards"]]
-    weighed = all(not option["postage_unknown"] for option in full)
+    full = [option for option in options if coverage(option) == coverage(by_price)]
     if weighed:
         recommended = min(full, key=_weigh)
     else:
         recommended = min(full, key=lambda option: (len(option["shops"]), option["unpriced_copies"], money(option["cards_aud"])))
     saves = None
-    if weighed and not recommended["unpriced"] and not by_price["unpriced"] and len(recommended["shops"]) < len(by_price["shops"]):
-        saves = text(money(by_price["total_aud"]) - money(recommended["total_aud"]))
+    if weighed and not recommended["unpriced"] and not by_price["unpriced"]:
+        difference = money(by_price["total_aud"]) - money(recommended["total_aud"])
+        if difference > 0:
+            saves = text(difference)
     options.sort(key=lambda option: (-option["cards"], bool(option["postage_unknown"]), *_weigh(option)))
     return {"recommended": recommended, "by_price": by_price, "options": options if order else [],
-            "wanted": wanted, "weighed": weighed, "saves_aud": saves}
+            "wanted": wanted, "weighed": weighed, "saves_aud": saves, "search_complete": search_complete}

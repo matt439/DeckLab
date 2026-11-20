@@ -52,6 +52,51 @@ class CommanderStartTests(unittest.TestCase):
           assert(toasts.some((t) => t.includes("Nobody At All isn't a card Deck Lab knows")), toasts.join('|'));
         ''')
 
+    def test_tonight_preview_locks_retries_then_applies_as_one_edit(self):
+        self.run_js(r'''
+          state.may = {create: [{space:'home'}]};
+          location.hash = '#/new?kind=commander';
+          const params = new URLSearchParams({commander:ghaltaCard.name, partner:'Partner'});
+          startEditor({mode:'new', kind:'commander', restoreDraft:false, tonight:params});
+          const ed = editor;
+          const answers = [], requests = [];
+          apiWrite = (path, body) => {requests.push([path, body]); return new Promise(resolve=>answers.push(resolve));};
+          const data = {names:[ghaltaCard.name,'Partner'], commanders:[{name:ghaltaCard.name,card:ghaltaCard},{name:'Partner',card:ghaltaCard}],
+            target:98,picked:2,open_slots:96,open_lands:38,open_spells:58,
+            picks:[{name:elves.name,quantity:1,reason:'Locked theme card',card:elves},{name:'Forest',quantity:1,reason:'Assumed plain basic supply'}],
+            roles:[{label:'Ramp',count:1,target:10}],mana_sources:[{colour:'G',count:1}],incoming:[{name:'Arrival',quantity:1}]};
+          const sheet = openTonightDraft(params), locks = sheet.body.querySelector('textarea'), buttons = sheet.foot.querySelectorAll('button');
+          assert.equal(requests.length,1); locks.value=elves.name; locks.fire('input'); buttons[1].click();
+          same(requests[1],['/api/commanders/draft',{space:'home',name:ghaltaCard.name,partner:'Partner',locked:[elves.name]}]);
+          answers[0](data); await Promise.resolve(); assert(buttons[2].hidden);
+          answers[1](data); await Promise.resolve(); assert(!buttons[2].hidden);
+          assert(sheet.body.textContent.includes('Locked theme card')); assert(sheet.body.textContent.includes('Arrival'));
+          const status = sheet.body.querySelector('[role="status"]');
+          assert(status.textContent.includes('96 open slots')); assert(!status.textContent.includes(elves.name));
+          assert.equal(ed.history.length,0); buttons[2].click(); assert(sheet.closed);
+          assert.equal(ed.history.length,1); same(ed.lists.Commander.map(r=>r.name),data.names);
+          same(ed.lists.Deck.map(r=>r.name).sort(),['Forest',elves.name].sort());
+          assert.equal(openTonightDraft(params),null); undoLast(); assert.equal(ed.fields.title,'');
+          assert(!Object.values(ed.lists).flat().length); assert.equal(requests.length,2);
+          const reopen=ed.dom.page.querySelectorAll('button').find(b=>b.textContent==='Review collection draft');
+          reopen.click(); same(requests[2],requests[1]);
+        ''')
+
+    def test_tonight_preview_keeps_title_only_drafts_and_drops_late_answers(self):
+        self.run_js(r'''
+          state.may = {create: [{space:'home'}]}; location.hash = '#/new?kind=commander';
+          startEditor({mode:'new',kind:'commander',restoreDraft:false});
+          const params = new URLSearchParams({commander:ghaltaCard.name}), ed=editor;
+          setField('title','My deck'); assert.equal(openTonightDraft(params),null);
+          assert.equal(ed.fields.title,'My deck');
+          startEditor({mode:'new',kind:'commander',restoreDraft:false});
+          let finish; apiWrite=()=>new Promise(resolve=>{finish=resolve;});
+          const sheet=openTonightDraft(params);
+          state.profile={id:'user1'}; finish({}); await Promise.resolve();
+          assert(sheet.foot.querySelectorAll('button')[2].hidden);
+          assert.equal(editor.history.length,0);
+        ''')
+
     def test_a_pair_goes_in_together_as_one_change(self):
         # E9-S28's third slice: #/new?kind=commander&commander=<one>&partner=<other>.
         self.run_js(r'''

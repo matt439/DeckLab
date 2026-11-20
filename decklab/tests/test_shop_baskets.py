@@ -138,6 +138,37 @@ class BasketTests(unittest.TestCase):
                          [(2, None, None), (1, None, None)])
         self.assertEqual(built["plan"]["by_price"]["stock_unknown"], ["Games Portal"])
 
+    def test_available_only_shop_keeps_eligible_tiers_and_the_preferred_tie(self):
+        listings = [{**listing(price, stock, finish, set_code), "condition": "Near Mint", "language": lang}
+                    for price, stock, finish, set_code, lang in (
+                        ("9.00", 1, "nonfoil", "m10", "en"), ("9.00", 1, "nonfoil", "fdn", "en"),
+                        ("10.00", 1, "nonfoil", "dsk", "en"), ("0.10", 1, "foil", "cmm", "en"),
+                        ("0.10", 1, "nonfoil", "m19", "de"), ("3.00", 0, "nonfoil", "m21", "en"))]
+        wanted = row("Wanted", 1, quantity="2")
+        captured = games_portal({"Wanted": entry(*listings)})
+        preference = {"minimum_condition": "NM", "english_only": True}
+        _, offers = shop_baskets._match(wanted, gamesportal.ADAPTER, captured, preference)
+        self.assertEqual({offer.listing["set"] for offer in offers}, {"dsk", "fdn", "m10"})
+        self.assertTrue(all(offer.stock is None and offer.listing["stock"] is None for offer in offers))
+        with mock.patch.object(shops, "listing_preference", return_value=preference):
+            built = self.build([wanted], gp=captured)
+        picked = self.basket(built, "gamesportal")["rows"][0]
+        self.assertEqual((picked["copies"], picked["listing"]["set"]), (2, "fdn"))
+        exact = {**wanted, "printing": "exact", "set": "FDN", "collector_number": "0227"}
+        _, exact_offers = shop_baskets._match(exact, gamesportal.ADAPTER, captured, preference)
+        self.assertEqual([offer.listing["set"] for offer in exact_offers], ["fdn"])
+
+    def test_available_only_shop_can_reach_free_postage_with_another_printing(self):
+        captured = games_portal({"Wanted": entry(listing("9.00", 1), listing("10.00", 1, set_code="dsk"))})
+        rules = {"gamesportal": {"postage_aud": "6.00", "free_over_aud": "10.00"}}
+        plan = shop_baskets.build([row("Wanted", 1)], {"gamesportal": captured}, rules=rules,
+                                  adapters=[gamesportal.ADAPTER])["plan"]
+        self.assertEqual((plan["by_price"]["cards_aud"], plan["by_price"]["total_aud"]), ("9.00", "15.00"))
+        best = plan["recommended"]
+        self.assertEqual((best["total_aud"], best["stock_unknown"]), ("10.00", ["Games Portal"]))
+        listing_used = best["shops"][0]["rows"][0]["listing"]
+        self.assertEqual((listing_used["set"], listing_used["stock"]), ("dsk", None))
+
     def test_an_exact_printing_the_snapshot_cant_tell_is_unconfirmed_not_claimed(self):
         rows = [row("Blank Printing", 1, printing="exact", set="fdn", collector_number="1", finish="nonfoil"),
                 row("No Set Recorded", 2, printing="exact")]

@@ -108,7 +108,7 @@ def snapshot(space, results_dir, *, other_hashes=()):
     Field notes qualify only when each recorded pair is an own-only result;
     variants need an own base and own opponents, including their against value.
     """
-    from decklab.lib.forge import pods, saved, variants
+    from decklab.lib.forge import pods, saved
     root = Path(results_dir)
     if not root.exists():
         return {}, {"selected": {}, "preserved_related": 0, "unknown": 0}
@@ -134,8 +134,10 @@ def snapshot(space, results_dir, *, other_hashes=()):
         for path in sorted(folder.glob("*.json")):
             content, value = _read(path)
             owners = {None}
+            # Versions 1 and 2 record ownership in the same fields. Review any new layout first.
             if value is not None and kind == "variant" and KEY.fullmatch(path.stem) \
-                    and value.get("test") == path.stem and value.get("version") == variants.SUMMARY_VERSION:
+                    and value.get("test") == path.stem and type(value.get("version")) is int \
+                    and value["version"] in (1, 2):
                 owners = _owners([value.get("base")]) | _owners(value.get("opponents"))
                 if owners == {space} and any(item.get("card_sha") in other_hashes
                                              for item in [value.get("base"), value.get("variant") or {},

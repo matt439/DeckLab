@@ -39,14 +39,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 27 | 24 | 2 | 0 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 45 | 42 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 26 | 1 | 0 | 3 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 39 | 36 | 0 | 1 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 40 | 37 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 26 | 24 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 38 | 37 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 21 | 0 | 0 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 33 | 31 | 1 | 0 | 1 |
+| [E9: Commander nights](#e9-commander-nights) | 34 | 32 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 88 | 70 | 10 | 4 | 4 |
-| **Total** | **408** | **366** | **19** | **6** | **17** |
+| **Total** | **410** | **368** | **19** | **6** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -1627,6 +1627,7 @@ As a player comparing my Commander deck with published lists, I want to know how
 
 - Given four catalogue entries sharing three matchup keys with 40 saved games, when the entries attribute 60 games between them, then the result shows 40 distinct games and retains all four entries with their source and per-entry coverage.
 - Given repeated keys within a group, then each distinct matchup contributes once to the group's evidence minimums, strength estimate, uncertainty range and turn statistics. Showing the same results under a second source cannot narrow the range. A list may still appear in each colour or style it belongs to.
+- Given a test of a card change against two sources of the same matchup, then the estimate, work scheduled, stopping decision and result count their shared games once. Both source entries remain visible. An older test whose verdict could have counted the games twice offers a fresh check using the saved games.
 
 Built (2026-11-20): the Testing summary and read-only CLI show distinct matchups and games alongside coverage attributed to catalogue entries when a result is shared. Per-entry rows retain their source, games and shared key. Each key contributes once within a group to its evidence minimum, estimate, uncertainty and turn statistics. The 40/60 fixture retains four entries over three matchup keys and checks statistics against the single-source result.
 
@@ -2726,8 +2727,9 @@ As the buyer, I want Shopping to compare the price of each remaining copy, so I 
 
 - Given two requested copies, one shop with eligible copies at A$1 and A$20, another with two at A$5 each, and zero postage, then By price and the recommended plan both show A$6 with one copy from each shop.
 - Given a postage charge, a stock limit or an unknown price, then each displayed plan shows the quantities and known charges it actually used. The recommendation still gives priority to covering the most requested copies.
+- Given a costlier eligible listing that unlocks free postage, then the recommended basket can use that listing and the item-price comparison keeps its own allocation. The plan shows the selected printings and flags any search limit or unresolved postage.
 
-Built (2026-11-20): the planner considers each available price tier within each shop combination. It compares coverage and known charges using the allocated copies and their postage. Unknown prices are shown separately. At zero postage, the A$1 and A$5 copies form the A$6 split in the fixture. Postage is applied to each combination's copy allocation, which is selected by eligible stock and unit prices.
+Built (2026-11-20): the planner compares the cost of the allocated cards and their delivery. It can split a row or choose a different eligible printing to reach free postage. At zero postage, the A$1 and A$5 copies form the A$6 split in the fixture. When an unpriced copy could change a shop's charge, postage stays unknown. A bounded search keeps a feasible allocation and the page says when another allocation could cost less. Small synthetic baskets are checked against exhaustive enumeration.
 
 <a id="e5-s41"></a>
 
@@ -2739,6 +2741,18 @@ As the buyer, I want the shop plan to count every ready copy I asked for, so I c
 - Given optional long-term add-ons, then they are outside that denominator. With no ready copies in stock, Shopping still gives the unmet count and the available reasons.
 
 Built (2026-11-20): coverage counts every ready copy. The plan lists unmet quantities and distinguishes confirmed lack of stock from incomplete checks, including when zero copies are covered. Long-term add-ons stay outside coverage. Synthetic API and UI tests cover mixed, empty and all-unavailable plans.
+
+<a id="e5-s42"></a>
+
+**E5-S42** · Matt · should · M · built
+
+As a player deciding which decks to finish first, I want to compare two groups against the same collection, deliveries and saved shop listings before adding anything to the purchase queue.
+
+- Each alternative counts its selected Planned lists together. It shows the copies already here, the shortages a confirmed delivery covers and what remains to buy. A copy can count once in each alternative.
+- If the group needing fewer singles costs more delivered, the comparison shows why. A full quote includes stock, item prices and postage. Missing information leaves the completion cost unknown, and a limited search is identified.
+- Comparing changes no records. I can choose one alternative and open the usual queue review.
+
+Built (2026-11-20): **Compare deck groups** under Shopping's **Build decks together** compares two choices of 2–12 home decks. The card breakdown names the deliveries each group depends on. The estimates reuse the basket planner, show selected listings and postage, and flag incomplete checks or unconfirmed copies. See [comparison endpoint](../lib/api/shopping_compare.py) and [fixture tests](../tests/test_shopping_compare.py).
 
 ---
 
@@ -4809,6 +4823,21 @@ As a Commander builder checking a list in the editor, I want the bracket box to 
 - Given Compare's bracket row, then "today's lists" is in the row's heading, not appended to the label.
 
 Built (2026-11-12): the editor's bracket box drops its own "No Game Changers." when the server's reason already starts with it, and the target is its own sentence ("Target bracket: 2."), so no label shows ") (". Compare's In brief heading reads "Bracket (today's lists)" when any side is a saved revision or a precon, and `ui_review/compare-baselines.js` still finds that text. Test: `decklab/tests/test_bracket_wording_ui.py` (Node).
+
+<a id="e9-s39"></a>
+
+**E9-S39** · Matt · should · L · built
+
+As a Commander player building from my collection, I want to pick a commander or pair, keep my theme cards, and review a first draft I can sleeve tonight.
+
+- Given an eligible commander or pair, the draft aims for 100 cards including its commanders. It explains its choices and shows any open slots when the pool falls short.
+- Given a card with multiple roles, it can help each relevant role while occupying one physical slot. The selection respects colour identity, Commander legality, available copies and cards already committed elsewhere.
+- Incoming cards cannot fill tonight's deck. The preview identifies any ordinary basics it draws from the assumed supply.
+- I can lock eligible theme cards and review the resulting proposal before applying it to the editor. Applying is one local Undo step, and saving uses the existing deck editor.
+
+Built (2026-11-20): Collection's **Commanders we could build → Build from cards free tonight** opens the new editor's preview. Picks show their reasons, role coverage, land sources and open slots. Roles can overlap. Spell selection uses creature types shared with the commander or locks, available cached EDHREC inclusion, and mana values. The normal deck checks remain available for the resulting list. See [Commander draft selection](../lib/decks/commander_draft.py) and its [request and selection tests](../tests/test_commander_draft.py).
+
+Selection also considers specific abilities in the commander’s rules text. Examples include artifact casts, creatures meeting a printed power threshold, creating matching tokens, and cards leaving the player's graveyard. A five-precon [study of ten public pools](commander-starter-study.md) records which picks changed, which role gaps remained and where the revised draft still passed useful cards.
 
 ---
 

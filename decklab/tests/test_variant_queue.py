@@ -246,6 +246,10 @@ class VariantQueueTests(support.VariantApiCase):
                     mock.patch.object(support.api.forge_runs.COORD_JOBS, "snapshot", return_value={"status": status}):
                 self.assertApiError(409, self.preview)
 
+    def test_finished_recipe_with_a_withheld_verdict_can_still_be_reviewed(self):
+        self.saved.update(looks=[], outcome=None, needs_recheck=True)
+        self.assertEqual(variant_queue._saved(self.saved["test"], self.profile), self.saved)
+
     def test_a_test_started_again_after_review_is_refused_inside_the_fresh_operation(self):
         preview = self.preview()
         before = self.box.inventory.load()

@@ -477,12 +477,18 @@ def _print_variant(found):
     the test's id."""
     summary = found["test"]
     print(found.get("words") or "No verdict yet.")
+    sources = {}
     for row in found.get("opponents") or []:
         paired = row.get("paired") or {}
         name = row.get("title") or row.get("id")
         if row.get("dropped"):
             print(f"  {name}: {row['dropped']}")
             continue
+        pair = (row.get("base_key"), row.get("paired_key"))
+        if row.get("shared_evidence"):
+            print(f"  {name} ({row['id']}): shares the paired games shown for {sources[pair]}.")
+            continue
+        sources[pair] = f"{name} ({row.get('id')})"
         if paired.get("delta") is None:
             print(f"  {name}: {row.get('games', 0):,} paired games, no difference yet")
             continue
