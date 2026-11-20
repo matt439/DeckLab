@@ -3714,6 +3714,10 @@ As a person adding a stack of new cards, I want to scan them with my phone's cam
 - Given the Collection page on a phone, when Scan cards is chosen, then each card held to the camera is recognised with its set and collector number, and added to a pending list.
 - Given the pending list, when it is reviewed, then each row can be corrected (printing, finish, condition) before Add saves them all as one change, as an import does.
 - Given a card the scanner can't read, when it fails, then the row can be typed in by name.
+- Given a loose stack, when the player presents each card to a live phone camera or webcam, then a stationary card counts once and the player can present another identical copy after clearing the guide.
+- Given a photo or flatbed scan of a regular grid, when the player selects occupied slots, then each selected slot is cropped from the original and follows the same printing review.
+- Given already-cropped scanner files, selecting up to 100 together lets the player review one physical card per file.
+- Given a successful scan import, then the player sees the saved physical copies per hour including time spent reviewing the batch.
 
 Decided (Matt, 2026-10-27): added from the comparison with ManaBox, Dragon Shield and Delver Lens. Scanning in ManaBox and importing (E7-S02) remains the route until this is built.
 
@@ -3732,9 +3736,11 @@ Evidence:
 - Token cards: `decklab/lib/scan.py`: propose_tokens; `decklab/lib/api/tokens_scan.py`: scan_token (POST /api/tokens/scan), add_scanned (POST /api/tokens/scan/add); `decklab/lib/tokens/ops.py`: add_many (tokens.add_many); `decklab/web/tokens-scan.js`: openTokenScan, drawTokenScanResult, addTypedToken, tokScanBack, tokScanRows, reviewTokenScan, addTokenScan; `decklab/web/tokens.js`: drawTokens's Scan token cards
 - `decklab/tests/test_tokens_scan_api.py`: test_the_face_and_its_printing_read_agree, test_a_printing_without_the_face_read_is_offered_not_taken, test_a_photo_is_answered_with_token_faces_and_nothing_is_written, test_only_the_space_s_own_people_may_scan_its_tokens, test_the_scanned_list_is_added_as_one_change, test_a_card_already_listed_is_kept_as_a_row_of_its_own, test_rows_are_checked_and_nothing_is_saved_when_one_is_wrong, test_two_fully_known_rows_are_refused_naming_the_row; `decklab/tests/test_tokens_scan_ui.py`: test_photos_fill_the_pending_list_and_add_sends_one_change, test_the_back_stays_blank_until_chosen, test_a_changed_list_keeps_the_cards_and_asks_again
 
-Gap: Not yet tried on real phone photos or the household's phones (foils, sleeves, glare), for cards or token cards (whose bottom-line layouts are untried). Scanning needs Windows' engine or Tesseract, so a Linux host needs `tesseract-ocr` installed.
+The bulk scanning slice (2026-11-20) adds live camera capture and selectable grid slots to Collection, plus elapsed-time reporting through the completed import. Individual photos and manual entry still use the same review flow. [Guide](../README.md#scan-a-stack-or-binder-page) · [Live capture](../web/collection-scan-live.js) · [Grid capture](../web/collection-scan-grid.js) · [Import timing tests](../tests/test_collection_scan_rate_ui.py)
 
-Next slice: try it on 10 to 20 real photos on each household phone (a few foils, sleeved and old cards, and a few token cards).
+Gap: Real phone and webcam capture, printed card and token photos, reflection through sleeves and binder pockets, and end-to-end physical throughput await a hands-on check.
+
+Next slice: try 10–20 real photos per household phone, including old cards, foils, sleeves and tokens. Run the [100-card comparison](scanning-spike.md#compare-cards-per-hour) with the physical stack and check exact printing, finish and quantity against the saved copies.
 
 **E7-S33** · Matt · should · S · built
 
@@ -3863,7 +3869,7 @@ As someone with physical cards but no recorded list, I want a small-batch starti
 - Pending scan/manual cards can be explicitly downloaded as collection CSV, then reopened through Import cards for a fresh preview before one guarded add. Resolve/skip uncertain photos first; photos and OCR text never enter the file.
 - The UI warns that closing loses unsaved pending cards, checks download failure without discarding the list, and tells users not to import a downloaded batch they already added. No automatic cross-device draft is claimed.
 
-Built 2026-11-15 with synthetic fixture/browser evidence only. Real camera/foil/sleeve recognition and physical Safari remain unqualified. Future direction: a server-backed resumable batch with stable batch identity and exactly-once completion, followed by a real-photo evaluation before expanding beyond one card per photo.
+Built 2026-11-15 with synthetic fixture/browser evidence only. Real camera/foil/sleeve recognition and physical Safari remain unqualified. A server-backed resumable batch with stable batch identity remains a future direction. E7-S32 owns live and grid capture and the real-photo evaluation.
 
 
 <a id="e7-s42"></a>

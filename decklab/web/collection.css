@@ -157,6 +157,19 @@ button.col-find-open { cursor: pointer; }
 /* Scan cards (collection-scan.js): the typed-name finder beside its button; picks and a pending card's printing wrap on a phone. */
 .col-scan-typed { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--s-2); }
 .col-scan-typed .field { flex: 1 1 14rem; min-width: 0; }
+.col-scan-live > p { margin: var(--s-1) 0; overflow-wrap: anywhere; }
+.col-scan-live > .check { display: inline-flex; align-items: center; gap: var(--s-2); min-height: var(--tap); }
+.col-scan-live-frame {
+  position: relative; margin: var(--s-2) auto;
+  /* Size the whole frame, including its overlay, so both match the source crop. */
+  width: min(100%, 34rem, calc(36vh * var(--col-live-ratio, 1.33)));
+  width: min(100%, 34rem, calc(36dvh * var(--col-live-ratio, 1.33)));
+}
+.col-scan-live-frame video { display: block; width: 100%; height: auto; border-radius: var(--r-sm); }
+.col-scan-live-guide {
+  position: absolute; box-sizing: border-box; pointer-events: none;
+  border: 3px dashed var(--on-scrim); box-shadow: 0 0 0 1px var(--scrim-edge);
+}
 .col-scan-pick { text-align: left; white-space: normal; }
 .col-scan-printing { flex: 1 1 12rem; min-width: 0; max-width: 100%; }
 .col-held { display: block; color: var(--ink-2); font-size: var(--fs-sm); font-weight: normal; line-height: 1.2;
