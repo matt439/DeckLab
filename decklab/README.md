@@ -357,6 +357,8 @@ deck as source and its title as `for`; an identical request's quantity is raised
 row, keeping that row's state, which the sheet names and warns about). The cards are worked out again in the change: a stale revision or any difference answers
 409 and asks for a new review. Both need a home admin who sees home's records.
 
+On Shopping, choose **Compare deck groups…** to compare two selections of 2–12 home decks. To compare A+B with A+C, select A and B in the first group, copy it to the second group, then swap B for C. Each result shows the copies physically available for those Planned lists, what confirmed deliveries will cover, and an estimated delivered cost for the remaining cards. Expand the shop estimate to see the printings and postage behind it. A card the saved shops did not check can leave the total unknown. **Review queue for this group…** opens a separate review before any purchase-queue change.
+
 Shopping's Build decks together has the same for its chosen decks: **Queue these…** (E5-S28,
 `lib/api/shopping_queue_combined.py`) asks `POST /api/shopping/queue/combined` (`{"profile",
 "decks": [ID, ...]}`, 2 to 12 home decks, nothing written) for each card of the combined shortfall

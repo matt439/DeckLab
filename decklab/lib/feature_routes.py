@@ -109,6 +109,7 @@ ACCESS = MappingProxyType({
     ('GET', 'gauntlet/history'): 'deck',
     ('GET', 'gauntlet/catalogue'): 'open',
     ('GET', 'gauntlet/board'): 'viewer-filtered',
+    ('GET', 'shopping/compare'): 'home-records',
     ('GET', 'shopping/combined'): 'home-records',
     ('GET', 'shopping/price-history'): 'home-records',
     ('POST', 'activity/undo'): 'activity',
@@ -341,6 +342,11 @@ def _start_sideboard_test(body):
     return start_sideboard_test(body)
 
 
+def _shopping_compare(**params):
+    from decklab.lib.api.shopping_compare import compare_view
+    return compare_view(**params)
+
+
 def _shopping_combined(**params):
     """Shopping's decks built together (api/shopping_combined.py, E5-S28): read-only."""
     from decklab.lib.api.shopping_combined import combined_view
@@ -544,6 +550,7 @@ def route_tables():
         ("gauntlet", "history"): (_gauntlet_history, ("id", "version", "profile")),
         ("gauntlet", "catalogue"): (_gauntlet_catalogue, ("format",)),
         ("gauntlet", "board"): (_gauntlet_board, ("format", "profile")),
+        ("shopping", "compare"): (_shopping_compare, ("left", "right")),
         ("shopping", "combined"): (_shopping_combined, ("decks",)),
         ("shopping", "price-history"): (_price_history, ("name", "row")),
     }

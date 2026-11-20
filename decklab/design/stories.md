@@ -39,14 +39,14 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 27 | 24 | 2 | 0 | 1 |
 | [E3: Test a deck](#e3-test-a-deck) | 45 | 42 | 3 | 0 | 0 |
 | [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 30 | 26 | 1 | 0 | 3 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 39 | 36 | 0 | 1 | 2 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 40 | 37 | 0 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 26 | 24 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 38 | 37 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 21 | 0 | 0 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 34 | 32 | 1 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 88 | 70 | 10 | 4 | 4 |
-| **Total** | **409** | **367** | **19** | **6** | **17** |
+| **Total** | **410** | **368** | **19** | **6** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -2741,6 +2741,18 @@ As the buyer, I want the shop plan to count every ready copy I asked for, so I c
 - Given optional long-term add-ons, then they are outside that denominator. With no ready copies in stock, Shopping still gives the unmet count and the available reasons.
 
 Built (2026-11-20): coverage counts every ready copy. The plan lists unmet quantities and distinguishes confirmed lack of stock from incomplete checks, including when zero copies are covered. Long-term add-ons stay outside coverage. Synthetic API and UI tests cover mixed, empty and all-unavailable plans.
+
+<a id="e5-s42"></a>
+
+**E5-S42** · Matt · should · M · built
+
+As a player deciding which decks to finish first, I want to compare two groups against the same collection, deliveries and saved shop listings before adding anything to the purchase queue.
+
+- Each alternative counts its selected Planned lists together. It shows the copies already here, the shortages a confirmed delivery covers and what remains to buy. A copy can count once in each alternative.
+- If the group needing fewer singles costs more delivered, the comparison shows why. A full quote includes stock, item prices and postage. Missing information leaves the completion cost unknown, and a limited search is identified.
+- Comparing changes no records. I can choose one alternative and open the usual queue review.
+
+Built (2026-11-20): **Compare deck groups** under Shopping's **Build decks together** compares two choices of 2–12 home decks. The card breakdown names the deliveries each group depends on. The estimates reuse the basket planner, show selected listings and postage, and flag incomplete checks or unconfirmed copies. See [comparison endpoint](../lib/api/shopping_compare.py) and [fixture tests](../tests/test_shopping_compare.py).
 
 ---
 

@@ -1,5 +1,11 @@
 # Deck Lab: history
 
+## Compare which decks to finish first (2026-11-20, E5-S42)
+
+In Shopping, **Compare deck groups** shows how many copies are here, on the way and still to buy for each alternative. The two groups can overlap. Each gets the same pool and saved shop checks, with each physical copy counted once within a group.
+
+Open **Cards needed** to see what an existing delivery will cover, or **Shop estimate** to see selected printings, item costs and postage. A shop reporting only availability supports one copy per distinct listing. Missing prices, stock or postage can leave the cost to finish unknown. A group can be taken into the usual queue review explicitly.
+
 ## A first Commander draft from cards free tonight (2026-11-20, E9-S39)
 
 Choose a commander or pair from **Collection → More → Commanders we could build**,
