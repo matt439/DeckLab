@@ -166,7 +166,7 @@ function colScanGrid({isCurrent, canScan, submit, onStart, onChange}) {
     separateFiles = sources.length > 1;
     alignment.hidden = separateFiles; fileRows.hidden = !separateFiles;
     if (separateFiles) {
-      const names = new Intl.Collator(undefined, {numeric: true, sensitivity: "base"});
+      const names = new Intl.Collator(LOCALE, {numeric: true, sensitivity: "base"});
       sources.sort((a, b) => names.compare(a.name, b.name));
       page++; fileField.hidden = true; panel.hidden = false;
       slots = sources.map((source, i) => makeSlot(i, source));
