@@ -10,7 +10,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **Sessions and decisions.** Pick these up when the named people, devices or systems are available. Each row below points to the owner and records the remaining check.
 
-- **Household phones and iPad.** Use the [20 November walkthrough](decklab/design/ui-ux-review-2026-11-20.md#verification-and-the-next-household-session) for building from the collection, taking shortages to a shop, scanning a small batch and starting a pod. Resume drafts across devices (`E2-S16`), check touch and layout (`E2-S22`, `E11-S30`), global search (`E11-S31`), pod controls and results (`E9-S11`), VoiceOver (`E11-S55`), real card and token photos from each phone (`E7-S32`), and cold/repeat load timings (`E11-S64`). The [Safari Simulator evidence](decklab/safari/EVIDENCE.md) covers repeat functional checks.
+- **Household phones and iPad.** Use the [20 November walkthrough](decklab/design/ui-ux-review-2026-11-20.md#verification-and-the-next-household-session) for building from the collection, taking shortages to a shop, scanning a small batch and starting a pod. Resume drafts across devices (`E2-S16`), check touch and layout (`E2-S22`, `E11-S30`), global search (`E11-S31`), pod controls and results (`E9-S11`), VoiceOver (`E11-S55`), real card and token photos from each phone and the [bulk scan timing trial](decklab/design/scanning-spike.md#compare-cards-per-hour) (`E7-S32`), and cold/repeat load timings (`E11-S64`). The [Safari Simulator evidence](decklab/safari/EVIDENCE.md) covers repeat functional checks.
 - **Signed-in browser and wake.** Check the off page, deck save and photo upload (`E11-S02`), browser policy and camera (`E11-S63`), and real phone access, scanning and timed wake on the Linux installation (`E11-S58`). The wake-on-request check (`E11-S59`) follows the owner-authenticated NAS update (`E11-S75`, deferred). Time a real request through the hardened gate.
 - **Forge and XMage.** Exercise the saved field choice in a browser and a real run, then restore the policy (`E3-S23`). Qualify Syr Elenora's engine behavior (`FG#4`), the corrected XMage bridge on the installed server (`E3-S40`), and the separate Forge side-build speed/winner comparison (`FG#2`). Real Forge runs need Matt's OK and run one workflow at a time on an idle PC. The completed replay and pod games are recorded in [PLAN.md](decklab/PLAN.md#details).
 - **People.** Matt reviews and publishes the draft release (`E11-S49`). Arrange User2's device and [testing session](decklab/design/user-testing-user2.md) (`E11-S28`).
@@ -36,12 +36,12 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 ## Deck Lab: collection, orders and buying
 
-**Owner:** [design/stories.md](decklab/design/stories.md), E5, E6 and E7.
+**Owner:** [design/stories.md](decklab/design/stories.md), E5, E6 and E7. [Design discussion on building decks with a partially recorded collection](decklab/design/playing-with-a-partial-collection.md).
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
-| `E7-S32` | DECISION | could | L | Card/token scanning and reviewed one-change import built. Left: 10–20 real photos on each household phone, including foils, sleeves, old cards and token cards; actual photos/devices are needed. |
+| `E7-S32` | DECISION | could | L | Try 10–20 real photos per phone (foils, sleeves, older cards and tokens) and [time a known stack](decklab/design/scanning-spike.md#compare-cards-per-hour) through live capture, gridded images and reviewed import. |
 
 ## Deck Lab: Commander nights
 

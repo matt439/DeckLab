@@ -58,6 +58,40 @@ class CollectionScanUiTests(unittest.TestCase):
           assert(empty.sheet.closed);
         """)
 
+    def test_large_batch_pages_editors_and_reviews_every_copy(self):
+        self.run_js("""
+          const ctx = openScanSheet(draw());
+          for (let i = 1; i <= 50; i++) {
+            addScanCard(ctx, proposal('Card ' + i, 'fdn', String(i), 'name and number'));
+          }
+          const pages = () => pick(ctx, 'Pending printings to show');
+          const changePage = (page) => { const p = pages(); p.value = String(page); p.fire('change'); };
+          assert.equal(pages().value, '2');
+          assert.equal(ctx.list.querySelectorAll('.col-trade-line').length, 2);
+          const oldRemove = pick(ctx, 'Take Card 50 off the list');
+          changePage(0);
+          assert.equal(document.activeElement, pages());
+          oldRemove.click();  // A control from the previous page cannot edit its copy.
+          assert.equal(ctx.pending.length, 50);
+          assert.equal(ctx.list.querySelectorAll('.col-trade-line').length, 24);
+          const qty = pick(ctx, 'Copies of Card 1');
+          qty.value = '3'; qty.fire('change');
+          addScanCard(ctx, proposal('Card 50', 'fdn', '50', 'name and number'));
+          assert.equal(pages().value, '0');
+          changePage(2);
+          assert.equal(pick(ctx, 'Copies of Card 50').value, '2');
+          assert.equal(foot(ctx, 'review').textContent, 'Review 53 cards');
+          const all = colScanCsv(ctx.pending).trimEnd().split(String.fromCharCode(10));
+          assert.equal(all.length, 51);
+          assert(all[1].includes('Card 1,fdn,1,nonfoil,3,'));
+          assert(all[50].includes('Card 50,fdn,50,nonfoil,2,'));
+          let body;
+          apiWrite = async (_path, data) => { body = data; throw new ApiError(503, 'Fixture stopped at preview'); };
+          const importing = reviewScan(ctx); await flush();
+          assert.equal(importing.scanned.length, 50);
+          assert.equal(body.text.trimEnd(), all.join(String.fromCharCode(10)));
+        """)
+
     def test_confirming_a_review_dismissal_keeps_the_scanned_list_for_correction(self):
         self.run_js("""
           const ctx = openScanSheet(draw());

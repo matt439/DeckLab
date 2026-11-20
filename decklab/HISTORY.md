@@ -1,5 +1,13 @@
 # Deck Lab: history
 
+## Scanning loose cards and binder pages (2026-11-20, E7-S32)
+
+Collection's **Scan cards…** can capture a loose stack with a fixed phone or webcam, read occupied slots on a binder page, or import a scanner's one-image-per-card output in batches of up to 100 files. Each method builds the same pending list for a reviewed import. The completed import reports saved copies per hour, including review time. Physical throughput and exact-printing accuracy await the [100-card trial](design/scanning-spike.md#compare-cards-per-hour). [Scanning guide](README.md#scan-a-stack-or-binder-page)
+
+## Check cards for a deck (2026-11-20, E5-S43)
+
+From **Decks**, a player can start a private checklist with just the names of the cards they are looking for. Each copy starts at **Check at home**. When the player finds one, they can mark it **Set aside**. Copies they choose to **Buy** form a shop list they can copy. The same profile can save and reopen the checklist with an empty deck library and collection. [Checklist guide](README.md#check-cards-for-a-deck)
+
 ## Deck building, shopping and game log UI fixes (2026-11-20)
 
 The [20 November UI review](design/ui-ux-review-2026-11-20.md) followed physical cards from collection entry through building, shopping and playing.

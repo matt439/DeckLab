@@ -334,7 +334,7 @@ function afterRender() {
   if (typeof renderRevisionNotice === "function") renderRevisionNotice();
   rememberCardUnderlay();
   const remembered = state.scroll.get(location.hash);
-  if (!state.firstRender) {
+  if (!state.firstRender && !document.activeElement?.closest("dialog[open]")) {
     window.scrollTo(0, remembered ? remembered.y : 0);
     // On a deck page, go back to the same place in the same part, even if a part above it is a
     // different height now (Practice hands drawn, or not yet).

@@ -1062,7 +1062,7 @@ function loadFailed(what, error, retry = null) {
  * any other error shows the server's message (errorBox), the database being down included (a 503 with
  * reason "database": waiting for the card data wouldn't help). token: the route it's for. title and back
  * (errorBox's) are for that error. */
-async function load(path, token, draw, { title = "This page couldn't be loaded", back } = {}) {
+async function load(path, token, draw, { title = "This page couldn't be loaded", back, cardWaitAction } = {}) {
   const main = $("#main");
   clear(main).append(loadingBox());
   let waited = false;
@@ -1082,7 +1082,8 @@ async function load(path, token, draw, { title = "This page couldn't be loaded",
         waited = true;
         const waking = e.data?.reason === "waking";
         await waitForCards(main, waking ? WAKING_MESSAGE : e.message, token,
-          waking ? "Deck Lab is waking up" : e.data?.reason === "off" ? "Deck Lab is off" : "The card data isn't ready yet");
+          waking ? "Deck Lab is waking up" : e.data?.reason === "off" ? "Deck Lab is off" : "The card data isn't ready yet",
+          e.data?.reason === "card_data" ? cardWaitAction?.() : null);
         if (token !== routeToken) return;
         continue;
       }
@@ -1157,7 +1158,7 @@ async function openWakeGate() {
 /** Show why the card data isn't ready (or, with reason "off" from the off page's Worker, that Deck Lab
  * isn't running at home; with "waking", that the PC is being woken), count down, and resolve when it's
  * time to retry. */
-function waitForCards(main, message, token, title = "The card data isn't ready yet") {
+function waitForCards(main, message, token, title = "The card data isn't ready yet", action = null) {
   return new Promise((resolve) => {
     let left = RETRY_SECONDS;
     const counter = el("span", { text: String(left) });
@@ -1167,7 +1168,7 @@ function waitForCards(main, message, token, title = "The card data isn't ready y
       el("h2", { text: title }),
       el("p", { text: message }),
       el("p", {}, "Trying again in ", counter, " seconds."),
-      el("div", { class: "actions" }, el("button", { type: "button", class: "btn", text: "Try now", onclick: done }))));
+      el("div", { class: "actions" }, el("button", { type: "button", class: "btn", text: "Try now", onclick: done }), action)));
     timer = setInterval(() => {
       if (token !== routeToken) return done();
       left -= 1;

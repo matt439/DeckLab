@@ -19,7 +19,7 @@ HOME_ROWS = frozenset({"public.product", "public.product_item", "public.product_
 SPACE_ROWS = frozenset({"public.profile", "public.collection_card", "public.collection_import", "public.token_card",
                         "public.dice_counter", "public.card_loan", "public.deck", "public.space_storage"})
 EXCLUDED = frozenset({"public.profile_email", "audit.change_set", "public.wishlist_entry", "public.profile_setting",
-                      "public.simulation_mode",
+                      "public.simulation_mode", "public.upgrade_checklist",
                       "public.visibility", "public.space_departure", "public.field_policy", "public.shop_postage",
                       "public.pricing_setting", "public.inventory_revision", "public.decks_revision"})
 FILTERS = {**dict.fromkeys(HOME_ROWS, ("", ())),
@@ -38,7 +38,7 @@ README = """# Deck Lab data export
 This is an opt-in home-only readable export, not a complete database backup.
 Only the home space's collection, tokens, dice/counters, loans, imports, decks,
 accessories and household purchase/product tables are included. Profile rows
-are limited to home; email addresses and all wishlists are omitted.
+are limited to home; email addresses, wishlists and personal upgrade checklists are omitted.
 
 Home-only games/plans, Commander-night notes and packing ticks are included.
 Mixed play records and audit records, preferences, global revision/settings/visibility rows

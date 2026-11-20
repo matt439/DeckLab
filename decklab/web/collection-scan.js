@@ -36,7 +36,7 @@ function openCollectionStartSheet(cv) {
     el("p", {text: "You don't need a spreadsheet, and you don't need to record everything today. Start with one deck or a small pile of loose cards."}),
     el("ul", {class: "lib-start-ways"},
       choose("Enter a pile of loose cards", scanAvailable(cv.data)
-        ? "Photograph one card at a time or type its name. Check the printings, then review the batch together."
+        ? "Use a camera, a photo of one card or a page of cards, or type names. Check the printings and review the batch together."
         : "Type names and choose printings. Photo reading isn't available on this server, but manual entry works.", openScanSheet),
       choose("Add an unchanged precon", "Use its published list instead of entering every card. Only use this shortcut when the physical cards match that list; check the preview first.", openPreconSheet),
       choose("Import a list or saved batch", "Use a collection export, or a pending batch downloaded before you added it. Preview it before saving; don't import a batch you already added.", openImportSheet)),
@@ -98,13 +98,18 @@ function scanBatchDescription(rows, label, unresolved = 0) {
 
 /** Open the sheet (where the visitor may change this collection), with the pending cards brought back from
  * the import sheet, if any. Returns its context, or null. */
-function openScanSheet(cv, pending = []) {
-  if (!colActive(cv) || cv.busy || !cv.editable) return null;
-  const sheet = colOpenSheet(`Scan cards into ${colWhose(cv.space)}`, { wide: true });
+function openScanSheet(cv, pending = [], scanStartedAt = Date.now()) {
+  if (!colActive(cv) || cv.busy || !cv.editable || cv.unsupported) return null;
+  const sheet = colOpenSheet(`Scan cards into ${colWhose(cv.space)}`, { wide: true,
+    onClose: () => {
+      document.removeEventListener("visibilitychange", refreshOnReturn);
+      ctx.captureRead?.controller.abort(); ctx.live?.stop(); ctx.grid?.stop();
+    } });
   const id = (key) => `col-scan-${key}-${sheet.heading.id}`;
   const ctx = { cv, sheet, pending: colScanCopy(pending), busy: false, picking: false, seq: 0, last: null,
     reads: scanAvailable(cv.data), defaults: {condition: "", language: "", finish: ""},
-    unsure: [], nextPhoto: 0, currentUnsure: null, resolving: null, space: cv.space, profile: cv.profile };
+    unsure: [], nextPhoto: 0, currentUnsure: null, resolving: null, space: cv.space, profile: cv.profile,
+    route: location.hash, scanStartedAt };
   guardScanBatch(sheet, () => colScanHere(ctx), () => scanBatchDescription(ctx.pending, "card", ctx.unsure.length));
   ctx.input = el("input", { id: id("photo"), type: "file", accept: "image/*", capture: "environment", class: "col-file" });
   ctx.input.addEventListener("change", () => {
@@ -126,13 +131,21 @@ function openScanSheet(cv, pending = []) {
   ctx.checkTitle = el("h3");
   ctx.checkCurrent = el("p", { class: "sub" });
   ctx.checks = el("section", { class: "col-scan-unsure", tabindex: "-1", hidden: true }, ctx.checkTitle, ctx.checkCurrent, ctx.checkList);
+  if (ctx.reads) {
+    ctx.captureIntro = el("p", { text: "Scan a loose stack, photograph a page, or take a close-up of one card. Deck Lab reads the images on the server and discards them. Review the batch before adding it." });
+    ctx.photoField = el("label", { class: "field col-file-field", for: ctx.input.id },
+      el("span", { text: "Take a photo of a card" }), ctx.input);
+    ctx.captureHint = el("p", { class: "sub", hidden: true });
+    ctx.live = colScanLive(colScanCaptureOptions(ctx, "grid"));
+    ctx.grid = colScanGrid(colScanCaptureOptions(ctx, "live"));
+    const beforeDismiss = sheet.beforeDismiss;
+    sheet.beforeDismiss = () => { ctx.live.stop(); return beforeDismiss(); };
+    document.addEventListener("visibilitychange", refreshOnReturn);
+  }
   sheet.body.append(
-    ctx.reads ? el("p", { text: "Photograph one card at a time, filling the frame with it. Each photo is read on the PC and "
-      + "never kept. Nothing is added until you review the list." })
+    ctx.reads ? ctx.captureIntro
       : el("p", { class: "box box-warn col-scan-off", text: COL_SCAN_OFF }),
-    // The photo field only where photos can be read (an empty div keeps append free of null).
-    ctx.reads ? el("label", { class: "field col-file-field", for: ctx.input.id },
-      el("span", { text: "Take a photo of a card" }), ctx.input) : el("div", { hidden: true }),
+    ...(ctx.reads ? [ctx.photoField, ctx.live.element, ctx.grid.element, ctx.captureHint] : []),
     colScanDefaults(ctx, id), ctx.message, ctx.result,
     el("div", { class: "col-scan-typed" },
       el("label", { class: "field", for: ctx.name.id }, el("span", { text: ctx.reads ? "Or type a card's name" : "Type a card's name" }), ctx.name),
@@ -141,6 +154,10 @@ function openScanSheet(cv, pending = []) {
     el("p", {class: "sub", text: "This pending batch is not saved when you close. Review and add small batches, or download this batch to import later. Do not import the download after adding the same cards here."}), ctx.list);
   drawScanPending(ctx);
   return ctx;
+
+  function refreshOnReturn() {
+    if (!document.hidden && colScanHere(ctx)) colScanPhotoDisabled(ctx);
+  }
 }
 
 function colScanSay(ctx, kind, text) {
@@ -151,6 +168,35 @@ function colScanSay(ctx, kind, text) {
 function colScanHere(ctx, seq) {
   return !ctx.sheet.closed && colActive(ctx.cv) && ctx.cv.space === ctx.space && ctx.cv.profile === ctx.profile
     && (seq === undefined || seq === ctx.seq);
+}
+
+/** Check the original page both before uploading a crop and before showing its answer. */
+function colScanCaptureOptions(ctx, other) {
+  const isCurrent = () => colScanHere(ctx) && ctx.cv.editable && !ctx.cv.unsupported && !ctx.cv.busy
+    && location.hash === ctx.route && !document.hidden && !ctx.sheet.body.hidden && ctx.sheet.dialog.isConnected
+    && [...document.querySelectorAll("dialog[open]")].at(-1) === ctx.sheet.dialog;
+  const canScan = () => isCurrent() && !ctx.busy && !ctx.picking && !ctx[other]?.active && ctx.unsure.length < COL_SCAN_UNSURE_MAX;
+  const onChange = () => {
+    if (ctx.captureRead && !ctx.captureRead.current()) ctx.captureRead.controller.abort();
+    if (colScanHere(ctx)) { colScanPhotoDisabled(ctx); drawScanFoot(ctx); }
+  };
+  return {isCurrent, canScan, onChange, onStart: onChange, addedLabel: () => ctx.last ? colScanLabel(ctx.last) : "",
+    submit: (photo, current, sourceLabel) => {
+      if (!canScan() || !current()) return Promise.resolve("failed");
+      return colScanRead(ctx, () => photo, () => current() && isCurrent(), sourceLabel);
+    }};
+}
+
+function colScanPhotoDisabled(ctx) {
+  const live = ctx.live?.active, grid = ctx.grid?.active;
+  ctx.input.disabled = Boolean(ctx.busy || live || grid || ctx.unsure.length >= COL_SCAN_UNSURE_MAX);
+  if (!ctx.photoField) return;
+  ctx.captureIntro.hidden = Boolean(live || grid);
+  ctx.photoField.hidden = Boolean(live || grid);
+  ctx.live.element.hidden = Boolean(grid);
+  ctx.grid.element.hidden = Boolean(live);
+  ctx.live.refresh?.();
+  ctx.grid.refresh?.();
 }
 
 function colScanControlHere(ctx, node) {
@@ -205,7 +251,7 @@ function colScanDefaults(ctx, id) {
 
 /** Archive metadata, not photos. Each unresolved scan has one current set of choice controls. */
 function drawScanUnsure(ctx) {
-  ctx.input.disabled = ctx.busy || ctx.unsure.length >= COL_SCAN_UNSURE_MAX;
+  colScanPhotoDisabled(ctx);
   ctx.checks.hidden = !ctx.unsure.length;
   ctx.checkTitle.textContent = `Check these (${ctx.unsure.length})`;
   ctx.checkCurrent.textContent = ctx.currentUnsure ? "The current photo needs a printing choice above. Resolve or skip every photo before Review."
@@ -213,26 +259,29 @@ function drawScanUnsure(ctx) {
   clear(ctx.checkList);
   for (const entry of ctx.unsure) {
     const current = ctx.currentUnsure === entry;
+    const label = entry.source || `Photo ${entry.id}`;
+    const reference = entry.source || `photo ${entry.id}`;
     const find = el("button", {type: "button", class: "btn btn-quiet", text: "Find by name…", disabled: ctx.busy,
-      "aria-label": `Find photo ${entry.id} by name`, onclick: event => {
+      "aria-label": `Find ${reference} by name`, onclick: event => {
         if (!colScanControlHere(ctx, event.currentTarget) || !ctx.unsure.includes(entry)) return;
         ctx.seq++; ctx.lookingUpName = false;
+        ctx.live?.stop();
         ctx.currentUnsure = ctx.resolving = entry; ctx.last = null; clear(ctx.result);
         ctx.name.value = entry.proposals[0]?.name || "";
-        ctx.result.append(el("p", {class: "sub", text: `Type the name for photo ${entry.id}, then choose its printing.`}));
+        ctx.result.append(el("p", {class: "sub", text: `Type the name for ${reference}, then choose its printing.`}));
         drawScanUnsure(ctx); ctx.name.focus();
       }});
     const skip = el("button", {type: "button", class: "btn btn-quiet", text: "Skip this photo", disabled: ctx.busy,
-      "aria-label": `Skip photo ${entry.id}`, onclick: event => {
+      "aria-label": `Skip ${reference}`, onclick: event => {
         if (!colScanControlHere(ctx, event.currentTarget) || !ctx.unsure.includes(entry)) return;
         ctx.unsure.splice(ctx.unsure.indexOf(entry), 1);
         if (ctx.currentUnsure === entry) { ctx.currentUnsure = null; clear(ctx.result); }
         if (ctx.resolving === entry) ctx.resolving = null;
         drawScanUnsure(ctx); drawScanFoot(ctx);
-        colScanSay(ctx, "info", `Skipped photo ${entry.id}. No card was added for it.`);
+        colScanSay(ctx, "info", `Skipped ${reference}. No card was added for it.`);
       }});
     ctx.checkList.append(el("li", {class: "col-scan-check", "data-scan-photo": String(entry.id)},
-      el("p", {}, el("strong", {text: `Photo ${entry.id}`}), ": ", entry.message),
+      el("p", {}, el("strong", {text: label}), ": ", entry.message),
       ...(!current && entry.proposals.length ? [colScanChoices(ctx, entry.proposals, false, entry.proposals, entry)] : []),
       el("div", {class: "actions"}, find, skip)));
   }
@@ -249,6 +298,10 @@ async function colScanShrink(file) {
   canvas.height = Math.max(1, Math.round(picture.height * scale));
   canvas.getContext("2d").drawImage(picture, 0, 0, canvas.width, canvas.height);
   if (picture.close) picture.close();
+  return colScanEncodeCanvas(canvas);
+}
+
+async function colScanEncodeCanvas(canvas) {
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", COL_SCAN_QUALITY));
   if (!blob) throw new Error("That photo couldn't be made smaller to send. Take it again.");
   if (blob.size > COL_SCAN_MAX) throw new Error("That photo is still more than 4 MiB once made smaller. Take it again.");
@@ -263,11 +316,19 @@ async function colScanShrink(file) {
 
 /** Send one photo and show what it was read as. */
 async function scanPhoto(ctx, file) {
-  if (ctx.busy || !ctx.reads || !colScanHere(ctx)) return;
+  if (ctx.live?.active || ctx.grid?.active) return;
+  return colScanRead(ctx, () => colScanShrink(file), () => colScanHere(ctx));
+}
+
+/** All capture paths use the existing one-photo recognition route and the same pending batch. */
+async function colScanRead(ctx, photoBytes, current, source = "") {
+  if (ctx.busy || !ctx.reads || !current()) return "failed";
   if (ctx.unsure.length >= COL_SCAN_UNSURE_MAX) {
-    colScanSay(ctx, "warn", `Check these holds ${COL_SCAN_UNSURE_MAX} photos. Resolve or skip some before taking another photo.`); return;
+    colScanSay(ctx, "warn", `Check these holds ${COL_SCAN_UNSURE_MAX} photos. Resolve or skip some before taking another photo.`); return "failed";
   }
   const seq = ++ctx.seq;
+  const read = source ? {current, controller: new AbortController()} : null;
+  ctx.captureRead = read;
   ctx.lookingUpName = false;
   ctx.busy = true;
   ctx.input.disabled = true;
@@ -276,17 +337,23 @@ async function scanPhoto(ctx, file) {
   drawScanUnsure(ctx); drawScanFoot(ctx);
   clear(ctx.message).append(loadingBox("Reading the card…"));
   try {
-    const photo = await colScanShrink(file);
-    if (!colScanHere(ctx, seq)) return;
-    const answer = await apiWrite("/api/collection/scan", { space: ctx.cv.space, photo });
-    if (!colScanHere(ctx, seq)) return;
-    drawScanResult(ctx, answer);
+    const photo = await photoBytes();
+    if (!current() || !colScanHere(ctx, seq)) return "failed";
+    const answer = await apiWrite("/api/collection/scan", { space: ctx.cv.space, photo }, "POST",
+      read ? {signal: read.controller.signal} : {});
+    if (!current() || !colScanHere(ctx, seq)) return "failed";
+    return drawScanResult(ctx, answer, source);
   } catch (error) {
-    if (colScanHere(ctx, seq)) colScanSay(ctx, "crit", error.message);
+    if (current() && colScanHere(ctx, seq)) colScanSay(ctx, "crit", error.message);
+    return "failed";
   } finally {
+    if (ctx.captureRead === read) ctx.captureRead = null;
     if (seq === ctx.seq) {
       ctx.busy = false; ctx.input.disabled = false; ctx.input.value = "";
-      if (colScanHere(ctx)) { drawScanUnsure(ctx); drawScanFoot(ctx); }
+      if (colScanHere(ctx)) {
+        if (!current()) clear(ctx.message);
+        drawScanUnsure(ctx); drawScanFoot(ctx);
+      }
     }
   }
 }
@@ -305,12 +372,12 @@ function colScanProposal(source) {
 
 /** One answer: the one printing read with its name is added (the others offered instead); else the choices to
  * pick from (reprints sharing the number read are all "name and number", so none of them is certain). */
-function drawScanResult(ctx, answer) {
+function drawScanResult(ctx, answer, source = "") {
   ctx.lookingUpName = false;
   ctx.currentUnsure = ctx.resolving = null;
   const proposals = (answer.proposals || []).slice(0, COL_SCAN_CHOICES).map(colScanProposal);
   let sure = proposals[0]?.how === "name and number" && proposals[1]?.how !== "name and number";
-  let unsure = sure ? null : {id: ++ctx.nextPhoto, message: answer.message || "The card couldn't be read.",
+  let unsure = sure ? null : {id: ++ctx.nextPhoto, source, message: answer.message || "The card couldn't be read.",
     proposals: proposals.map(colScanProposal),
     language: answer.read?.language || proposals.find(p => p.language)?.language || ""};
   if (unsure) {ctx.unsure.push(unsure);ctx.currentUnsure = unsure;ctx.resolving = unsure;}
@@ -318,27 +385,28 @@ function drawScanResult(ctx, answer) {
   if (!proposals.length) {
     colScanSay(ctx, "warn", answer.message || "The card couldn't be read.");
     ctx.result.append(el("p", { class: "sub", text: "Type its name below, or take the photo again closer and sharper." }));
-    ctx.name.focus();
+    if (!source) ctx.name.focus();
     drawScanUnsure(ctx); drawScanFoot(ctx);
-    return;
+    return "review";
   }
   ctx.last = sure ? addScanCard(ctx, proposals[0], proposals) : null;
   if (sure && !ctx.last) {
     sure = false;
-    unsure = {id: ++ctx.nextPhoto, message: "This printing is at the 999-copy limit. Review a smaller batch; this card is still pending.",
+    unsure = {id: ++ctx.nextPhoto, source, message: "This printing is at the 999-copy limit. Review a smaller batch; this card is still pending.",
       proposals: proposals.map(colScanProposal), language: proposals[0]?.language || ""};
     ctx.unsure.push(unsure); ctx.currentUnsure = ctx.resolving = unsure;
   }
   colScanSay(ctx, sure ? "info" : "warn", sure ? `Added ${colScanLabel(ctx.last)}.` : unsure?.message || answer.message);
   const others = sure ? proposals.slice(1) : proposals;
   drawScanUnsure(ctx); drawScanFoot(ctx);
-  if (!others.length) return;
+  if (!others.length) return sure ? "added" : "review";
   ctx.result.append(el("p", { class: "sub", text: sure ? "Not that one? Choose the printing instead:" : "Choose its printing:" }),
     colScanChoices(ctx, others, sure, proposals, unsure));
   if (answer.proposals.length > COL_SCAN_CHOICES) {
     const rest = answer.proposals.slice(COL_SCAN_CHOICES).map(colScanProposal);
     ctx.result.append(otherScanPrintings(() => colScanChoices(ctx, rest, sure, proposals, unsure)));
   }
+  return sure ? "added" : "review";
 }
 
 /** Buttons for printings: each adds its card (replacing the one just added, when instead), with choices (the
@@ -378,6 +446,7 @@ function otherScanPrintings(draw) {
 async function findScanName(ctx) {
   const name = ctx.name.value.trim();
   if (ctx.busy || !colScanHere(ctx) || !name) return;
+  ctx.live?.stop();
   const seq = ++ctx.seq;
   ctx.lookingUpName = true;
   const unsure = ctx.resolving && ctx.unsure.includes(ctx.resolving) ? ctx.resolving : null;
@@ -495,6 +564,7 @@ function colScanSetPrinting(ctx, card, p, picked = false) {
  * copies, which is the space scanned into); the printing and finish picked become the card's. */
 async function colScanOther(ctx, card) {
   if (ctx.busy || ctx.picking || !colScanHere(ctx)) return;
+  ctx.live?.stop();
   ctx.picking = true;
   let picker, picked;
   try {
@@ -527,7 +597,7 @@ function colScanPrinting(ctx, card) {
   const at = String(card.choices.findIndex((c) => c.set === card.set && c.collector_number === card.collector_number));
   const select = el("select", { class: "col-scan-printing", "aria-label": `Printing of ${card.name}`, onchange: () => {
     const c = card.choices[parseInt(select.value, 10)];
-    if (ctx.busy || !c) { select.value = at; return; }
+    if (!colScanControlHere(ctx, select) || !c) { select.value = at; return; }
     colScanSetPrinting(ctx, card, c);
   } }, card.choices.map((c, i) => el("option", { value: String(i), text: colScanChoiceWords(c, card) })));
   select.value = at;
@@ -540,36 +610,69 @@ function takeScanCard(ctx, card) {
   drawScanPending(ctx);
 }
 
-/** The pending list, each card with its printing, copies, finish, condition and language, then the sheet's Review. */
+const COL_SCAN_PAGE_SIZE = 24;
+
+/** A long batch keeps all its rows for review/export but only renders the editors for one page. */
+function colScanPage(ctx) {
+  const count = ctx.pending.length, pages = Math.ceil(count / COL_SCAN_PAGE_SIZE);
+  if (pages <= 1) { ctx.pendingPage = null; return ctx.pending; }
+  const last = pages - 1, page = Math.min(ctx.pendingPage ?? last, last);
+  const picker = el("select", { "aria-label": "Pending printings to show", onchange: () => {
+    if (!colScanControlHere(ctx, picker)) { picker.value = String(page); return; }
+    const selected = Number(picker.value);
+    if (!Number.isInteger(selected) || selected < 0 || selected > last) return;
+    ctx.pendingPage = selected === last ? null : selected;
+    drawScanPending(ctx);
+    ctx.list.querySelector('[aria-label="Pending printings to show"]')?.focus();
+  } }, Array.from({ length: pages }, (_, i) => {
+    const start = i * COL_SCAN_PAGE_SIZE, end = Math.min(start + COL_SCAN_PAGE_SIZE, count);
+    return el("option", { value: String(i), text: `${start + 1}–${end} of ${count}` });
+  }));
+  picker.value = String(page);
+  ctx.list.append(el("li", { class: "col-scan-page" }, el("label", { class: "field" }, "Show printings", picker)));
+  return ctx.pending.slice(page * COL_SCAN_PAGE_SIZE, (page + 1) * COL_SCAN_PAGE_SIZE);
+}
+
+/** The visible printing editors. The footer and import always count the whole batch. */
 function drawScanPending(ctx) {
   clear(ctx.list);
-  ctx.pending.forEach((card) => {
+  colScanPage(ctx).forEach((card) => {
     if (!card.choices) card.choices = [];
     const qty = el("input", { type: "number", class: "col-qty-input", inputmode: "numeric", min: 1, max: 999, step: 1,
       value: String(card.quantity), "aria-label": `Copies of ${card.name}`,
-      onchange: () => { const count = Number(qty.value); if (colScanCount(ctx, count)) card.quantity = count; qty.value = String(card.quantity); drawScanFoot(ctx); } });
+      onchange: () => {
+        if (!colScanControlHere(ctx, qty)) return;
+        const count = Number(qty.value);
+        if (colScanCount(ctx, count)) card.quantity = count;
+        qty.value = String(card.quantity); drawScanFoot(ctx);
+      } });
     const finish = el("select", { "aria-label": `Finish of ${card.name}`,
-      onchange: () => { colScanEdit(ctx, card, {finish: finish.value}); } },
+      onchange: () => { if (colScanControlHere(ctx, finish)) colScanEdit(ctx, card, {finish: finish.value}); } },
       Object.entries(COL_FINISH_WORDS).map(([value, text]) => el("option", { value, text })));
     finish.value = card.finish;
     const condition = el("select", { "aria-label": `Condition of ${card.name}`,
-      onchange: () => { colScanEdit(ctx, card, {condition: condition.value}); } },
+      onchange: () => { if (colScanControlHere(ctx, condition)) colScanEdit(ctx, card, {condition: condition.value}); } },
       COL_CONDITIONS.map(([value, , text]) => el("option", { value, text })));
     condition.value = card.condition;
     // Language: as read off the card, else not recorded (blank, never assumed English).
     const languages = COL_LANGUAGES.some(([v]) => v === card.language) ? COL_LANGUAGES : [...COL_LANGUAGES, [card.language, card.language]];
     const language = el("select", { "aria-label": `Language of ${card.name}`,
-      onchange: () => { colScanEdit(ctx, card, {language: language.value}); } },
+      onchange: () => { if (colScanControlHere(ctx, language)) colScanEdit(ctx, card, {language: language.value}); } },
       languages.map(([value, text]) => el("option", { value, text: value ? `${text} (${value})` : text })));
     language.value = card.language;
     ctx.list.append(el("li", { class: "col-trade-line" },
       el("span", { class: "col-trade-what", text: `${card.name} (${String(card.set).toUpperCase()} ${card.collector_number})` }),
       colScanPrinting(ctx, card),
       el("button", { type: "button", class: "btn btn-quiet", text: "Other printings…", "aria-label": `Other printings of ${card.name}`,
-        onclick: () => colScanOther(ctx, card) }),
+        onclick: event => { if (colScanControlHere(ctx, event.currentTarget)) colScanOther(ctx, card); } }),
       qty, finish, condition, language,
       el("button", { type: "button", class: "btn btn-quiet", text: "Take out", "aria-label": `Take ${card.name} off the list`,
-        onclick: () => { if (ctx.busy) return; ctx.pending.splice(ctx.pending.indexOf(card), 1); if (ctx.last === card) ctx.last = null; drawScanPending(ctx); } })));
+        onclick: event => {
+          if (ctx.busy || !colScanHere(ctx) || !ctx.list.contains(event.currentTarget)) return;
+          ctx.pending.splice(ctx.pending.indexOf(card), 1);
+          if (ctx.last === card) ctx.last = null;
+          drawScanPending(ctx);
+        } })));
   });
   if (!ctx.pending.length) ctx.list.append(el("li", { class: "sub", text: "Nothing yet." }));
   drawScanFoot(ctx);
@@ -577,10 +680,18 @@ function drawScanPending(ctx) {
 
 function drawScanFoot(ctx) {
   const cards = ctx.pending.reduce((n, c) => n + c.quantity, 0);
+  const capturing = ctx.live?.active || ctx.grid?.active;
+  if (ctx.captureHint) {
+    ctx.captureHint.hidden = !capturing;
+    if (capturing) {
+      const finish = ctx.live?.active ? "Stop the camera to review." : "Finish or discard the images to review.";
+      ctx.captureHint.textContent = `${cards} pending · ${ctx.unsure.length} to check. ${finish}`;
+    }
+  }
   sheetActions(ctx.sheet, [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.dismiss() },
-    cards ? {text: "Download pending batch", value: "download", disabled: ctx.busy || ctx.picking || ctx.unsure.length > 0,
+    !capturing && cards ? {text: "Download pending batch", value: "download", disabled: ctx.busy || ctx.picking || ctx.unsure.length > 0,
       onclick: event => { if (colScanControlHere(ctx, event.currentTarget)) downloadScanBatch(ctx); }} : null,
-    cards || ctx.unsure.length ? { text: cards ? `Review ${plural(cards, "card")}` : "Review", kind: "primary", value: "review",
+    !capturing && (cards || ctx.unsure.length) ? { text: cards ? `Review ${plural(cards, "card")}` : "Review", kind: "primary", value: "review",
       disabled: ctx.busy || ctx.picking, onclick: event => {
         if (colScanControlHere(ctx, event.currentTarget) && ctx.sheet.foot.contains(event.currentTarget)) reviewScan(ctx);
       } } : null]);
@@ -600,7 +711,7 @@ function colScanCsv(pending) {
 
 /** Hand the list to the Import cards sheet's preview: from there it's added as an import is (or taken back). */
 function reviewScan(ctx) {
-  if (ctx.busy || ctx.picking || !colScanHere(ctx)) return null;
+  if (ctx.busy || ctx.picking || ctx.live?.active || ctx.grid?.active || !colScanHere(ctx)) return null;
   if (ctx.unsure.length) {
     colScanSay(ctx, "warn", `Resolve or skip ${plural(ctx.unsure.length, "photo")} in Check these before Review. Nothing was sent to the import preview.`);
     ctx.checks.focus(); return null;
@@ -613,9 +724,10 @@ function reviewScan(ctx) {
   const importing = openImportSheet(cv);
   if (importing) {
     importing.scanned = colScanCopy(ctx.pending);
+    importing.scanStartedAt = ctx.scanStartedAt;
     guardScanBatch(importing.sheet, () => colActive(cv) && !importing.sheet.closed,
       () => scanBatchDescription(importing.scanned, "card"), () => importing.busy);
-    previewImport(importing, `scan-${day}.csv`, text);
+    previewImport(importing, `scan-${day}.csv`, text, ctx.scanStartedAt);
   }
   return importing;
 }
@@ -626,13 +738,13 @@ function colScanBack(importing) {
   return { text: "Back to the scanned list", value: "back", onclick: () => {
     if (importing.busy || importing.sheet.closed) return;
     importing.sheet.close();
-    openScanSheet(importing.cv, importing.scanned);
+    openScanSheet(importing.cv, importing.scanned, importing.scanStartedAt);
   } };
 }
 
 /** Explicit portable checkpoint, using the existing import format; no photos, OCR text or other space's data. */
 function downloadScanBatch(ctx) {
-  if (!colScanHere(ctx) || !ctx.cv.editable || ctx.cv.unsupported || ctx.busy || ctx.picking || !ctx.pending.length) return;
+  if (!colScanHere(ctx) || !ctx.cv.editable || ctx.cv.unsupported || ctx.busy || ctx.picking || ctx.live?.active || ctx.grid?.active || !ctx.pending.length) return;
   if (ctx.unsure.length) {
     colScanSay(ctx, "warn", "Resolve or skip the photos in Check these before downloading. Nothing was downloaded.");
     return;

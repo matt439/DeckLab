@@ -521,7 +521,11 @@ class ApiEndpointTests(ServerTestCase):
         with self.box.no_index(), mock.patch.dict(api.carddata.UPDATE, running=True):
             self.assertEqual(self.get_json("/api/status")["updating"], True)
             self.assertEqual(self.get_json("/api/status")["cards"]["ready"], False)
-            for path in ("/api/decks", "/api/deck?id=casual/gruul-test", "/api/goldfish?id=casual/gruul-test",
+            waiting = self.get_json("/api/decks", 503)
+            self.assertEqual(set(waiting), {"error", "reason"})
+            self.assertEqual(waiting["reason"], "card_data")
+            self.assertIn("still being downloaded", waiting["error"])
+            for path in ("/api/deck?id=casual/gruul-test", "/api/goldfish?id=casual/gruul-test",
                          "/api/cards/search?q=llan", "/img/fdn/227/small"):
                 with self.subTest(path=path):
                     self.assertIn("still being downloaded", self.assertError(path, 503))

@@ -454,3 +454,17 @@ button.deck-row { cursor: pointer; }
 .lib-start-ways > li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); }
 .lib-start-ways .btn { min-width: 9.5em; justify-content: center; }
 .lib-start-line { flex: 1 1 18em; }
+
+.upgrade-checklist { display: grid; gap: var(--s-3); }
+.upgrade-checklist > :empty { display: none; }
+.upgrade-checklist > p, .upgrade-checklist-rows { margin: 0; }
+.upgrade-checklist-rows { padding: 0; list-style: none; }
+.upgrade-checklist-rows li {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--s-2);
+  align-items: center; padding: var(--s-2) 0; border-bottom: 1px solid var(--border);
+}
+.upgrade-checklist-rows strong { overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+  .upgrade-checklist-rows li { grid-template-columns: minmax(0, 1fr) auto; }
+  .upgrade-checklist-rows strong { grid-column: 1 / -1; }
+}

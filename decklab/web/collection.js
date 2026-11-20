@@ -910,11 +910,11 @@ function openImportSheet(cv) {
 }
 
 /** Send the file's text for a preview and show it. */
-async function previewImport(ctx, filename, text) {
+async function previewImport(ctx, filename, text, scanStartedAt = null) {
   const cv = ctx.cv;
   if (ctx.busy || ctx.sheet.closed || !colActive(cv)) return;
   const seq = ++ctx.seq;
-  ctx.source = { filename, text };
+  ctx.source = { filename, text, scanStartedAt };
   ctx.preview = null;
   ctx.groupReview = null;
   clear(ctx.area);
@@ -973,6 +973,18 @@ function drawImportPreview(ctx) {
   sheetActions(ctx.sheet, actions);
 }
 
+/** Only the successful import knows how many physical copies were saved. The scan's clock
+ * includes setup, recognition, corrections, review, retries and the write itself. */
+function colScanImportRate(startedAt, answer) {
+  const copies = answer.added?.cards;
+  const elapsed = Date.now() - startedAt;
+  if (!Number.isFinite(startedAt) || !(elapsed > 0) || answer.ok !== true ||
+      !Number.isSafeInteger(copies) || copies < 1) return "";
+  const perHour = copies * 3600000 / elapsed;
+  const pace = perHour < 1 ? "under 1 saved copy" : plural(Math.round(perHour), "saved copy", "saved copies");
+  return ` Scan to import took ${durationWords(elapsed / 1000)} (${pace}/hour).`;
+}
+
 async function applyImport(ctx, skipProblems) {
   const cv = ctx.cv;
   if (ctx.busy || ctx.sheet.closed || !ctx.preview || !colActive(cv)) return;
@@ -995,6 +1007,7 @@ async function applyImport(ctx, skipProblems) {
     else if (skipProblems) body.skip_problems = true;
     const answer = await apiWrite("/api/collection/import/apply", body);
     const added = answer.added || { rows: 0, cards: 0 };
+    const scanRate = colScanImportRate(ctx.source?.scanStartedAt, answer);
     const here = !ctx.sheet.closed && colActive(cv) && selection === ctx.seq && ctx.preview === reviewed;
     ctx.busy = false;
     ctx.sheet.close();
@@ -1002,7 +1015,7 @@ async function applyImport(ctx, skipProblems) {
     if (answer.sha256) cv.sha256 = answer.sha256;
     invalidateLibrary();
     const words = `Imported ${plural(added.cards || 0, "card")} (${plural(added.rows || 0, "row")}).`
-      + (answer.skipped ? ` ${plural(answer.skipped, "row")} with problems skipped.` : "") + colImportExcludedWords(answer);
+      + (answer.skipped ? ` ${plural(answer.skipped, "row")} with problems skipped.` : "") + colImportExcludedWords(answer) + scanRate;
     if (here && !document.querySelector("dialog[open]")) colReload(cv, words, answer.stale_tables, colFilingSnapshot(answer, cv));
     else if (state.profile?.id === cv.profile) toast(words);
   } catch (error) {
@@ -1016,7 +1029,7 @@ async function applyImport(ctx, skipProblems) {
       clear(ctx.area);
       clear(ctx.message).append(el("p", { class: "box box-warn", text: error.message }));
       sheetActions(ctx.sheet, [{ text: "Cancel", onclick: () => ctx.sheet.dismiss() },
-        { text: "Preview again", kind: "primary", onclick: () => previewImport(ctx, ctx.source.filename, ctx.source.text) }]);
+        { text: "Preview again", kind: "primary", onclick: () => previewImport(ctx, ctx.source.filename, ctx.source.text, ctx.source.scanStartedAt) }]);
       return;
     }
     if (error.status === 409 && error.data && error.data.sha256) {
