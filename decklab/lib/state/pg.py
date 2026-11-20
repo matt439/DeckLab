@@ -793,6 +793,14 @@ class PgStore:
 
     # ------------------------------------------------------------------ editor drafts kept for later
 
+    def checklist(self, profile_id):
+        from . import upgrade_checklist
+        return upgrade_checklist.pg_get(self, profile_id)
+
+    def checklist_put(self, profile_id, title, rows, expect):
+        from . import upgrade_checklist
+        return upgrade_checklist.pg_put(self, profile_id, title, rows, expect)
+
     def deck_draft(self, profile_id, deck_id, version):
         """One profile's draft of one deck list (pg_deck_drafts.get; deck_drafts.view's shape).
         Not cached; deck_drafts.MissingSchema before migration 0018."""

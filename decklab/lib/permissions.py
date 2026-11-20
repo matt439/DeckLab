@@ -250,12 +250,17 @@ def sees_accessories(profile, *, script=False, public=frozenset()):
     return owners is None or bool(owners)
 
 
+def owns_profile(profile, owner_id):
+    """Personal records belong to the named viewer, even in a shared space."""
+    return bool(profile) and isinstance(owner_id, str) and profile.get("id") == owner_id
+
+
 def sees_wishlist(profile, owner_id, *, script=False):
     """True only when profile is the wishlist's owner (owner_id is its
     profile id): not an admin, not someone else at home, and not a
     request naming nobody, a script's included. script doesn't widen it; it's taken so that the
     callers ask this as they ask the other rules."""
-    return bool(profile) and isinstance(owner_id, str) and profile.get("id") == owner_id
+    return owns_profile(profile, owner_id)
 
 
 def sees_inventory(profile, space, *, script=False, public=frozenset()):

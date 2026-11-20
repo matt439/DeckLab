@@ -77,6 +77,7 @@ class MemoryStore:
         self._lock = threading.RLock()
         self.down = False
         self._wishlists = {}        # profile id -> [wishlist_entry rows] in position order
+        self._checklists = {}       # profile id -> private working checklist and revision
         self._settings = {}         # profile id -> {key: value}
         self._mode = None           # the simulation_mode row, or None
         self._seeded_mode = None    # MemoryStore(mode=...)'s, shown until a write replaces it
@@ -155,6 +156,27 @@ class MemoryStore:
                 self._batch = None
             if rows:
                 self._append(actor, actor_id, message, reason, rows)
+
+    def checklist(self, profile_id):
+        from . import upgrade_checklist
+        pid = rules.profile_id(profile_id)
+        with self._lock:
+            self._check()
+            return _copy(self._checklists.get(pid, upgrade_checklist.empty()))
+
+    def checklist_put(self, profile_id, title, rows, expect):
+        from . import upgrade_checklist
+        pid = rules.profile_id(profile_id)
+        title, rows = upgrade_checklist.normalize(title, rows, expect)
+        with self._lock:
+            self._check()
+            if self._batch is not None:
+                raise Invalid("Save the checklist separately from an inventory or deck change.")
+            before = self._checklists.get(pid, upgrade_checklist.empty())
+            after = upgrade_checklist.transition(before, title, rows, expect)
+            if after is not before:
+                self._checklists[pid] = after
+            return _copy(after)
 
     # ------------------------------------------------------------------ wishlists
 

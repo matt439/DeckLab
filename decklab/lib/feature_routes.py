@@ -220,6 +220,8 @@ LEGACY_ACCESS = MappingProxyType({
     ('PUT', '/api/profiles/{profile}/settings'): 'profile',
     ('GET', '/api/profiles/{profile}/wishlist'): 'profile',
     ('POST', '/api/profiles/{profile}/wishlist'): 'profile',
+    ('GET', '/api/profiles/{profile}/deck-checklist'): 'profile',
+    ('POST', '/api/profiles/{profile}/deck-checklist'): 'profile',
     ('GET', '/api/shopping'): 'home-records',
     ('GET', '/api/decks'): 'viewer-filtered',
     ('POST', '/api/decks'): 'deck-edit',

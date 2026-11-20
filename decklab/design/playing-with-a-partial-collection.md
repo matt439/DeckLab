@@ -8,13 +8,15 @@ Deck Lab already lets someone start a deck from a pasted list or a precon, deal 
 
 ## A checklist to try at home
 
+**Decks → Check cards for a deck** implements the first part of this idea. Each profile can keep one private checklist, give it an optional name, and reopen it after saving. [How to use the checklist](../README.md#check-cards-for-a-deck) · [Story E5-S43](stories.md#e5-s43)
+
 A player is considering eight upgrades for Commander night. On their phone, they give the deck a name and enter the eight cards. They can leave the rest of the deck and the collection blank.
 
-1. All eight start under **Check at home**. Where Deck Lab knows a copy's location, it can tell the player where to look.
+1. All eight start under **Check at home**. The player can work through the rows as they look in their box.
 2. The player finds four cards in a box and marks them **Set aside**. This records the copies physically pulled for this deck. The player can leave the printing and total owned unknown.
 3. The player chooses **Buy** for two cards and leaves the last two to check later. At the shop they see **2 to buy · 2 still to check · 4 set aside**. They can copy the two they want or correct a choice if they find another copy.
 
-Picking a card for an upgrade expresses intent. Pulling one copy establishes that it is available for this build. That distinction matters if two decks want the same card, or a 60-card deck needs three copies and the player finds only one. A personal checklist could work in an invited member's own space as well as at home. The existing Cards tab already offers a deck-level copy action. [Member deck and buying views](../README.md#peoples-own-collections-spaces)
+Picking a card for an upgrade expresses intent. Pulling one copy establishes that the player has set it aside for this build. That distinction matters if two decks want the same card, or a 60-card deck needs three copies and the player finds only one. Each choice belongs to the checklist. The Cards tab still offers its deck-level copy action based on recorded inventory. [Member deck and buying views](../README.md#peoples-own-collections-spaces)
 
 ## Other ways to reduce upkeep
 
@@ -25,4 +27,4 @@ Picking a card for an upgrade expresses intent. Pulling one copy establishes tha
 
 ## How to test the idea
 
-Ask someone who passed on Deck Lab, “Last time you changed a deck, how did you figure out which cards you needed to buy?” Then try the checklist with a change they are actually considering. Watch whether they can take it to their box or the shop, whether they understand what is still unchecked, and whether they reach for it on their next deck change. Those observations would help decide which idea deserves a prototype.
+Ask someone who passed on Deck Lab, “Last time you changed a deck, how did you figure out which cards you needed to buy?” Then try the checklist with a change they are actually considering. Watch whether they can take it to their box or the shop, whether they understand what is still unchecked, and whether they reach for it on their next deck change. Their experience can guide the next change.

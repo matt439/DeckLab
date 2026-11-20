@@ -96,6 +96,39 @@ class HomeListenerTests(unittest.TestCase):
         given = {"Host": HOSTS[0], "Cf-Access-Jwt-Assertion": token(claims(email=email)), **(headers or {})}
         return self.request(self.remote, "GET", path, headers=given)
 
+    def test_member_reopens_their_deck_checklist_without_a_deck_or_recorded_card(self):
+        path = "/api/profiles/user2/deck-checklist"
+        email = "user2@example.com"
+        self.assertEqual(self.remote_get(path, email), (200, {"revision": 0, "title": "", "rows": []}))
+        headers = {"Host": HOSTS[0], "Cf-Access-Jwt-Assertion": token(claims(email=email)), **WRITE}
+        rows = [{"name": "Unknown printing", "choice": "check"}, {"name": "Unknown printing", "choice": "buy"}]
+        form = {"expect": 0, "title": "A deck change", "rows": rows}
+        status, saved = self.request(self.remote, "POST", path, json.dumps(form).encode(), headers)
+        self.assertEqual(status, 200, saved)
+        self.assertGreater(saved["revision"], 0)
+        self.assertEqual(saved, {"revision": saved["revision"], "title": form["title"], "rows": rows})
+        self.assertEqual(self.remote_get(path, email), (200, saved))
+        self.assertEqual(self.request(self.remote, "POST", path, json.dumps(dict(form, rows=[])).encode(), headers)[0], 409)
+        # The login is an owner, but cannot submit an edit sent in another viewer's context.
+        mismatch = dict(form, expect=saved["revision"], rows=[], profile="user1")
+        self.assertEqual(self.request(self.remote, "POST", path, json.dumps(mismatch).encode(), headers)[0], 403)
+        self.assertEqual(self.remote_get(path, email), (200, saved))
+
+    def test_deck_checklist_refuses_other_viewers_before_reading_the_body(self):
+        own = "/api/profiles/user1/deck-checklist"
+        missing = "/api/profiles/nobody/deck-checklist"
+        self.assertEqual(self.home_get(own, {access.VIEWER_HEADER: "user1"})[0], 200)
+        refusal = self.home_get(missing)
+        self.assertEqual(refusal[0], 403)
+        for headers in ({}, SCRIPT, {access.VIEWER_HEADER: "matt"}):
+            with self.subTest(headers=headers):
+                self.assertEqual(self.home_get(own, headers), refusal)
+                self.assertEqual(self.home_get(missing, headers), refusal)
+                for body in (b"{", b'{"profile":"user1","expect":0,"title":"","rows":[]}'):
+                    self.assertEqual(self.request(self.home, "POST", own, body, {**WRITE, **headers}), refusal)
+        # The signed-in administrator can neither read the member's private list nor choose the member by header.
+        self.assertEqual(self.remote_get(own, "matt@example.com", {access.VIEWER_HEADER: "user1"}), refusal)
+
     # ------------------------------------------------------------------ who is a script
 
     def test_a_script_on_the_pc_is_answered_as_today(self):

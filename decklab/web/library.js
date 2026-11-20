@@ -148,13 +148,23 @@ function libMatchesTitle(deck, filters) {
 }
 
 function showLibrary(params, token) {
-  load("/api/decks", token, (data) => {
+  const profile = state.profile;
+  return load("/api/decks", token, (data) => {
     if (!cacheLibrary(data)) {
       $("#main").append(errorBox("The saved deck list changed", new ApiError(409, "Reload to get the latest saved copy.")));
       return;
     }
     drawLibrary(data, libraryFilters(params));
-  });
+  }, { cardWaitAction: () => libChecklistButton(() => state.profile === profile && routeToken === token && parseHash().path === "library") });
+}
+
+/** The warm library and the first card download both lead to the same name-only checklist. */
+function libChecklistButton(currentPage) {
+  if (!state.profile?.id) return null;
+  return el("button", { type: "button", class: "btn", text: "Check cards for a deck", "aria-haspopup": "dialog",
+    onclick: event => {
+      if (event.currentTarget.isConnected && currentPage()) openUpgradeChecklist(currentPage);
+    } });
 }
 
 /** A labelled select for the filter row (its words hidden: each option says what it is) or, with shown,
@@ -293,6 +303,7 @@ function drawLibrary(data, filters) {
   const personalNeeds = memberOwnSpace() ? el("button", { type: "button", class: "btn", text: "Cards to get", onclick: () => {
     if (view.current?.()) openMemberNeeds();
   } }) : null;
+  const checklist = libChecklistButton(view.current);
   // Compare two decks (compare.js, E1-S13): choose the two from the decks shown here.
   if (data.decks.filter((d) => !d.error).length > 1) more.push({ label: "Compare two decks…", onclick: () => openCompareFirst(data.decks) });
   // New deck is the page's one primary action for whoever may make a deck (on a phone it opens in the Quick
@@ -312,8 +323,9 @@ function drawLibrary(data, filters) {
 
   // The warnings go first: they say when the missing-card counts can't be trusted.
   add(main, [
-    ...pageHead({ title: routeH1("library"), description: "Tap a deck for its cards, play guide and stats.",
-      primary: personalNeeds ? [primary, personalNeeds] : primary, more: rowMore ? [] : more }),
+    ...pageHead({ title: routeH1("library"), description: data.decks.length ? "Tap a deck for its cards, play guide and stats."
+      : "Planning an upgrade? Start with just the names of the cards you want to check.",
+      primary: [primary, checklist, personalNeeds].filter(Boolean), more: rowMore ? [] : more }),
     warningsBox(data.warnings, "Warnings"),
     tables,
     libOfficialPanel(data),           // library-official.js: Game Changer and ban changes (E9-S36)

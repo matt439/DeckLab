@@ -74,22 +74,23 @@ def _index_info():
         return None, reason
 
 
-def _require_cards():
+def _require_cards(*, tag_wait=False):
     """Raise ApiError 503 until the card index can be loaded. The message is
     for the person holding the phone; the details are in the server log."""
     info, reason = _index_info()
     if info is not None:
         return
     recovery = _card_recovery()
+    extra = {"reason": "card_data"} if tag_wait else {}
     if UPDATE["running"]:
         raise ApiError(503, "The card data is still being downloaded from Scryfall and indexed "
-                            "(the first start takes a few minutes). Try again shortly." + recovery)
+                            "(the first start takes a few minutes). Try again shortly." + recovery, **extra)
     if UPDATE["error"]:
         raise ApiError(503, "There's no card data yet: the last download from Scryfall failed. "
                             "Deck Lab tries again by itself; the server log on the PC says what "
-                            "went wrong." + recovery)
+                            "went wrong." + recovery, **extra)
     raise ApiError(503, f"{reason}. Deck Lab gets it from Scryfall when it starts; the server log "
-                        f"on the PC says more." + recovery)
+                        f"on the PC says more." + recovery, **extra)
 
 
 def _named_admin():

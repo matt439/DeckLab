@@ -81,7 +81,7 @@ def decks_index():
     "own_collection_empty" (E11-S56) is whether the viewer's own space's collection has no
     cards (_own_collection_empty), for the library's empty-space start; left out for a script,
     nobody chosen, a viewer who may not see that collection, or one that can't be read."""
-    _require_cards()
+    _require_cards(tag_wait=True)  # The library can still open its name-only checklist during this wait.
     summaries = [dict(summary) for summary in guard.visible_decks(decks.list_decks())]
     opponents = usual_opponent_ids(summaries)
     add_usual_opponents(summaries, opponents)

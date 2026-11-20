@@ -111,6 +111,9 @@ class MemberExportTests(db_support.DbTestCase):
                             ("a" * 32, ["sample/casual/current", "other/casual/current"], Jsonb({"notes": SECRET})))
             # Drafts kept for later (E2-S16, not audited): fingerprinted, never written into the artifact.
             for space, text in ((SPACE, "member draft"), ("other", SECRET)):
+                c.execute("insert into upgrade_checklist (profile_id, revision, title, rows) "
+                          "values (%s, 1, %s, %s)", (space, "Private upgrade " + text,
+                                                      Jsonb([{"name": "Opt", "choice": "check"}])))
                 c.execute("insert into deck_draft (profile_id, deck_id, version, revision, saved_at, device, content) "
                           "values (%s, %s, 'target', 1, now(), 'iPad', %s)",
                           (space, f"{space}/casual/current", Jsonb({"v": 1, "notes": text})))
@@ -146,6 +149,7 @@ class MemberExportTests(db_support.DbTestCase):
         for path in self.dest.rglob("*"):
             if path.is_file():
                 self.assertNotIn(SECRET.encode(), path.read_bytes())
+                self.assertNotIn(b"Private upgrade", path.read_bytes())
         self.assertEqual(self.match(manifest), manifest)
 
     def test_export_is_read_only_and_deterministic(self):
@@ -176,7 +180,7 @@ class MemberExportTests(db_support.DbTestCase):
         self.assertIn("imports/scan.csv", files)
         self.assertIn("decks/casual/current.md", files)
         for query, params in seen:
-            self.assertNotRegex(query, r"\b(?:profile|profile_email|play_record|profile_setting|wishlist_entry|deck_draft|new_deck_draft|visibility)\b")
+            self.assertNotRegex(query, r"\b(?:profile|profile_email|play_record|profile_setting|wishlist_entry|upgrade_checklist|deck_draft|new_deck_draft|visibility)\b")
             self.assertNotIn("ops.visit", query)
             if "%s" in query:
                 self.assertEqual(params, (SPACE,))
@@ -199,6 +203,7 @@ class MemberExportTests(db_support.DbTestCase):
         self.change("update deck_draft set revision = revision + 1 where profile_id = 'other'")
         with self.connect() as c:
             c.execute("update new_deck_draft set revision = revision + 1 where profile_id = 'other'")
+            c.execute("update upgrade_checklist set revision = revision + 1 where profile_id = 'other'")
         self.assertEqual(self.match(manifest), manifest)
 
     def test_current_other_space_list_protects_a_result_without_seen_as_provenance(self):
@@ -227,6 +232,7 @@ class MemberExportTests(db_support.DbTestCase):
     def test_member_non_file_state_changes_require_a_fresh_export(self):
         for sql in ("update profile_setting set value = value || 'x' where profile_id = 'sample'",
                     "update wishlist_entry set notes = notes || 'x' where profile_id = 'sample'",
+                    "update upgrade_checklist set title = title || 'x' where profile_id = 'sample'",
                     "update deck_draft set revision = revision + 1 where profile_id = 'sample'",
                     "update play_record set revision = revision + 1"):
             with self.subTest(sql=sql):

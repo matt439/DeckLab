@@ -40,6 +40,10 @@ operator interface. Never place the secret in a URL, web storage or browser code
 - Home orders, receipts, products, shopping and packing records stay within home.
   Home members may read those records; their administrative writes require the
   relevant home-admin permission.
+- The deck upgrade checklist belongs to one profile, including in the shared home
+  space. GET and POST on `/api/profiles/{profile}/deck-checklist` require that
+  profile as the viewer. Saves check the revision. Checklist titles and card
+  choices stay out of Activity, public deck views and the home-only data export.
 - Accessories and their saved pictures follow their owner, with shared home kit
   available to the home profiles. Another owner's Public kit remains read-only.
 - Owner-controlled Public switches grant read-only access to signed-in viewers.
@@ -168,3 +172,4 @@ on any server. The route-access fixture check fails when a source migration is a
 - `0026_watchlist_buy_under.sql`
 - `0027_deck_line_categories.sql`
 - `0028_space_storage.sql`
+- `0029_upgrade_checklist.sql`

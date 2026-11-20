@@ -27,6 +27,9 @@ tests/test_state_contract.py checks):
   They require an independent transaction, exact global audit/current/list evidence and the
   shared wishlist lock. The saved receipt's decimal revision is the owner's latest audit-row
   id, not an inventory/deck revision. Memory-only tests use an explicit audit-shaped adapter.
+- checklist(profile_id) and checklist_put(profile_id, title, rows, expect) -> {revision, title, rows};
+  each row is one physical copy with a name and a check/set_aside/buy choice. Revision 0 means
+  never saved. These private working lists use independent writes and never enter Activity.
 - settings(profile_id) -> {key: value} as saved, in key order (api/settings.py checks values
   and fills in defaults); settings_put(profile_id, values, actor, message) -> {key: value},
   None removing a key; settings_cached(profile_id) -> {key: value}, the last good values

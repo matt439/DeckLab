@@ -167,7 +167,8 @@ class RouteAccessTests(PermissionTestCase):
                     isinstance(name, ast.Name) and name.id in {"writes", "matchup_writes", "coord_writes"} for name in node.targets):
                 found.update(("POST", "/api/" + "/".join(ast.literal_eval(key))) for key in node.value.keys)
         dynamic = {(method, f"/api/profiles/{{profile}}/{kind}") for kind, methods in (
-            ("settings", ("GET", "PUT")), ("wishlist", ("GET", "POST"))) for method in methods}
+            ("settings", ("GET", "PUT")), ("wishlist", ("GET", "POST")),
+            ("deck-checklist", ("GET", "POST"))) for method in methods}
         files = {("GET", path) for path in ("/img/{set}/{number}/{size}", "/symbols/{symbol}",
                  "/accessory-img/{name}", "/accessory-img/staged/{token}", "/{static-file}")}
         self.assertEqual(found | dynamic | files, set(feature_routes.LEGACY_ACCESS))
@@ -256,6 +257,8 @@ class RouteAccessTests(PermissionTestCase):
             body = {"profile": who, "owner": "user3", "thing": "collection", "public": True}
         if legacy_path and "{profile}" in legacy_path:
             body = {"theme": "dark"} if legacy_path.endswith("settings") else {"action": "add", "name": "Llanowar Elves"}
+            if legacy_path.endswith("deck-checklist"):
+                body = {"expect": 0, "title": "Upgrade", "rows": [{"name": "Forest", "choice": "check"}]}
         if legacy_path in ("/api/deck/check", "/api/deck/save"):
             body.pop("space")
         if legacy_path == "/api/tables/update":

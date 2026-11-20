@@ -65,6 +65,8 @@ class RemovalApplyTests(db_support.DbTestCase):
                     cur.execute("insert into wishlist_entry (profile_id, position, name, notes) values (%s,0,'Opt',%s)",
                                 (space, f"{space} wishlist"))
                     cur.execute("insert into profile_setting (profile_id,key,value) values (%s,'theme','dark')", (space,))
+                    cur.execute("insert into upgrade_checklist (profile_id,revision,title,rows) "
+                                "values (%s,1,'Private upgrade','[]')", (space,))
                 cur.execute("insert into token_card (space_id,position,front,quantity) values ('sample',0,'Elf',1)")
                 for deck_id, space, slug, land in (("sample/casual/own", "sample", "own", "Forest"),
                                                   ("sample/casual/second", "sample", "second", "Mountain"),
@@ -134,6 +136,7 @@ class RemovalApplyTests(db_support.DbTestCase):
         with self.connect() as c:
             self.assertEqual(c.execute("select count(*) from space where id='sample'").fetchone()[0], 1)
             self.assertEqual(c.execute("select count(*) from new_deck_draft where space_id='sample'").fetchone()[0], 1)
+            self.assertEqual(c.execute("select count(*) from upgrade_checklist where profile_id='sample'").fetchone()[0], 1)
             self.assertEqual(c.execute("select count(*) from audit.change_set").fetchone()[0], self.changes_before)
         self.assertEqual(self.pending(), [])
         for relative, raw in self.originals.items():
@@ -155,6 +158,7 @@ class RemovalApplyTests(db_support.DbTestCase):
                              .fetchone()[0], 0)
             self.assertEqual(c.execute("select count(*) from deck_draft").fetchone()[0], 0)
             self.assertEqual(c.execute("select space_id from new_deck_draft").fetchall(), [("other",)])
+            self.assertEqual(c.execute("select profile_id from upgrade_checklist").fetchall(), [("other",)])
             revision, updated, by, ids, content = c.execute("select revision,updated_on,updated_by,deck_ids,content "
                                                            "from play_record where id=%s", ("a" * 32,)).fetchone()
             self.assertEqual(revision, 2)

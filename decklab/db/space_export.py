@@ -7,7 +7,7 @@ decks/<kind>/<slug>.md and retired/decks/<kind>/<slug>.md (the last saved text),
 (the storage setup, E8-S25) when the space saved one.
 
 manifest.json binds those files to a deterministic, space-scoped database SHA.
-The SHA also covers histories, aliases, wishlist, settings, switches, editor drafts
+The SHA also covers histories, aliases, wishlist, upgrade checklist, settings, switches, editor drafts
 kept for later (migrations 0018 and 0019) and related play records, without putting their
 contents in the artifact. It excludes global
 revision counters and audit rows, so another space's unrelated save doesn't make
@@ -111,6 +111,14 @@ def snapshot(c, space, *, details=False, personal=False):
             (space, space))), key=_json)
     else:
         data["drafts"] = []
+    # Private like the wishlist. Bind removal to the saved choices without putting them in the
+    # card-file artifact. An absent checklist also preserves a pre-migration export's fingerprint.
+    if not personal and c.execute("select to_regclass('public.upgrade_checklist') is not null").fetchone()[0]:
+        checklists = [row[0] for row in c.execute(
+            "select to_jsonb(r) from upgrade_checklist r join profile p on p.id = r.profile_id "
+            "where p.space_id = %s order by r.profile_id", (space,))]
+        if checklists:
+            data["upgrade_checklists"] = checklists
     # A new deck's drafts (migration 0019): the member's own, and any in the member's space. Only
     # when there are some, so an export made before the migration still matches without them.
     if not personal and c.execute("select to_regclass('public.new_deck_draft') is not null").fetchone()[0]:

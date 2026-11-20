@@ -1,5 +1,9 @@
 # Deck Lab: history
 
+## Check cards for a deck (2026-11-20, E5-S43)
+
+From **Decks**, a player can start a private checklist with just the names of the cards they are looking for. Each copy starts at **Check at home**. When the player finds one, they can mark it **Set aside**. Copies they choose to **Buy** form a shop list they can copy. The same profile can save and reopen the checklist with an empty deck library and collection. [Checklist guide](README.md#check-cards-for-a-deck)
+
 ## Deck building, shopping and game log UI fixes (2026-11-20)
 
 The [20 November UI review](design/ui-ux-review-2026-11-20.md) followed physical cards from collection entry through building, shopping and playing.
