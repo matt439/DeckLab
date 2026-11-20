@@ -2727,8 +2727,9 @@ As the buyer, I want Shopping to compare the price of each remaining copy, so I 
 
 - Given two requested copies, one shop with eligible copies at A$1 and A$20, another with two at A$5 each, and zero postage, then By price and the recommended plan both show A$6 with one copy from each shop.
 - Given a postage charge, a stock limit or an unknown price, then each displayed plan shows the quantities and known charges it actually used. The recommendation still gives priority to covering the most requested copies.
+- Given a costlier eligible listing that unlocks free postage, then the recommended basket can use that listing and the item-price comparison keeps its own allocation. The plan shows the selected printings and flags any search limit or unresolved postage.
 
-Built (2026-11-20): the planner considers each available price tier within each shop combination. It compares coverage and known charges using the allocated copies and their postage. Unknown prices are shown separately. At zero postage, the A$1 and A$5 copies form the A$6 split in the fixture. Postage is applied to each combination's copy allocation, which is selected by eligible stock and unit prices.
+Built (2026-11-20): the planner compares the cost of the allocated cards and their delivery. It can split a row or choose a different eligible printing to reach free postage. At zero postage, the A$1 and A$5 copies form the A$6 split in the fixture. When an unpriced copy could change a shop's charge, postage stays unknown. A bounded search keeps a feasible allocation and the page says when another allocation could cost less. Small synthetic baskets are checked against exhaustive enumeration.
 
 <a id="e5-s41"></a>
 

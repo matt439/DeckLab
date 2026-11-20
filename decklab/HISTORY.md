@@ -1,5 +1,18 @@
 # Deck Lab: history
 
+## Comparing shop baskets including postage (2026-11-20, E5-S27, E5-S40)
+
+Shopping can move some copies to a different shop or choose another eligible
+printing when that reaches free postage. In a three-card fixture the lowest
+item prices total A$16 delivered. Paying A$1 more for one card brings the
+delivered basket to A$11. Both options show the shops and copies they use.
+The recommended basket shows its selected listings and copies known printings
+to the shop list.
+
+An unpriced copy can leave a shop's postage unsettled when it might take the
+basket over the threshold. The page identifies that uncertainty. On a complex
+queue, it shows the best basket found and says when it reached the search limit.
+
 ## Shared opponents in tests of card changes (2026-11-20, E3-S30, E3-S53)
 
 When two catalogue entries share a Forge matchup, testing a deck change

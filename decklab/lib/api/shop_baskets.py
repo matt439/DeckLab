@@ -84,17 +84,11 @@ def _match(row, adapter, data, preference):
     if matched["status"] != "in_stock":
         return shown, []
     name = str(row.get("name") or "").casefold()
-    if not adapter.counts_stock:
-        price = shop_stock.money(matched.get("price_aud"))
-        listing = {key: matched[key] for key in ("set", "collector_number", "finish", "url")}
-        listing.update(price_aud=matched["price_aud"] if price is not None else None, stock=None,
-                       condition=matched.get("condition"), language=matched.get("language"))
-        key = (adapter.key, name, listing["set"], listing["collector_number"], listing["finish"], price)
-        return shown, [shop_stock.Offer(key, listing, price, None)]
-    return shown, _counted_offers(row, adapter.key, name, entry, matched, preference)
+    return shown, _offers(row, adapter, name, entry, matched, preference)
 
 
-def _counted_offers(row, shop, name, entry, matched, preference):
+def _offers(row, adapter, name, entry, matched, preference):
+    """All eligible printings, retaining each listing's observed availability or counted stock."""
     listings = [(index, item) for index, item in enumerate(entry.get("listings") or ())
                 if isinstance(item, dict) and (item.get("stock") or 0) > 0
                 and shops.listing_preferences.fits(item, preference)]
@@ -106,11 +100,11 @@ def _counted_offers(row, shop, name, entry, matched, preference):
     offers = []
     for index, item in listings:
         price = shop_stock.money(item.get("price"))
-        stock = item["stock"]
+        stock = item["stock"] if adapter.counts_stock else None
         listing = {"set": item.get("set"), "collector_number": item.get("number"), "finish": item.get("finish"),
                    "price_aud": item.get("price") if price is not None else None, "stock": stock,
                    "url": item.get("url"), **shops.listing_preferences.words(item)}
-        offers.append(shop_stock.Offer((shop, name, index), listing, price, stock))
+        offers.append(shop_stock.Offer((adapter.key, name, index), listing, price, stock))
     return sorted(offers, key=lambda offer: (str(offer.listing.get("set") or ""),
                                              str(offer.listing.get("collector_number") or "")))
 
