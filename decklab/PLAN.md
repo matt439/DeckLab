@@ -57,9 +57,10 @@ The database move is finished: phase 5b is built, and the week of side-by-side c
     nonmeaningful. The API correctly leaves its headline and ranges null,
     with a generic thin-evidence note. Filled budgets do not qualify that
     deck's AI behavior; the memory retry played no additional games and
-    cannot repair this script limitation. `FG#4` stays open only for a
-    dedicated native AI/script/pilot qualification, preserving the household
-    deck and existing script flag until a qualified change is established.
+    cannot repair this script limitation. The [source investigation and two-game control](forge-trial/syr-elenora-pilot.md)
+    trace the ordinary pilot's veto of the marked creature spell. A fixture verifies
+    the two cast observers independently. Native confirmation awaits an approved idle
+    window for the mirrored Syr Elenora and Lu Meng test with stock scripts.
 
 Each finished feature in [HISTORY.md](HISTORY.md) also lists its "known low issues, left open". None of them is planned; fix one when it gets in the way.
 
