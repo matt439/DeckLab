@@ -1,5 +1,15 @@
 # Deck Lab: history
 
+## Shared opponents in tests of card changes (2026-11-20, E3-S30, E3-S53)
+
+When two catalogue entries share a Forge matchup, testing a deck change
+schedules the comparison once. Both entries appear in the result. Each group
+counts the shared games once when calculating the change in win rate and its
+range. The estimate and the decision to stop use the same distinct matchups.
+
+For older tests with a potentially double-counted verdict, Deck Lab shows the
+saved games and offers a fresh check. Opening the result starts no games.
+
 ## Popular decks coverage and saved samples (2026-11-20, E3-S30, E3-S52, E3-S53)
 
 Popular decks shows saved opponents and games when the results cannot produce

@@ -161,8 +161,84 @@ class RunTests(GauntletVariantCase):
         house = variants.run_test(self.base, self.cards, other, "quick", by="Matt", results_dir=self.folder)
         self.assertNotIn("groups", variants.view(house["test"], self.folder))
 
+    def test_alias_preserves_saved_ranges_stopping_and_mismatch_totals(self):
+        summary = self.run_test(mode=100)
+        before = variants.view(summary["test"], self.folder)
+        alias = dict(summary["opponents"][0], id="gauntlet:other/red", title="Same list from another source")
+        opponents = [self.red, self.blue, dict(self.red, id=alias["id"])]
+        summary["opponents"].append(alias)
+        variants._write_summary(summary, self.folder)
+        after = variants.view(summary["test"], self.folder)
+        self.assertEqual(after["field"], before["field"])
+        self.assertEqual(after["groups"], before["groups"])
+        self.assertEqual(after["note"], before["note"])
+        self.assertEqual(after["distinct_matchups"], 2)
+        self.assertEqual([row["shared_evidence"] for row in after["opponents"]], [False, False, True])
+        self.assertEqual(after["opponents"][0]["paired"], after["opponents"][2]["paired"])
+        self.assertEqual(after["opponents"][2]["title"], alias["title"])
+        # An individual row's missing saved hint does not erase the actual seats in the paired file.
+        summary["opponents"][0]["variant_side"] = None
+        state = {"kw": {"results_dir": self.folder}}
+        for count in (2, 3):
+            with self.subTest(sources=count):
+                diffs = variants._look_numbers(state, summary, opponents[:count], 100)
+                judged = dict(summary, looks=[])
+                look = variants._judge(judged, diffs, 100, [100])
+                self.assertEqual(look, before["test"]["looks"][-1])
+                self.assertEqual(judged["starter_mismatch"], before["test"]["starter_mismatch"])
+        summary["opponents"][0]["dropped"] = "earlier failed catalogue entry"
+        variants._write_summary(summary, self.folder)
+        remaining = variants.view(summary["test"], self.folder)
+        self.assertFalse(remaining["opponents"][2]["shared_evidence"])
+        self.assertEqual(remaining["field"], before["field"])
+
+    def test_stop_judges_only_the_completed_prefix_across_distinct_matchups(self):
+        summary = self.run_test(mode=10)
+        first, second = summary["opponents"]
+        alias = dict(first, id="gauntlet:other/red")
+        summary.update(opponents=[first, second, alias], looks=[])
+        original_load = variants.load_paired
+
+        def missing_game(key, folder):
+            paired = original_load(key, folder)
+            if key == first["paired_key"]:
+                for batch in paired["batches"]:
+                    batch["games"] = [game for game in batch["games"] if game["g"] != 3]
+            return paired
+
+        opponents = [self.red, self.blue, dict(self.red, id=alias["id"])]
+        with mock.patch.object(variants, "load_paired", missing_game):
+            variants._stopped_look({"kw": {"results_dir": self.folder}}, summary, opponents, [10])
+        self.assertEqual(summary["games_per_opponent"], 3)
+        self.assertEqual(summary["starter_mismatch"]["of"], 6)
+        self.assertTrue(summary["looks"][0]["stopped"])
+
 
 class GroupTests(unittest.TestCase):
+
+    def test_a_second_catalogue_label_alone_cannot_turn_an_uncertain_change_into_a_gain(self):
+        record = {"id": "first", "base_key": "A", "paired_key": "one",
+                  "group": {"identity": "R", "style": "aggro", "tier": "hard"}}
+        difference = {"center": .08, "var": .0025}
+        members = [(record, difference)]
+        original = variants_gauntlet.groups(members)
+        alias = dict(record, id="other-source")
+        self.assertLess(original["colour"][0]["low"], 0)
+        self.assertEqual(variants_gauntlet.groups(members + [(alias, difference)]), original)
+        # The same card list with a different effective pilot can be an independent pair.
+        independent = dict(record, id="different-pilot", base_key="B", paired_key="two")
+        two = variants_gauntlet.groups(members + [(independent, difference)])
+        self.assertEqual(two["colour"][0]["opponents"], 2)
+        self.assertGreater(two["colour"][0]["low"], 0)
+
+    def test_alias_keeps_its_own_source_tags_and_adds_no_weight_within_shared_groups(self):
+        pair = {"base_key": "A", "paired_key": "one"}
+        members = [(dict(pair, group={"identity": "U", "style": "control", "tier": "core"}), None),
+                   (dict(pair, group={"identity": "U", "style": "control", "tier": "precon"}), None)]
+        groups = variants_gauntlet.groups(members)
+        self.assertEqual([(row["key"], row["opponents"]) for row in groups["colour"]], [("U", 1)])
+        self.assertCountEqual([(row["key"], row["opponents"]) for row in groups["tier"]],
+                              [("core", 1), ("precon", 1)])
 
     def test_an_untagged_opponent_is_unknown_never_colourless(self):
         rows = [({"id": "a", "group": {"identity": "", "style": "aggro", "tier": "easy"}}, None),
@@ -188,6 +264,20 @@ class GauntletCommandLineTests(GauntletVariantCase):
 
     main = CommandLineTests.main
     dck = CommandLineTests.dck
+
+    def test_two_catalogue_sources_share_one_printed_result(self):
+        original = CATALOGUE["decks"][0]
+        alias = dict(original, id="gauntlet:other/red", title="Red from another source")
+        catalogue = dict(CATALOGUE, decks=[original, alias])
+        self.samples[SAMPLE["id"]] = dict(SAMPLE, decks=[original["id"], alias["id"]])
+        green = self.dck("green", GREEN)
+        with mock.patch.object(gauntlet, "_load_catalogue", return_value=catalogue):
+            code, out, err = self.main("variant", green, "--remove", "1 Fiery Annihilation", "--add", "1 Shock",
+                                       "--gauntlet", SAMPLE["id"], "--games", "40")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(out.count("over 40 paired games"), 1)
+        self.assertIn(f"{alias['title']} ({alias['id']}): shares the paired games shown for "
+                      f"{original['title']} ({original['id']}).", out)
 
     def test_variant_gauntlet(self):
         green = self.dck("green", GREEN)

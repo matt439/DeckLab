@@ -1627,6 +1627,7 @@ As a player comparing my Commander deck with published lists, I want to know how
 
 - Given four catalogue entries sharing three matchup keys with 40 saved games, when the entries attribute 60 games between them, then the result shows 40 distinct games and retains all four entries with their source and per-entry coverage.
 - Given repeated keys within a group, then each distinct matchup contributes once to the group's evidence minimums, strength estimate, uncertainty range and turn statistics. Showing the same results under a second source cannot narrow the range. A list may still appear in each colour or style it belongs to.
+- Given a test of a card change against two sources of the same matchup, then the estimate, work scheduled, stopping decision and result count their shared games once. Both source entries remain visible. An older test whose verdict could have counted the games twice offers a fresh check using the saved games.
 
 Built (2026-11-20): the Testing summary and read-only CLI show distinct matchups and games alongside coverage attributed to catalogue entries when a result is shared. Per-entry rows retain their source, games and shared key. Each key contributes once within a group to its evidence minimum, estimate, uncertainty and turn statistics. The 40/60 fixture retains four entries over three matchup keys and checks statistics against the single-source result.
 

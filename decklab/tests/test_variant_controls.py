@@ -27,7 +27,6 @@ class ControlsTests(unittest.TestCase):
         self.fakes = {}
         for patch in (mock.patch.object(engine, "today", return_value=self.eng),
                       mock.patch.object(common, "_settings", return_value={"forge_field_inflight": 1}),
-                      mock.patch.object(variants, "_base_key", side_effect=lambda a, b: engine._sha(sorted([a["card_sha"], b["card_sha"]]))),
                       mock.patch.object(runner, "run", side_effect=self._fake_run)):
             patch.start()
             self.addCleanup(patch.stop)
@@ -35,6 +34,8 @@ class ControlsTests(unittest.TestCase):
     def _fake_run(self, a, b, n, **kwargs):
         folder = Path(kwargs["results_dir"])
         fake = self.fakes.setdefault(folder, FakeRuns(folder))
+        if not kwargs.get("key"):
+            kwargs["key"] = engine.key(a, b, self.eng)
         found = fake(a, b, n, **kwargs)
         self.calls.append({**fake.calls[-1], "folder": folder})
         found.update(engine.result_fields(self.eng, [a, b]))
@@ -76,6 +77,16 @@ class ControlsTests(unittest.TestCase):
         path.write_text(json.dumps({"same_install": True, "same_key": True, "noise_floors": [receipt]}), encoding="utf-8")
         found = variants.run_placebo(self.base, self.opponent, 50, by="Matt", results_dir=self.root, noise_floor=path)
         self.assertEqual(found["noise_floor"][self.opponent["card_sha"]]["different_outcomes"], 3)
+        self.assertEqual(found["opponents"][0]["noise_floor"], found["noise_floor"][self.opponent["card_sha"]])
+        different_pilot = dict(self.opponent, id="casual/red-control",
+                               pilot={"profile": "Default", "switches": ["fixture-1"]})
+        with mock.patch.object(variants, "_opponent_entries", return_value=[self.opponent, different_pilot]):
+            field = variants.run_placebo(self.base, "field", 50, by="Matt", results_dir=self.root, noise_floor=path)
+        first, second = field["opponents"]
+        self.assertEqual(first["noise_floor"]["different_outcomes"], 3)
+        self.assertIsNone(second["noise_floor"])
+        self.assertNotEqual(first["base_key"], second["base_key"])
+        self.assertNotIn(self.opponent["card_sha"], field["noise_floor"])
         other = {**self.base, "pilot": {"profile": "Default", "switches": ["fixture-1"]}}
         self.assertEqual(controls._noise(path, other, [self.opponent], self.eng), {})
         self.assertEqual(controls._noise(path, self.base, [self.opponent], {**self.eng, "clock_s": 9}), {})

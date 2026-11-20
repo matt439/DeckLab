@@ -70,7 +70,7 @@ def _saved(test_id, profile):
         snapshot = forge_runs.COORD_JOBS.snapshot(job)
         if snapshot["status"] in variant_page.WAITING:
             raise ApiError(409, "Wait for this test to finish before reviewing a queue request.")
-    if not saved.get("looks") and saved.get("outcome") is None:
+    if not saved.get("looks") and saved.get("outcome") is None and not saved.get("needs_recheck"):
         raise ApiError(409, "This test has no finished result to review.")
     if not variant_buying.HOME_DECK.fullmatch(str((saved.get("base") or {}).get("id", ""))):
         raise ApiError(400, "Only a saved home deck's test can add a home queue request.")
