@@ -132,7 +132,7 @@ class ShoppingBasketOrderTests(unittest.TestCase):
             condition: '', language: '', notes: ''});
           action('Edit order').click(); view.data.queue_revision = 'q2'; action('Preview order').click(); await tick();
           assert.equal(writes.length, 1); assert.equal(view.stale, true); assert(sheet.orderError.textContent.includes('queue changed'));
-          assert.equal(action('Preview order').disabled, true);
+          assert(!action('Preview order') && !action('Refresh Shopping').disabled);
           assert.equal(shopOrderSheet({...view, stale: false}, seed), null);
         """)
 
@@ -144,4 +144,32 @@ class ShoppingBasketOrderTests(unittest.TestCase):
           const seed = shopBasketOrderSeed(view, basket, basket);
           assert.equal(seed.cards.length, 1); assert.equal(seed.cards[0].quantity, 5);
           same(seed.fulfils, [{row: 1, quantity: 2}, {row: 2, quantity: 3}]);
+        """)
+
+    def test_basket_save_conflict_refreshes_in_place_and_requires_a_fresh_preview(self):
+        self.seed_js("""
+          const writes = []; let previews = 0;
+          apiWrite = async (path, body) => {
+            writes.push([path, body]);
+            if (path.endsWith('/preview')) return {preview: 'review-' + ++previews, tables: {}};
+            if (body.preview === 'review-1') throw new ApiError(409, 'Queue changed');
+            return {saved: true};
+          };
+          api = async () => ({...empty, queue_revision: 'q2', to_buy: [{...queued, quantity: 2}]});
+          route = () => {}; toast = () => {};
+          const seed = shopBasketOrderSeed(view, basket, basket), sheet = shopOrderSheet(view, seed);
+          const action = text => sheet.foot.querySelectorAll('button').find(item => item.textContent === text);
+          const tick = async () => {for (let n = 0; n < 10; n++) await null;};
+          const notes = sheet.body.querySelector('[data-order-field=notes]'); notes.value = 'Confirm pickup'; notes.fire('input');
+          action('Preview order').click(); await tick(); action('Save order').click(); await tick();
+          action('Refresh Shopping').click(); await tick();
+          assert(!sheet.closed && !action('Save order')); assert.equal(writes.length, 2);
+          assert(sheet.body.querySelector('[role=status]').textContent.includes('4 selected before, now 2 queued'));
+          const check = sheet.body.querySelector('[data-order-fulfils=1]'); assert(!check.checked); check.checked = true;
+          action('Preview order').click(); await tick();
+          const body = writes[2][1]; assert.equal(body.expect, 'q2');
+          same(body.fulfils, [{row: 1, quantity: 2}]); same(body.cards.rows, seed.cards);
+          same(body.record, writes[0][1].record); assert.equal(body.record.notes, 'Confirm pickup');
+          action('Save order').click(); await tick();
+          same(writes[3], ['/api/shopping/order/apply', {preview: 'review-2'}]); assert(sheet.closed);
         """)

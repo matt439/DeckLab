@@ -110,6 +110,7 @@ class MemberSelfServiceTests(PermissionTestCase):
         self.assertFalse(answer["ready"])
         self.assertEqual(answer["rows"], [])
         self.assertIn("recognized", answer["reason"])
+        self.assertEqual([deck["id"] for deck in answer["check_decks"]], ["user2/casual/second"])
 
 
 class MemberDownloadHttpTests(ServerTestCase):

@@ -122,6 +122,7 @@ function closeAllSheets() {
   closeAssemblySheets();
   closeProductStorageSheets();
   closeTokenPlanSheets();
+  if (typeof closePlayDeleteSheets === "function") closePlayDeleteSheets();
   if (typeof closeLifeCounter === "function") closeLifeCounter();     // life-counter.js: its game stays kept
   if (typeof closePodLifeCounter === "function") closePodLifeCounter();
   closeAccessorySheets();

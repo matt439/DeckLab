@@ -88,6 +88,83 @@ class DeckQueueMissingUiTests(unittest.TestCase):
           same(toasts, ['Queued 2 copies of 1 card for Test Deck.']);
         """)
 
+    def test_play_now_exports_its_shortfall_and_labels_the_planned_review_before_opening(self):
+        self.run_js(r"""
+          state.may = admin; state.profile.role = 'admin';
+          const page = makePage(), copied = [];
+          const opt = card('Opt', 'Instant', 1, ['U']);
+          page.version = 'owned';
+          page.sections.Deck = [{qty: 4, name: 'Opt', card: opt}, {qty: 6, name: 'Elf', card: elf}];
+          page.owned.rows = [row('Opt', 4, 1, [['Incoming', 1]]), row('Elf', 6, 0)];
+          page.owned.totals.missing = 1;
+          navigator.clipboard = {writeText: async (text) => copied.push(text)};
+          showMissing(page);
+          assert(!queueButton());
+          const planned = buttonText(main, 'Review Planned list shortages'); assert(planned);
+          buttonText(main, 'Copy missing cards').click(); await settle();
+          same(copied, ['1 Opt\n']); same(calls, []);
+          planned.click(); await settle();
+          assert(sheet().textContent.includes('Bolt')); assert(!sheet().textContent.includes('Opt'));
+          same(calls[0][1], {profile: 'matt', deck: 'casual/test'});
+        """)
+
+    def test_copy_missing_on_a_members_own_deck_and_no_export_for_hidden_inventory(self):
+        self.run_js(r"""
+          state.profile = {id: 'user2', space: 'user2', role: 'member'};
+          state.may = {...admin, orders: false, see_inventory: ['user2']};
+          const page = makePage();
+          page.summary = {...page.summary, id: 'user2/casual/test', space: 'user2'};
+          showMissing(page); assert(!queueButton());
+          navigator.clipboard = {writeText: async () => { throw Error('Unavailable'); }};
+          buttonText(main, 'Copy missing cards').click(); await settle();
+          assert.equal(sheet().querySelector('textarea').value, '3 Bolt\n');
+          assert(sheet().textContent.includes('Planned list'));
+          shopCloseQueueSheets(); assert(!sheet());
+          const hidden = makePage(); delete hidden.owned; showMissing(hidden);
+          assert(!buttonText(main, 'Copy missing cards')); same(calls, []);
+        """)
+
+    def test_old_sheet_cannot_submit_as_another_profile_or_after_its_deck_redraws(self):
+        self.run_js("""
+          state.may = admin; state.profile.role = 'admin';
+          for (const change of ['profile','route','deck']) {
+            showMissing(makePage()); queueButton().click(); await settle();
+            const button = buttonText(sheet(), 'Queue 2 copies (To buy)');
+            const before = calls.length;
+            if (change === 'profile') state.profile = {...state.profile, id:'user2'};
+            if (change === 'route') routeToken++;
+            if (change === 'deck') showMissing(makePage());
+            button.click(); await settle(); assert.equal(calls.length,before);
+            shopCloseQueueSheets(); assert(!sheet());
+            state.profile = {...state.profile, id:'matt'};
+          }
+        """)
+
+    def test_selective_queue_totals_state_and_choices_survive_a_fresh_review(self):
+        self.run_js("""
+          state.may = admin; state.profile.role = 'admin';
+          review.rows[1] = {...review.rows[1], queued: 0, copies: 1, joins: 'long_term'};
+          showMissing(makePage()); queueButton().click(); await settle();
+          const check = (name, checked) => {
+            const input = sheet().querySelector('[aria-label="Queue ' + name + '"]');
+            input.checked = checked; input.fire('change');
+          };
+          check('Elf', false);
+          assert(!sheet().querySelector('.queue-missing-joins'));
+          check('Bolt', false);
+          assert(buttonText(sheet(), 'Queue 0 copies (To buy)').disabled);
+          check('Bolt', true);
+          buttonText(sheet(), 'Long-term').click();
+          saveAnswer = new ApiError(409, 'Review again.');
+          buttonText(sheet(), 'Queue 2 copies (Long-term)').click(); await settle();
+          same(calls[1][1].selected, ['Bolt']); assert.equal(calls[1][1].cards.length, 2);
+          review.rows.push({name: 'Opt', copies: 1, missing: 1, queued: 0, joins: null});
+          buttonText(sheet(), 'Review again').click(); await settle();
+          assert(!sheet().querySelector('[aria-label="Queue Opt"]').checked);
+          assert(!sheet().querySelector('[aria-label="Queue Elf"]').checked);
+          assert(buttonText(sheet(), 'Queue 2 copies (Long-term)'));
+        """)
+
     def test_copies_joining_a_row_in_another_state_are_named_and_sent_back(self):
         self.run_js("""
           state.may = admin; state.profile.role = 'admin';

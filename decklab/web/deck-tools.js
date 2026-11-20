@@ -18,11 +18,16 @@ function matchesReadiness(deck, filter) {
   const missing = deck.missing && deck.missing.target;
   const waiting = deck.on_the_way && deck.on_the_way.target;
   const known = !deck.error && missing != null && waiting != null && deck.availability_confirmed?.target !== false;
-  return filter === "unknown" ? !known : known && (filter === "ready" ? missing === 0 && waiting === 0
+  return filter === "unknown" ? !known : known && (filter === "ready" ? deck.card_count !== 0 && missing === 0 && waiting === 0
     : filter === "waiting" ? missing === 0 && waiting > 0 : missing > 0);
 }
 
-function exportedDeck(data, {categories = false} = {}) {
+function exportedDeck(data, {categories = false, missing = false} = {}) {
+  if (missing) {
+    if (!seesInventory(data.summary.space || deckSpaceOf(data.summary.id))) return "";
+    return (data.owned?.rows || []).filter(row => row.missing > 0)
+      .map(row => `${row.missing} ${row.name}\n`).join("");
+  }
   return Object.entries(data.sections).filter(([, lines]) => lines.length).map(([section, lines]) =>
     [section, ...lines.map(l => `${l.qty} ${l.name}${l.set ? ` (${l.set.toUpperCase()})${l.number ? ` ${l.number}` : ""}` : ""}`
       + (l.finish === "foil" ? " *F*" : l.finish === "etched" ? " *E*" : "")
@@ -37,21 +42,24 @@ function downloadDeck(data) {
 }
 
 /** Copy the list shown to the clipboard; where that isn't allowed, a sheet with the list selected to copy. */
-async function copyDeck(data, options = {}) {
+async function copyDeck(data, options = {}, trigger = null) {
   const text = exportedDeck(data, options), profile = state.profile?.id, token = routeToken, hash = location.hash;
   const main = document.getElementById("main");
-  const current = () => profile === state.profile?.id && token === routeToken && hash === location.hash
+  const current = () => (!trigger || trigger.isConnected) && profile === state.profile?.id && token === routeToken && hash === location.hash
     && main?.isConnected && document.getElementById("main") === main && exportedDeck(data, options) === text;
-  if (!current()) return;
+  if (!text || !current()) return;
+  const what = options.missing ? "Missing cards" : options.categories ? "Decklist with categories" : "Decklist";
   try {
     await navigator.clipboard.writeText(text);
-    if (current()) toast(options.categories ? "Decklist with categories copied." : "Decklist copied.");
+    if (current()) toast(what + " copied.");
   } catch (_) {
     if (!current()) return;
-    const area = el("textarea", {"aria-label": "Decklist to copy", readonly: true, rows: 14, class: "export-copy"});
+    const area = el("textarea", {"aria-label": what + " to copy", readonly: true, rows: 14, class: "export-copy"});
     area.value = text;
-    const sheet = openSheet({title: options.categories ? "Copy the decklist with categories" : "Copy the decklist",
-      body: [el("p", {class: "sub", text: "Select and copy this list. Finish marks are kept."}), area]});
+    const sheet = shopTrackQueueSheet(openSheet({
+      title: options.missing ? "Copy missing cards" : options.categories ? "Copy the decklist with categories" : "Copy the decklist",
+      body: [el("p", {class: "sub", text: options.missing ? `Select and copy the missing quantities for ${data.summary.title} (${listName(data.version)}).`
+        : "Select and copy this list. Finish marks are kept."}), area]}), null);
     sheetActions(sheet, [{text: "Done", kind: "primary", onclick: () => sheet.close()}]);
     area.focus(); area.select();
   }

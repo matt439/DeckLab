@@ -1,4 +1,4 @@
-"""The library's last played words and the Not played lately sort (E1-S27, library.js deckPlayed and
+"""The library's 1v1 game history and least recently played sort (E1-S27, library.js deckPlayed and
 libPlayedRank), in the event/DOM double with the API stubbed.
 
 Run from the repo root: python scripts/test_fixtures.py decklab.tests.test_library_played_ui
@@ -19,9 +19,9 @@ class LibraryPlayedTests(_Shelf):
           const data = { ...DATA, decks: DECKS.map((d) => ({ ...d, played: played[d.title] ?? null })) };
           drawLibrary(data, libraryFilters(new URLSearchParams("all=1&format=casual")));
           const words = (title) => { const n = tile(title).querySelector(".deck-played"); return n ? n.textContent : null; };
-          assert.equal(words("Gruul"), "Last played 2026-10-08 · 3 games");
-          assert.equal(words("Vampires"), "Last played 2026-10-20 · 1 game");
-          assert.equal(words("Angels"), "Not played at home yet");
+          assert.equal(words("Gruul"), "Last 1v1 game 2026-10-08 · 3 games");
+          assert.equal(words("Vampires"), "Last 1v1 game 2026-10-20 · 1 game");
+          assert.equal(words("Angels"), "No 1v1 games recorded yet");
           // Games that couldn't be read (null) say nothing, never "not played".
           assert.equal(words("Otters"), null);
         """)
@@ -40,5 +40,5 @@ class LibraryPlayedTests(_Shelf):
           main.querySelector("#filter-sort").fire("change", { target: { value: "played" } });
           same(titles(), ["D", "E", "C", "A", "B"]);
           assert(main.querySelector("#filter-sort").querySelectorAll("option").map((o) => o.textContent)
-            .includes("Sort: Not played lately"));
+            .includes("Sort: Least recently played (1v1)"));
         """)

@@ -242,7 +242,7 @@ class DeckOverviewUiTests(unittest.TestCase):
           assert.equal(draw(null), null);
           assert.equal(draw(undefined), null);
           const empty = draw({last: null, games: 0, since: null, can_record: true});
-          assert.equal(empty.querySelector('.deck-played').textContent, 'Not played at home yet');
+          assert.equal(empty.querySelector('.deck-played').textContent, 'No 1v1 games recorded yet');
           assert.equal(empty.querySelector('h2'), null);
           // The Game log narrowed to the deck, in plain sight (E11-S61).
           assert.equal(empty.querySelector('.deck-played-log').textContent, 'Record a game');
@@ -254,8 +254,8 @@ class DeckOverviewUiTests(unittest.TestCase):
             assert.equal(shown.querySelector('.deck-played-log').getAttribute('href'), '#/play?id=casual%2Ftest');
           }
           let part = draw({last: '2026-10-20', games: 3, since: {version: 'target', changes: [], more: 0}});
-          assert.equal(part.querySelector('.deck-played').textContent, 'Last played 2026-10-20 · 3 games');
-          assert.equal(part.querySelector('h2').textContent, 'Played at home');
+          assert.equal(part.querySelector('.deck-played').textContent, 'Last 1v1 game 2026-10-20 · 3 games');
+          assert.equal(part.querySelector('h2').textContent, '1v1 games');
           const log = part.querySelector('.deck-played-log');
           assert(log.closest('.deck-section-head'));
           assert.equal(log.textContent, 'Open the Game log');

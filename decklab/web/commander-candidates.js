@@ -17,22 +17,42 @@
 /** Open the ranking for the Collection page's space (any viewer the page loaded for: it sees the inventory). */
 function openCommanderCandidates(cv) {
   if (!colActive(cv) || cv.busy) return null;
-  const whose = colWhose(cv.space);
-  const ctx = { cv, whose, seq: 0, detail: null };
   const sheet = colOpenSheet("Commanders we could build", { wide: true });
-  ctx.sheet = sheet;
-  ctx.intro = el("p", { class: "sub", text: `Each card that may be a commander, with a copy free in ${whose}, by how much of the Command Zone template's ramp, card advantage and disruption the rest of ${whose}'s free cards in its colours already cover. Free: owned or on the way, and not in a built deck or a product kept intact.` });
+  return commanderCandidatesSheet(cv.space, sheet, () => colActive(cv));
+}
+
+function commanderCandidatesSheet(space, sheet, here, onChoose = null) {
+  const whose = colWhose(space);
+  const ctx = { space, sheet, here, onChoose, whose, seq: 0, detail: null };
+  ctx.intro = el("p", { class: "sub", text: `Commanders ranked by the ramp, card advantage and disruption available in ${whose}. Role coverage includes incoming copies. A draft for tonight uses only cards in storage.` });
+  ctx.input = el("input", { type: "search", class: "search-input", maxlength: 150, autocomplete: "off",
+    "aria-label": "Find a commander by name", placeholder: "Find a commander by name" });
+  ctx.search = el("form", { class: "actions", role: "search" }, ctx.input,
+    el("button", { type: "submit", class: "btn", text: "Find commander" }));
+  let timer;
+  ctx.input.addEventListener("input", () => {
+    ++ctx.seq;
+    clear(ctx.area);
+    clear(ctx.message);
+    clearTimeout(timer);
+    timer = setTimeout(() => { if (!sheet.closed && here()) rankCandidates(ctx); }, 250);
+  });
+  ctx.search.addEventListener("submit", event => {
+    event.preventDefault();
+    clearTimeout(timer);
+    if (here()) rankCandidates(ctx);
+  });
   ctx.message = el("div", { class: "col-sheet-message", role: "status", "aria-live": "polite" });
   ctx.area = el("div", { class: "ccand-area" });
   ctx.back = { text: "← Back to the ranking", value: "back", onclick: () => backToCandidates(ctx) };
-  add(sheet.body, [ctx.intro, ctx.message, ctx.area]);
+  add(sheet.body, [ctx.intro, ctx.search, ctx.message, ctx.area]);
   sheetActions(sheet, [{ text: "Close", value: "close", onclick: () => sheet.close() }]);
   rankCandidates(ctx);
   return ctx;
 }
 
 function candidatesAlive(ctx, seq) {
-  return seq === ctx.seq && !ctx.sheet.closed && colActive(ctx.cv);
+  return seq === ctx.seq && !ctx.sheet.closed && ctx.here();
 }
 
 async function rankCandidates(ctx) {
@@ -42,7 +62,9 @@ async function rankCandidates(ctx) {
   clear(ctx.message).append(loadingBox("Ranking commanders…"));
   try {
     const params = new URLSearchParams();
-    if (ctx.cv.space !== HOME_SPACE) params.set("space", ctx.cv.space);
+    if (ctx.space !== HOME_SPACE) params.set("space", ctx.space);
+    ctx.query = (ctx.input.value || "").trim();
+    if (ctx.query) params.set("q", ctx.query);
     const answer = await api(`/api/commanders/candidates?${params}`);
     if (!candidatesAlive(ctx, seq)) return;
     ctx.ranking = answer;
@@ -85,7 +107,8 @@ function candidatePick(ctx, c) {
   const pair = c.kind === "pair";
   const words = [plural(c.cards, "other free card"), plural(c.lands, "non-basic land"),
     pair ? `together by ${c.pairing}` : c.partner && c.partner.length ? `has ${c.partner.join(", ")}` : null,
-    c.kind === "held" ? `in ${candidateHolders(c)}` : null];
+    c.kind === "held" ? `in ${candidateHolders(c)}` : candidateFaces(c).filter(f => f.incoming > 0)
+      .map(f => `${pair ? f.name + ": " : ""}${candidateStock(f)}`).join(" · ")];
   return el("li", { class: pair ? "ccand-pair" : c.kind === "held" ? "ccand-held" : null },
     el("button", { type: "button", class: "pcov-pick", onclick: () => openCandidate(ctx, c) },
       el("span", { class: "pcov-pick-words" }, el("strong", {}, c.name, " ", colourPips(c.colours || [])),
@@ -109,8 +132,10 @@ function drawCandidates(ctx, answer) {
   add(clear(ctx.area), [
     answer.tags_available === false ? el("p", { class: "box box-warn", text: "Role tags are unavailable in the card data, so every role counts 0. Update the card data on the PC to rank them." }) : null,
     list.length ? el("ol", { class: "pcov-list" }, list.map((c) => candidatePick(ctx, c)))
-      : emptyBox(`No card that may be a commander has a copy free in ${ctx.whose}.`, null, { live: true }),
-    answer.total > list.length ? el("p", { class: "result-count", text: `The best ${num(list.length)} of ${num(answer.total)}.` }) : null,
+      : emptyBox(ctx.query ? `No available commander matches “${ctx.query}”.`
+        : `No card that may be a commander has a copy free in ${ctx.whose}.`, null, { live: true }),
+    answer.total > list.length ? el("p", { class: "result-count",
+      text: ctx.query ? `Showing ${num(list.length)} of ${num(answer.total)} matches.` : `The best ${num(list.length)} of ${num(answer.total)}.` }) : null,
     candidatePairsNote(answer.pairs),
     held.length ? el("section", { class: "ccand-held-list" },
       el("h3", { text: "Held by a deck" }),
@@ -121,8 +146,10 @@ function drawCandidates(ctx, answer) {
 }
 
 function backToCandidates(ctx) {
+  ctx.seq++;
   ctx.detail = null;
   ctx.intro.hidden = false;
+  ctx.search.hidden = false;
   ctx.sheet.heading.textContent = "Commanders we could build";
   sheetActions(ctx.sheet, [{ text: "Close", value: "close", onclick: () => ctx.sheet.close() }]);
   if (ctx.ranking) drawCandidates(ctx, ctx.ranking); else rankCandidates(ctx);
@@ -130,22 +157,36 @@ function backToCandidates(ctx) {
 
 /** "#/new?kind=commander&commander=…" in the candidate's space, or null when the viewer may not add decks there. */
 function candidateNewDeckHref(ctx, c) {
-  if (!createTargets().some((t) => t.space === ctx.cv.space)) return null;
+  if (!createTargets().some((t) => t.space === ctx.space)) return null;
   const names = c.names || [c.name];
   const params = new URLSearchParams({ kind: "commander", commander: names[0] });
   if (names[1]) params.set("partner", names[1]);
-  if (ctx.cv.space !== HOME_SPACE) params.set("space", ctx.cv.space);
+  if (ctx.space !== HOME_SPACE) params.set("space", ctx.space);
   return `#/new?${params}`;
+}
+
+function candidateFaces(c) { return c.faces || [c]; }
+
+function candidateStock(face) {
+  const words = [];
+  if (face.free > 0) words.push(`${num(face.free)} free`);
+  if (face.incoming > 0) words.push(face.free > 0 ? `${num(face.incoming)} on the way` : `On the way (${num(face.incoming)})`);
+  return words.join(" · ") || "None free";
 }
 
 /** New deck from it and See EDHREC ideas. */
 function candidateActions(ctx, c) {
   const href = candidateNewDeckHref(ctx, c);
+  const tonight = c.kind !== "held" && candidateFaces(c).every(f => f.free > 0);
+  const action = (label, draft) => ctx.onChoose
+    ? el("button", { type: "button", class: draft ? "btn btn-primary" : "btn", text: label,
+      onclick: event => { if (ctx.here() && event.currentTarget.isConnected) ctx.onChoose(c, draft); } })
+    : el("a", { class: draft ? "btn" : "btn btn-primary", href: href + (draft ? "&draft=tonight" : ""), text: label });
   return el("div", { class: "ccand-actions" },
-    href ? el("a", { class: "btn btn-primary", href, text: "New deck from it" }) : null,
-    href && c.kind !== "held" ? el("a", { class: "btn", href: href + "&draft=tonight", text: "Build from cards free tonight" }) : null,
+    href ? action(ctx.onChoose ? "Use as commander" : "New deck from it", false) : null,
+    href && tonight ? action("Build from cards free tonight", true) : null,
     el("button", { type: "button", class: "btn", text: "See EDHREC ideas…",
-      onclick: () => openEdhrecSheet(null, { commander: (c.names || [c.name])[0], commander2: (c.names || [])[1] || null, space: ctx.cv.space }) }));
+      onclick: () => openEdhrecSheet(null, { commander: (c.names || [c.name])[0], commander2: (c.names || [])[1] || null, space: ctx.space }) }));
 }
 
 /** The candidate's free cards by name, asked once it's opened. */
@@ -156,7 +197,7 @@ async function loadCandidateCards(ctx, c) {
     const names = c.names || [c.name];
     const params = new URLSearchParams({ name: names[0] });
     if (names[1]) params.set("partner", names[1]);
-    if (ctx.cv.space !== HOME_SPACE) params.set("space", ctx.cv.space);
+    if (ctx.space !== HOME_SPACE) params.set("space", ctx.space);
     const answer = await api(`/api/commanders/candidate?${params}`);
     if (!candidatesAlive(ctx, seq) || ctx.detail !== c) return;
     drawCandidateCards(ctx, answer);
@@ -170,7 +211,7 @@ async function loadCandidateCards(ctx, c) {
 function candidateCardGroup(heading, rows, more, words) {
   return el("section", { class: "ccand-group" }, el("h3", {}, heading, " ", el("small", { class: "sub", text: words })),
     rows.length ? el("div", {}, rows.map((r) => cardRow(r.card || null, { name: r.name, caption: r.name,
-      meta: r.free > 1 ? `${num(r.free)} free` : "Free", viewerGroup: "commander-candidate" })))
+      meta: candidateStock(r), viewerGroup: "commander-candidate" })))
       : el("p", { class: "sub", text: "None free in its colours." }),
     more ? el("p", { class: "result-count", text: `${plural(more, "more card")} not listed.` }) : null);
 }
@@ -190,8 +231,10 @@ function drawCandidateCards(ctx, answer) {
 
 /** One candidate: its card, each template category's free cards beside its target, and what else fits. */
 function openCandidate(ctx, c) {
+  if (!ctx.here() || ctx.sheet.closed) return;
   ctx.detail = c;
   ctx.intro.hidden = true;
+  ctx.search.hidden = true;
   ctx.sheet.heading.textContent = c.name;
   clear(ctx.message);
   const rows = (c.categories || []).map((p) => el("tr", { class: p.short ? "ccand-short" : null },
@@ -201,9 +244,9 @@ function openCandidate(ctx, c) {
     el("td", { text: p.count == null ? "" : p.short ? "Short" : p.in_coverage ? "At target" : "Basics fill the rest" })));
   add(clear(ctx.area), [
     el("div", { class: "ccand-head" },
-      el("div", { class: "card-tiles ccand-tile" }, (c.faces || [{ name: c.name, card: c.card, free: c.free }]).map((f) =>
+      el("div", { class: "card-tiles ccand-tile" }, candidateFaces(c).map((f) =>
         cardTile(f.card || null, { name: f.name, viewerGroup: "commander-candidates",
-          meta: [c.kind === "held" ? "None free" : `${num(f.free)} free`] }))),
+          meta: [candidateStock(f)] }))),
       el("div", { class: "ccand-words" },
         el("p", { class: "precon-summary" }, candidateShare(c)),
         el("p", { text: candidateShort(c) + "." }),

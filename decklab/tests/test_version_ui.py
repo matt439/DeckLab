@@ -436,6 +436,10 @@ class VersionInteractionTests(unittest.TestCase):
           renderVersionStatus({...answer(), cards: {ready: true, built_at: "2026-10-01", freshness: {stale: true, warning: words}}});
           assert.equal(host.hidden, false);
           assert.match(host.textContent, /^Card data/);
+          const details = host.querySelector("details");
+          assert.equal(details.getAttribute("open"), null);
+          assert.equal(details.querySelector("summary").textContent, "Card data may be out of date");
+          assert.equal(details.querySelector("p").textContent, words);
           assert.match(host.textContent, /20 days old; on the server PC run python -m decklab\\.lib\\.cards update\\./);
           renderVersionStatus({...answer(), cards: {ready: true, built_at: "2026-10-01", freshness: null}});
           assert.equal(host.hidden, true);

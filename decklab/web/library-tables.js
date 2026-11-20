@@ -6,7 +6,7 @@ owned-vs-needed tables no longer match the collection, with Update all (editor-d
 one POST /api/tables/update of every deck the visitor may change, one change in Deck Lab), the decks whose
 tables can't be updated and why (an unknown card name, no table), and the spaces whose tables wait (Update all,
 receipts and orders leave them) until their collection is fixed. A visitor who may not see a space's collection gets none of
-its decks (the server leaves them out). #/library?tables=1 (TABLES_HREF) scrolls to it once.
+its decks (the server leaves them out). #/library?tables=1 (TABLES_HREF) expands and scrolls to it once.
 
 The Collection page's note after a save (staleTablesNote) and Receive delivery's note about tables it left
 (tablesLaterNote) link here. Loaded after library.js; nothing here runs at load.
@@ -52,7 +52,18 @@ function libTablesPanel(scrolled, onUpdated) {
     const blocked = data.blocked || [];
     const held = data.held || [];
     if (stale.length || blocked.length || held.length) {
-      host.append(staleTablesPart(stale, { standalone: true, blocked, held, after: blockedTablesPart, onUpdated }));
+      const summary = el("summary");
+      const content = staleTablesPart(stale, { standalone: true, blocked, held, onUpdated, after: (remaining) => {
+        summary.textContent = remaining.alone && !remaining.blocked.length && !remaining.held.length
+          ? "Deck availability tables are up to date" : "Deck availability may be out of date";
+        return blockedTablesPart(remaining);
+      } });
+      host.append(el("details", { class: "warning-details", open: asked }, summary, content));
+      show();
+      if (scrolled) { summary.focus({ preventScroll: true }); host.scrollIntoView({ block: "start" }); }
+    } else if (asked) {
+      boxed(false);
+      host.append(el("p", { class: "note", text: "Deck availability tables are up to date." }));
       show();
       if (scrolled) host.scrollIntoView({ block: "start" });
     }
@@ -116,14 +127,15 @@ function blockedTablesPart({ blocked, held, alone }) {
       el("a", { href: deckHref(id), text: d.title }), `: ${d.reasons.join("; ")}.`))));
   }
   for (const h of held) {
-    const whose = h.space === HOME_SPACE ? "the home decks'" : `${spaceName(h.space)}'s decks'`;
+    const waiting = h.space === HOME_SPACE ? "Update all, receipts and orders leave the home decks' tables as they are"
+      : `Update all leaves ${spaceName(h.space)}'s decks' tables as they are`;
     const why = heldWords(h);
     // A long reason (a pool warning, usually also shown at the top of the page) folds away under a short line.
     out.push(why && why.length > 140
       ? el("div", { class: "note note-warn" }, el("div", {},
-          el("p", { text: `Update all, receipts and orders leave ${whose} tables as they are until the collection is fixed.` }),
+          el("p", { text: `${waiting} until the collection is fixed.` }),
           el("details", { class: "more" }, el("summary", { text: "Why" }), el("p", { text: `${why}.` }))))
-      : el("p", { class: "note note-warn", text: `Update all, receipts and orders leave ${whose} tables as they are until this is fixed: ${why}.` }));
+      : el("p", { class: "note note-warn", text: `${waiting} until this is fixed: ${why}.` }));
   }
   return out;
 }

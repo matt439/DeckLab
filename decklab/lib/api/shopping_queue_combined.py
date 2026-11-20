@@ -29,7 +29,7 @@ from .common import DATABASE_DOWN, ApiError, _keys, _parse_body, _public
 from .saving import inventory_write_lock
 from .settings import _web_actor
 from .shopping_missing import is_token
-from .shopping_queue_missing import SEPARATOR, STATES, _authorized, _canonical, _reviewed, names_title
+from .shopping_queue_missing import SEPARATOR, STATES, _authorized, _canonical, names_title, reviewed_selection, selected_rows
 
 CHANGED = "The decks, the collection or the purchase queue changed since this review. Review what to buy again."
 
@@ -145,9 +145,10 @@ class _CombinedQueue:
     """The reviewed cards, checked again from the snapshot the change is made on."""
     kind = "watchlist.add_many"
 
-    def __init__(self, ids, state, reviewed):
+    def __init__(self, ids, state, reviewed, selected):
         self.ids, self.state, self.reviewed = ids, state, reviewed
-        self.params = {"decks": list(ids), "state": state, "cards": [list(card) for card in reviewed]}
+        self.selected = selected
+        self.params = {"decks": list(ids), "state": state, "cards": [list(card) for card in reviewed if card[0] in selected]}
         self.rows = self.review = None
 
     def run(self, inv):
@@ -158,14 +159,8 @@ class _CombinedQueue:
                 review = _proposal(self.ids)
             except ApiError:
                 raise inventory.Conflict(CHANGED) from None
-        if not review["ready"]:
-            raise inventory.Conflict(CHANGED)
-        adding = [row for row in review["rows"] if row["copies"]]
-        found = sorted(((row["name"], row["copies"], row["joins"]) for row in adding), key=lambda card: card[0].casefold())
-        if found != self.reviewed:
-            raise inventory.Conflict(CHANGED)
-        self.rows, self.review = adding, review
-        values = [_values(row, review, self.state) for row in adding]
+        self.rows, self.review = selected_rows(review, self.reviewed, self.selected, CHANGED), review
+        values = [_values(row, review, self.state) for row in self.rows]
         return inventory.Op("watchlist.add_many", {"rows": values, "repo": str(config.REPO)}).run(inv)
 
 
@@ -175,9 +170,9 @@ def add_combined(profile, data, expect):
     if not isinstance(state, str) or state not in STATES:
         raise ApiError(400, "state must be ready (To buy) or long_term (Long-term)")
     ids = _ids(data["decks"])
-    reviewed = _reviewed(data["cards"])
+    reviewed, selected = reviewed_selection(data)
     _require_cards()
-    operation = _CombinedQueue(ids, state, reviewed)
+    operation = _CombinedQueue(ids, state, reviewed, selected)
     try:
         inv = inventory.current()
         if inv.revision != expect:

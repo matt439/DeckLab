@@ -55,13 +55,19 @@ function shopOrderSheet(view, seed = null) {
   if (!isAdminProfile() || !mayDo("orders") || !seesHomeInventory(state.may)
       || !shopQueueActive(view) || view.busy || view.stale || !view.data.queue_revision) return null;
   if (seed && seed.expect !== view.data.queue_revision) return null;
-  const sheet = shopTrackQueueSheet(openSheet({title: "Record an order", wide: true}), view);
+  const originalView = view;
+  const sheet = shopTrackQueueSheet(openSheet({title: "Record an order", wide: true, onClose: () => {
+    if (view.stale) {
+      setTimeout(() => { if (shopQueueActive(view) && !document.querySelector("dialog[open]")) route(); }, 0);
+    } else if (view !== originalView && shopQueueActive(view)) view.root.querySelector(".shop-order-add")?.focus();
+  }}), view);
   const form = el("form", {class: "shop-order-form"}), inputs = {}, cards = [], selections = [];
   const cardList = el("div", {class: "shop-order-cards"});
   const error = el("div", {class: "form-error", role: "alert", hidden: true});
   const previewBox = el("div", {class: "shop-order-preview", hidden: true, "aria-live": "polite"});
   let preview = null, previewBody = "", sequence = 0, busyNow = false, nameTimer = null, nameSequence = 0, referenceTyped = false;
-  const alive = () => !sheet.closed && shopQueueActive(view);
+  let queueRevision = view.data.queue_revision, busyWords = "";
+  const alive = () => !sheet.closed && sheet.dialog.getAttribute("open") !== null && shopQueueActive(view);
   sheet.orderError = error;
   const field = (where, key, label, tag = "input", props = {}, children = []) => {
     const input = el(tag, {id: `order-${key}-${sheet.heading.id}`, "data-order-field": key, ...props}, children);
@@ -79,9 +85,10 @@ function shopOrderSheet(view, seed = null) {
   function actions() {
     sheetActions(sheet, [{text: "Cancel", disabled: busyNow, onclick: () => sheet.close()},
       preview ? {text: "Edit order", disabled: busyNow, onclick: () => { invalidate(); error.hidden = true; }} : null,
-      {text: preview ? "Save order" : "Preview order", kind: "primary", disabled: busyNow || view.stale,
+      view.stale ? {text: "Refresh Shopping", kind: "primary", disabled: busyNow, onclick: event => refreshQueue(event.currentTarget)} :
+      {text: preview ? "Save order" : "Preview order", kind: "primary", disabled: busyNow,
         onclick: () => preview ? save() : review()}]);
-    shopSheetBusy(sheet, busyNow, preview ? "Saving…" : "Previewing…");
+    shopSheetBusy(sheet, busyNow, busyWords);
   }
   const metadata = el("div", {class: "shop-order-grid"});
   field(metadata, "seller", "Seller (if known)", "input", {type: "text", maxlength: 200});
@@ -255,19 +262,41 @@ function shopOrderSheet(view, seed = null) {
   const extraProduct = field(product, "product_extra", "This product contains additional copies of printings already owned", "input", {type: "checkbox"});
   form.append(product);
 
-  if ((view.data.to_buy || []).length) {
-    const queue = el("section", {class: "shop-order-section"}, el("h3", {text: "Purchase queue"}),
+  const queue = el("section", {class: "shop-order-section"});
+  const refreshNotice = el("div", {class: "note", role: "status", tabindex: "-1", hidden: true});
+  form.append(refreshNotice, queue);
+  function drawQueue(rows) {
+    // Queue row numbers are positions. Reuse a choice only for the same inventory queue_key.
+    const key = card => JSON.stringify([card.name, card.printing, card.set, card.collector_number, card.finish, card.for]);
+    const previous = new Map(selections.filter(item => item.checked.checked).map(item => [key(item.card), item]));
+    const changes = [];
+    selections.length = 0;
+    clear(queue).append(el("h3", {text: "Purchase queue"}),
       el("p", {class: "field-hint", text: "Tick only rows this order covers, then enter the copies to take off the queue. Other copies stay queued."}));
-    for (const card of view.data.to_buy) {
+    queue.hidden = !rows.length;
+    for (const card of rows) {
       const checked = el("input", {type: "checkbox", "data-order-fulfils": card.queue_row, onchange: invalidate});
       const quantity = el("input", {type: "number", min: 1, max: card.quantity, value: card.quantity,
         "aria-label": `Queued copies of ${card.name} fulfilled`, "data-order-fulfils-quantity": card.queue_row, oninput: invalidate});
+      const old = previous.get(key(card));
+      if (old) {
+        previous.delete(key(card));
+        if (old.card.quantity === card.quantity && old.card.state === card.state) {
+          checked.checked = true;
+          quantity.value = old.quantity.value;
+        } else {
+          changes.push(`${card.name} · ${card.for || "Purchase queue"} · ${shopPrintingIntent(card)} — ${old.quantity.value} selected before, now ${card.quantity} queued (${SHOPPING_STATES[card.state] || card.state}). Select again if covered.`);
+        }
+      }
       selections.push({card, checked, quantity});
       queue.append(el("div", {class: "shop-order-queue"}, el("label", {}, checked,
-        el("span", {}, el("strong", {text: card.name}), el("small", {text: [card.for, shopPrinting(card), `${card.quantity} queued`].filter(Boolean).join(" · ")}))), quantity));
+        el("span", {}, el("strong", {text: card.name}), el("small", {text: [card.for, shopPrintingIntent(card), `${card.quantity} queued`].filter(Boolean).join(" · ")}))), quantity));
     }
-    form.append(queue);
+    for (const {card, quantity} of previous.values())
+      changes.push(`${card.name} · ${card.for || "Purchase queue"} · ${shopPrintingIntent(card)}: the row for ${quantity.value} selected copies is no longer in the queue.`);
+    return changes;
   }
+  drawQueue(view.data.to_buy || []);
   if (seed) {
     inputs.seller.value = seed.seller; inputs.ordered_on.value = seed.ordered_on; suggestReference();
     cards.push(...seed.cards.map(card => ({...card})));
@@ -291,7 +320,7 @@ function shopOrderSheet(view, seed = null) {
         throw new Error(`Copies of ${card.name} must be a whole number from 1 to 9999.`);
     }
     const lines = key => inputs[key].value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-    const body = {expect: seed ? seed.expect : view.data.queue_revision, record: {id: inputs.id.value.trim(), seller: inputs.seller.value.trim(),
+    const body = {expect: queueRevision, record: {id: inputs.id.value.trim(), seller: inputs.seller.value.trim(),
       ordered_on: inputs.ordered_on.value, notes: inputs.notes.value.trim()}, fulfils: [], extra_copies: []};
     if (cards.length) body.cards = {rows: cards.map(card => ({...card, quantity: Number(card.quantity)})), checks: lines("cards_checks")};
     if (inputs.tokens_csv.value.trim()) body.tokens = {csv: inputs.tokens_csv.value, checks: lines("tokens_checks")};
@@ -313,8 +342,8 @@ function shopOrderSheet(view, seed = null) {
     }
     return body;
   }
-  function setBusy(value) {
-    busyNow = value; shopQueueBusy(view, value);
+  function setBusy(value, words = "") {
+    busyNow = value; busyWords = words; shopQueueBusy(view, value);
     form.querySelectorAll("input").forEach(input => {input.disabled = value;});
     form.querySelectorAll("textarea").forEach(input => {input.disabled = value;});
     form.querySelectorAll("select").forEach(input => {input.disabled = value;});
@@ -323,13 +352,13 @@ function shopOrderSheet(view, seed = null) {
   }
   async function review() {
     if (!alive() || busyNow || view.busy || view.stale || !isAdminProfile()) return;
-    if (seed && seed.expect !== view.data.queue_revision) {
-      view.stale = true; problem("The queue changed since this basket was worked out. Refresh Shopping and review its current basket.");
-      conflictRefresh(); actions(); return;
+    if (queueRevision !== view.data.queue_revision) {
+      view.stale = true; problem("The queue changed while this order was open. Refresh Shopping to review its current rows.");
+      actions(); return;
     }
     let body;
     try {body = payload();} catch (failure) {problem(failure.message); return;}
-    const seq = ++sequence, original = JSON.stringify(body); error.hidden = true; setBusy(true);
+    const seq = ++sequence, original = JSON.stringify(body); error.hidden = true; setBusy(true, "Previewing…");
     try {
       const answer = await apiWrite("/api/shopping/order/preview", body);
       if (!alive() || seq !== sequence || original !== JSON.stringify(payload())) return;
@@ -339,7 +368,7 @@ function shopOrderSheet(view, seed = null) {
     } catch (failure) {
       if (alive()) {
         if (failure.status === 409) view.stale = true;
-        problem(`The order couldn't be previewed: ${failure.message}`); conflictRefresh();
+        problem(`The order couldn't be previewed: ${failure.message}`);
       }
     } finally {if (alive()) setBusy(false); else shopQueueBusy(view, false);}
   }
@@ -358,16 +387,36 @@ function shopOrderSheet(view, seed = null) {
         invalidate(); error.hidden = true; product.open = true; inputs.product_csv.focus();
       }}));
   }
-  function conflictRefresh() {
-    if (view.stale) error.append(el("button", {type: "button", class: "btn btn-quiet", text: "Refresh Shopping",
-      onclick: () => {shopCloseQueueSheets(view); route();}}));
+  async function refreshQueue(button) {
+    const mayRefresh = () => alive() && view.stale && isAdminProfile() && seesHomeInventory(state.may) && mayDo("orders");
+    if (!mayRefresh() || busyNow || !button.isConnected) return;
+    invalidate(); setBusy(true, "Refreshing…");
+    try {
+      const fresh = await api("/api/shopping");
+      if (!mayRefresh()) return;
+      if (!fresh?.queue_revision || !Array.isArray(fresh.to_buy)) throw new Error("The current queue is unavailable.");
+      const freshView = drawShopping(fresh);
+      const changes = drawQueue(fresh.to_buy);
+      view.root.remove();
+      view = freshView;
+      sheet.queueView = view;
+      queueRevision = fresh.queue_revision;
+      error.hidden = true;
+      refreshNotice.hidden = false;
+      refreshNotice.textContent = changes.length ? "Order details kept. Review these changed queue allocations before previewing again."
+        : "Order details and queue selections kept. Preview the order again before saving.";
+      if (changes.length) refreshNotice.append(el("ul", {}, changes.map(words => el("li", {text: words}))));
+      refreshNotice.focus();
+    } catch (failure) {
+      if (alive()) problem(`Shopping couldn't be refreshed: ${failure.message}`);
+    } finally {if (alive()) setBusy(false); else shopQueueBusy(view, false);}
   }
   async function save() {
     if (!alive() || busyNow || view.busy || view.stale || !preview || !isAdminProfile()) return;
     try {
       if (previewBody !== JSON.stringify(payload())) {invalidate(); problem("The order changed. Preview it again before saving."); return;}
     } catch (failure) {invalidate(); problem(failure.message); return;}
-    const token = preview; error.hidden = true; setBusy(true);
+    const token = preview; error.hidden = true; setBusy(true, "Saving…");
     try {
       const answer = await apiWrite("/api/shopping/order/apply", {preview: token});
       if (!alive()) return;
@@ -377,7 +426,7 @@ function shopOrderSheet(view, seed = null) {
     } catch (failure) {
       if (alive()) {
         invalidate(); if (failure.status === 409) view.stale = true;
-        problem(`The order couldn't be saved: ${failure.message}. Preview it again before saving.`); conflictRefresh();
+        problem(`The order couldn't be saved: ${failure.message}. ${view.stale ? "Refresh Shopping to review the current queue." : "Preview it again before saving."}`);
       }
     } finally {if (alive()) setBusy(false); else shopQueueBusy(view, false);}
   }

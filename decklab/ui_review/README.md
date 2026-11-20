@@ -178,14 +178,14 @@ the collapsed section makes no request, the opponent picker remains usable and
 the two scores stay separate. No engine or database write is made; these
 captures qualify rendering only, not native XMage behavior or device acceptance.
 
-The opt-in 54-case `shell-layout` suite measures header siblings, search form/input,
+The opt-in 56-case `shell-layout` suite measures header siblings, search form/input,
 focus decoration, activity control and viewport bounds in both themes. Cases cover
 320/393/599/600/624/625/699/700/820/999/1000/1199/1200/1440px, short landscape,
 explicit root-font stress, home library/receipt headers and a synthetic active run.
 The run is an invented read adapter; no Forge process is started. Ordinary keyboard
-events exercise `/` search focus or sheet opening, Escape, and avatar menu opening
-and closing. Scrolled title geometry is retained. Overflow and sibling overlap are
-diagnostics for matched comparison, not automatic visual acceptance. The eight-case
+events exercise `/` search focus or sheet opening, Escape, and forward and reverse
+tab order through the admin and member account panels. Scrolled title geometry is
+retained. Overflow and sibling overlap are diagnostics for matched comparison. The ten-case
 smoke subset covers phone, tablet, desktop and enlarged tablet headers. `all` still
 means capture/editor only. Additional 600px search-focus screenshots expose the
 actual ring and allocation; physical software keyboards remain unqualified.

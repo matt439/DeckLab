@@ -40,14 +40,12 @@ run('first-use', async review => {
             sheet=page.locator('dialog[open]').last();
             await sheet.getByRole('button',{name:'Find its printings',exact:true}).waitFor();
             await page.route('**/api/printings?*', route=>route.fulfill({status:200,json:{
-              name:'Llanowar Elves',printings:[{name:'Llanowar Elves',set:'fdn',collector_number:'227',set_name:'Foundations',finish:'nonfoil',finishes:['nonfoil'],owned:0}]}}));
-            // Render pending controls using synthetic cards, without OCR or inventory writes.
-            await page.evaluate(()=>{
-              const cv=colView({space:'home',editable:true,sha256:'fixture'},'home',routeToken,'find');
-              colCloseSheets(); const ctx=openScanSheet(cv);
-              addScanCard(ctx,{name:'Llanowar Elves',set:'fdn',collector_number:'227',finish:'nonfoil',finishes:['nonfoil']});
-            });
-            sheet=page.locator('dialog[open]').last();
+              name:'Llanowar Elves',printings:Array.from({length:10},(_,index)=>({set:'fdn',
+                collector_number:String(218+index),set_name:'Foundations',finishes:['nonfoil']}))}}));
+            await sheet.getByPlaceholder("The card's exact name").fill('Llanowar Elves');
+            await sheet.getByRole('button',{name:'Find its printings',exact:true}).click();
+            await sheet.getByText('Other printings…',{exact:true}).click();
+            await sheet.getByRole('button',{name:'Llanowar Elves (FDN 227) · Foundations',exact:true}).click();
             const download=page.waitForEvent('download');
             await sheet.getByRole('button',{name:'Download pending batch',exact:true}).click();
             const file=await download;
@@ -58,7 +56,16 @@ run('first-use', async review => {
             assert(!savedText.includes('data:image'));
             assert.equal(await file.failure(),null);
             assert((await sheet.innerText()).includes('Nothing was added now'));
+            for(const dismiss of [()=>page.keyboard.press('Escape'),()=>page.evaluate(()=>history.back()),
+              ()=>sheet.getByRole('button',{name:'Close',exact:true}).click()]) {
+              await dismiss();
+              await sheet.getByRole('heading',{name:'Discard this batch?'}).waitFor();
+              assert((await sheet.innerText()).includes('1 card'));
+              await sheet.getByRole('button',{name:'Keep scanning',exact:true}).click();
+              await sheet.getByRole('button',{name:'Review 1 card',exact:true}).waitFor();
+            }
             await sheet.getByRole('button',{name:'Cancel',exact:true}).click();
+            await sheet.getByRole('button',{name:'Discard batch',exact:true}).click();
             await page.getByRole('button',{name:'Start with physical cards',exact:true}).click();
             await page.locator('dialog[open]').last().locator('[data-action=cancel]').click();
             assert.equal(await page.locator('dialog[open]').count(),0);

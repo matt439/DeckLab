@@ -9,6 +9,7 @@
  * answer has no "owned" at all: the server leaves it out for a visitor who may not see the collection. */
 function ownedSection(data) {
   if (!("owned" in data)) return null;
+  if (data.sections && !Object.values(data.sections).some(lines => lines.length)) return null;
   const o = data.owned;
   const section = el("section", { class: "deck-section deck-prices", id: "sec-owned", "aria-labelledby": "h-owned" },
     el("h2", { id: "h-owned", text: "Prices" }));

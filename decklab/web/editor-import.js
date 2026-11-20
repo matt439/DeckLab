@@ -248,11 +248,33 @@ function startFromPart() {
     el("p", { text: precon ? "Add cards with the search, or start from a pasted list, a precon or another deck."
       : "Add cards with the search, or start from a pasted list or another deck." }),
     el("div", { class: "actions" },
+      precon && ed.fields.kind === "commander" && createTargets().some(t => t.space === ed.space)
+        ? el("button", { type: "button", class: "btn", text: "Build from my collection",
+          onclick: event => { if (event.currentTarget.isConnected) openEditorCommanderCandidates(ed); } }) : null,
       ed.tonight && !ed.notice && !isDirty() ? el("button", { type: "button", class: "btn", text: "Review collection draft",
         onclick: event => { if (editor === ed && event.currentTarget.isConnected) openTonightDraft(ed.tonight); } }) : null,
       el("button", { type: "button", class: "btn", text: "Paste a list…", onclick: openPaste }),
       precon ? el("button", { type: "button", class: "btn btn-quiet", text: "A precon…", onclick: openPreconStart }) : null,
       el("button", { type: "button", class: "btn btn-quiet", text: "Another deck…", onclick: openDeckStart })));
+}
+
+/** Choose in the current editor so a title, player or other draft details stay in place. */
+function openEditorCommanderCandidates(ed) {
+  if (!editorKeyboardCurrent(ed) || ed.mode !== "new" || ed.fields.kind !== "commander" || ed.from
+      || Object.values(ed.lists).some(lines => lines.length) || !seesInventory(ed.space)
+      || !createTargets().some(target => target.space === ed.space)) return null;
+  const sheet = colOpenSheet("Commanders we could build", { wide: true });
+  const owner = editorImportOwner(ed, sheet), initial = ed.snap;
+  const ownsReply = () => editorImportHere(owner, null, true, false) && ed.snap === initial;
+  return commanderCandidatesSheet(ed.space, sheet, ownsReply, (candidate, tonight) => {
+    if (!editorImportHere(owner) || ed.snap !== initial) return;
+    const faces = candidateFaces(candidate);
+    const params = new URLSearchParams({ space: ed.space, commander: faces[0].name });
+    if (faces[1]) params.set("partner", faces[1].name);
+    sheet.close();
+    if (tonight) openTonightDraft(params, true);
+    else applyCollectionDraft(faces, []);
+  });
 }
 
 /** A sheet with a search box and a list of choices drawn by find(text) → Promise<[{label, sub, value}]>.
@@ -346,16 +368,17 @@ function openDeckStart() {
 }
 
 /** Review a candidate against physical copies before adding its list to the new editor. */
-function openTonightDraft(params) {
+function openTonightDraft(params, fromEditor = false) {
   const ed = editor, space = params.get("space") || HOME_SPACE;
   if (!editorKeyboardCurrent(ed) || ed.mode !== "new" || ed.space !== space ||
       !createTargets().some(target => target.space === space)) return null;
-  if (ed.notice || ed.dirty || ed.fields.kind !== "commander") {
+  if ((!fromEditor && (ed.notice || ed.dirty)) || ed.fields.kind !== "commander"
+      || Object.values(ed.lists).some(lines => lines.length)) {
     toast("Your unsaved new deck is still here. Save or discard it before building from the collection.");
     return null;
   }
   const name = params.get("commander"), partner = params.get("partner");
-  const sheet = openSheet("Build from cards free tonight", { wide: true });
+  const sheet = colOpenSheet("Build from cards free tonight", { wide: true });
   const owner = editorImportOwner(ed, sheet);
   const locks = el("textarea", { rows: 3, placeholder: "One card name per line" });
   locks.value = ed.tonightLocks || "";
@@ -368,7 +391,7 @@ function openTonightDraft(params) {
     el("label", { class: "field" }, el("span", { text: "Theme cards to keep" }), locks), status, result);
   sheet.foot.append(el("button", { type: "button", class: "btn", text: "Cancel", onclick: () => sheet.close() }), refresh, accept);
   let request = 0, preview = null;
-  function here(control) { return editorImportHere(owner, control) && ed.snap === initial && !ed.dirty; }
+  function here(control) { return editorImportHere(owner, control) && ed.snap === initial; }
   const initial = ed.snap;
   function invalidate() {
     request++;
@@ -402,19 +425,25 @@ function openTonightDraft(params) {
   refresh.addEventListener("click", loadDraft);
   accept.addEventListener("click", () => {
     if (!here(accept) || !preview || accept.hidden) return;
-    const sections = {
-      Commander: preview.commanders.map(row => ({ qty: 1, name: row.name, card: row.card })),
-      Deck: preview.picks.map(row => ({ qty: row.quantity, name: row.name, card: row.card })),
-    };
-    const title = preview.names.length === 1 ? preview.names[0].split(" // ")[0]
-      : preview.names.map(n => n.split(" // ")[0].split(",")[0]).join(" and ");
-    ed.fields.title = title.slice(0, 100);
     sheet.close();
-    mergeLines(sections);
-    drawDetails();
+    applyCollectionDraft(preview.commanders, preview.picks);
   });
   loadDraft();
   return sheet;
+}
+
+function applyCollectionDraft(commanders, picks) {
+  const ed = editor;
+  if (!norm("title", ed.fields.title)) {
+    const fronts = commanders.map(row => row.name.split(" // ")[0]);
+    ed.fields.title = (fronts.length === 1 ? fronts[0] : fronts.map(n => n.split(",")[0]).join(" and ")).slice(0, 100);
+  }
+  ed.addSection = "Deck";
+  mergeLines({
+    Commander: commanders.map(row => ({ qty: 1, name: row.name, card: row.card })),
+    Deck: picks.map(row => ({ qty: row.quantity, name: row.name, card: row.card })),
+  });
+  drawDetails();
 }
 
 function drawTonightDraft(host, draft) {

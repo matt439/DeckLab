@@ -46,6 +46,17 @@ class DraftApiTests(base.CandidatesTestCase):
             error = self.assertApiError(409, self.preview)
             self.assertNotIn("Private title", error.message)
 
+    def test_commander_rechecked_when_its_last_physical_copy_moves(self):
+        from decklab.lib.api import commander_candidates
+        name = "Abaddon the Despoiler"
+        snapshot = api._pool("home")
+        with mock.patch.object(commander_candidates, "_pool", return_value=snapshot):
+            face = commander_candidates.candidates_view(q=name)["candidates"][0]["faces"][0]
+        self.assertEqual((face["free"], face["incoming"]), (1, 1))
+        snapshot.in_use.append(pool.InUse("holder", "Holder", "built", Counter({name: 1})))
+        with mock.patch.object(api, "_pool", return_value=snapshot):
+            self.assertIn("free tonight", self.assertApiError(400, lambda: self.preview(name=name)).message)
+
     def test_private_or_public_cross_space_never_reads_pool(self):
         _write(self.box.root / "config.json", json.dumps(ROLES))
         with _as("user2"), mock.patch.object(api, "_pool") as loader:

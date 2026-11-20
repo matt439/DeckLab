@@ -20,7 +20,7 @@ SETUP = SHELL + r'''
       status: "built" }], total: 7, capped: false, more: true },
     { id: "collection", label: "In your collection", space: "user2", items: [{ name: "Llanowar Elves", owned: 2, incoming: 1,
       in_use: 2, free: 0, basic: false, card: ELVES }], total: 1, capped: false, more: false },
-    { id: "cards", label: "Other cards", items: [{ name: "Elvish Mystic", card: MYSTIC }], total: 240, capped: true, more: true }] };
+    { id: "cards", label: "Other cards", items: [{ name: "Elvish Mystic", card: MYSTIC }], total: 200, capped: true, more: true }] };
   let searches = [], pending = [];
   const realApi = api;
   api = async (path) => {
@@ -73,7 +73,8 @@ class GlobalSearchUiTests(unittest.TestCase):
           items[1].click();
           assert.equal(inspections.at(-1).card.name, "Llanowar Elves");
           const all = results.querySelectorAll(".gs-all");
-          same(all.map((a) => a.textContent), ["See all 7", "See all 240+"]);
+          same(all.map((a) => a.textContent), ["See all 7", "Browse first 50 of 200+"]);
+          assert(results.textContent.includes("Refine your search"));
           assert.equal(all[0].getAttribute("href"), "#/library?all=1&q=elv");
           all[1].click(); await flush();
           assert.equal(searches.at(-1), "/api/search?q=elv&group=cards&limit=50");
@@ -123,6 +124,34 @@ class GlobalSearchUiTests(unittest.TestCase):
           api = async () => { throw new ApiError(503, "Deck Lab's database can't be reached."); };
           await type("y");
           assert(box().results.textContent.includes("database can't be reached"));
+        ''')
+
+    def test_new_query_removes_previous_targets_and_cancels_pending_browse(self):
+        self.run_js(r'''
+          start(); box().input.focus(); await type("elv"); await answer();
+          const oldPick = box().results.querySelector(".gs-item");
+          let followed = 0; oldPick.addEventListener("click", () => { followed += 1; });
+          box().results.querySelectorAll(".gs-all").at(-1).click();
+          box().input.value = "dragon"; box().input.fire("input");
+          assert.equal(oldPick.isConnected, false);
+          assert.equal(box().results.hidden, true);
+          box().form.fire("submit");                         // during debounce
+          flushTimers(); await flush();
+          assert.equal(searches.at(-1), "/api/search?q=dragon");
+          box().form.fire("submit");                         // waiting for dragon
+          assert.equal(box().results.querySelector(".gs-pick"), null);
+          assert.equal(followed, 0);
+          await answer({ q: "elv", groups: [ANSWER.groups[2]] }, 1);
+          assert.equal(viewed.length, 0);                    // previous browse response arrived late
+          const data = structuredClone(ANSWER);
+          data.q = "dragon"; data.groups[0].items[0].title = "Dragons";
+          data.groups[2].total = 50; data.groups[2].capped = false;
+          await answer(data);
+          const updated = box().results.querySelector(".gs-item");
+          assert(updated.textContent.includes("Dragons"));
+          assert.equal(box().results.querySelectorAll(".gs-all").at(-1).textContent, "See all 50");
+          updated.addEventListener("click", () => { followed += 1; });
+          box().form.fire("submit"); assert.equal(followed, 1);
         ''')
 
     def test_older_text_and_another_persons_answers_are_dropped(self):
@@ -175,6 +204,11 @@ class GlobalSearchUiTests(unittest.TestCase):
           box().results.fire("keydown", { key: "ArrowUp", preventDefault() {} });
           assert.equal(document.activeElement, box().input);
           box().input.fire("keydown", { key: "Escape", preventDefault() {} });
+          assert.equal(box().results.hidden, true);
+          box().input.fire("keydown", { key: "ArrowDown" });
+          assert.equal(document.activeElement, picks[0]);
+          box().results.fire("keydown", { key: "Escape" });
+          assert.equal(document.activeElement, box().input);
           assert.equal(box().results.hidden, true);
           let followed = 0; picks[0].addEventListener("click", () => { followed += 1; });
           box().form.fire("submit", { preventDefault() {} });

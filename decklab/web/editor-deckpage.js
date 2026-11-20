@@ -19,6 +19,10 @@ out-of-date owned-vs-needed tables (staleTablesPart, staleTableBox).
 function deckActions(data) {
   const s = data.summary;
   if (!s.read_only && canEditDeck(s)) {
+    if (deckNeedsMainCards(data) && s.status !== "built") {
+      return el("div", { class: "deck-actions" },
+        el("a", { class: "btn btn-primary", href: editHref(s.id, data.version), text: "Add cards" }));
+    }
     // With two lists the button names the one it edits; on a phone it says just "Edit" (the rest stays in its
     // accessible name), so the deck's title keeps the head's row.
     const which = data.versions.length > 1 ? ` the ${listName(data.version, true)}` : "";
@@ -93,6 +97,12 @@ function tableConflictWords(d) {
   return `${d.title} was saved again${when}`;
 }
 
+function tableAvailabilityCauses(home) {
+  return home
+    ? "Collection edits, orders and cards held in built decks can change availability."
+    : "Collection edits and cards held in built decks can change availability.";
+}
+
 /** Decks whose owned-vs-needed tables are out of date, with "Update their tables": after a save, the other
  * decks', only those the visitor may change (each entry's may_update, or canEditDeckId from an older server).
  * opts.standalone: the Decks page's "Tables out of date" list (library-tables.js) instead: every deck it's
@@ -152,12 +162,13 @@ function staleTablesPart(stale, opts = {}) {
       if (button) button.addEventListener("click", () => update(mine, button, error, []));
       const heading = solo ? (one ? "A deck's owned-vs-needed table is out of date" : `${list.length} decks' owned-vs-needed tables are out of date`)
         : one ? "Another deck's owned-vs-needed table is out of date" : `${list.length} other decks' owned-vs-needed tables are out of date`;
+      const decks = el("ul", { class: "sources-list" }, list.map((d) => el("li", {}, el("a", { href: deckHref(d.id), text: d.title }),
+        d.count ? ` (${plural(d.count, "card")} changed)` : "")));
       add(host, [
         el(solo ? "h2" : "h3", { text: heading }),
-        el("p", { class: "sub", text: "The tables written in those decks don't match what the collection gives now: cards ordered since they were written, or cards a built deck holds. Updating rewrites only those tables (with today's prices), saved together in Deck Lab." }),
-        el("details", { class: "more" }, el("summary", { text: one ? "Which deck" : "Which decks" }),
-          el("ul", { class: "sources-list" }, list.map((d) => el("li", {}, el("a", { href: deckHref(d.id), text: d.title }),
-            d.count ? ` (${plural(d.count, "card")} changed)` : "")))),
+        el("p", { class: "sub", text: tableAvailabilityCauses(list.some((d) => deckSpaceOf(d.id) === HOME_SPACE))
+          + " Updating saves the current counts and prices in these tables." }),
+        solo ? decks : el("details", { class: "more" }, el("summary", { text: one ? "Which deck" : "Which decks" }), decks),
         mine.length && mine.length < list.length
           ? el("p", { class: "sub", text: someWait
             ? `Update all updates the ${plural(mine.length, "deck")} you may change whose collection is complete; the others wait.`
@@ -220,7 +231,8 @@ function staleTableBox(data) {
   });
   return el("div", { class: "box box-stale stale-own" },
     el("h3", { text: "The deck's owned-vs-needed table is out of date" }),
-    el("p", { text: `The numbers above are worked out now. The owned-vs-needed table written in ${data.summary.title} was worked out earlier, and ${n === 1 ? "1 card's row differs" : `${n} cards' rows differ`}: cards ordered since, or copies other decks now hold.` }),
+    el("p", { text: `The numbers above are current. In the saved table for ${data.summary.title}, ${n === 1 ? "1 card's row differs" : `${n} cards' rows differ`}. `
+      + tableAvailabilityCauses(deckSpaceOf(deck.id) === HOME_SPACE) }),
     el("details", { class: "more" }, el("summary", { text: "What's different" }),
       el("ul", { class: "sources-list" }, t.changes.map((c) => el("li", { text: tableChangeWords(c) })))),
     el("div", { class: "stale-own-actions" }, el("div", { class: "actions" }, button), error));

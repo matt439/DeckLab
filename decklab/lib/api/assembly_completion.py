@@ -59,6 +59,8 @@ def decorate(plan, selected, profile=False):
     reason = None
     if denied:
         reason = "You cannot mark these decks built: " + ", ".join(denied) + "."
+    elif plan.get("list_issue"):
+        reason = plan["list_issue"]
     elif not changed:
         reason = ("These decks are already marked built." if any(d["completion"]["already_built"]
                   for d in plan["decks"]) else "Product decks and pairings are read-only here.")
@@ -331,6 +333,8 @@ def mark_built(body):
             guard.require(profile, "deck.edit", ops_decks.parsed_deck(inventory.current().deck(item["id"])))
         if data["fingerprint"] != plan["completion"]["fingerprint"]:
             raise ApiError(409, CHANGED)
+        if plan.get("list_issue"):
+            raise ApiError(400, plan["list_issue"])
         if not plan["completion"]["can_mark_built"]:
             raise ApiError(409, plan["completion"]["reason"])
         built = plan["completion"]["decks"]

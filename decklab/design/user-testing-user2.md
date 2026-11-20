@@ -70,6 +70,9 @@ Prefer a deck of his that isn't built: for a built deck the banner answers it ou
 Success: he gives the right count and names a card that really is missing (check it in the Cards tab's Missing filter; the banner names no cards).
 > **For Matt (don't read out):** the banner under the title says "N missing, about A$X" (plus "· N held by other decks" when other decks hold copies; those count as missing), with **Show missing**; or "Ready to build: you have every card" (not built), "Every card is here" (built), "Ready once N cards arrive", or "Whether you have every card couldn't be worked out". If he opened the deck from its library tile, the Cards tab may already be filtered to Missing (see T2), so he may have seen the answer already. The Cards tab has All / Missing / On the way / In other decks chips, and missing cards are greyed out. "On the way" never applies to his space. There may be a "Planned list | Play-now list" switch, with an **i** button.
 
+**T4b. Prepare for a shop visit.** "You want to take a list of the cards you still need for all your decks to the shop. Where would you start? Show me how you'd take the list with you."
+Observe the first place he looks, whether he finds **Cards to get** unaided, and whether he expects the quantities to cover one deck or all his saved Planned decks. Let him read his list privately.
+
 **T5. Change a deck and check it stuck.** *(adapt)* "In [the test deck / the deck you chose], swap one card for another, save it, and then show me that Deck Lab kept the change."
 Success: a "Saved …" message, and the change is still there after he leaves the deck and comes back, or in its History.
 > **For Matt (don't read out):** **Edit** on the deck page. A phone gets the Quick edit; a tablet or computer gets the full editor, with **Add cards**, **Save** and **▾ Save & view deck**. History is under the deck page's More. He sees no Played by, Sleeves or Deck box fields; that's expected. "Test this change" needs a Forge run; who can start one follows Settings, Simulations, **Who can start them** (checked in section 2). While it's admins only, only Matt can.
@@ -164,6 +167,11 @@ One block per task, with room to write under each line. Leave every result blank
 - His words (quote, or labelled paraphrase):<br><br>
 - Impact (blocks / needs help / minor friction): ____
 - Follow-up (story id, new story, or none): ____
+
+**T4b Shop visit**
+
+- First place tried and expected list scope: ____
+- Found and copied the list unaided / with help / unfinished: ____
 
 **T5 Deck change: saved, still there afterwards**
 

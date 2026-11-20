@@ -882,7 +882,7 @@ function openImportSheet(cv) {
     ctx.preview = null;
     ctx.groupReview = null;
     clear(ctx.area);
-    sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() }]);
+    sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.dismiss() }]);
     const file = input.files && input.files[0];
     if (!file) return;
     if (file.size > COL_IMPORT_MAX) {
@@ -905,7 +905,7 @@ function openImportSheet(cv) {
     colImportHelp(cv, sheet),
     el("label", { class: "field col-file-field", for: input.id }, el("span", { text: "File (.csv or .txt)" }), input),
     ctx.message, ctx.area);
-  sheetActions(sheet, [{ text: "Cancel", value: "cancel", onclick: () => sheet.close() }]);
+  sheetActions(sheet, [{ text: "Cancel", value: "cancel", onclick: () => sheet.dismiss() }]);
   return ctx;
 }
 
@@ -919,7 +919,7 @@ async function previewImport(ctx, filename, text) {
   ctx.groupReview = null;
   clear(ctx.area);
   clear(ctx.message).append(loadingBox(`Reading ${filename}…`));
-  sheetActions(ctx.sheet, [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.close() }, colScanBack(ctx)]);
+  sheetActions(ctx.sheet, [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.dismiss() }, colScanBack(ctx)]);
   try {
     const preview = await apiWrite("/api/collection/import/preview", { space: cv.space, filename, text });
     if (seq !== ctx.seq || ctx.sheet.closed || !colActive(cv)) return;
@@ -929,7 +929,7 @@ async function previewImport(ctx, filename, text) {
   } catch (error) {
     if (seq !== ctx.seq || ctx.sheet.closed || !colActive(cv)) return;
     clear(ctx.message).append(el("div", { class: "box box-crit", role: "alert" }, el("p", { text: error.message })));
-    sheetActions(ctx.sheet, [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.close() }, colScanBack(ctx)]);
+    sheetActions(ctx.sheet, [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.dismiss() }, colScanBack(ctx)]);
   }
 }
 
@@ -958,7 +958,7 @@ function drawImportPreview(ctx) {
         el("td", { text: r.name || "" }), el("td", { text: colPrinting(r) }),
         el("td", { text: r.condition || "–" }), el("td", { text: r.language || "–" })))))) : null]);
   const cards = adds.cards || 0;
-  const actions = [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.close() }, colScanBack(ctx)];
+  const actions = [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.dismiss() }, colScanBack(ctx)];
   if (cards > 0 && !problems.length) {
     actions.push({ text: `Import ${plural(cards, "card")}`, kind: "primary", value: "import", onclick: () => applyImport(ctx, false) });
   } else if (cards > 0) {
@@ -1015,7 +1015,7 @@ async function applyImport(ctx, skipProblems) {
       ctx.groupReview = null;
       clear(ctx.area);
       clear(ctx.message).append(el("p", { class: "box box-warn", text: error.message }));
-      sheetActions(ctx.sheet, [{ text: "Cancel", onclick: () => ctx.sheet.close() },
+      sheetActions(ctx.sheet, [{ text: "Cancel", onclick: () => ctx.sheet.dismiss() },
         { text: "Preview again", kind: "primary", onclick: () => previewImport(ctx, ctx.source.filename, ctx.source.text) }]);
       return;
     }
@@ -1025,7 +1025,7 @@ async function applyImport(ctx, skipProblems) {
       if (Array.isArray(error.data.rows)) colTakeRows(cv, error.data);
       clear(ctx.message).append(el("div", { class: "box box-warn", role: "alert" }, el("p", { text: error.message }),
         el("p", { text: "Nothing was imported yet. The import only adds cards, so it can go on top of the latest list." })));
-      sheetActions(ctx.sheet, [{ text: "Cancel", onclick: () => ctx.sheet.close() }, { text: "Import into the latest list",
+      sheetActions(ctx.sheet, [{ text: "Cancel", onclick: () => ctx.sheet.dismiss() }, { text: "Import into the latest list",
         kind: "primary", value: "import", onclick: () => applyImport(ctx, skipProblems) }]);
       return;
     }

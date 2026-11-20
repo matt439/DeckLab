@@ -57,10 +57,9 @@ function podShownRecord(record) {
     (record.result === "draw" || record.seats.some(seat => seat.seat_id === record.result));
 }
 
-function podCard(entry, data, editable = true) {
+function podCard(entry, data, editable = true, headId = `play-pod-${entry.record.id}`) {
   const record = entry.record;
   // As a two-player game's card (play.js playGameCard): the heading names the pod for a screen reader (E11-S55).
-  const headId = `play-pod-${record.id}`;
   const card = el("article", { class: "panel play-record play-pod-record" },
     el("div", { class: "play-record-head" },
       el("h3", { id: headId }, podResult(record),
@@ -85,22 +84,37 @@ function podCard(entry, data, editable = true) {
   return card;
 }
 
+function playPodActions(data, deckId) {
+  if (!Array.isArray(data.pods) || !Array.isArray(data.pod_lists)) return null;
+  const actions = el("div", { class: "actions", role: "group", "aria-label": "Game actions" });
+  const canRecord = state.profile && data.pod_lists.some(list => podList(list) && list.can_record === true);
+  const resume = podCounterResumeAction(data, actions);
+  if (!canRecord && (!resume || resume.hidden)) return null;
+  if (data.lists.length) actions.append(el("button", { type: "button", class: "btn", text: "Record a 1v1",
+    onclick: () => document.getElementById("play-quick-deck-0")?.focus() }));
+  if (canRecord) {
+    const launcher = (label, startOnly) => {
+      const button = el("button", { type: "button", class: "btn", text: label });
+      const owner = podOwnerContext(data, button, actions, null, deckId);
+      button.addEventListener("click", () => {
+        if (podOwner(owner) && podCounterControlVisible(button)) podForm(owner, null, null, startOnly);
+      });
+      return button;
+    };
+    if (podCounterAvailable()) actions.append(launcher("Start a pod", true));
+    actions.append(launcher("Record a pod", false));
+  }
+  if (resume) actions.append(resume);
+  return actions;
+}
+
 function playPodSection(data, deckId = "") {
   if (!Array.isArray(data.pods) || !Array.isArray(data.pod_lists)) return null;
   const entries = data.pods.filter(entry => podShownRecord(entry?.record));
-  const section = el("section", { class: "play-section", "aria-labelledby": "play-pods-title" });
-  const heading = el("div", { class: "play-section-head" }, el("h2", { id: "play-pods-title", text: "Commander pods" }));
-  if (state.profile && data.pod_lists.some(list => podList(list) && list.can_record === true)) {
-    const button = el("button", { type: "button", class: "btn", text: "Record a pod game" });
-    heading.append(button);
-    const owner = podOwnerContext(data, button, heading, null, deckId);
-    button.addEventListener("click", () => { if (podOwner(owner) && !button.disabled) podForm(owner); });
-  }
-  section.append(heading);
+  const section = el("section", { class: "play-section", "aria-labelledby": "play-pods-title" },
+    el("div", { class: "play-section-head" }, el("h2", { id: "play-pods-title", text: "Commander pods" })));
   const summary = deckId ? podResultsPart(data.pod_summary) : null;
   if (summary) section.append(summary);
-  const resume = podCounterResumeAction(data, section);
-  if (resume) section.append(resume);
   section.append(el("p", { class: "sub", text: "Three or four players. Pod results stay separate from 1v1 Head to head." }),
     entries.length ? el("div", { class: "play-records" }, entries.map(entry => podCard(entry, data)))
       : emptyBox(deckId ? "No pod games with this deck yet." : "No pod games have been recorded yet."));
@@ -167,9 +181,9 @@ function podFrameHere(frame) {
 function podFormHere(ctx) {
   return (podOwner(ctx) || ctx.counterPreset && podContextOwner(ctx)) &&
     (!ctx.counterPreset || ctx.counterPreset.isCurrent()) && podFrameHere(ctx.editFrame) && ctx.form.parentNode === ctx.editFrame.body &&
-    ctx.reviewButton.parentNode === ctx.editFrame.foot && ctx.reviewButton.isConnected &&
+    ctx.submitButton.parentNode === ctx.editFrame.foot && ctx.submitButton.isConnected &&
     ctx.form.contains(ctx.seatsBox) && ctx.form.contains(ctx.count) && ctx.form.contains(ctx.date) &&
-    ctx.form.contains(ctx.result) && ctx.form.contains(ctx.notes) && (!ctx.counterDetails || ctx.counterDetails.here(ctx.form))
+    (ctx.startOnly || ctx.form.contains(ctx.result)) && ctx.form.contains(ctx.notes) && (!ctx.counterDetails || ctx.counterDetails.here(ctx.form))
     && ctx.controls.every(row =>
       ctx.seatsBox.contains(row.box) && [row.player, row.type, row.list, row.commander].every(node => row.box.contains(node)));
 }
@@ -196,11 +210,11 @@ function podDraftError(payload, today) {
   return null;
 }
 
-function podForm(owner, preset = null, onSaved = null) {
+function podForm(owner, preset = null, onSaved = null, startOnly = false) {
   if ((!podOwner(owner) && !(preset && podContextOwner(owner))) || preset && !preset.isCurrent() ||
       owner.sheet && !owner.sheet.closed) return;
-  const ctx = { ...owner, generation: 0, previewId: null, pending: false, counterPreset: preset, onSaved };
-  owner.sheet = ctx.sheet = openSheet(ctx.record ? "Correct a pod game" : "Record a pod game", { wide: true });
+  const ctx = { ...owner, generation: 0, previewId: null, pending: false, counterPreset: preset, onSaved, startOnly };
+  owner.sheet = ctx.sheet = openSheet(startOnly ? "Start a pod" : ctx.record ? "Correct a pod game" : "Record a pod game", { wide: true });
   ctx.editFrame = podFrame(ctx.sheet);
   ctx.frame = owner.host.parentNode; ctx.frameParent = ctx.frame.parentNode;
   const currentLists = ctx.lists.filter(podList);
@@ -221,7 +235,9 @@ function podForm(owner, preset = null, onSaved = null) {
   ctx.seatsBox = el("div", { class: "play-pod-form-seats" });
   ctx.form = el("form", { class: "play-form play-pod-form" });
   ctx.error = el("p", { class: "form-error", role: "alert" });
-  ctx.reviewButton = el("button", { type: "button", class: "btn btn-primary", text: "Review pod game" });
+  const submit = () => startOnly ? podCounterStart(ctx, owner) : podPreview(ctx);
+  ctx.submitButton = el("button", { type: "button", class: "btn btn-primary",
+    text: startOnly ? "Start pod counter" : "Review pod game", onclick: submit });
   const change = () => { ctx.generation++; ctx.error.textContent = ""; };
   const remember = () => { for (const row of ctx.controls || []) Object.assign(row.seat, {
     type: row.type.value, player: row.player.value, commander: row.commander.value,
@@ -271,18 +287,19 @@ function podForm(owner, preset = null, onSaved = null) {
   ctx.counterDetails = playCounterFields(ctx.record?.counter || preset?.counter, ctx.active.map(id => ({ id, name: ctx.seats.get(id).player })));
   for (const node of ctx.counterDetails?.fields || []) for (const event of ["input", "change"]) node.addEventListener(event, change);
   add(ctx.form, [el("p", { class: "sub", text: "Choose at least one of your collection's Commander decks. External opponent and commander labels stay private to your collection." }),
-    playField("Players", ctx.count), playField("Date played", ctx.date), ctx.seatsBox, playField("Result", ctx.result),
+    playField("Players", ctx.count), playField(startOnly ? "Date" : "Date played", ctx.date), ctx.seatsBox,
+    startOnly ? null : playField("Result", ctx.result),
     playField("Notes (optional)", ctx.notes), ctx.counterDetails?.root, ctx.error]);
   ctx.editFrame.body.append(ctx.form);
   ctx.editFrame.foot.append(el("button", { type: "button", class: "btn", text: "Cancel", onclick: () => {
     if (podFormHere(ctx) && podTop(ctx.sheet) && !ctx.pending) ctx.sheet.close();
-  } }), ctx.reviewButton);
-  if (!ctx.record && !preset && podCounterAvailable()) {
+  } }), ctx.submitButton);
+  if (startOnly) ctx.counterStart = ctx.submitButton;
+  else if (!ctx.record && !preset && podCounterAvailable()) {
     ctx.counterStart = el("button", { type: "button", class: "btn", text: "Start pod counter", onclick: () => podCounterStart(ctx, owner) });
     ctx.editFrame.foot.append(ctx.counterStart);
   }
-  ctx.reviewButton.addEventListener("click", () => podPreview(ctx));
-  ctx.form.addEventListener("submit", event => { event.preventDefault(); podPreview(ctx); });
+  ctx.form.addEventListener("submit", event => { event.preventDefault(); submit(); });
   if (podFormHere(ctx) && podTop(ctx.sheet)) ctx.controls[0].player.focus();
 }
 
@@ -424,7 +441,7 @@ function podReviewed(answer, payload, space, saved = false) {
   return { id: saved ? record.id : answer.id, token: answer.review_sha256, record: structuredClone(record) };
 }
 async function podPreview(ctx) {
-  if (!podFormHere(ctx) || !podTop(ctx.sheet) || ctx.pending || ctx.reviewButton.disabled) return;
+  if (ctx.startOnly || !podFormHere(ctx) || !podTop(ctx.sheet) || ctx.pending || ctx.submitButton.disabled) return;
   let payload;
   if (ctx.counterDetails) {
     try { ctx.counterDetails.read(ctx.active); } catch (error) { ctx.error.textContent = error.message; return; }
@@ -439,7 +456,7 @@ async function podPreview(ctx) {
   if (localError) { ctx.error.textContent = localError; return; }
   const generation = ctx.generation, stamp = JSON.stringify(payload);
   const current = () => podFormHere(ctx) && ctx.generation === generation && podDraftStamp(ctx) === stamp;
-  ctx.pending = true; ctx.error.textContent = ""; busy(ctx.reviewButton, "Checking.");
+  ctx.pending = true; ctx.error.textContent = ""; busy(ctx.submitButton, "Checking.");
   try {
     const answer = await apiWrite("/api/play/pod", { ...payload, preview: true });
     if (!current() || !podTop(ctx.sheet)) return;
@@ -449,7 +466,7 @@ async function podPreview(ctx) {
     ctx.previewId = checked.id; payload = { ...payload, id: checked.id };
     podReviewSheet(ctx, payload, checked, generation);
   } catch (_) { if (current() && podTop(ctx.sheet)) ctx.error.textContent = "The pod game couldn't be reviewed. Your draft is still here; try Review again."; }
-  finally { ctx.pending = false; if (podFormHere(ctx)) unbusy(ctx.reviewButton); }
+  finally { ctx.pending = false; if (podFormHere(ctx)) unbusy(ctx.submitButton); }
 }
 
 function podReviewSheet(ctx, payload, checked, generation) {
@@ -464,7 +481,7 @@ function podReviewSheet(ctx, payload, checked, generation) {
   const current = () => podFormHere(ctx) && podFrameHere(frame) && podTop(review) &&
     summary.parentNode === frame.body && error.parentNode === frame.body && back.parentNode === frame.foot && save.parentNode === frame.foot &&
     back.isConnected && save.isConnected && ctx.generation === generation && podDraftStamp(ctx) === stamp;
-  back.addEventListener("click", () => { if (current() && !pending) { review.close(); if (podFormHere(ctx) && podTop(ctx.sheet)) ctx.reviewButton.focus(); } });
+  back.addEventListener("click", () => { if (current() && !pending) { review.close(); if (podFormHere(ctx) && podTop(ctx.sheet)) ctx.submitButton.focus(); } });
   save.addEventListener("click", async () => {
     if (!current() || pending || saved || save.disabled) return;
     pending = true; busy(save, "Saving."); error.textContent = "";

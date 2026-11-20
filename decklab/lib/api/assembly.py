@@ -369,6 +369,10 @@ def _preview(selected, profile=False):
     from . import box_check_printings
     answer = box_check_printings.annotate(answer, p, inventory.current())
     answer["selections"] = selections
+    empty_main = [item["title"] for item in answer["decks"] if not recipes[item["id"]].get("Deck")]
+    if empty_main:
+        answer["ready"] = False
+        answer["list_issue"] = "Add main-deck cards to " + ", ".join(empty_main) + " before building."
     from .assembly_intent import project
     for item in answer["decks"]:
         item["returns"].extend(item.pop("basic_returns", []))

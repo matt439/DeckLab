@@ -15,18 +15,20 @@
  * scanAvailable), the sheet says so and offers only the typed name. */
 "use strict";
 
-const TOK_SCAN_CHOICES = 8;             // printings offered at most for one card
+const TOK_SCAN_CHOICES = 8;             // printing choices shown before expanding the list
 const TOK_SCAN_MAX = 50;                // rows added at once (the server's token_ops.MAX_BATCH)
 const TOK_SCAN_OFF = "Photos can't be read on this server, so type each token's name instead.";
 
 /** Open the sheet over the Tokens page's view (where the visitor may change its tokens). Returns its context, or null. */
 function openTokenScan(view, pending = []) {
   if (!tokensActive(view) || view.busy || !view.canEdit) return null;
-  const sheet = openSheet(view.space === HOME_SPACE ? "Scan token cards" : `Scan token cards into ${spaceName(view.space)}'s tokens`,
+  const sheet = colOpenSheet(view.space === HOME_SPACE ? "Scan token cards" : `Scan token cards into ${spaceName(view.space)}'s tokens`,
     { wide: true });
   const id = (key) => `tok-scan-${key}-${sheet.heading.id}`;
   const ctx = { view, sheet, pending: tokScanCopy(pending), busy: false, seq: 0, last: null, reviewing: false,
     names: (view.data && view.data.face_names) || [], reads: scanAvailable(view.data) };
+  guardScanBatch(sheet, () => tokScanHere(ctx), () => scanBatchDescription(ctx.pending, "token card"),
+    () => ctx.reviewing && ctx.busy);
   ctx.input = el("input", { id: id("photo"), type: "file", accept: "image/*", capture: "environment", class: "col-file" });
   ctx.input.addEventListener("change", () => {
     const file = ctx.input.files && ctx.input.files[0];
@@ -95,7 +97,7 @@ function tokScanLabel(p) {
 /** One answer: a face read with a printing that has it, or read alone, is added (the others offered instead); else the
  * choices to pick from (a printing whose faces aren't the name read, or reprints of the face sharing the number). */
 function drawTokenScanResult(ctx, answer) {
-  const proposals = (answer.proposals || []).slice(0, TOK_SCAN_CHOICES);
+  const proposals = answer.proposals || [];
   clear(ctx.result);
   if (!proposals.length) {
     tokScanSay(ctx, "warn", answer.message || "The token card couldn't be read.");
@@ -109,15 +111,18 @@ function drawTokenScanResult(ctx, answer) {
   tokScanSay(ctx, sure ? "info" : "warn", sure ? `Added ${tokScanLabel(first)}.` : answer.message);
   const others = sure ? proposals.slice(1) : proposals;
   if (!others.length) return;
-  ctx.result.append(el("p", { class: "sub", text: sure ? "Not that one? Choose instead:" : "Choose which this card is:" }),
-    el("div", { class: "col-trade-choices", role: "group", "aria-label": "Token cards" }, others.map((p) =>
-      el("button", { type: "button", class: "btn btn-quiet col-scan-pick", onclick: () => {
-        if (ctx.busy || ctx.reviewing) return;
+  const seq = ctx.seq;
+  const choices = rows => el("div", { class: "col-trade-choices", role: "group", "aria-label": "Token cards" }, rows.map(p =>
+      el("button", { type: "button", class: "btn btn-quiet col-scan-pick", onclick: event => {
+        if (ctx.busy || ctx.reviewing || !tokScanHere(ctx, seq) || !ctx.result.contains(event.currentTarget)) return;
         if (sure && ctx.last) takeScanToken(ctx, ctx.last);
         ctx.last = addScanToken(ctx, p, proposals);
         clear(ctx.result);
         tokScanSay(ctx, "info", `Added ${tokScanLabel(p)}.`);
-      } }, tokScanLabel(p)))));
+      } }, tokScanLabel(p))));
+  ctx.result.append(el("p", { class: "sub", text: sure ? "Not that one? Choose instead:" : "Choose which this card is:" }),
+    choices(others.slice(0, TOK_SCAN_CHOICES)));
+  if (others.length > TOK_SCAN_CHOICES) ctx.result.append(otherScanPrintings(() => choices(others.slice(TOK_SCAN_CHOICES))));
 }
 
 /** The exact face name typed (any case or accents), or null; any name when the face names aren't to hand. */
@@ -284,7 +289,7 @@ function drawTokenScanPending(ctx) {
 function drawTokenScanFoot(ctx) {
   const cards = ctx.pending.reduce((n, c) => n + c.quantity, 0);
   const blocked = ctx.pending.some((card) => tokScanProblem(ctx, card)) || ctx.pending.length > TOK_SCAN_MAX;
-  sheetActions(ctx.sheet, [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.close() },
+  sheetActions(ctx.sheet, [{ text: "Cancel", value: "cancel", onclick: () => ctx.sheet.dismiss() },
     cards ? { text: `Review ${plural(cards, "token card")}`, kind: "primary", value: "review", disabled: blocked,
       onclick: () => reviewTokenScan(ctx) } : null]);
 }

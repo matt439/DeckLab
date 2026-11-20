@@ -154,3 +154,26 @@ class CommanderPairsUiTests(unittest.TestCase):
           const words = ctx.area.textContent;
           assert(words.includes('Every copy is in Ghalta Stompy and one of the home decks') && words.includes('None free'), words);
         """)
+
+    def test_single_and_pair_arrivals_keep_only_the_planning_action(self):
+        self.run_js("""
+          const incoming = {name: "Tymna the Weaver", free: 0, incoming: 1, card: null};
+          const single = lead(incoming.name, ['W'], 3, [], {faces: [incoming], free: 0});
+          const pair = {...PAIR, faces: [PAIR.faces[0], incoming]};
+          const cv = make(), asked = [];
+          api = async path => {
+            asked.push(path);
+            return path.includes('/candidate?') ? CARDS : {...RANKED, candidates: [single, pair]};
+          };
+          const ctx = openCommanderCandidates(cv); await flush();
+          ctx.input.value = 'Tymna'; ctx.search.fire('submit'); await flush();
+          assert(asked.includes('/api/commanders/candidates?q=Tymna'));
+          for (const item of ctx.area.querySelectorAll('.pcov-pick')) assert(item.textContent.includes('On the way'));
+          for (const c of [single, pair]) {
+            openCandidate(ctx, c); await flush();
+            assert(ctx.area.textContent.includes('On the way (1)'));
+            assert(!ctx.area.textContent.includes('Build from cards free tonight'));
+            assert(ctx.area.textContent.includes('New deck from it'));
+            backToCandidates(ctx);
+          }
+        """)

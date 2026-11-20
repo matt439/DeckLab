@@ -585,13 +585,20 @@ function drawHome(host, data, library, view) {
       [["popular", "Popular decks"], ["matchups", "Matchups"], ["rankings", "Rankings"]].map(([mode, text]) => el("button", { type: "button", text,
         "aria-pressed": String(view.mode === mode), onclick: () => {
           if (view.token != null && (view.token !== routeToken || view.profile !== state.profile?.id)) return;
-          view.mode = mode; if (mode !== "rankings") muCancelRankings(view); if (mode !== "popular") gbCancel(view); view.rankingsForce = true; gbWriteView(mode); drawHome(host, data, library, view);
+          view.mode = mode;
+          if (mode !== "rankings") muCancelRankings(view);
+          if (mode !== "popular") gbCancel(view);
+          view.rankingsForce = true;
+          gbWriteView(mode);
+          drawHome(host, data, library, view);
+          host.querySelector(".mu-view").querySelector('[aria-pressed="true"]').focus({ preventScroll: true });
         } }))));
   if (formats.length > 1) head.append(el("div", { class: "segmented mu-format", role: "group", "aria-label": "Format" },
     formats.map(([format, words]) => el("button", { type: "button", text: words, "aria-pressed": String(format === view.format),
       onclick: () => {
         if (view.token != null && (view.token !== routeToken || view.profile !== state.profile?.id)) return;
         view.format = format; view.deck = null; view.rankingsForce = true; local.set(HOME_FORMAT_KEY, format); drawHome(host, data, library, view);
+        host.querySelector(".mu-format").querySelector('[aria-pressed="true"]').focus({ preventScroll: true });
       } }))));
   section.append(head); host.append(section);
   if (view.mode === "popular") { muCancelRankings(view); muCancelSelectedSummary(view); return gbDraw(section, view, head); }

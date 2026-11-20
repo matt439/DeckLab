@@ -159,6 +159,54 @@ run('editor', async review => {
     assert.deepEqual(savedFields(await review.readFixture(context, editPath)), savedBefore, 'Saved deck changed after resume');
     report.saved_deck_unchanged = true;
     report.server_kept_draft_unchanged = true;
+
+    const commanderPage = await context.newPage();
+    review.observe(commanderPage, report.page_errors, report.http_errors);
+    await commanderPage.goto(review.pageUrl('#/new?kind=commander'));
+    await commanderPage.getByRole('button', { name: 'Add a commander', exact: true }).click();
+    const search = commanderPage.getByRole('searchbox', { name: 'Card name', exact: true });
+    await search.fill('Forest');
+    await commanderPage.getByRole('button', { name: 'Add Forest', exact: true }).click();
+    await commanderPage.getByText("Forest can't lead a Commander deck.", { exact: true }).waitFor();
+    const addTo = commanderPage.getByRole('group', { name: 'Add cards to', exact: true });
+    assert.equal(await addTo.getByRole('button', {name: 'Commander', exact: true}).getAttribute('aria-pressed'), 'true');
+    await search.fill('Marwyn');
+    await commanderPage.getByRole('button', { name: 'Add Marwyn, the Nurturer', exact: true }).click();
+    await commanderPage.waitForFunction(() => editor.lists.Commander?.[0]?.name === 'Marwyn, the Nurturer'
+      && editor.lists.Commander.length === 1 && editor.addSection === 'Deck');
+    report.cases.guided_commander = { rejected: 'Forest', accepted: 'Marwyn, the Nurturer', next: 'The 99' };
+
+    const starterContext = await review.context({ width: 393, height: 852, coarse: true, theme: 'light' });
+    const starter = await starterContext.newPage();
+    review.observe(starter, report.page_errors, report.http_errors);
+    const name = 'Marwyn, the Nurturer';
+    const face = {name, free:1, incoming:0, card:null};
+    await starter.route('**/api/commanders/candidates?*', route => {
+      const found = new URL(route.request().url()).searchParams.get('q') === 'Marwyn';
+      return route.fulfill({json:{total: found ? 1 : 0, candidates: found ? [{
+        name, names:[name], faces:[face], kind:'single', cards:1, lands:0, categories:[], covered:1, of:40,
+      }] : []}});
+    });
+    await starter.route('**/api/commanders/candidate?*', route => route.fulfill({json:{categories:[]}}));
+    await starter.route('**/api/commanders/draft', route => {
+      assert.equal(route.request().postDataJSON().name, name);
+      return route.fulfill({json:{commanders:[face], picks:[{name:'Llanowar Elves', quantity:1, reason:'Provides ramp'}],
+        picked:1, target:99, open_slots:98, open_lands:38, open_spells:60, roles:[], mana_sources:[], incoming:[]}});
+    });
+    await starter.goto(review.pageUrl('#/new?kind=commander'));
+    await starter.getByRole('button', {name:'Build from my collection', exact:true}).click();
+    await starter.getByRole('searchbox', {name:'Find a commander by name'}).fill('Marwyn');
+    await starter.locator('.pcov-pick').filter({hasText:name}).click();
+    await starter.getByRole('button', {name:'Build from cards free tonight', exact:true}).click();
+    await starter.getByText(/98 open slots/).waitFor();
+    await starter.getByText(/Provides ramp/).waitFor();
+    await starter.getByRole('button', {name:'Use this draft', exact:true}).click();
+    await starter.waitForFunction(() => editor.lists.Commander?.[0]?.name === 'Marwyn, the Nurturer'
+      && editor.lists.Deck?.[0]?.name === 'Llanowar Elves' && !document.querySelector('dialog[open]'));
+    await starter.locator('.bar-undo').click();
+    await starter.getByRole('button', {name:'Build from my collection', exact:true}).waitFor();
+    report.cases.collection_starter = { searched:'Marwyn', open_slots:98, restored_empty_editor:true };
+
     assert.equal(report.screenshots.length, 3, 'Editor review screenshots are incomplete');
     assert.equal(report.page_errors.length, 0, 'Uncaught page error during editor review');
     assert(!report.http_errors.some(row => row.category === 'unexpected_http_error'), 'Unexpected editor fixture HTTP failure');

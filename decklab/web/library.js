@@ -14,7 +14,7 @@ selection. Products stay tiles in both.
 Decks are grouped by whose they are: the home decks first, then each person's (their own space, lib/spaces.py),
 by name, in a part that folds away; within each, Commander then 60-card (kind "casual"). Products (sealed decks, read only)
 come last, folded until opened (remembered on this device). The filters (whose decks, format, status,
-colour identity, archetype, availability) and the sort (Ready first, Recently changed, Not played lately, Strongest vs
+colour identity, archetype, availability) and the sort (Ready first, Recently changed, Least recently played (1v1), Strongest vs
 popular decks, Name) are kept in the address; on a phone they're
 behind a "Filter" sheet. Title search stays in sight, with its query in the address too. "Mine" is the
 decks Played by the visitor at home, or a person's own decks.
@@ -26,7 +26,7 @@ plays each deck. Nothing here runs at load.
 */
 "use strict";
 
-const LIB_SORTS = { ready: "Ready first", recent: "Recently changed", played: "Not played lately",
+const LIB_SORTS = { ready: "Ready first", recent: "Recently changed", played: "Least recently played (1v1)",
   popular: "Strongest vs popular decks", name: "Name" };
 // The deck kinds' groups, in the order they show (decided 2026-10-27: Commander first).
 const LIB_KIND_ORDER = ["commander", "casual"];
@@ -290,10 +290,10 @@ function drawLibrary(data, filters) {
     const first = results.querySelector(".lib-pick");
     if (first) first.focus();
   } }] : [];
-  // Compare two decks (compare.js, E1-S13): choose the two from the decks shown here.
-  if (typeof memberOwnSpace === "function" && memberOwnSpace()) more.push({label: "Cards to get…", onclick: () => {
+  const personalNeeds = memberOwnSpace() ? el("button", { type: "button", class: "btn", text: "Cards to get", onclick: () => {
     if (view.current?.()) openMemberNeeds();
-  }});
+  } }) : null;
+  // Compare two decks (compare.js, E1-S13): choose the two from the decks shown here.
   if (data.decks.filter((d) => !d.error).length > 1) more.push({ label: "Compare two decks…", onclick: () => openCompareFirst(data.decks) });
   // New deck is the page's one primary action for whoever may make a deck (on a phone it opens in the Quick
   // edit); without it, More ("⋯") sits at the end of the filter row instead of on a row of its own under the title.
@@ -313,7 +313,7 @@ function drawLibrary(data, filters) {
   // The warnings go first: they say when the missing-card counts can't be trusted.
   add(main, [
     ...pageHead({ title: routeH1("library"), description: "Tap a deck for its cards, play guide and stats.",
-      primary, more: rowMore ? [] : more }),
+      primary: personalNeeds ? [primary, personalNeeds] : primary, more: rowMore ? [] : more }),
     warningsBox(data.warnings, "Warnings"),
     tables,
     libOfficialPanel(data),           // library-official.js: Game Changer and ban changes (E9-S36)
@@ -461,7 +461,10 @@ function deckReadiness(d) {
   }
   if (!target.known) return { rank: 4, chip: status("plain", "Availability needs checking"), missing: 0 };
   // Every card here is the usual case: no chip (chips are for exceptions; Ready first puts these first).
-  if (!target.missing && !target.waiting) return { rank: 1, chip: null, missing: 0 };
+  if (!target.missing && !target.waiting) {
+    if (d.card_count === 0) return { rank: 4, chip: status("plain", "No main-deck cards yet"), missing: 0 };
+    return { rank: 1, chip: null, missing: 0 };
+  }
   if (!target.missing) {
     return { rank: 2, chip: status("info", `${num(target.waiting)} on the way`), missing: 0 };
   }
@@ -491,7 +494,7 @@ function libPlayedRank(d) {
 }
 
 /** decks sorted by the library's sort: Ready first (built, then ready, waiting, fewest missing, unknown),
- * Recently changed (newest edit first, never-edited last), Not played lately (never played first, then the oldest
+ * Recently changed (newest edit first, never-edited last), Least recently played (no 1v1 games first, then the oldest
  * last game, libPlayedRank) or Name; by title within a tie. */
 function sortDecks(decks, sort) {
   const title = (a, b) => (a.title || a.id).localeCompare(b.title || b.id);
@@ -794,13 +797,12 @@ function deckMeta(d, person) {
   return parts.length ? factLine("deck-meta", parts) : null;
 }
 
-/** A deck's home games (E1-S27), from the Game log's games the visitor may see: "Last played 2026-10-08 · 3 games",
- * or "Not played at home yet"; null when they couldn't be read (never shown as not played). */
+/** The visible physical 1v1 games (E1-S27). The Commander line-up also counts pods. */
 function deckPlayed(d) {
   const p = d.played;
   if (!p || d.error) return null;
-  return p.games && p.last ? factLine("deck-played", [`Last played ${p.last}`, plural(p.games, "game")])
-    : el("span", { class: "deck-played", text: "Not played at home yet" });
+  return p.games && p.last ? factLine("deck-played", [`Last 1v1 game ${p.last}`, plural(p.games, "game")])
+    : el("span", { class: "deck-played", text: "No 1v1 games recorded yet" });
 }
 
 /** A deck's tile in the library: the whole tile is one link (or, while choosing pictures, a button for a deck

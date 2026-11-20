@@ -5,6 +5,7 @@
 .shop-order-section { display: grid; gap: var(--s-3); min-width: 0; padding-top: var(--s-4); border-top: 1px solid var(--border); }
 .shop-order-section > h3 { margin: 0; font-size: var(--fs-md); }
 .shop-order-section > summary, .shop-order-paste > summary { min-height: var(--tap); cursor: pointer; font-weight: var(--fw-semibold); }
+.shop-order-paste .field-hint { overflow-wrap: anywhere; }
 details.shop-order-section:not([open]) > :not(summary) { display: none; }
 .shop-order-section > .field, .shop-order-form > .field { margin: 0; }
 .shop-order-section textarea { width: 100%; }

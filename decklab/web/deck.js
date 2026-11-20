@@ -322,6 +322,7 @@ function deckBuildLink(data) {
   // A trial is a precon not owned: Build decks never offers it (AGENTS.md).
   if (s.trial || !seesInventory(HOME_SPACE) || deckSpaceOf(s.id) !== HOME_SPACE) return null;
   const built = s.status === "built";
+  if (!built && deckNeedsMainCards(data)) return null;
   return el("a", { class: `btn${built || s.read_only ? "" : " btn-primary"} deck-build`, href: deckBuildHref(data),
     text: built ? "Review build" : "Build deck" });
 }
@@ -447,6 +448,7 @@ function overviewParts(data) {
   const verdict = data.stats ? statsVerdict(data.stats, data.summary) : null;
   const total = copies(Object.entries(data.sections).filter(([name]) => name !== "Sideboard").flatMap(([, l]) => l));
   return [
+    deckNeedsMainCards(data) ? emptyBox("This list has no main-deck cards yet.") : null,
     commanderReadiness(data),
     deckAssemblySection(data),
     deckOverviewPlayed(data),
@@ -720,10 +722,8 @@ function redrawCards(screen) {
   const choose = (patch) => { Object.assign(view, patch); redrawCards(screen); deckAddress(screen); };
   // A list with no cards (a new idea with an empty decklist): no toolbar, one line and the editor to fill it.
   if (!all.length) {
-    const s = data.summary;
     clear(screen.cardsBar);
-    add(clear(screen.cardsHost), [emptyBox("This list has no cards yet.", canEditDeck(s)
-      ? el("a", { class: "btn", href: editHref(s.id, data.version), text: "Add cards" }) : null)]);
+    add(clear(screen.cardsHost), [emptyBox("This list has no cards yet.")]);
     return;
   }
   add(clear(screen.cardsBar), [

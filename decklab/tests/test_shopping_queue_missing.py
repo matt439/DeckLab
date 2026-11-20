@@ -176,6 +176,21 @@ class QueueMissingTests(ApiTestCase):
         tokens = [row for row in rows if row["set"] == "ttsr"]
         self.assertEqual(len(tokens), 1)                             # tokens are never queued here
 
+    def test_only_selected_cards_are_written_and_the_entire_review_is_rechecked(self):
+        review = self.review()
+        selected = ["Wrath of God"]
+        cards = [{"name": row["name"], "copies": row["copies"], "joins": row["joins"]}
+                 for row in review["rows"] if row["copies"]]
+        other = next(row for row in cards if row["name"] not in selected)
+        other["copies"] += 1
+        self.refused(409, lambda: self.save(review, cards=cards, selected=selected))
+        for bad in (None, [], selected * 2, ["Forest"], "Wrath of God", [{}]):
+            with self.subTest(bad=bad):
+                self.refused(400, lambda: self.save(review, selected=bad))
+        result = self.save(review, selected=selected)
+        self.assertEqual((result["cards"], result["copies"]), (1, 2))
+        self.assertEqual([(row["name"], row["quantity"]) for row in self.rows()], [("Wrath of God", "2")])
+
     def test_a_stale_revision_or_a_changed_review_saves_nothing(self):
         review = self.review()
         self.refused(409, lambda: self.save(review, expect="stale"))

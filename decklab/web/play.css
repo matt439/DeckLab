@@ -11,7 +11,7 @@
 .play-section { margin-top: var(--s-6); }
 .play-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2) var(--s-4); margin-bottom: var(--s-3); }
 .play-section-head h2 { margin: 0; font-size: var(--fs-lg); }
-.play-filter { min-width: min(100%, 280px); }
+.play-filter { width: min(100%, 380px); }
 .play-records { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); }
 .play-record { min-width: 0; display: grid; gap: var(--s-2); align-content: start; }
 .play-record > * { margin: 0; }
@@ -93,7 +93,10 @@ dialog.life-counter button, .life-total, .life-small-value { touch-action: manip
   border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-3); }
 .play-counter-seat > legend { padding: 0 var(--s-2); font-weight: var(--fw-bold); }
 .play-counter-fields > p { margin: 0; }
-.life-end { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-sizing: border-box;
+dialog.life-counter[open]:has(> .life-end:not([hidden])) {
+  display: grid; grid-template-rows: minmax(min-content, 1fr) auto; overflow: auto;
+}
+.life-end { justify-self: center; box-sizing: border-box; margin-bottom: max(var(--s-2), env(safe-area-inset-bottom));
   width: min(440px, calc(100% - 2 * var(--s-4))); display: grid; gap: var(--s-3); padding: var(--s-5);
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-panel); box-shadow: var(--shadow-2); }
 .life-end > h2, .life-end > p { margin: 0; }

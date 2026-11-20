@@ -37,6 +37,7 @@ class MemberToolsUiTests(unittest.TestCase):
           button(sheet.foot,'Copy list').click();await flush();same(copies,['3 Llanowar Elves']);
           assert.equal(calls.length,1);assert(calls[0].startsWith('/api/space/needed?space=user2'));
           state.profile=PROFILES[0];button(sheet.foot,'Copy list').click();await flush();assert.equal(copies.length,1);
+          closeAllSheets();assert(!sheet.dialog.isConnected);
         """)
 
     def test_late_needs_and_downloads_do_not_cross_profile_or_route(self):
@@ -53,8 +54,13 @@ class MemberToolsUiTests(unittest.TestCase):
 
     def test_partial_or_empty_counts_never_offer_a_copy_of_incomplete_rows(self):
         self.run_js("""
-          as('user2',MAY.user2);api=async()=>({ready:false,reason:'Your collection needs checking.',rows:[{name:'Unproven',quantity:1}]});
+          as('user2',MAY.user2);api=async()=>({ready:false,check_collection:true,reason:'Your collection needs checking.',rows:[{name:'Unproven',quantity:1}]});
           let sheet=await openMemberNeeds();assert(sheet.body.textContent.includes('needs checking'));assert(!button(sheet.foot,'Copy list'));
-          sheet.close();api=async()=>({ready:true,rows:[],decks:[]});sheet=await openMemberNeeds();
+          assert.equal(sheet.body.querySelector('a').getAttribute('href'),'#/collection?space=user2&view=rows');
+          api=async()=>({ready:false,check_decks:[{id:'user2/casual/mine',title:'My deck'}]});
+          button(sheet.foot,'Try again').click();await flush();
+          assert.equal(sheet.body.querySelector('a').getAttribute('href'),deckHref('user2/casual/mine','target'));
+          api=async()=>({ready:true,rows:[],decks:[]});
+          button(sheet.foot,'Try again').click();await flush();
           assert(sheet.body.textContent.includes('no saved Planned decks'));assert(!button(sheet.foot,'Copy list'));
         """)

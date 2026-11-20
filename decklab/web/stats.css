@@ -5,7 +5,9 @@
 /* The verdict strip (stats.js statsVerdict): the stats' answers before any chart, on the Overview and Stats. */
 .verdict-strip {
   list-style: none; margin: 0 0 var(--s-3); padding: 0;
-  display: grid; gap: var(--s-2); grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%;
+  display: grid; gap: var(--s-2); width: 100%;
+  /* Two tiles across on a phone, stacking when enlarged text needs the row. */
+  grid-template-columns: repeat(auto-fit, minmax(clamp(45%, 8rem, 100%), 1fr));
 }
 .verdict {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0;

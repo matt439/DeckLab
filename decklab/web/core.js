@@ -721,9 +721,12 @@ function menuButton(label, items, { aria = null, buttonClass = "btn btn-secondar
   return el("span", { class: "menu-wrap" }, wireMenu(button, menu), menu);
 }
 
-/** Open and close a popover (a menu) from its button: aria-expanded follows it, Esc and a click outside close
- * it, focus moves into it on opening and the arrow keys move through its items. Returns the button. */
+/** Open a popover from its button. Action menus use arrows between items. A panel of ordinary
+ * controls (the account panel) follows native tab order until focus leaves it. */
 function wireMenu(button, menu) {
+  function closeAfterTab(event) {
+    if (!menu.hidden && !menu.contains(event.relatedTarget)) closeMenus();
+  }
   menu.setAttribute("data-popover", "");
   keyboardMenuButton(button);
   button.addEventListener("click", () => {
@@ -748,7 +751,11 @@ function wireMenu(button, menu) {
         || event.altKey || event.ctrlKey || event.metaKey || (event.shiftKey && event.key !== "Tab")) return;
     // A held activation must not choose again when the menu returns focus to its button. Navigation may repeat.
     if (event.repeat && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); return; }
-    if (event.key === "Tab") { closeMenus(); return; }
+    if (event.key === "Tab") {
+      if (menu.getAttribute("role") === "menu") closeMenus();
+      else menu.addEventListener("focusout", closeAfterTab, { once: true });
+      return;
+    }
     if (event.key === "Escape") {
       closeMenus();
       button.focus();

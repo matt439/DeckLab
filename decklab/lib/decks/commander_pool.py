@@ -232,7 +232,7 @@ def candidates(free, card_of, may_lead, categories, partners=lambda card: []):
                        for lead in entries if may_lead(lead["card"])])
 
 
-def pairs(free, card_of, pairable, pair_rule, categories, max_pairable=MAX_PAIRABLE, max_pairs=MAX_PAIRS):
+def pairs(free, card_of, pairable, pair_rule, categories, max_pairable=MAX_PAIRABLE, max_pairs=MAX_PAIRS, query=""):
     """(rows, {"found", "left_out", "untried"}): the pairs of free cards that may be two commanders
     together, as candidates' rows with "kind": "pair", "names" (the two by name, a Background second) and
     "pairing" (pair_rule's words), best first and at most max_pairs. found is how many pairs there were,
@@ -243,6 +243,8 @@ def pairs(free, card_of, pairable, pair_rule, categories, max_pairable=MAX_PAIRA
     entries = _entries(free, card_of)
     halves = sorted((e for e in entries if pairable(e["card"])),
                     key=lambda e: (-len(e["card"].get("printings") or ()), e["name"].casefold()))
+    if query:
+        halves.sort(key=lambda e: query not in e["name"].casefold() and e["name"].casefold() not in query)
     tried, untried = halves[:max_pairable], max(len(halves) - max_pairable, 0)
     groups, of = _Groups(entries, categories), _of(categories)
     rows = []
@@ -252,8 +254,12 @@ def pairs(free, card_of, pairable, pair_rule, categories, max_pairable=MAX_PAIRA
             if words is None:
                 continue
             two = sorted((a, b), key=lambda e: (_is_background_type(e["card"]), e["name"].casefold()))
+            if query and query not in " and ".join(e["name"].casefold() for e in two):
+                continue
             rows.append({"kind": "pair", **_row(two, groups, categories, of), "pairing": words})
     best_first(rows)
+    if query:
+        rows.sort(key=lambda row: row["name"].casefold() != query)
     return rows[:max_pairs], {"found": len(rows), "left_out": max(len(rows) - max_pairs, 0), "untried": untried}
 
 

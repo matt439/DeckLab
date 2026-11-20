@@ -9,14 +9,14 @@ Popular decks, the list watcher's checks to gbRefresh, and a pause to gbCancel.
 
 The board's read is single-flight with a deadline, and dropped when the page, the profile or the view has moved on.
 It reads again when a run starts or ends (the watcher's running list), every GB_POLL_MS while a row plays, and on a
-view or format change. Before a Play it never plans or estimates: the deck's Testing tab says how long. A read
+view or format change. Opening a row's Play confirmation reads that list's estimate on demand. A board read
 that starts redraws only when nothing of its format is on screen yet, and a redraw puts the keyboard focus back on
 the same row's Details or Play (or its Details when its Play has gone: it's playing now).
 
 Under the rows, one muted line says when the popular decks list was built (E3-S43, gtBuiltLine).
 
 Loaded after gauntlet.js (gtBeforeLine, gtOlderLine, gtFigureWords, gtBuiltLine) and sim-ui.js (winRateFigure, rangeBar,
-freshnessBadge); editor.js supplies ask().
+freshnessBadge); editor.js supplies the confirmation sheet.
 */
 "use strict";
 
@@ -242,19 +242,57 @@ function gbPlayButton(view, row) {
     "data-focus": `play:${row.deck.id}`, onclick: () => gbPlay(view, row) });
 }
 
-/** Ask first, then start the standard sample through the usual run endpoint, bound to the list on screen. */
-async function gbPlay(view, row) {
-  const profile = state.profile?.id, token = view.token;
-  const choice = await ask(`Play ${shortTitle(row.deck.title)} against popular decks?`,
-    [`${plural(row.of || 0, "popular deck")}, about 100 games each. Forge plays two runs at a time; others wait ` +
-      "their turn. The deck's Testing tab says how long."],
-    [{ value: "play", text: "Play", kind: "primary" }, { value: "cancel", text: "Cancel" }]);
-  if (choice !== "play" || token !== routeToken || state.profile?.id !== profile || !runGate().may) return;
+/** Plan just this row, using the deck's standard sample and the time estimates from its Testing tab. */
+function gbPlay(view, row) {
+  if (!gbHere(view) || !runGate().may) return;
+  const format = view.gbFormat, deck = row.deck, controller = new AbortController();
+  let budget;
+  const sheet = colOpenSheet(`Play ${shortTitle(deck.title)} against popular decks?`, { onClose(choice) {
+    controller.abort();
+    if (choice === "play" && budget && gbHere(view) && format === view.gbFormat && runGate().may)
+      gbStart(view, deck, budget);
+  } });
+  const here = () => !sheet.closed && sheet.dialog.isConnected && gbHere(view) && view.gbFormat === format;
+  const cancel = el("button", { type: "button", class: "btn", text: "Cancel", onclick: () => sheet.close() });
+  sheet.foot.append(cancel);
+  async function estimate() {
+    if (!here()) return;
+    clear(sheet.body).append(loadingBox("Checking remaining games and time…"));
+    try {
+      const answer = await api(gtUrl({ id: deck.id, version: "target" }), { signal: controller.signal });
+      if (!here()) return;
+      clear(sheet.body);
+      if (answer.deck?.card_sha !== deck.card_sha || gtPlaying(answer)) {
+        sheet.body.append(el("p", { text: gtPlaying(answer) ? "A run for this list is already waiting or playing."
+          : "This list changed. Close this sheet to review its updated row." }));
+        gbRefresh(view, null, { force: true });
+        return;
+      }
+      const plan = answer.budgets?.[answer.default_budget];
+      if (!answer.is_standard || !Number.isSafeInteger(plan?.new_games) || plan.new_games < 0) {
+        sheet.body.append(el("p", { text: "An estimate for the standard sample is unavailable." }),
+          el("a", { href: `${deckHref(deck.id, "target")}&tab=matchups&part=gauntlet`, text: "View deck testing details" }));
+        return;
+      }
+      add(sheet.body, gtRunTime(answer, answer.default_budget));
+      if (plan.new_games > 0) {
+        budget = answer.default_budget;
+        sheet.foot.insertBefore(el("button", { type: "button", class: "btn btn-primary", text: "Play",
+          onclick: () => sheet.close("play") }), cancel);
+      } else cancel.textContent = "Close";
+    } catch (e) {
+      if (here()) clear(sheet.body).append(loadFailed("The run estimate", e, estimate));
+    }
+  }
+  estimate();
+}
+
+async function gbStart(view, deck, budget) {
   try {
-    await apiWrite("/api/gauntlet/run", { id: row.deck.id, version: "target", expected_card_sha: row.deck.card_sha });
+    await apiWrite("/api/gauntlet/run", { id: deck.id, version: "target", expected_card_sha: deck.card_sha, budget });
     if (typeof syncRunsPill === "function") syncRunsPill(true);
   } catch (e) {
-    if (token === routeToken && state.profile?.id === profile) toast(e.message || String(e));
+    if (gbHere(view)) toast(e.message || String(e));
   }
-  if (token === routeToken && state.profile?.id === profile) gbRefresh(view, null, { force: true });
+  if (gbHere(view)) gbRefresh(view, null, { force: true });
 }

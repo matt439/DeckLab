@@ -44,8 +44,7 @@ def preview(body):
     if p.warnings or p.unresolved:
         raise ApiError(409, "Resolve the collection or deck list warnings before building from free copies.")
     spare = pool.free_copies(p)
-    incoming = {n: sum(q for _, q in lines) for n, lines in p.on_the_way.items()}
-    free = {n: qty - incoming.get(n, 0) for n, qty in spare.items()}
+    free = pool.physical_free_copies(p, spare)
     rules = _rules()
     tag = rules.commander.MASS_LAND_DENIAL_TAG
     try:
@@ -69,8 +68,8 @@ def preview(body):
     for row in result["picks"]:
         row["card"] = pictured(row["name"])
     identity = set(result["colours"])
-    result["incoming"] = [{"name": n, "quantity": min(q, spare[n])} for n, q in sorted(incoming.items())
-                          if q > 0 and spare[n] > 0 and commander_draft.known_identity(cards.card(n))
+    result["incoming"] = [{"name": n, "quantity": q} for n, q in sorted((spare - free).items())
+                          if commander_draft.known_identity(cards.card(n))
                           and fits(cards.card(n), identity)
                           ] if space == spaces.HOME and guard.sees_home_records() else []
     return {**result, "space": space, "source": rules.source}

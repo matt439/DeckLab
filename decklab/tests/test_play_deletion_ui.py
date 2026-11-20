@@ -5,6 +5,7 @@ from decklab.tests import test_play_pods_ui as pod_ui
 from decklab.tests.test_workspace_ui import NODE
 
 SETUP = r'''
+  editor=null;  // The Game log has no open deck editor.
   const deletable=()=>entry({can:{edit:true,delete:true}});
   const openDelete=()=>{const saved=deletable(),data=packet({pods:[saved]});const section=mount(data);
     const source=buttonText(section,'Delete this game');assert(source);source.click();return{saved,data,source,sheet:sheets.at(-1)};};
@@ -57,4 +58,75 @@ class PlayDeletionUiTests(unittest.TestCase):
           ctx=openDelete();deletionReason(ctx.sheet).value='Duplicate';buttonText(ctx.sheet.foot,'Delete game').click();
           state.profile={...state.profile};resolve({deleted:true,id:ctx.saved.record.id});await settle();
           assert.equal(routes.length,0);assert.equal(messages.length,0);
+        ''')
+
+    def test_background_conflict_returns_to_review_then_requires_a_new_explicit_confirmation(self):
+        self.run_js(r'''
+          const write=deferred(),read=deferred(),{sheet,saved}=openDelete();
+          const confirm=buttonText(sheet.foot,'Delete game'),cancel=buttonText(sheet.foot,'Keep game');
+          const reads=[];
+          apiWrite=(path,body)=>{writes.push(body);return write.promise;};
+          api=(path,options)=>{reads.push(path);assert.equal(options.wakeHop,false);return read.promise;};
+          deletionReason(sheet).value='Duplicate after checking';confirm.click();
+          document.visibilityState='hidden';document.fire('visibilitychange');
+          write.reject(Error('The game changed.'));await settle();
+          assert(cancel.disabled);assert(confirm.disabled);assert.equal(reads.length,0);
+          document.visibilityState='visible';document.fire('visibilitychange');
+          assert(!cancel.disabled);assert(!confirm.disabled);assert.equal(confirm.textContent,'Review current game');
+          assert(sheet.body.textContent.includes('The game changed.'));assert.equal(deletionReason(sheet).value,'Duplicate after checking');
+          confirm.click();confirm.click();same(reads,['/api/play']);assert.equal(writes.length,1);
+          document.visibilityState='hidden';
+          const current=entry({record:{...saved.record,notes:'Freshly corrected pod'},sha256:shaB,can:{delete:true}});
+          read.resolve(packet({pods:[current]}));await settle();assert(!sheet.body.textContent.includes('Freshly corrected pod'));
+          document.visibilityState='visible';document.fire('visibilitychange');
+          assert(sheet.body.textContent.includes('Freshly corrected pod'));assert.equal(confirm.textContent,'Delete game');
+          apiWrite=async(path,body)=>{writes.push(body);return {deleted:true,id:podId};};
+          confirm.click();await settle();assert(sheet.closed);
+          same(writes.map(w=>[w.sha256,w.reason]),[[shaR,'Duplicate after checking'],[shaB,'Duplicate after checking']]);
+        ''')
+
+    def test_background_success_refreshes_only_the_same_open_sheet_and_profile_once(self):
+        self.run_js(r'''
+          for(const abandon of ['closed','profile','route','none']){
+            const response=deferred(),{sheet}=openDelete();apiWrite=()=>response.promise;
+            deletionReason(sheet).value='Duplicate';buttonText(sheet.foot,'Delete game').click();
+            document.visibilityState='hidden';response.resolve({deleted:true,id:podId});await settle();
+            assert.equal(routes.length,0);assert.equal(messages.length,0);
+            if(abandon==='closed')closeAllSheets();
+            if(abandon==='profile')state.profile={...state.profile};
+            if(abandon==='route')routeToken++;
+            document.visibilityState='visible';document.fire('visibilitychange');document.fire('visibilitychange');
+            if(abandon==='none'){assert(sheet.closed);same(routes,['#/play']);same(messages,['Game deleted.']);}
+            else {assert.equal(routes.length,0);assert.equal(messages.length,0);sheet.close();}
+          }
+        ''')
+
+    def test_route_and_profile_cleanup_remove_the_private_record_review(self):
+        self.run_js(r'''
+          const {sheet,saved}=openDelete();
+          deletionReason(sheet).value='Private reason';
+          apiWrite=async()=>{throw Error('Record changed');};
+          buttonText(sheet.foot,'Delete game').click();await settle();
+          api=async()=>packet({pods:[{...saved,record:{...saved.record,notes:'Private corrected note'}}]});
+          buttonText(sheet.foot,'Review current game').click();await settle();
+          assert(document.body.textContent.includes('Private corrected note'));
+          closeAllSheets();
+          assert(sheet.closed);assert(!sheet.dialog.isConnected);assert.equal(playDeleteSheet,null);
+          assert(!document.body.textContent.includes('Private corrected note'));
+        ''')
+
+    def test_failed_refresh_and_missing_or_revoked_game_cannot_retry_the_write(self):
+        self.run_js(r'''
+          for(const missing of [true,false]){
+            const {sheet}=openDelete(),confirm=buttonText(sheet.foot,'Delete game');
+            apiWrite=async(path,body)=>{writes.push(body);throw Error('Connection lost');};
+            deletionReason(sheet).value='Duplicate';confirm.click();await settle();
+            api=async()=>{throw Error('Still offline');};confirm.click();await settle();
+            assert(sheet.body.textContent.includes('Still offline'));assert.equal(confirm.textContent,'Review current game');
+            api=async()=>packet({pods:missing?[]:[entry({can:{delete:false}})]});
+            confirm.click();await settle();assert(confirm.disabled);assert(sheet.body.textContent.includes('no longer available'));
+            assert.equal(deletionReason(sheet).value,'Duplicate');sheet.body.querySelector('form').fire('submit');await settle();
+            buttonText(sheet.foot,'Keep game').click();assert(sheet.closed);
+          }
+          assert.equal(writes.length,2);
         ''')

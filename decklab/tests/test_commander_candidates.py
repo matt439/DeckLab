@@ -52,7 +52,8 @@ class CandidatesApiTests(CandidatesTestCase):
                                                 "mass disruption": 0, "plan": None})
         self.assertEqual((abaddon["covered"], abaddon["of"], abaddon["share"]), (4, 40, 0.1))
         # One owned, one coming with the preordered precon (its commander).
-        self.assertEqual((abaddon["cards"], abaddon["lands"], abaddon["free"]), (3, 0, 2))
+        self.assertEqual((abaddon["cards"], abaddon["lands"], abaddon["free"]), (3, 0, 1))
+        self.assertEqual(abaddon["faces"][0]["incoming"], 1)
         # Ghalta (G): 3 free Llanowar Elves (the box holds 2) and the Sol Ring; 1 of the 2 Pick Your Poisons.
         # The Elvish Mystic is the box's; Wrath of God is white.
         self.assertEqual(self.counts(ghalta)["ramp"], 2)
@@ -73,6 +74,10 @@ class CandidatesApiTests(CandidatesTestCase):
     def test_limit_and_bad_requests(self):
         answer = api.candidates_view(limit="1")
         self.assertEqual((len(answer["candidates"]), answer["total"]), (1, 2))
+        lower_ranked = api.candidates_view(limit="1", q="gHaLtA")
+        self.assertEqual([row["name"] for row in lower_ranked["candidates"]], ["Ghalta, Primal Hunger"])
+        self.assertEqual(lower_ranked["total"], 1)
+        self.assertApiError(400, api.candidates_view, None, None, "x" * 151)
         self.assertApiError(400, api.candidates_view, None, "0")
         self.assertApiError(400, api.candidates_view, None, "201")
 
@@ -173,6 +178,7 @@ class CandidateCardsApiTests(CandidatesTestCase):
         self.assertEqual(self.names(parts["targeted disruption"]), ["Fire // Ice"])
         self.assertEqual((parts["mass disruption"]["count"], parts["mass disruption"]["short"]), (0, True))
         self.assertEqual(parts["ramp"]["cards"][0]["card"]["name"], "Sol Ring")
+        self.assertEqual((parts["ramp"]["cards"][0]["free"], parts["ramp"]["cards"][0]["incoming"]), (0, 1))
         self.assertEqual(answer["others"]["count"], 0)
         self.assertEqual(answer["source"]["id"], role_targets.SOURCE_ID)
 

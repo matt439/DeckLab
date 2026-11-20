@@ -467,6 +467,11 @@ class LibraryShelfTests(_Shelf):
           drawLibrary(DATA, libraryFilters(new URLSearchParams("all=1&format=casual")));
           // Ready first: built, every card here, waiting for a delivery, then missing cards (fewest first).
           same(titles(), ["Gruul", "Angels", "Vampires", "Otters"]);
+          const idea = deck("casual/idea", "Idea", {status:"idea", card_count:0, ...counts(0)});
+          const lands = deck("casual/lands", "Lands", {card_count:20, ...counts(0)});
+          same([idea, lands].filter(d => matchesReadiness(d, "ready")), [lands]);
+          same(sortDecks([idea, lands], "ready"), [lands, idea]);
+          assert(deckReadiness(idea).chip.textContent.includes("No main-deck cards yet"));
           main.querySelector("#filter-sort").fire("change", { target: { value: "recent" } });
           same(titles(), ["Otters", "Vampires", "Gruul", "Angels"]);
           // Times are compared as times, not as text: a later edit with fractions of a second, in another zone.
@@ -524,7 +529,7 @@ class LibraryShelfTests(_Shelf):
           assert(sheet.textContent.includes("Format") && sheet.textContent.includes("Sort"));
           // The sheet's sort field has its label shown, so its options don't repeat "Sort:" (the row's do).
           same(sheet.querySelector("#sheet-filter-sort").querySelectorAll("option").map((o) => o.textContent),
-               ["Ready first", "Recently changed", "Not played lately", "Strongest vs popular decks", "Name"]);
+               ["Ready first", "Recently changed", "Least recently played (1v1)", "Strongest vs popular decks", "Name"]);
           assert.equal(main.querySelector("#filter-sort").querySelector("option").textContent, "Sort: Ready first");
           const format = sheet.querySelector("#sheet-filter-format");
           format.focus();
@@ -861,6 +866,8 @@ class LibraryTablesTests(_Shelf):
           assert(tiles().length > 0);
           await flush();
           assert(!panel().hidden);
+          assert(!isOpen(panel().querySelector("details")));
+          assert.equal(panel().querySelector("summary").textContent, "Deck availability may be out of date");
           // Under the warnings, before the filters.
           assert(main.children.indexOf(panel()) < main.children.indexOf(main.querySelector(".lib-filters")));
           // A blocked deck is listed only under "Can't be updated", once, with every reason in plain words.
@@ -871,7 +878,7 @@ class LibraryTablesTests(_Shelf):
           assert.equal(panel().querySelector("h3").textContent, "Can't be updated");
           same(items(blocked), [`Otters: card names Deck Lab doesn't know in its ${listName("owned", true)}: Bogus Card, Other Bogus; it has no owned-vs-needed table.`]);
           assert(panel().querySelector(".note").textContent.includes(
-            `Update all, receipts and orders leave ${spaceName("user2")}'s decks' tables as they are until this is fixed: card names Deck Lab doesn't know: Bogus Card (in user2/casual/elves).`));
+            `Update all leaves ${spaceName("user2")}'s decks' tables as they are until this is fixed: card names Deck Lab doesn't know: Bogus Card (in user2/casual/elves).`));
           assert(panel().textContent.includes("Update all updates the 1 deck you may change; the others wait for whoever plays them."));
           // Update all is a plain button: New deck is the page's one primary action.
           const all = button(panel(), "Update all");
@@ -929,6 +936,17 @@ class LibraryTablesTests(_Shelf):
           assert.equal(button(panel(), "Update all"), null);
         """)
 
+    def test_personal_table_explanation_matches_the_personal_pool(self):
+        self.run_js("""
+          as("user2", MAY.member);
+          serve({ stale: [entry("user2/casual/elves", "Elves", 1, true)], blocked: [], held: STALE.held });
+          drawLibrary(DATA, libraryFilters(new URLSearchParams("tables=1")));
+          await flush();
+          assert(isOpen(panel().querySelector("details")));
+          assert.match(panel().textContent, /Collection edits and cards held in built decks/);
+          assert.doesNotMatch(panel().textContent, /order|receipt/i);
+        """)
+
     def test_the_address_scrolls_to_it_once(self):
         self.run_js("""
           as("matt", MAY.admin);
@@ -940,6 +958,8 @@ class LibraryTablesTests(_Shelf):
           assert.equal(panel().scrolled, undefined);
           await flush();
           assert.equal(panel().scrolled, 1);
+          assert(isOpen(panel().querySelector("details")));
+          assert.equal(document.activeElement, panel().querySelector("summary"));
           assert.equal(panel().scrollOptions.block, "start");
           // The address drops the ask (the filters stay), so coming back doesn't scroll again.
           same(urls, ["#/library?all=1"]);
