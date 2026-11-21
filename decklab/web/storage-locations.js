@@ -28,6 +28,10 @@ function colTakeLocations(cv, answer) {
     else if (Array.isArray(answer.rows) && cv.locations) cv.locations = { ...cv.locations, sha256: null };
     if (Object.hasOwn(answer, "storage_box")) cv.storageBoxCount = answer.storage_box || null;
     if (Object.hasOwn(answer, "storage_setup")) cv.storageSetup = colStorageSetup(answer.storage_setup);
+    if (Array.isArray(answer.rows) && (!answer.locations || !answer.storage_setup) && cv.storageSetup) {
+      // A legacy or incomplete rows answer cannot renew the filing locations.
+      cv.storageSetup.placements = null;
+    }
   }
   cv.storageForecast = colStorageForecast(answer?.storage_forecast, cv);
   drawColStorageForecast(cv);
@@ -56,6 +60,7 @@ function colStorageSetup(raw) {
     if (!c || typeof c.id !== "string" || typeof c.name !== "string" || !c.name || !count(c.cards)
         || !(c.capacity === null || Number.isSafeInteger(c.capacity) && c.capacity > 0)) return null;
     containers.push({ id: c.id, name: c.name, kind: String(c.kind || ""), capacity: c.capacity, cards: c.cards,
+      order: c.order, sections: c.sections, holds: c.holds || {},
       sleeved: c.sleeved === true, over: c.capacity !== null && c.cards !== null && c.cards > c.capacity });
   }
   const totals = {};
@@ -63,8 +68,16 @@ function colStorageSetup(raw) {
     if (!count(raw[key] ?? null)) return null;
     totals[key] = raw[key] ?? null;
   }
+  const filing = containers.every(c => ["colour-type", "set", "name", "none"].includes(c.order)
+    && Array.isArray(c.sections) && c.sections.every(section => typeof section === "string")
+    && typeof c.holds === "object" && !Array.isArray(c.holds));
+  const placements = raw.placements;
+  const matched = placements && typeof placements === "object" && !Array.isArray(placements)
+    && Object.values(placements).every(pair => Array.isArray(pair) && pair.length === 2
+      && pair.every(value => value === null || typeof value === "string"));
   return { source: String(raw.source || ""), default: typeof raw.default === "string" ? raw.default : null,
-    containers, ...totals, suggestions: raw.suggestions.filter((text) => typeof text === "string" && text).slice(0, 1000) };
+    containers, placements: filing && matched ? placements : null, ...totals,
+    suggestions: raw.suggestions.filter((text) => typeof text === "string" && text).slice(0, 1000) };
 }
 
 /** The space's own suggestions: its storage setup's sections (or names), else, from an older server,

@@ -135,6 +135,7 @@ class RowsTests(CollectionEditTestCase):
         elves = pictures["fdn|227|nonfoil"]
         self.assertEqual((elves["name"], elves["img_small"], elves["exact"]), ("Llanowar Elves", "/img/fdn/227/small", True))
         self.assertIn("oracle_text", elves)
+        self.assertEqual(elves["produced_mana"], ["G"])
         self.assertEqual(pictures["cmm|648|nonfoil"]["name"], "Elvish Mystic")
         self.assertTrue(all(set(r) == set(ce.FIELDS) for r in view["rows"]))
 

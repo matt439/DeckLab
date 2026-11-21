@@ -4279,6 +4279,8 @@ Built (2026-11-13), slice 7: sections from the rule (a colour-type container's o
 
 Deployment: done 2026-11-14. Home's live collection had no recorded locations (0 of 1,075 rows), so none could leave the box; the server's update applied 0028 after its backup.
 
+Built (2026-11-21): Each collection’s Card list offers its saved storage order. The sort works on exact printing rows across pages and filters. The setup sheet shows the filing order in the main form and Preview. Home’s Build decks also follows the saved section sequence and can sort by recorded placement with no default container. [Storage setup guide](../README.md#sort-cards-as-you-store-them)
+
 
 **E8-S26** · Space members · should · M · built
 

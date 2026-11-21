@@ -34,7 +34,8 @@ function drawCollectionRows(data, space, token = null) {
   cv.storageOnly = false;
   cv.locationFilter = "all";
   const saved = String(local.get("collection.rowsSort") || "name:1").split(":");
-  cv.sort = { key: COL_SORTS[saved[0]] ? saved[0] : "name", dir: saved[1] === "-1" ? -1 : 1 };
+  cv.sort = { key: Object.hasOwn(COL_SORTS, saved[0]) || saved[0] === "storage" ? saved[0] : "name",
+    dir: saved[0] !== "storage" && saved[1] === "-1" ? -1 : 1 };
   const search = el("input", { id: "col-row-search", type: "search", autocomplete: "off", spellcheck: "false",
     placeholder: "Name, set or set and number", oninput: () => { cv.search = search.value; cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS; drawColRowList(cv); } });
   cv.rowSearch = search;
@@ -58,10 +59,8 @@ function drawCollectionRows(data, space, token = null) {
   cv.preview = el("aside", { class: "col-preview", role: "region", "aria-label": "Selected collection row" });
   const tools = el("div", { class: "toolbar col-row-tools" },
     el("label", { class: "field col-row-search", for: search.id }, el("span", { class: "sr-only", text: "Search the list" }), search),
-    el("button", { type: "button", class: "btn col-row-filter-toggle", "aria-label": "Filter card list",
-      onclick: () => colRowFilters(cv) }, svgEl("svg", { viewBox: "0 0 20 20", width: 20, height: 20,
-        "aria-hidden": "true", focusable: "false" }, svgEl("path", { d: "M3 4h14l-5.5 6.5V16l-3-1.5v-4L3 4Z",
-        fill: "none", stroke: "currentColor", "stroke-width": 1.6, "stroke-linejoin": "round" }))),
+    el("button", { type: "button", class: "btn col-row-filter-toggle", text: "Filter and sort",
+      onclick: () => colRowFilters(cv) }),
     el("div", { class: "filter-chips filter-chips-scroll col-row-filter-options" }, cv.storageChoice, colLocationFilter(cv)));
   const root = el("div", { class: "collection-page col-rows-page" }, colHead(cv),
     cv.unsupported ? null : [cv.boxNote, cv.forecastNote, cv.unrecordedChoice, tools,
@@ -75,6 +74,11 @@ function drawCollectionRows(data, space, token = null) {
   return cv;
 }
 
+/** Keep the browser's choice when a collection has no usable filing order. */
+function colEffectiveSort(cv) {
+  return cv.sort.key === "storage" && !colHasStorageOrder(cv) ? { key: "name", dir: 1 } : cv.sort;
+}
+
 /** The rows the search and the "in storage" and "not recorded" filters show, sorted. */
 function colShownRows(cv) {
   const words = tokFold(cv.search || "");
@@ -82,7 +86,8 @@ function colShownRows(cv) {
   const rows = (cv.rows || []).filter((row) => (!words || tokFold(row.name).includes(words) || tokFold(row.set).includes(words)
     || printing === tokFold((row.set || "") + " " + (row.collector_number ?? "")))
     && (!cv.unrecordedOnly || colUnrecorded(row)) && (!cv.storageOnly || colInStorage(cv, row)) && colLocationMatches(cv, row));
-  const { key, dir } = cv.sort;
+  const { key, dir } = colEffectiveSort(cv);
+  if (key === "storage") return colStorageSortedRows(cv, rows);
   if (key === "price") {
     // Unpriced rows stay last whichever way it's sorted; equal prices go by name.
     return rows.sort((a, b) => {
@@ -122,6 +127,7 @@ function drawColRowList(cv) {
     if (!stored) { cv.storageOnly = false; cv.storageBox.checked = false; }
   }
   colLocationFiltersSync(cv);
+  if (cv.sheetSort) colSyncRowSort(cv);
   const shown = colShownRows(cv);
   const selected = shown.find((row) => colKey(row) === cv.selectedKey);
   if (!selected) cv.selectedKey = null;
@@ -129,6 +135,7 @@ function drawColRowList(cv) {
   const cards = rows.reduce((n, row) => n + Number(row.quantity || 0), 0);
   cv.count.textContent = shown.length === rows.length ? `${plural(rows.length, "row")}, ${plural(cards, "card")}`
     : `${num(shown.length)} of ${plural(rows.length, "row")}`;
+  if (colEffectiveSort(cv).key === "storage") cv.count.append(" · Storage order");
   const pages = Math.max(1, Math.ceil(shown.length / COL_ROWS_PAGE));
   cv.page = Math.min(Math.max(1, cv.page), pages);
   const go = (page, control) => {
@@ -160,7 +167,7 @@ function drawColRowList(cv) {
   colDrawPreview(cv, selected);
   drawColPriceNote(cv);
   drawColStorageBox(cv);
-  setCollectionBusy(cv, cv.busy);
+  setCollectionBusy(cv, cv.busy, shown);
   registerCollectionKeyboardHelp(cv);
   // A native sort/pager activation removes its own control. Restore only that owned focus.
   if ((sort || pageFocus) && colActive(cv) && cv.root?.contains(cv.list) && !cv.busy
@@ -216,12 +223,13 @@ function colPriceStamp(value) {
 /** The lab table: card selection, identity/type, printing/finish, copies and recorded details,
  * held counts and saved-hint markers, the estimated price of one copy and notes. The casual list is separate. */
 function colRowTable(cv, rows) {
+  const sort = colEffectiveSort(cv);
   const sortable = (key, cls = "") => {
-    const on = cv.sort.key === key;
-    return el("th", { scope: "col", class: `col-th-${key} ${cls}`.trim(), "aria-sort": on ? (cv.sort.dir > 0 ? "ascending" : "descending") : null },
+    const on = sort.key === key;
+    return el("th", { scope: "col", class: `col-th-${key} ${cls}`.trim(), "aria-sort": on ? (sort.dir > 0 ? "ascending" : "descending") : null },
       el("button", { type: "button", class: "th-sort", "data-col-sort": key, text: colSortWords(key, cv.prices), onclick: (event) => {
         if (!colRowControlCurrent(cv, event.currentTarget)) return;
-        cv.sort = { key, dir: on ? -cv.sort.dir : COL_SORT_FIRST[key] || 1 };
+        cv.sort = { key, dir: on ? -sort.dir : COL_SORT_FIRST[key] || 1 };
         local.set("collection.rowsSort", `${key}:${cv.sort.dir}`);
         cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS;
         drawColRowList(cv);
@@ -484,10 +492,21 @@ function colCasualRows(cv, shown) {
       } }) : null);
 }
 
-/** The casual filter button uses the tracked sheet and the same predicates as the lab toolbar. */
+/** A fresh rows answer can add or remove the storage option while the sheet is open. */
+function colSyncRowSort(cv) {
+  const select = cv.sheetSort;
+  const option = select.querySelector('option[value="storage:1"]');
+  if (colHasStorageOrder(cv)) {
+    if (!option) select.insertBefore(el("option", { value: "storage:1", text: "Storage order" }), select.querySelector("option"));
+  } else if (option) option.remove();
+  const active = colEffectiveSort(cv);
+  select.value = `${active.key}:${active.dir}`;
+}
+
+/** The filter and sort sheet uses the same predicates as the toolbar and table headings. */
 function colRowFilters(cv) {
-  if (!colActive(cv) || cv.busy) return;
-  const sheet = colOpenSheet("Filter card list");
+  if (!colActive(cv) || cv.busy || document.querySelector("dialog[open]") || keyboardMenuOpen()) return;
+  const sheet = colOpenSheet("Filter and sort card list", { onClose: () => { cv.sheetSort = null; } });
   const redraw = () => { cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS; drawColRowList(cv); };
   const checkbox = (words, checked, change, disabled = false) => {
     const box = el("input", { type: "checkbox", disabled }); box.checked = checked;
@@ -495,12 +514,15 @@ function colRowFilters(cv) {
     return el("label", { class: "choice" }, box, el("span", { text: words }));
   };
   const sort = el("select", { "aria-label": "Sort card list", onchange: () => {
-    if (!colActive(cv)) return;
+    if (sheet.closed || !sort.isConnected || sheet.dialog !== document.querySelector("dialog[open]") ||
+        !colActive(cv) || cv.busy || keyboardMenuOpen()) return;
+    if (sort.value === "storage:1" && !colHasStorageOrder(cv)) return;
     const [key, dir] = sort.value.split(":"); cv.sort = { key, dir: Number(dir) };
     local.set("collection.rowsSort", sort.value); redraw();
   } }, Object.keys(COL_SORTS).flatMap((key) => [1, -1].map((dir) =>
     el("option", { value: `${key}:${dir}`, text: `${colSortWords(key, cv.prices)}: ${dir === 1 ? "ascending" : "descending"}` }))));
-  sort.value = `${cv.sort.key}:${cv.sort.dir}`;
+  cv.sheetSort = sort;
+  colSyncRowSort(cv);
   add(sheet.body, [
     checkbox("Condition or language not recorded", cv.unrecordedOnly, (on) => { cv.unrecordedOnly = on; cv.unrecorded.checked = on; }),
     checkbox("In storage only", cv.storageOnly, (on) => { cv.storageOnly = on; cv.storageBox.checked = on; }, !cv.storage || !!cv.storage.error),

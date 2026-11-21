@@ -5,7 +5,7 @@ apart from the rows like their prices and storage counts, in every answer that s
     "locations":   {"ready", "sha256", "rows": {"set|number|finish": "Row 2, B"}}
     "storage_box": {"cards", "capacity", "over", "not_counted", "elsewhere"} (home only), or None
     "storage_setup": {"source", "revision", "default", "containers", "elsewhere", "unplaced",
-                      "not_counted", "suggestions"} (storage_setup(): every space, E8-S25)
+                      "not_counted", "suggestions", "placements"} (storage_setup(): every space, E8-S25)
 
 locations' ready is False while the database lacks migration 0016: the page then shows locations
 as unavailable and the card sheet can't set one (the rows and every other edit still work). The
@@ -65,17 +65,6 @@ def locations(space, key):
     return answer
 
 
-def _bulk_conflict(space, message):
-    """One fresh snapshot for a refused batch's rows, locations and both review receipts."""
-    from . import collection_edit as ce
-    with common.state_errors():
-        fresh = inventory.backend().load()
-    with inventory.pinned(fresh):
-        rows, sha = ce._view(fresh.collection(space))
-        shown = ce._rows_json(rows)
-        return ApiError(409, message, sha256=sha, rows=shown, **ce._extras(space, shown))
-
-
 def bulk_set(body):
     """POST /api/collection/locations/bulk: assign or explicitly clear exact reviewed rows.
 
@@ -107,8 +96,8 @@ def bulk_set(body):
         sheet, summary = ce._apply(space, op, _web_actor(profile),
                                    message=f"set storage locations in {ce._whose(space)}")
     except ApiError as e:
-        if e.status == 409:
-            raise _bulk_conflict(space, e.message) from None
+        if e.status == 409 and "locations" not in e.extra:
+            raise ce._stale(space, message=e.message) from None
         raise
     rows, now = ce._view(sheet)
     shown = ce._rows_json(rows)
@@ -172,15 +161,17 @@ def _counts(space, rows, storage, key, record):
     return out
 
 
-def storage_setup(space, rows, storage, key, view=None):
+def storage_setup(space, rows, storage, key, view=None, *, location_view=None):
     """The rows answers' "storage_setup" (E8-S25): the space's containers with their counts.
 
         {"source": "saved" | "default" | "none", "revision", "default": container id or None,
-         "containers": [{id, name, kind, capacity, sleeved, cards, over}], "elsewhere",
+         "containers": [{id, name, kind, capacity, sleeved, order, sections, holds, cards, over}], "elsewhere",
          "unplaced", "not_counted", "suggestions": the location suggestions, in order}
 
     cards and the totals are None when the copies in decks can't be worked out; over is None for
-    a container without a capacity. Sections go only into suggestions."""
+    a container without a capacity. For a Card list with readable locations, placements maps its
+    distinct recorded location texts to [container id, section name]. A row with no location uses
+    the default. Storage previews and Shopping do not include recorded locations."""
     view = view or setup_view(space)
     record = view["storage"]
     counts = _counts(space, rows, storage, key, record)
@@ -188,12 +179,17 @@ def storage_setup(space, rows, storage, key, view=None):
     for c in record["containers"]:
         cards = None if counts is None else counts[c["id"]]
         containers.append({"id": c["id"], "name": c["name"], "kind": c["kind"], "capacity": c["capacity"],
-                           "sleeved": c["sleeved"], "cards": cards,
+                           "sleeved": c["sleeved"], "order": c["order"], "sections": c["sections"],
+                           "holds": c.get("holds", {}), "cards": cards,
                            "over": None if cards is None or c["capacity"] is None else cards > c["capacity"]})
     totals = {name: None if counts is None else counts[key_] for name, key_ in
               (("elsewhere", "_elsewhere"), ("unplaced", "_unplaced"), ("not_counted", "_basic"))}
-    return {"source": view["source"], "revision": view["revision"], "default": record["default"],
-            "containers": containers, **totals, "suggestions": space_storage.suggestions(record)}
+    answer = {"source": view["source"], "revision": view["revision"], "default": record["default"],
+              "containers": containers, **totals, "suggestions": space_storage.suggestions(record)}
+    if view.get("ready") is not None and location_view and location_view.get("ready") and location_view.get("sha256"):
+        answer["placements"] = {text: list(space_storage.match_section(record, text))
+                                for text in sorted(set(location_view["rows"].values()))}
+    return answer
 
 
 def storage_box(space, rows, storage, key, view=None):

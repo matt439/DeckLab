@@ -90,14 +90,24 @@ run('ui-priorities', async review => {
       assert.equal(await dialog.locator('.storage-container > fieldset > legend').innerText(),'Synthetic renamed box');
       assert.equal(await dialog.locator('select').last().locator('option:checked').innerText(),'Synthetic renamed box');
       assert.equal(await dialog.locator('.storage-options').getAttribute('open'),null);
+      await dialog.getByLabel(/^Filing order/).selectOption('set');
+      assert.equal(await page.evaluate(()=>storageRecord(syntheticStorageContext).containers[0].order),'set');
       await capture('storage-edit');
-      await dialog.getByText('Optional details: kind, filing order and sleeves',{exact:true}).click();
-      await dialog.locator('.storage-options select[id*=-order-]').waitFor({state:'visible'});
+      await dialog.getByText('Kind, section contents and sleeves',{exact:true}).click();
+      await dialog.locator('.storage-options select[id*=-kind-]').waitFor({state:'visible'});
       await capture('storage-options');
-      await page.evaluate(()=>{syntheticStorageContext.review=syntheticStorageAnswer;drawStorageReview(syntheticStorageContext);});
+      await page.evaluate(()=>{
+        const storage=storageRecord(syntheticStorageContext);
+        syntheticStorageAnswer.storage=storage;
+        syntheticStorageAnswer.after.containers[0]={...storage.containers[0],cards:140};
+        syntheticStorageAnswer.moves[0].to=storage.containers[0].name;
+        syntheticStorageContext.review=syntheticStorageAnswer;
+        drawStorageReview(syntheticStorageContext);
+      });
       await dialog.getByText('Before you save',{exact:true}).waitFor();
       assert((await dialog.locator('.storage-impact').innerText()).includes('40 cards over capacity'));
       assert((await dialog.locator('.storage-impact').innerText()).includes('4 cards'));
+      assert((await dialog.locator('.storage-filing-order').innerText()).includes('Synthetic renamed box · By set and collector number'));
       assert.equal(await dialog.locator('.storage-comparison > li').count(),1);
       await capture('storage-impact');
       await dialog.getByRole('button',{name:'Back',exact:true}).click();

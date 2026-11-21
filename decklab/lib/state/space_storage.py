@@ -249,33 +249,47 @@ def _starts(location, prefix):
     return len(prefix) if not rest or rest[0] in " ," else 0
 
 
-def match(record, location):
-    """The id of the container a recorded location belongs to: the record's default for none
-    recorded, else the container whose section or name it starts with (the longest wins), else
-    None ("somewhere else")."""
+def match_section(record, location):
+    """The (container id, section name) for a recorded location, by longest matching prefix.
+    A container name can qualify one of its sections ("Binder, Page 1"). A bare container
+    match or the default for a blank location has no section."""
     text = (location or "").strip()
     if not text:
-        return (record or {}).get("default")
-    best, length = None, 0
+        return (record or {}).get("default"), None
+    winner, matched_section, length = None, None, 0
     for container in (record or {}).get("containers") or ():
-        for prefix in (*container.get("sections", ()), container.get("name", "")):
-            found = _starts(text, prefix)
+        for section in (*container.get("sections", ()), None):
+            found = _starts(text, container.get("name", "") if section is None else section)
             if found > length:
-                best, length = container["id"], found
-    return best
+                winner, matched_section, length = container, section, found
+    if winner is None:
+        return None, None
+    if matched_section is None and length < len(text):
+        rest = text[length:].lstrip(" ,")
+        matched_section = max((s for s in winner.get("sections", ()) if _starts(rest, s)), key=len, default=None)
+    return winner["id"], matched_section
+
+
+def match(record, location):
+    """The container id for a recorded location, the default for a blank, or None."""
+    return match_section(record, location)[0]
+
+
+def placed_section(record, places):
+    """Where to file a card by name: its first recorded location in a container, or the
+    default when it has no recorded locations."""
+    if not places:
+        return match_section(record, "")
+    for place in places:
+        found = match_section(record, place)
+        if found[0] is not None:
+            return found
+    return None, None
 
 
 def placed(record, places):
-    """The container id a card's recorded locations (in collection row order) put it in: the
-    container of the first that belongs to one (match), so a card in two containers goes under the
-    first; None when it has locations but none belongs to a container; the default with none."""
-    if not places:
-        return (record or {}).get("default")
-    for place in places:
-        found = match(record, place)
-        if found is not None:
-            return found
-    return None
+    """The container id of the first matching recorded location (see placed_section)."""
+    return placed_section(record, places)[0]
 
 
 def suggestions(record):

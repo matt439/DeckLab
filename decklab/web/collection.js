@@ -277,6 +277,7 @@ function colPrice(cv, row) {
 /** A 409's latest rows (collection_edit._stale), with their prices so new rows aren't shown unpriced. */
 function colTakeRows(cv, data) {
   cv.rows = data.rows;
+  if (data.pictures) Object.assign(cv.pictures, data.pictures);
   if (data.prices) cv.prices = colPrices(data.prices);
   cv.storage = data.storage ? colStorage(data.storage) : colWithoutHints(cv.storage);
   colTakeLocations(cv, data);
@@ -350,14 +351,14 @@ function colHead(cv, query) {
     cv.message];
 }
 
-function setCollectionBusy(cv, busy) {
+function setCollectionBusy(cv, busy, shown = null) {
   cv.busy = busy;
   if (!cv.root) return;
   cv.root.setAttribute("aria-busy", String(busy));
   for (const control of cv.root.querySelectorAll(".col-mutate")) control.disabled = busy;
   if (cv.kind === "rows") {
     colLocationFiltersSync(cv);
-    colLocationBatchSync(cv, colShownRows(cv));
+    colLocationBatchSync(cv, shown || colShownRows(cv));
   }
   refreshKeyboardHints();
 }
@@ -371,9 +372,9 @@ function colSay(cv, words, stale) {
   toast(words);
 }
 
-/** The rows and their sha256 (and pictures), fetched when the page didn't load them (the Find cards view). */
-async function colEnsureRows(cv) {
-  if (cv.sha256 && cv.rows) return;
+/** Fetch the rows for Find cards, or refresh their filing locations after a storage setup save. */
+async function colEnsureRows(cv, { refresh = false } = {}) {
+  if (!refresh && cv.sha256 && cv.rows) return;
   const profile = state.profile, profileId = cv.profile, token = cv.token;
   const hash = location.hash, root = cv.root, revision = cv.forecastRevision || 0;
   const pending = cv.rowsPending;
@@ -407,9 +408,10 @@ async function colEnsureRows(cv) {
     if (data.prices) cv.prices = colPrices(data.prices);
     if (data.storage) cv.storage = colStorage(data.storage);
     colTakeLocations(cv, data);
+    return true;
   })();
   cv.rowsPending = request;
-  try { await request.promise; }
+  try { return await request.promise; }
   finally { if (cv.rowsPending === request) cv.rowsPending = null; }
 }
 

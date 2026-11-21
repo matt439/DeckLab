@@ -61,6 +61,7 @@ class TradeTests(TradeApiTestCase):
         self.assertEqual(answer["rows"], self.rows()["rows"])
         self.assertEqual(answer["stale_tables"], [])
         self.assertIn("prices", answer)
+        self.assertEqual(set(answer["pictures"]), {"lea|232|nonfoil"})
 
     def test_giving_every_copy_removes_the_row_and_a_message_comes_first(self):
         gave = [{**ELVES, "quantity": "5"}]
