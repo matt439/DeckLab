@@ -114,7 +114,7 @@ class AssemblyStorageOrderUiTests(unittest.TestCase):
           same(names(main), ['Apple', 'Fig', 'Kiwi', 'Mango', 'Pear', 'Zebra']);
         """)
 
-    def test_one_container_looks_as_before(self):
+    def test_one_container_distinguishes_recorded_locations_elsewhere(self):
         self.run_js("""
           const cards = {'Zebra': card('Zebra', 'Creature', ['W']), 'Apple': card('Apple', 'Instant', ['U'])};
           const data = plan(cards);
@@ -122,9 +122,56 @@ class AssemblyStorageOrderUiTests(unittest.TestCase):
             containers: [{id: 'box', name: 'Storage box', order: 'colour-type', sleeved: false}], placed: {Zebra: null}};
           drawAssembly(data, routeToken);
           choose('Storage order');
-          assert.equal(main.querySelectorAll('.pack-container-group').length, 0);
+          const groups = main.querySelectorAll('.pack-container-group');
+          same(groups.map(g => g.querySelector('h4').textContent), ['Storage box · 1 card', 'Somewhere else · 1 card']);
+          same(groups.map(names), [['Apple'], ['Zebra']]);
+          assert.equal(groups[0].querySelector('h5').textContent, 'Spells · Blue · 1 card');
+        """)
+
+    def test_recorded_section_then_mapped_section_in_physical_order(self):
+        self.run_js("""
+          const cards = {Bear: card('Bear', 'Creature', ['G']), Sap: card('Sap', 'Creature', ['R']),
+            Rain: card('Rain', 'Instant', ['U']), Plains: card('Plains', 'Land', [], {produced_mana: ['W']}),
+            Unknown: null};
+          const data = plan(cards);
+          data.storage_order = {rule: 'colour-type', container: 'Long box',
+            section_order: ['Front', 'Middle', 'Rear'], sections: {creatures: 'Rear', lands: 'Front'},
+            filed_sections: {Bear: 'Middle'}};
+          drawAssembly(data, routeToken); choose('Storage order');
+          const groups = main.querySelectorAll('.pack-storage-group');
+          same(groups.map(g => g.querySelector('h4').textContent), ['Front · Lands · White · 1 card',
+            'Middle · Creatures · Green · 1 card', 'Rear · Creatures · Red · 1 card',
+            'Spells · Blue · 1 card', 'Other cards · 1 card']);
+          same(names(main), ['Plains', 'Bear', 'Sap', 'Rain', 'Unknown']);
+        """)
+
+    def test_set_order_in_recorded_sections_without_a_default(self):
+        self.run_js("""
+          const cards = Object.fromEntries(['Zebra', 'Apple', 'Mango', 'Kiwi', 'Fig'].map(n => [n, card(n, 'Creature')]));
+          const data = plan(cards);
+          data.storage_order = {rule: 'none', container: null,
+            containers: [{id: 'binder', name: 'Binder', order: 'set', section_order: ['Back', 'Front']}],
+            filed_sections: {Zebra:'Back', Apple:'Front', Mango:'Front'},
+            placed: {Zebra:'binder', Apple:'binder', Mango:'binder', Kiwi:'binder', Fig:null},
+            printings: {Zebra:['zzz','3'], Apple:['aaa','10'], Mango:['aaa','2'], Kiwi:['aaa','1']}};
+          drawAssembly(data, routeToken); choose('Storage order');
+          const groups = main.querySelectorAll('.pack-container-group');
+          same(groups.map(g => g.querySelector('h4').textContent), ['Binder · 4 cards', 'Somewhere else · 1 card']);
+          same(groups[0].querySelectorAll('h5').map(h => h.textContent),
+            ['Back · Set · ZZZ · 1 card', 'Front · Set · AAA · 2 cards', 'Set · AAA · 1 card']);
+          same(names(main), ['Zebra', 'Mango', 'Apple', 'Kiwi', 'Fig']);
+        """)
+
+    def test_name_ordered_container_with_sections_offers_a_physical_order(self):
+        self.run_js("""
+          const cards = Object.fromEntries(['Zebra', 'Apple', 'Mango'].map(n => [n, card(n, 'Creature')]));
+          const data = plan(cards);
+          data.storage_order = {rule: 'name', container: 'Binder', section_order: ['Back', 'Front'],
+            filed_sections: {Zebra:'Back', Mango:'Front'}};
+          drawAssembly(data, routeToken); choose('Storage order');
           same(main.querySelectorAll('.pack-storage-group').map(g => g.querySelector('h4').textContent),
-            ['Creatures · White · 1 card', 'Spells · Blue · 1 card']);
+            ['Back · 1 card', 'Front · 1 card', 'No section recorded · 1 card']);
+          same(names(main), ['Zebra', 'Mango', 'Apple']);
         """)
 
     def test_put_back_says_unsleeved_only_when_the_default_container_isnt_sleeved(self):

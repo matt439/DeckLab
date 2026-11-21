@@ -1,5 +1,9 @@
 # Deck Lab: history
 
+## Sort cards as they are filed (2026-11-21, E8-S25)
+
+The Collection card list can follow its space’s saved containers, sections and filing rules. Each printing uses its own location. The Storage setup sheet shows the filing rule beside each container and lists the chosen order in Preview. Home’s Build decks follows the saved section sequence and can use recorded locations even when there is no default container. [Storage setup guide](README.md#sort-cards-as-you-store-them)
+
 ## Scanning loose cards and binder pages (2026-11-20, E7-S32)
 
 Collection's **Scan cards…** can capture a loose stack with a fixed phone or webcam, read occupied slots on a binder page, or import a scanner's one-image-per-card output in batches of up to 100 files. Each method builds the same pending list for a reviewed import. The completed import reports saved copies per hour, including review time. Physical throughput and exact-printing accuracy await the [100-card trial](design/scanning-spike.md#compare-cards-per-hour). [Scanning guide](README.md#scan-a-stack-or-binder-page)

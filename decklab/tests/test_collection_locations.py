@@ -165,7 +165,7 @@ class StorageSetupTests(CollectionEditTestCase):
         return self.box.state.space_storage_put(space, record, expect, actor, "Set the storage setup")
 
     def locate(self, place):
-        row = next(r for r in self.rows()["rows"] if r["set"] == "fdn" and r["collector_number"] == "227")
+        row = next(r for r in self.rows()["rows"] if rules.ident(r) == rules.ident(ELVES))
         self.save(action="edit", original=ELVES, location=place, row=row)
         held = self.rows()["storage"]["rows"][ce._picture_key(ELVES)]["held"] or 0
         return int(row["quantity"]) - held
@@ -200,6 +200,24 @@ class StorageSetupTests(CollectionEditTestCase):
         self.locate("Row 2")                                       # no longer one of home's sections
         setup = self.rows()["storage_setup"]
         self.assertEqual((setup["containers"][1]["cards"], setup["elsewhere"]), (0, free))
+
+    def test_filing_order_uses_each_printings_own_location_and_the_longest_matching_section(self):
+        self.setup(default=None, containers=[
+            {"name": "Box", "order": "colour-type", "sections": ["Front", "Back"],
+             "holds": {"Front": "lands", "Back": "creatures"}},
+            {"name": "Binder", "order": "set", "sections": ["Front pocket"]}])
+        self.locate("FRONT pocket, 4")
+        answer = self.save(action="add", location="back, 3", row={"name": "Llanowar Elves", **ELVES,
+                           "finish": "foil", "quantity": "1"})
+        setup = answer["storage_setup"]
+        self.assertIsNone(setup["default"])
+        self.assertEqual([(c["id"], c["order"], c["sections"], c["holds"]) for c in setup["containers"]],
+                         [("box", "colour-type", ["Front", "Back"], {"Front": "lands", "Back": "creatures"}),
+                          ("binder", "set", ["Front pocket"], {})])
+        self.assertEqual(answer["locations"]["rows"], {"fdn|227|nonfoil": "FRONT pocket, 4", "fdn|227|foil": "back, 3"})
+        self.assertEqual(setup["placements"], {"FRONT pocket, 4": ["binder", "Front pocket"], "back, 3": ["box", "Back"]})
+        self.locate("Somewhere else")
+        self.assertEqual(self.rows()["storage_setup"]["placements"]["Somewhere else"], [None, None])
 
     def test_no_default_container_means_no_box_count(self):
         self.setup(default=None, containers=[{"name": "Binder", "kind": "binder"}])
@@ -240,6 +258,8 @@ class StoragePreviewTests(CollectionEditTestCase):
         self.assertEqual([c["name"] for c in answer["after"]["containers"]], ["Shoebox", "Binder"])
         self.assertEqual(answer["after"]["containers"][1]["cards"], free)
         self.assertEqual(answer["moves"], [{"from": None, "to": "Binder", "locations": 1}])
+        self.assertNotIn("placements", answer["now"])
+        self.assertNotIn("placements", answer["after"])
         self.assertEqual(answer["storage"]["containers"][1]["id"], "binder")
         self.assertEqual(self.box.state.space_storage("home")["revision"], 0)      # nothing saved
         self.assertEqual(self.preview({"default": "box", "containers": [box]})["moves"], [])  # a rename moves nothing
@@ -267,7 +287,7 @@ class StorageOrderTests(CollectionEditTestCase):
 
     def test_the_built_in_box_a_set_binder_and_no_default(self):
         self.assertEqual(self.order("Llanowar Elves"), {"rule": "colour-type", "container": "Storage box", "sleeved": False,
-                                                        "sections": HOME_SECTIONS})
+                                                        "sections": HOME_SECTIONS, "section_order": list(HOME_SECTIONS.values())})
         self.setup(default="binder", containers=[{"name": "Shoebox", "order": "name"},
                                                  {"id": "binder", "name": "Binder", "kind": "binder", "order": "set",
                                                   "sleeved": True}])
@@ -275,6 +295,11 @@ class StorageOrderTests(CollectionEditTestCase):
         self.assertEqual((order["rule"], order["container"], order["sleeved"]), ("set", "Binder", True))
         self.assertEqual(order["printings"], {"Llanowar Elves": ["fdn", "227"]})
         self.setup(default=None, containers=[{"name": "Shoebox", "order": "set"}])
+        order = self.order("Llanowar Elves")
+        self.assertIsNone(order["container"])
+        self.assertEqual([c["order"] for c in order["containers"]], ["set"])
+        self.assertEqual(order["placed"], {"Llanowar Elves": None})
+        self.setup(default=None, containers=[])
         self.assertIsNone(self.order("Llanowar Elves"))
 
     def test_a_set_order_prefers_the_copy_filed_in_the_container(self):
@@ -290,7 +315,7 @@ class StorageOrderTests(CollectionEditTestCase):
         def pick(found):
             inv = SimpleNamespace(locations_ready=True, locations_of=lambda _space: found,
                                   collection=lambda _space: SimpleNamespace(rows=rows))
-            return assembly_locations._printings(inv, record, "binder", {"Llanowar Elves"})["Llanowar Elves"]
+            return assembly_locations._printings(inv, record, {"Llanowar Elves": "binder"})["Llanowar Elves"]
         self.assertEqual(pick({("dom", "168", "nonfoil"): "Shelf", ("fdn", "227", "nonfoil"): "Shelf",
                                ("m19", "314", "nonfoil"): "Page 1, 3"}), ["m19", "314"])    # filed in the binder
         self.assertEqual(pick({("dom", "168", "nonfoil"): "Shelf"}), ["fdn", "227"])     # no location: the default's
@@ -316,26 +341,25 @@ class StorageOrderTests(CollectionEditTestCase):
         self.assertEqual((order["rule"], order["container"], order["sleeved"]), ("colour-type", "Storage box", False))
         self.assertEqual(order["containers"], [
             {"id": "box", "name": "Storage box", "order": "colour-type", "sleeved": False,
-             "sections": {"creatures": "Row 1"}},     # each container's own sections
-            {"id": "binder", "name": "Binder", "order": "set", "sleeved": True}])
+             "sections": {"creatures": "Row 1"}, "section_order": ["Row 1", "Row 2"]},
+            {"id": "binder", "name": "Binder", "order": "set", "sleeved": True, "section_order": ["Page 3"]}])
         self.assertEqual(order["sections"], {"creatures": "Row 1"})
+        self.assertEqual(order["filed_sections"], {"Llanowar Elves": "Page 3"})
         self.assertEqual(order["placed"], {"Llanowar Elves": "binder", "Black Lotus": None, "Sol Ring": "box"})
         self.assertEqual(order["printings"], {"Llanowar Elves": ["fdn", "227"]})     # only the set-ordered binder's
         self.setup(default="box", containers=[{"id": "box", "name": "Storage box", "order": "colour-type"}])
         with inventory.pinned():
-            self.assertEqual(assembly_locations.storage_order(inventory.current(), {"Llanowar Elves"}),
-                             {"rule": "colour-type", "container": "Storage box", "sleeved": False})    # one: as before
+            order = assembly_locations.storage_order(inventory.current(), {"Llanowar Elves"})
+            self.assertEqual(order["placed"], {"Llanowar Elves": None})    # its explicit location is elsewhere
 
     def test_a_card_in_two_containers_goes_under_the_first_matching_location(self):
-        from decklab.lib.api import assembly_locations as al
-        record = {"default": "box", "containers": [{"id": "box", "name": "Storage box", "sections": ["Row 1"]},
-                                                   {"id": "binder", "name": "Binder", "sections": []}]}
-        self.assertEqual(al._placed(record, ["Binder, 4", "Row 1"]), "binder")
-        self.assertEqual(al._placed(record, ["Row 1", "Binder"]), "box")
-        self.assertEqual(al._placed(record, ["Attic", "Binder"]), "binder")     # the first that matches one
-        self.assertIsNone(al._placed(record, ["Attic"]))
-        self.assertEqual(al._placed(record, None), "box")
-        self.assertEqual(al._placed(record, []), "box")
+        self.setup(default="box", containers=[{"id": "box", "name": "Storage box", "sections": ["Row 1"]},
+                                              {"id": "binder", "name": "Binder", "sections": []}])
+        places = {"One": ["Binder, 4", "Row 1"], "Two": ["Row 1", "Binder"], "Three": ["Attic", "Binder"],
+                  "Four": ["Attic"], "Five": []}
+        order = assembly_locations.storage_order(inventory.current(), set(places), places)
+        self.assertEqual(order["placed"], {"One": "binder", "Two": "box", "Three": "binder", "Four": None, "Five": "box"})
+        self.assertEqual(order["filed_sections"], {"Two": "Row 1"})
 
 
 class StorageWordsTests(CollectionEditTestCase):

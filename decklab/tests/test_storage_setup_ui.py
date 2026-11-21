@@ -69,6 +69,8 @@ class StorageSetupUiTests(unittest.TestCase):
             {name: 'Binder', kind: 'binder', capacity: 360, sections: ['Row 1', 'Row 2', 'Row 3'], order: 'none', sleeved: true}]}},
             'POST']);
           const review = ctx.reviewBox.textContent;
+          same(ctx.reviewBox.querySelector('.storage-filing-order').querySelectorAll('li').map(li => li.textContent),
+            ['Storage box · By card group, colour and mana value', 'Binder · No particular order']);
           assert(review.includes(`Storage box: about 3 of ${num(2400)} cards`), review);
           assert(review.includes('Binder: about 1 of 360 cards'), review);
           assert(review.includes('2 recorded locations would move from somewhere else to Binder.'), review);
@@ -187,6 +189,9 @@ class StorageSetupUiTests(unittest.TestCase):
           foot(ctx, 'preview').click(); await flush();
           assert(ctx.reviewBox.textContent.includes('What each section holds'), ctx.reviewBox.textContent);
           assert(ctx.reviewBox.textContent.includes('Storage box: Row 4 holds creatures'), ctx.reviewBox.textContent);
+          const review = storageHoldsReview({containers: [{...BOX, sections: ['Row 3', 'Row 1'],
+            holds: {'Row 1': 'lands', 'Row 3': 'creatures'}}]});
+          assert(review[1].textContent.includes('Row 3 holds creatures, Row 1 holds lands'));
         """)
 
     def test_the_count_lines_change_opens_it(self):

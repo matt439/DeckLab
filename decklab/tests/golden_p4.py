@@ -183,6 +183,7 @@ HIDDEN_EDIT = ("table",)
 # Build decks' storage_order for home's built-in box (E8-S25 slices 5-7), dropped as a default.
 BUILT_IN_ORDER = {"rule": "colour-type", "container": "Storage box", "sleeved": False,
                   "sections": {"creatures": "Row 1", "spells": "Row 2", "lands": "Row 3", "tokens": "Row 4"}}
+BUILT_IN_SECTION_ORDER = {**BUILT_IN_ORDER, "section_order": ["Row 1", "Row 2", "Row 3", "Row 4"]}
 DECK_ITEMS = ("list_decks", "beginner_box_pairings", "load_deck", "decks_index", "deck_view", "assembly",
               "by_viewer", "accessories", "accessories_p4")
 DECK_PATH = re.compile(r"^magic/(?:people/([a-z0-9]+(?:-[a-z0-9]+)*)/)?decks/(casual|commander)/([^/]+)\.md$")
@@ -649,7 +650,7 @@ def storage_location_defaults(dump):
         for plan in plans.values() if isinstance(plans, dict) else []:
             if isinstance(plan, dict) and plan.get("storage_locations") == {"ready": True, "cards": {}}:
                 plan.pop("storage_locations")
-            if isinstance(plan, dict) and plan.get("storage_order") == BUILT_IN_ORDER:
+            if isinstance(plan, dict) and plan.get("storage_order") in (BUILT_IN_ORDER, BUILT_IN_SECTION_ORDER):
                 plan.pop("storage_order")
 
 

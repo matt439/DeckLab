@@ -128,6 +128,8 @@ class BulkLocationsTests(CollectionEditTestCase):
         self.assertEqual(error.extra["sha256"], fresh["sha256"])
         self.assertEqual(error.extra["rows"], fresh["rows"])
         self.assertEqual(error.extra["locations"], fresh["locations"])
+        self.assertEqual(error.extra["storage_setup"]["placements"], {"Binder": [None, None]})
+        self.assertEqual(error.extra["pictures"], fresh["pictures"])
         self.assertEqual(error.extra["storage_box"], fresh["storage_box"])
         self.assertEqual(self.writes, [])
 
@@ -219,6 +221,7 @@ class BulkLocationsTests(CollectionEditTestCase):
                 view = self.rows()
                 self.assertIsNone(view["locations"]["sha256"])
                 self.assertTrue(view["locations"]["error"])
+                self.assertNotIn("placements", view["storage_setup"])
                 error = self.assertApiError(409, self.bulk, locations_sha256=ce.EMPTY_SHA)
                 self.assertIsNone(error.extra["locations"]["sha256"])
                 self.assertEqual(self.magic_files(), before)
@@ -228,6 +231,7 @@ class BulkLocationsTests(CollectionEditTestCase):
         self.seed_locations("fdn,227,nonfoil,Binder\n", "user2")
         home = self.rows()
         self.assertEqual(home["locations"]["sha256"], ce.EMPTY_SHA)
+        self.assertEqual(home["storage_setup"]["placements"], {})
         answer = self.bulk()
         self.assertEqual(answer["locations"]["sha256"], files.rendered_sha256(
                          self.backend.load().location_sheet("home")))

@@ -43,7 +43,10 @@ class StorageHierarchyUiTests(unittest.TestCase):
           const option = ctx.edit.querySelector(`option[value="${ctx.defaultKey}"]`);
           assert.equal(option.textContent, 'Card shelf');
           assert.equal(storageRecord(ctx).default, 'box');
-          assert(row.querySelector('.storage-options').textContent.includes('filing order'));
+          const filing = row.querySelectorAll('select').find(s => s.id.includes('-order-'));
+          assert.equal(filing.closest('details'), null);
+          assert(filing.closest('label').textContent.includes('Filing order'));
+          assert(filing.closest('label').textContent.includes('Card list and Build decks'));
           assert(!row.querySelector('.storage-options').open);
           assert.equal(row.querySelector('[data-move="up"]').getAttribute('aria-label'), 'Move Card shelf up');
           assert.equal(row.querySelectorAll('input')[1].value, '2400');

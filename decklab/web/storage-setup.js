@@ -10,7 +10,7 @@
 "use strict";
 
 const STORAGE_KIND_WORDS = { box: "Box", binder: "Binder", shelf: "Shelf", other: "Other" };
-const STORAGE_ORDER_WORDS = { "colour-type": "By colour, then type", set: "By set and number", name: "By name", none: "No particular order" };
+const STORAGE_ORDER_WORDS = { "colour-type": "By card group, colour and mana value", set: "By set and collector number", name: "By name", none: "No particular order" };
 const STORAGE_ROWS = /^\s*(\d{1,2})\s+rows?\s*$/i;
 
 /** Open the sheet for the space's own people. Resolves with its context, or null. */
@@ -128,7 +128,7 @@ function drawStorageEdit(ctx) {
   const id = (key) => `storage-${key}-${ctx.sheet.heading.id}`;
   const limits = storageLimits(ctx);
   const home = ctx.cv.space === HOME_SPACE;
-  const intro = el("p", { text: "Add the boxes, binders or shelves holding this collection's loose cards." });
+  const intro = el("p", { text: "List your boxes, binders and shelves in the order you look through them. Choose how you file cards in each one." });
   const list = el("ol", { class: "storage-containers" }, ctx.containers.map((c, i) => storageFieldset(ctx, c, i, id)));
   const adder = el("button", { type: "button", class: "btn btn-secondary", text: "Add a container",
     disabled: ctx.containers.length >= limits.containers || null, onclick: () => {
@@ -195,17 +195,19 @@ function storageFieldset(ctx, c, i, id) {
     el("fieldset", {},
       el("legend", { text: label }),
       el("label", { class: "field", for: name.id }, el("span", { text: "Name" }), name),
+      el("label", { class: "field", for: order.id }, el("span", { text: "Filing order" }), order,
+        el("small", { class: "field-hint", text: ctx.cv.space === HOME_SPACE
+          ? "The Card list and Build decks use this when you sort by storage."
+          : "The Card list uses this when you sort by storage." })),
       el("label", { class: "field", for: capacity.id }, el("span", { text: "Holds (cards)" }), capacity),
       el("label", { class: "field", for: sections.id }, el("span", { text: "Sections" }), sections,
-        el("small", { class: "field-hint", text: "One per line, or a count such as “4 rows” for Row 1 to Row 4. They're the location suggestions." })),
-      el("p", { class: "field-hint", text: "A recorded location is matched by its starting words: a section or container name. For example, Row 2, B belongs to Row 2." }),
+        el("small", { class: "field-hint", text: "List sections in filing order, one per line, or enter “4 rows” for Row 1 to Row 4." })),
+      el("p", { class: "field-hint", text: "Start a card’s recorded location with its section or container. If two binders both have a Page 1, use the binder name too, such as “Blue binder, Page 1”." }),
       el("details", { class: "storage-options", open: c.optionsOpen || null,
         ontoggle: (e) => { c.optionsOpen = e.target.open; } },
-        el("summary", { text: "Optional details: kind, filing order and sleeves" }),
+        el("summary", { text: "Kind, section contents and sleeves" }),
         el("div", { class: "storage-options-fields" },
           el("label", { class: "field", for: kind.id }, el("span", { text: "Kind" }), kind),
-          el("label", { class: "field", for: order.id }, el("span", { text: "Cards are ordered" }), order,
-            el("small", { class: "field-hint", text: "Build decks uses this filing order when you choose Storage order." })),
           storageHoldsBox(ctx, c, k, holds),
           el("label", { class: "choice", for: sleeved.id }, sleeved, el("span", { text: "Its cards are kept sleeved" })))),
       el("div", { class: "actions storage-moves" },
@@ -331,6 +333,10 @@ function drawStorageReview(ctx) {
     storageImpact(answer),
     answer.counts_error ? null : [el("h3", { text: "Container counts: now and after saving" }),
       storageComparison(answer.now, answer.after)],
+    answer.storage.containers.length ? [
+      el("h3", { text: "Filing order" }),
+      el("ol", { class: "storage-filing-order" }, answer.storage.containers.map((c) =>
+        el("li", {}, el("strong", { text: c.name }), " · ", STORAGE_ORDER_WORDS[c.order])))] : null,
     el("h3", { text: "Recorded locations" }),
     answer.counts_error ? el("p", { class: "sub", text: "Recorded-location reassignments are unavailable until the collection can be read." })
       : moves.length ? el("ul", { class: "storage-moves-list" }, moves.map((m) => el("li", {
@@ -349,8 +355,8 @@ function drawStorageReview(ctx) {
 /** The review's "What each section holds" (slice 7): one line per container whose sections hold groups. */
 function storageHoldsReview(storage) {
   const lines = (storage.containers || []).filter((c) => c.holds && Object.keys(c.holds).length).map((c) =>
-    el("li", { text: `${c.name}: ${Object.entries(c.holds).map(([section, group]) =>
-      `${section} holds ${(STORAGE_HOLDS_WORDS[group] || group).toLowerCase()}`).join(", ")}` }));
+    el("li", { text: `${c.name}: ${c.sections.filter(section => Object.hasOwn(c.holds, section)).map(section =>
+      `${section} holds ${(STORAGE_HOLDS_WORDS[c.holds[section]] || c.holds[section]).toLowerCase()}`).join(", ")}` }));
   return lines.length ? [el("h3", { text: "What each section holds" }), el("ul", { class: "storage-holds-list" }, lines)] : null;
 }
 
@@ -364,16 +370,22 @@ async function saveStorage(ctx) {
     const saved = await apiWrite("/api/storage", { profile: ctx.profile, space: cv.space, expect: ctx.revision, storage: answer.storage }, "PUT");
     if (!ctx.here()) return;
     ctx.sheet.close();
-    if (answer.after && !answer.counts_error) {
-      const setup = colStorageSetup({ ...answer.after, source: saved.source || "saved" });
-      if (setup) cv.storageSetup = setup;
-    } else {
-      cv.storageSetup = colStorageSetup({ source: "saved", default: saved.storage.default, containers: saved.storage.containers.map((c) =>
-        ({ ...c, cards: null })), elsewhere: null, unplaced: null, not_counted: null,
-        suggestions: saved.storage.containers.flatMap((c) => c.sections.length ? c.sections : [c.name]) });
-    }
-    drawColStorageBox(cv);
+    const setup = answer.after && !answer.counts_error ? { ...answer.after, source: saved.source || "saved" }
+      : { source: "saved", default: saved.storage.default, containers: saved.storage.containers.map(c => ({ ...c, cards: null })),
+        suggestions: saved.storage.containers.flatMap(c => c.sections.length ? c.sections : [c.name]) };
+    colTakeLocations(cv, { storage_setup: setup });
+    if (cv.kind === "rows") drawColRowList(cv);
     colSay(cv, "Storage setup saved.");
+    if (cv.kind === "rows" && setup.containers.length) {
+      // The preview contains counts. The fresh rows answer supplies each printing's filing location.
+      const revision = cv.forecastRevision, hash = location.hash, profile = state.profile;
+      try {
+        if (await colEnsureRows(cv, { refresh: true }) && colActive(cv)) drawColRowList(cv);
+      } catch {
+        if (colActive(cv) && state.profile === profile && location.hash === hash && cv.forecastRevision === revision)
+          colSay(cv, "Storage setup saved. Reload the Card list to refresh its storage order.");
+      }
+    }
   } catch (error) {
     if (!ctx.here()) return;
     storageBusy(ctx, false);

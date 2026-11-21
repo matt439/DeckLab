@@ -87,6 +87,20 @@ class RuleTests(unittest.TestCase):
         empty = rules.normalize({"containers": []})
         self.assertEqual(rules.effective("home", empty, 1800), (empty, "saved"))   # the opt-out
 
+    def test_qualified_sections_match_only_within_the_named_container(self):
+        record = rules.normalize([{"name": "Blue binder", "sections": ["Page 1", "Page 1 back", "Page 3"]},
+                                  {"name": "Red binder", "sections": ["Page 1", "Blue binder index"]}])
+        for location, expected in [
+                ("blue BINDER, page 1, left", ("blue-binder", "Page 1")),
+                ("Red binder PAGE 1", ("red-binder", "Page 1")),
+                ("Blue binder Page 1 back, top", ("blue-binder", "Page 1 back")),
+                ("Blue binder, Page 10", ("blue-binder", None)),
+                ("Red binder, Page 3", ("red-binder", None)),
+                ("Page 1", ("blue-binder", "Page 1")),
+                ("Blue binder index", ("red-binder", "Blue binder index"))]:
+            with self.subTest(location=location):
+                self.assertEqual(rules.match_section(record, location), expected)
+
     def test_home_rows_record_their_groups(self):
         self.assertEqual(rules.HOME_ROW_GROUPS, {"Row 1": "creatures", "Row 2": "spells", "Row 3": "lands",
                                                  "Row 4": "tokens"})

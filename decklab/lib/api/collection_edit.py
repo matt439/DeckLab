@@ -244,7 +244,8 @@ def _pictures(rows):
                 printed = cards.printing_card(row["set"], row["collector_number"]) if p else None
                 if not printed or printed["name"] != card["name"]:
                     p = None
-            out[_picture_key(row)] = {**_card_json(card, p or _shown_printing(card)), "exact": p is not None}
+            out[_picture_key(row)] = {**_card_json(card, p or _shown_printing(card)), "exact": p is not None,
+                                      "produced_mana": list(card.get("produced_mana") or ())}
     except RuntimeError:                # the index went away meanwhile: no pictures, the rows still show
         return {}
     return out
@@ -376,17 +377,21 @@ def _extras(space, shown):
     storage = _storage(space, shown, prices)
     setup = places.setup_view(space)        # the space's storage setup (E8-S25), read once
     box = places.storage_box(space, shown, storage, _picture_key, setup)
-    return {"prices": prices, "storage": storage, "locations": places.locations(space, _picture_key),
-            "storage_box": box, "storage_setup": places.storage_setup(space, shown, storage, _picture_key, setup),
+    locations = places.locations(space, _picture_key)
+    return {"prices": prices, "storage": storage, "locations": locations, "storage_box": box,
+            "storage_setup": places.storage_setup(space, shown, storage, _picture_key, setup, location_view=locations),
             "storage_forecast": collection_forecast.build(space, shown, box, setup["storage"])}
 
 
-def _stale(space, sha=None):
-    """The 409 for a collection that changed since the page loaded it, with its rows, their prices and
-    storage counts (_extras)."""
-    rows, now = _read(space, fresh=True)
-    shown = _rows_json(rows)
-    return ApiError(409, ops.STALE.format(title=_title(space)), sha256=now, rows=shown, **_extras(space, shown))
+def _stale(space, *, message=None):
+    """A 409 with the current rows, pictures, locations and their filing order from one snapshot."""
+    with common.state_errors():
+        fresh = inventory.backend().load()
+    with inventory.pinned(fresh):
+        rows, now = _view(fresh.collection(space))
+        shown = _rows_json(rows)
+        return ApiError(409, message or ops.STALE.format(title=_title(space)), sha256=now, rows=shown,
+                        pictures=_pictures(shown), **_extras(space, shown))
 
 
 def _request_sha(value):

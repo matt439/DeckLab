@@ -184,5 +184,5 @@ def save_trade(body):
                                message=words)
     rows, now = ce._view(sheet)
     shown = ce._rows_json(rows)
-    return {"ok": True, "sha256": now, "rows": shown, **ce._extras(space, shown),
+    return {"ok": True, "sha256": now, "rows": shown, "pictures": ce._pictures(tracked), **ce._extras(space, shown),
             "gave": summary.counts["gave"], "got": summary.counts["cards"], "stale_tables": ce._stale_tables(space)}

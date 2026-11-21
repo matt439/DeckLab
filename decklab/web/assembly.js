@@ -334,36 +334,35 @@ function packStorageRule(data) {
   if (!data || !Object.hasOwn(data, "storage_order")) return { rule: "colour-type", container: null, printings: {} };
   const order = data.storage_order;
   if (!order || typeof order !== "object") return { rule: "none", container: null, printings: {} };
-  const known = (rule) => ["colour-type", "set", "name", "none"].includes(rule) ? rule : "none";
-  return { rule: known(order.rule),
+  return { ...packFilingRule(order, order.rule),
     container: typeof order.container === "string" && order.container ? order.container : null,
     sleeved: order.sleeved === true, // slice 6: Put back drops "unsleeved" for a sleeved default container
-    sections: packSections(order.sections), // slice 7
     printings: order.printings && typeof order.printings === "object" ? order.printings : {},
-    ...packStorageContainers(order, known) };
+    filedSections: new Map(Object.entries(order.filed_sections || {})), ...packStorageContainers(order) };
 }
 
-/** A container's {group: section} (slice 7), checked by storage-locations.js when it's loaded. */
-function packSections(sections) {
-  return typeof storageGroupSections === "function" ? storageGroupSections(sections) : {};
+/** A container's divisions and the physical sequence in which to visit its sections. */
+function packFilingRule(container, rule) {
+  return { rule: ["colour-type", "set", "name", "none"].includes(rule) ? rule : "none",
+    sections: storageGroupSections(container.sections),
+    sectionOrder: Array.isArray(container.section_order) ? container.section_order : [] };
 }
 
-/** Slice 7: two or more containers, each with its own rule and sections, and the container id the server
- * placed each card in (null: somewhere else; a card it doesn't list goes to the default container). One
- * container or none sends neither, and the plan looks as before. */
-function packStorageContainers(order, known) {
+/** Containers and recorded placement when the plan distinguishes cards inside and outside a container. */
+function packStorageContainers(order) {
   const list = Array.isArray(order.containers) ? order.containers.filter(c => c && typeof c.id === "string"
     && typeof c.name === "string") : [];
-  if (list.length < 2) return { containers: null, placed: {} };
-  return { containers: list.map(c => ({ id: c.id, name: c.name, rule: known(c.order), sections: packSections(c.sections) })),
+  if (!list.length) return { containers: null, placed: {} };
+  return { containers: list.map(c => ({ id: c.id, name: c.name, ...packFilingRule(c, c.order) })),
     placed: order.placed && typeof order.placed === "object" ? order.placed : {} };
 }
 
-/** The orders on offer: Name, and the storage's own when it differs from Name (colour-type: "Storage
- * order"; set: "Set order"; two or more containers: "Storage order", by container first). */
+/** A single set-ordered container keeps its familiar label. Other physical divisions offer Storage order. */
 function packOrderOptions(view) {
-  const label = view.storageRule.containers ? "Storage order"
-    : { "colour-type": "Storage order", set: "Set order" }[view.storageRule.rule];
+  const { containers, rule, sectionOrder } = view.storageRule;
+  let label;
+  if (!containers && rule === "set") label = "Set order";
+  else if (containers || rule === "colour-type" || sectionOrder?.length) label = "Storage order";
   return label ? [["name", "Name"], ["storage", label]] : [["name", "Name"]];
 }
 
@@ -407,41 +406,6 @@ function packOrderSync(view) {
     ? "Grouped by container, then by its filing order." : where || "Grouped by the storage filing order.";
 }
 
-/** The storage rows: creatures (artifacts last), spells (artifacts last), then lands by mana colour.
- * Nonlands use the front's colours, never Commander identity. Colourless non-artifacts follow
- * multicolour in their row; missing card data stays visible at the end. */
-function packStorageGroup(card) {
-  const face = card?.faces?.[0] || card;
-  const type = (face?.type_line || card?.type_line || "").split(" // ")[0].split(/\s[—–-]\s/)[0];
-  if (!type) return [23, "Other cards"];
-  const colored = values => (values || []).filter(c => "WUBRG".includes(c));
-  const rank = colors => colors.length > 1 ? 5 : colors.length ? "WUBRG".indexOf(colors[0]) : 6;
-  const words = ["White", "Blue", "Black", "Red", "Green", "Multicolour", "Colourless"];
-  if (/\bLand\b/.test(type)) {
-    const produces = colored(card.produced_mana);
-    const color = rank(produces.length ? produces : colored(card.color_identity));
-    return [16 + color, `Lands · ${words[color]}`];
-  }
-  const creature = /\bCreature\b/.test(type);
-  if (/\bArtifact\b/.test(type)) return creature ? [7, "Artifact creatures"] : [15, "Artifacts"];
-  const color = rank(colored(face.colors ?? card.colors));
-  return [color + (creature ? 0 : 8), `${creature ? "Creatures" : "Spells"} · ${words[color]}`];
-}
-
-/** A colour-type divider with its section first (slice 7), when the default container's rule says which section
- * holds the divider's group: "Row 1 · Creatures · White", "Row 2 · Artifacts". Ranks 0-7 are creatures, 8-15
- * spells, 16-22 lands (packStorageGroup); "Other cards" keeps its label. */
-function packSectionLabel(sections, rank, label) {
-  const group = rank < 8 ? "creatures" : rank < 16 ? "spells" : rank < 23 ? "lands" : null;
-  const section = group ? sections?.[group] : null;
-  return section ? `${section} · ${label}` : label;
-}
-
-/** Unknown mana values sort after known costs, including zero. */
-function packManaValue(card) {
-  return Number.isFinite(card?.cmc) ? card.cmc : Infinity;
-}
-
 /** The set order's divider (E8-S25 slice 5): the set of home's copy filed in the default container,
  * as storage_order's printings say; cards without one last. Ranks sort as strings. */
 function packSetGroup(view, name) {
@@ -454,7 +418,7 @@ function packSetGroup(view, name) {
 /** Collector numbers in number order ("9" before "10"), then the name. */
 function packCollectorOrder(view, a, b) {
   const number = (name) => String((view.storageRule.printings[name] || [])[1] || "");
-  return number(a).localeCompare(number(b), undefined, { numeric: true }) || a.localeCompare(b);
+  return storageCollectorCompare(number(a), number(b)) || a.localeCompare(b);
 }
 
 /** Picture grids in name order, or under the storage order's dividers (colour-and-type: by mana value;
@@ -463,7 +427,7 @@ function packCardGroups(view, rows) {
   if (!rows.length) return null;
   const sorted = [...rows].sort((a, b) => a.name.localeCompare(b.name));
   if (packOrder(view) !== "storage") return packGrid(view, sorted);
-  if (!view.storageRule.containers) return packRuleGroups(view, sorted, view.storageRule.rule, "h4");
+  if (!view.storageRule.containers) return packRuleGroups(view, sorted, view.storageRule, "h4");
   return packContainerGroups(view, sorted);
 }
 
@@ -476,7 +440,7 @@ function packGrid(view, rows) {
 function packContainerGroups(view, sorted) {
   const { containers, placed, container: fallbackName } = view.storageRule;
   const fallback = containers.find(c => c.name === fallbackName)?.id ?? null;
-  const groups = new Map([...containers.map(c => [c.id, { name: c.name, rule: c.rule, sections: c.sections, rows: [] }]),
+  const groups = new Map([...containers.map(c => [c.id, { ...c, rows: [] }]),
     [null, { unmatched: true, name: "Somewhere else", rule: "name", sections: {}, rows: [] }]]);
   for (const row of sorted) {
     const id = Object.hasOwn(placed, row.name) ? placed[row.name] : fallback;
@@ -488,30 +452,35 @@ function packContainerGroups(view, sorted) {
       el("h4", {}, group.name, el("span", { class: "pack-section-count", text: ` · ${plural(count, "card")}` })),
       el("p", { class: "pack-container-remaining", "data-pack-remaining": "" }),
       group.unmatched ? el("p", { class: "sub", text: "These cards match no configured storage container, or have no recorded location and no default container." }) : null,
-      packRuleGroups(view, group.rows, group.rule, "h5", group.sections));
+      packRuleGroups(view, group.rows, group, "h5"));
   });
 }
 
-/** Name-sorted rows under one rule's dividers (colour-type or set; name and none: one grid); sections
- * ({group: section}) start the colour-type dividers. */
-function packRuleGroups(view, sorted, rule, heading, sections = view.storageRule.sections) {
-  if (rule !== "colour-type" && rule !== "set") return packGrid(view, sorted);
-  const grid = (items) => packGrid(view, items);
+/** Visit the physical sections in order, then each section's colour/type or set dividers. */
+function packRuleGroups(view, sorted, container, heading) {
+  const { rule, sectionOrder, sections } = container;
   const bySet = rule === "set";
   const groups = new Map();
   for (const row of sorted) {
-    const [rank, label] = bySet ? packSetGroup(view, row.name) : packStorageGroup(view.cards[row.name]);
-    if (!groups.has(rank)) groups.set(rank, { label: bySet ? label : packSectionLabel(sections, rank, label), rows: [] });
-    groups.get(rank).rows.push(row);
+    const [rank, label] = bySet ? packSetGroup(view, row.name)
+      : rule === "colour-type" ? storageCardGroup(view.cards[row.name]) : [0, ""];
+    const section = view.storageRule.filedSections?.get(row.name) ?? (rule === "colour-type" ? sections?.[storageGroupKind(rank)] : null);
+    const title = [section, label].filter(Boolean).join(" · ");
+    const key = JSON.stringify([section || null, rank]);
+    if (!groups.has(key)) groups.set(key, { rank, section: storageSectionRank(sectionOrder, section), title, rows: [] });
+    groups.get(key).rows.push(row);
   }
-  const ranked = (a, b) => typeof a === "number" ? a - b : a < b ? -1 : a > b ? 1 : 0;
-  return [...groups].sort(([a], [b]) => ranked(a, b)).map(([, group]) => {
-    group.rows.sort(bySet ? (a, b) => packCollectorOrder(view, a.name, b.name)
-      : (a, b) => packManaValue(view.cards[a.name]) - packManaValue(view.cards[b.name]) || a.name.localeCompare(b.name));
+  const ordered = [...groups.values()].sort((a, b) => a.section - b.section || (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0));
+  return ordered.map(group => {
+    if (bySet) group.rows.sort((a, b) => packCollectorOrder(view, a.name, b.name));
+    if (rule === "colour-type") group.rows.sort((a, b) => storageManaValue(view.cards[a.name]) - storageManaValue(view.cards[b.name])
+      || a.name.localeCompare(b.name));
+    const grid = packGrid(view, group.rows);
+    if (!group.title && groups.size === 1) return grid;
     const count = group.rows.reduce((total, row) => total + row.qty, 0);
     return el("div", { class: "pack-storage-group" },
-      el(heading, {}, group.label, el("span", { class: "pack-section-count", text: ` · ${plural(count, "card")}` })),
-      grid(group.rows));
+      el(heading, {}, group.title || "No section recorded",
+        el("span", { class: "pack-section-count", text: ` · ${plural(count, "card")}` })), grid);
   });
 }
 
