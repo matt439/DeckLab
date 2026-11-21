@@ -169,7 +169,7 @@ inventory writes answer 503 with "reason": "database":
                                          built deck's Token cards line, one change (lib/api/token_cards.py)
     GET  /api/tokens/plan[?space=]       every built deck's Token cards line as planned (lib/api/token_plan.py)
     POST /api/tokens/plan                body {"profile", "space", "sha256"}: save that plan, one change
-    POST /api/decklist/parse             "Paste a list": known lines, unknown names, errors
+    POST /api/decklist/parse             review pasted text or a public Moxfield/Archidekt deck link
     GET  /api/tables/stale               decks whose owned-vs-needed table is out of date (of the
                                          spaces the visitor may see)
     POST /api/tables/update              rewrite those tables, in one change (only decks the profile

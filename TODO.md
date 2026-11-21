@@ -6,13 +6,14 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **The only ordering in this file.** Keep every `DECISION` row here. Keep this block to the current aim and the next few actions; results go in their owners (HISTORY.md for what shipped).
 
-**Ready work (2026-11-21).** Against popular decks remains the lead feature. The redesign is at household device acceptance. Start the new work with the deck-linked checklist (`E5-S44`), then draft a Play-now list from free copies (`E2-S34`), guide precon upgrades (`E9-S40`), test against published precons in a pod (`E3-S55`), import a deck link (`E2-S35`), and start another game with the same pod (`E4-S35`).
+**Current work (2026-11-21).** Against popular decks remains the lead feature. The redesign is at household device acceptance. The deck-building and pod features added on 21 November are in [HISTORY.md](decklab/HISTORY.md). Their remaining acceptance checks are below.
 
 **Sessions and decisions.** Pick these up when the named people, devices or systems are available. Each row below points to the owner and records the remaining check.
 
 - **Household phones and iPad.** Use the [20 November walkthrough](decklab/design/ui-ux-review-2026-11-20.md#verification-and-the-next-household-session) for building from the collection, taking shortages to a shop, scanning a small batch and starting a pod. Resume drafts across devices (`E2-S16`), check touch and layout (`E2-S22`, `E11-S30`), global search (`E11-S31`), pod controls and results (`E9-S11`), VoiceOver (`E11-S55`), real card and token photos from each phone and the [bulk scan timing trial](decklab/design/scanning-spike.md#compare-cards-per-hour) (`E7-S32`), and cold/repeat load timings (`E11-S64`). The [Safari Simulator evidence](decklab/safari/EVIDENCE.md) covers repeat functional checks.
+- **Deck building and replay.** Try the deck-linked checklist during an actual deck change (`E5-S44`), review early-interaction swaps with a player tuning a precon (`E9-S40`), and play two consecutive pod games from the Game log on a phone (`E4-S35`).
 - **Signed-in browser and wake.** Check the off page, deck save and photo upload (`E11-S02`), browser policy and camera (`E11-S63`), and real phone access, scanning and timed wake on the Linux installation (`E11-S58`). The wake-on-request check (`E11-S59`) follows the owner-authenticated NAS update (`E11-S75`, deferred). Time a real request through the hardened gate.
-- **Forge and XMage.** Exercise the saved field choice in a browser and a real run, then restore the policy (`E3-S23`). Qualify Syr Elenora's engine behavior (`FG#4`), the corrected XMage bridge on the installed server (`E3-S40`), and the separate Forge side-build speed/winner comparison (`FG#2`). Real Forge runs need Matt's OK and run one workflow at a time on an idle PC. The completed replay and pod games are recorded in [PLAN.md](decklab/PLAN.md#details).
+- **Forge and XMage.** Exercise the saved field choice in a browser and a real run, then restore the policy (`E3-S23`). Qualify Syr Elenora's engine behavior (`FG#4`), the corrected XMage bridge on the installed server (`E3-S40`), the separate Forge side-build speed/winner comparison (`FG#2`), and the published-precon pod (`E3-S55`). Real Forge runs need Matt's OK and run one workflow at a time on an idle PC. The completed replay and pod games are recorded in [PLAN.md](decklab/PLAN.md#details).
 - **People.** Matt reviews and publishes the draft release (`E11-S49`). Arrange User2's device and [testing session](decklab/design/user-testing-user2.md) (`E11-S28`).
 - **Waiting for data.** The earlier-lists browser check (`E3-S50`) needs a deck with several genuinely tested lists. The last server review found none.
 
@@ -33,8 +34,6 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E2-S16` | DECISION | could | L | Implementation built, including Quick edit and new-deck drafts. Left: same-profile resume, competing drafts and save/discard across the household's real devices; fixtures cannot qualify touch/Safari or device durability. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes, on the P1 redesign since 2026-11-05 ([evidence](decklab/safari/EVIDENCE.md)). |
-| `E2-S34` | OPEN | should | M | [Draft a Play-now list](decklab/design/stories.md#e2-s34) for one saved Commander deck by reviewing stand-ins across its confirmed shortages together. |
-| `E2-S35` | OPEN | could | M | [Import a public deck link](decklab/design/stories.md#e2-s35) from Moxfield or Archidekt through the existing deck import review. |
 
 ## Deck Lab: collection, orders and buying
 
@@ -43,7 +42,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
-| `E5-S44` | OPEN | should | M | [Check cards from a saved deck](decklab/design/stories.md#e5-s44), from checking at home through setting aside purchases. Later slices register sleeved decks with loose cards unchecked and record a transfer once across both decks. |
+| `E5-S44` | DECISION | should | M | Try the [deck-linked checklist](decklab/design/stories.md#e5-s44) during a physical deck change. Later slices cover sleeved cards and reviewed transfers between decks. |
 | `E7-S32` | DECISION | could | L | Try 10–20 real photos per phone (foils, sleeves, older cards and tokens) and [time a known stack](decklab/design/scanning-spike.md#compare-cards-per-hour) through live capture, gridded images and reviewed import. |
 
 ## Deck Lab: Commander nights
@@ -53,8 +52,8 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E9-S11` | DECISION | could | L | Real 16-game rotated pod, statistics and Stop/resume passed 2026-11-18 after the replay gate. Left: chooser, progress pill and result acceptance on the actual phone/iPad. |
-| `E9-S40` | OPEN | should | M | [Guide a Commander precon upgrade](decklab/design/stories.md#e9-s40) with reviewed cuts and additions for one chosen goal, checked against the player's actual list and free copies. |
-| `E4-S35` | OPEN | could | S | [Start another pod with the same seats](decklab/design/stories.md#e4-s35) from a saved game, with a fresh counter and editable deck choices. |
+| `E9-S40` | DECISION | should | M | Review the [early-interaction swaps](decklab/design/stories.md#e9-s40) with a player tuning a real precon. |
+| `E4-S35` | DECISION | could | S | Try [two consecutive pods](decklab/design/stories.md#e4-s35) on a physical phone, starting the second from the saved first game. |
 
 ## Deck Lab: testing and Forge
 
@@ -69,7 +68,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `FG#2` | DECISION | should | L+pc | Agree an idle window for the [side-build speed and winner comparison](decklab/PLAN.md#details). The 2.0.16 replay was complete at the 2026-11-18 review. |
 | `FG#3` | DEFERRED | could | M+pc | More experiment games (AI profiles, team-pump fix, override sets), decided with `FG#2`'s replay; the clean `fiery` test ran 2026-10-21 (C4 does what `fiery` does). |
 | `E3-S40` | DECISION | should | L+pc | Corrected isolated bridge passed 8 positive games and independent identity/outcome checks. Left: deploy and qualify it live; earlier negative receipts remain, with genuine unsupported identities explicit. |
-| `E3-S55` | OPEN | should | L+pc | [Test one deck against three published Commander precons](decklab/design/stories.md#e3-s55) in a four-player pod, with a reviewed lineup and seat-rotated results. |
+| `E3-S55` | DECISION | should | L+pc | Run the [published-precon pod](decklab/design/stories.md#e3-s55) with real Forge in an approved idle window and check the rotated seat results. |
 
 ## Deck Lab: running it
 

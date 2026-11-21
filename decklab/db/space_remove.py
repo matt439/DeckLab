@@ -31,6 +31,7 @@ _TABLE_KEYS = {
     "aliases": ("deck_alias", ("alias_id",)),
     "wishlist": ("wishlist_entry", ("profile_id", "position")),
     "upgrade_checklists": ("upgrade_checklist", ("profile_id",)),
+    "deck_upgrade_checklists": ("deck_upgrade_checklist", ("profile_id", "deck_id")),
     "settings": ("profile_setting", ("profile_id", "key")),
     "visibility": ("visibility", ("owner", "thing")),
     "drafts": ("deck_draft", ("profile_id", "deck_id", "version")),

@@ -70,6 +70,68 @@ class PodLifeBridgeUiTests(unittest.TestCase):
           assert(buttonText(main,'Resume pod counter'));assert(kept(data));
         """)
 
+    def test_rematch_copies_seats_in_order_and_saves_a_fresh_record(self):
+        self.run_js(r"""
+          const first=await startCounter();closeCounter();const previous=kept(first.data);
+          const saved=entry(),own=saved.record.seats[0],external=saved.record.seats[1];
+          saved.record.seats=[{...external,commander:'Front // Back, Partner'},
+            {...external,seat_id:'s4',player:'Fourth player',commander:'Other leader'},own,saved.record.seats[2]];
+          const data=packet({today:'2026-10-29',pods:[saved]});mount(data);
+          const nextId='2'.repeat(32),now=Date.now()+42000;Date.now=()=>now;
+          apiWrite=async(path,body)=>{writes.push([path,structuredClone(body)]);
+            const answer=response(body,body.preview===false);if(body.preview)answer.id=nextId;return answer;};
+          buttonText(main,'Play another with these seats').click();const setup=sheets.at(-1);
+          same(kept(data),previous);assert.equal(writes.length,0);assert.equal(controls(setup).date.value,'2026-10-29');
+          assert.equal(controls(setup).notes.value,'');assert.equal(controls(setup).result,null);
+          assert.equal(controls(setup).count.value,'4');
+          assert.equal(seat(setup,'s2','player').value,external.player);
+          assert.equal(seat(setup,'s2','commander').value,'Front // Back, Partner');
+          assert.equal(seat(setup,'s1','list').value,'0');
+          set(seat(setup,'s4','player'),'Changed player');
+          buttonText(setup.foot,'Start pod counter').click();const next=kept(data);
+          assert(counter());assert(setup.closed);assert.equal(writes.length,0);
+          assert.notEqual(next.session_id,previous.session_id);assert.equal(next.started,now);assert.equal(next.ended,null);
+          same(next.seats.map(row=>row.seat_id),['s2','s4','s1','s3']);
+          assert(next.seats.every(row=>row.life===40&&row.poison===0&&row.out===null&&row.damage.every(hit=>hit.value===0)));
+          assert.equal(next.seats[0].commander,'Front // Back, Partner');assert.equal(next.seats[1].player,'Changed player');
+          const review=await checkResult(await endDraw());assert.equal(writes[0][1].id,null);assert.equal(writes[0][1].sha256,null);
+          await saveResult(review);assert.equal(writes[1][1].id,nextId);assert.equal(writes[1][1].sha256,null);
+          assert.equal(writes[1][1].result,'draw');assert.equal(saved.record.result,'s1');assert.equal(saved.record.notes,'A note');
+          assert.equal(saved.record.seats[1].player,'Fourth player');assert.equal(kept(data),null);same(routes,['#/play']);
+        """)
+
+    def test_rematch_requires_explicit_choices_for_changed_and_unavailable_lists(self):
+        self.run_js(r"""
+          const saved=entry();saved.record.seats[2]={seat_id:'s3',type:'deck',player:'Third player',
+            deck:recordedSnapshot({id:'commander/gone',title:'Unavailable list'})};
+          const data=packet({pods:[saved],pod_lists:[snapshot({sha256:shaB}),snapshot({id:'commander/replacement',title:'Replacement'})]});
+          mount(data);buttonText(main,'Play another with these seats').click();const setup=sheets.at(-1);
+          const select=id=>seat(setup,id,'list'),start=()=>buttonText(setup.foot,'Start pod counter').click();
+          assert.equal(select('s1').value,'');assert.equal(select('s3').value,'');
+          assert(select('s1').textContent.includes('updated list'));assert(!select('s3').textContent.includes('Unavailable list'));
+          assert(setup.body.textContent.includes("list has changed"));assert(setup.body.textContent.includes('previous list is unavailable'));
+          start();assert.equal(counter(),null);assert.equal(kept(data),null);
+          set(select('s1'),'0','change');set(controls(setup).count,'4','change');assert.equal(select('s3').value,'');
+          start();assert.equal(counter(),null);set(select('s3'),'1','change');start();
+          const next=kept(data);assert(counter());assert.equal(next.seats[0].deck.sha256,shaB);
+          assert.equal(next.seats[2].deck.id,'commander/replacement');assert.equal(next.seats[2].player,'Third player');
+          assert.equal(writes.length,0);closeCounter();
+        """)
+
+    def test_rematch_is_limited_to_a_saved_game_in_the_current_recording_space(self):
+        self.run_js(r"""
+          const saved=entry({can:{edit:false}});
+          for(const space of [undefined,'user2']){
+            saved.record.space=space;mount(packet({pods:[saved]}));assert.equal(buttonText(main,'Play another with these seats'),undefined);
+          }
+          saved.record.space='home';const data=packet({pods:[saved]});mount(data);
+          buttonText(main,'Play another with these seats').click();const setup=sheets.at(-1);
+          assert.equal(controls(setup).count.value,'3');state.profile={...state.profile};
+          buttonText(setup.foot,'Start pod counter').click();assert.equal(counter(),null);assert.equal(kept(data),null);
+          setup.close();mount(data);const button=buttonText(main,'Play another with these seats');data.pods.length=0;
+          button.click();assert.equal(sheets.at(-1),setup);assert.equal(writes.length,0);
+        """)
+
     def test_four_seats_and_literal_external_commander_names_are_not_split(self):
         self.run_js(r"""
           const data=packet(),edit=launch(data);set(controls(edit).count,'4','change');

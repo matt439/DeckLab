@@ -583,6 +583,9 @@ button.edit-card:hover { background: var(--hover); }
 .paste-result { display: grid; gap: var(--s-3); margin-top: var(--s-3); }
 .paste-result .chip-btn { margin: 2px 0; color: var(--link); font-family: inherit; }
 .paste-diff { max-height: 40vh; overflow-y: auto; }
+.import-choice > span { display: grid; min-width: 0; gap: 2px; }
+.import-choice > span > :empty { display: none; }
+.import-choice small { color: var(--ink-2); }
 
 .choice-list { list-style: none; margin: var(--s-3) 0 0; padding: 0; display: grid; gap: var(--s-1); max-height: 55vh; overflow-y: auto; }
 .choice-item {

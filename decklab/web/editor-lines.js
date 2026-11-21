@@ -121,17 +121,20 @@ function drawLines() {
   const focus = document.activeElement && host.contains(document.activeElement)
     ? document.activeElement.dataset.focus : null;
   clear(host);
+  const playNow = editorPlayNowButton(ed);
   if (noOwnedList()) {
     host.append(el("div", { class: "empty edit-empty" },
       el("p", { text: `No ${listName("owned", true)} yet. It's the deck made only from cards you have or have on the way.` }),
-      el("button", { type: "button", class: "btn btn-primary",
-        text: `Start it from the ${listName("target", true)}`, onclick: startOwned })));
+      el("div", { class: "actions" }, playNow,
+        el("button", { type: "button", class: playNow ? "btn" : "btn btn-primary",
+          text: `Start it from the ${listName("target", true)}`, onclick: startOwned }))));
     return;
   }
   const kind = currentKind();
   const visual = visualLook();
   host.classList.toggle("is-visual", visual);
   const total = Object.values(ed.lists).reduce((n, lines) => n + lines.length, 0);
+  if (playNow) host.append(el("div", { class: "actions" }, playNow));
   if (!total && ed.mode === "new" && !ed.from) host.append(startFromPart());
   // A removed line stays where it was, as "Removed ... Undo", while the editor is open.
   const rows = (entries) => entries.sort((a, b) => compareEditorLines(a.line, b.line))

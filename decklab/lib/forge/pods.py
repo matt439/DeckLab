@@ -15,6 +15,8 @@ import time
 from collections import deque
 from pathlib import Path
 
+from decklab.lib.gauntlet import pod_lineups
+
 from . import common, engine, install, lifecycle, processes, runner, slots
 
 VERSION = 1
@@ -77,7 +79,10 @@ def _options(games, clock_s, seed_base):
 
 
 def _sides(entries):
-    return [{k: entry.get(k) for k in ("id", "version", "title", "kind", "card_sha")} for entry in entries]
+    keys = ("id", "version", "title", "kind", "card_sha")
+    optional = ("target_bracket", "precon_source")
+    return [{**{key: entry.get(key) for key in keys}, **{key: entry[key] for key in optional if key in entry}}
+            for entry in entries]
 
 
 _hash_lock = threading.Lock()
@@ -136,9 +141,12 @@ def engine_identity(setup=None):
 
 def key(entries, games=DEFAULT_GAMES, *, clock_s=DEFAULT_CLOCK, seed_base=DEFAULT_SEED, eng=None):
     chosen = check(entries)
-    identity = {"version": VERSION, "kind": "pods", "sides": [
-        {k: side[k] for k in ("id", "version", "card_sha")} for side in _sides(chosen)],
-        "options": _options(games, clock_s, seed_base), "engine": eng}
+    sides = [{key: entry[key] for key in ("id", "version", "card_sha")} for entry in chosen]
+    if pod_lineups.is_lineup(chosen):
+        for side, entry in zip(sides[1:], chosen[1:]):
+            side["precon_source"] = entry["precon_source"]
+    identity = {"version": VERSION, "kind": "pods", "sides": sides,
+                "options": _options(games, clock_s, seed_base), "engine": eng}
     return hashlib.sha256(_canonical(identity).encode("ascii")).hexdigest()
 
 
@@ -243,6 +251,20 @@ def _wilson(wins, total):
     return [round(max(0.0, centre - half), 4), round(min(1.0, centre + half), 4)]
 
 
+def _win_share(wins, total):
+    return {"wins": wins, "pods": total, "rate": round(wins / total, 4) if total else None,
+            "range": _wilson(wins, total)}
+
+
+def _rotations(deck_id, counted):
+    wins, totals = [0] * SEATS, [0] * SEATS
+    for game in counted:
+        seat = game["seats"].index(deck_id)
+        totals[seat] += 1
+        wins[seat] += game["w"] == seat + 1
+    return {str(seat + 1): _win_share(wins[seat], totals[seat]) for seat in range(SEATS)}
+
+
 def summary(rows, entries):
     """Draws are included in each denominator; clock stops never credit a winner."""
     games = [dict(game, seats=row["seats"]) for row in rows for game in row["games"]]
@@ -251,9 +273,10 @@ def summary(rows, entries):
     for entry in entries:
         wins = sum(game["result"] == "win" and game["seats"][game["w"] - 1] == entry["id"]
                    for game in counted)
-        by_deck[entry["id"]] = {"wins": wins, "pods": len(counted),
-                                "rate": round(wins / len(counted), 4) if counted else None,
-                                "range": _wilson(wins, len(counted))}
+        by_deck[entry["id"]] = _win_share(wins, len(counted))
+    if pod_lineups.is_lineup(entries):
+        deck_id = entries[0]["id"]
+        by_deck[deck_id]["by_seat"] = _rotations(deck_id, counted)
     return {"pods": len(games), "counted": len(counted), "wins": sum(g["result"] == "win" for g in games),
             "draws": sum(g["result"] == "draw" for g in games),
             "clock_stops": sum(g["result"] == "clock" for g in games),

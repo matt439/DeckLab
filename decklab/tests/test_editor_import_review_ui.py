@@ -180,3 +180,56 @@ class EditorImportReviewUiTests(unittest.TestCase):
           updateEditorImportMarks(choices,'replace');const words=host.querySelector('.import-availability').textContent;
           assert(words.includes('2 on the way'));assert(words.includes('1 to buy'));assert(!words.includes('3 on the way'));
         """)
+
+    def test_public_link_hands_off_once_to_review_with_marks_and_no_draft_change_before_apply(self):
+        self.import_js(r"""
+          const url='https://moxfield.com/decks/fixture', before=keepList(ed.lists);
+          const source={Deck:[{qty:1,name:'Elvish Mystic',set:'cmm',number:'648',finish:'etched',category:'Ramp',card:elves}]};
+          const answer={sections:source,source_text:'Deck\n1 Elvish Mystic (CMM) 648 *E* #Ramp\n',
+            unknown:[],errors:[],warnings:[],count:{cards:1,lines:1},marks:true,
+            availability:{rows:[{name:'Elvish Mystic',owned:1,on_the_way:0,in_use_elsewhere:[],available:1,missing:0}]}};
+          apiWrite=async(path,body)=>{writes.push([path,body]);return answer;};
+          changed=options=>{ed.dirty=isDirty();if(!options||options.history!==false)recordHistory(ed);};
+          const paste=openPaste();
+          paste.body.querySelectorAll('button').find(button=>button.textContent==='Import a deck link…').click();
+          const link=document.querySelectorAll('dialog[open]').at(-1); assert(link);
+          link.querySelector('input').value=url; link.querySelector('form').fire('submit'); await tick();
+          same(writes,[['/api/decklist/parse',{link:url,context:{id:'casual/gruul'}}]]);
+          const review=document.querySelectorAll('dialog[open]').at(-1); assert(review && review!==link);
+          assert(review.textContent.includes('1 free')); assert(review.textContent.includes('#Ramp'));
+          same(keepList(ed.lists),before);
+          review.querySelectorAll('button').find(button=>button.textContent==='Add 1 card').click();
+          assert.equal(ed.lists.Deck.find(line=>line.name==='Elvish Mystic').finish,'etched');
+          assert.equal(ed.history.length,1); assert.equal(writes.length,1);
+          assert.equal(undoLast(),true); same(keepList(ed.lists),before);
+        """)
+
+    def test_unavailable_link_can_fall_back_to_paste_and_late_result_cannot_replace_the_draft(self):
+        self.import_js("""
+          const before=keepList(ed.lists);
+          apiWrite=async()=>{throw new ApiError(404,'That deck is private or unavailable.');};
+          const link=openDeckLinkImport('1 Elvish Mystic'), form=link.body.querySelector('form');
+          form.querySelector('input').value='https://archidekt.com/decks/12345';
+          form.fire('submit'); await tick();
+          assert(link.body.textContent.includes('private or unavailable')); same(keepList(ed.lists),before);
+          link.foot.querySelectorAll('button').find(button=>button.textContent==='Paste a list').click();
+          const paste=document.querySelectorAll('dialog[open]').at(-1);
+          assert.equal(paste.querySelector('textarea').value,'1 Elvish Mystic'); same(keepList(ed.lists),before);
+          paste.querySelectorAll('button').find(button=>button.textContent==='Cancel').click();
+          let finish; apiWrite=()=>new Promise(resolve=>{finish=resolve;});
+          const late=openDeckLinkImport(), next=late.body.querySelector('form');
+          next.querySelector('input').value='https://archidekt.com/decks/12345'; next.fire('submit');
+          state.profile={id:'user1'}; finish({source_text:'unavailable to new viewer'}); await tick();
+          assert.equal(document.querySelectorAll('dialog[open]').at(-1),late.dialog);
+          same(keepList(ed.lists),before);
+        """)
+
+    def test_empty_new_commander_draft_uses_linked_command_zone_for_default_selections(self):
+        self.import_js("""
+          const empty={...ed,mode:'new',fields:{kind:'commander'},lists:{}};
+          const source={Commander:[{qty:1,name:'Fixture commander',card:{...elves,name:'Fixture commander',color_identity:['G']}}],
+            Deck:[{qty:1,name:'Elvish Mystic',card:{...elves,name:'Elvish Mystic',color_identity:['G']}},
+                  {qty:1,name:'Blue card',card:{...bolt,name:'Blue card',color_identity:['U']}}]};
+          const choices=editorImportChoices(empty,source,{},true);
+          same(choices.rows.map(row=>row.selected),[true,true,false]);
+        """)

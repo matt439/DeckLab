@@ -119,6 +119,12 @@ def snapshot(c, space, *, details=False, personal=False):
             "where p.space_id = %s order by r.profile_id", (space,))]
         if checklists:
             data["upgrade_checklists"] = checklists
+    if not personal and c.execute("select to_regclass('public.deck_upgrade_checklist') is not null").fetchone()[0]:
+        linked_checklists = sorted((r[0] for r in c.execute(
+            "select to_jsonb(r) from deck_upgrade_checklist r join profile p on p.id = r.profile_id "
+            "join deck d on d.id = r.deck_id where p.space_id = %s or d.space_id = %s", (space, space))), key=_json)
+        if linked_checklists:
+            data["deck_upgrade_checklists"] = linked_checklists
     # A new deck's drafts (migration 0019): the member's own, and any in the member's space. Only
     # when there are some, so an export made before the migration still matches without them.
     if not personal and c.execute("select to_regclass('public.new_deck_draft') is not null").fetchone()[0]:

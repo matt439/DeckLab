@@ -71,6 +71,27 @@ class DeckSwapsUiTests(unittest.TestCase):
           assert(sheet.textContent.includes("isn't short of it"));
         """)
 
+    def test_selecting_a_stand_in_prefills_the_deck_checklist_without_saving(self):
+        self.run_js(r"""
+          const openDialog = () => document.body.querySelectorAll('dialog').pop();
+          const previousApi = api;
+          const linked = '/api/profiles/matt/deck-checklist?deck=casual%2Ftest';
+          api = async path => path === linked
+            ? {revision: 1, title: '', rows: [{name: 'Forest', choice: 'set_aside'}]}
+            : previousApi(path);
+          apiWrite = async () => assert.fail('Choosing a stand-in must not save any lists');
+          showMissing(makePage()); await settle();
+          buttonText(finder(), 'See them').click();
+          const standIns = openDialog();
+          buttonText(standIns, 'Add one to checklist').click(); await settle();
+          const checklist = openDialog();
+          assert(checklist && !standIns.isConnected);
+          const rows = checklist.querySelector('.upgrade-checklist-rows');
+          assert(rows.textContent.includes('Shock'));
+          same(rows.querySelectorAll('select').map(field => field.value), ['set_aside', 'check']);
+          assert.equal(buttonText(checklist, 'Save checklist').disabled, false);
+        """)
+
     def test_a_long_list_folds(self):
         self.run_js("""
           const more = Array.from({length: 7}, (_, i) => ({...swapsAnswer.cards[1], name: `Card ${i}`}));

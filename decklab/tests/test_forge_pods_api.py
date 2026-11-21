@@ -3,12 +3,14 @@ import contextlib
 import copy
 import hashlib
 import json
+import os
 import threading
 from unittest import mock
 
 from decklab.lib import access, api, jobs
 from decklab.lib.api import forge_pods, forge_runs, guard, run_recovery
 from decklab.lib.forge import pods as real_pods
+from decklab.lib.gauntlet import pod_lineups
 from decklab.tests.test_api import _write
 from decklab.tests.test_api_permissions import PermissionTestCase
 
@@ -37,6 +39,25 @@ def body(profile=None, **data):
 
 def seats(ids=IDS):
     return [{"id": deck_id, "version": "target"} for deck_id in ids]
+
+
+def stock_precon(letter, rank, identity, commander, basic, source="mtgjson", **overrides):
+    return {"id": f"gauntlet:precon/Fixture_{letter}", "title": f"Precon {letter}",
+            "kind": "commander", "tier": "precon", "playable": True, "fixes": [], "identity": identity,
+            "bracket": {"minimum": 2},
+            "cards": {"Commander": [[1, commander]], "Main": [[99, basic]]},
+            "source": {"kind": source, "rank": rank, "file": "fixture/private/local.dck"}, **overrides}
+
+
+def precon_catalogue():
+    return {"format": pod_lineups.catalogue.CATALOGUE_FORMAT, "kind": "commander", "decks": [
+        stock_precon("A", 2, "G", "Llanowar Elves", "Forest"),
+        stock_precon("B", 3, "R", "Goblin Guide", "Mountain"),
+        stock_precon("C", 4, "B", "Gravecrawler", "Swamp", source="forge"),
+        stock_precon("Skip_unsupported", 1, "U", "Delver of Secrets", "Island", playable=False),
+        stock_precon("Skip_fixed", 1, "W", "Savannah Lions", "Plains", fixes=["Added a Plains."]),
+        stock_precon("Defer_same_colour", 2, "G", "Giant Growth", "Forest"),
+    ]}
 
 
 class FakePods:
@@ -94,6 +115,8 @@ class PodApiTests(PermissionTestCase):
                DECK.format(title="Member pod deck", count=25, bracket=2))
         self.pods = FakePods()
         self.box.forge.pods = self.pods
+        self.catalogue_path = self.box.data / "fixture-commander-catalogue.json"
+        self.enterContext(mock.patch.object(pod_lineups.catalogue, "catalogue_path", return_value=self.catalogue_path))
         self.addCleanup(lambda: delattr(self.box.forge, "pods"))
         self.runner = jobs.Runner(max_running=2, max_queued=4, log=lambda text: None,
                                   describe=forge_runs._matchup_error, name="coordinator")
@@ -135,6 +158,9 @@ class PodApiTests(PermissionTestCase):
         key = key or self.plan(who, chosen)["key"]
         return self.call(who, forge_pods.run_pods, body(who, decks=chosen, games=16, expected_key=key))
 
+    def catalogue(self, found=None):
+        pod_lineups.catalogue.save("commander", found if found is not None else precon_catalogue())
+
     def test_choices_are_only_visible_commander_decks_and_no_private_kit(self):
         answer = self.call("matt", forge_pods.pods_view)
         choices = answer["choices"]
@@ -155,6 +181,68 @@ class PodApiTests(PermissionTestCase):
         self.assertEqual(self.runner.active(), [])
         self.assertNotIn("dck", json.dumps(answer))
         json.dumps(answer, allow_nan=False)
+
+    def test_precon_review_uses_three_unchanged_catalogue_lists_with_sources(self):
+        self.catalogue()
+        with mock.patch.object(pod_lineups.catalogue, "load", wraps=pod_lineups.catalogue.load) as load:
+            available = self.call("matt", forge_pods.pods_view)["lineups"]
+            self.assertEqual(self.call("matt", forge_pods.pods_view)["lineups"], available)
+            load.assert_called_once_with("commander")
+        self.assertEqual(len(available), 1)
+        self.assertEqual(available[0]["id"], pod_lineups.LINEUP)
+        answer = self.call("matt", forge_pods.plan_pods, body(decks=seats(IDS[:1]), lineup=pod_lineups.LINEUP))
+        self.assertEqual(answer["lineup"], pod_lineups.LINEUP)
+        self.assertEqual([side["title"] for side in answer["sides"][1:]], ["Precon A", "Precon B", "Precon C"])
+        self.assertTrue(answer["sides"][1]["source_url"].endswith("/Fixture_A.json"))
+        self.assertIsNone(answer["sides"][3]["source_url"])
+        self.assertEqual(answer["sides"][3]["source_name"], "Forge bundled precon")
+        self.assertEqual(answer["plan"]["estimated_seconds"], 16 * forge_pods.SECONDS_PER_POD)
+        self.assertFalse(self.runner.active())
+        self.assertNotIn("local.dck", json.dumps(answer))
+        self.assertEqual(self.error("matt", forge_pods.plan_pods,
+                                    body(decks=seats([answer["sides"][1]["id"]]), lineup=pod_lineups.LINEUP)).status, 400)
+
+    def test_precon_start_rechecks_sparring_list_and_simulation_policy(self):
+        found = precon_catalogue()
+        self.catalogue(found)
+        request = {"decks": seats(IDS[:1]), "lineup": pod_lineups.LINEUP}
+        answer = self.call("matt", forge_pods.plan_pods, body(**request))
+        confirmed = {**request, "expected_key": answer["key"]}
+        self.assertEqual(self.error("user1", forge_pods.run_pods, body("user1", **confirmed)).status, 403)
+        original = self.catalogue_path.stat()
+        found["decks"][1]["cards"]["Commander"][0][1] = "Goblin Cadet"
+        self.catalogue(found)
+        os.utime(self.catalogue_path, ns=(original.st_atime_ns, original.st_mtime_ns))
+        replaced = self.catalogue_path.stat()
+        self.assertEqual((replaced.st_size, replaced.st_mtime_ns), (original.st_size, original.st_mtime_ns))
+        stale = self.error("matt", forge_pods.run_pods, body("matt", **confirmed))
+        self.assertEqual((stale.status, stale.message), (409, forge_pods.CHANGED))
+        self.assertFalse(self.runner.active())
+
+    def test_precon_job_and_results_follow_saved_deck_visibility(self):
+        self.catalogue()
+        request = {"decks": seats([OTHER]), "lineup": pod_lineups.LINEUP}
+        hidden = self.error("matt", forge_pods.plan_pods, body(**request))
+        self.assertEqual(hidden.status, 404)
+        self.assertNotIn("Member pod deck", hidden.message)
+        answer = self.call("user2", forge_pods.plan_pods, body(**request))
+        # Matt can start a simulation with this publicly shared saved deck while it remains public.
+        public = mock.patch.object(guard, "public_deck_spaces", return_value=frozenset({"user2"}))
+        self.pods.gate.clear()
+        with public:
+            self.call("matt", forge_pods.run_pods, body("matt", **request, expected_key=answer["key"]))
+            self.assertTrue(self.pods.started.wait(5))
+            public_view = self.call("matt", forge_pods.pods_view, answer["key"])
+            self.assertEqual(public_view["lineup"], pod_lineups.LINEUP)
+        self.assertEqual(self.error("matt", forge_pods.pods_view, answer["key"]).status, 404)
+        self.pods.gate.set()
+        job = self.runner.get("pods:" + answer["key"])
+        self.assertTrue(job.wait(5))
+        self.catalogue_path.unlink()
+        allowed = self.call("user2", forge_pods.pods_view, answer["key"])
+        self.assertEqual(allowed["result"]["sides"][1]["source_name"], "MTGJSON")
+        self.assertEqual(allowed["lineups"], [])
+        self.assertEqual(self.call("matt", forge_pods.pods_view)["results"], [])
 
     def test_real_core_plan_contract_has_four_win_ranges_without_starting_forge(self):
         self.box.forge.pods = real_pods

@@ -131,7 +131,8 @@ class MigrationRegistrationTests(unittest.TestCase):
         self.assertLess(names.index(TABLE), names.index("public.inventory_revision"))
         self.assertEqual([name for name in names if name != TABLE], [
             "public.space", "public.profile", "public.profile_email", "audit.change_set",
-            "public.wishlist_entry", "public.upgrade_checklist", "public.profile_setting", "public.simulation_mode",
+            "public.wishlist_entry", "public.upgrade_checklist", "public.deck_upgrade_checklist",
+            "public.profile_setting", "public.simulation_mode",
             "public.play_record", "public.packing_tick", "public.commander_night", "public.visibility",
             "public.space_departure", "public.shop_postage", "public.pricing_setting", "public.space_storage", "public.inventory_revision", "public.collection_card",
             "public.collection_import", "public.token_card", "public.dice_counter", "public.card_loan", "public.product",

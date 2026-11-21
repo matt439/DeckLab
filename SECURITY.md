@@ -173,3 +173,4 @@ on any server. The route-access fixture check fails when a source migration is a
 - `0027_deck_line_categories.sql`
 - `0028_space_storage.sql`
 - `0029_upgrade_checklist.sql`
+- `0030_deck_upgrade_checklist.sql`

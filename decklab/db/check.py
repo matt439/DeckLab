@@ -512,6 +512,8 @@ def _space_departures(c):
             references += (("space_storage", "t.space_id = d.space_id"),)
         if c.execute("select to_regclass('public.upgrade_checklist') is not null").fetchone()[0]:
             references += (("upgrade_checklist", "t.profile_id = d.space_id"),)
+        if c.execute("select to_regclass('public.deck_upgrade_checklist') is not null").fetchone()[0]:
+            references += (("deck_upgrade_checklist", "t.profile_id = d.space_id or starts_with(t.deck_id, d.space_id || '/')"),)
         if ids:
             for table, condition in references:
                 count = c.execute(f"select count(*) from {table} t where exists "

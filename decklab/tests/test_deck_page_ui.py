@@ -46,6 +46,64 @@ class DeckPageUiTests(unittest.TestCase):
                                 capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_saved_deck_checklist_selects_copies_and_reopens_to_set_purchases_aside(self):
+        self.run_js(r"""
+          const flush = async () => { for (let i = 0; i < 6; i++) await Promise.resolve(); };
+          const openDialog = () => document.body.querySelectorAll('dialog').pop();
+          const page = makePage();
+          page.owned = null;
+          location.hash = '#/deck?id=casual%2Ftest&tab=cards';
+          drawDeck(page, deckViewOf(parseHash().params));
+          const path = '/api/profiles/matt/deck-checklist?deck=casual%2Ftest';
+          const reads = [], writes = [];
+          let saved = {revision: 0, title: '', rows: []};
+          const previousApi = api;
+          api = async requested => {
+            if (requested !== path) return previousApi(requested);
+            reads.push(requested);
+            return structuredClone(saved);
+          };
+          apiWrite = async (requested, body) => {
+            assert.equal(requested, path);
+            assert.equal(body.expect, saved.revision);
+            writes.push(structuredClone(body));
+            saved = {revision: saved.revision + 1, title: body.title, rows: structuredClone(body.rows)};
+            return structuredClone(saved);
+          };
+          const launch = buttonText(panel('cards'), 'Card checklist');
+          assert(launch, 'Checklist should work without inventory data');
+          assert.equal(reads.length, 0, 'Loading a deck must not read its private checklist');
+          launch.click(); await flush();
+          let sheet = openDialog();
+          const chooser = sheet.querySelector('.upgrade-checklist-picker');
+          const selection = chooser.querySelector('select'), qty = chooser.querySelector('input');
+          assert(selection.querySelectorAll('option').some(option => option.textContent === 'Elf (6)'));
+          selection.value = 'Elf'; selection.fire('change');
+          qty.value = '7'; buttonText(chooser, 'Add from list').click();
+          assert.equal(sheet.querySelector('.upgrade-checklist-rows').children.length, 0);
+          qty.value = '2'; buttonText(chooser, 'Add from list').click();
+          const plans = () => sheet.querySelector('.upgrade-checklist-rows').querySelectorAll('select');
+          same(plans().map(plan => plan.value), ['check', 'check']);
+          plans()[0].value = 'buy'; plans()[0].fire('change');
+          assert(sheet.querySelectorAll('textarea').some(control => control.value === '1 Elf'));
+          assert.equal(writes.length, 0);
+          buttonText(sheet, 'Save checklist').click(); await flush();
+          colCloseSheets();
+          launch.click(); await flush(); sheet = openDialog();
+          same(plans().map(plan => plan.value), ['buy', 'check']);
+          plans()[0].value = 'set_aside'; plans()[0].fire('change');
+          buttonText(sheet, 'Save checklist').click(); await flush();
+          same(saved.rows, [{name: 'Elf', choice: 'set_aside'}, {name: 'Elf', choice: 'check'}]);
+          same(reads, [path, path]);
+        """)
+
+    def test_public_deck_has_no_linked_checklist_for_another_space(self):
+        self.run_js(r"""
+          state.profile = {id: 'user2', space: 'user2', name: 'User2'};
+          open('#/deck?id=casual%2Ftest&tab=cards');
+          assert.equal(buttonText(panel('cards'), 'Card checklist'), undefined);
+        """)
+
     def test_tabs_are_lazy_and_in_the_address(self):
         self.run_js("""
           open('#/deck?id=casual%2Ftest&v=target');

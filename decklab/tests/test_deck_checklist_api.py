@@ -10,6 +10,32 @@ from decklab.tests.test_api_permissions import PermissionTestCase
 
 
 class DeckChecklistTests(PermissionTestCase):
+    def test_linked_lists_are_private_to_each_profile_and_separate_by_deck(self):
+        deck = "casual/gruul-test"
+        rows = [{"name": "Mind Stone", "choice": "buy"}, {"name": "Mind Stone", "choice": "set_aside"}]
+        with access.viewing("matt"):
+            form = {"expect": 0, "title": "", "rows": rows}
+            saved = deck_checklist.save("matt", self.body("matt", **form), deck)
+            self.assertEqual(deck_checklist.view("matt", deck), saved)
+            self.assertEqual(deck_checklist.view("matt", "commander/elf-commander")["rows"], [])
+            self.assertEqual(deck_checklist.view("matt")["rows"], [])
+            with self.assertRaises(ApiError) as stale:
+                deck_checklist.save("matt", self.body("matt", **form), deck)
+            self.assertEqual(stale.exception.status, 409)
+        with access.viewing("user1"):
+            self.assertEqual(deck_checklist.view("user1", deck)["rows"], [])
+            with self.assertRaises(ApiError) as private:
+                deck_checklist.view("matt", deck)
+            self.assertEqual(private.exception.status, 403)
+            self.assertEqual(deck_checklist.save("user1", self.body("user1", **form), deck)["rows"], rows)
+        with access.using({"profile": "user2", "email": "", "remote": True}):
+            self.assertEqual(deck_checklist.view("user2", "user2/casual/r-elves")["rows"], [])
+            for deck in ("casual/gruul-test", "user2/casual/does-not-exist"):
+                with self.subTest(deck=deck), self.assertRaises(ApiError) as hidden:
+                    deck_checklist.view("user2", deck)
+                self.assertEqual((hidden.exception.status, hidden.exception.message), (404, f"No deck {deck!r}"))
+        self.assertEqual(self.box.state.changes(), [])
+
     def test_member_can_split_copies_and_reopen_without_inventory_or_card_data(self):
         rows = [{"name": "Mind Stone", "choice": choice} for choice in ("set_aside", "buy", "check")]
         with access.using({"profile": "user2", "email": "", "remote": True}), \

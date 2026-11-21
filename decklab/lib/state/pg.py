@@ -793,13 +793,13 @@ class PgStore:
 
     # ------------------------------------------------------------------ editor drafts kept for later
 
-    def checklist(self, profile_id):
+    def checklist(self, profile_id, *, deck_id=None):
         from . import upgrade_checklist
-        return upgrade_checklist.pg_get(self, profile_id)
+        return upgrade_checklist.pg_get(self, profile_id, deck_id=deck_id)
 
-    def checklist_put(self, profile_id, title, rows, expect):
+    def checklist_put(self, profile_id, title, rows, expect, *, deck_id=None):
         from . import upgrade_checklist
-        return upgrade_checklist.pg_put(self, profile_id, title, rows, expect)
+        return upgrade_checklist.pg_put(self, profile_id, title, rows, expect, deck_id=deck_id)
 
     def deck_draft(self, profile_id, deck_id, version):
         """One profile's draft of one deck list (pg_deck_drafts.get; deck_drafts.view's shape).

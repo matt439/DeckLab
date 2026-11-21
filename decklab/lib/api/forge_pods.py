@@ -1,13 +1,15 @@
 """Four-player Commander simulations, separate from head-to-head results.
 
-Every selected or saved seat must still be visible before a response describes
-the run. Jobs share COORD_JOBS and its normal starter/owner/admin Stop rules.
+Every saved-deck seat must still be visible before a response describes the run.
+Stock precon opponents come from the public, Forge-screened catalogue. Jobs share
+COORD_JOBS and its normal starter/owner/admin Stop rules.
 The only files written are Forge's isolated pod cache and run-recovery journal.
 """
 import importlib
 import traceback
 
 from decklab.lib import decks, jobs, permissions
+from decklab.lib.gauntlet import pod_lineups
 
 from . import common, forge_runs, guard, simulations
 from .common import MAX_BODY, MAX_EDIT_BODY, ApiError, _keys, _parse_body, _public, _SHA_RE
@@ -22,6 +24,10 @@ UNKNOWN_BRACKET = "Set a target bracket on each of the four Commander decks befo
 BRACKETS_APART = "Choose decks with the same or neighbouring target brackets for this pod."
 BUSY = "4 simulation runs are already waiting. Try again when one has finished."
 FAILED = "The pod run could not finish on the PC. Try again; the server log says why."
+PRECONS_MISSING = "The published precon lineup is unavailable. Check the Commander catalogue on the PC."
+PRECON_BRACKET = "Use a Commander deck with target bracket 1, 2 or 3 for this bracket 2 lineup."
+# Single-worker mean in PLAN.md's four-player prototype. Queue time is excluded.
+SECONDS_PER_POD = 72
 
 
 def _pods(forge):
@@ -41,9 +47,10 @@ def _games(value):
     return forge_runs._games(value, GAME_CHOICES)
 
 
-def _selections(value):
-    if not isinstance(value, list) or len(value) != 4:
-        raise ApiError(400, "Choose exactly four Commander decks for a pod.")
+def _selections(value, with_precons):
+    if not isinstance(value, list) or len(value) != (1 if with_precons else 4):
+        raise ApiError(400, "Choose one saved Commander deck for the precon pod." if with_precons
+                       else "Choose exactly four Commander decks for a pod.")
     out = []
     for item in value:
         if not isinstance(item, dict):
@@ -63,11 +70,15 @@ def _visible_first(selections, profile=False):
 
 
 def _side(entry):
-    return {key: entry.get(key) for key in ("id", "version", "title", "card_sha", "kind", "target_bracket")}
+    out = {key: entry.get(key) for key in ("id", "version", "title", "card_sha", "kind", "target_bracket")}
+    source = pod_lineups.public_source(entry)
+    if source:
+        out.update(source)
+    return out
 
 
-def _entries(forge, selections):
-    if len({deck_id for deck_id, _ in selections}) != 4:
+def _entries(forge, selections, precons=None):
+    if len({deck_id for deck_id, _ in selections}) != len(selections):
         raise ApiError(400, "Choose four different Commander decks for a pod.")
     out = []
     brackets = []
@@ -82,6 +93,10 @@ def _entries(forge, selections):
         except forge.ForgeError as error:
             raise ApiError(400, _public(error)) from None
         out.append(dict(entry, target_bracket=bracket))
+    if precons is not None:
+        if type(brackets[0]) is not int or not 1 <= brackets[0] <= pod_lineups.BRACKET + 1:
+            raise ApiError(400, PRECON_BRACKET)
+        return out + precons
     if any(type(bracket) is not int or not 1 <= bracket <= 5 for bracket in brackets):
         raise ApiError(400, UNKNOWN_BRACKET)
     if max(brackets) - min(brackets) > 1:
@@ -104,9 +119,11 @@ def _choices(seen):
 
 def _visible(saved, seen):
     sides = (saved.get("sides") or saved.get("decks")) if isinstance(saved, dict) else None
-    return (isinstance(sides, list) and len(sides) == 4
-            and all(isinstance(side, dict) and isinstance(side.get("id"), str)
-                    and seen.historical(side["id"]) for side in sides))
+    if not isinstance(sides, list) or len(sides) != 4:
+        return False
+    library_sides = sides[:1] if pod_lineups.is_lineup(sides) else sides
+    return all(isinstance(side, dict) and isinstance(side.get("id"), str)
+               and seen.historical(side["id"]) for side in library_sides)
 
 
 def _safe(saved, seen):
@@ -116,7 +133,10 @@ def _safe(saved, seen):
     keys = ("key", "kind", "games", "planned", "completed", "remaining", "summary", "statistical_only",
             "note", "updated", "created", "by", "stopped_by", "stopped", "state", "clock_s")
     out = {key: saved[key] for key in keys if key in saved}
-    out["sides"] = [_side(side) for side in saved.get("sides") or saved.get("decks")]
+    sides = saved.get("sides") or saved.get("decks")
+    out["sides"] = [_side(side) for side in sides]
+    if pod_lineups.is_lineup(sides):
+        out["lineup"] = pod_lineups.LINEUP
     # The summary is a numeric projection produced by pods; by_deck uses the
     # same visible ids as sides, and contains no recipes or process failures.
     summary = saved.get("summary")
@@ -151,7 +171,8 @@ class _PodJob:
 
     def __init__(self, forge, pods, entries, games, plan, eng, profile):
         self.forge, self.pods, self.sides, self.games = forge, pods, entries, games
-        self.entry, self.chosen = entries[0], entries[1:]
+        self.lineup = pod_lineups.LINEUP if pod_lineups.is_lineup(entries) else None
+        self.entry, self.chosen = entries[0], [] if self.lineup else entries[1:]
         self.key, self.eng = plan["key"], eng
         self.by, self.by_id = profile["name"], profile["id"]
         self.via = {"kind": "pods", "title": "Four-player Commander pod",
@@ -166,11 +187,16 @@ def _job(key):
     return forge_runs.COORD_JOBS.get("pods:" + key)
 
 
-def _answer(forge, pods, seen, key=None, plan=None):
+def _answer(forge, pods, seen, key=None, plan=None, precons=None):
+    if precons is None:
+        precons = pod_lineups.entries()
     answer = {"key": key, "status": "none", "sides": [], "result": None, "job": None,
               "notice": None, "error": None, "choices": _choices(seen),
               "game_choices": list(GAME_CHOICES), "default_games": DEFAULT_GAMES,
               "forge": forge.status(), "simulations": simulations.view(seen.profile)}
+    answer["lineups"] = ([{"id": pod_lineups.LINEUP, "title": pod_lineups.TITLE,
+                           "target_bracket": pod_lineups.BRACKET, "precons": [_side(side) for side in precons]}]
+                         if precons else [])
     if key is None:
         answer["results"] = []
         if hasattr(pods, "results"):
@@ -188,9 +214,14 @@ def _answer(forge, pods, seen, key=None, plan=None):
         raise ApiError(404, MISSING)
     answer["result"] = result
     answer["sides"] = (result or reviewed or {}).get("sides") or [_side(side) for side in job.fn.sides]
+    lineup = (result or reviewed or {}).get("lineup") or (getattr(job.fn, "lineup", None) if job else None)
+    if lineup:
+        answer["lineup"] = lineup
     if reviewed is not None:
         answer["plan"] = {**reviewed, "games": plan["games"], "remaining": plan.get("remaining"),
                           "completed": plan.get("completed")}
+        if lineup and type(plan.get("remaining")) is int:
+            answer["plan"]["estimated_seconds"] = plan["remaining"] * SECONDS_PER_POD
     if result is not None:
         tally = result.get("summary") or {}
         answer["status"] = "error" if (result.get("state") == "error"
@@ -224,28 +255,41 @@ def pods_view(key=None):
     return _answer(forge, pods, seen, _key(key) if key else None)
 
 
+def _precons(data):
+    if "lineup" not in data:
+        return None
+    if data["lineup"] != pod_lineups.LINEUP:
+        raise ApiError(400, "Choose an available published precon lineup.")
+    entries = pod_lineups.entries()
+    if not entries:
+        raise ApiError(409, PRECONS_MISSING)
+    return entries
+
+
 def plan_pods(body):
     data = _parse_body(body, MAX_EDIT_BODY)
-    selections = _selections(data.get("decks"))
+    selections = _selections(data.get("decks"), "lineup" in data)
     _visible_first(selections)
-    _keys(data, ("decks",), ("profile", "games"))
+    _keys(data, ("decks",), ("profile", "games", "lineup"))
     forge = forge_runs._forge_module()
     pods, seen = _pods(forge), forge_runs._Seen()
-    entries, games = _entries(forge, selections), _games(data.get("games"))
+    precons = _precons(data)
+    entries, games = _entries(forge, selections, precons), _games(data.get("games"))
     plan, _ = _plan(pods, entries, games)
-    return _answer(forge, pods, seen, plan["key"], plan)
+    return _answer(forge, pods, seen, plan["key"], plan, precons)
 
 
 def run_pods(body):
     data = _parse_body(body, MAX_EDIT_BODY)
     profile = _writer(data)
-    selections = _selections(data.get("decks"))
+    selections = _selections(data.get("decks"), "lineup" in data)
     _visible_first(selections, profile)
     guard.require_start(profile)
-    _keys(data, ("profile", "decks", "expected_key"), ("games",))
+    _keys(data, ("profile", "decks", "expected_key"), ("games", "lineup"))
     forge = forge_runs._forge_module()
     pods, seen = _pods(forge), forge_runs._Seen(profile)
-    entries, games = _entries(forge, selections), _games(data.get("games"))
+    precons = _precons(data)
+    entries, games = _entries(forge, selections, precons), _games(data.get("games"))
     plan, eng = _plan(pods, entries, games)
     if _key(data["expected_key"]) != plan["key"]:
         raise ApiError(409, CHANGED)
@@ -258,7 +302,7 @@ def run_pods(body):
         run_recovery.submit(forge, "pods", run, profile, data, "pods:" + run.key, rerun=True)
     except jobs.Busy as error:
         raise ApiError(503, forge_runs.MATCHUP_STOPPING if error.stopping else BUSY) from None
-    return _answer(forge, pods, seen, run.key, plan)
+    return _answer(forge, pods, seen, run.key, plan, precons)
 
 
 def stop_pods(body):

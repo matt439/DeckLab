@@ -47,6 +47,7 @@ TABLES = [
     ("audit.change_set", ("id",)),
     ("public.wishlist_entry", ("profile_id", "position")),
     ("public.upgrade_checklist", ("profile_id",)),
+    ("public.deck_upgrade_checklist", ("profile_id", "deck_id")),
     ("public.profile_setting", ("profile_id", "key")),
     ("public.simulation_mode", ("id",)),
     ("public.play_record", ("kind", "id")),
@@ -89,13 +90,13 @@ INVENTORY_TABLES = {name for name, _ in TABLES[TABLES.index(("public.inventory_r
 # Inventory tables a later migration adds (0020's dice_counter). Without one the magic folder is
 # still written (the snapshot reads its rows as none); only its CSV is skipped.
 LATER_INVENTORY_TABLES = {"public.dice_counter", "public.card_loan"}
-# Tables a database not yet migrated may lack (0003, 0004, 0006, 0010-0013, 0017, 0020-0022, 0028-0029).
+# Tables a database not yet migrated may lack (0003, 0004, 0006, 0010-0013, 0017, 0020-0022, 0028-0030).
 # Until it's migrated they're skipped, a CSV already written for one is kept and the wishlists
 # (or magic) folder is left as it is (without 0006 no deck file is exported; a missing table of
 # LATER_INVENTORY_TABLES doesn't hold magic back), so the nightly export still works between
 # updating the code and running migrate.
-UNTIL_MIGRATED = {"public.wishlist_entry", "public.upgrade_checklist", "public.profile_setting", "public.simulation_mode",
-                  "public.play_record", "public.packing_tick", "public.commander_night", "public.visibility",
+UNTIL_MIGRATED = {"public.wishlist_entry", "public.upgrade_checklist", "public.deck_upgrade_checklist",
+                  "public.profile_setting", "public.simulation_mode", "public.play_record", "public.packing_tick", "public.commander_night", "public.visibility",
                   "public.space_departure", "public.field_policy", "public.shop_postage",
                   "public.pricing_setting", "public.space_storage"} | INVENTORY_TABLES | DECK_TABLES
 MAGIC = "magic"                     # the export repo's folder of inventory files
@@ -113,7 +114,8 @@ git's history shows what changed between them.
   in the format the TradingCardCollection repo's `magic/wishlists/<profile>.json` files had:
   `{"version": 1, "entries": [...]}`, the cards in list order, `set` and `number` empty for
   no particular printing.
-- `tables/public.upgrade_checklist.csv` holds each profile's saved deck upgrade checklist and revision.
+- `tables/public.upgrade_checklist.csv` holds each profile's standalone upgrade checklist and revision.
+  `tables/public.deck_upgrade_checklist.csv` holds saved-deck checklists and revisions by profile and deck.
 - `magic/`: the inventory (collections, tokens, raw imports, products, orders, the watchlist)
   as the files the TradingCardCollection repo's `magic/` folder held before the database,
   byte for byte in their formats: `collection.csv`, `tokens.csv`, `watchlist.csv`,

@@ -1,6 +1,6 @@
 """Intrinsic list-only Compare sides: no collection, kit, simulation or state-store reads."""
-from decklab.lib import decks, precons
-from . import deck_aliases
+from decklab.lib import decks, precons, spaces
+from . import deck_aliases, guard
 from .card_lookup import _lines_json
 from .carddata import _require_cards
 from .common import ApiError, _public
@@ -39,11 +39,16 @@ def current_view(deck_id=None, version="target"):
         raise
     answer = snapshot(sections, summary, version)
     answer["versions"] = list(summary.get("versions") or [version])
+    viewer = guard.viewer()
+    space, kind, _slug = spaces.split_deck_id(summary["id"])
+    if (version == "target" and kind == "commander" and viewer is not None
+            and (viewer.get("space") or spaces.HOME) == space and guard.allowed(viewer, "deck.edit", summary)):
+        answer["may_upgrade_precon"] = True
     return deck_aliases.metadata(answer, requested, summary["id"])
 
 
-def precon_view(file=None):
-    """Public MTGJSON list, explicitly picked; it never creates or searches for a household deck."""
+def published_precon(file):
+    """Read the selected published precon as deck sections, without looking up any saved deck."""
     from .precons import _entry
     _require_cards()
     entry = _entry(file)
@@ -61,6 +66,12 @@ def precon_view(file=None):
     for line in read["lines"]:
         section = "Deck" if kind != "commander" and line["section"] == "Commander" else line["section"]
         sections.setdefault(section, []).append(decks.DeckLine(line["count"], line["name"], line["set"], line["number"], line["finish"]))
+    return entry, kind, sections
+
+
+def precon_view(file=None):
+    """Public MTGJSON list, explicitly picked; it never creates or searches for a household deck."""
+    entry, kind, sections = published_precon(file)
     return snapshot(sections, {"id": None, "title": entry["name"], "kind": kind,
                               "format": "Commander" if kind == "commander" else "Published precon", "colors": None},
                     comparison={"kind": "precon", "file": entry["file"], "label": f"Published precon: {entry['name']}",

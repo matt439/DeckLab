@@ -84,6 +84,7 @@ function drawSwapFinder(body, data, answer) {
 function openDeckSwapSheet(data, entry, answer) {
   const s = data.summary;
   const editable = canEditDeck(s);
+  const canCheck = deckUpgradeChecklistOffered(data);
   // Only when the Play-now list is short of it too: else the editor would have nothing to swap.
   const out = !(entry.list_missing > 0);
   const sheet = openSheet({ title: `Stand-ins for ${entry.name}`, side: true });
@@ -94,7 +95,13 @@ function openDeckSwapSheet(data, entry, answer) {
     el("ul", { class: "swap-list" }, entry.candidates.map((c) => el("li", { class: "swap-row" },
       cardRow(c.card, { name: c.name, meta: swapCandidateMeta(c), viewerGroup: "deck-swaps",
         chips: !c.basic && !c.here ? [status("info", "On the way")] : [], caption: `${c.name} for ${entry.name}` }),
-      el("p", { class: "sub swap-note", text: c.note.text })))),
+      el("p", { class: "sub swap-note", text: c.note.text }),
+      canCheck ? el("button", { type: "button", class: "btn btn-quiet", text: "Add one to checklist",
+        "aria-label": `Add one copy of ${c.name} to the checklist`, onclick: event => {
+          if (!event.currentTarget.isConnected || sheet.closed || deckScreen?.data !== data) return;
+          sheet.close();
+          openDeckUpgradeChecklist(data, [c.name]);
+        } }) : null))),
     entry.more ? el("p", { class: "sub", text: `${plural(entry.more, "more card fits", "more cards fit")}; these are the closest.` }) : null]);
   if (editable && !out) {
     sheet.foot.append(el("a", { class: "btn", href: `${editHref(s.id, "owned")}&swap=${encodeURIComponent(entry.name)}`,

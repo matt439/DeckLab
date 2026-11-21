@@ -63,6 +63,7 @@ class ScopeTests(unittest.TestCase):
         self.assertEqual(set(scope.FILTERS) | scope.EXCLUDED, {name for name, _ in export.TABLES})
         self.assertFalse(set(scope.FILTERS) & scope.EXCLUDED)
         self.assertIn("public.upgrade_checklist", scope.EXCLUDED)
+        self.assertIn("public.deck_upgrade_checklist", scope.EXCLUDED)
         with self.assertRaises(ValueError):
             scope.included("public.future_private_table")
         for name in ("public.profile_email", "public.wishlist_entry", "audit.change_set"):
