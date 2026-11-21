@@ -92,6 +92,9 @@ class RemovalApplyTests(db_support.DbTestCase):
         with self.connect("owner") as c:      # a draft kept for later (E2-S16): not audited, so no change set
             c.execute("insert into deck_draft (profile_id, deck_id, version, revision, saved_at, content) "
                       "values ('sample', 'sample/casual/own', 'target', 1, now(), '{\"v\": 1}')")
+            c.execute("insert into deck_upgrade_checklist (profile_id, deck_id, revision, title, rows) "
+                      "values ('sample', 'sample/casual/own', 1, 'Private list', '[]'), "
+                      "('other', 'other/casual/keep', 1, 'Other private list', '[]')")
             c.execute("delete from new_deck_draft")       # migration 0019's: no deck to cascade from
             for space in ("sample", "other"):
                 c.execute("insert into new_deck_draft (profile_id, space_id, source, revision, saved_at, content) "
@@ -137,6 +140,8 @@ class RemovalApplyTests(db_support.DbTestCase):
             self.assertEqual(c.execute("select count(*) from space where id='sample'").fetchone()[0], 1)
             self.assertEqual(c.execute("select count(*) from new_deck_draft where space_id='sample'").fetchone()[0], 1)
             self.assertEqual(c.execute("select count(*) from upgrade_checklist where profile_id='sample'").fetchone()[0], 1)
+            self.assertEqual(c.execute("select count(*) from deck_upgrade_checklist where profile_id='sample'")
+                             .fetchone()[0], 1)
             self.assertEqual(c.execute("select count(*) from audit.change_set").fetchone()[0], self.changes_before)
         self.assertEqual(self.pending(), [])
         for relative, raw in self.originals.items():
@@ -159,6 +164,8 @@ class RemovalApplyTests(db_support.DbTestCase):
             self.assertEqual(c.execute("select count(*) from deck_draft").fetchone()[0], 0)
             self.assertEqual(c.execute("select space_id from new_deck_draft").fetchall(), [("other",)])
             self.assertEqual(c.execute("select profile_id from upgrade_checklist").fetchall(), [("other",)])
+            self.assertEqual(c.execute("select profile_id, deck_id from deck_upgrade_checklist").fetchall(),
+                             [("other", "other/casual/keep")])
             revision, updated, by, ids, content = c.execute("select revision,updated_on,updated_by,deck_ids,content "
                                                            "from play_record where id=%s", ("a" * 32,)).fetchone()
             self.assertEqual(revision, 2)

@@ -65,6 +65,7 @@ function compareDraw(sides) {
         anchor ? { label: "Compare with another deck…", onclick: () => openCompareChooser(anchor) } : null] }),
     el("div", { class: "compare-heads" }, sides.map((d, i) => compareHead(d, labels[i], sameDeck, sides, i))),
     warningsBox(compareNotes(sides, labels), "About these stats"),
+    typeof preconUpgradePanel === "function" ? preconUpgradePanel(sides) : null,
     compareBrief(sides, labels),
     compareDeltaPart(sides, labels),
     compareCurves(sides, labels),

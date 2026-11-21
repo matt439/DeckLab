@@ -458,6 +458,9 @@ button.deck-row { cursor: pointer; }
 .upgrade-checklist { display: grid; gap: var(--s-3); }
 .upgrade-checklist > :empty { display: none; }
 .upgrade-checklist > p, .upgrade-checklist-rows { margin: 0; }
+.upgrade-checklist-picker { min-width: 0; margin: 0; }
+.upgrade-checklist-picker .field { margin-block-end: var(--s-2); }
+.upgrade-checklist-picker > :empty { display: none; }
 .upgrade-checklist-rows { padding: 0; list-style: none; }
 .upgrade-checklist-rows li {
   display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--s-2);

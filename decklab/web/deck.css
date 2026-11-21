@@ -456,6 +456,10 @@ table.data tfoot .total-cost { font-weight: var(--fw-semibold); text-align: left
 .swap-row > .card-row { grid-column: 1; min-width: 0; }
 .swap-row > .swap-note { grid-column: 1; margin: 0; overflow-wrap: anywhere; }
 .swap-row > .swap-use { grid-column: 2; grid-row: 1 / span 2; min-height: 44px; }
+.play-now-row { padding-block: var(--s-2); border-top: 1px solid var(--border); overflow-wrap: anywhere; }
+.play-now-row > p { margin-block: 0 var(--s-2); }
+.play-now-row > label { display: inline-flex; align-items: center; min-height: var(--tap); gap: var(--s-2); }
+.play-now-row input { width: 18px; height: 18px; }
 @media (max-width: 599px) {
   /* A phone: "Use n" on its own line under the card and its note. */
   .swap-row { grid-template-columns: minmax(0, 1fr); }

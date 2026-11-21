@@ -7,6 +7,7 @@ from unittest import mock
 from decklab.lib import access, api, decks, jobs
 from decklab.lib.api import forge_pods, forge_runs, run_recovery as recovery
 from decklab.lib.forge import run_journal
+from decklab.lib.gauntlet import pod_lineups
 from decklab.tests.test_api import ApiTestCase, _write
 from decklab.tests.test_field_api import ELVES
 from decklab.tests.test_forge_pods_api import DECK, IDS, FakePods, body, seats
@@ -56,6 +57,15 @@ class PodRecoveryTests(ApiTestCase):
         self.sides.reverse()
         incoming["games"] = 64
         self.assertEqual(result, expected, "caller mutation cannot rewrite a captured recovery request")
+
+    def test_precon_request_keeps_the_lineup_and_binds_all_four_seat_inputs(self):
+        self.run.lineup = pod_lineups.LINEUP
+        for index, entry in enumerate(self.sides[1:], 1):
+            entry.update(id=f"gauntlet:precon/Fixture_{index}", precon_source="mtgjson")
+        prepared = self.prepare()
+        self.assertEqual(prepared["request"], {"profile": "matt", "decks": seats([ELVES]),
+                                              "lineup": pod_lineups.LINEUP, "games": 16, "expected_key": self.key})
+        self.assertEqual({ref["id"] for ref in prepared["manifest"]["refs"]}, {side["id"] for side in self.sides})
 
     def test_checkpoint_remaining_changes_work_only_and_manifest_binds_all_four_lists(self):
         partial = self.prepare()

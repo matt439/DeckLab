@@ -1,4 +1,4 @@
-/* Four-player Commander simulations (E9-S11, E9-S21, E9-S22). A reviewed pod is separate from
+/* Four-player Commander simulations (E9-S11, E9-S21, E9-S22, E3-S55). A reviewed pod is separate from
  * head-to-head tests and the Game log's physical games. No request starts a run except Start.
  * Loaded with the matchup scripts; every response belongs to one route, profile and connected page. */
 "use strict";
@@ -15,20 +15,25 @@ function fpHere(ctx) {
 
 function fpChoiceKey(deck) { return `${deck.id}|${deck.version || "target"}`; }
 function fpPlaying(answer) { return ["queued", "running"].includes(answer?.status); }
-function fpSignature(ctx) { return JSON.stringify({ decks: ctx.selected, games: ctx.games }); }
+function fpSignature(ctx) { return JSON.stringify({ lineup: ctx.lineup, decks: fpSelected(ctx), games: ctx.games }); }
+function fpSelected(ctx) { return ctx.lineup ? ctx.selected.slice(0, 1) : ctx.selected; }
 
 function fpChosen(ctx) {
-  return ctx.selected.map(value => (ctx.answer?.choices || []).find(deck => fpChoiceKey(deck) === value));
+  return fpSelected(ctx).map(value => (ctx.answer?.choices || []).find(deck => fpChoiceKey(deck) === value));
 }
+function fpLineup(ctx) { return (ctx.answer?.lineups || []).find(lineup => lineup.id === ctx.lineup); }
 
 /** Only declared target brackets qualify the choices; a detected minimum cannot stand in for one. */
 function fpChoiceProblem(ctx) {
   const decks = fpChosen(ctx);
-  if (decks.length !== 4 || decks.some(deck => !deck)) return "Choose four Commander decks.";
-  if (new Set(decks.map(deck => sameDeckId(deck.id))).size !== 4) return "Choose four different decks.";
-  const brackets = decks.map(deck => deck.target_bracket);
+  const lineup = fpLineup(ctx);
+  if (ctx.lineup && !lineup) return "This published precon lineup is unavailable. Choose another lineup.";
+  if (decks.some(deck => !deck)) return ctx.lineup ? "Choose a saved Commander deck." : "Choose four Commander decks.";
+  if (!lineup && new Set(decks.map(deck => sameDeckId(deck.id))).size !== 4) return "Choose four different decks.";
+  const brackets = [...decks.map(deck => deck.target_bracket), ...(lineup ? [lineup.target_bracket] : [])];
   if (brackets.some(value => !Number.isInteger(value) || value < 1 || value > 5)) {
-    return "Set a target bracket on each chosen deck before checking this pod.";
+    return lineup ? "Set a target bracket on your saved deck before checking this pod."
+      : "Set a target bracket on each chosen deck before checking this pod.";
   }
   if (Math.max(...brackets) - Math.min(...brackets) > 1) return "Choose decks whose target brackets are at most one apart.";
   return null;
@@ -42,7 +47,7 @@ function fpStartProblem(ctx) {
   if (ctx.uncertain) return "Refresh the run before starting again; the PC did not confirm the last request.";
   if (fpChoiceProblem(ctx)) return fpChoiceProblem(ctx);
   if (!ctx.plan || ctx.plan.signature !== fpSignature(ctx)) return "Check this pod before starting.";
-  if (ctx.plan.remaining === 0) return "This sample already has all its planned games. Choose another run size or different decks, then check again.";
+  if (ctx.plan.remaining === 0) return "This sample already has all its planned games. Change the run size or deck choices, then check again.";
   return null;
 }
 
@@ -53,6 +58,7 @@ function fpControls(ctx) {
   ctx.start.setAttribute("aria-describedby", "fp-start-reason");
   ctx.reason.textContent = fpStartProblem(ctx) || "Seats rotate between batches. Start plays only this reviewed pod.";
   ctx.selectedControls.forEach(control => { control.disabled = !!ctx.busy; });
+  ctx.lineupControl.disabled = !!ctx.busy;
   ctx.gamesControl.disabled = !!ctx.busy;
   if (!ctx.plan) clear(ctx.review);
 }
@@ -64,6 +70,17 @@ function fpInvalidate(ctx) {
   fpControls(ctx);
 }
 
+function fpPaintLineup(ctx) {
+  const precons = !!ctx.lineup;
+  ctx.firstDeckLabel.textContent = precons ? "Saved Commander deck" : "Deck 1";
+  ctx.deckFields.slice(1).forEach(field => { field.hidden = precons; });
+  ctx.lineupHelp.textContent = precons
+    ? "The saved deck and the precons must be within one target bracket."
+    : "Choose four different Commander decks you can see. Their declared target brackets must be at most one apart. Targets are aims, not a guarantee of equal power.";
+  const lineup = fpLineup(ctx);
+  add(clear(ctx.lineupInfo), [lineup ? el("ul", {}, lineup.precons.map(fpLineupDeck)) : null]);
+}
+
 function fpForm(ctx) {
   const selectDeck = index => {
     const select = el("select", { class: "fp-deck", id: `fp-deck-${index}`, onchange: () => {
@@ -72,8 +89,19 @@ function fpForm(ctx) {
       fpInvalidate(ctx);
     } });
     ctx.selectedControls.push(select);
-    return el("label", { class: "fp-field", for: `fp-deck-${index}` }, `Deck ${index + 1}`, select);
+    const label = el("span", { text: `Deck ${index + 1}` });
+    if (index === 0) ctx.firstDeckLabel = label;
+    return el("label", { class: "fp-field", for: `fp-deck-${index}` }, label, select);
   };
+  ctx.lineupControl = el("select", { id: "fp-lineup", onchange: () => {
+    if (!fpHere(ctx) || ctx.busy) return;
+    ctx.lineup = ctx.lineupControl.value;
+    fpPaintLineup(ctx);
+    fpInvalidate(ctx);
+  } });
+  ctx.lineupHelp = el("p", { class: "sub" });
+  ctx.lineupInfo = el("div", { class: "fp-lineup-info" });
+  ctx.deckFields = [0, 1, 2, 3].map(selectDeck);
   ctx.gamesControl = el("select", { class: "fp-games", id: "fp-games", onchange: () => {
     if (!fpHere(ctx) || ctx.busy) return;
     ctx.games = Number(ctx.gamesControl.value);
@@ -87,8 +115,9 @@ function fpForm(ctx) {
   ctx.message = el("div", { class: "fp-message", role: "status" });
   return el("section", { class: "box fp-chooser", "aria-labelledby": "fp-choose-heading" },
     el("h2", { id: "fp-choose-heading", text: "Choose the pod" }),
-    el("p", { class: "sub", text: "Choose four different Commander decks you can see. Their declared target brackets must be at most one apart. Targets are aims, not a guarantee of equal power." }),
-    el("div", { class: "fp-choices" }, [0, 1, 2, 3].map(selectDeck)),
+    el("label", { class: "fp-field", for: "fp-lineup" }, "Lineup", ctx.lineupControl),
+    ctx.lineupHelp, ctx.lineupInfo,
+    el("div", { class: "fp-choices" }, ctx.deckFields),
     el("label", { class: "fp-field", for: "fp-games" }, "How many games?", ctx.gamesControl),
     el("p", { class: "sub", text: "Four-player games can take considerably longer than a head-to-head test. The PC stays awake while they play." }),
     el("div", { class: "actions" }, ctx.check), ctx.review,
@@ -106,7 +135,8 @@ async function showForgePods(params, token) {
   clear($("#main")).append(root);
   const ctx = { root, token, profile: state.profile?.id, address: location.hash,
     key: params.get("key") || null, answer: null, selected: ["", "", "", ""], games: FP_GAMES[0],
-    selectedControls: [], plan: null, busy: false, uncertain: false, initialized: false, watcher: null, choicesSignature: null };
+    selectedControls: [], lineup: "", plan: null, busy: false, uncertain: false, initialized: false, watcher: null,
+    choicesSignature: null, lineupsSignature: null };
   add(root, [crumb("#/matchups", "Testing"), pageHead({ title: "Four-player pods",
     description: "Test four Commander decks together with Forge's AI." }),
     el("p", { class: "note", text: "These are simulated pod games, separate from the Game log and all head-to-head results. Pod games do not replay exactly: read their win shares as statistics only." })]);
@@ -152,6 +182,8 @@ async function fpRead(ctx) {
     clear(ctx.content).append(loadFailed("Four-player pods", error, () => fpRead(ctx)));
     ctx.initialized = false;
     ctx.selectedControls = [];
+    ctx.choicesSignature = null;
+    ctx.lineupsSignature = null;
   }
 }
 
@@ -189,7 +221,25 @@ function fpAnswer(ctx, answer) {
     ctx.result = el("div", { class: "fp-result" });
     ctx.history = el("div", { class: "fp-history" });
     clear(ctx.content).append(ctx.live, ctx.result, ctx.form, ctx.history);
-    if (answer.sides?.length === 4) ctx.selected = answer.sides.map(fpChoiceKey);
+    if (answer.sides?.length === 4) {
+      ctx.lineup = answer.lineup || "";
+      ctx.selected = ctx.lineup ? [fpChoiceKey(answer.sides[0]), "", "", ""] : answer.sides.map(fpChoiceKey);
+    }
+  }
+  const lineups = answer.lineups || [];
+  const lineupsSignature = JSON.stringify(lineups);
+  if (lineupsSignature !== ctx.lineupsSignature) {
+    ctx.lineupsSignature = lineupsSignature;
+    if (ctx.lineup) ctx.plan = null;
+    clear(ctx.lineupControl).append(el("option", { value: "", text: "Four saved Commander decks" }),
+      ...lineups.map(lineup => el("option", { value: lineup.id, text: `Published precons · ${lineup.title}` })));
+    if (ctx.lineup && !fpLineup(ctx)) {
+      ctx.lineupControl.append(el("option", { value: ctx.lineup, disabled: true, text: "Saved lineup unavailable" }));
+    } else if (!lineups.length) {
+      ctx.lineupControl.append(el("option", { disabled: true, text: "Published precon lineup unavailable" }));
+    }
+    ctx.lineupControl.value = ctx.lineup;
+    fpPaintLineup(ctx);
   }
   const choices = answer.choices || [];
   const signature = JSON.stringify(choices);
@@ -217,7 +267,21 @@ function fpAnswer(ctx, answer) {
 }
 
 function fpBody(ctx) {
-  return { decks: fpChosen(ctx).map(deck => ({ id: deck.id, version: deck.version || "target" })), games: ctx.games };
+  const body = { decks: fpChosen(ctx).map(deck => ({ id: deck.id, version: deck.version || "target" })), games: ctx.games };
+  if (ctx.lineup) body.lineup = ctx.lineup;
+  return body;
+}
+
+function fpPreconSource(deck) {
+  if (!deck.source_name) return null;
+  if (!/^https:\/\//.test(deck.source_url || "")) return deck.source_name;
+  return el("a", { href: deck.source_url, target: "_blank", rel: "noopener noreferrer",
+    text: `${deck.source_name} list`, "aria-label": `${deck.source_name} list for ${deck.title}` });
+}
+
+function fpLineupDeck(deck) {
+  const source = fpPreconSource(deck);
+  return el("li", {}, deck.title, source ? [" · ", source] : null);
 }
 
 function fpWriteFailure(ctx, error, uncertain = false) {
@@ -231,8 +295,10 @@ function fpWriteFailure(ctx, error, uncertain = false) {
     ctx.answer = null;
     ctx.initialized = false;
     ctx.selected = ["", "", "", ""];
+    ctx.lineup = "";
     ctx.selectedControls = [];
     ctx.choicesSignature = null;
+    ctx.lineupsSignature = null;
     clear(ctx.content).append(loadFailed("This pod", error, () => fpRead(ctx)));
     return;
   }
@@ -262,10 +328,15 @@ async function fpCheck(ctx) {
     ctx.plan = { key: answer.key, signature, remaining };
     clear(ctx.message);
     clear(ctx.review).append(el("h3", { text: remaining === 0 ? "This sample is complete" : "Ready to start" }),
-      el("ul", {}, (answer.sides || fpChosen(ctx)).map(deck => el("li", { text: deck.title }))),
+      el("ul", {}, (answer.sides || fpChosen(ctx)).map(fpLineupDeck)),
       el("p", { text: remaining === 0 ? `All ${ctx.games} planned pod games are already saved. No new games are needed.`
         : completed > 0 ? `${completed} of ${ctx.games} planned pod games are already saved. Start resumes the ${remaining} remaining games, keeping completed games and rotating seats between batches.`
         : `${ctx.games} pod games, with seats rotated between batches. No games have started.` }));
+    const estimate = answer.plan?.estimated_seconds;
+    if (remaining > 0 && fpFinite(estimate) && estimate > 0) {
+      ctx.review.append(el("p", { class: "sub",
+        text: `About ${durationWords(estimate)} for ${plural(remaining, "remaining game")} with one Forge worker. Timing varies.` }));
+    }
   } catch (error) {
     if (fpHere(ctx)) fpWriteFailure(ctx, error);
   } finally {
@@ -346,6 +417,18 @@ async function fpStop(ctx, key) {
 
 function fpFinite(value) { return typeof value === "number" && Number.isFinite(value); }
 
+function fpSeatBreakdown(deck, seats) {
+  if (!deck || !seats) return null;
+  return el("section", { class: "fp-seat-results", "aria-labelledby": "fp-seats-heading" },
+    el("h3", { id: "fp-seats-heading", text: `${deck.title} by seat` }),
+    el("ul", {}, [1, 2, 3, 4].map(seat => {
+      const row = seats[seat];
+      const words = row?.pods ? `${plural(row.wins, "win")} in ${plural(row.pods, "counted pod")}`
+        : "no counted pod games";
+      return el("li", { text: metaWords(`Seat ${seat}`, words) });
+    })));
+}
+
 /** A pod uses the whole 0–100% range; the head-to-head bar's 50% centre would be misleading here. */
 function fpResultPart(answer) {
   const result = answer?.result;
@@ -381,8 +464,10 @@ function fpResultPart(answer) {
       const validRange = Array.isArray(range) && range.length === 2 && range.every(fpFinite) &&
         range[0] >= 0 && range[0] <= range[1] && range[1] <= 1;
       const known = validRate && validRange && counted > 0;
+      const source = fpPreconSource(side);
       return el("li", { class: "fp-share" },
         el("h3", { text: side.title || row.title || `Deck ${index + 1}` }),
+        source ? el("p", { class: "sub" }, source) : null,
         winRateFigure(known ? { value: rate, low: range[0], high: range[1] } : null,
           { size: "hero", what: "Pod win share" }),
         el("p", { class: "sub", text: Number.isInteger(row.wins) && row.wins >= 0
@@ -391,6 +476,7 @@ function fpResultPart(answer) {
       Number.isInteger(summary.draws) ? `${plural(summary.draws, "draw")} recorded` : null,
       Number.isInteger(summary.clock_stops) ? `${plural(summary.clock_stops, "clock stop")} excluded` : null,
       Number.isInteger(summary.failed_batches) ? `${plural(summary.failed_batches, "failed batch", "failed batches")}` : null) }));
+  if (answer.lineup || result.lineup) add(section, [fpSeatBreakdown(sides[0], byDeck?.[sides[0]?.id]?.by_seat)]);
   if (result.note) section.append(el("p", { class: "sub", text: result.note }));
   return section;
 }

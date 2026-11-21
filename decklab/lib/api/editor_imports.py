@@ -8,12 +8,8 @@ from .common import ApiError, _keys
 from .library import _find_summary, _load_pool, check_deck_id
 
 
-def availability(sections, context):
-    """Use only the visible target deck's space, or an explicitly readable new space.
-
-    Results keep the existing pool meaning: by card name, independent of printing.
-    The normal inventory projection redacts hidden holders and home's deliveries.
-    """
+def context_scope(context):
+    """The visible target deck's space, or an explicitly readable new space."""
     if not isinstance(context, dict):
         raise ApiError(400, "The import review needs its editor context")
     _keys(context, (), ("id", "space"))
@@ -27,6 +23,12 @@ def availability(sections, context):
     else:
         space = space_param(context.get("space"))
         guard.require_sees_inventory(space)
+    return deck_id, space
+
+
+def availability(sections, context):
+    """By card name, with the ordinary inventory projection and redaction."""
+    deck_id, space = context_scope(context)
     if not guard.sees_inventory(space):
         return {"marks": False, "availability": None, "availability_error": None}
     with common.state_errors():

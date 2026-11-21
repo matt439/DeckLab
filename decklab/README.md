@@ -186,7 +186,9 @@ Every card picture or card name opens the **card viewer** over the list it's in,
 
 #### Check cards for a deck
 
-Open **Decks → Check cards for a deck** when you have a few upgrades in mind and want to know what to pick up at the shop. You can start with an empty library and collection, even while Deck Lab downloads its card catalogue for the first time. Each signed-in profile has one private checklist.
+Open **Decks → Check cards for a deck** when you have a few upgrades in mind and want to know what to pick up at the shop. You can start with an empty library and collection, even while Deck Lab downloads its card catalogue for the first time. Each signed-in profile has one standalone private checklist.
+
+For a saved deck in your space, open **Cards → Card checklist**. Choose a card and quantity from the displayed list, or add a named card you are considering. From an **Owned stand-ins** suggestion, **Add one to checklist** starts with that copy ready to check. Save before heading out, then return to the same deck to mark any purchases **Set aside**. Each profile keeps its own checklist for that deck, even when two people share the deck's space.
 
 1. Optionally enter a deck name. Paste the card names, one copy per line, and choose **Add cards**. Repeat a name if you want several copies. Each copy starts at **Check at home**.
 2. As you look through your cards, mark the copies you've physically pulled **Set aside**. Mark a copy **Buy** when you decide to get it. You can change each choice later.

@@ -29,6 +29,57 @@ function replacedLists(sections) {
   return mergedLists({}, sections);
 }
 
+function openDeckLinkImport(fallbackText = "") {
+  const ed = editor;
+  if (!editorKeyboardCurrent(ed) || ed.saving || ed.asking || ed.leaving) return null;
+  const sheet = openSheet("Import a deck link", {wide: true});
+  const owner = editorImportOwner(ed, sheet);
+  const input = el("input", {id: "deck-import-url", type: "url", maxlength: "500", autocomplete: "off",
+    spellcheck: "false", autocapitalize: "off"});
+  const result = el("p", {class: "form-error", "aria-live": "polite"});
+  const review = el("button", {type: "submit", class: "btn btn-primary", text: "Review the deck"});
+  const paste = el("button", {type: "button", class: "btn", text: "Paste a list", onclick: event => {
+    if (!editorImportHere(owner, event.currentTarget)) return;
+    sheet.close();
+    openPaste(fallbackText ? {text: fallbackText} : null);
+  }});
+  const form = el("form", {id: "deck-import-link", novalidate: true},
+    el("label", {class: "field", for: input.id}, el("span", {text: "Public Moxfield or Archidekt deck URL"}), input),
+    result);
+  let sequence = 0;
+  input.addEventListener("input", () => {
+    sequence += 1;
+    result.textContent = "";
+  });
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!editorImportHere(owner, review)) return;
+    const link = input.value.trim(), request = ++sequence;
+    if (!link) {
+      result.textContent = "Paste a link to the deck first.";
+      return;
+    }
+    result.textContent = "";
+    busy(review, "Reading deck…");
+    try {
+      const answer = await apiWrite("/api/decklist/parse", {link, context: editorImportContext(ed)});
+      if (!editorImportHere(owner) || sequence !== request) return;
+      sheet.close();
+      openPaste({text: answer.source_text, title: "Review imported list", answer});
+    } catch (error) {
+      if (!(error instanceof ApiError)) throw error;
+      if (editorImportHere(owner) && sequence === request) result.textContent = error.message;
+    } finally {
+      if (review.isConnected) unbusy(review);
+    }
+  });
+  review.setAttribute("form", "deck-import-link");
+  sheet.body.append(form);
+  sheet.foot.append(el("button", {type: "button", class: "btn", text: "Cancel", onclick: () => sheet.close()}), paste, review);
+  input.focus();
+  return sheet;
+}
+
 function openPaste(seed = null) {
   const ed = editor;
   if (!editorKeyboardCurrent(ed) || ed.saving || ed.asking || ed.leaving) return null;
@@ -43,7 +94,14 @@ function openPaste(seed = null) {
   let mode = "add";
   const has = Object.values(ed.lists).some((lines) => lines.length);
   sheet.body.append(el("label", { class: "field", for: "paste-text" },
-    el("span", { text: "Text from Arena, MTGO, Moxfield or ManaBox" }), area), choiceHost, result);
+    el("span", { text: seeded?.answer ? "Imported list text" : "Text from Arena, MTGO, Moxfield or ManaBox" }), area));
+  if (!seeded) sheet.body.append(el("button", {type: "button", class: "btn btn-quiet", text: "Import a deck link…",
+    onclick: event => {
+      if (!editorImportHere(owner, event.currentTarget)) return;
+      sheet.close();
+      openDeckLinkImport(area.value);
+    }}));
+  sheet.body.append(choiceHost, result);
   const checkButton = el("button", { type: "button", class: "btn btn-primary", text: "Check the list" });
   const applyButton = el("button", { type: "button", class: "btn btn-primary", hidden: true });
   sheet.foot.append(el("button", { type: "button", class: "btn", text: "Cancel", onclick: () => sheet.close() }),
@@ -68,9 +126,7 @@ function openPaste(seed = null) {
     try {
       const answer = await apiWrite("/api/decklist/parse", { text: written, context: editorImportContext(ed) });
       if (!editorImportHere(owner) || request !== parseSequence || written !== area.value) return;
-      parsed = answer; choices = editorImportChoices(ed, parsed.sections, parsed);
-      drawEditorImportChoices(choiceHost, choices, () => {if (editorImportHere(owner)) drawParsed();});
-      drawParsed();
+      presentParsed(answer);
     } catch (e) {
       if (!(e instanceof ApiError)) throw e;
       if (editorImportHere(owner) && request === parseSequence)
@@ -78,6 +134,13 @@ function openPaste(seed = null) {
     } finally {
       unbusy(checkButton);
     }
+  }
+
+  function presentParsed(answer) {
+    parsed = answer;
+    choices = editorImportChoices(ed, parsed.sections, parsed, !!seeded?.answer);
+    drawEditorImportChoices(choiceHost, choices, () => { if (editorImportHere(owner)) drawParsed(); });
+    drawParsed();
   }
 
   function fixLine(u, name, control) {
@@ -152,7 +215,8 @@ function openPaste(seed = null) {
   });
   if (seeded) area.value = seeded.text;
   area.focus();
-  if (seeded?.check) check();
+  if (seeded?.answer) presentParsed(seeded.answer);
+  else if (seeded?.check) check();
   return sheet;
 }
 
@@ -254,6 +318,8 @@ function startFromPart() {
       ed.tonight && !ed.notice && !isDirty() ? el("button", { type: "button", class: "btn", text: "Review collection draft",
         onclick: event => { if (editor === ed && event.currentTarget.isConnected) openTonightDraft(ed.tonight); } }) : null,
       el("button", { type: "button", class: "btn", text: "Paste a list…", onclick: openPaste }),
+      el("button", { type: "button", class: "btn btn-quiet", text: "Import a deck link…",
+        onclick: event => { if (event.currentTarget.isConnected) openDeckLinkImport(); } }),
       precon ? el("button", { type: "button", class: "btn btn-quiet", text: "A precon…", onclick: openPreconStart }) : null,
       el("button", { type: "button", class: "btn btn-quiet", text: "Another deck…", onclick: openDeckStart })));
 }

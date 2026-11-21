@@ -729,15 +729,15 @@ class Handler(BaseHTTPRequestHandler):
             if len(route) == 3 and route[0] == "profiles" and route[2] == "deck-checklist":
                 from decklab.lib.api import deck_checklist
                 self._allow(*GET, "POST")
-                self._no_query(query)
+                deck_id = self._query(query, ("deck",)).get("deck")
                 if self.command == "POST":
                     # Refuse a different owner before reading the private body. Preserve a supplied
                     # profile so a stale page cannot save its previous viewer's list as the new viewer.
                     deck_checklist.require_owner(route[1])
                     self.check_write()
                     body = self._read_body(api.MAX_EDIT_BODY)
-                    return self._send_json(200, deck_checklist.save(route[1], body))
-                return self._send_json(200, deck_checklist.view(route[1]))
+                    return self._send_json(200, deck_checklist.save(route[1], body, deck_id))
+                return self._send_json(200, deck_checklist.view(route[1], deck_id))
             if route == ["shopping"]:
                 self._allow(*GET)
                 self._no_query(query)

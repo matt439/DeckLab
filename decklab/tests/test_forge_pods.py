@@ -11,6 +11,7 @@ from unittest import mock
 
 from decklab.lib import jobs
 from decklab.lib.forge import common, pods, simjar
+from decklab.lib.gauntlet import pod_lineups
 
 
 def entries():
@@ -91,6 +92,30 @@ class PodPureTests(unittest.TestCase):
         self.assertEqual(first["range"], [0.0945, 0.9055])
         self.assertEqual(nums["by_deck"][chosen[3]["id"]]["wins"], 0)
         self.assertIsNone(pods.summary([], chosen)["by_deck"][chosen[0]["id"]]["range"])
+
+    def test_published_pod_persists_sources_and_counts_the_saved_deck_in_each_rotated_seat(self):
+        chosen = entries()
+        for index, entry in enumerate(chosen[1:], 1):
+            entry.update(id=f"gauntlet:precon/Fixture_{index}", precon_source="mtgjson")
+        found = saved(chosen)
+        for batch in pods.batches(chosen):
+            seat = batch["seats"].index(chosen[0]["id"]) + 1
+            reader = pods.PodReader()
+            reader.feed(win(1, seat))
+            reader.feed("Game Result: Game 2 ended in a Draw! Took 50 ms.\n")
+            reader.feed("Stopping slow match as draw\n")
+            reader.feed(win(3, seat))
+            found["batches"].append(dict(batch, attempt=0, games=reader.games, failed=False, stopped=False))
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            pods._save(found, root)
+            result = pods.load(found["key"], root)
+        self.assertEqual(result["summary"]["clock_stops"], 4)
+        main = result["summary"]["by_deck"][chosen[0]["id"]]
+        self.assertEqual((main["wins"], main["pods"], main["rate"]), (4, 8, 0.5))
+        self.assertEqual(main["by_seat"], {str(seat): pods._win_share(1, 2) for seat in range(1, 5)})
+        self.assertEqual(pod_lineups.public_source(result["sides"][1])["source_name"], "MTGJSON")
+        self.assertNotEqual(pods.key([*chosen[:3], dict(chosen[3], precon_source="forge")]), found["key"])
 
     def test_saved_validator_binds_provenance_and_rejects_extra_completed_games(self):
         chosen = entries()

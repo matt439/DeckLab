@@ -723,6 +723,7 @@ function redrawCards(screen) {
   // A list with no cards (a new idea with an empty decklist): no toolbar, one line and the editor to fill it.
   if (!all.length) {
     clear(screen.cardsBar);
+    add(screen.cardsBar, [deckUpgradeChecklistButton(screen)]);
     add(clear(screen.cardsHost), [emptyBox("This list has no cards yet.")]);
     return;
   }
@@ -735,7 +736,7 @@ function redrawCards(screen) {
       [["list", "List"], ["pictures", "Pictures"]].map(([mode, words]) => el("button", { type: "button",
         "aria-pressed": String(view.mode === mode), text: words,
         onclick: () => { local.set(CARDS_VIEW_KEY, mode); choose({ mode }); } }))),
-    cardsGroupingToggle(data, () => redrawCards(screen))]);
+    cardsGroupingToggle(data, () => redrawCards(screen)), deckUpgradeChecklistButton(screen)]);
   const shown = new Set(), parts = [];
   const filterWords = { missing: "missing", coming: "on the way", held: "in other decks" }[view.filter];
   for (const group of groups) {

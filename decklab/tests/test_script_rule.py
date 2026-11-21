@@ -129,6 +129,17 @@ class HomeListenerTests(unittest.TestCase):
         # The signed-in administrator can neither read the member's private list nor choose the member by header.
         self.assertEqual(self.remote_get(own, "matt@example.com", {access.VIEWER_HEADER: "user1"}), refusal)
 
+    def test_profile_route_selects_the_linked_checklist_on_reads_and_writes(self):
+        standalone = "/api/profiles/user1/deck-checklist"
+        linked = standalone + "?deck=casual%2Fgruul-test"
+        headers = {access.VIEWER_HEADER: "user1"}
+        form = {"expect": 0, "title": "", "rows": [{"name": "Mind Stone", "choice": "buy"}]}
+        self.assertEqual(self.home_get(linked, headers), (200, {"revision": 0, "title": "", "rows": []}))
+        status, saved = self.request(self.home, "POST", linked, json.dumps(form).encode(), {**WRITE, **headers})
+        self.assertEqual(status, 200, saved)
+        self.assertEqual(self.home_get(linked, headers), (200, saved))
+        self.assertEqual(self.home_get(standalone, headers)[1]["rows"], [])
+
     # ------------------------------------------------------------------ who is a script
 
     def test_a_script_on_the_pc_is_answered_as_today(self):

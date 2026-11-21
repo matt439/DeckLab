@@ -96,9 +96,13 @@ def _canonical(kind, request, run, profile):
         if isinstance(run.against, str) and run.against.startswith("gauntlet:"):
             data["against"] = run.against   # retain the exact saved sample, never redraw the standard one
     elif kind == "pods":
+        lineup = getattr(run, "lineup", None)
+        chosen = run.sides[:1] if lineup else run.sides
         data = {"profile": profile["id"], "decks": [{"id": side["id"], "version": side["version"]}
-                                                  for side in run.sides],
+                                                  for side in chosen],
                 "games": run.games, "expected_key": run.key}
+        if lineup:
+            data["lineup"] = lineup
     return data
 
 

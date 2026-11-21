@@ -315,7 +315,7 @@ def _paste_line(line, exact, warnings, counts):
 
 
 def parse_list(body):
-    """POST /api/decklist/parse {"profile", "text"[, "context"]}: "Paste a list".
+    """POST /api/decklist/parse: pasted text or a public deck link from the editor.
 
     Reads Arena/MTGO text the way decks.parse_decklist does (the same line
     parser and section headers, and a card straight after a blank line with
@@ -328,15 +328,25 @@ def parse_list(body):
     adds independently guarded name-level pool marks, with no price lookup."""
     data = _parse_body(body)
     _writer(data)       # a dry run: anyone may paste a list (guard.py)
-    _keys(data, ("profile", "text"), ("context",))
-    text = data["text"]
+    _keys(data, ("profile",), ("text", "link", "context"))
+    if ("text" in data) == ("link" in data):
+        raise ApiError(400, "Use either a pasted list or a public deck link")
+    warnings = []
+    if "link" in data:
+        from decklab.lib import deck_link_import
+        from .editor_imports import context_scope
+
+        context_scope(data.get("context"))
+        text, warnings = deck_link_import.fetch(data["link"])
+    else:
+        text = data["text"]
     if not isinstance(text, str):
         raise ApiError(400, "text must be the pasted list, as a string")
     if len(text.encode("utf-8")) > MAX_PASTE:
         raise ApiError(413, f"A pasted list is limited to {MAX_PASTE // 1024} KB")
     _require_cards()
     counts = _lazy(_pool_counts)       # the pool search and the printing picker pick from too
-    sections, unknown, errors, warnings = {}, [], [], []
+    sections, unknown, errors = {}, [], []
     current, after_blank, orphan, started = None, False, None, False
     for number, raw in enumerate(text.replace("\r\n", "\n").replace("\r", "\n").split("\n"), 1):
         shown = raw.strip()[:200]
@@ -398,6 +408,8 @@ def parse_list(body):
     if "context" in data:
         from .editor_imports import availability
         answer.update(availability(lines, data["context"]))
+    if "link" in data:
+        answer["source_text"] = text    # allow spelling corrections in the normal text review
     return answer
 
 

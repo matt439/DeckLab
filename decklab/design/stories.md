@@ -36,17 +36,17 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | Epic | Stories | Built | Partial | Missing | Not wanted |
 |---|---:|---:|---:|---:|---:|
 | [E1: Find, plan and choose decks](#e1-find-plan-and-choose-decks) | 21 | 21 | 0 | 0 | 0 |
-| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 29 | 24 | 2 | 2 | 1 |
-| [E3: Test a deck](#e3-test-a-deck) | 46 | 42 | 3 | 1 | 0 |
-| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 31 | 26 | 1 | 1 | 3 |
-| [E5: Decide what to buy](#e5-decide-what-to-buy) | 42 | 38 | 0 | 2 | 2 |
+| [E2: Build and edit a deck](#e2-build-and-edit-a-deck) | 29 | 26 | 2 | 0 | 1 |
+| [E3: Test a deck](#e3-test-a-deck) | 46 | 42 | 4 | 0 | 0 |
+| [E4: Get ready, play and learn](#e4-get-ready-play-and-learn) | 31 | 26 | 2 | 0 | 3 |
+| [E5: Decide what to buy](#e5-decide-what-to-buy) | 42 | 38 | 1 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 26 | 24 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 38 | 37 | 1 | 0 | 0 |
 | [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 21 | 0 | 0 | 2 |
-| [E9: Commander nights](#e9-commander-nights) | 35 | 32 | 1 | 1 | 1 |
+| [E9: Commander nights](#e9-commander-nights) | 35 | 32 | 2 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 88 | 70 | 10 | 4 | 4 |
-| **Total** | **417** | **369** | **19** | **12** | **17** |
+| **Total** | **417** | **371** | **23** | **6** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -865,7 +865,7 @@ Evidence: `lib/decks/small_swaps.py`, `lib/api/small_swaps.py`, `web/deck-small-
 
 <a id="e2-s34"></a>
 
-**E2-S34** · Matt · should · M · missing
+**E2-S34** · Matt · should · M · built
 
 As a Commander player waiting on a few cards, I want one draft of the deck I can sleeve tonight, so that I can decide which cards are worth buying after I have played it.
 
@@ -877,9 +877,11 @@ As a Commander player waiting on a few cards, I want one draft of the deck I can
 
 **First slice.** Reuse the existing stand-in and pool checks in one preview for a saved Commander deck. Allocate available copies across the reviewed rows and test held, lent and incoming copies, insufficient stock, locked cards and saving the reviewed draft. Use fixture lists and inventory for the first checks.
 
+**Now (2026-11-21).** Draft from free copies on a saved Commander's Play-now editor reviews shortages together, including unmatched and protected cards. Update preview applies changes to the locks. Use this draft creates one Undo step and leaves the regular check and Save available.
+
 <a id="e2-s35"></a>
 
-**E2-S35** · Space members · could · M · missing
+**E2-S35** · Space members · could · M · built
 
 As a player sent a deck link by a friend, I want to open it in Deck Lab's import review, so that I can see which cards I can use and which I would need to get.
 
@@ -890,6 +892,8 @@ As a player sent a deck link by a friend, I want to open it in Deck Lab's import
 **Gap.** E2-S31 reviews pasted lists and selections from a saved Deck Lab deck. E2-S32 covers export round trips and offline collection files. A link shared in chat still needs to be opened and exported outside Deck Lab. [ManaBox import guide](https://www.manabox.app/guides/decks/import-export/)
 
 **First slice.** Add reviewed link import for the two supported providers. Use fixtures for public responses, unavailable lists and retained drafts. Keep the provider lookup limited to public decklists and use the existing per-space review when showing collection facts.
+
+**Now (2026-11-21).** Import a deck link from the editor's list import or a new deck's starting choices. Public Moxfield and Archidekt lists go through the same card, section and availability review as pasted lists. If a provider cannot supply the list, the editor keeps the draft and offers paste.
 
 ## E3: Test a deck
 
@@ -1674,7 +1678,7 @@ Built (2026-11-20): Chance to draw shows both **Either card** and **Both cards**
 
 <a id="e3-s55"></a>
 
-**E3-S55** · Matt · should · L · missing
+**E3-S55** · Matt · should · L · partial
 
 As a player taking a Commander deck to a social night, I want to test it against three published precons in a four-player pod, so that I can see how it plays in a multiplayer game even when it is my only saved deck.
 
@@ -1684,6 +1688,10 @@ As a player taking a Commander deck to a social night, I want to test it against
 **Gap.** Against popular decks (E3-S28) uses published lists in 1v1. Four-player pods (E9-S11) take four distinct visible saved decks. A player with one deck needs to create the other three in their library to test that lineup.
 
 **First slice.** Offer a curated lineup from the existing catalogue and use the current pod preview, engine admission, rotation and result flow. Check the route, privacy and a representative lineup with fixtures. Qualify an actual run in an approved idle window.
+
+**Now (2026-11-21).** Four-player pods offers a published-precon lineup with one saved deck and three stock lists from the Forge-screened catalogue. Review the sources, remaining games and estimate before Start. Saved results include the tested deck's record by starting seat.
+
+Awaiting: approved idle forge run
 
 ## E4: Get ready, play and learn
 
@@ -2182,7 +2190,7 @@ Evidence:176 broad play/pod/bridge/web fixtures pass (one DB class skip), plus67
 
 <a id="e4-s35"></a>
 
-**E4-S35** · Matt · could · S · missing
+**E4-S35** · Matt · could · S · partial
 
 As a player whose Commander table is staying together, I want to start another game with the same seats, so that we can play again without setting up each player and deck from scratch.
 
@@ -2192,6 +2200,10 @@ As a player whose Commander table is staying together, I want to start another g
 **Gap.** The Game log and pod counter already save reviewed pod games (E4-S18, E4-S26, E9-S16). A successful save returns to the Game log, and Start a pod opens a fresh setup.
 
 **First slice.** Open the existing counter setup with the roster from the just-saved pod. Exercise an external seat, a changed deck, fresh counters and the recording-space boundary in fixtures, then try two consecutive games on a phone.
+
+**Now (2026-11-21).** Play another with these seats in the Game log opens a fresh counter setup with the saved players, decks and external commanders in order. Changed lists need an explicit choice. Recording the result creates a separate game.
+
+Awaiting: phone
 
 ## E5: Decide what to buy
 
@@ -2826,7 +2838,7 @@ Evidence: [profile endpoint](../lib/api/deck_checklist.py), [checklist storage](
 
 <a id="e5-s44"></a>
 
-**E5-S44** · Space members · should · M · missing
+**E5-S44** · Space members · should · M · partial
 
 As a player who only records part of my collection, I want to check and pick up cards from the deck I am changing, so that I can keep the deck useful while loose copies are still unchecked.
 
@@ -2838,6 +2850,10 @@ As a player who only records part of my collection, I want to check and pick up 
 **First slice.** Open a checklist from a saved deck, prefill selected rows, and keep the existing per-copy choices and copy-to-shop action. A player can confirm purchases as Set aside from the same deck. Check draft and profile isolation and try the workflow with someone making an actual deck change.
 
 **Follow-on slices.** Let players register the cards already sleeved in a deck, starting from a modified precon or their current list, with loose stock left unchecked. Then offer one reviewed transfer for a physical copy between two tracked decks. With permission to edit both, confirm the copy and update both lists together, or leave both as they were if the review has gone stale.
+
+**Now (2026-11-21).** Card checklist on the deck's Cards tab keeps per-copy checks, shopping choices and set-aside counts in a private list for that profile and deck. Choose cards and quantities from the displayed list, or start with a stand-in. Saving the checklist works with an empty recorded collection.
+
+Awaiting: household deck change
 
 ## E6: Record orders and receive cards
 
@@ -4934,7 +4950,7 @@ Selection also considers specific abilities in the commander’s rules text. Exa
 
 <a id="e9-s40"></a>
 
-**E9-S40** · Matt · should · M · missing
+**E9-S40** · Matt · should · M · partial
 
 As a Commander player upgrading a precon for social play, I want a few paired cuts and additions that serve a goal, so that I can make a useful change and know what it means for the next game.
 
@@ -4944,6 +4960,10 @@ As a Commander player upgrading a precon for social play, I want a few paired cu
 **Gap.** Compare already shows the differences from a stock list (E1-S30), and Commander has EDHREC ideas and cuts (E9-S07 and E2-S28). The goal-based small-swap workflow (E2-S33) serves casual 60-card decks. A player upgrading a precon still has to pair the cuts and additions themselves. [EDHREC precon upgrade guide](https://edhrec.com/guides/how-to-use-edhrec#precon-upgrades)
 
 **First slice.** Start with one goal and a small set of paired swaps for a current saved list. Reuse the existing stock-list picker, Commander checks, pool review and editor draft. Qualify the proposals in fixtures and ask a player to review them for a precon they are tuning.
+
+**Now (2026-11-21).** Compare with a published precon, then choose Find early interaction. The review uses the saved Planned list and free copies, shows each trade-off and checks the resulting list. Review in editor or Test this change opens the same proposed draft for a final review.
+
+Awaiting: player review
 
 ## E10: Members, access and privacy
 

@@ -114,6 +114,9 @@ class MemberExportTests(db_support.DbTestCase):
                 c.execute("insert into upgrade_checklist (profile_id, revision, title, rows) "
                           "values (%s, 1, %s, %s)", (space, "Private upgrade " + text,
                                                       Jsonb([{"name": "Opt", "choice": "check"}])))
+                c.execute("insert into deck_upgrade_checklist (profile_id, deck_id, revision, title, rows) "
+                          "values (%s, %s, 1, %s, %s)", (space, f"{space}/casual/current", "Linked " + text,
+                                                         Jsonb([{"name": "Opt", "choice": "buy"}])))
                 c.execute("insert into deck_draft (profile_id, deck_id, version, revision, saved_at, device, content) "
                           "values (%s, %s, 'target', 1, now(), 'iPad', %s)",
                           (space, f"{space}/casual/current", Jsonb({"v": 1, "notes": text})))
@@ -180,7 +183,7 @@ class MemberExportTests(db_support.DbTestCase):
         self.assertIn("imports/scan.csv", files)
         self.assertIn("decks/casual/current.md", files)
         for query, params in seen:
-            self.assertNotRegex(query, r"\b(?:profile|profile_email|play_record|profile_setting|wishlist_entry|upgrade_checklist|deck_draft|new_deck_draft|visibility)\b")
+            self.assertNotRegex(query, r"\b(?:profile|profile_email|play_record|profile_setting|wishlist_entry|upgrade_checklist|deck_upgrade_checklist|deck_draft|new_deck_draft|visibility)\b")
             self.assertNotIn("ops.visit", query)
             if "%s" in query:
                 self.assertEqual(params, (SPACE,))
@@ -204,6 +207,7 @@ class MemberExportTests(db_support.DbTestCase):
         with self.connect() as c:
             c.execute("update new_deck_draft set revision = revision + 1 where profile_id = 'other'")
             c.execute("update upgrade_checklist set revision = revision + 1 where profile_id = 'other'")
+            c.execute("update deck_upgrade_checklist set revision = revision + 1 where profile_id = 'other'")
         self.assertEqual(self.match(manifest), manifest)
 
     def test_current_other_space_list_protects_a_result_without_seen_as_provenance(self):
@@ -233,6 +237,7 @@ class MemberExportTests(db_support.DbTestCase):
         for sql in ("update profile_setting set value = value || 'x' where profile_id = 'sample'",
                     "update wishlist_entry set notes = notes || 'x' where profile_id = 'sample'",
                     "update upgrade_checklist set title = title || 'x' where profile_id = 'sample'",
+                    "update deck_upgrade_checklist set title = title || 'x' where profile_id = 'sample'",
                     "update deck_draft set revision = revision + 1 where profile_id = 'sample'",
                     "update play_record set revision = revision + 1"):
             with self.subTest(sql=sql):

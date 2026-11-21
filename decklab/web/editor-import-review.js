@@ -18,9 +18,8 @@ function editorImportHere(owner, control = null, unchanged = true, topmost = tru
     && (!control || control.isConnected && sheet.dialog.contains(control) && !control.disabled);
 }
 
-function editorImportIdentity(ed) {
+function editorImportIdentity(ed, commanders = ed.lists.Commander || []) {
   if ((ed.mode === "new" ? ed.fields.kind : ed.kind) !== "commander") return null;
-  const commanders = ed.lists.Commander || [];
   if (!commanders.length || commanders.length > 2 || commanders.some(line => !editorImportColours(line.card?.color_identity))) return false;
   return new Set(commanders.flatMap(line => line.card.color_identity));
 }
@@ -54,8 +53,10 @@ function editorImportCounts(sections) {
   return counts;
 }
 
-function editorImportChoices(ed, sections, answer = {}) {
-  const identity = editorImportIdentity(ed), base = editorImportCounts(ed.lists), anticipated = new Map(base);
+function editorImportChoices(ed, sections, answer = {}, linked = false) {
+  const fromSource = linked && ed.mode === "new" && Object.values(ed.lists).every(lines => !lines.length);
+  const identity = editorImportIdentity(ed, fromSource ? (sections.Commander || []) : undefined);
+  const base = editorImportCounts(ed.lists), anticipated = new Map(base);
   const rows = [];
   for (const [section, lines] of Object.entries(sections || {})) for (const line of lines) {
     const name = line.card?.name || line.name, limit = editorImportCopyLimit(line.card);

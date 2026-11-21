@@ -1,5 +1,16 @@
 # Deck Lab: history
 
+## Deck-building reviews and Commander pods (2026-11-21)
+
+- **Card checklist** on a saved deck starts with cards and quantities you choose from its Cards tab or a stand-in. Each profile has its own checklist for the deck, with per-copy check, buy and set-aside choices. Migration 0030 adds the linked checklists (`E5-S44`).
+- **Draft from free copies** reviews a Commander's shortages together in the Play-now editor. It allocates each available stand-in once, keeps protected and locked cards, shows anything still short, and applies the review in one Undo step (`E2-S34`).
+- **Find early interaction** on the published-precon comparison reviews one-for-one Commander upgrades from free copies. Each option shows the trade-off and rules checks, then opens the normal Planned editor draft for review or testing (`E9-S40`).
+- **Published precons** in Four-player pods pairs one saved Commander deck with three stock opponents from the screened catalogue. Check the lineup and estimated time before starting. Results include the public list sources and the saved deck's results by starting seat (`E3-S55`).
+- **Import a deck link** accepts public Moxfield and Archidekt lists in the editor's import review, with paste available when a list cannot be fetched (`E2-S35`).
+- **Play another with these seats** in the Game log starts a new counter setup from a saved pod. Confirm or replace changed deck choices before starting. The new game gets its own record (`E4-S35`).
+
+The physical checklist walkthrough, precon player review, phone rematch and approved real Forge qualification remain in [TODO.md](../TODO.md#now).
+
 ## Sort cards as they are filed (2026-11-21, E8-S25)
 
 The Collection card list can follow its space’s saved containers, sections and filing rules. Each printing uses its own location. The Storage setup sheet shows the filing rule beside each container and lists the chosen order in Preview. Home’s Build decks follows the saved section sequence and can use recorded locations even when there is no default container. [Storage setup guide](README.md#sort-cards-as-you-store-them)

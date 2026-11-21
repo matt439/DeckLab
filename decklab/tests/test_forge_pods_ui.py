@@ -43,6 +43,17 @@ SETUP = r"""
       rate:[.4,.2,.1,.1][i],range:[[.17,.69],[.06,.51],[.02,.4],[.02,.4]][i]}]))};
   const result={key,sides:choices.slice(0,4),games:16,planned:16,completed:13,remaining:3,
     summary,statistical_only:true,note:'Statistics only: four-player games do not replay exactly.'};
+  const precons=[
+    {id:'precon:one',title:'First Precon',source_url:'https://example.com/decks/one.json',source_name:'MTGJSON'},
+    {id:'precon:two',title:'Second Precon',source_url:'https://example.com/decks/two.json',source_name:'MTGJSON'},
+    {id:'precon:three',title:'Third Precon',source_name:'Forge bundled precon'},
+  ];
+  const lineup={id:'published-precons',title:'Bracket 2 precons',target_bracket:2,precons};
+  const preconSides=[choices[0],...precons];
+  const preconPacket=(extra={})=>({choices:[choices[0]],lineups:[lineup],...extra});
+  const selectLineup=(value=lineup.id)=>{
+    const select=main.querySelector('#fp-lineup');select.value=value;select.fire('change');
+  };
 """
 
 
@@ -76,6 +87,65 @@ class ForgePodsUiTests(unittest.TestCase):
           choose(3,4);assert(blocked(button('Start')));
           if(button('Start'))button('Start').click();await settle();
           assert.equal(writes.length,1,'an obsolete plan cannot start new choices');
+        """)
+
+    def test_one_saved_deck_can_review_and_start_against_published_precons(self):
+        self.run_js(r"""
+          await draw(preconPacket());selectLineup();choose(0,0);
+          assert.equal(writes.length,0);
+          assert(!main.querySelector('#fp-deck-0').parentNode.hidden);
+          assert(main.querySelectorAll('.fp-deck').slice(1).every(node=>node.parentNode.hidden));
+          assert(blocked(button('Start')));
+          const plan=packet(preconPacket({key,lineup:lineup.id,sides:preconSides,
+            plan:{games:16,completed:3,remaining:13,estimated_seconds:960}}));
+          writeAnswers=[plan,{...plan,status:'queued',job:{done:3,total:16,may_stop:true}}];
+          button('Check this pod').click();await settle();
+          assert.equal(writes.length,1);
+          const body={decks:[{id:choices[0].id,version:'target'}],lineup:lineup.id,games:16};
+          same(writes[0],{path:'/api/forge/pods/plan',body});
+          const review=main.querySelector('.fp-plan');
+          for(const deck of precons)assert(review.textContent.includes(deck.title));
+          assert(review.textContent.includes('Forge bundled precon'));
+          same(review.querySelectorAll('a').map(link=>link.getAttribute('href')),precons.slice(0,2).map(deck=>deck.source_url));
+          assert(review.textContent.includes('16 min for 13 remaining games with one Forge worker'));
+          assert(!blocked(button('Start')));button('Start').click();await settle();
+          same(writes[1],{path:'/api/forge/pods/run',body:{...body,expected_key:key}});
+          assert.equal(writes.length,2);
+        """)
+
+    def test_lineup_change_invalidates_a_checked_precon_pod(self):
+        self.run_js(r"""
+          await draw(preconPacket());selectLineup();choose(0,0);
+          writeAnswers=[packet(preconPacket({key,lineup:lineup.id,sides:preconSides,plan:{games:16}}))];
+          button('Check this pod').click();await settle();assert(!blocked(button('Start')));
+          selectLineup('');assert(blocked(button('Start')));
+          assert(main.querySelectorAll('.fp-deck').every(node=>!node.parentNode.hidden));
+          selectLineup();assert(blocked(button('Start')));assert.equal(writes.length,1);
+          assert.equal(main.querySelector('.fp-plan').textContent,'');
+        """)
+
+    def test_saved_precon_pod_names_lineup_and_verified_results_by_seat(self):
+        self.run_js(r"""
+          const bySeat={1:{wins:2,pods:4},2:{wins:1,pods:3},3:{wins:0,pods:3},4:{wins:0,pods:0}};
+          const byDeck=Object.fromEntries(preconSides.map((deck,i)=>[deck.id,
+            {...summary.by_deck[choices[i].id],...(i===0?{by_seat:bySeat}:{})}]));
+          const saved={...result,lineup:lineup.id,sides:preconSides,summary:{...summary,by_deck:byDeck}};
+          readAnswer=packet(preconPacket({key,lineup:lineup.id,sides:preconSides,status:'done',
+            result:saved,results:[{...saved,key:otherKey}]}));
+          location.hash='#/forge-pods?key='+key;
+          await showForgePods(new URLSearchParams('key='+key),routeToken);await settle();
+          assert.equal(main.querySelector('#fp-lineup').value,lineup.id);
+          assert.equal(main.querySelector('#fp-deck-0').value,choices[0].id+'|target');
+          assert(blocked(button('Start')));assert.equal(writes.length,0);
+          const loaded=main.querySelector('.fp-results');
+          for(const deck of preconSides)assert(loaded.textContent.includes(deck.title));
+          assert(loaded.textContent.includes('10 counted pod games'));
+          const seats=loaded.querySelector('.fp-seat-results');
+          assert(seats.textContent.includes('Deck A by seat'));
+          assert(seats.textContent.includes('Seat 1 · 2 wins in 4 counted pods'));
+          assert(seats.textContent.includes('Seat 2 · 1 win in 3 counted pods'));
+          assert(seats.textContent.includes('Seat 4 · no counted pod games'));
+          assert(main.querySelector('.fp-history').textContent.includes('Third Precon'));
         """)
 
     def test_simulation_refusal_explains_start_without_any_run_write(self):
