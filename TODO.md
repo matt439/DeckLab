@@ -6,7 +6,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 
 **The only ordering in this file.** Keep every `DECISION` row here. Keep this block to the current aim and the next few actions; results go in their owners (HISTORY.md for what shipped).
 
-**Ready work (2026-11-20).** All 12 rows from the 2026-11-20 audit are complete. Against popular decks remains the lead feature. The redesign is at household device acceptance.
+**Ready work (2026-11-21).** Against popular decks remains the lead feature. The redesign is at household device acceptance. Start the new work with the deck-linked checklist (`E5-S44`), then draft a Play-now list from free copies (`E2-S34`), guide precon upgrades (`E9-S40`), test against published precons in a pod (`E3-S55`), import a deck link (`E2-S35`), and start another game with the same pod (`E4-S35`).
 
 **Sessions and decisions.** Pick these up when the named people, devices or systems are available. Each row below points to the owner and records the remaining check.
 
@@ -33,6 +33,8 @@ An index of open work, one row per item; each row points to the doc that owns th
 |---|---|---|---|---|
 | `E2-S16` | DECISION | could | L | Implementation built, including Quick edit and new-deck drafts. Left: same-profile resume, competing drafts and save/discard across the household's real devices; fixtures cannot qualify touch/Safari or device durability. |
 | `E2-S22` | DECISION | must | M | Physical hardware/touch-usability follow-up on the household's iPhones and M2 11-inch iPad; the six-configuration Safari Simulator suite passes, on the P1 redesign since 2026-11-05 ([evidence](decklab/safari/EVIDENCE.md)). |
+| `E2-S34` | OPEN | should | M | [Draft a Play-now list](decklab/design/stories.md#e2-s34) for one saved Commander deck by reviewing stand-ins across its confirmed shortages together. |
+| `E2-S35` | OPEN | could | M | [Import a public deck link](decklab/design/stories.md#e2-s35) from Moxfield or Archidekt through the existing deck import review. |
 
 ## Deck Lab: collection, orders and buying
 
@@ -41,15 +43,18 @@ An index of open work, one row per item; each row points to the doc that owns th
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E5-S15` | DEFERRED | should | M | User1 asks from the page for a card or a Forge run, Matt approves (`E3-S13`); not urgent. |
+| `E5-S44` | OPEN | should | M | [Check cards from a saved deck](decklab/design/stories.md#e5-s44), from checking at home through setting aside purchases. Later slices register sleeved decks with loose cards unchecked and record a transfer once across both decks. |
 | `E7-S32` | DECISION | could | L | Try 10–20 real photos per phone (foils, sleeves, older cards and tokens) and [time a known stack](decklab/design/scanning-spike.md#compare-cards-per-hour) through live capture, gridded images and reviewed import. |
 
 ## Deck Lab: Commander nights
 
-**Owner:** [design/stories.md](decklab/design/stories.md#e9-commander-nights), E9.
+**Owner:** [design/stories.md](decklab/design/stories.md), E4 for playing at the table and [E9](decklab/design/stories.md#e9-commander-nights) for Commander nights.
 
 | id | status | pri | size | item |
 |---|---|---|---|---|
 | `E9-S11` | DECISION | could | L | Real 16-game rotated pod, statistics and Stop/resume passed 2026-11-18 after the replay gate. Left: chooser, progress pill and result acceptance on the actual phone/iPad. |
+| `E9-S40` | OPEN | should | M | [Guide a Commander precon upgrade](decklab/design/stories.md#e9-s40) with reviewed cuts and additions for one chosen goal, checked against the player's actual list and free copies. |
+| `E4-S35` | OPEN | could | S | [Start another pod with the same seats](decklab/design/stories.md#e4-s35) from a saved game, with a fresh counter and editable deck choices. |
 
 ## Deck Lab: testing and Forge
 
@@ -64,6 +69,7 @@ An index of open work, one row per item; each row points to the doc that owns th
 | `FG#2` | DECISION | should | L+pc | Agree an idle window for the [side-build speed and winner comparison](decklab/PLAN.md#details). The 2.0.16 replay was complete at the 2026-11-18 review. |
 | `FG#3` | DEFERRED | could | M+pc | More experiment games (AI profiles, team-pump fix, override sets), decided with `FG#2`'s replay; the clean `fiery` test ran 2026-10-21 (C4 does what `fiery` does). |
 | `E3-S40` | DECISION | should | L+pc | Corrected isolated bridge passed 8 positive games and independent identity/outcome checks. Left: deploy and qualify it live; earlier negative receipts remain, with genuine unsupported identities explicit. |
+| `E3-S55` | OPEN | should | L+pc | [Test one deck against three published Commander precons](decklab/design/stories.md#e3-s55) in a four-player pod, with a reviewed lineup and seat-rotated results. |
 
 ## Deck Lab: running it
 
