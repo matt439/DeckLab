@@ -65,21 +65,21 @@ Each epic has a journey in [journeys.md](journeys.md) and its stories in [storie
 | Epic | Title | What it covers | Built | Partial | Missing | Not wanted |
 |---|---|---|---|---|---|---|
 | E1 | Find, plan and choose decks | The library (`#/library`), deck ideas, cover pictures, the deck page's banner and Overview, choosing what to play | 21 | 0 | 0 | 0 |
-| E2 | Build and edit a deck | New deck, the editor and the phone Quick edit, Planned and Play-now lists, owned vs needed, history; `deck pull/push/new/tables` | 24 | 2 | 0 | 1 |
-| E3 | Test a deck | Stats, Practice, Forge matchups (`#/matchups`, `#/matchup`), field rank, Test this change (`#/variant`), the simulations setting | 42 | 3 | 0 | 0 |
-| E4 | Get ready, play and learn | The Packing plan (`#/assembly`), tokens to grab, How to play, practice hands, the Game log (`#/play`) and sideboard plans | 26 | 1 | 0 | 3 |
-| E5 | Decide what to buy | Missing cards and estimated costs, the purchase queue on `#/shopping`, AU shop checks, buylists, `watchlist` and `order add --fulfils` | 38 | 0 | 1 | 2 |
+| E2 | Build and edit a deck | New deck, the editor and the phone Quick edit, Planned and Play-now lists, owned vs needed, history; `deck pull/push/new/tables` | 24 | 2 | 2 | 1 |
+| E3 | Test a deck | Stats, Practice, Forge matchups (`#/matchups`, `#/matchup`), field rank, Test this change (`#/variant`), the simulations setting | 42 | 3 | 1 | 0 |
+| E4 | Get ready, play and learn | The Packing plan (`#/assembly`), tokens to grab, How to play, practice hands, the Game log (`#/play`) and sideboard plans | 26 | 1 | 1 | 3 |
+| E5 | Decide what to buy | Missing cards and estimated costs, the purchase queue on `#/shopping`, AU shop checks, buylists, `watchlist` and `order add --fulfils` | 38 | 0 | 2 | 2 |
 | E6 | Record orders and receive cards | `order add\|edit\|checks\|split\|cancel`, products, on the way, Receive delivery (`#/receipt`), follow-ups, keeping a product intact | 24 | 0 | 0 | 2 |
 | E7 | Keep the collection accurate | The Collection page (`#/collection`), imports and Add a precon, `collection merge`, Tokens (`#/tokens`), removals, stale tables, `db check` | 37 | 1 | 0 | 0 |
 | E8 | Sleeves, boxes and storage | Sleeves & boxes (`#/accessories`), Sleeves and Deck box lines, the Choose… picker, kit warnings, put-back steps, the storage box | 21 | 0 | 0 | 2 |
-| E9 | Commander nights | Commander checks and the minimum bracket, multiplayer practice, Forge's Commander field, getting ready for the social Commander night | 32 | 1 | 0 | 1 |
+| E9 | Commander nights | Commander checks and the minimum bracket, multiplayer practice, Forge's Commander field, getting ready for the social Commander night | 32 | 1 | 1 | 1 |
 | E10 | Members, access and privacy | Roles and spaces, the read and write rules, "Who are you?", decklab.example.com behind Cloudflare Access, Activity (`#/activity`), Visits on Settings, private by default | 34 | 1 | 1 | 2 |
 | E11 | Run and trust the system | The server and tunnel, database maintenance, audit trail, typed commands, Forge upkeep, Settings, Safari regressions, visual design and code hygiene | 70 | 10 | 4 | 4 |
 
 ## Headline counts
 
 - **10 personas:** two primary, three secondary (User5, the space members and the self-hoster), one supplementary, one non-human actor and three anti-personas.
-- **11 epics, 411 stories:** 369 built, 19 partial, 6 missing and 17 not wanted (generated, with the epic rows above, from the story headers by `python scripts/audit_stories.py --write`; the lint workflow checks them).
+- **11 epics, 417 stories:** 369 built, 19 partial, 12 missing and 17 not wanted (generated, with the epic rows above, from the story headers by `python scripts/audit_stories.py --write`; the lint workflow checks them).
 - **Must and should stories, 2026-11-20.** Matt has 149 built and 3 partial. User1 has 33 built, 1 partial and 1 missing. The self-hoster has 5 built, Claude Code 25, the space members 7, User5 4 and the Commander table 1. [Coverage by persona](gap-analysis.md#coverage-per-persona)
 
 The 2026-11-20 audit checked the remaining work against its owners and the implementation. It identified 12 coding tasks that can start with fixtures, including a correction to testing a deck change against popular decks. The redesign still needs household device acceptance. The current work order and the remaining checks are in [TODO.md](../../TODO.md#now).
