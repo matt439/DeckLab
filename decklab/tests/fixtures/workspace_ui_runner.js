@@ -135,7 +135,7 @@ vm.runInContext(`
   let changes = 0, inspections = [];
   changed = () => { changes += 1; };
   openCard = (card, trigger) => { inspections.push({card, trigger}); };
-  afterRender = () => {};
+  ${viewport?.realAfterRender ? "" : "afterRender = () => {};"}
   editor = {mode: "new", profile: state.profile?.id, fields: {kind: "casual"}, lists: {Deck: []}, sections: ["Deck", "Sideboard"],
     addSection: "Deck", dom: {}, checkSeq: 0};
   const alpha = {name: "Alpha", mana_cost: "{G}", type_line: "Creature — Elf", cmc: 1, have: {}, default: null};

@@ -8,10 +8,10 @@ review step. Results read "<name> won". */
 "use strict";
 
 function showPlay(params, token) {
-  const id = params.get("id") || "";
+  const id = addressDeckId(params.get("id")) || "";
   const version = params.get("version") === "owned" ? "owned" : "target";
-  const action = params.get("action");
-  load(`/api/play${id ? `?id=${encodeURIComponent(id)}` : ""}`, token, data => drawPlay(data, id, version, action));
+  const action = params.get("action"), sha = params.get("sha");
+  load(`/api/play${id ? `?id=${encodeURIComponent(id)}` : ""}`, token, data => drawPlay(data, id, version, action, sha));
 }
 
 /** A list's words; a side or opponent the server sent hidden (another space's private deck, E10-S32) has only
@@ -73,7 +73,7 @@ function playNoGamesWords() {
     : "No games have been recorded yet.";
 }
 
-function drawPlay(data, deckId, version = "target", action = null) {
+function drawPlay(data, deckId, version = "target", action = null, sha = null) {
   const games = data.games.filter(entry => playLegacyGame(entry?.record));
   const main = $("#main");
   const filter = el("select", { id: "play-filter", onchange: event => {
@@ -84,20 +84,24 @@ function drawPlay(data, deckId, version = "target", action = null) {
     seen.add(list.id); filter.append(el("option", { value: list.id, text: list.title, selected: list.id === deckId }));
   }
   const fromDeck = deckId && [...data.lists, ...(data.pod_lists || [])].find(list => list.id === deckId && list.version === version);
+  const linked = deckId && ["start", "record"].includes(action);
+  const wrongBox = data.decks?.[deckId]?.packed_match?.[version] === false;
+  const chooseLists = Boolean(linked && (!fromDeck || (sha !== null && fromDeck.sha256 !== sha) || wrongBox));
+  const unavailable = chooseLists ? note(wrongBox ? "The packed box needs checking against this saved list. Choose the lists in use at the table."
+    : "The requested deck list is unavailable for a new game. Choose the lists in use at the table.") : null;
+  if (unavailable) unavailable.setAttribute("tabindex", "-1");
   // While there are no plans, the empty state holds this one action instead of the section head.
   const planButton = el("button", { class: "btn", type: "button", text: "New sideboard plan", disabled: !data.lists.length || null,
     hidden: !data.sideboards.length || null, onclick: () => playPlanForm(data, deckId) });
-  const commander = (data.pod_lists || []).some(list => list.id === deckId && list.can_record === true);
-  const podActions = typeof playPodActions === "function" ? playPodActions(data, deckId, version) : null;
-  const quick = data.lists.length ? playQuickRecord(data, deckId, version) : playWithoutDecks(data);
+  const commander = (data.pod_lists || []).some(list => list.id === deckId && list.version === version && list.can_record === true);
+  const podActions = typeof playPodActions === "function" ? playPodActions(data, deckId, version, chooseLists) : null;
+  const quick = data.lists.length ? playQuickRecord(data, deckId, version, chooseLists) : playWithoutDecks(data);
   add(main, [
     pageHead({ crumb: fromDeck ? [deckHref(fromDeck.id, fromDeck.version), fromDeck.title] : null, title: routeH1("play"),
       description: "Start a counter, record a result, or look up a game you played." }),
     warningsBox(data.warnings, "Some play records or deck lists could not be loaded"),
-    deckId && !fromDeck && ["start", "record"].includes(action)
-      ? note("The requested deck list is unavailable for a new game. Check the selected decks before starting or recording.") : null,
-    podActions, quick,
-    !deckId ? playChooseTonight(data) : null,
+    unavailable, podActions, quick,
+    !deckId ? playChooseTonight(data, quick.choosePair) : null,
     seen.size && (games.length || data.pods?.length || deckId) ? el("label", { class: "field play-filter", for: "play-filter" },
       el("span", { text: "Show games with" }), filter) : null,
     el("section", { class: "play-section", "aria-labelledby": "play-games-title" },
@@ -114,8 +118,8 @@ function drawPlay(data, deckId, version = "target", action = null) {
         : emptyBox("No sideboard plans yet.", data.lists.length ? el("button", { class: "btn", type: "button",
           text: "New sideboard plan", onclick: () => playPlanForm(data, deckId) }) : null))]);
   if (deckId) {
-    let focus = action === "pods" ? document.getElementById("play-pods-title") : null;
-    if (["start", "record"].includes(action)) {
+    let focus = unavailable || (action === "pods" ? document.getElementById("play-pods-title") : null);
+    if (linked && !focus) {
       focus = (commander && podActions?.querySelector(`[data-play-pod-action="${action}"]`))
         || quick.querySelector(action === "start" ? "[data-play-start]" : "#play-quick-deck-0");
     }
@@ -129,7 +133,7 @@ function drawPlay(data, deckId, version = "target", action = null) {
   }
 }
 
-function playChooseTonight(data) {
+function playChooseTonight(data, choosePair) {
   const hasPairs = data.lists.length && typeof playTonightFor === "function" && playTonightFor(state.profile);
   const lineup = typeof commanderLineupSection === "function" ? commanderLineupSection() : null;
   if (!hasPairs && !lineup) return null;
@@ -140,7 +144,7 @@ function playChooseTonight(data) {
     const token = routeToken, profile = state.profile;
     const showPairs = () => {
       if (!disclosure.open || !disclosure.isConnected || token !== routeToken || profile !== state.profile) return;
-      const pairs = playTonightSection(data);
+      const pairs = playTonightSection(data, choosePair);
       if (pairs) pairsHost.append(pairs);
       disclosure.removeEventListener("toggle", showPairs);
     };
@@ -239,29 +243,28 @@ function playStarts(data, deckId, people, names, version = "target") {
   return starts.map((n) => (n < 0 ? 0 : n));
 }
 
-/** Set by the quick record drawn last: puts lists in its pickers (Tonight's pairs). */
-let playQuickChoose = null;
-
 /** The quick record: each player's deck, More details, and one button per result. */
-function playQuickRecord(data, deckId, version = "target") {
+function playQuickRecord(data, deckId, version = "target", chooseLists = false) {
   const lists = data.lists;
   const names = playPlayers();
   const me = state.profile, space = (me && me.space) || HOME_SPACE;
   const people = [me, (state.profiles || []).find((p) => me && p.id !== me.id && (p.space || HOME_SPACE) === space)];
-  const starts = playStarts(data, deckId, people, names, version);
+  const starts = chooseLists ? [-1, -1] : playStarts(data, deckId, people, names, version);
   const error = el("p", { class: "form-error", role: "alert" });
   const date = el("input", { type: "date", id: "play-quick-date", required: true, max: data.today, value: data.today });
   const notes = el("textarea", { id: "play-quick-notes", maxlength: 2000, rows: 2 });
   const sides = names.map((name, i) => {
-    const select = el("select", { id: `play-quick-deck-${i}` }, lists.map((list, n) => el("option", { value: String(n),
-      selected: n === starts[i], text: playListWords(list) })));
-    select.value = String(starts[i]);
+    const select = el("select", { id: `play-quick-deck-${i}` },
+      chooseLists ? el("option", { value: "", text: "Choose a current list" }) : null,
+      lists.map((list, n) => el("option", { value: String(n), selected: n === starts[i], text: playListWords(list) })));
+    select.value = chooseLists ? "" : String(starts[i]);
     const label = el("span", { text: `${name}'s deck` });
     const legend = el("legend", { text: name });
     const player = el("input", { type: "text", id: `play-quick-name-${i}`, maxlength: 80, required: true, value: name });
     const mulligans = el("input", { type: "number", id: `play-quick-mull-${i}`, min: 0, max: 20, step: 1, value: 0, inputmode: "numeric" });
     const plan = el("select", { id: `play-quick-plan-${i}` });
-    return { select, label, legend, player, mulligans, plan, plans: [], get: () => lists[Number(select.value)] };
+    const get = () => select.value === "" ? null : lists[Number(select.value)];
+    return { select, label, legend, player, mulligans, plan, plans: [], get };
   });
   const outcomes = [
     el("button", { type: "button", class: "btn play-outcome", "data-result": "a" }),
@@ -289,12 +292,6 @@ function playQuickRecord(data, deckId, version = "target") {
     side.player.addEventListener("input", relabel);
   });
   relabel(); refreshPlans();
-  // Tonight's pairs (play-tonight.js) put a suggested pair's lists in the pickers: [index in lists, or -1].
-  playQuickChoose = (choices) => {
-    choices.forEach((n, i) => { if (n >= 0) sides[i].select.value = String(n); });
-    refreshPlans();
-    sides[0].select.focus();
-  };
   const panel = el("section", { class: "panel play-quick", "aria-labelledby": "play-quick-title" },
     el("h2", { id: "play-quick-title", text: "1v1 at the table" }),
     el("div", { class: "play-quick-decks" }, sides.map((side, i) =>
@@ -314,6 +311,13 @@ function playQuickRecord(data, deckId, version = "target") {
     el("h3", { id: "play-record-result", text: "Record a game" }),
     el("div", { class: "play-outcomes", role: "group", "aria-labelledby": "play-record-result" }, outcomes),
     error);
+  panel.choosePair = choices => {
+    if (!panel.isConnected || choices.length !== sides.length || !choices.every(index => lists[index])) return false;
+    choices.forEach((index, seat) => { sides[seat].select.value = String(index); });
+    refreshPlans();
+    sides[0].select.focus();
+    return true;
+  };
   for (const button of outcomes) {
     button.addEventListener("click", () => playQuickSave({ data, sides, date, notes, outcomes, error, button,
       result: button.getAttribute("data-result") }));
@@ -328,6 +332,10 @@ function playQuickRecord(data, deckId, version = "target") {
  * is written until then. The result buttons stay disabled while a game waits, so one tap is one game. */
 async function playQuickSave({ data, sides, date, notes, outcomes, error, button, result }) {
   const token = routeToken, profile = state.profile && state.profile.id;
+  if (sides.some(side => !side.get())) {
+    error.textContent = "Choose the two deck lists before recording.";
+    return;
+  }
   error.textContent = "";
   const payload = { id: null, sha256: null, date: date.value || data.today, result, notes: notes.value,
     sides: sides.map((side) => {
@@ -893,8 +901,8 @@ function playPlanForm(data, deckId, entry = null, preferred = {}) {
   const redraw = () => {
     controls = []; clear(moves);
     listContext.textContent = own.get().version === "owned"
-      ? "Play-now list: counts below are in this saved list, not a fresh collection check."
-      : "Planned list: counts below are in the plan, not necessarily cards you own. Choose Play-now to plan with that saved list.";
+      ? `${listName("owned")} · The counts below come from the saved list.`
+      : `${listName("target")} · The counts include planned cards. Choose the ${listName("owned", true)} to plan with that saved list.`;
     for (const [direction, section] of [["out", "Deck"], ["in", "Sideboard"]]) {
       const box = el("fieldset", { class: "play-side" }, el("legend", { text: direction === "in" ? "In from sideboard" : "Out of main deck" }));
       const counts = new Map();

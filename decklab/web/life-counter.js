@@ -99,20 +99,24 @@ function lifeMayRecord(data, game) {
 /** The Game log's way in: Life counter for the decks chosen (chosen(): [{list, name}, ...]), or Resume. */
 function lifeCounterLauncher(data, chosen) {
   if (typeof lifeSourceNewGame === "function") return lifeV2Launcher(data, chosen);
-  const box = el("div", { class: "play-counter" });
-  const start = event => openLifeCounter(data, lifeNewGame(chosen(), state.profile && state.profile.id), draw,
-    { source: event?.currentTarget });
+  const box = el("div", { class: "play-counter" }), error = el("p", { class: "form-error", role: "status" });
+  const start = event => {
+    const choices = chosen();
+    if (choices.some(choice => !choice.list)) { error.textContent = "Choose the two deck lists before starting."; return; }
+    error.textContent = "";
+    openLifeCounter(data, lifeNewGame(choices, state.profile && state.profile.id), draw, { source: event?.currentTarget });
+  };
   function draw() {
     const saved = lifeSaved(data);
     clear(box);
     if (!saved) {
-      box.append(el("button", { type: "button", class: "btn", text: "Start a 1v1 game", "data-play-start": "", onclick: start }));
+      box.append(el("button", { type: "button", class: "btn", text: "Start a 1v1 game", "data-play-start": "", onclick: start }), error);
       return;
     }
     add(box, [el("button", { type: "button", class: "btn", text: "Resume life counter",
       onclick: event => openLifeCounter(data, lifeSaved(data) || saved, draw, { resume: true, source: event.currentTarget }) }),
     el("span", { class: "sub", text: saved.players.map((p) => `${p.name} ${p.life}`).join(" · ") }),
-    el("button", { type: "button", class: "btn btn-quiet", text: "Start a new 1v1 game", "data-play-start": "", onclick: start })]);
+    el("button", { type: "button", class: "btn btn-quiet", text: "Start a new 1v1 game", "data-play-start": "", onclick: start }), error]);
   }
   draw();
   return box;

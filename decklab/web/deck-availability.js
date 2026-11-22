@@ -138,11 +138,13 @@ function availabilityBanner(data, screen) {
       onclick: () => openDeckTab("cards", { to: "sec-owned" }) });
   } else {
     kind = a.missing ? "warn" : a.coming ? "info" : "good";
-    verdict = a.missing ? `${a.missing} missing from recorded copies` : a.coming
+    const missing = `${a.missing} missing from recorded copies`;
+    verdict = needsMain ? "No main-deck cards yet" : a.missing ? missing : a.coming
       ? `Ready once ${plural(a.coming, "card")} ${a.coming === 1 ? "arrives" : "arrive"}`
       : fromBox ? "All counted copies are here" : "Ready to build from recorded copies";
     if (a.here) counts.push(`${fromBox ? "Here for this list" : "Free now"} ${a.here}`);
     if (a.coming) counts.push(`On the way ${a.coming}`);
+    if (needsMain && a.missing) counts.push(missing);
     if (a.held) counts.push(`Held in another deck or product ${a.held}`);
     if (a.lent) counts.push(`Lent out ${a.lent}`);
     if (a.missing || a.coming) {

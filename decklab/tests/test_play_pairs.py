@@ -190,6 +190,8 @@ class PairsViewTests(ApiTestCase):
                          ["How even it is isn't known yet: only 1 real game and no Forge result.",
                           "Last played against each other 2 days ago."])
         self.assertEqual([s["version"] for s in first["sides"]], ["target", "target"])
+        for side in first["sides"]:
+            self.assertEqual(side["sha256"], play._snapshot(side["id"], side["version"])["sha256"])
 
     def test_a_member_and_a_request_naming_nobody_get_nothing_about_home(self):
         self.game("casual/alpha", "casual/beta", "a")
@@ -234,6 +236,17 @@ class PairsViewTests(ApiTestCase):
         with access.viewing("matt"):
             row = next(deck for deck in play_tonight._decks() if deck["id"] == "casual/beta")
         self.assertIsNone(row["ready"])
+
+    def test_packed_list_matches_current_list_after_reordering_and_splitting_lines(self):
+        path = self.box.magic / "decks" / "casual" / "beta.md"
+        text = path.read_text(encoding="utf-8")
+        packed = json.dumps({"version": "target", "sections": {
+            "Deck": ["20 Forest", "1 Llanowar Elves (FDN) 227", "39 Forest"]}})
+        _write(path, text.replace("- **Status:** built", "- **Status:** built\n- **Assembled:** " + packed))
+        with access.viewing("matt"):
+            answer = play_tonight.pairs_view()
+        self.assertEqual(answer["ready"], 3)
+        self.assertIn(("casual/alpha", "casual/beta"), ids(answer["pairs"]))
 
     def test_decks_whose_availability_can_t_be_confirmed_are_never_suggested(self):
         _write(self.broken, self.broken_text)

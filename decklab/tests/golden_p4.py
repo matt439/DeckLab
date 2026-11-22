@@ -655,7 +655,7 @@ def storage_location_defaults(dump):
 
 
 def played_defaults(dump):
-    """Drop only E1-S27's no-games (or unread) "played" on library summaries and deck pages."""
+    """Drop no-games defaults and the additive, separately tested Game log link metadata."""
     for mine in [dump, *((dump.get("by_viewer") or {}).values())]:
         index = mine.get("decks_index") if isinstance(mine, dict) else None
         for summary in (index.get("decks") or []) if isinstance(index, dict) else []:
@@ -663,13 +663,20 @@ def played_defaults(dump):
                 summary.pop("played")
         views = mine.get("deck_view") if isinstance(mine, dict) else None
         for view in views.values() if isinstance(views, dict) else []:
-            played = view.get("played", 0) if isinstance(view, dict) else 0
+            if not isinstance(view, dict):
+                continue
+            played = view.get("played", 0)
             if isinstance(played, dict):    # E11-S61's can_record, the viewer's play.record answer, compares nowhere
                 played = {k: v for k, v in played.items() if k != "can_record"}
                 if played.get("pods") == {"last": None, "three_player": 0, "four_player": 0}:
                     played.pop("pods")
-            if isinstance(view, dict) and played in (None, {"last": None, "games": 0, "since": None}):
+            if played in (None, {"last": None, "games": 0, "since": None}):
                 view.pop("played")
+            link = view.get("play_list", False)
+            if link is None or (isinstance(link, dict) and link.keys() <= {"sha256", "packed_match"}
+                                and isinstance(link.get("sha256"), str) and re.fullmatch(r"[0-9a-f]{64}", link["sha256"])
+                                and ("packed_match" not in link or ("owned" in view and type(link["packed_match"]) is bool))):
+                view.pop("play_list")
 
 
 def keep_rule_defaults(dump):

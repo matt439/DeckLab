@@ -9,7 +9,7 @@ import re
 import traceback
 from collections import Counter
 
-from decklab.lib import accessories, decks, inventory, pool, spaces, tokens
+from decklab.lib import accessories, cards, decks, inventory, pool, spaces, tokens
 from decklab.lib.inventory import paths as inventory_paths
 from decklab.lib.state import StateError
 
@@ -128,7 +128,7 @@ def _own_collection_empty():
     only its own people learn whether a collection is empty, and nothing else about it."""
     try:
         profile = guard.viewer()
-    except ApiError:
+    except (ApiError, *cards.INDEX_ERRORS):
         return None
     space = profile.get("space") if isinstance(profile, dict) else None
     if not isinstance(space, str) or not space or not guard.sees_inventory(space, profile):
@@ -535,6 +535,21 @@ def _played(deck_id, summary):
     return played
 
 
+def _play_list(summary, version, sections, deck_file):
+    """Identity for an exact Game log link, with physical matching where visible."""
+    from . import play_records
+    if summary.get("trial"):
+        return None
+    try:
+        captured = play_records.snapshot_from_sections(summary, version, sections)
+    except ApiError:
+        return None
+    choice = {"sha256": captured["sha256"]}
+    if play_records.may_check_packed_list(summary):
+        choice["packed_match"] = play_records.packed_list_matches(deck_file, version)
+    return choice
+
+
 def deck_view(deck_id, version="target", omit=()):
     """GET /api/deck?id=<deck id>&version=target|owned[&omit=matchups]: the decklist with card
     data and images, its stats, and owned vs needed.
@@ -630,6 +645,8 @@ def deck_view(deck_id, version="target", omit=()):
     never named), with "since", what its list changed after its last game, from the deck's own
     revisions, and "can_record", whether this viewer may record a game with it (play.record, as the
     Game log's decks say); None when the games can't be read.
+    play_list identifies the selected list in the Game log, or None if it cannot be used there.
+    Its optional packed_match verdict follows the inventory's visibility.
 
     box_label is an owned intact product's box label (product_label.box_label: its name,
     colours, decks and the deck page its QR code opens), only for a viewer who sees home's
@@ -719,6 +736,7 @@ def deck_view(deck_id, version="target", omit=()):
         "usual_opponents": usual_opponents(deck_id),
         # When it was last played at home and what its list changed since (E1-S27): the Game log's games.
         "played": _played(deck_id, summary),
+        "play_list": _play_list(summary, version, sections, deck_file),
         "swaps": view_swaps(deck_file),
         # The Considering list (E2-S23): its free counts only for a viewer who sees the inventory.
         "considering": considering_view(deck_file, deck_id, p, sees, warnings),

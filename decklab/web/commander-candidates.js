@@ -1,4 +1,4 @@
-/* New deck's "Commanders we could build" (E9-S28, lib/api/commander_candidates.py):
+/* "Commanders we could build" (E9-S28, lib/api/commander_candidates.py):
  * the space's free legendary creatures (and other cards that may be a commander) ranked by how much of a
  * Commander deck the rest of the free pool covers in each one's colours, counted by the Command Zone
  * template's role targets (ramp, card advantage, targeted and mass disruption), best first. Opening one shows

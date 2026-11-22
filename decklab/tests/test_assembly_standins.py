@@ -169,6 +169,7 @@ class StandInApiTests(StandInFixtures):
             self.assertEqual(packed["version"], "owned")
             self.assertEqual(packed["rows"][0]["card"]["name"], "Black Lotus")
             self.assertEqual(packed["rows"][0]["using"], "Aerie Mystics")
+            self.assertIs(answer["play_list"]["packed_match"], version == "target")
         with mock.patch.object(api.deck_page.guard, "sees_inventory", return_value=False), \
                 mock.patch.object(endpoint, "project_packed", side_effect=AssertionError("inventory hidden")):
             self.assertNotIn("packed_placeholders", api.deck_view(OWN, omit=("matchups",)))

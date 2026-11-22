@@ -247,8 +247,11 @@ function fpAnswer(ctx, answer) {
     ctx.plan = null;
     ctx.selectedControls.forEach((select, i) => {
       clear(select).append(el("option", { value: "", text: "Choose a Commander deck…" }),
-        ...choices.map(deck => el("option", { value: fpChoiceKey(deck),
-          text: `${deck.title}${deck.version === "owned" ? " (play-now list)" : ""} · ${deck.target_bracket == null ? "target bracket not set" : `target bracket ${deck.target_bracket}`}${deck.public ? " · Public" : ""}` })));
+        ...choices.map(deck => {
+          const title = deck.version === "owned" ? `${deck.title} (${listName(deck.version)})` : deck.title;
+          const bracket = deck.target_bracket == null ? "target bracket not set" : `target bracket ${deck.target_bracket}`;
+          return el("option", { value: fpChoiceKey(deck), text: `${title} · ${bracket}${deck.public ? " · Public" : ""}` });
+        }));
       if (!choices.some(deck => fpChoiceKey(deck) === ctx.selected[i])) ctx.selected[i] = "";
       select.value = ctx.selected[i];
     });

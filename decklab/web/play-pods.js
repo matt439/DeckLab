@@ -93,7 +93,7 @@ function podCard(entry, data, editable = true, headId = `play-pod-${entry.record
   return card;
 }
 
-function playPodActions(data, deckId, version = "target") {
+function playPodActions(data, deckId, version = "target", chooseList = false) {
   if (!Array.isArray(data.pods) || !Array.isArray(data.pod_lists)) return null;
   const actions = el("div", { class: "actions play-pod-actions", role: "group", "aria-label": "Real Commander pod actions" });
   const canRecord = state.profile && data.pod_lists.some(list => podList(list) && list.can_record === true);
@@ -104,6 +104,7 @@ function playPodActions(data, deckId, version = "target") {
       const button = el("button", { type: "button", class: "btn", text: label, "data-play-pod-action": startOnly ? "start" : "record" });
       const owner = podOwnerContext(data, button, actions, null, deckId);
       owner.version = version;
+      owner.chooseList = chooseList;
       button.addEventListener("click", () => {
         if (podOwner(owner) && podCounterControlVisible(button)) podForm(owner, null, null, startOnly);
       });
@@ -231,9 +232,10 @@ function podForm(owner, preset = null, onSaved = null, startOnly = false) {
   ctx.editFrame = podFrame(ctx.sheet);
   ctx.frame = owner.host.parentNode; ctx.frameParent = ctx.frame.parentNode;
   const currentLists = ctx.lists.filter(list => podList(list) && (!rematchSetup || podLifeDeck(playChoice(list), ctx.space)));
-  const start = currentLists.find(list => list.id === ctx.deckId && list.version === ctx.version && list.can_record === true)
+  const start = ctx.chooseList ? null : (
+    currentLists.find(list => list.id === ctx.deckId && list.version === ctx.version && list.can_record === true)
     || currentLists.find(list => list.id === ctx.deckId && list.can_record === true)
-    || currentLists.find(list => list.can_record === true);
+    || currentLists.find(list => list.can_record === true));
   ctx.seats = new Map([1, 2, 3, 4].map(n => [`s${n}`, { seat_id: `s${n}`, type: n === 1 ? "deck" : "external",
     player: n === 1 ? ctx.profile.name : `Opponent ${n - 1}`, commander: "", selected: start && podKey(start) }]));
   const seeded = preset?.seats || (rematchSetup ? ctx.record.seats : correction?.seats);
@@ -269,6 +271,7 @@ function podForm(owner, preset = null, onSaved = null, startOnly = false) {
       if (correction && seat.deck && !lists.some(list => podKey(list) === podKey(seat.deck))) lists.unshift({ ...seat.deck, historical: true });
       const selected = lists.findIndex(value => podKey(value) === seat.selected);
       const needsReplacement = (preset || rematchSetup) && seat.deck && selected < 0;
+      const needsChoice = needsReplacement || (ctx.chooseList && selected < 0);
       const isCurrentVersion = value => needsReplacement && value.id === seat.deck.id && value.version === seat.deck.version;
       const player = el("input", { type: "text", maxlength: 160, required: true, value: seat.player, "data-pod-player": id });
       const type = el("select", { "data-pod-type": id }, el("option", { value: "deck", text: "Saved Commander deck" }),
@@ -276,8 +279,9 @@ function podForm(owner, preset = null, onSaved = null, startOnly = false) {
       const list = el("select", { "data-pod-list": id }, lists.map((value, index) => el("option", { value: String(index),
         text: playListWords(value) + (value.historical ? " (recorded historical list)"
           : rematchSetup && isCurrentVersion(value) ? " (updated list)" : " (current saved list)") })));
-      if (needsReplacement) list.insertBefore(el("option", { value: "", text: "Choose a current replacement list" }), list.children[0] || null);
-      list.value = needsReplacement ? "" : String(Math.max(0, selected));
+      if (needsChoice) list.insertBefore(el("option", { value: "", text: needsReplacement
+        ? "Choose a current replacement list" : "Choose a current list" }), list.children[0] || null);
+      list.value = needsChoice ? "" : String(Math.max(0, selected));
       const commander = el("input", { type: "text", maxlength: 600, value: seat.commander || "", "data-pod-commander": id });
       const deckField = playField("Deck and list", list), commanderField = playField("Commander (optional)", commander);
       const replacement = needsReplacement ? el("p", { class: "box box-warn", text: rematchSetup

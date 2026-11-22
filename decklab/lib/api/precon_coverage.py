@@ -1,4 +1,4 @@
-"""The Collection page's "Precons we could build" (E1-S24): MTGJSON's published
+"""Precon coverage (E1-S24): MTGJSON's published
 precons ranked by how much of each one the space's free pool covers
 (lib/precon_coverage.py), one precon's missing cards with their estimated AUD
 cost, and a new idea deck started from its list. Imported when first needed,
@@ -31,6 +31,7 @@ from . import precons as add
 from .carddata import _require_cards
 from .collection import _integer, space_param
 from .common import ApiError, _keys, _parse_body, _public
+from .library import visible_unresolved, visible_warnings
 from .settings import _writer
 
 LIMIT = 60
@@ -46,6 +47,10 @@ def _pool(space):
         if space == spaces.HOME and not guard.sees_home_records():
             raise ApiError(409, "The collection couldn't be read.") from None
         raise ApiError(409, f"The collection couldn't be read: {_public(error)}") from None
+
+
+def _collection_incomplete(stock):
+    return bool(visible_warnings(stock) or visible_unresolved(stock.unresolved))
 
 
 def _may_start(space):
@@ -79,7 +84,7 @@ def coverage_view(space=None, format=None, type=None, limit=None):
         raise ApiError(502, _public(e)) from None
     return {"space": space, "date": ranked["date"], "decks": ranked["decks"][:limit],
             "total": len(ranked["decks"]), "types": ranked["types"], "status": ranked["status"],
-            "collection_incomplete": bool(p.warnings or p.unresolved), "may_start": _may_start(space)}
+            "collection_incomplete": _collection_incomplete(p), "may_start": _may_start(space)}
 
 
 def _sections(read, kind):
@@ -138,7 +143,8 @@ def coverage_deck(file=None, space=None):
     has_commander = any(line["section"] == "Commander" for line in read["lines"])
     kind = "commander" if entry["type"] == "Commander Deck" and has_commander else "casual"
     sections = _sections(read, kind)
-    result = pool.compare(sections, _pool(space), prices=True)
+    stock = _pool(space)
+    result = pool.compare(sections, stock, prices=True)
     total = sum(r["need"] for r in result["rows"])
     covered = sum(min(r["need"], r["available"]) for r in result["rows"])
     free_now = 0
@@ -158,7 +164,7 @@ def coverage_deck(file=None, space=None):
     why = why_not_testable(*kind_and_cards(entry, sections))
     return {"deck": entry, "kind": kind, "title": title[:saving.MAX_TITLE], "cards": total, "covered": covered,
             "free_now": free_now, "on_the_way": covered - free_now, "incoming_cards": incoming,
-            "collection_incomplete": bool(result["warnings"] or result["unresolved"]), "list_complete": not read["problems"],
+            "collection_incomplete": _collection_incomplete(stock), "list_complete": not read["problems"],
             "share": round(covered / total, 4) if total else None, "missing": missing,
             "totals": {k: result["totals"][k] for k in ("missing", "aud_missing", "unpriced")},
             "rate": result["rate"], "rate_date": result["rate_date"], "price_date": result["price_date"],

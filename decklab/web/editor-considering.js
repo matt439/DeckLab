@@ -472,7 +472,7 @@ function drawEditorPromotionState(ed, section) {
   for (const [name, rows] of Object.entries(ed.planned)) rows.forEach(line => lines.append(el("p", {
     class: "editor-planned-row", "data-planned-uid": line.uid, text: `${sectionTitle(name)}: ${line.qty} ${line.name} (${printingText(line)})${line.category ? ` · ${line.category}` : ""}` })));
   section.append(el("details", { class: "more editor-planned-draft" }, el("summary", { text: "Planned changes awaiting Save" }),
-    el("p", { class: "sub", text: "These changes belong to Planned. This Play-now list stays as it is." }), lines));
+    el("p", { class: "sub", text: `These changes apply to the ${listName("target", true)}.` }), lines));
   markEditorPlannedRows(ed);
 }
 function fillEditorPlannedCards(answer, sent) {

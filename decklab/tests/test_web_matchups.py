@@ -392,9 +392,9 @@ class ReviewFixTests(unittest.TestCase):
             ".map(n=>n.getAttribute('aria-label'))]); })()"])
         entries = json.loads(entries)
         self.assertEqual([(row[0], row[1]) for row in entries], [("casual/c", .7), ("casual/b", .4)])
-        self.assertIn("play-now", entries[0][3])
+        self.assertIn("alternative list", entries[0][3])
         self.assertEqual(entries[1][2], f"#/matchup?key={'2' * 64}")
-        self.assertIn("play-now", labels)
+        self.assertIn("alternative list", labels)
         unknown_words, unknown_labels = json.loads(unknown)
         self.assertIn("?", unknown_words)
         self.assertRegex(unknown_labels[-1].lower(), r"not known|no winner")
@@ -433,7 +433,7 @@ class ReviewFixTests(unittest.TestCase):
                              (("casual/a", "A"), ("casual/b", "B"))]}
         s = {"id": "casual/a", "kind": "casual", "title": "A"}
         href, = _run_page([f"(() => {{ {self.STUB} const parts = deckResultParts({json.dumps(m)}, {json.dumps(s)}, "
-                           f"'play-now list', {json.dumps(library)}, 'owned'); "
+                           f"'alternative list', {json.dumps(library)}, 'owned'); "
                            "return walk(parts[1]).find((n) => n.tag === 'a').getAttribute('href'); })()"])
         self.assertEqual(href, "#/matchup?a=casual%2Fa&av=owned&b=casual%2Fb&bv=target")
 
@@ -535,11 +535,11 @@ class RunsPillTests(unittest.TestCase):
             ".map((n) => n.getAttribute('aria-label')).join(' | '); })()",
             f"(() => {{ {walk} return [{parts}].flat(Infinity).filter(Boolean).flatMap(walk).filter((n) => n.tag === 'a')"
             ".map((n) => n.getAttribute('href')).join(' '); })()"], self.NAMES)[1:]
-        self.assertIn("Forge playing: Gruul Ramp vs Izzet Otters (play-now)game 640 of ~1,100 · about 6 min left", text)
+        self.assertIn("Forge playing: Gruul Ramp vs Izzet Otters (alternative list)game 640 of ~1,100 · about 6 min left", text)
         self.assertIn("WaitingField run of Gruul Rampnext", text)
         self.assertIn("Every run in Simulate", text)
         self.assertEqual(ring, "58 | Games played: 640 of ~1,100")
-        self.assertEqual(stops, "Stop the Forge run: Gruul Ramp vs Izzet Otters (play-now)")
+        self.assertEqual(stops, "Stop the Forge run: Gruul Ramp vs Izzet Otters (alternative list)")
         self.assertEqual(links, "#/matchup?key=k #/matchups")
         # Alone, its Stop is just "Stop the Forge run"; before a tenth of it has played there's no time left yet.
         alone, early = _run_page([

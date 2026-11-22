@@ -128,8 +128,11 @@ def _entry(summary, deadline, shows_standins, shows_box):
                 entry["packed_version"] = packed["version"]
         if shows_standins:
             try:
-                markers = (standins.installed_for(deck_file) or {}).get("cards", []) if packed is not None \
-                    else standins.project(deck_file, version)["rows"]
+                if built:
+                    installed = standins.installed_for(deck_file)
+                    markers = installed["cards"] if installed else []
+                else:
+                    markers = standins.project(deck_file, version)["rows"]
             except standins.StandInsError:
                 entry["unknown"] = "Its physical placeholders need checking. Review the build from the deck page."
             else:

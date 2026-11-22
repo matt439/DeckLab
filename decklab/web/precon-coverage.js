@@ -1,4 +1,4 @@
-/* New deck's "Precons we could build" (E1-S24, lib/api/precon_coverage.py): MTGJSON's published
+/* "Precons we could build" (E1-S24, lib/api/precon_coverage.py): MTGJSON's published
  * precons ranked by how much of each the space's free pool already covers (copies not held by built decks or
  * intact products, plain basics left out), best first, filtered by format and kind of deck. Opening one shows
  * its missing cards with their estimated AUD cost (with the rate and the dates it was pulled), and

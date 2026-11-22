@@ -7,6 +7,7 @@
 - **Add cards** opens single entry, Scan, import and owned precon entry. Storage and box checks explain when a hand count records a dated audit and when a scan shows a temporary report.
 - The main navigation follows Decks, Collection and household Shopping. More has **At the table**, **Simulate** and **Help**. Real games and simulations show their evidence separately. **Against popular decks** leads the simulation choices.
 - **Who sees what** names configured profiles through Cloudflare Access and trusted home-network visitors before a Public grant. **Changes & undo** and **Administration** group the existing recovery and operator tools.
+- The real-game shortcuts check the exact saved list, and **Use this pair** applies both lists together. An explicit simulation opponent stays selected while estimates load. Box checks use the recorded packed list, and read-only Public collection views offer Commander and precon discovery through **Explore collection**.
 
 The [feature review](design/feature-focus-review-2026-11-22.md#household-acceptance)
 owns the phone and portrait iPad walkthrough. The existing device, camera and

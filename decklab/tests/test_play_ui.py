@@ -172,6 +172,32 @@ class PlayUiTests(unittest.TestCase):
           delete document.visibilityState;
         """)
 
+    def test_an_unavailable_link_requires_both_lists_before_recording(self):
+        self.run_js("""
+          state.profile={id:'matt',name:'Matt'}; state.profiles=[state.profile];
+          const list=(id,sha256)=>({id,version:'target',sha256,title:id,sections:{Deck:[{name:'Forest',qty:60}]}});
+          const lists=[list('casual/a','a'.repeat(64)),list('casual/b','b'.repeat(64))];
+          const data={lists,games:[],sideboards:[],warnings:[],today:'2026-10-08'};
+          const previewed=[]; apiWrite=async (url,payload)=>{previewed.push(payload);throw Error('Fixture stops at preview');};
+          location.hash='#/play?id=casual%2Fa&action=record';
+          for(const [version,sha,packed] of [['owned',null,true],['target','c'.repeat(64),true],['target',lists[0].sha256,false]]){
+            clear(main); drawPlay({...data,decks:{'casual/a':{packed_match:{target:packed}}}},lists[0].id,version,'record',sha);
+            flushTimers();
+            assert.match(document.activeElement.textContent,/Choose the lists in use at the table/);
+            const a=main.querySelector('#play-quick-deck-0'), b=main.querySelector('#play-quick-deck-1');
+            same([a.value,b.value],['','']);
+            const record=main.querySelector('.play-outcome');
+            record.click(); assert.equal(previewed.length,0);
+            a.value='0'; b.value='1'; record.click();
+            for(let i=0;i<5;i++) await null;
+            const checked=previewed.pop();
+            assert.equal(checked.preview,true);
+            same(checked.sides.map(x=>x.sha256),lists.map(x=>x.sha256));
+          }
+          clear(main); drawPlay(data,lists[0].id);
+          assert.equal(main.querySelector('#play-quick-deck-0').value,'0');
+        """)
+
     def test_quick_record_details_and_a_refusal(self):
         self.run_js("""
           state.profile={id:'matt',name:'Matt'}; state.profiles=[state.profile];

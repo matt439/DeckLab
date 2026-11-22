@@ -219,7 +219,7 @@ class ForgePodsUiTests(unittest.TestCase):
           assert(main.textContent.includes('at most one apart'));
           await draw({choices:[...choices,{...choices[0],version:'owned'}]});chooseFour();
           const fourth=main.querySelectorAll('.fp-deck')[3];
-          fourth.value=fourth.querySelectorAll('option').find(node=>node.textContent.includes('play-now list')).getAttribute('value');
+          fourth.value=fourth.querySelectorAll('option').find(node=>node.textContent.includes('Alternative list')).getAttribute('value');
           fourth.fire('change');assert(blocked(button('Check this pod')));
           assert(main.textContent.includes('four different decks'));assert.equal(writes.length,0);
         """)

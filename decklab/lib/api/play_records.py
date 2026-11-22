@@ -178,6 +178,11 @@ def _checked(kind, record_id, record):
 
 def _snapshot(deck_id, version):
     summary, source = _deck_sections(deck_id, version)
+    return snapshot_from_sections(summary, version, source)
+
+
+def snapshot_from_sections(summary, version, source):
+    """Capture a current saved list using the same identity as the Game log."""
     if is_half(summary):
         raise ApiError(400, "Choose a complete deck or Beginner Box pairing")
     for lines in source.values():
@@ -189,6 +194,24 @@ def _snapshot(deck_id, version):
         raise ApiError(400, "Choose a deck with a main deck")
     payload = {"id": summary["id"], "version": version, "sections": sections}
     return {**payload, "title": summary["title"], "sha256": _hash(_bytes(payload))}
+
+
+def may_check_packed_list(summary, profile=False):
+    return (summary.get("status") == "built" and not summary["id"].startswith(("product/", "pairing/"))
+            and guard.sees_inventory(spaces.space_of(summary["id"]), profile))
+
+
+def packed_list_matches(deck, version):
+    """Compare the box to the named saved list, ignoring order and categories."""
+    from decklab.lib.decks import assembled
+    from .assembly_intent import recipe_counts
+    if deck is None:
+        return False
+    try:
+        selected = deck.owned if version == "owned" else deck.target
+        return bool(selected) and recipe_counts(assembled.sections(deck)) == recipe_counts(selected)
+    except cards.INDEX_ERRORS:
+        return False
 
 
 def snapshot_sections(source):
@@ -649,7 +672,9 @@ def play_overview(deck_id=None):
     from its historical sections) and "editable"; none is part of its stored record or sha256.
     Separately, pods contains three- or four-seat records with can.edit, while
     pod_lists contains only the viewer's own-space Commander choices, each with
-    a positive boolean can_record. Their external player/commander labels stay
+    a positive boolean can_record. For the linked built deck only, a viewer who
+    sees its inventory also receives a packed_match verdict for each saved list
+    in decks. Pod external player/commander labels stay
     private to the recording space even when its game results are Public.
     games and its can.sides/result remain exclusively the existing 1v1 format.
 
@@ -674,6 +699,11 @@ def play_overview(deck_id=None):
             continue        # a trial deck (E3-S39) is a precon not owned: never played at the table
         about[summary["id"]] = {"player": summary.get("player"), "status": summary.get("status"),
                                  "can_record": guard.allowed(viewer, "play.record", [summary])}
+        if summary["id"] == deck_id and may_check_packed_list(summary, viewer):
+            from decklab.lib.inventory.ops_decks import parsed_deck
+            parsed = parsed_deck(snapshot.deck(deck_id))
+            about[deck_id]["packed_match"] = {version: packed_list_matches(parsed, version)
+                                               for version in summary["versions"]}
         for version in summary["versions"]:
             try:
                 captured = _snapshot(summary["id"], version)

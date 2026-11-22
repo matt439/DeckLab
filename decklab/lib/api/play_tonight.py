@@ -10,8 +10,8 @@ member, a request naming nobody) gets {"available": false, "pairs": []} and noth
 games or Forge numbers, not even a count. The decks are home's built casual decks the viewer may see
 (guard.visible_decks); a deck is ready when its built list (pool._built_version) has nothing missing in
 home's pool, needs no incoming copies and its availability is confirmed (no unknown card or pool warning).
-A recorded box must match that saved list and use no physical placeholders, so choosing the pair
-selects the list actually available to play and record.
+A recorded box must match that saved list and use no physical placeholders. Each suggested side
+carries that saved game's list hash, so the Game log can select both exact lists together.
 The games are the Game log's own (library_played._games: its visibility and
 damage checks, renamed decks' old ids resolved, pods left out); a game with a removed side counts for
 nothing. Forge's numbers are the Constructed field's saved pairs this viewer sees (library_forge.pair_rates,
@@ -19,11 +19,12 @@ cached; never a game played), each kept only when both its lists are the two dec
 field addition's other list never stands for the built one (the pair then goes by the real record). When the games can't be read nothing is suggested (error says so); when
 Forge's numbers can't be, the pairs go by the real record only (forge_error says so).
 """
-from decklab.lib import decks, inventory, permissions, play_pairs, pool, spaces
+from decklab.lib import cards, decks, inventory, permissions, play_pairs, pool, spaces
 from decklab.lib.decks import assembled, standins
 from decklab.lib.inventory.ops_decks import parsed_deck
 
 from . import guard, library_forge, library_played, play_records
+from .common import ApiError
 from .library import _load_pool, is_half
 
 NO_GAMES = "The Game log can't be read now, so no pairs are suggested."
@@ -41,18 +42,12 @@ def _home_viewer():
 def _ready(summary, version, p, deck):
     """True when the built list has every card here, False when it misses some, None when that can't be
     confirmed (an unknown card, a pool warning: the library's "Availability needs checking")."""
-    if deck is None:
+    if not play_records.packed_list_matches(deck, version):
         return None
     try:
-        packed = assembled.get(deck)
         placeholders = standins.installed_for(deck)
-        if placeholders and placeholders["cards"]:
+        if assembled.version(deck) != version or (placeholders and placeholders["cards"]):
             return None
-        if packed:
-            selected = deck.owned if version == "owned" else deck.target
-            same_list = selected and play_records.snapshot_sections(packed["sections"]) == play_records.snapshot_sections(selected)
-            if packed["version"] != version or not same_list:
-                return None
         result = pool.owned_vs_needed(summary["id"], version, pool=p, prices=False)
     except (decks.DeckNotFound, decks.DeckFileError, OSError, ValueError):
         return None
@@ -77,8 +72,16 @@ def _decks():
     for s in summaries:
         version = pool._built_version(s, [])
         deck = parsed_deck(snapshot.deck(s["id"]))
+        ready = _ready(s, version, p, deck)
+        sha256 = None
+        if ready:
+            sections = deck.owned if version == "owned" else deck.target
+            try:
+                sha256 = play_records.snapshot_from_sections(s, version, sections)["sha256"]
+            except (ApiError, *cards.INDEX_ERRORS):
+                ready = None
         found.append({"id": s["id"], "title": s.get("title") or s["id"], "player": s.get("player"),
-                      "status": "built", "kind": "casual", "version": version, "ready": _ready(s, version, p, deck)})
+                      "status": "built", "kind": "casual", "version": version, "ready": ready, "sha256": sha256})
     return found
 
 
@@ -111,4 +114,8 @@ def pairs_view():
              for day, _ids, sides, result in played if len(sides) == 2]
     forge, answer["forge_error"] = library_forge.pair_rates()
     answer["pairs"] = play_pairs.suggest(ready, games, _built_rates(forge, ready), today)
+    hashes = {deck["id"]: deck["sha256"] for deck in ready}
+    for pair in answer["pairs"]:
+        for side in pair["sides"]:
+            side["sha256"] = hashes[side["id"]]
     return answer

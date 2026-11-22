@@ -441,7 +441,7 @@ function matchupEntries(deck, decks, pairs, format, engines = false) {
     played.add(sameDeckId(side.them.id));
     const olderWords = [side.me.current === false ? "this list has changed since" : null,
       side.them.current === false ? "the opponent's list has changed since" : null,
-      side.me.version === "owned" || side.them.version === "owned" ? "played with a play-now list" : null]
+      side.me.version === "owned" || side.them.version === "owned" ? `simulated with an ${listName("owned", true)}` : null]
       .filter(Boolean).join("; ");
     entries.push({ item, side, value: side.rate.value, muted: !!item.not_meaningful, olderWords,
       engineTag: engines && !pair.newer && earlierEngine(item) });

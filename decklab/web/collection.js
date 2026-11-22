@@ -338,16 +338,22 @@ function colHead(cv, query) {
       "aria-current": cv.kind === "map" ? "page" : null }) : null);
   const owner = cv.space === HOME_SPACE ? "the people of the home collection" : spaceName(cv.space);
   const canAdd = cv.editable && !cv.unsupported;
+  const canExplore = !cv.editable && cv.data.space === cv.space && seesInventory(cv.space);
   const action = (text, open) => el("button", { type: "button", class: "btn btn-primary col-mutate", text,
     "data-focus": "add", "aria-haspopup": "dialog", onclick: event => {
       if (event.currentTarget.isConnected && colActive(cv) && !cv.busy) open(cv);
     } });
   const primary = canAdd ? action(cv.kind === "map" ? "Storage setup" : "Add cards",
     cv.kind === "map" ? openStorageSetup : openCollectionAddSheet) : null;
-  const manage = cv.kind === "map" || cv.unsupported ? null : menuButton("Manage collection", [
+  const explore = open => event => {
+    if (event.currentTarget.isConnected && colActive(cv) && seesInventory(cv.space)) open(cv);
+  };
+  const manage = cv.kind === "map" || cv.unsupported ? null : menuButton(canExplore ? "Explore collection" : "Manage collection", [
     canAdd ? { label: "Record a trade…", onclick: () => openTradeSheet(cv) } : null,
     canAdd ? { label: "Loans…", onclick: () => openCollectionLoans(cv) } : null,
-    canAdd ? "sep" : null,
+    canExplore ? { label: "Find commanders…", onclick: explore(openCommanderCandidates) } : null,
+    canExplore ? { label: "Find precons…", onclick: explore(openCoverageSheet) } : null,
+    canAdd || canExplore ? "sep" : null,
     { label: "Download collection (CSV)", onclick: () => downloadCollection(cv) },
     typeof memberOwnSpace === "function" && memberOwnSpace() && cv.space === ownSpace()
       ? { label: "Download my space (zip)", onclick: () => openCollectionDownload(cv) } : null,

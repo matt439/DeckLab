@@ -183,7 +183,7 @@ class AssemblySectionsUiTests(unittest.TestCase):
         self.run_js("""
           const assembled={version:'owned',main_count:60,sideboard_count:1,sideboard_intended:3,changed:true,
             remaining:[{...intention,assembled:1,remaining:2,missing:null,on_the_way:null}]};
-          const data={summary:{id:'casual/a',assembled},version:'target'};
+          const data={summary:{id:'casual/a',assembled},versions:['target','owned'],version:'target'};
           assert.equal(deckAssemblySection(data),null);
           const node=deckAssemblySection({...data,owned:{},assembled});
           assert(node.textContent.includes('60 main-deck cards + 1 of 3 sideboard'));
@@ -191,6 +191,9 @@ class AssemblySectionsUiTests(unittest.TestCase):
           assert(node.textContent.includes('availability needs checking'));
           assert(!node.textContent.includes('0 to get'));
           assert.equal(node.querySelector('a').getAttribute('href'),'#/assembly?deck=casual%2Fa&version=owned');
+          const withoutAlternative=deckAssemblySection({...data,versions:['target'],owned:{},assembled});
+          assert(withoutAlternative.textContent.includes('Alternative list'));
+          assert.equal(withoutAlternative.querySelector('a').getAttribute('href'),'#/assembly?deck=casual%2Fa&version=target');
         """)
 
     def test_banner_keeps_intended_missing_cards_separate_from_the_built_main_deck(self):

@@ -127,6 +127,22 @@ class PodUiTests(unittest.TestCase):
           assert.equal(document.activeElement.id,'play-pods-title');assert.equal(writes.length,0);
         """)
 
+    def test_stale_deck_action_never_preselects_a_replacement_pod_list(self):
+        self.run_js("""
+          const current=snapshot({sha256:shaB}), data=packet({lists:[current],pod_lists:[current]});
+          drawPlay(data,current.id,'target','record',shaA); flushTimers();
+          assert.match(document.activeElement.textContent,/The requested deck list is unavailable/);
+          buttonText(main,'Record a pod game').click();
+          const edit=sheets.at(-1), first=seat(edit,'s1','list');
+          assert.equal(first.value,'');
+          await review(edit); assert.equal(writes.length,0);
+          assert.match(edit.body.textContent,/Choose a saved Commander deck/);
+          set(first,'0','change');
+          await review(edit);
+          assert.equal(writes.length,1);
+          same(writes[0][1].seats[0].deck,{id:current.id,version:'target',sha256:shaB});
+        """)
+
     def test_back_to_editing_retains_typed_fields_and_server_preview_identity(self):
         self.run_js("""
           const edit=launch();set(seat(edit,'s2','commander'),'Typed commander');set(controls(edit).notes,'Private note');

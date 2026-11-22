@@ -11,14 +11,15 @@ import unittest
 from decklab.tests.test_play_ui import NODE, RUNNER, WEB
 
 SETUP = """
-  const list = (id, title, version = 'target') => ({ id, version, sha256: id + version, title, sections: { Deck: [{ name: 'Forest', qty: 60 }] } });
+  const sha = (id, version) => id.split('/').at(-1).padStart(63, '0') + (version === 'owned' ? 'b' : 'a');
+  const list = (id, title, version = 'target') => ({ id, version, sha256: sha(id, version), title, sections: { Deck: [{ name: 'Forest', qty: 60 }] } });
   const lists = [list('casual/a', 'Alpha'), list('casual/b', 'Beta'), list('casual/c', 'Gamma'), list('casual/c', 'Gamma', 'owned')];
   const data = { lists, games: [], sideboards: [], warnings: [], today: '2026-10-29' };
   const matt = { id: 'matt', name: 'Matt', space: 'home', plays_as: 'user' };
   const user1 = { id: 'user1', name: 'User1', space: 'home', plays_as: 'wife' };
   state.profiles = [matt, user1];
-  const pair = (a, av, b, bv, reasons) => ({ sides: [{ id: a, title: a, version: av, seat: 'user' },
-    { id: b, title: b, version: bv, seat: 'wife' }], evenness: { band: 'even' }, last_played: null, days: null, reasons });
+  const pair = (a, av, b, bv, reasons) => ({ sides: [{ id: a, title: a, version: av, seat: 'user', sha256: sha(a, av) },
+    { id: b, title: b, version: bv, seat: 'wife', sha256: sha(b, bv) }], evenness: { band: 'even' }, last_played: null, days: null, reasons });
   const answer = { available: true, ready: 3, unconfirmed: 0, error: null, forge_error: null, today: '2026-10-29',
     pairs: [pair('casual/c', 'owned', 'casual/b', 'target', ['Evenly matched by Forge: Gamma wins 50% of 120 simulated games.',
       'Not played against each other yet.']), pair('casual/a', 'target', 'casual/b', 'target', ['Fairly even.', 'Played lately.'])] };
@@ -65,6 +66,31 @@ class PlayTonightUiTests(unittest.TestCase):
           main.querySelectorAll('.play-tonight-pair')[1].querySelector('button').click();
           same(chosen(), ['Alpha target', 'Beta target']);
           assert.ok(!main.textContent.includes('undefined') && !main.textContent.includes('null'));
+        """)
+
+    def test_stale_pair_changes_neither_seat_and_offers_an_explicit_refresh(self):
+        self.run_js("""
+          const missing = pair('casual/d', 'target', 'casual/b', 'target', []);
+          const changed = structuredClone(answer.pairs[0]);
+          changed.sides[0].sha256 = 'f'.repeat(64);
+          answering({...answer, pairs:[missing, changed]});
+          state.profile = matt;
+          let refreshes = 0; route = () => refreshes++;
+          clear(main); drawPlay(data, ''); await openTonight();
+          pickers()[0].value = '1'; pickers()[1].value = '2';
+          for (const card of main.querySelectorAll('.play-tonight-pair')) {
+            const [use, refresh] = card.querySelectorAll('button');
+            assert(refresh.parentNode.hidden);
+            use.click();
+            same(chosen(), ['Beta target', 'Gamma target']);
+            assert.match(card.querySelector('[role="status"]').textContent, /Refresh the Game log/);
+            assert(!refresh.parentNode.hidden);
+            assert.equal(refreshes, 0);
+          }
+          const refresh = main.querySelector('.play-tonight-pair').querySelectorAll('button')[1];
+          refresh.click(); assert.equal(refreshes, 1);
+          clear(main); drawPlay(data, '');
+          refresh.fire('click'); assert.equal(refreshes, 1);
         """)
 
     def test_empty_failed_and_member_states(self):

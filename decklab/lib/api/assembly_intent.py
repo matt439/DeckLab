@@ -23,7 +23,8 @@ def _counts(sections):
     return result
 
 
-def _recipe(sections):
+def recipe_counts(sections):
+    """Count each printing and finish in its section, independent of line order and grouping."""
     result = Counter()
     for section, lines in sections.items():
         for line in lines:
@@ -114,4 +115,4 @@ def project(deck, p=None, result=None, *, version="target", sections=None, stand
             "sideboard_count": sum(actual_counts.get("Sideboard", {}).values()),
             "sideboard_intended": sum(intended_counts.get("Sideboard", {}).values()),
             "remaining_count": sum(row["remaining"] for row in remaining), "remaining": remaining,
-            "changed": _recipe(actual) != _recipe(intended) or bool(remaining)}
+            "changed": recipe_counts(actual) != recipe_counts(intended) or bool(remaining)}

@@ -84,7 +84,7 @@ let matchupRefresh = null;              // the current route's single refresh lo
 
 function isLive(data) { return data.status === "queued" || data.status === "running"; }
 
-/** "Boros Burn", or "Boros Burn (play-now list)" for the owned version (core.js listName). */
+/** A side's full title, with the alternative list identified when used. */
 function sideTitle(side) { return side.title + (side.version === "owned" ? ` (${listName("owned", true)})` : ""); }
 
 /** Both sides' titles, told apart in a mirror match ("Boros Burn (deck 1)"). */
@@ -104,8 +104,8 @@ function shortTitle(title) {
   return t || String(title || "");
 }
 
-/** A side's short title, with "(play-now)" for its owned list. */
-function sideShort(side) { return shortTitle(side.title) + (side.version === "owned" ? " (play-now)" : ""); }
+/** A side's short title, with the alternative list identified when used. */
+function sideShort(side) { return sideTitle({ title: shortTitle(side.title), version: side.version }); }
 
 function matchupHref(a, b) {
   return `#/matchup?a=${encodeURIComponent(a.id)}&av=${a.version || "target"}` +

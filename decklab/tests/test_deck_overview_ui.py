@@ -246,7 +246,7 @@ class DeckOverviewUiTests(unittest.TestCase):
           assert.equal(empty.querySelector('h2'), null);
           // The Game log narrowed to the deck, in plain sight (E11-S61).
           assert.equal(empty.querySelector('.deck-played-log').textContent, 'Record a game');
-          assert.equal(empty.querySelector('.deck-played-log').getAttribute('href'), '#/play?id=casual%2Ftest&version=target&action=record');
+          assert.equal(empty.querySelector('.deck-played-log').getAttribute('href'), '#/play?id=casual%2Ftest&version=target&action=record&sha=' + 'a'.repeat(64));
           // A viewer who may not record a game with it (another space's Public deck) is only shown the Game log.
           for (const can_record of [false, undefined]) {
             const shown = draw({last: null, games: 0, since: null, can_record});

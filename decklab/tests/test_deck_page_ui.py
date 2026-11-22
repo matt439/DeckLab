@@ -19,6 +19,7 @@ PAGE = """
       player: 'user', status: 'building', read_only: false, card_count: 29, sideboard_count: 0,
       versions: ['target', 'owned'], kit: null},
     version: 'target', versions: ['target', 'owned'],
+    play_list: {sha256: 'a'.repeat(64)},
     sections: {Deck: [
       {qty: 4, name: 'Elf', set: 'fdn', number: '1', finish: 'nonfoil', card: elf},
       {qty: 2, name: 'Elf', set: 'm21', number: '2', finish: 'foil', card: elf},
@@ -259,6 +260,21 @@ class DeckPageUiTests(unittest.TestCase):
           assert(banner().includes('Packed in this box'));
         """)
 
+    def test_incoming_commander_does_not_make_an_empty_main_deck_ready(self):
+        self.run_js("""
+          const page = makePage();
+          page.summary.kind = 'commander';
+          page.summary.status = 'idea';
+          page.sections = {Commander: [{name: 'Commander', qty: 1}]};
+          page.owned.rows = [row('Commander', 1, 0, [['order x', 1]])];
+          page.owned.totals.missing = 0;
+          const banner = availabilityBanner(page, {view: {tab: 'overview'}});
+          assert(banner.textContent.includes('Planned list · No main-deck cards yet'), banner.textContent);
+          assert(banner.textContent.includes('On the way 1'));
+          assert(buttonText(banner, 'Show on the way'));
+          assert(!banner.textContent.includes('Ready'));
+        """)
+
     def test_empty_idea_directs_the_player_to_add_cards_for_the_selected_list(self):
         self.run_js("""
           state.may = null;
@@ -391,6 +407,27 @@ class DeckPageUiTests(unittest.TestCase):
           const prices = cards.querySelector('#sec-owned');
           assert(prices.textContent.includes('Price table: 3 missing, about A$3.75 at the cheapest printings'));
           assert(!prices.querySelector('table').textContent.includes('Forest'));
+        """)
+
+    def test_real_game_actions_use_the_exact_saved_list_and_respect_the_packed_box(self):
+        self.run_js("""
+          const data = makePage();
+          data.played = {games:0, can_record:true};
+          data.version = 'owned';
+          const items = () => deckMoreItems(data).filter(item => item?.label);
+          const start = () => items().find(item => item.label === 'Start a real game');
+          assert.equal(start().href, '#/play?id=casual%2Ftest&version=owned&action=start&sha=' + data.play_list.sha256);
+          const record = () => deckOverviewPlayed(data).querySelector('.deck-played-log');
+          assert.equal(record().getAttribute('href'), '#/play?id=casual%2Ftest&version=owned&action=record&sha=' + data.play_list.sha256);
+          data.play_list.packed_match = false;
+          assert(!start());
+          assert.equal(record().textContent, 'View recorded games');
+          data.play_list = null;
+          data.summary.id = 'product/fdn-beginner-box/cats';
+          assert(!start());
+          data.summary.id = 'commander/trial';
+          data.summary.trial = 'Trial_TST';
+          assert(!start());
         """)
 
     def test_head_and_overview(self):

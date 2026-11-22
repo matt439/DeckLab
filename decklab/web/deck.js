@@ -367,6 +367,16 @@ function deckPageColours(data) {
   return "WUBRG".split("").filter((c) => found.has(c));
 }
 
+/** The Game log link, with a saved list identity when it starts or records play. */
+function deckGameHref(data, action = null) {
+  const version = data.version === "owned" ? "owned" : "target";
+  const href = `#/play?id=${encodeURIComponent(data.summary.id)}&version=${version}`;
+  if (!action || action === "pods") return action ? `${href}&action=${action}` : href;
+  const list = data.play_list;
+  if (!state.profile || !/^[a-f0-9]{64}$/.test(list?.sha256 || "") || list.packed_match === false) return null;
+  return `${href}&action=${action}&sha=${list.sha256}`;
+}
+
 /** The More menu's items. */
 function deckMoreItems(data) {
   const s = data.summary;
@@ -377,8 +387,11 @@ function deckMoreItems(data) {
   // POST /api/deck/cover refuses products and pairings, so only a deck text the viewer may change.
   const cover = typeof openCoverPicker === "function" && !s.read_only
     && !/^(product|pairing)\//.test(s.id) && canEditDeck(s);
+  const start = deckGameHref(data, "start");
+  const log = !s.trial && !s.id.startsWith(BOX_PREFIX) ? deckGameHref(data) : null;
+  const game = start ? { label: "Start a real game", href: start } : log && { label: "View recorded games", href: log };
   return [
-    { label: "Start a real game", href: `#/play?id=${id}&version=${data.version}&action=start` },
+    game,
     !s.read_only ? { label: "History", href: `#/history?id=${id}&v=${data.version}` } : null,
     // compare.js: the other deck is chosen from the decks this viewer sees.
     typeof openCompareChooser === "function" ? { label: "Compare with…", onclick: () => {

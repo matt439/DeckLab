@@ -130,6 +130,7 @@ function deckAssemblySection(data) {
   if (!packed) return deckStandinsSection(data);
   const label = typeof offersBoxLabel === "function" && offersBoxLabel(data);
   const review = info && ownSpace() === HOME_SPACE && space === HOME_SPACE && seesHomeInventory(state.may);
+  const reviewVersion = data.versions?.includes(info?.version) ? info.version : data.version;
   const token = routeToken, profile = state.profile?.id;
   const current = () => {
     const { path, params } = parseHash();
@@ -158,7 +159,7 @@ function deckAssemblySection(data) {
     deckStandinsSection(data, true),
     remainingIntentPart(info?.remaining, `Still on the ${listName(info?.intended_version, true)}`),
     review || scanButton || printLabel ? el("div", { class: "actions" },
-      review ? el("a", { class: "btn", href: `#/assembly?deck=${encodeURIComponent(summary.id)}&version=${info.version}`,
+      review ? el("a", { class: "btn", href: `#/assembly?deck=${encodeURIComponent(summary.id)}&version=${reviewVersion}`,
         text: "Check packed cards by hand" }) : null,
       scanButton, printLabel) : null,
     review || scan ? el("p", { class: "sub", text: [review

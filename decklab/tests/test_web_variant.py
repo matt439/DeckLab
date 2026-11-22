@@ -287,6 +287,7 @@ class VariantSavedSampleSheetTests(unittest.TestCase):
           const estimate=(against,opponents,extra={})=>({against,opponents,available:opponents>0,...extra});
           let savedEstimate=async()=>estimate(custom,1);
           let standardEstimate=async()=>estimate('gauntlet',2);
+          let fieldEstimate=async()=>estimate('field',3);
           let launched=async()=>({test:{test:'a'.repeat(64)}});
           api=async path=>{
             if(!path.startsWith('/api/variant/estimate?'))return {};
@@ -295,7 +296,8 @@ class VariantSavedSampleSheetTests(unittest.TestCase):
             requests.push([q.get('id'),q.get('version'),against]);
             if(against===custom)return savedEstimate();
             if(against==='gauntlet')return standardEstimate();
-            return estimate(against,against==='field'?3:2);
+            if(against==='field')return fieldEstimate();
+            return estimate(against,2);
           };
           apiWrite=async (path,body)=>{writes.push({path,body});return launched();};
           load=(path,token,show)=>{assert.equal(path,'/api/deck/edit?id=casual%2Fsample');show(view());};
@@ -332,10 +334,27 @@ class VariantSavedSampleSheetTests(unittest.TestCase):
 
           standardEstimate=()=>new Promise(resolve=>{release=resolve;});
           ({dialog,start}=openTest(false));await drain();
-          dialog.querySelector('input[value="field"]').fire('change');await drain();
+          const field=dialog.querySelector('input[value="field"]');
+          assert(field.getAttribute('checked')!==null);
+          field.click();await drain();
           release(estimate('gauntlet',2));await drain();
           assert(dialog.querySelector('input[value="field"]').getAttribute('checked')!==null);
           start.click();await drain();assert.equal(writes[1].body.against,'field');
+        ''')
+
+    def test_unavailable_explicit_field_requires_a_new_choice(self):
+        self.run_js(r'''
+          let releaseField;
+          fieldEstimate=()=>new Promise(resolve=>{releaseField=resolve;});
+          const {dialog,start}=openTest(false);
+          dialog.querySelector('input[value="field"]').click();
+          releaseField(estimate('field',0));await drain();
+          assert(dialog.querySelector('input[value="field"]').getAttribute('checked')!==null);
+          assert(dialog.textContent.includes('The household field is unavailable.'));
+          assert(start.disabled);start.click();assert.equal(writes.length,0);
+          dialog.querySelector('input[value="gauntlet"]').fire('change');await drain();
+          assert(!start.disabled);start.click();await drain();
+          assert.equal(writes[0].body.against,'gauntlet');
         ''')
 
     def test_the_current_testing_sample_is_selected_and_only_start_sends_it(self):

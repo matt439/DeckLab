@@ -17,12 +17,12 @@ import urllib.error
 from collections import Counter
 from unittest import mock
 
-from decklab.lib import pool
+from decklab.lib import pool, precons
 from decklab.lib import precon_coverage as coverage
-from decklab.lib import precons
 from decklab.lib.api import precon_coverage as api
-from decklab.lib.inventory import entry
+from decklab.lib.inventory import entry, paths
 from decklab.tests.test_precons import DINOS, ELVES, PreconTestCase
+from decklab.tests.test_public_collection_games import publish
 
 
 def archive(decks):
@@ -178,6 +178,26 @@ class RankingTests(CoverageTestCase):
 
 
 class DeckTests(CoverageTestCase):
+
+    def test_collection_status_uses_the_readers_visible_sources(self):
+        publish(self.box.state, "home", "collection")
+        hidden_deck = "casual/private"
+        hidden_order = f"{paths.ORDERS}/private.csv"
+        cases = (
+            ("deck warning", pool.Pool(Counter(), {}, [], warnings=["Private deck warning"],
+                                       warning_decks={"Private deck warning": hidden_deck}), False),
+            ("order warning", pool.Pool(Counter(), {}, [], warnings=["Private order warning"]), False),
+            ("unknown card in hidden sources", pool.Pool(Counter(), {}, [],
+                                                         unresolved={"Private card": {hidden_deck, hidden_order}}), False),
+            ("unknown card in the collection", pool.Pool(Counter(), {}, [],
+                                                         unresolved={"Recorded card": {paths.collection()}}), True),
+        )
+        for case, stock, public_incomplete in cases:
+            with mock.patch.object(api, "_pool", return_value=stock):
+                for viewer, expected in (("user2", public_incomplete), ("matt", True)):
+                    with self.subTest(case=case, viewer=viewer), self.as_(viewer):
+                        for answer in (self.ranked("home"), api.coverage_deck("TestDinos_TST", "home")):
+                            self.assertIs(answer["collection_incomplete"], expected)
 
     def test_rank_and_detail_distinguish_physical_copies_from_arrivals(self):
         stock = pool.Pool(Counter({"Llanowar Elves": 1, "Sol Ring": 3}), {"Sol Ring": [("Fixture order", 3)]}, [])

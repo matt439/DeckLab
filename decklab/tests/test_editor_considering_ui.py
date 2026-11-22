@@ -63,11 +63,12 @@ SETUP = quick.SETUP + '\nchanged = ' + panes.REAL_CHANGED + r""";
 
 @unittest.skipUnless(NODE, "Node.js isn't installed")
 class EditorConsideringUiTests(unittest.TestCase):
-    def run_js(self, scenario):
+    def run_js(self, scenario, *, real_after_render=False):
         result = subprocess.run(
             [NODE, str(RUNNER)],
             input=json.dumps([str(WEB), SETUP + scenario, True,
                               {"innerWidth": 393, "innerHeight": 852, "coarse": True,
+                               "realAfterRender": real_after_render,
                                "visual": {"width": 393, "height": 852}}]),
             capture_output=True, text=True, encoding="utf-8", timeout=20)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -138,6 +139,7 @@ class EditorConsideringUiTests(unittest.TestCase):
           load=(path,token,ready)=>ready(consideringView());
           location.hash=editHref('casual/sample','owned')+'&focus=considering&consider=Opt';
           showEditor(parseHash().params,routeToken);
+          flushTimers();
           const ed=editor, before=plainConsidering(ed);
           assert.equal(location.hash,editHref('casual/sample','owned'));
           assert.equal(ed.version,'owned');
@@ -151,6 +153,22 @@ class EditorConsideringUiTests(unittest.TestCase):
           same(plainConsidering(ed),before);
           same(writes,[]);
         """)
+
+    def test_edit_considering_link_reaches_section_after_page_render(self):
+        self.run_js(r"""
+          state.firstRender = false;
+          history.replaceState = (entry, unused, hash) => { history.state = entry; if (hash) location.hash = hash; };
+          api = async () => consideringView();
+          location.hash = editHref('casual/sample', 'target') + '&focus=considering';
+          showEditor(parseHash().params, routeToken);
+          await settle();
+          assert.equal(document.activeElement, main);
+          flushTimers();
+          const section = editor.dom.considering;
+          assert.equal(document.activeElement, section);
+          assert.equal(section.scrolled, 1);
+          assert(!document.querySelector('dialog[open]'));
+        """, real_after_render=True)
 
     def test_empty_section_add_remove_and_undo_keep_the_same_local_draft_contract(self):
         self.run_js(r"""
@@ -513,7 +531,7 @@ class EditorConsideringUiTests(unittest.TestCase):
           assert(/Considering/i.test(sheet.body.textContent));
           assert(!sheet.body.textContent.includes('Nothing to save'));
           assert(!sheet.body.textContent.includes('Changes to the planned list:'));
-          assert(!sheet.body.textContent.includes('Changes to the play-now list:'));
+          assert(!sheet.body.textContent.includes('Changes to the alternative list:'));
           assert(!sheet.body.textContent.includes('Adds a line saying the list changed'));
           assert.equal(button(sheet.foot,'Save').disabled,false);
           sheet.close();

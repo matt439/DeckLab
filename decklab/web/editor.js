@@ -598,7 +598,15 @@ function showEditor(params, token) {
       address.delete("focus");
       address.delete("consider");
       history.replaceState(history.state, "", `#/edit?${address}`);
-      openSavedDeckEditor(view, version, () => editorFocusConsidering(editor, proposal));
+      openSavedDeckEditor(view, version, () => {
+        const ed = editor, hash = location.hash;
+        // The loader restores the page's scroll and focus after drawing the editor.
+        requestAnimationFrame(() => {
+          if (editorKeyboardCurrent(ed) && location.hash === hash && !document.querySelector("dialog[open]")) {
+            editorFocusConsidering(ed, proposal);
+          }
+        });
+      });
       return;
     }
     openSavedDeckEditor(view, version);

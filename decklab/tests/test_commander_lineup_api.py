@@ -165,6 +165,17 @@ class LineupViewTests(PermissionTestCase):
                 self.assertNotIn("stand_ins", row)
                 self.assertNotIn("box_checked_on", row)
 
+    def test_legacy_built_deck_does_not_report_future_placeholder_choices_as_installed(self):
+        self.save_night()
+        folder = self.box.magic / "decks" / "commander"
+        choices = {"target": INSTALLED["built"]["cards"], "owned": [], "built": None}
+        extra = "- **Stand-ins:** " + json.dumps(choices) + "\n"
+        self.deck(folder, "legacy", "Legacy", "built", card="Llanowar Elves", extra=extra)
+        self.deck(folder, "planned", "Planned", "building", card="Llanowar Elves", extra=extra)
+        found = {row["id"]: row for row in self.view()["groups"]["fits"]}
+        self.assertEqual(found["commander/legacy"]["stand_ins"], [])
+        self.assertEqual(found["commander/planned"]["stand_ins"], choices["target"])
+
     def test_checks_that_fail_or_run_out_of_time_are_unknown(self):
         self.save_night()
         with mock.patch.object(commander_lineup, "TIME_BUDGET", -1.0):

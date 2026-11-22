@@ -192,22 +192,22 @@ function deckOverviewPlayed(data) {
   if (data.summary.trial) return ptrDeckNotice(data);         // precon-trial.js: a trial isn't played at home (E3-S39)
   const p = data.played;
   if (!p) return null;
-  const gameHref = `#/play?id=${encodeURIComponent(data.summary.id)}&version=${data.version === "owned" ? "owned" : "target"}`;
-  const log = (text) => el("a", { class: "btn btn-quiet deck-more-link deck-played-log",
-    href: gameHref + (text === "Record a game" ? "&action=record" : ""), text });
+  const record = p.can_record === true ? deckGameHref(data, "record") : null;
+  const log = (canRecord) => el("a", { class: "btn btn-quiet deck-more-link deck-played-log",
+    href: canRecord && record || deckGameHref(data), text: canRecord && record ? "Record a game" : "View recorded games" });
   if ((!p.games || !p.last) && !p.pods) {
     return el("div", { class: "deck-overview-played deck-played-empty" },
       el("p", {}, deckPlayed(data)),
       // Only a viewer the Game log would let record one with this deck (play.record) is offered to.
-      el("p", {}, log(p.can_record === true ? "Record a game" : "View recorded games")));
+      el("p", {}, log(true)));
   }
   return el("section", { class: "deck-section deck-overview-played", "aria-labelledby": "h-overview-played" },
     el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-played", text: "Recorded games" }),
-      log(p.can_record === true && !p.games && !p.pods?.last ? "Record a game" : "View recorded games")),
+      log(!p.games && !p.pods?.last)),
     el("p", {}, deckPlayed(data)), deckPlayedSince(p.since, data.summary),
     p.pods ? el("p", { class: "deck-played-pods" }, p.pods.last
       ? [`Last Commander pod ${p.pods.last} · ${plural(p.pods.three_player, "3-player game")} · ${plural(p.pods.four_player, "4-player game")} · `,
-        el("a", { href: `${gameHref}&action=pods`, text: "View pod history" })]
+        el("a", { href: deckGameHref(data, "pods"), text: "View pod history" })]
       : "No Commander pods recorded yet") : null);
 }
 

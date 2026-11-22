@@ -1,4 +1,4 @@
-"""The Collection page's "Commanders we could build…" (E9-S28, commander-candidates.js), over the real scripts
+"""The "Commanders we could build" ranking (E9-S28, commander-candidates.js), over the real scripts
 with fixture answers."""
 import json
 import subprocess
@@ -99,6 +99,37 @@ class CommanderCandidatesUiTests(unittest.TestCase):
           await rankCandidates(ctx);
           assert(ctx.area.textContent.includes('Role tags are unavailable'), ctx.area.textContent);
           assert(ctx.area.textContent.includes('No card that may be a commander'), ctx.area.textContent);
+        """)
+
+
+    def test_public_collection_readers_can_open_both_rankings(self):
+        self.run_js("""
+          const asked = [];
+          api = async path => {
+            asked.push(path);
+            if (path.startsWith('/api/commanders/candidates?')) return RANKED;
+            if (path.startsWith('/api/commanders/candidate?')) return CARDS;
+            return {space:'home', decks:[], total:0, types:[], status:{}};
+          };
+          make();
+          assert.equal(button(main, 'Find commanders…'), null);
+          assert.equal(button(main, 'Find precons…'), null);
+          as('user2', {...MAY.user2, see_inventory:['home', 'user2']});
+          location.hash = '#/collection?space=home';
+          drawCollection({space:'home', cards:[], total:0, editable:false}, new URLSearchParams(), 'home');
+          assert.equal(button(main, 'Add cards'), null);
+          button(main, 'Explore collection').click();
+          button(main, 'Find commanders…').click(); await flush();
+          const commanders = openDialog();
+          assert(commanders.textContent.includes('Ghalta, Primal Hunger'));
+          commanders.querySelectorAll('.pcov-pick')[1].click(); await flush();
+          assert.equal(commanders.querySelector('.ccand-actions a'), null);
+          button(commanders, '×').click();
+          button(main, 'Explore collection').click();
+          button(main, 'Find precons…').click(); await flush();
+          assert(openDialog().textContent.includes('No precon lists have been read yet.'));
+          same(asked, ['/api/commanders/candidates?', '/api/commanders/candidate?name=Kraum%2C+Ludevic%27s+Opus',
+            '/api/precons/coverage?']);
         """)
 
 
