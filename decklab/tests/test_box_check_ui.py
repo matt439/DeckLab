@@ -74,6 +74,48 @@ class BoxCheckUiTests(unittest.TestCase):
           assert(nums(fresh).every(input=>input.value===''));assert.equal(localChecks(fresh).length,7);assert.equal(calls.length,0);
         ''')
 
+    def test_deck_link_opens_the_count_after_shared_ticks_and_only_for_that_arrival(self):
+        self.run_js(r'''
+          const data=boxPlan(),address=boxCheckAddress('casual/a','owned');
+          location.hash=address;requestBoxCheck(address,'casual/a');
+          load=(path,token,draw)=>{assert.equal(path,'/api/assembly?deck=casual%2Fa&version=owned');return draw(data);};
+          let finish; apiWrite=(path,body)=>{
+            assert.equal(path,'/api/assembly/ticks');assert(!body.changes);
+            return new Promise(resolve=>{finish=resolve;});
+          };
+          showAssembly(parseHash().params,routeToken);assert.equal(assemblySheets.size,0);
+          finish({ticks:[]});await settle();
+          assert.equal(assemblySheets.size,1);
+          const sheet=[...assemblySheets][0];assert(sheet.body.textContent.includes('Count the cards'));
+          button(sheet.dialog,'Cancel').click();packProgress(packingProgressView);await settle();assert.equal(assemblySheets.size,0);
+          const before=state.profile;requestBoxCheck(address,'casual/a');state.profile={...before};
+          assert.equal(takeRequestedBoxCheck(address),null);
+        ''')
+
+    def test_paused_review_requires_same_physical_generation_and_uses_fresh_deck_hash(self):
+        self.run_js(r'''
+          const key='f'.repeat(64), opened=await openBox(contents(),boxMeta({resume_key:key})),profile=state.profile;
+          allFound(opened.sheet);found(opened.sheet,2,'1');extraCard(opened.sheet,'Opt','2','Sideboard');
+          reviewButton(opened.sheet).click();button(opened.sheet.dialog,'Keep count for later').click();
+          assert(opened.sheet.closed);assert.equal(opened.button.textContent,'Resume box check');
+          clear(main);routeToken++;location.hash=boxCheckAddress('casual/a','owned');
+          const newHash='e'.repeat(64);
+          const fresh=boxPlan(contents({sha256:newHash}),boxMeta({resume_key:key,expect:newHash}));
+          const view=drawAssembly(fresh,routeToken);await settle();
+          assert.equal(state.profile,profile);assert.equal(view.results.querySelector('.pack-box-check').textContent,'Resume box check');
+          view.results.querySelector('.pack-box-check').click();
+          const sheet=[...assemblySheets][0];assert(dateButton(sheet));
+          for(const text of ['Deck: 1 x Recorded Elf','Sideboard: 2 x Opt','The packed checklist still matches']) assert(sheet.body.textContent.includes(text),text);
+          assert.equal(pausedBoxCheck,null);
+          button(sheet.dialog,'Keep count for later').click();
+          const changed=boxPlan(contents({sha256:newHash}),boxMeta({resume_key:'d'.repeat(64),expect:newHash}));
+          clear(main);routeToken++;
+          const after=drawAssembly(changed,routeToken);await settle();
+          assert.equal(after.results.querySelector('.pack-box-check').textContent,'Count by hand');
+          assert(after.results.textContent.includes('could not be matched to this box'));
+          state.profile={...profile};retireDepartedBoxChecks();assert.equal(pausedBoxCheck,null);
+        ''')
+
     def test_blur_change_of_last_extra_count_keeps_review_button_and_its_first_click(self):
         self.run_js(r'''
           const {sheet}=await openBox();allFound(sheet);const extra=extraCard(sheet,'Opt','2','Sideboard');

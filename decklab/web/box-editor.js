@@ -2,6 +2,7 @@
 "use strict";
 
 let boxEditorHandoff = null;
+let boxEditorReturn = null;
 
 function boxEditorScope() {
   return Boolean(state.profile?.id) && ownSpace() === HOME_SPACE && seesHomeInventory(state.may);
@@ -46,12 +47,12 @@ async function boxEditorChoices(deck, evidence, row, direction, options) {
     let chosen = false;
     clear(options.host).append(el("h4", { text: "Choose the intended list to review" }),
       el("p", { text: observation.section + ": " + direction + " " + observation.quantity + " x " + packBoxRowWords(observation) + "." }),
-      el("p", { class: "sub", text: "Opening a list closes this box review and discards its local counts and extras. A check date is saved only with Save check date. You will make any list changes yourself." }),
+      el("p", { class: "sub", text: "Opening a list keeps this count for your return. Use Save check date in the box review to record the check, and the Editor's Save to record any list changes." }),
       el("div", { class: "actions" }, versions.map(version => el("button", { type: "button", class: "btn btn-secondary box-editor-version",
         "data-version": version, text: "Open " + listName(version), onclick: event => {
           if (chosen || !here() || !event.currentTarget.isConnected || !options.host.contains(event.currentTarget)) return;
           chosen = true;
-          options.leave(() => boxEditorNavigate(observation, version));
+          options.leave(returnHash => boxEditorNavigate(observation, version, returnHash));
         } }))));
   } catch (failure) {
     // Not reached, or the PC failed: asking again may help. A changed deck or permission needs the plan again.
@@ -67,13 +68,16 @@ async function boxEditorChoices(deck, evidence, row, direction, options) {
   } finally { options.busy(false); } // The caller updates controls only while it still owns the original sheet.
 }
 
-function boxEditorNavigate(observation, version) {
+function boxEditorNavigate(observation, version, returnHash = null) {
   const hash = editHref(observation.id, version);
-  boxEditorHandoff = { observation, version, hash, profile: state.profile, token: null, view: null };
+  boxEditorHandoff = { observation, version, hash, returnHash, profile: state.profile, token: null, view: null };
+  boxEditorReturn = null;
   location.hash = hash;
 }
 
 function boxEditorRoute(path, token) {
+  if (boxEditorReturn && (!boxEditorScope() || boxEditorReturn.profile !== state.profile
+      || path !== "edit" || location.hash !== boxEditorReturn.hash)) boxEditorReturn = null;
   const handoff = boxEditorHandoff;
   if (!handoff) return;
   if (!boxEditorScope() || handoff.profile !== state.profile || path !== "edit" || location.hash !== handoff.hash || handoff.token !== null) {
@@ -91,7 +95,7 @@ function boxEditorGuardView(view, version, token) {
     boxEditorHandoff = null;
     if (owned) $("#main").append(el("div", { class: "box box-warn" },
       el("p", { text: "The saved deck or this existing list changed after the box review. Open a fresh box check before using its observation." }),
-      el("a", { class: "btn", href: "#/assembly", text: "Back to Build decks" })));
+      el("a", { class: "btn", href: handoff.returnHash || "#/assembly", text: handoff.returnHash ? "Return to box check" : "Back to Build decks" })));
     return false;
   }
   handoff.view = view;
@@ -106,23 +110,33 @@ function attachBoxEditorContext(ed) {
   if (editor !== ed || handoff.profile !== state.profile || handoff.token !== routeToken || location.hash !== handoff.hash || !boxEditorScope()
       || ed.mode !== "edit" || ed.id !== handoff.observation.id || ed.version !== handoff.version || ed.readOnly || ed.view !== handoff.view
       || ed.sha256 !== handoff.observation.deck_sha256 || !boxEditorViewAllowed(ed.view, handoff.observation) || !boxEditorExistingVersion(ed.view, ed.version)) return;
-  ed.boxObservation = Object.freeze({ observation: handoff.observation, profile: handoff.profile, token: handoff.token, hash: handoff.hash, version: handoff.version });
+  ed.boxObservation = Object.freeze({ observation: handoff.observation, profile: handoff.profile, token: handoff.token,
+    hash: handoff.hash, version: handoff.version });
+  if (handoff.returnHash) boxEditorReturn = { id: ed.id, hash: handoff.hash, href: handoff.returnHash, profile: state.profile };
 }
 
 function boxEditorContextBanner(ed) {
+  const back = () => {
+    const returning = boxEditorReturn;
+    return returning && editor === ed && returning.profile === state.profile && location.hash === returning.hash
+      && returning.id === ed.id && boxEditorScope()
+      ? el("a", { class: "btn btn-quiet", href: returning.href, text: "Return to box check" }) : null;
+  };
   const context = ed.boxObservation;
-  if (!context) return null;
-  const here = () => editor === ed && context.profile === state.profile && context.token === routeToken && location.hash === context.hash
-    && ed.mode === "edit" && ed.id === context.observation.id && ed.version === context.version && !ed.readOnly && !ed.gone && !ed.check?.file_changed
+  if (!context) return back();
+  const sourceRoute = () => editor === ed && context.profile === state.profile && context.token === routeToken && location.hash === context.hash
+    && ed.mode === "edit" && ed.id === context.observation.id && ed.version === context.version && boxEditorScope();
+  const here = () => sourceRoute() && !ed.readOnly && !ed.gone && !ed.check?.file_changed
     && ed.sha256 === context.observation.deck_sha256 && boxEditorViewAllowed(ed.view, context.observation);
-  if (!here()) return null;
+  if (!here()) return back();
   const observation = context.observation;
   return el("section", { class: "box box-info banner box-editor-note", role: "status" },
     el("h2", { text: "Box review observation" }),
     el("p", { text: observation.title + ": " + observation.section + "; " + observation.direction + " " + observation.quantity + " x " + packBoxRowWords(observation) + "." }),
     el("p", { text: "You chose the " + listName(context.version) + ". The observation is context only; decide any list changes yourself." }),
     el("p", { text: "Editing an intended list keeps the saved Assembled contents as recorded. Use Build decks to repack or take the deck apart when you physically change it." }),
-    el("button", { type: "button", class: "btn btn-quiet", text: "Dismiss box observation", onclick: event => {
-      if (here() && event.currentTarget.isConnected) { ed.boxObservation = null; drawBanners(); }
-    } }));
+    el("div", { class: "actions" }, back(),
+      el("button", { type: "button", class: "btn btn-quiet", text: "Dismiss box observation", onclick: event => {
+        if (here() && event.currentTarget.isConnected) { ed.boxObservation = null; drawBanners(); }
+      } })));
 }

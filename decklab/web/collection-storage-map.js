@@ -8,11 +8,14 @@ function drawCollectionStorageMap(data, space, token) {
   const cv = colView(data, space, token, "map");
   cv.mapProfile = state.profile;
   cv.mapHash = location.hash;
-  cv.mapSections = Array.isArray(data.sections) ? data.sections : [];
+  cv.mapSections = Array.isArray(data.sections) ? [...data.sections] : [];
   cv.mapContent = el("div", { class: "col-map-content" });
   cv.root = el("div", { class: "collection-page col-map-page" }, colHead(cv), cv.mapContent);
   $("#main").append(cv.root);
-  if (!cv.unsupported && data.space === space) drawStorageMapContent(cv);
+  if (!cv.unsupported && data.space === space) {
+    drawStorageMapContent(cv);
+    restoreStorageAuditCorrection(cv);
+  }
   colTakeNotice(cv);
   return cv;
 }
@@ -60,7 +63,8 @@ function drawStorageMapContent(cv) {
   const intro = el("section", { class: "panel col-map-overview", "aria-label": "Storage overview" },
     el("div", { class: "col-map-overview-head" },
       el("h2", { text: "Expected loose cards" }),
-      el("strong", { class: "col-map-total", text: storageMapCount(total) })));
+      el("strong", { class: "col-map-total", text: storageMapCount(total) })),
+    el("p", { class: "sub", text: "Open a section to count its cards or follow up on differences." }));
   const unplaced = [];
   for (const { name, sections: places } of containers) {
     const items = groups.get(name) || [];
@@ -102,8 +106,11 @@ function storageMapRow(cv, container, place, sections, total, expanded) {
   const title = el("span", { class: "col-map-section-name", text: label });
   const count = el("span", { class: "col-map-section-count", text: storageMapCount(quantity) });
   if (!sections.length) return el("div", row, el("div", { class: "col-map-row-label" }, title, count, bar));
+  const pending = sections.filter(section => storageAuditNeedsReview(section.audit)).length;
   return el("details", { ...row, open: expanded.has(key) },
-    el("summary", { class: "col-map-row-label" }, title, count, bar), storageMapDividers(cv, sections));
+    el("summary", { class: "col-map-row-label" }, title, count,
+      pending ? el("span", { class: "col-map-needs-review" }, `Needs review · ${plural(pending, "section")}`) : null,
+      bar), storageMapDividers(cv, sections));
 }
 
 function storageMapDividers(cv, sections) {
@@ -117,24 +124,32 @@ function storageMapDividers(cv, sections) {
       el("summary", { text: `Empty sections (${thousands(empty.length)})` }), buttons(empty)) : null];
 }
 
+function storageAuditNeedsReview(audit) {
+  return Boolean(audit && (audit.needs_review || audit.mismatch_rows || audit.extra));
+}
+
 function storageMapAuditStatus(audit) {
-  if (!audit) return "Never audited";
-  if (audit.current === false) return "Changed since audit";
-  return audit.mismatch_rows || audit.extra ? "Differences found" : "Count matched";
+  if (!audit) return ["Never audited"];
+  const stale = audit.current === false;
+  if (storageAuditNeedsReview(audit)) return stale ? ["Needs review", "Changed since audit"] : ["Needs review"];
+  return [stale ? "Changed since audit" : "Count matched"];
 }
 
 function storageMapButton(cv, section, bar) {
   const name = el("span", { class: "col-map-section-name", text: section.label });
   const count = el("span", { class: "col-map-section-count", text: storageMapCount(section.quantity) });
-  const status = section.auditable === false ? "Audit unavailable" : storageMapAuditStatus(section.audit);
+  const status = section.auditable === false && !storageAuditNeedsReview(section.audit)
+    ? ["Audit unavailable"] : storageMapAuditStatus(section.audit);
+  if (section.auditable === false && status[0] !== "Audit unavailable") status.push("Audit unavailable");
   return el("button", { type: "button", class: "col-map-section",
     "data-colour": section.colour, "data-section": section.id,
-    "aria-label": [storageMapPlace(section), section.label, count.textContent, status].filter(Boolean).join(", "),
+    "aria-label": [storageMapPlace(section), section.label, count.textContent, ...status].filter(Boolean).join(", "),
     onclick: event => openStorageMapSection(cv, section, event.currentTarget) },
     el("span", { class: "col-map-swatch", "aria-hidden": true }),
     el("span", { class: "col-map-section-text" }, name,
       section.place && section.place !== section.label ? el("span", { class: "sub", text: section.place }) : null),
-    el("span", { class: "col-map-section-facts" }, count, el("span", { class: "sub", text: status })), bar);
+    el("span", { class: "col-map-section-facts" }, count,
+      status.map(text => el("span", { class: text === "Needs review" ? "col-map-needs-review" : "sub", text }))), bar);
 }
 
 function storageMapSheetHere(ctx) {
@@ -147,9 +162,11 @@ function openStorageMapSection(cv, section, trigger) {
   const sheet = colOpenSheet(section.label, { wide: true, onClose: () => {
     cv.mapSheet = null;
     if (!storageMapHere(cv)) return;
-    if (trigger.isConnected) trigger.focus();
-    else [...cv.mapContent.querySelectorAll(".col-map-section")]
-      .find(button => button.dataset.section === section.id)?.focus();
+    const button = trigger.isConnected ? trigger : [...cv.mapContent.querySelectorAll(".col-map-section")]
+      .find(button => button.dataset.section === section.id);
+    for (let details = button?.closest("details"); details && cv.mapContent.contains(details);
+      details = details.parentNode?.closest("details")) details.setAttribute("open", "");
+    button?.focus();
   } });
   cv.mapSheet = sheet;
   const ctx = { cv, sheet, id: section.id, busy: false,
@@ -162,9 +179,11 @@ function openStorageMapSection(cv, section, trigger) {
 }
 
 function storageMapSheetActions(ctx, ...items) {
-  const actions = [{ text: "Close", value: "close", onclick: () => ctx.sheet.dismiss(), disabled: ctx.busy }, ...items];
+  const text = !items.length && storageAuditNeedsReview(ctx.data?.section.audit) ? "Keep for later" : "Close";
+  const actions = [{ text, value: "close", onclick: () => ctx.sheet.dismiss(), disabled: ctx.busy }, ...items];
   sheetActions(ctx.sheet, actions.filter(Boolean).map(action => ({ ...action, onclick: event => {
-    if (storageMapSheetHere(ctx) && !ctx.busy && event.currentTarget.isConnected && ctx.sheet.foot.contains(event.currentTarget)) action.onclick(event.currentTarget);
+    if (storageMapSheetHere(ctx) && !ctx.busy && event.currentTarget.isConnected && ctx.sheet.foot.contains(event.currentTarget)
+        && [...document.querySelectorAll("dialog[open]")].at(-1) === ctx.sheet.dialog) action.onclick(event.currentTarget);
   } })));
 }
 
@@ -186,6 +205,7 @@ async function loadStorageMapSection(ctx) {
     if (!storageMapSheetHere(ctx)) return;
     if (data.space !== ctx.cv.space || data.section?.id !== ctx.id) throw new Error("This section is unavailable.");
     ctx.data = data;
+    syncStorageMapSection(ctx.cv, data.section);
     drawStorageMapDetail(ctx);
   } catch (error) {
     if (!storageMapSheetHere(ctx)) return;
@@ -193,6 +213,17 @@ async function loadStorageMapSection(ctx) {
     storageMapReport(ctx, error.message, "crit");
     storageMapSheetActions(ctx, { text: "Try again", value: "retry", onclick: () => loadStorageMapSection(ctx) });
   }
+}
+
+function syncStorageMapSection(cv, section) {
+  const index = cv.mapSections.findIndex(item => item.id === section.id);
+  if (index === -1) return;
+  const previous = cv.mapSections[index];
+  if (previous.quantity === section.quantity && previous.auditable === section.auditable &&
+      Boolean(previous.audit) === Boolean(section.audit) &&
+      storageMapAuditStatus(previous.audit).join() === storageMapAuditStatus(section.audit).join()) return;
+  cv.mapSections[index] = section;
+  drawStorageMapContent(cv);
 }
 
 function drawStorageMapDetail(ctx) {
@@ -204,7 +235,7 @@ function drawStorageMapDetail(ctx) {
   clear(ctx.content).append(
     el("p", { class: "sub", text: [storageMapPlace(section), `${storageMapCount(section.quantity)} expected`].filter(Boolean).join(" · ") }));
   if (canAudit || canScan) ctx.content.append(storageMapCheckOptions(ctx, canAudit, canScan));
-  ctx.content.append(storageMapAuditHistory(section.audit));
+  ctx.content.append(storageMapAuditHistory(ctx, section.audit));
   if (message) storageMapReport(ctx, message, "info");
   if (!canAudit && rows?.length && !ctx.saved) ctx.content.append(
     el("h3", { text: "Expected cards" }),
@@ -230,9 +261,10 @@ function storageMapCheckOptions(ctx, canAudit, canScan) {
   };
   if (canAudit) addOption("manual", "Count by hand", "Review your counts and save a dated audit with any differences.",
     () => startStorageMapAudit(ctx));
-  if (canScan) addOption("scan", ctx.data.scan.available ? "Scan" : "Look up cards", ctx.data.scan.available
-    ? "Scan printings for a temporary difference report. Closing clears the report."
-    : "Photo scanning is unavailable. Look up printings for a temporary difference report.",
+  if (canScan) addOption("scan", ctx.data.scan.available ? "Scan" : "Look up cards", [
+    ctx.data.scan.available ? "Check printings with photos or look them up by name." : "Photo scanning is unavailable. Look up printings by name.",
+    canAudit ? "Review and save the count." : "Closing clears this temporary difference report.",
+  ].join(" "),
     trigger => scanStorageMapSection(ctx, trigger));
   return el("section", { class: "col-map-check" }, el("h3", { text: "Check this section" }), options);
 }
@@ -245,26 +277,32 @@ function scanStorageMapSection(ctx, trigger) {
     "Set basic lands aside. Deck Lab does not track how many are loose."];
   if (rows.some(row => row.manual)) instructions.push("Count printed token cards by hand, checking both faces of each physical card.");
   if (rows.some(row => row.estimated)) instructions.push("Some expected counts are estimates because the printing held elsewhere is uncertain.");
+  const review = data.ready && data.editable && data.expect
+    ? (observations, capture) => reviewStorageMapScan(ctx, data, observations, capture) : null;
   startCardAudit({ title: [data.section.container, data.section.place, data.section.label].filter((part, index, all) =>
     part && all.indexOf(part) === index).join(" · "), instructions: instructions.join(" "), mode: "section",
-    space: data.space, scan: data.scan, excludedNames: data.excluded_names, rows, current });
+    space: data.space, scan: data.scan, excludedNames: data.excluded_names, rows, current, review });
 }
 
-function storageMapAuditHistory(audit) {
+function storageMapAuditHistory(ctx, audit) {
   if (!audit) return el("p", { text: "This section has never been audited." });
   const when = new Date(audit.audited_at);
   const date = audit.audited_at && Number.isFinite(when.valueOf())
     ? el("time", { datetime: audit.audited_at, text: COL_STORAGE_MAP_DATE.format(when) }) : "Date unavailable";
   return el("section", { class: "col-map-history" },
-    el("h3", {}, "Last audited ", date),
+    el("h3", { tabindex: "-1" }, "Last audited ", date),
+    storageAuditNeedsReview(audit) ? el("p", { class: "col-map-needs-review", text: "Needs review" }) : null,
     audit.current === false ? el("p", { class: "box box-warn", text: "The expected contents have changed since this audit." }) : null,
     storageMapAuditSummary(audit),
-    storageMapDifferenceList(audit.differences));
+    storageMapDifferenceList(audit.differences, ctx),
+    storageMapUnidentified(audit),
+    storageAuditNeedsReview(audit) ? storageMapFollowUp() : null);
 }
 
-function storageMapAuditSummary(audit) {
+function storageMapAuditSummary(audit, partial = false) {
   const found = `${storageMapCount(audit.observed)} counted · ${storageMapCount(audit.expected)} expected`;
-  if (!audit.mismatch_rows && !audit.extra) return el("p", { text: `${found}. The count matched.` });
+  if (!storageAuditNeedsReview(audit)) return el("p", { text: partial ? found :
+    `${found}. The count matched${audit.estimated ? " the estimates shown" : ""}.` });
   const changes = [
     audit.missing ? `${storageMapCount(audit.missing)} missing` : null,
     audit.surplus ? `${storageMapCount(audit.surplus)} over the listed counts` : null,
@@ -274,6 +312,7 @@ function storageMapAuditSummary(audit) {
 }
 
 function storageMapRowPrinting(row) {
+  if (row.manualLabel) return row.manualLabel;
   if (!row.set) return row.description || colPrinting(row);
   const finish = row.finish === "nonfoil" ? "Non-foil" : null;
   return [colPrinting(row), finish, row.description].filter(Boolean).join(" · ");
@@ -288,11 +327,28 @@ function storageMapExpected(row) {
   return `${thousands(row.quantity)} expected${row.estimated ? " (estimate)" : ""}`;
 }
 
-function storageMapDifferenceList(rows) {
+function storageMapDifferenceList(rows, ctx) {
   if (!rows?.length) return null;
-  return el("ul", { class: "col-map-differences" }, rows.map(row => el("li", {},
-    el("span", {}, el("strong", { text: row.name }), " · ", storageMapRowPrinting(row)),
-    el("span", { class: "sub", text: `${row.expected} expected · ${row.observed} counted` }))));
+  return el("ul", { class: "col-map-differences" }, rows.map(row => {
+    const correction = ctx?.cv.editable && storageAuditCorrectionKind(row);
+    const printing = storageMapRowPrinting(row);
+    const label = correction === "token" ? "Review token copies" : "Review collection copies";
+    return el("li", {},
+      el("span", {}, el("strong", { text: row.name }),
+        printing ? el("span", { class: "sub", text: printing }) : null),
+      el("span", { class: "sub", text: `${row.expected} expected${row.estimated ? " (estimate)" : ""} · ${row.observed} counted` }),
+      correction ? el("button", { type: "button", class: "btn btn-secondary col-map-correction", text: label,
+        "aria-label": `${label}: ${row.name}${printing ? `, ${printing}` : ""}`, onclick: event => {
+          if (storageMapCheckHere(ctx, event.currentTarget) && [...document.querySelectorAll("dialog[open]")].at(-1) === ctx.sheet.dialog) {
+            openStorageAuditCorrection(ctx, row);
+          }
+        } }) : null);
+  }));
+}
+
+function storageMapFollowUp() {
+  return el("p", { class: "sub",
+    text: "Recount the exact printing or token first. Check nearby sections, deck boxes, intact products and loans. Refile misplaced cards or correct the recorded location. Change the total owned only after checking all locations. Recount this section when you’re done." });
 }
 
 function storageMapInput(label) {
@@ -308,13 +364,16 @@ function startStorageMapAudit(ctx) {
     input.setAttribute("aria-describedby", expected.id);
     return { row, input, expected };
   });
-  ctx.extra = storageMapInput("Unlisted cards counted");
+  ctx.extra = storageMapInput("Unidentified copies");
   ctx.extra.value = "0";
+  ctx.unlisted = [];
+  ctx.unlistedSummary = el("div", { class: "col-map-unlisted-summary", "aria-live": "polite" });
   const list = el("ul", { class: "col-map-counts" }, ctx.inputs.map(({ row, input, expected }) =>
     el("li", {}, el("label", { class: "col-map-count-row" }, storageMapRowIdentity(row), expected, input))));
   const fill = el("button", { type: "button", class: "btn btn-secondary", text: "Unentered counts match",
     onclick: event => {
-      if (!storageMapSheetHere(ctx) || !ctx.form.isConnected || !ctx.form.contains(event.currentTarget)) return;
+      if (!storageMapCheckHere(ctx, event.currentTarget) ||
+          [...document.querySelectorAll("dialog[open]")].at(-1) !== ctx.sheet.dialog) return;
       for (const { row, input } of ctx.inputs) if (!input.value.trim()) input.value = String(row.quantity);
       storageMapReport(ctx, "Blank counts filled with the expected quantities. Review your counts before saving.", "info");
     } });
@@ -325,10 +384,29 @@ function startStorageMapAudit(ctx) {
     rows.some(row => row.estimated) ? el("p", { class: "sub",
       text: "Some expected counts are estimates because Deck Lab cannot establish exactly which copies are held elsewhere." }) : null,
     rows.length ? [el("div", { class: "actions" }, fill), list] : el("p", { class: "sub", text: "Deck Lab expects this section to be empty." }),
+    el("h3", { text: "Unlisted cards" }),
+    el("button", { type: "button", class: "btn btn-secondary", text: "Identify unlisted printings",
+      onclick: event => identifyStorageMapExtras(ctx, event.currentTarget) }),
+    ctx.unlistedSummary,
     el("label", { class: "col-map-count-row col-map-extra" },
-      el("span", {}, el("strong", { text: "Unlisted cards" }),
-        el("span", { class: "sub", text: "Copies of cards or printings missing from this list." })), ctx.extra));
+      el("span", {}, el("strong", { text: "Unidentified copies" }),
+        el("span", { class: "sub", text: "Enter only the unlisted copies you haven’t identified above." })), ctx.extra));
   editStorageMapAudit(ctx);
+}
+
+function identifyStorageMapExtras(ctx, trigger) {
+  const data = ctx.data, form = ctx.form;
+  const current = () => storageMapCheckHere(ctx, trigger) && ctx.data === data && ctx.form === form;
+  if (!current() || [...document.querySelectorAll("dialog[open]")].at(-1) !== ctx.sheet.dialog) return;
+  openStorageAuditUnlisted({ space: ctx.cv.space, rows: data.rows, excludedNames: data.excluded_names || [],
+    initial: ctx.unlisted, current, finish: rows => {
+      if (!current()) return;
+      ctx.unlisted = rows;
+      clear(ctx.unlistedSummary);
+      add(ctx.unlistedSummary, [storageMapDifferenceList(rows.map(row =>
+        ({ ...row, expected: 0, observed: row.quantity })))]);
+      trigger.focus();
+    } });
 }
 
 function editStorageMapAudit(ctx) {
@@ -349,57 +427,128 @@ function storageMapReadCount(input) {
 }
 
 function reviewStorageMapAudit(ctx) {
-  const counts = [];
-  const differences = [];
+  const counts = new Map();
   for (const { row, input } of ctx.inputs) {
     const observed = storageMapReadCount(input);
     if (observed === null) return storageMapReport(ctx, "Enter a whole number of zero or more for every printing.");
-    counts.push([row.key, observed]);
-    if (observed !== row.quantity) differences.push({ ...row, expected: row.quantity, observed });
+    counts.set(row.key, observed);
   }
   const extra = storageMapReadCount(ctx.extra);
-  if (extra === null) return storageMapReport(ctx, "Enter a whole number of zero or more for unlisted cards.");
-  const observed = counts.reduce((n, [, quantity]) => n + quantity, extra);
-  if (!Number.isSafeInteger(observed)) return storageMapReport(ctx, "The total is too large. Check the counts you entered.");
-  const audit = { expected: ctx.data.section.quantity, observed,
-    mismatch_rows: differences.length, extra, differences,
-    missing: differences.reduce((n, row) => n + Math.max(0, row.expected - row.observed), 0),
-    surplus: differences.reduce((n, row) => n + Math.max(0, row.observed - row.expected), 0) };
+  if (extra === null) return storageMapReport(ctx, "Enter a whole number of zero or more for unidentified copies.");
+  const review = storageMapMakeReview(ctx.data, counts, ctx.unlisted, extra);
+  if (!review) return storageMapReport(ctx, "The total is too large. Check the counts you entered.");
   storageMapReport(ctx, null);
   const heading = el("h3", { text: "Review your count", tabindex: "-1" });
-  add(clear(ctx.content), [heading, storageMapAuditSummary(audit), storageMapDifferenceList(differences),
-    el("p", { class: "sub", text: "Saving records the audit and its differences. Use the Card list or Tokens page to correct inventory quantities." })]);
+  add(clear(ctx.content), [heading, ...storageMapReviewContent(review.audit, 0, true)]);
   storageMapSheetActions(ctx, { text: "Edit count", value: "edit", onclick: () => editStorageMapAudit(ctx) },
-    { text: "Save audit", value: "save", kind: "primary", onclick: () => saveStorageMapAudit(ctx, counts, extra) });
+    { text: "Save audit", value: "save", kind: "primary", onclick: () => saveStorageMapAudit(ctx, review) });
   heading.focus();
 }
 
-async function saveStorageMapAudit(ctx, counts, extra) {
+function storageMapMakeReview(data, counts, unlisted, extra) {
+  const differences = data.rows.flatMap(row => {
+    const observed = counts.get(row.key);
+    return row.quantity === observed ? [] : [{ ...row, expected: row.quantity, observed }];
+  });
+  const extraTotal = unlisted.reduce((n, row) => n + row.quantity, extra);
+  const observed = [...counts.values()].reduce((n, quantity) => n + quantity, extraTotal);
+  if (!Number.isSafeInteger(observed)) return null;
+  const audit = { expected: data.section.quantity, observed, mismatch_rows: differences.length,
+    extra: extraTotal, unidentified_extra: extra, estimated: data.rows.some(row => row.estimated),
+    missing: differences.reduce((n, row) => n + Math.max(0, row.expected - row.observed), 0),
+    surplus: differences.reduce((n, row) => n + Math.max(0, row.observed - row.expected), 0),
+    differences: [...differences, ...unlisted.map(row => ({ ...row, expected: 0, observed: row.quantity }))] };
+  return { counts, extra, unlisted, audit };
+}
+
+function storageMapReviewContent(audit, skipped, canSave) {
+  return [storageMapAuditSummary(audit, Boolean(skipped)), storageMapDifferenceList(audit.differences), storageMapUnidentified(audit),
+    audit.estimated ? el("p", { class: "sub", text: "Some expected counts are estimates. Check which printings are held elsewhere before correcting inventory." }) : null,
+    skipped ? el("p", { class: "box box-warn", text: `${plural(skipped, "photo")} skipped. To save an audit, start a fresh scan or count by hand.` }) : null,
+    canSave ? el("p", { class: "sub", text: "Save the audit to keep this count and open the relevant records for any corrections." }) : null];
+}
+
+function storageMapUnidentified(audit) {
+  if (!audit.unidentified_extra) return null;
+  return el("p", { class: "sub", text: plural(audit.unidentified_extra, "unidentified copy", "unidentified copies") });
+}
+
+function reviewStorageMapScan(ctx, data, { scanned, manualCounts, skipped }, capture) {
+  const counts = new Map(data.rows.map(row => [row.key, 0]));
+  const excluded = new Set(data.excluded_names);
+  const unlisted = new Map();
+  let extra = 0;
+  for (const row of scanned) {
+    if (excluded.has(row.canonical_name || row.name)) continue;
+    const key = colKey(row);
+    if (counts.has(key)) counts.set(key, counts.get(key) + row.quantity);
+    else unlisted.set(key, { ...row, quantity: (unlisted.get(key)?.quantity || 0) + row.quantity });
+  }
+  for (const [row, observed] of manualCounts) {
+    if (counts.has(row.key)) counts.set(row.key, observed);
+    else extra += observed;
+  }
+  const review = storageMapMakeReview(data, counts, [...unlisted.values()], extra);
+  const status = el("div", { class: "col-sheet-message", "aria-live": "polite" });
+  const canSave = review && !skipped && unlisted.size <= 2000;
+  return {
+    content: [status, ...(review ? storageMapReviewContent(review.audit, skipped, canSave) : []),
+      !review || unlisted.size > 2000 ? el("p", { class: "box box-warn",
+        text: "This audit has too many counted copies or unlisted printings. Check your counts." }) : null],
+    save: canSave ? () => saveStorageMapAudit(ctx, review, capture, status) : null,
+  };
+}
+
+async function saveStorageMapAudit(ctx, review, capture, status = ctx.status) {
+  const { cv, id } = ctx, data = ctx.data;
+  const controls = capture?.sheet || ctx.sheet;
+  const here = () => storageMapSheetHere(ctx) && ctx.data === data && !controls.closed &&
+    controls.dialog.getAttribute("open") !== null && status.isConnected;
+  if (!here() || ctx.busy) return;
+  const say = (message, kind = "warn") => clear(status).append(el("p", { class: `box box-${kind}`, role: "status", text: message }));
   ctx.busy = true;
-  storageMapReport(ctx, "Saving audit…", "info");
-  for (const button of ctx.sheet.foot.querySelectorAll("button")) button.disabled = true;
-  const { cv, id } = ctx;
+  if (capture) capture.busy = true;
+  say("Saving audit…", "info");
+  for (const button of controls.foot.querySelectorAll("button")) button.disabled = true;
+  const { counts, extra, unlisted } = review;
   try {
-    const data = await apiWrite(COL_STORAGE_MAP_API, { space: cv.space, section: id, expect: ctx.data.expect,
-      counts: Object.fromEntries(counts), extra });
-    if (!storageMapSheetHere(ctx)) return;
-    if (data.section?.id !== id) throw new Error("The audit could not be confirmed. Reload this section to check.");
+    const answer = await apiWrite(COL_STORAGE_MAP_API, { space: cv.space, section: id, expect: data.expect,
+      counts: Object.fromEntries(counts), extra, ...(unlisted.length ? { unlisted: unlisted.map(row =>
+        ({ set: row.set, collector_number: row.collector_number, finish: row.finish, quantity: row.quantity })) } : {}) });
+    if (!here()) return;
+    if (answer.section?.id !== id || !answer.section.audit) throw new Error("The audit could not be confirmed. Reload this section to check.");
     ctx.busy = false;
+    if (capture) capture.busy = false;
     ctx.saved = true;
-    cv.mapSections = cv.mapSections.map(section => section.id === id ? data.section : section);
-    ctx.data = { ...ctx.data, section: data.section, expect: null };
-    drawStorageMapContent(cv);
+    ctx.data = { ...data, section: answer.section, expect: answer.expect || null };
+    syncStorageMapSection(cv, answer.section);
     drawStorageMapDetail(ctx);
     storageMapReport(ctx, "Audit saved.", "good");
+    const focusHistory = () => { if (storageMapSheetHere(ctx)) ctx.content.querySelector(".col-map-history h3")?.focus(); };
+    if (capture) {
+      capture.afterClose = focusHistory;
+      controls.close();
+    } else focusHistory();
   } catch (error) {
-    if (!storageMapSheetHere(ctx)) return;
+    if (!here()) return;
     ctx.busy = false;
+    if (capture) capture.busy = false;
     if (error.status === 409) {
-      storageMapReport(ctx, `${error.message} Reload this section to start a new count.`);
-      storageMapSheetActions(ctx, { text: "Reload section", value: "reload", kind: "primary", onclick: () => loadStorageMapSection(ctx) });
+      say(`${error.message} Reload this section to start a new count.`);
+      const reload = { text: "Reload section", value: "reload", kind: "primary", onclick: () => {
+        if (!here() || ctx.busy || [...document.querySelectorAll("dialog[open]")].at(-1) !== controls.dialog) return;
+        if (capture) {
+          capture.afterClose = () => { if (storageMapSheetHere(ctx)) loadStorageMapSection(ctx); };
+          controls.close();
+        } else loadStorageMapSection(ctx);
+      } };
+      if (capture) sheetActions(controls, [{ text: "Done", value: "done", onclick: () => {
+        if (here() && !ctx.busy) controls.close();
+      } }, reload]);
+      else storageMapSheetActions(ctx, reload);
     } else {
-      storageMapReport(ctx, error.message, "crit");
-      for (const button of ctx.sheet.foot.querySelectorAll("button")) button.disabled = false;
+      say(error.message, "crit");
+      for (const button of controls.foot.querySelectorAll("button")) button.disabled = false;
     }
   }
 }

@@ -11,22 +11,38 @@
  * onSaved(answer, words) gets the save's answer; onLatest(latest) the list as it is now, when a
  * conflict's changes are discarded. Returns the sheet. */
 function openTokenSheet({ row = null, rows = null, sha256, faceNames, keywords, onSaved, onLatest, onRemove = null, onZoom = null,
-  space = HOME_SPACE } = {}) {
+  space = HOME_SPACE, audit = null } = {}) {
   const editing = Boolean(row);
-  const sheet = openSheet(editing ? tokLabel(row) : "Add a token card", { wide: true });
-  const ctx = { sheet, row, editing, sha256, onSaved, onLatest, busy: false, inputs: {}, space,
+  const open = audit ? colOpenSheet : openSheet;
+  const sheet = open(editing ? tokLabel(row) : "Add a token card", { wide: true });
+  const ctx = { sheet, row, editing, sha256, onSaved, onLatest, busy: false, inputs: {}, space, audit,
     names: faceNames || [], keywords: keywords && keywords.length ? keywords : TOK_KEYWORDS, base: row ? tokBase(row) : null, rows };
   ctx.form = el("form", { class: "tok-form", novalidate: true,
     onsubmit: (event) => { event.preventDefault(); saveTokenFromSheet(ctx); } });
   ctx.message = el("div", { class: "tok-sheet-message", role: "status", "aria-live": "polite" });
-  add(ctx.form, [ctx.message, editing ? tokSheetSummary(ctx, row, onZoom) : null, tokFields(ctx, row)]);
+  const fields = tokFields(ctx, row);
+  let review = null;
+  if (audit) {
+    ctx.inputs.quantity.value = "";
+    const field = ctx.inputs.quantity.closest("label");
+    field.querySelector("span").textContent = "Total owned token cards";
+    review = el("div", {},
+      el("p", { class: "box box-info",
+        text: "Check both faces of the physical token card and enter your verified total across all locations. If you have zero copies, use Remove." }),
+      field);
+  }
+  add(ctx.form, [ctx.message, editing ? tokSheetSummary(ctx, row, onZoom) : null, review || fields]);
   sheet.body.append(ctx.form);
   // Editing: Save, and Remove at the bottom (the sheet's × closes it); adding: Cancel and Save.
   sheetActions(sheet, [
     editing ? null : { text: "Cancel", value: "cancel", onclick: () => sheet.close() },
     { text: "Save", kind: "primary", value: "save", onclick: () => saveTokenFromSheet(ctx) },
-    editing && onRemove ? { text: "Remove…", kind: "danger btn-quiet", value: "remove", onclick: () => { sheet.close(); onRemove(); } } : null]);
-  if (!editing) ctx.inputs.front.focus();
+    editing && onRemove ? { text: "Remove…", kind: "danger btn-quiet", value: "remove", onclick: () => {
+      if (ctx.busy || sheet.closed || audit && !audit.here()) return;
+      sheet.close(); onRemove();
+    } } : null]);
+  if (audit) ctx.inputs.quantity.focus();
+  else if (!editing) ctx.inputs.front.focus();
   return sheet;
 }
 
@@ -224,6 +240,7 @@ function tokFormRow(ctx) {
   if (quantityText === "" || !Number.isInteger(quantity) || quantity < 1 || quantity > 9999) {
     return tokProblem(ctx, "quantity", "The quantity is the number of physical cards: a whole number from 1 to 9999.");
   }
+  if (ctx.audit) return { ...ctx.base, quantity };
   if (row.set && !/^[a-z0-9]{2,8}$/.test(row.set)) {
     return tokProblem(ctx, "set", "The set code is 2 to 8 letters or digits, like “tltr” (or leave it blank).");
   }
@@ -232,7 +249,7 @@ function tokFormRow(ctx) {
 }
 
 async function saveTokenFromSheet(ctx) {
-  if (ctx.busy || ctx.sheet.closed) return;
+  if (ctx.busy || ctx.sheet.closed || ctx.audit && !ctx.audit.here()) return;
   const row = tokFormRow(ctx);
   if (!row) return;
   const body = { action: ctx.editing ? "edit" : "add", row };
@@ -255,6 +272,7 @@ async function saveTokenFromSheet(ctx) {
 /** Send a save; on success close the sheet and hand on the answer. A card that's already listed asks
  * what to do; a list changed meanwhile offers to re-apply. */
 async function tokSend(ctx, body) {
+  if (ctx.audit && (ctx.sheet.closed || !ctx.audit.here())) return;
   clear(ctx.message).append(loadingBox("Saving…"));
   try {
     const answer = await apiWrite("/api/tokens/save", tokBody(ctx, body));
@@ -266,6 +284,17 @@ async function tokSend(ctx, body) {
     else ctx.onSaved(answer, words);
   } catch (error) {
     if (ctx.sheet.closed) return;
+    if (ctx.audit && error.status === 409 && (error.data?.latest || error.data?.same_row)) {
+      ctx.sheet.heading.textContent = "The tokens list needs another review";
+      clear(ctx.sheet.body).append(el("p", { text: "Open the current token record and verify its total before saving." }));
+      sheetActions(ctx.sheet, [{ text: "Review current tokens", kind: "primary", onclick: () => {
+        if (!ctx.audit.here()) return;
+        ctx.sheet.close();
+        if (error.data.latest) ctx.onLatest?.(error.data.latest);
+        else ctx.audit.refresh();
+      } }]);
+      return;
+    }
     if (error.status === 409 && error.data && error.data.same_row) { showTokenSameRow(ctx, error, body); return; }
     if (error.status === 409 && error.data && error.data.latest) { showTokenConflict(ctx, error, body); return; }
     clear(ctx.message).append(el("div", { class: "box box-crit", role: "alert" }, el("p", { text: error.message })));

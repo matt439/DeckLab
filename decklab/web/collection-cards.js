@@ -67,36 +67,55 @@ async function removeCollectionRow(cv, row) {
  * is picked from a strip of the card's printings (GET /api/printings, with their pictures), then its
  * finish. Editing, Remove sits at the bottom. opts.name: the name a new card starts with. */
 function openCollectionSheet(cv, row = null, opts = {}) {
-  if (!colActive(cv) || cv.busy || !cv.editable || opts.repair && !opts.repair.here()) return null;
+  if (!colActive(cv) || cv.busy || !cv.editable || opts.repair && !opts.repair.here() ||
+      opts.audit && !opts.audit.here()) return null;
   const editing = Boolean(row);
   const sheet = colOpenSheet(editing ? row.name : `Add a card to ${colWhose(cv.space)}`, { wide: true });
   const ctx = { cv, sheet, row, editing, base: row ? colBase(row) : null, busy: false, printings: [], chosen: -1, nameSeq: 0,
-    printSeq: 0, suggestTimer: 0, stripFilter: "", boxRepair: opts.repair || null, addHash: location.hash };
+    printSeq: 0, suggestTimer: 0, stripFilter: "", boxRepair: opts.repair || null, audit: opts.audit || null,
+    addHash: location.hash };
   ctx.form = el("form", { class: "col-form", novalidate: true,
     onsubmit: (event) => { event.preventDefault(); saveCollectionSheet(ctx); } });
   ctx.message = el("div", { class: "col-sheet-message", role: "status", "aria-live": "polite" });
   ctx.form.append(ctx.message, colFields(ctx, row || (opts.name ? { name: opts.name } : null)));
   sheet.body.append(ctx.form);
   boxCollectionEditorNote(ctx);
+  if (ctx.audit) {
+    ctx.inputs.name.setAttribute("readonly", "");
+    ctx.inputs.quantity.value = "";
+    ctx.inputs.quantity.setAttribute("aria-label", "Total owned copies of this printing");
+    ctx.form.querySelector(".col-field-quantity").querySelector("label").textContent = "Total owned copies";
+    if (editing) {
+      for (const key of ["condition", "language", "notes", "location"]) ctx.form.querySelector(`.col-field-${key}`).hidden = true;
+      ctx.location.input.disabled = true;
+    }
+    sheet.body.insertBefore(el("p", { class: "box box-info", text: editing
+      ? "Enter your verified total across all locations. If you have zero copies, use Remove after checking other locations."
+      : "Add this exact printing and finish only after checking all locations. Enter your verified total owned copies." }), ctx.form);
+  }
   // Editing: Save, and Remove at the bottom (the sheet's × closes it); adding: Cancel and Add.
   sheetActions(sheet, [
     editing ? null : { text: "Cancel", value: "cancel", onclick: () => sheet.close() },
     { text: editing ? "Save" : "Add", kind: "primary", value: "save", onclick: () => saveCollectionSheet(ctx) },
     ctx.boxRepair ? { text: "Review listed copies", onclick: () => {
-      if (!ctx.busy && !sheet.closed && boxCollectionEditorHere(ctx)) boxCollectionAfterSheet(sheet, () => boxCollectionEditorHere(ctx),
+      if (!ctx.busy && !sheet.closed && colEditorHere(ctx)) boxCollectionAfterSheet(sheet, () => colEditorHere(ctx),
         () => openCopiesSheet(cv, name, { repair: ctx.boxRepair }));
     } } : null,
     editing ? { text: "Remove…", kind: "danger btn-quiet", value: "remove", onclick: () => {
-      if (ctx.boxRepair) {
-        if (!ctx.busy && !sheet.closed && boxCollectionEditorHere(ctx)) boxCollectionAfterSheet(sheet, () => boxCollectionEditorHere(ctx),
+      if (ctx.boxRepair || ctx.audit) {
+        if (!ctx.busy && !sheet.closed && colEditorHere(ctx)) boxCollectionAfterSheet(sheet, () => colEditorHere(ctx),
           () => removeCollectionRow(cv, row));
       } else { sheet.close(); removeCollectionRow(cv, row); }
     } } : null]);
   const name = row ? row.name : opts.name;
-  if (name) loadColPrintings(ctx, name, row);
+  if (name) loadColPrintings(ctx, name, row || ctx.audit?.printing);
   else colFillFinishes(ctx);
   (editing || name ? ctx.inputs.quantity : ctx.inputs.name).focus();
   return ctx;
+}
+
+function colEditorHere(ctx) {
+  return (!ctx.boxRepair || ctx.boxRepair.here()) && (!ctx.audit || ctx.audit.here());
 }
 
 function colFields(ctx, row) {
@@ -163,7 +182,7 @@ function colSuggestNames(ctx) {
   ctx.suggestTimer = setTimeout(async () => {
     try {
       const answer = await api(`/api/cards/search?q=${encodeURIComponent(q)}&limit=8`);
-      if (seq !== ctx.nameSeq || ctx.sheet.closed || !boxCollectionEditorHere(ctx)) return;
+      if (seq !== ctx.nameSeq || ctx.sheet.closed || !colEditorHere(ctx)) return;
       clear(ctx.datalist).append(...(answer.cards || []).map((c) => el("option", { value: c.name })));
     } catch (e) { /* suggestions are a help only; the printing lookup says what's wrong */ }
   }, 200);
@@ -198,13 +217,13 @@ function colPrintingList(answer) {
 
 /** Look up a name's printings and draw the strip (keeping a row's own when editing). */
 async function loadColPrintings(ctx, typed, keep = null) {
-  if (!boxCollectionEditorHere(ctx)) return;
+  if (!colEditorHere(ctx)) return;
   const name = String(typed || "").trim();
   colResetPrintings(ctx);
   if (!name) return;
   const seq = ctx.printSeq;
   const currentLookup = () => seq === ctx.printSeq && ctx.inputs.name.value.trim() === name
-    && !ctx.sheet.closed && boxCollectionEditorHere(ctx);
+    && !ctx.sheet.closed && colEditorHere(ctx);
   clear(ctx.strip).append(loadingBox("Looking up its printings…"));
   let answer;
   try {
@@ -234,10 +253,15 @@ async function loadColPrintings(ctx, typed, keep = null) {
   if (answer.name && answer.name !== ctx.inputs.name.value) ctx.inputs.name.value = answer.name;   // Scryfall's exact name
   ctx.printingName = ctx.inputs.name.value.trim();
   ctx.printings = colPrintingList(answer);
-  const current = keep || (ctx.row && ctx.row.name === answer.name ? ctx.row : null);
+  const current = ctx.audit?.printing || keep || (ctx.row && ctx.row.name === answer.name ? ctx.row : null);
   if (!ctx.boxRepair && current && current.set && !ctx.printings.some((p) => p.set === current.set && p.collector_number === current.collector_number)) {
-    ctx.printings.unshift({ set: current.set, set_name: "as recorded", collector_number: current.collector_number,
-      finishes: [current.finish || "nonfoil"], released: "", img_small: null });
+    if (!ctx.audit || ctx.editing) ctx.printings.unshift({ set: current.set, set_name: "as recorded",
+      collector_number: current.collector_number, finishes: [current.finish || "nonfoil"], released: "", img_small: null });
+  }
+  if (ctx.audit) {
+    const printing = ctx.audit.printing;
+    ctx.printings = ctx.printings.filter(p => p.finishes.includes(printing.finish) &&
+      colKey({ ...p, finish: printing.finish }) === printing.key).map(p => ({ ...p, finishes: [printing.finish] }));
   }
   const at = current ? ctx.printings.findIndex((p) => p.set === current.set && p.collector_number === current.collector_number) : -1;
   ctx.chosen = at >= 0 ? at : ctx.printings.length === 1 ? 0 : -1;
@@ -261,7 +285,7 @@ function drawColStrip(ctx) {
       title: p.set_name || null, "aria-label": `${words}${p.set_name ? `, ${p.set_name}` : ""}${p.released ? `, ${String(p.released).slice(0, 4)}` : ""}`,
       onclick: () => {
         if (seq !== ctx.printSeq) return;
-        if (ctx.boxRepair && (ctx.busy || ctx.sheet.closed || !boxCollectionEditorHere(ctx))) return;
+        if (ctx.boxRepair && (ctx.busy || ctx.sheet.closed || !colEditorHere(ctx))) return;
         ctx.chosen = i; drawColStrip(ctx); colFillFinishes(ctx);
       } },
       el("span", { class: "col-strip-pic" }, p.img_small ? el("img", { src: p.img_small, alt: "", loading: "lazy", decoding: "async", width: 73, height: 102 })
@@ -274,7 +298,7 @@ function drawColStrip(ctx) {
     oninput: (e) => { ctx.stripFilter = e.target.value; const at = e.target.selectionStart; drawColStrip(ctx);
       const again = ctx.strip.querySelector(".col-strip-find"); if (again) { again.focus(); again.setSelectionRange(at, at); } } }) : null;
   add(clear(ctx.strip), [
-    ctx.printings.length ? el("div", { class: "col-strip-tools" }, filter,
+    ctx.printings.length && !ctx.audit ? el("div", { class: "col-strip-tools" }, filter,
       el("button", { type: "button", class: "btn col-sheet-mutate", text: "Bigger pictures…",
         onclick: () => { if (seq === ctx.printSeq) colPickBig(ctx, name); } })) : null,
     ctx.printings.length ? el("div", { class: "col-strip", role: "group", "aria-label": `Printings of ${name}` }, tiles)
@@ -287,7 +311,7 @@ function drawColStrip(ctx) {
 
 /** The bigger printing picker (cards-ui.js pickPrinting): its choice becomes the strip's. */
 async function colPickBig(ctx, name) {
-  if (ctx.sheet.closed || !colActive(ctx.cv) || !boxCollectionEditorHere(ctx)) return;
+  if (ctx.sheet.closed || !colActive(ctx.cv) || !colEditorHere(ctx)) return;
   const seq = ctx.printSeq;
   const p = ctx.printings[ctx.chosen];
   const finish = ctx.finishBox.querySelector('[aria-pressed="true"]');
@@ -296,7 +320,7 @@ async function colPickBig(ctx, name) {
     picked = await pickPrinting(name, { current: p ? { set: p.set, number: p.collector_number, finish: finish ? finish.dataset.value : "nonfoil" } : null,
       onOpen: sheet => { picker = sheet; colSheets.add(sheet); } });
   } finally { if (picker) colSheets.delete(picker); }
-  if (!picked || !picked.set || seq !== ctx.printSeq || ctx.sheet.closed || !colActive(ctx.cv) || !boxCollectionEditorHere(ctx)) return;
+  if (!picked || !picked.set || seq !== ctx.printSeq || ctx.sheet.closed || !colActive(ctx.cv) || !colEditorHere(ctx)) return;
   let at = ctx.printings.findIndex((o) => o.set === picked.set && o.collector_number === picked.number);
   if (at < 0) {
     ctx.printings.unshift({ set: picked.set, set_name: picked.set_name || "", collector_number: picked.number,
@@ -381,11 +405,19 @@ function colFormRow(ctx) {
   if (ctx.boxRepair && name !== ctx.boxRepair.difference.name) return colProblem(ctx, "name", "Keep the exact reviewed card name. Close this sheet to search for another card.");
   if (ctx.boxRepair && !ctx.editing && (ctx.cv.rows || []).some(owned => colKey(owned) === colKey(row)))
     return colProblem(ctx, "printing", "This printing is already listed. Use Review listed copies and select its row to enter the total owned quantity.");
+  if (ctx.audit) {
+    if (colKey(row) !== ctx.audit.printing.key) return colProblem(ctx, "printing", "Choose the exact printing from this audit.");
+    const listed = ctx.cv.rows?.find(owned => colKey(owned) === ctx.audit.printing.key);
+    if (ctx.editing ? !listed || !colSameRow(colBase(listed), ctx.base) : listed) {
+      return colProblem(ctx, "quantity", "The listed copies have changed. Close this sheet and review the current row.");
+    }
+    if (ctx.editing) return { ...ctx.base, quantity };
+  }
   return row;
 }
 
 async function saveCollectionSheet(ctx) {
-  if (ctx.busy || ctx.sheet.closed || !boxCollectionEditorHere(ctx)) return;
+  if (ctx.busy || ctx.sheet.closed || !colEditorHere(ctx)) return;
   if (!ctx.editing && (!ctx.form.isConnected || !colAddReady(ctx))) return;
   const row = colFormRow(ctx);
   if (!row) return;
@@ -396,7 +428,7 @@ async function saveCollectionSheet(ctx) {
   colSheetBusy(ctx, true);
   try {
     await colEnsureRows(ctx.cv);
-    if (ctx.sheet.closed || !boxCollectionEditorHere(ctx)) return;
+    if (ctx.sheet.closed || !colEditorHere(ctx)) return;
     await colSend(ctx, body);
   } catch (error) {
     if (!ctx.sheet.closed && (body.action !== "add" || colAddHere(ctx)))
@@ -408,7 +440,7 @@ async function saveCollectionSheet(ctx) {
 
 /** Add belongs to its original route and top sheet; stale native controls never start another add. */
 function colAddHere(ctx, trigger = null) {
-  return ctx.addHash === location.hash && !ctx.sheet.closed && colActive(ctx.cv) && boxCollectionEditorHere(ctx)
+  return ctx.addHash === location.hash && !ctx.sheet.closed && colActive(ctx.cv) && colEditorHere(ctx)
     && [...document.querySelectorAll("dialog[open]")].at(-1) === ctx.sheet.dialog
     && (!trigger || trigger.isConnected && !trigger.disabled && ctx.sheet.foot.contains(trigger));
 }
@@ -421,10 +453,10 @@ function colAddReady(ctx, trigger = null) {
  * put the change back on top of the latest one. */
 async function colSend(ctx, body) {
   const cv = ctx.cv;
-  if (ctx.sheet.closed || !colActive(cv) || !boxCollectionEditorHere(ctx)) return;
+  if (ctx.sheet.closed || !colActive(cv) || !colEditorHere(ctx)) return;
   if (body.action === "add" && !colAddReady(ctx)) return;
   body = await colReductionReason(ctx, body);
-  if (!body || ctx.sheet.closed || !colActive(cv) || !boxCollectionEditorHere(ctx)) return;
+  if (!body || ctx.sheet.closed || !colActive(cv) || !colEditorHere(ctx)) return;
   if (body.action === "add" && !colAddReady(ctx)) return;
   const requestHash = location.hash;
   const addSave = body.action === "add" ? { pending: true, done: false, stale: false } : null;
@@ -441,7 +473,7 @@ async function colSend(ctx, body) {
       if (state.profile?.id === cv.profile) toast(words);
       return;
     }
-    if (!boxCollectionEditorHere(ctx)) return;
+    if (!colEditorHere(ctx)) return;
     const filing = body.action === "add" ? colFilingSnapshot(answer, cv, "add") : null;
     ctx.sheet.close();
     colChanged(cv, answer, words, filing);
@@ -450,10 +482,10 @@ async function colSend(ctx, body) {
       addSave.stale = true; cv.rows = null; invalidateLibrary();
       return;
     }
-    if (ctx.sheet.closed || !colActive(cv) || !boxCollectionEditorHere(ctx)) return;
+    if (ctx.sheet.closed || !colActive(cv) || !colEditorHere(ctx)) return;
     if (error.status === 409 && error.data?.in_use && error.data.confirm_in_use) {
       const proceed = await askCollectionInUse(error.data.in_use, body.action);
-      if (!proceed || ctx.sheet.closed || !colActive(cv) || !boxCollectionEditorHere(ctx)) {
+      if (!proceed || ctx.sheet.closed || !colActive(cv) || !colEditorHere(ctx)) {
         if (!ctx.sheet.closed) clear(ctx.message).append(el("p", { text: "Nothing saved." }));
         return;
       }
@@ -476,10 +508,15 @@ function showCollectionConflict(ctx, error, body) {
   clear(sheet.body).append(ctx.message);
   clear(ctx.message);
   const discard = { text: "Discard my changes", kind: "discard", value: "discard", onclick: () => sheet.close() };
+  if (ctx.audit) {
+    sheet.body.append(el("p", { text: "The collection changed. Close this sheet and check the current copies before entering a fresh total." }));
+    sheetActions(sheet, [{ ...discard, text: "Review current copies", kind: "primary" }]);
+    return;
+  }
   if (ctx.boxRepair) {
     sheet.body.append(el("p", { text: "Review the current listed copies before entering a total. Re-applying an old total could count copies twice or overwrite a newer count." }));
     sheetActions(sheet, [{ text: "Review listed copies", kind: "primary", onclick: () => {
-      if (!sheet.closed && boxCollectionEditorHere(ctx)) boxCollectionAfterSheet(sheet, () => boxCollectionEditorHere(ctx),
+      if (!sheet.closed && colEditorHere(ctx)) boxCollectionAfterSheet(sheet, () => colEditorHere(ctx),
         () => openCopiesSheet(cv, body.row.name, { repair: ctx.boxRepair }));
     } }, discard]);
     return;

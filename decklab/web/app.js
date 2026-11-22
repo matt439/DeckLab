@@ -266,6 +266,7 @@ function route() {
     history.replaceState(history.state, "", `#/matchups${query ? `?${query}` : ""}`);
   }
   boxCollectionRoute(path, token);
+  storageAuditCorrectionRoute(token);
   if (path === "card") {
     if (!state.profile) { closeCardAddress(); return drawWho(); }
     return showCardAddress(params, token);

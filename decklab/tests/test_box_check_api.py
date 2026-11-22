@@ -123,10 +123,29 @@ class BoxCheckApiTests(BoxCheckCase):
         info = offer["box_check"]
         self.assertEqual(info, {"expect": self.record().sha256, "checked_on": None, "editable": True, "why_not": None,
                                 "recipe_sha256": box_check.recipe_sha256("owned", offer["take_apart"]["sections"]),
+                                "resume_key": box_check.resume_key(deck, self.record(),
+                                                                  box_check.recipe_sha256("owned", offer["take_apart"]["sections"])),
                                 "printings": {}})
         self.assertEqual(offer["take_apart"]["version"], "owned")
         self.assertEqual(offer["take_apart"]["card_count"], 14)
         self.assertEqual(files.render(inventory.current(), decks=True), before)
+
+    def test_resume_key_tracks_physical_generation_instead_of_unrelated_deck_edits(self):
+        deck = self.parsed()
+        physical = decks.parse_decklist(f"Deck\n1 {MYSTIC}\n12 Forest\n")
+        assembled.install(deck, "target", physical)
+        self.write_parsed(deck)
+        original = self.offer()["box_check"]
+        decks.set_sleeves(deck, "fixture sleeves")
+        self.write_parsed(deck)
+        renamed_kit = self.offer()["box_check"]
+        self.assertNotEqual(original["expect"], renamed_kit["expect"])
+        self.assertEqual(original["resume_key"], renamed_kit["resume_key"])
+        assembled.install(deck, "target", physical, force=True)
+        self.write_parsed(deck)
+        repacked = self.offer()["box_check"]
+        self.assertEqual(original["recipe_sha256"], repacked["recipe_sha256"])
+        self.assertNotEqual(original["resume_key"], repacked["resume_key"])
 
     def test_legacy_save_adds_only_date_without_freezing_or_changing_any_other_data(self):
         deck = self.parsed()

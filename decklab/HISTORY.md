@@ -1,5 +1,11 @@
 # Deck Lab: history
 
+## Follow up on a physical audit (2026-11-22, E8-S28 and E7-S32)
+
+Collection's **Storage map** shows **Needs review** on sections with differences, even after the expectations change, and on collapsed rows that contain them. Hand counts and scans use the same storage audit review. The saved report names identified extras by printing and finish and keeps a separate count for unidentified copies. Open a relevant Collection or Tokens record from the saved difference, then return to the section. The count records what was found. Correcting inventory is a separate save, and a matching recount clears the review state. [Storage audit guide](README.md#audit-a-storage-section)
+
+A built deck's **Packed in this box** area leads to its scan and, for eligible household decks, straight into the hand count. Deck scans compare names across sections. The hand count can record a date and chosen printings, or take you through the existing preview for a correction to the recorded box. [Deck box guide](README.md#collection-and-physical-play)
+
 ## From a deck plan to the table (2026-11-22)
 
 - Deck pages name the active list beside its physical readiness. Incoming, held and lent copies have their own labels. Packed in this box has its own record and reservations, and the packing workflow distinguishes physical placeholders from substitute cards in a list.

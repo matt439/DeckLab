@@ -93,11 +93,17 @@ class StorageMapTests(CollectionEditTestCase):
         holds = {"built": {"rows": {0: 2}, "unmatched": []}}
         with mock.patch.object(tokens.reserve, "holds", return_value=holds):
             review = self.review("Token cards")
+            row, = review["rows"]
+            saved = self.record(review, counts={row["key"]: 2})["section"]["audit"]
         self.assertEqual((review["section"]["quantity"], review["section"]["place"]), (3, "Row 4"))
         self.assertEqual([row["quantity"] for row in review["rows"]], [3])
         self.assertIn("Goblin", review["rows"][0]["name"])
         self.assertIn("Treasure", review["rows"][0]["name"])
         self.assertNotIn("Fixture note", str(review))
+        difference, = saved["differences"]
+        self.assertEqual((difference["key"], difference["token"]), (row["key"], row["token"]))
+        self.assertTrue(difference["estimated"])
+        self.assertNotIn("notes", difference["token"])
 
     def test_saved_discrepancies_use_exact_rows_without_inventory_writes(self):
         _write(self.box.magic / "collection.csv", COLLECTION + "Elvish Mystic,cmm,648,foil,2,NM,en,\n")
@@ -134,6 +140,64 @@ class StorageMapTests(CollectionEditTestCase):
             with self.subTest(counts=counts, extra=extra):
                 self.assertApiError(400, self.record, review, counts, extra)
         self.assertIsNone(self.section()["audit"])
+
+    def test_known_wrong_finish_and_unidentified_extras_are_kept_for_recheck(self):
+        with mock.patch.object(pool, "load_pool", return_value=pool.Pool(Counter(), {}, [])):
+            review = self.review()
+            counts = {row["key"]: row["quantity"] for row in review["rows"]}
+            counts["fdn|227|nonfoil"] -= 1
+            result = self.record(review, counts, extra=2, unlisted=[
+                {"set": "FDN", "collector_number": "227", "finish": "foil", "quantity": 1},
+            ])
+            saved = result["section"]["audit"]
+            self.assertEqual((saved["expected"], saved["observed"], saved["missing"], saved["surplus"], saved["extra"],
+                              saved["unidentified_extra"], saved["mismatch_rows"]), (6, 8, 1, 0, 3, 2, 2))
+            self.assertTrue(saved["needs_review"])
+            self.assertEqual([(row["key"], row["expected"], row["observed"]) for row in saved["differences"]],
+                             [("fdn|227|nonfoil", 5, 4), ("fdn|227|foil", 0, 1)])
+            self.assertEqual(saved, self.review()["section"]["audit"])
+            self.assertEqual(result["expect"], self.review()["expect"])
+
+            _write(self.box.magic / "collection.csv", COLLECTION.replace("227,nonfoil,5", "227,nonfoil,4"))
+            old = self.section()["audit"]
+            self.assertFalse(old["current"])
+            self.assertTrue(old["needs_review"])
+            self.assertNotIn("differences", old)
+            self.assertApiError(409, self.record, {**review, "expect": result["expect"]})
+            matched = self.record(self.review())["section"]["audit"]
+            self.assertTrue(matched["current"])
+            self.assertFalse(matched["needs_review"])
+            self.assertEqual(matched["differences"], [])
+
+    def test_invalid_unlisted_printings_do_not_save_a_report(self):
+        review = self.review()
+        foil = {"set": "fdn", "collector_number": "227", "finish": "foil", "quantity": 1}
+        bad = ([{**foil, "finish": "nonfoil"}], [{**foil, "finish": "etched"}], [{**foil, "quantity": True}],
+               [{**foil, "quantity": 0}], [{**foil, "set": "xxxx"}], [{**foil, "collector_number": "unknown"}],
+               [{**foil, "name": "Someone supplied this name"}], [foil, {**foil, "set": "FDN"}],
+               [foil] * (storage_map.MAX_UNLISTED + 1), {"printing": foil})
+        for rows in bad:
+            with self.subTest(rows=rows if not isinstance(rows, list) or len(rows) < 3 else "oversized"):
+                self.assertApiError(400, self.record, review, unlisted=rows)
+        self.assertIsNone(self.section()["audit"])
+
+    def test_legacy_difference_gets_edit_key_only_while_exact_row_can_be_proved(self):
+        with mock.patch.object(pool, "load_pool", return_value=pool.Pool(Counter(), {}, [])):
+            review = self.review()
+            ident = review["section"]["id"]
+            row = next(row for row in review["rows"] if row["name"] == "Llanowar Elves")
+            difference = {field: row[field] for field in ("name", "set", "collector_number", "finish")}
+            difference.update(expected=row["quantity"], observed=row["quantity"] - 1)
+            expected = review["section"]["quantity"]
+            stored = {"digest": review["expect"].split(":", 1)[1], "expected": expected, "observed": expected - 1,
+                      "extra": 0, "missing": 1, "surplus": 0, "mismatch_rows": 1, "differences": [difference]}
+            state.store().collection_audit_record("home", ident, 0, lambda *_: stored,
+                                                  state.Actor("matt", "Matt", "home"), "Record fixture audit")
+            self.assertEqual(self.review()["section"]["audit"]["differences"], [{**difference, "key": row["key"]}])
+            _write(self.box.magic / "collection.csv", COLLECTION.replace("fdn,227,nonfoil,5", "fdn,227,foil,5"))
+            after = self.review()["section"]["audit"]
+            self.assertFalse(after["current"])
+            self.assertEqual(after["differences"], [difference])
 
     def test_an_empty_configured_divider_can_record_unlisted_cards(self):
         review = self.review("White creatures")

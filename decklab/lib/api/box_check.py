@@ -33,6 +33,13 @@ def recipe_sha256(version, sections):
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def resume_key(deck, stored, recipe):
+    """Keep a local count bound to the same box across nonphysical deck edits."""
+    value = json.dumps([stored.id, stored.rename_version, assembled.generation(deck), recipe],
+                       ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
 def project(deck, stored, checklist, profile=False):
     """Build-decks metadata after its existing physical-content and inventory guards."""
     if deck is None or stored is None or deck.space != spaces.HOME or deck.kind not in decks.KINDS or deck.status != "built":
@@ -43,9 +50,10 @@ def project(deck, stored, checklist, profile=False):
     available = checklist is not None and checklist.get("available") is True
     editable = available and guard.allowed(profile, "deck.edit", deck)
     reason = (checklist.get("reason") if checklist else None) if not available else None
+    recipe = recipe_sha256(checklist["version"], checklist["sections"]) if available else None
     return {"expect": stored.sha256, "checked_on": boxcheck.checked_on(deck), "editable": bool(editable),
             "why_not": reason or (None if editable else "You cannot record a box check for this deck."),
-            "recipe_sha256": recipe_sha256(checklist["version"], checklist["sections"]) if available else None}
+            "recipe_sha256": recipe, "resume_key": resume_key(deck, stored, recipe) if available else None}
 
 
 def _exact_name(name):

@@ -17,6 +17,7 @@ let packProductReviewReturn = null;        // one-use, in-memory intent for one 
 
 function showAssembly(params, token) {
   const hash = location.hash, profile = state.profile?.id;
+  const check = takeRequestedBoxCheck(hash);
   const returning = packProductReviewReturn;
   if (returning && (returning.hash !== hash || returning.profile !== profile)) packProductReviewReturn = null;
   const query = new URLSearchParams();
@@ -30,7 +31,7 @@ function showAssembly(params, token) {
     const choices = data.choices.filter(choice => !choice.error && choice.versions?.includes("target"));
     const recipe = [...new Set(selectedIds)].filter(id => choices.some(choice => choice.id === id))
       .map(id => ({ id, version: "target" }));
-    return drawAssembly(data, token, restore ? returning.recipe : recipe.length ? recipe : null, Boolean(restore));
+    return drawAssembly(data, token, restore ? returning.recipe : recipe.length ? recipe : null, Boolean(restore), check);
   });
 }
 
@@ -40,11 +41,11 @@ function packGroupOf(choice) {
   return ["built", "building"].includes(choice.status) ? choice.status : "idea";
 }
 
-function drawAssembly(data, token, initialRecipe = null, returningFromProduct = Boolean(initialRecipe)) {
+function drawAssembly(data, token, initialRecipe = null, returningFromProduct = Boolean(initialRecipe), boxCheckStart = null) {
   const sortKey = `packing-order.${state.profile?.id || "guest"}`;
   const view = { token, hash: location.hash, profile: state.profile?.id, choices: data.choices.filter(item => !item.error && item.versions?.length),
     selected: (initialRecipe || data.selections || data.decks).map(packSelectedChoice), seq: 0, timer: null,
-    sortKey, order: local.get(sortKey) === "storage" ? "storage" : "name", storageRule: packStorageRule(null) };
+    sortKey, order: local.get(sortKey) === "storage" ? "storage" : "name", storageRule: packStorageRule(null), boxCheckStart };
   view.root = el("div", { class: "pack-page" });
   view.results = el("div", { class: "pack-results", "aria-live": "polite" });
   view.message = el("p", { class: "pack-message", role: "status" });
@@ -151,6 +152,7 @@ function drawPackPicks(view) {
 /** A choice changed: redraw the checklist and work the plan out again shortly after. */
 function packChanged(view) {
   if (assemblyActive(view)) packProductReviewReturn = null;
+  view.boxCheckStart = null;
   closeAssemblySheets(false);
   ++view.seq;
   view.builtMessage = null;
@@ -623,7 +625,9 @@ function packCurrentBox(view, deck) {
     el("h3", { text: "Packed in this box" }),
     version ? el("p", { text: [listName(version), count].filter(Boolean).join(" · ") }) : null,
     checked ? el("p", { class: "sub" }, "Last checked ", el("time", { datetime: checked, text: checked })) : null,
-    el("div", { class: "actions" }, packBoxCheckButton(view, deck), packTakeApartButton(view, deck)));
+    el("div", { class: "actions" }, packBoxCheckButton(view, deck), packTakeApartButton(view, deck)),
+    packBoxCheckDraftFor(deck) && !packBoxCheckCanResume(deck) ? el("p", { class: "sub",
+      text: "The paused count could not be matched to this box. Start a fresh check." }) : null);
 }
 
 function renderAssemblyPlan(view, data) {
@@ -800,6 +804,7 @@ async function packMarkBuilt(view) {
 function packProgress(view) {
   packChooserSync(view);
   packViewerSync(view);
+  packOpenRequestedBoxCheck(view);
   for (const group of view.results?.querySelectorAll(".pack-container-group") || []) {
     const remaining = (view.ticks || []).filter(t => t.tile && !t.done && group.contains(t.node))
       .reduce((total, t) => total + t.count, 0);

@@ -556,7 +556,7 @@ function showTokens(token, params) {
   const wanted = params && params.get("space");
   const space = wanted && seenSpaces().some((s) => s.id === wanted) ? wanted : ownSpace();
   return load(tokPath(space), token, (data) => drawTokens(data, token, space),
-    { title: "The tokens list couldn't be loaded" });
+    { title: "The tokens list couldn't be loaded", back: storageAuditCorrectionBack("token") });
 }
 
 /** Links to token lists in seenSpaces(): only visible spaces, omitted with fewer than two choices. */
@@ -645,6 +645,7 @@ function updateTokens(view, focus) {
   clear(view.panels);
   add(view.panels, [tokMissingPanel(data, view.space), tokIncomingPanel(data)]);
   drawTokenList(view);
+  drawStorageAuditTokenCorrection(view);
   setTokensBusy(view, view.busy);
   window.scrollTo(0, y);
   const again = focused && view.root.querySelector(`[data-focus="${focused}"]`);
@@ -937,11 +938,11 @@ function addToken(view) {
     keywords: view.data.keywords, space: view.space, ...tokSheetHooks(view) });
 }
 
-function editToken(view, row) {
+function editToken(view, row, audit = null) {
   if (!tokensActive(view) || view.busy || !view.canEdit) return;
   openTokenSheet({ row, rows: view.data.rows, sha256: view.data.sha256, faceNames: view.data.face_names,
-    keywords: view.data.keywords, space: view.space, ...tokSheetHooks(view),
-    onRemove: () => removeToken(view, row),
+    keywords: view.data.keywords, space: view.space, audit, ...tokSheetHooks(view),
+    onRemove: () => removeToken(view, row, audit),
     onZoom: () => {
       const open = view.root.querySelector(`[data-key="${row.key}"] .card-tile-open`);
       const group = open && viewerGroup(open);
@@ -965,9 +966,10 @@ function tokSheetHooks(view) {
 
 /** Ask before removing a row, with an optional reason (it goes into the change history). Resolves with
  * {reason} or null. */
-function askRemoveToken(row, title) {
+function askRemoveToken(row, audit = null) {
   return new Promise((resolve) => {
-    const sheet = openSheet(title || `Remove ${tokLabel(row)} ×${row.quantity}?`,
+    const open = audit ? colOpenSheet : openSheet;
+    const sheet = open(`Remove ${tokLabel(row)} ×${row.quantity}?`,
       { onClose: (result) => resolve(result == null ? null : result) });
     const reason = el("input", { id: `tok-reason-${sheet.heading.id}`, type: "text", maxlength: 200, autocomplete: "off",
       placeholder: "e.g. lost, traded, damaged" });
@@ -980,10 +982,10 @@ function askRemoveToken(row, title) {
   });
 }
 
-async function removeToken(view, row) {
-  if (!tokensActive(view) || view.busy) return;
-  const choice = await askRemoveToken(row);
-  if (!choice || !tokensActive(view) || view.busy) return;
+async function removeToken(view, row, audit = null) {
+  if (!tokensActive(view) || view.busy || audit && !audit.here()) return;
+  const choice = await askRemoveToken(row, audit);
+  if (!choice || !tokensActive(view) || view.busy || audit && !audit.here()) return;
   let sha = view.data.sha256;
   let current = row;
   let base = tokBase(row);
@@ -1006,6 +1008,10 @@ async function removeToken(view, row) {
       if (error.status !== 409 || !latest) {
         clear(view.message).append(el("div", { class: "box box-crit" }, el("p", { text: error.message })));
         toast(error.message);
+        return;
+      }
+      if (audit) {
+        tokShow(view, latest, "The tokens list changed. Check the current token record before removing it.");
         return;
       }
       // Only a row that's really gone is "Already removed": one changed meanwhile is still there.

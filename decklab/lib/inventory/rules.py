@@ -308,6 +308,7 @@ def set_intact(row, intact):
 
 TOKEN_FIELDS = ["front", "back", "set", "front_collector_number", "back_collector_number",
                 "finish", "quantity", "front_details", "back_details", "notes"]
+TOKEN_ID_FIELDS = tuple(field for field in TOKEN_FIELDS if field not in ("quantity", "notes"))
 UNVERIFIED = re.compile(r"reverse face unconfirmed|reverse.*(?:unknown|unconfirmed)|"
                         r"pairing.*(?:unknown|unconfirmed)|check physical pairing", re.I)
 # The order tokens.csv is kept in, shared by receipts and Deck Lab's Tokens page
@@ -322,7 +323,7 @@ def token_sort_key(row):
 
 def token_identity(row):
     """A token card's identity: every column except quantity and notes."""
-    return tuple(row[key] for key in TOKEN_FIELDS if key not in ("quantity", "notes"))
+    return tuple(row[key] for key in TOKEN_ID_FIELDS)
 
 
 def token_uncertain(row):

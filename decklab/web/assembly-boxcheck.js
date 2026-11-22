@@ -2,6 +2,27 @@
 "use strict";
 
 const BOX_CHECK_SECTIONS = ["Commander", "Companion", "Deck", "Sideboard"];
+let requestedBoxCheck = null;
+let pausedBoxCheck = null;
+
+function boxCheckAddress(id, version) {
+  return `#/assembly?deck=${encodeURIComponent(id)}&version=${version === "owned" ? "owned" : "target"}`;
+}
+
+function requestBoxCheck(hash, id) {
+  requestedBoxCheck = { hash, id, profile: state.profile };
+}
+
+function takeRequestedBoxCheck(hash) {
+  const intent = requestedBoxCheck;
+  requestedBoxCheck = null;
+  return intent?.hash === hash && intent.profile === state.profile ? intent : null;
+}
+
+function retireDepartedBoxChecks() {
+  if (requestedBoxCheck && (requestedBoxCheck.profile !== state.profile || requestedBoxCheck.hash !== location.hash)) requestedBoxCheck = null;
+  if (pausedBoxCheck && (pausedBoxCheck.profile !== state.profile || !boxEditorScope())) pausedBoxCheck = null;
+}
 
 function packBoxCheckEvidence(deck) {
   const meta = deck.box_check, physical = packTakeApartContents(deck.take_apart);
@@ -20,23 +41,61 @@ function packBoxCheckEvidence(deck) {
   return { meta, physical };
 }
 
+function packBoxCheckDraftFor(deck) {
+  return pausedBoxCheck?.deckId === deck.id && pausedBoxCheck.profile === state.profile && boxEditorScope() ? pausedBoxCheck : null;
+}
+
+function packBoxCheckCanResume(deck, evidence) {
+  const draft = packBoxCheckDraftFor(deck);
+  if (!draft) return false;
+  if (evidence === undefined) evidence = packBoxCheckEvidence(deck);
+  if (!evidence || draft.recipe !== evidence.meta.recipe_sha256 || draft.editable !== evidence.meta.editable) return false;
+  if (/^[a-f0-9]{64}$/.test(draft.resumeKey || "") || /^[a-f0-9]{64}$/.test(evidence.meta.resume_key || "")) {
+    return draft.resumeKey === evidence.meta.resume_key;
+  }
+  return draft.expect === evidence.meta.expect;
+}
+
+function packBoxCheckProgressReady(view) {
+  const progress = view.progress;
+  return progress?.loaded && !progress.busy && !progress.pending.size && !progress.error;
+}
+
+function packOpenRequestedBoxCheck(view) {
+  const start = view.boxCheckStart;
+  if (!start || !packBoxCheckProgressReady(view)) return;
+  view.boxCheckStart = null;
+  const data = view.data;
+  Promise.resolve().then(() => {
+    if (!assemblyActive(view) || start.profile !== state.profile || start.hash !== location.hash || data !== view.data
+        || view.previewing || view.saving || view.reviewing || document.querySelector("dialog[open]")) return;
+    const button = [...view.results.querySelectorAll(".pack-box-check")].find(node => node.dataset.boxCheckDeck === start.id);
+    if (button?.isConnected) { button.focus(); button.click(); }
+  });
+}
+
 function packBoxCheckButton(view, deck) {
   if (!deck.box_check || deck.completion?.status !== "built" || !/^(casual|commander)\/[^/]+$/.test(deck.id)
       || ownSpace() !== HOME_SPACE || !seesHomeInventory(state.may)) return null;
   const data = view.data, recipe = JSON.stringify(view.selected.map(packSelectedChoice));
-  const button = el("button", { type: "button", class: "btn pack-box-check", text: "Count by hand",
-    "aria-label": deck.title + ": count packed cards by hand", onclick: () => {
+  const button = el("button", { type: "button", class: "btn pack-box-check", "data-box-check-deck": deck.id, onclick: () => {
       if (!assemblyActive(view) || view.hash !== location.hash || view.data !== data || !data.decks.includes(deck)
           || !button.isConnected || !view.results.contains(button) || view.previewing || view.reviewing || view.saving
           || view.boxCheckRefresh?.data === data || document.querySelector("dialog[open]")
           || recipe !== JSON.stringify(view.selected.map(packSelectedChoice))) return;
-      const progress = view.progress;
-      if (!progress?.loaded || progress.busy || progress.pending.size || progress.error) {
+      if (!packBoxCheckProgressReady(view)) {
         view.message.textContent = "Save or check the shared packing ticks before opening a box check."; return;
       }
       packReviewBoxCheck(view, deck);
     } });
+  packBoxCheckButtonText(button, deck);
   return button;
+}
+
+function packBoxCheckButtonText(button, deck) {
+  const resume = packBoxCheckCanResume(deck);
+  button.textContent = resume ? "Resume box check" : "Count by hand";
+  button.setAttribute("aria-label", deck.title + (resume ? ": resume box check" : ": count packed cards by hand"));
 }
 
 function packBoxRowWords(row) {
@@ -79,13 +138,17 @@ function packReviewBoxCheck(view, deck) {
   const evidence = packBoxCheckEvidence(deck), recipe = JSON.stringify(view.selected.map(packSelectedChoice));
   const data = view.data, root = view.root, seq = view.seq, original = JSON.stringify([deck.box_check, deck.take_apart]);
   const expected = [], extras = [], controls = [], repairButtons = [], acceptedValues = new WeakMap();
-  const printingOffers = boxCheckPrintingOffers(evidence?.meta), printingControls = [], printingShown = new Set();
+  const printingOffers = boxCheckPrintingOffers(evidence?.meta), printingControls = [], printingInputs = [], printingShown = new Set();
+  const returning = packBoxCheckCanResume(deck, evidence) ? pausedBoxCheck : null;
+  if (packBoxCheckDraftFor(deck)) pausedBoxCheck = null;
   let leavingForRepair = false, editorReading = false, sourceSha = evidence?.meta.expect;
   let stage = "edit", pending = false, saved = false, repaired = false, needsRefresh = false, refreshed = false, review = null;
   view.reviewing = true; packProgress(view);
   const ctx = openAssemblySheet(view, "Count " + deck.title + " by hand", { wide: true, onClose: () => {
     if (!owner()) return;
     if (leavingForRepair) { view.reviewing = false; view.boxCheckRefresh = null; packProgress(view); return; }
+    const trigger = [...view.results.querySelectorAll(".pack-box-check")].find(node => node.dataset.boxCheckDeck === deck.id);
+    if (trigger) packBoxCheckButtonText(trigger, deck);
     if (saved || needsRefresh) afterClose();
     else if (!pending) { view.reviewing = false; packProgress(view); }
   } });
@@ -101,7 +164,7 @@ function packReviewBoxCheck(view, deck) {
   const error = el("p", { class: "form-error", role: "alert", tabindex: "-1" });
   const editing = el("div"), reviewing = el("div", { hidden: true }), editorChoices = el("div", { class: "box-editor-choices" });
   ctx.sheet.body.append(el("p", { text: "Count the cards and physical placeholders in the box, then review any differences against the packed record." }),
-    el("p", { class: "sub", text: "Card art represents names only. Save check date records the date and any printings you choose. Counts and differences stay in this review unless you open a separate correction." }),
+    el("p", { class: "sub", text: "Card art represents names only. Save check date records the date and any printings you choose. Counts and differences stay in this review, with an option to resume them in this tab." }),
     el("p", { class: "sub", hidden: !Object.keys(printingOffers).length, text: "Where you own multiple printings, choose which you found in the box to record them with the date." }),
     el("p", { class: "sub", text: "Every count starts unreviewed. Tick a tile to fill its full recorded quantity, or enter a whole count. Use 0 when none were found." }), editing, reviewing, error);
   function local(input, valid = () => true) {
@@ -150,13 +213,21 @@ function packReviewBoxCheck(view, deck) {
     for (const row of expected) row.tick.disabled = pending || saved || needsRefresh || stage !== "edit";
     for (const button of repairButtons) button.disabled = pending || needsRefresh || leavingForRepair || editorReading;
   }
+  function keepCount() {
+    pausedBoxCheck = { deckId: deck.id, expect: sourceSha, recipe: evidence.meta.recipe_sha256,
+      resumeKey: evidence.meta.resume_key, profile: state.profile, editable: evidence.meta.editable, rows: review.rows, extras: review.extras,
+      printingOffers: JSON.stringify(printingOffers), printingValues: printingInputs.map(input => input.value) };
+  }
   function leaveForRepair(go) {
     leavingForRepair = true; lock();
-    boxCollectionAfterSheet(ctx.sheet, () => owner() && leavingForRepair, go);
+    boxCollectionAfterSheet(ctx.sheet, () => owner() && leavingForRepair, () => {
+      if (!repaired) keepCount();
+      go(boxCheckAddress(deck.id, evidence.physical.version));
+    });
   }
   function differences() {
     const canCorrect = evidence.meta.editable && (review.missing.length || review.extra.length);
-    add(clear(reviewing), [el("h3", { text: "Review differences" }),
+    add(clear(reviewing), [el("h3", { text: "Review differences", tabindex: "-1" }),
       el("p", { text: plural(review.expected_cards, "recorded physical card") + "; " + plural(review.found_cards, "card") + " found, including extras." }),
       el("p", { class: "sub", text: "Save check date records today's check and any printings you chose." }),
       canCorrect ? el("p", { class: "sub",
@@ -165,7 +236,7 @@ function packReviewBoxCheck(view, deck) {
     if (printingSummary) reviewing.append(printingSummary);
     if (printingSummary && canCorrect) reviewing.append(el("p", { class: "sub",
       text: "Correct the recorded box doesn't save printing choices: check the box again after correcting it, or use the deck page's Printings in box…." }));
-    reviewing.append(el("p", { class: "sub", text: "Review collection copies closes this local box review and discards its counts and extras. It does not save a check date or change the collection. A missing card may still be in storage or another box." }));
+    reviewing.append(el("p", { class: "sub", text: "Recount and check storage or other boxes first. Review collection copies to verify the total you own. Review a deck list if your intended list needs a change. You can resume this count here after either review." }));
     repairButtons.length = 0;
     for (const [key, label] of [["missing", "Missing"], ["extra", "Extra"]]) reviewing.append(el("section", {},
       el("h4", { text: label }), review[key].length ? el("ul", {}, review[key].map(row => {
@@ -178,7 +249,7 @@ function packReviewBoxCheck(view, deck) {
                   || !review[key].includes(row) || JSON.stringify(snapshot()) !== JSON.stringify(review)) return;
               const difference = boxCollectionDifference(deck, { meta: { ...evidence.meta, expect: sourceSha } }, row, key);
               if (!difference) return;
-              leaveForRepair(() => boxCollectionNavigate(difference));
+              leaveForRepair(returnHash => boxCollectionNavigate(difference, returnHash));
             } });
           repairButtons.push(button); item.append(button);
         }
@@ -221,21 +292,32 @@ function packReviewBoxCheck(view, deck) {
           if (!actionable(event, ctx.sheet.foot) || stage !== "edit") return;
           review = snapshot(); if (!review) return;
           stage = "review"; editing.hidden = true; reviewing.hidden = false; differences(); error.textContent = ""; actions();
+          reviewing.querySelector("h3").focus();
         } } : null,
       !saved && !needsRefresh && stage === "review" ? { text: "Back to counts", disabled: pending || editorReading, onclick: event => {
         if (!actionable(event, ctx.sheet.foot)) return;
         stage = "edit"; editing.hidden = false; reviewing.hidden = true; error.textContent = ""; actions();
       } } : null,
+      !needsRefresh && !repaired && ["review", "saved"].includes(stage) ? { text: "Keep count for later", disabled: pending || editorReading,
+        onclick: event => {
+          if (!here() || pending || editorReading || leavingForRepair || !event.currentTarget.isConnected
+              || !ctx.sheet.foot.contains(event.currentTarget) || JSON.stringify(snapshot()) !== JSON.stringify(review)) return;
+          keepCount(); ctx.sheet.close();
+        } } : null,
       !saved ? { text: evidence ? "Cancel" : "Close", disabled: pending, onclick: () => ctx.sheet.close() } : null]);
   }
   function addExtra(event) {
     if (!actionable(event) || stage !== "edit" || extras.length >= 200) return;
+    appendExtra().name.focus(); actions();
+  }
+  function appendExtra(initial = { section: "Deck", name: "", quantity: "" }) {
     const row = {}, alive = () => extras.includes(row);
     row.section = local(el("select", { "aria-label": "Extra card section" }, BOX_CHECK_SECTIONS.map(section => el("option", { value: section, text: section }))), alive);
-    row.section.value = "Deck";
-    acceptedValues.set(row.section, "Deck");
-    row.name = local(el("input", { type: "text", maxlength: 200, autocomplete: "off", "aria-label": "Extra card exact canonical name" }), alive);
-    row.input = local(el("input", { type: "number", inputmode: "numeric", min: 1, max: 9999, step: 1, "aria-label": "Extra physical quantity" }), alive);
+    row.section.value = initial.section;
+    acceptedValues.set(row.section, row.section.value);
+    row.name = local(el("input", { type: "text", maxlength: 200, autocomplete: "off", value: initial.name, "aria-label": "Extra card exact canonical name" }), alive);
+    row.input = local(el("input", { type: "number", inputmode: "numeric", min: 1, max: 9999, step: 1,
+      value: String(initial.quantity), "aria-label": "Extra physical quantity" }), alive);
     row.node = el("div", { class: "panel" }, el("label", { class: "field" }, el("span", { text: "Section" }), row.section),
       el("label", { class: "field" }, el("span", { text: "Exact canonical card name" }), row.name),
       el("label", { class: "field" }, el("span", { text: "Physical quantity" }), row.input),
@@ -243,7 +325,8 @@ function packReviewBoxCheck(view, deck) {
         if (!actionable(event) || stage !== "edit" || !alive()) return;
         extras.splice(extras.indexOf(row), 1); row.node.remove(); actions();
       } }));
-    extras.push(row); extraFields.append(row.node); actions(); row.name.focus();
+    extras.push(row); extraFields.append(row.node);
+    return row;
   }
   let extraFields;
   if (!evidence) editing.append(el("p", { class: "box box-warn", text: deck.take_apart?.reason || "The recorded physical contents cannot be checked. Reload the plan before starting a box check." }));
@@ -269,7 +352,9 @@ function packReviewBoxCheck(view, deck) {
         const art = physical.name && data.box_check_cards?.[physical.name];
         const card = art && art.name === physical.name ? art : null;
         const offer = physical.name && !printingShown.has(physical.name) ? printingOffers[physical.name] : null;
-        const choice = offer ? boxCheckPrintingControl(physical.name, offer, input => local(input)) : null;
+        const choice = offer ? boxCheckPrintingControl(physical.name, offer, input => {
+          printingInputs.push(input); return local(input);
+        }) : null;
         if (choice) { printingShown.add(physical.name); printingControls.push(choice); }
         tiles.append(el("div", {}, cardTile(card, { name: packBoxRowWords(physical), qty: physical.quantity, check: row.tick,
           meta: physical.name ? "Representative art; printing and finish unconfirmed" : "Unnamed physical placeholder" }),
@@ -339,6 +424,28 @@ function packReviewBoxCheck(view, deck) {
       }
     }
   }
+  if (returning) {
+    expected.forEach((row, index) => {
+      row.input.value = String(returning.rows[index].quantity);
+      acceptedValues.set(row.input, row.input.value);
+    });
+    returning.extras.forEach(appendExtra);
+    if (returning.printingOffers === JSON.stringify(printingOffers)) printingInputs.forEach((input, index) => {
+      input.value = returning.printingValues[index];
+      acceptedValues.set(input, input.value);
+    });
+    const printingsChanged = returning.printingOffers !== JSON.stringify(printingOffers);
+    const recordChanged = returning.expect !== evidence.meta.expect;
+    if (printingsChanged || recordChanged) ctx.sheet.body.insertBefore(el("p", { class: "box box-info", text: [
+      recordChanged ? "The deck record changed. The packed checklist still matches." : null,
+      printingsChanged ? "Review any printing choices against the current collection." : null,
+      "Review the restored count before saving.",
+    ].filter(Boolean).join(" ") }), ctx.sheet.body.children[0]);
+    syncTicks();
+    review = snapshot();
+    if (review) { stage = "review"; editing.hidden = true; reviewing.hidden = false; differences(); }
+  }
   actions();
+  if (stage === "review") reviewing.querySelector("h3").focus();
   return ctx;
 }

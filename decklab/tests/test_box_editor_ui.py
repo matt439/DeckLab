@@ -39,8 +39,8 @@ class BoxEditorUiTests(unittest.TestCase):
     def test_fresh_source_offers_both_existing_versions_without_default_destination_or_write(self):
         self.run_js(r'''
           const {sheet,reads}=await loadChoices();let writes=0;apiWrite=async()=>{writes++;};same(reads,['/api/deck/edit?id=casual%2Fa']);
-          assert(versionButton(sheet,'target'));assert(versionButton(sheet,'owned'));assert(sheet.body.textContent.includes('discards its local counts and extras'));
-          assert(sheet.body.textContent.includes('A check date is saved only with Save check date'));assert.equal(location.hash,'#/assembly');assert.equal(boxEditorHandoff,null);assert.equal(writes,0);
+          assert(versionButton(sheet,'target'));assert(versionButton(sheet,'owned'));assert(sheet.body.textContent.includes('Opening a list keeps this count for your return'));
+          assert(sheet.body.textContent.includes('Use Save check date in the box review'));assert.equal(location.hash,'#/assembly');assert.equal(boxEditorHandoff,null);assert.equal(writes,0);
         ''')
 
     def test_missing_owned_version_is_not_created_or_offered(self):
@@ -132,7 +132,8 @@ class BoxEditorUiTests(unittest.TestCase):
           for(const mode of ['sha','viewsha','changed','gone']){
             const oldSha=ed.sha256,oldViewSha=ed.view.sha256;ed.check=null;ed.gone=null;ed.sha256=oldSha;ed.view.sha256=oldViewSha;
             if(mode==='sha')ed.sha256='c'.repeat(64);if(mode==='viewsha')ed.view.sha256='c'.repeat(64);if(mode==='changed')ed.check={file_changed:true};if(mode==='gone')ed.gone={message:'Gone'};
-            assert.equal(boxEditorContextBanner(ed),null);ed.sha256=oldSha;ed.view.sha256=oldViewSha;ed.check=null;ed.gone=null;
+            assert.equal(boxEditorContextBanner(ed)?.textContent,'Return to box check');
+            ed.sha256=oldSha;ed.view.sha256=oldViewSha;ed.check=null;ed.gone=null;
           }
           const raw=JSON.stringify(sendList(ed.lists));button(main,'Dismiss box observation').click();assert.equal(main.querySelector('.box-editor-note'),null);assert.equal(JSON.stringify(sendList(ed.lists)),raw);assert(!ed.dirty);
           boxEditorNavigate(Object.freeze(observation()),'target');location.hash='#/library';boxEditorRoute('library',++routeToken);assert.equal(boxEditorHandoff,null);

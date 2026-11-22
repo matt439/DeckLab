@@ -169,6 +169,7 @@ function drawColRowList(cv) {
   colDrawPreview(cv, selected);
   drawColPriceNote(cv);
   drawColStorageBox(cv);
+  drawStorageAuditCollectionCorrection(cv);
   setCollectionBusy(cv, cv.busy, shown);
   registerCollectionKeyboardHelp(cv);
   // A native sort/pager activation removes its own control. Restore only that owned focus.

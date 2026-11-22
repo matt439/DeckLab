@@ -2,6 +2,7 @@
 "use strict";
 
 let boxCollectionHandoff = null;
+let boxCollectionReturn = null;
 
 /** Close first, then wait for this exact sheet entry to land before another route or sheet. */
 function boxCollectionAfterSheet(sheet, guard, go) {
@@ -50,13 +51,17 @@ function boxCollectionDifference(deck, evidence, row, direction) {
 }
 
 /** Provenance only: collection writes always use their own freshly loaded SHA. */
-function boxCollectionNavigate(difference) {
-  boxCollectionHandoff = { difference, profile: state.profile, route: null };
+function boxCollectionNavigate(difference, returnHash = null) {
+  boxCollectionHandoff = { difference, returnHash, profile: state.profile, route: null };
+  boxCollectionReturn = null;
   location.hash = "#/collection";
 }
 
 /** A different person, address or second arrival discards the receipt. */
 function boxCollectionRoute(path, token) {
+  retireDepartedBoxChecks();
+  if (boxCollectionReturn && (!boxCollectionScope() || boxCollectionReturn.profile !== state.profile
+      || path !== "collection" || location.hash !== "#/collection")) boxCollectionReturn = null;
   const handoff = boxCollectionHandoff;
   if (!handoff) return;
   if (!boxCollectionScope() || handoff.profile !== state.profile || path !== "collection" || location.hash !== "#/collection"
@@ -93,6 +98,7 @@ function boxCollectionPrintings(answer, name) {
 
 /** A successful fresh Collection load consumes this once; no URL, roster or storage carries it. */
 async function boxCollectionConsume(cv) {
+  boxCollectionReturnLink(cv);
   const handoff = boxCollectionHandoff;
   if (!handoff) return;
   boxCollectionHandoff = null;
@@ -101,15 +107,26 @@ async function boxCollectionConsume(cv) {
   const hash = location.hash, profile = state.profile;
   const here = () => colActive(cv) && state.profile === profile && boxCollectionScope() && cv.space === HOME_SPACE
     && cv.editable && location.hash === hash && parseHash().path === "collection";
-  await boxCollectionCheckSource(cv, handoff.difference, here);
+  await boxCollectionCheckSource(cv, handoff.difference, here, handoff.returnHash);
+}
+
+function boxCollectionReturnLink(cv) {
+  const returning = boxCollectionReturn;
+  const parent = cv.message.parentNode;
+  if (returning?.profile !== state.profile || !parent || !boxCollectionScope() || !colActive(cv)
+      || cv.space !== HOME_SPACE || !cv.editable || location.hash !== "#/collection"
+      || parent.querySelector(".return-to-box-check")) return;
+  parent.insertBefore(el("p", { class: "sub return-to-box-check" },
+    el("a", { class: "btn btn-quiet", href: returning.hash, text: "Return to box check" })), cv.message);
 }
 
 /** The box review's deck is still the one it checked, then the copies sheet; else why not, with the way back
  * to Build decks (and Try again when the PC couldn't answer). */
-async function boxCollectionCheckSource(cv, difference, here) {
+async function boxCollectionCheckSource(cv, difference, here, returnHash = null) {
   const waiting = loadingBox("Checking the box review's deck…", { small: true });
   clear(cv.message).append(waiting);
-  const back = () => el("a", { class: "btn btn-quiet", href: "#/assembly", text: "Back to Build decks" });
+  const back = () => el("a", { class: "btn btn-quiet", href: returnHash || "#/assembly",
+    text: returnHash ? "Return to box check" : "Back to Build decks" });
   try {
     const source = await api(`/api/deck/edit?id=${encodeURIComponent(difference.id)}`);
     if (!here()) return;
@@ -123,13 +140,15 @@ async function boxCollectionCheckSource(cv, difference, here) {
     colSay(cv, "The source deck couldn't be checked. Open a fresh box check before reviewing its collection copies.");
     const retry = error instanceof ApiError && (error.status === 0 || error.status >= 500);
     cv.message.append(el("div", { class: "actions" }, retry ? el("button", { type: "button", class: "btn", text: "Try again",
-      onclick: () => { if (here()) boxCollectionCheckSource(cv, difference, here); } }) : null, back()));
+      onclick: () => { if (here()) boxCollectionCheckSource(cv, difference, here, returnHash); } }) : null, back()));
     return;
   } finally { waiting.remove(); }
+  if (returnHash) {
+    boxCollectionReturn = { profile: state.profile, hash: returnHash };
+    boxCollectionReturnLink(cv);
+  }
   openCopiesSheet(cv, difference.name, { repair: Object.freeze({ difference, here }) });
 }
-
-function boxCollectionEditorHere(ctx) { return !ctx.boxRepair || ctx.boxRepair.here(); }
 
 function boxCollectionEditorNote(ctx) {
   if (!ctx.boxRepair) return;

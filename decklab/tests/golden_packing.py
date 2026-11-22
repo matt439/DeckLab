@@ -81,7 +81,7 @@ def _named(value):
 def _default_box_check(deck):
     """Named physical rows only after both default receipts match the checklist."""
     check, physical = deck.get("box_check"), deck.get("take_apart")
-    if (not isinstance(check, dict) or set(check) not in (BOX_KEYS, BOX_PRINTINGS_KEYS)
+    if (not isinstance(check, dict) or set(check) - {"resume_key"} not in (BOX_KEYS, BOX_PRINTINGS_KEYS)
             or check.get("printings", {}) != {} or check["checked_on"] is not None
             or check["editable"] is not True or check["why_not"] is not None
             or not _hash(check["expect"]) or not _hash(check["recipe_sha256"])
@@ -126,7 +126,15 @@ def _default_box_check(deck):
         return None
     recipe = json.dumps({"version": physical["version"], "sections": sections}, ensure_ascii=False,
                         sort_keys=True, separators=(",", ":"))
-    return names if hashlib.sha256(recipe.encode("utf-8")).hexdigest() == check["recipe_sha256"] else None
+    recipe_hash = hashlib.sha256(recipe.encode("utf-8")).hexdigest()
+    if recipe_hash != check["recipe_sha256"]:
+        return None
+    if "resume_key" in check:
+        # Historical fixtures have no deck renames or assembly generations.
+        resume = json.dumps([deck["id"], 0, 0, recipe_hash], ensure_ascii=False, separators=(",", ":"))
+        if check["resume_key"] != hashlib.sha256(resume.encode("utf-8")).hexdigest():
+            return None
+    return names
 
 
 def _default_box_art(value, names):

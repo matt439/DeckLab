@@ -137,12 +137,19 @@ function deckAssemblySection(data) {
     return token === routeToken && profile === state.profile?.id && seesInventory(space)
       && deckScreen?.data === data && path === "deck" && addressDeckId(params.get("id")) === summary.id;
   };
+  const checkAddress = review ? boxCheckAddress(summary.id, reviewVersion) : null;
   const scanButton = scan ? el("button", { type: "button", class: "btn", text: "Scan for differences", onclick: event => {
     if (!current() || space !== ownSpace() || !event.currentTarget.isConnected) return;
     const rows = audit.rows.map(row => row.manual ? { ...row,
       manualLabel: row.name.replace(/^Unspecified stand-in for /, "Unnamed physical placeholder for ") } : row);
     startCardAudit({ title: `Scan ${summary.title}`, space, mode: "deck", scan: audit.scan, rows,
       current: () => current() && space === ownSpace(),
+      followUpText: "Recount the physical cards and check each section of the box. If something is missing, look in storage and other boxes before changing your collection.",
+      followUp: checkAddress ? { label: "Check packed cards by hand", run: () => {
+        if (!current() || ownSpace() !== HOME_SPACE || !seesHomeInventory(state.may)) return;
+        requestBoxCheck(checkAddress, summary.id);
+        location.hash = checkAddress;
+      } } : null,
       instructions: "Scan the main deck, commanders, companion and sideboard together. "
         + "Set token cards aside. Copies count by physical card name across all printings."
         + (audit.rows.some(row => row.manual) ? " Count unnamed physical placeholders by hand." : "") });
@@ -158,12 +165,14 @@ function deckAssemblySection(data) {
       `The packed cards differ from the ${listName(info.intended_version, true)}.` }) : null,
     deckStandinsSection(data, true),
     remainingIntentPart(info?.remaining, `Still on the ${listName(info?.intended_version, true)}`),
-    review || scanButton || printLabel ? el("div", { class: "actions" },
-      review ? el("a", { class: "btn", href: `#/assembly?deck=${encodeURIComponent(summary.id)}&version=${reviewVersion}`,
-        text: "Check packed cards by hand" }) : null,
-      scanButton, printLabel) : null,
-    review || scan ? el("p", { class: "sub", text: [review
-      ? "A hand count can record a check date or let you review a correction." : null,
-      scan ? "Scanning gives a temporary comparison with the recorded box." : null].filter(Boolean).join(" ") }) : null,
+    checkAddress || scanButton ? el("section", {}, el("h3", { text: "Check this box" }),
+      el("div", { class: "actions" }, checkAddress ? el("a", { class: "btn", href: checkAddress,
+        text: "Check packed cards by hand", onclick: event => {
+          if (current() && event.currentTarget.isConnected && !event.defaultPrevented && !event.metaKey && !event.ctrlKey
+              && !event.altKey && !event.shiftKey) requestBoxCheck(checkAddress, summary.id);
+        } }) : null, scanButton),
+      el("p", { class: "sub", text: [review ? "A hand count can record a check date or let you review a correction." : null,
+        scan ? "Scanning gives a temporary comparison with the recorded box." : null].filter(Boolean).join(" ") })) : null,
+    printLabel ? el("div", { class: "actions" }, printLabel) : null,
     deckPrintingsSection(data));
 }
