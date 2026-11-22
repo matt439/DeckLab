@@ -24,7 +24,7 @@ def rules(mtg=(None, None), gp=(None, None)):
 
 def build(rows, mtg=None, gp=None, postage=None):
     captured = {key: value for key, value in (("mtgmate", mtg), ("gamesportal", gp)) if value}
-    return shop_baskets.build(rows, captured or None, "rev-1", postage)
+    return shop_baskets.build(rows, captured or None, "rev-1", postage, adapters=shops.SNAPSHOT_ADAPTERS)
 
 
 def basket(built, key):
@@ -138,9 +138,10 @@ class PlanTests(unittest.TestCase):
             "gamesportal": games_portal({"Sol Ring": entry(listing("5.00", 2, set_code="m19"))}),
         }
         counted = [mock.patch.object(shops.ADAPTERS[key], "counts_stock", True) for key in snapshots]
+        adapters = shops.SNAPSHOT_ADAPTERS
         with counted[0], counted[1]:
-            free = shop_baskets.build(rows, snapshots, "q1", rules(mtg=("0", None), gp=("0", None)))["plan"]
-            paid = shop_baskets.build(rows, snapshots, "q1", rules(mtg=("6", None), gp=("0", None)))["plan"]
+            free = shop_baskets.build(rows, snapshots, "q1", rules(mtg=("0", None), gp=("0", None)), adapters)["plan"]
+            paid = shop_baskets.build(rows, snapshots, "q1", rules(mtg=("6", None), gp=("0", None)), adapters)["plan"]
         for plan in (free["by_price"], free["recommended"], paid["by_price"]):
             self.assertEqual(plan["cards_aud"], "6.00")
             self.assertEqual([(shop["key"], shop["rows"][0]["listing"]["set"], shop["cards"])
@@ -241,7 +242,7 @@ class PostageApiTests(PermissionTestCase):
         with access.viewing("matt"):
             shown = shop_postage.view()
             self.assertEqual((shown["revision"], shown["can_edit"]), (0, True))
-            self.assertEqual([item["key"] for item in shown["shops"]], ["mtgmate", "gamesportal"])
+            self.assertEqual([item["key"] for item in shown["shops"]], ["mtgmate"])
             saved = self.save()
         self.assertEqual(saved["shops"][0]["free_over_aud"], "100.00")
         with access.viewing("user1"):

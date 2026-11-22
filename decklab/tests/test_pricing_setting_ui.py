@@ -13,9 +13,9 @@ from decklab.tests.test_workspace_ui import NODE, RUNNER, WEB
 SETUP = SHELL + r'''
   const answer = (over = {}) => ({revision: 0,
     currency: {saved: null, config: null, effective: 'AUD', symbol: 'A$', source: 'default'},
-    shops: {saved: null, config: null, effective: ['mtgmate', 'gamesportal'], source: 'default',
-      choices: [{key: 'mtgmate', name: 'MTGMate', site: 'https://shop.example'},
-                {key: 'gamesportal', name: 'Games Portal', site: 'https://games.example'}]},
+    shops: {saved: null, config: null, effective: ['mtgmate'], source: 'default',
+      choices: [{key: 'mtgmate', name: 'MTGMate', site: 'https://shop.example'}],
+      unavailable: ['Games Portal price checks are disabled.']},
     currencies: [{code: 'AUD', symbol: 'A$'}, {code: 'EUR', symbol: '€'}, {code: 'SEK', symbol: 'SEK '}],
     can_edit: true, ...over});
   let view = answer(), reads = [], writes = [], failure = null, footers = 0, hold = null;
@@ -24,7 +24,7 @@ SETUP = SHELL + r'''
   apiWrite = async (path, body, method) => { writes.push({path, body, method});
     return answer({revision: 1, currency: {saved: body.currency, config: null, effective: body.currency || 'AUD',
       symbol: '€', source: body.currency ? 'saved' : 'default'},
-      shops: {...answer().shops, saved: body.shops, effective: body.shops || ['mtgmate', 'gamesportal'],
+      shops: {...answer().shops, saved: body.shops, effective: body.shops || ['mtgmate'],
         source: body.shops ? 'saved' : 'default'}}); };
   showFooter = () => { footers++; }; loadSimulations = () => {}; settingsSimulations = () => {};
   loadCommanderNightSettings = () => {}; loadPostageSettings = () => {}; loadVisits = () => {}; loadReferenceFacts = () => {};
@@ -54,8 +54,10 @@ class PricingSettingUiTests(unittest.TestCase):
                ["Use config.json's (AUD, the default)", 'AUD (A$)', 'EUR (€)', 'SEK']);
           assert(byId('pricing-shops-config').checked);
           assert(byId('pricing-shop-mtgmate').checked && byId('pricing-shop-mtgmate').disabled);
+          assert(!byId('pricing-shop-gamesportal'));
           const text = panel.textContent;
-          for (const words of ['uses the new setting within a minute', 'Availability needs updating', 'Shops list prices and postage in A$'])
+          for (const words of ['uses the new setting within a minute', 'Availability needs updating',
+            'Shops list prices and postage in A$', 'Games Portal price checks are disabled.'])
             assert(text.includes(words), words);
           assert(byId('pricing-source').textContent.includes('estimates in AUD (the default)'));
         ''')
@@ -66,7 +68,6 @@ class PricingSettingUiTests(unittest.TestCase):
           const before = footers;
           byId('pricing-currency').value = 'EUR';
           byId('pricing-shops-config').checked = false; byId('pricing-shops-config').fire('change');
-          byId('pricing-shop-gamesportal').checked = false; byId('pricing-shop-gamesportal').fire('change');
           await save();
           same(writes, [{path: '/api/pricing-setting', method: 'PUT',
             body: {profile: 'matt', expect: 0, currency: 'EUR', shops: ['mtgmate']}}]);
@@ -95,7 +96,7 @@ class PricingSettingUiTests(unittest.TestCase):
           assert.equal(byId('pricing-currency').querySelectorAll('option')[0].textContent, "Use config.json's (GBP)");
           byId('pricing-currency').value = '';
           byId('pricing-shops-config').checked = false; byId('pricing-shops-config').fire('change');
-          for (const key of ['mtgmate', 'gamesportal']) { byId(`pricing-shop-${key}`).checked = false; byId(`pricing-shop-${key}`).fire('change'); }
+          byId('pricing-shop-mtgmate').checked = false; byId('pricing-shop-mtgmate').fire('change');
           assert(byId('pricing-shops-off').textContent.includes('nightly shop check is off'));
           await save();
           same(writes.map(w => w.body), [{profile: 'matt', expect: 0, currency: null, shops: []}]);

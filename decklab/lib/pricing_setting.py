@@ -6,7 +6,7 @@ config.json: every other admin setting goes through the state store (a revision,
 set, an Activity row, the export, `db check` and backups), and config.json, the household's file
 with its emails and Cloudflare Access settings, is written only by the PC-side updater. So:
 
-    saved non-null field  >  config.json's  >  the default (AUD; every shop)
+    saved non-null field  >  config.json's  >  the default (AUD; every available shop)
 
 Before migration 0022, with no store installed (a test) or while the database can't be read, the
 last value this process read is used, else config.json's alone: exactly the behaviour before the

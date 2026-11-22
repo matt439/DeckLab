@@ -138,7 +138,10 @@ def warning():
 
 
 def heartbeat_steps(night):
-    if not _read()[1]:
+    from . import available_adapters
+    records, ready = _read()
+    if not ready:
         return {"shop health": False}
-    return {"shop_" + key: value["outcome"] == "ok" for key, value in read().items()
-            if value["night"] == night.isoformat() and value["outcome"] in ("ok", "failed")}
+    available = {adapter.key for adapter in available_adapters()}
+    return {"shop_" + key: value["outcome"] == "ok" for key, value in records.items()
+            if key in available and value["night"] == night.isoformat() and value["outcome"] in ("ok", "failed")}

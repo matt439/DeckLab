@@ -353,7 +353,6 @@ NETWORK = (
     ("Exchange rates (Frankfurter)", "https://api.frankfurter.dev/v1/latest?from=USD&to=AUD", False),
     ("EDHREC", "https://json.edhrec.com/pages/commanders/atraxa-praetors-voice.json", False),
     ("MTGMate", "https://www.mtgmate.com.au/robots.txt", False),
-    ("Games Portal", "https://gamesportal.com.au/robots.txt", False),
 )
 
 

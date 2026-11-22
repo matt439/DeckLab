@@ -1,8 +1,7 @@
-"""Games Portal's adapter (E5-S08): its search page for a card name and how to read it.
+"""Games Portal's former price source (E5-S08), kept for saved shop data.
 
-Games Portal is a Shopify shop whose robots.txt (checked 2026-10-31) disallows the cart,
-checkout, account and sorted or filtered collection pages but not /search, and names no
-Crawl-delay, so the Session keeps its own 60 seconds. The page is SEARCH_PATH + the name,
+Deck Lab no longer fetches this source. Games Portal's terms prohibit automated crawling.
+The old search page was SEARCH_PATH + the name,
 quoted whole, with type=product: the shop's own search results, ten products to a page and
 fuzzy (other names come too), of which only the first page is read. When that page was full
 (PAGE_SIZE products) or links a further page (/search?page=2...), the listings come back marked
@@ -176,6 +175,7 @@ def parse_name_page(text, name):
 class GamesPortal(Adapter):
     key, name, site = "gamesportal", SHOP, SITE
     counts_stock = False                    # "available" only: a listing's stock is 1 or 0
+    disabled_reason = "Games Portal price checks are disabled."
 
     def name_url(self, name):
         return name_url(name)

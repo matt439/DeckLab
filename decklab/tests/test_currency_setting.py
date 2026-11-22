@@ -220,9 +220,9 @@ class DeckTableTests(unittest.TestCase):
 
 class StatusTests(unittest.TestCase):
     def test_pricing_names_the_currency_and_the_shops(self):
-        with setting("EUR", shops=["gamesportal"]):
+        with setting("EUR", shops=["gamesportal", "mtgmate"]):
             self.assertEqual(carddata.pricing(), {"currency": "EUR", "symbol": "€", "currency_default": False,
-                                                  "shops": [{"key": "gamesportal", "name": "Games Portal"}]})
+                                                  "shops": [{"key": "mtgmate", "name": "MTGMate"}]})
         with setting(present=False, shops=[]):
             self.assertEqual(carddata.pricing(), {"currency": "AUD", "symbol": "A$", "currency_default": True,
                                                   "shops": []})

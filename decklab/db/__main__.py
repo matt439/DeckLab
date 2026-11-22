@@ -15,7 +15,7 @@ psycopg through lib/venv.py; .venv\\Scripts\\python, or .venv/bin/python off Win
   check            check the data: the rule checks, the decks' invariants and a files round trip
                    (--history: the recent runs)
   nightly          what the scheduled task runs: backup, prune, visits' prune, export, check, restore check,
-                   MTGMate's and Games Portal's purchase-queue prices (lib/shops/)
+                   the enabled shops' purchase-queue prices (lib/shops/)
   visits           who has visited Deck Lab and what they opened (read-only; visits.py)
   schedule         manage the nightly Task Scheduler task, or preview systemd user units
   wishlist         list or change a profile's wishlist: list, add, set, remove (wishlist_cli.py)
@@ -309,7 +309,7 @@ def parser():
                                   "trip; recorded in ops.backup_run.")
     sp.add_argument("--history", action="store_true", help="print the recent runs instead of checking")
     sp.add_argument("--limit", type=int, default=14, metavar="N", help="with --history: how many runs (default 14)")
-    command("nightly", _nightly, "Backup, prune, the visits' prune, export, check, (monthly) a restore check and the shops' queue prices (MTGMate, Games Portal).")
+    command("nightly", _nightly, "Backup, prune, the visits' prune, export, check, (monthly) a restore check and the enabled shops' queue prices.")
     sp = command("visits", _visits, "Show who has visited Deck Lab and what they opened (read-only).", dbname=True)
     sp.add_argument("--days", type=int, default=30, metavar="N",
                     help="the window for days visited and the pages opened most (1-366, default 30)")

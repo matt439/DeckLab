@@ -1,10 +1,10 @@
-"""Australian shop prices for the purchase queue (E5-S08; the snapshot reads MTGMate and Games Portal).
+"""Australian shop prices for the purchase queue (E5-S08).
 
 The shop-specific part is an adapter (base.py's interface; mtgmate.py and gamesportal.py,
 ADAPTERS below): where a shop's page of a card name is and how to read it. This package does
 the rest the same for any shop: asks politely (Session), keeps the snapshot file and matches
-the queue's rows. SNAPSHOT_ADAPTERS are the shops the snapshot reads (both, Matt 2026-10-31),
-less any config.json's "shops" setting leaves out (enabled_adapters(), E11-S53: [] turns it off).
+the queue's rows. SNAPSHOT_ADAPTERS includes known shops for saved settings and history.
+enabled_adapters() selects available shops permitted by the "shops" setting (E11-S53).
 
 Once a day at most, `snapshot` looks up each distinct card name on the purchase queue
 (the watchlist: its rows only) at each shop. The nightly step also includes confirmed missing
@@ -36,8 +36,7 @@ How it asks: one request per card name, the shop's page of every printing with t
 (the adapter's name_url; MTGMate's NAME_PATH, the same page its card links lead to), never its
 search (MTGMate's robots.txt disallows /cards/search). robots.txt is read first on every run;
 a path it disallows is never fetched, and its Crawl-delay (60 seconds when this was written)
-spaces the requests, so a queue of 30 names takes about half an hour (Games Portal's names no
-Crawl-delay, so it gets DEFAULT_DELAY, the same minute). A failure, a timeout or an unreadable page leaves that name's
+spaces the requests, so a queue of 30 names takes about half an hour. A failure or an unreadable page leaves that name's
 price unknown ("error"), never a converted US price; three failures in a row stop the run
 and leave the rest unknown. The nightly task gives a run NIGHTLY_BUDGET of requests at
 robots.txt's delay: the names least recently read go first, and those it doesn't reach keep
@@ -90,8 +89,7 @@ else:
 
 ADAPTERS = {adapter.key: adapter for adapter in (mtgmate.ADAPTER, gamesportal.ADAPTER)}
 ADAPTER = ADAPTERS["mtgmate"]               # the first shop: the old single-shop names and answers are its
-SNAPSHOT_ADAPTERS = tuple(ADAPTERS.values())  # every shop the snapshot can read, in the order pages show them;
-                                            # enabled_adapters() is those config.json's "shops" turns on (E11-S53)
+SNAPSHOT_ADAPTERS = tuple(ADAPTERS.values())  # Known shops, including ones with historical snapshots only
 SHOP = ADAPTER.name
 SITE = ADAPTER.site
 ROBOTS_PATH = ADAPTER.robots_path
@@ -115,28 +113,33 @@ def _say_once(text):
         print(text, file=sys.stderr, flush=True)
 
 
+def available_adapters():
+    return tuple(adapter for adapter in SNAPSHOT_ADAPTERS if not adapter.disabled_reason)
+
+
 def enabled_adapters(settings=None):
     """The shops the snapshot checks, in SNAPSHOT_ADAPTERS order (E11-S53): config.json's "shops",
-    a list of shop keys ("mtgmate", "gamesportal"), or every shop when it isn't set. [] turns the
-    shop check off (a household that can't buy from these shops). An unknown key is left out, and
-    a value that isn't a list counts as unset, each said once on stderr. settings: config.load()'s
+    a list of shop keys ("mtgmate", "gamesportal"), or every available shop when it isn't set. [] turns the
+    shop check off. Unavailable shops are left out, including when named explicitly. An unknown key
+    is left out, and a value that isn't a list counts as unset, each said once on stderr. settings: config.load()'s
     (when not given, with Settings' saved choice laid over it: lib/pricing_setting.py)."""
     if settings is None:
         from decklab.lib import pricing_setting
         settings = pricing_setting.settings()
     value = settings.get(SETTING)
+    available = available_adapters()
     if value is None:
-        return SNAPSHOT_ADAPTERS
+        return available
     if not isinstance(value, list) or not all(isinstance(key, str) for key in value):
-        _say_once(f'config.json\'s "{SETTING}" isn\'t a list of shop keys, so every shop is checked '
-                  f"({', '.join(ADAPTERS)}).")
-        return SNAPSHOT_ADAPTERS
+        _say_once(f'config.json\'s "{SETTING}" isn\'t a list of shop keys, so every available shop is checked '
+                  f"({', '.join(adapter.key for adapter in available)}).")
+        return available
     wanted = {key.strip().lower() for key in value}
     unknown = sorted(wanted - set(ADAPTERS))
     if unknown:
         _say_once(f'config.json\'s "{SETTING}" names shops Deck Lab doesn\'t know: {", ".join(unknown)} '
                   f"(known: {', '.join(ADAPTERS)}); they're left out.")
-    return tuple(adapter for adapter in SNAPSHOT_ADAPTERS if adapter.key in wanted)
+    return tuple(adapter for adapter in available if adapter.key in wanted)
 
 
 def normalize_keys(value):
@@ -151,7 +154,7 @@ def normalize_keys(value):
 
 
 def shops_off_words():
-    return (f'No price-check shop is set (Settings\' Prices, or else config.json\'s "{SETTING}", is empty), '
+    return (f'No available price-check shop is enabled in Settings\' Prices or config.json\'s "{SETTING}", '
             "so no shop is checked.")
 
 
@@ -195,6 +198,8 @@ class Session:
         self.last = self.clock()
 
     def start(self):
+        if self.adapter.disabled_reason:
+            raise ShopError(self.adapter.disabled_reason)
         self._wait()
         self.rules = robots_rules(self.fetch(self.adapter.robots_url()))
         delay = self.rules[2]
@@ -654,6 +659,9 @@ def refresh(*, force=False, say=print, progress=True, session=None, budget=None,
     Caller pins survive; a pin opened here is released before any retailer request."""
     from decklab.lib import inventory
     adapter = getattr(session, "adapter", None) or adapter or ADAPTER
+    if adapter.disabled_reason:
+        say(adapter.disabled_reason)
+        return 1
     shop = adapter.name
     now = _now()
     with contextlib.ExitStack() as capture:
@@ -819,11 +827,14 @@ def nightly(log, *, sessions=None):
 
 def _chosen(args):
     key = getattr(args, "shop", None)
-    return (ADAPTERS[key],) if key else enabled_adapters()     # --shop asks that one even when it's off
+    return (ADAPTERS[key],) if key else enabled_adapters()
 
 
 def _snapshot(args):
     adapters = _chosen(args)
+    if adapters and adapters[0].disabled_reason:
+        print(adapters[0].disabled_reason, file=sys.stderr)
+        return 1
     if not adapters:
         print(f"{shops_off_words()} (--shop KEY asks one anyway.)")
         return 0
@@ -931,7 +942,7 @@ def _history_command(args):
 def main(argv=None):
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(errors="replace")
-    names = " and ".join(adapter.name for adapter in SNAPSHOT_ADAPTERS)
+    names = " and ".join(adapter.name for adapter in available_adapters())
     parser = argparse.ArgumentParser(prog="python -m decklab.lib.shops",
                                      description=f"{names} prices and stock for the purchase queue (a daily snapshot).")
     sub = parser.add_subparsers(dest="command", required=True)

@@ -60,6 +60,7 @@ function drawPricingSettings(host, data, token, profile) {
   }
   const notes = [
     el("p", {class: "sub", id: "pricing-source", text: pricingSourceLine(data)}),
+    ...(data.shops.unavailable || []).map(text => el("p", {class: "field-hint", text})),
     el("p", {class: "sub", text: "Deck Lab uses the new setting within a minute. Reprice existing availability tables under Decks → Availability needs updating → Update all, or with deck tables --reprice --apply on the PC. Shops list prices and postage in A$."})];
   if (!data.can_edit) {
     clear(host).append(...notes);
@@ -112,7 +113,7 @@ function drawPricingSettings(host, data, token, profile) {
       el("span", {class: "field-hint", text: "Prices are estimates, from Scryfall's US prices at the ECB's daily rate."})),
     el("fieldset", {class: "pricing-shops"}, el("legend", {text: "Price-check shops"}),
       el("label", {class: "choice", for: ctx.useConfig.id}, ctx.useConfig,
-        el("span", {text: ` Use config.json's (${configShops ? (configShops.length ? configShops.join(", ") : "none") : "every shop, the default"})`})),
+        el("span", {text: ` Use config.json's (${configShops ? (configShops.length ? configShops.join(", ") : "none") : "all available shops, the default"})`})),
       ctx.shops.map(item => item.label), ctx.off),
     ...(preferenceFields ? [preferenceFields] : []),
     ...notes, ctx.error, ctx.status, ctx.reload, el("div", {class: "actions"}, ctx.save));

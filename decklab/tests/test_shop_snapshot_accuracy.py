@@ -19,7 +19,7 @@ from decklab.lib import cards, shops
 from decklab.lib.api import guard, shop_baskets, shop_history
 from decklab.lib.api.common import ApiError
 from decklab.lib.shops import base, gamesportal, history, mtgmate, rows
-from decklab.tests.test_shop_adapters import saved
+from decklab.tests.test_shop_adapters import games_portal_fixture, saved
 from decklab.tests.test_shop_adapters import session as saved_session
 from decklab.tests.test_shop_baskets import GP_AT, entry, games_portal, listing, row
 from decklab.tests.test_shop_baskets import mtgmate as mtgmate_snapshot
@@ -116,6 +116,7 @@ class FirstPageTests(unittest.TestCase):
         self.assertEqual(base.Listings([1], partial=True), [1])
 
     def test_the_snapshot_keeps_the_flag_carries_it_and_its_lines_say_so(self):
+        self.enterContext(games_portal_fixture())
         _, asked = saved_session(gamesportal.ADAPTER, {"Sol Ring": "sol-ring.html"})
         data = shops.take(["Sol Ring", "Nothing Such"], session=asked, now=lambda: datetime(2026, 11, 2, 3, tzinfo=TZ))
         self.assertEqual([(name, card["status"], card.get("partial")) for name, card in data["cards"].items()],
@@ -314,7 +315,7 @@ class HistoryCommandRowTests(TwoShopTestCase):
 class BasketAccuracyTests(unittest.TestCase):
     def build(self, queue, mtg=None, gp=None):
         captured = {key: value for key, value in (("mtgmate", mtg), ("gamesportal", gp)) if value}
-        return shop_baskets.build(queue, captured, "rev-1")
+        return shop_baskets.build(queue, captured, "rev-1", adapters=shops.SNAPSHOT_ADAPTERS)
 
     def test_a_first_page_only_line_is_marked_in_the_basket_and_in_the_reasons(self):
         queue = [row("Sol Ring", 1), row("Rare Thing", 2)]

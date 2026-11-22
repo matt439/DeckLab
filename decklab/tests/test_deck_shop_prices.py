@@ -42,7 +42,7 @@ class DeckShopPricesTests(PermissionTestCase):
             with self.subTest(who=who):
                 self.load.reset_mock()
                 answer = self.view(who)
-                self.assertEqual(self.load.call_count, len(shops.SNAPSHOT_ADAPTERS))  # one read a shop
+                self.load.assert_called_once_with(adapter=shops.ADAPTER)
                 rows = answer["owned"]["rows"]
                 self.assertTrue(any(row["missing"] > 0 for row in rows))
                 for row in rows:
@@ -101,7 +101,7 @@ class DeckShopPricesTests(PermissionTestCase):
         with access.using(None), access.viewing(None), access.answering(True):
             answer = deck_page.deck_view(DECK, omit={"matchups"})
         self.assertTrue(any("shop_snapshot" in row for row in answer["owned"]["rows"]))
-        self.assertEqual(self.load.call_count, len(shops.SNAPSHOT_ADAPTERS))  # one read a shop
+        self.load.assert_called_once_with(adapter=shops.ADAPTER)
 
     def test_hidden_and_missing_decks_are_refused_before_any_capture(self):
         for deck in (DECK, "casual/not-present"):
@@ -144,14 +144,14 @@ class DeckShopPricesTests(PermissionTestCase):
         with mock.patch.object(shop_prices, "for_row", side_effect=AssertionError("Implicit reload")), \
                 mock.patch.object(shops, "match", side_effect=AssertionError("Exact queue intent")):
             answer = self.view()
-        self.assertEqual(self.load.call_count, len(shops.SNAPSHOT_ADAPTERS))  # one read a shop
+        self.load.assert_called_once_with(adapter=shops.ADAPTER)
         self.assertTrue(all(row["shop_snapshot"]["status"] == "not_checked"
                             for row in answer["owned"]["rows"] if row["missing"] > 0))
 
     def test_cache_read_failure_is_optional_and_raw_details_never_enter_answer(self):
         self.load.side_effect = OSError("PRIVATE household cache path")
         answer = self.view()
-        self.assertEqual(self.load.call_count, len(shops.SNAPSHOT_ADAPTERS))  # one read a shop
+        self.load.assert_called_once_with(adapter=shops.ADAPTER)
         self.assertTrue(answer["owned"])
         self.assertNotIn("PRIVATE", json.dumps(answer))
         self.assertTrue(all(row["shop_snapshot"]["status"] == "not_checked"
@@ -194,7 +194,7 @@ class DeckShopProjectionBoundaryTests(unittest.TestCase):
         self.assertTrue(all("shop_snapshot" not in row for row in rows[:-1]))
         self.assertIn("shop_snapshot", rows[-1])
         rows[-1].pop("shop_snapshot")
-        self.assertEqual([shown["shop"] for shown in rows[-1].pop("shop_snapshots")], ["MTGMate", "Games Portal"])
+        self.assertEqual([shown["shop"] for shown in rows[-1].pop("shop_snapshots")], ["MTGMate"])
         self.assertEqual(rows, before)
         self.assertEqual(owned["totals"], {"missing": 12})
 
