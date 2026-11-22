@@ -108,7 +108,8 @@ class GoldenPackingTests(unittest.TestCase):
         bad = [box_participant(checked_on="2026-10-27"), box_participant(editable=False),
                box_participant(why_not="Cannot record"), box_participant(expect="bad"),
                box_participant(expect="c" * 64), box_participant(recipe_sha256="bad"),
-               box_participant(recipe_sha256="c" * 64), box_participant(unexpected="keep")]
+               box_participant(recipe_sha256="c" * 64), box_participant(unexpected="keep"),
+               box_participant(resume_key=None), box_participant(resume_key="c" * 64)]
         for key, value in (("available", False), ("sha256", "c" * 64), ("version", "future"),
                            ("card_count", True), ("card_count", 4), ("source", "invented"),
                            ("reason", "Cannot read"), ("sections", {"Deck": []})):
@@ -121,6 +122,16 @@ class GoldenPackingTests(unittest.TestCase):
                 found = golden_packing.normalise(original)["assembly"]["a"]
                 self.assertEqual(found["decks"][0]["box_check"], participant["box_check"])
                 self.assertEqual(found["box_check_cards"], {"Opt": box_art()})
+
+    def test_default_box_resume_key_can_be_omitted_with_its_receipt(self):
+        participant = box_participant(printings={})
+        check = participant["box_check"]
+        resume = f'["{participant["id"]}",0,0,"{check["recipe_sha256"]}"]'
+        check["resume_key"] = hashlib.sha256(resume.encode()).hexdigest()
+        original = {"assembly": {"a": {"decks": [participant], "box_check_cards": {"Opt": box_art()}}}}
+        plan = golden_packing.normalise(original)["assembly"]["a"]
+        self.assertNotIn("box_check", plan["decks"][0])
+        self.assertNotIn("box_check_cards", plan)
 
     def test_art_map_with_wrong_names_unknown_facts_or_shape_remains_comparable(self):
         for art in (None, [], {"Forest": box_art(name="Forest")}, {"Opt": None},
