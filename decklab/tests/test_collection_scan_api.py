@@ -42,6 +42,24 @@ class ScanApiTests(tce.CollectionEditTestCase):
         data.setdefault("photo", PHOTO)
         return self.call(cs.scan_photo, profile, space=space, **data)
 
+    def test_audit_card_name_preserves_both_faces_and_imports_keep_the_printed_name(self):
+        ghalta = "Ghalta, Primal Hunger"
+        delver = "Delver of Secrets // Insectile Aberration"
+        for lines, printed, canonical, exact in [
+            ([ghalta, "R 1124", "SLD • EN"], ghalta + " // " + ghalta, ghalta, True),
+            (["R 1124", "SLD • EN"], ghalta + " // " + ghalta, ghalta, False),
+            (["Delver of Secrets", "C 0051", "ISD • EN"], delver, delver, True),
+            (["Llanowar Elvcs"], "Llanowar Elves", "Llanowar Elves", False),
+            (["Unreadable title", "Llanowar Elves"], "Llanowar Elves", "Llanowar Elves", False),
+            (["?", "Llanowar Elves"], "Llanowar Elves", "Llanowar Elves", False),
+        ]:
+            with self.subTest(lines=lines):
+                self.lines = lines
+                result = self.scan()
+                proposal = result["proposals"][0]
+                self.assertEqual((proposal["name"], proposal["canonical_name"]), (printed, canonical))
+                self.assertIs(result["read"]["name_exact"], exact)
+
     def test_a_photo_is_answered_with_its_printing_and_nothing_is_written(self):
         before = self.magic_files()
         answer = self.scan()

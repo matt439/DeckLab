@@ -1,8 +1,9 @@
-"""Check an ordinary home deck's physical box; only its historical date is saved.
+"""Physical card counts for ordinary built decks and home box-check saves.
 
-Observed quantities and differences are transient owner-only answers. Neither a check
-nor its date changes a physical reservation, intended list, collection or printing fact.
+Home and member deck pages can audit their own space's physical copies by name.
+The home box check can separately save a date and explicitly chosen printing details.
 """
+from collections import Counter
 from datetime import date
 import hashlib
 import json
@@ -101,6 +102,30 @@ def physical(deck):
     decks.token_cards(deck)  # Match the existing take-apart checklist's physical-metadata validity.
     version = assembled.version(deck)
     return version, assembly_takeapart._physical_rows(deck, assembled.sections(deck), version)
+
+
+def scan_audit(deck, warnings):
+    """An own-space, read-only count sheet for the entire box, independent of the displayed list."""
+    if deck is None or deck.status != "built" or deck.kind not in decks.KINDS:
+        return None
+    if not guard.allowed(guard.viewer(), "collection.edit", deck.space):
+        return None
+    try:
+        _, sections = physical(deck)
+    except cards.INDEX_ERRORS:
+        warnings.append("The physical deck list could not be read for a scan audit. Check the saved build and card data.")
+        return None
+    names, markers = Counter(), Counter()
+    for rows in sections.values():
+        for row in rows:
+            if row["name"] is None:
+                markers[row["for"]] += row["quantity"]
+            else:
+                names[row["name"]] += row["quantity"]
+    from .collection import scan_flag
+    return {"scan": scan_flag(), "rows": [{"name": name, "quantity": qty} for name, qty in sorted(names.items())]
+            + [{"name": f"Unspecified stand-in for {target}", "quantity": qty, "manual": True}
+               for target, qty in sorted(markers.items())]}
 
 
 def save_box_check(body):

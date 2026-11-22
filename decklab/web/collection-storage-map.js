@@ -132,7 +132,7 @@ function openStorageMapSection(cv, section, trigger) {
 function storageMapSheetActions(ctx, ...items) {
   const actions = [{ text: "Close", value: "close", onclick: () => ctx.sheet.dismiss(), disabled: ctx.busy }, ...items];
   sheetActions(ctx.sheet, actions.filter(Boolean).map(action => ({ ...action, onclick: event => {
-    if (storageMapSheetHere(ctx) && !ctx.busy && event.currentTarget.isConnected && ctx.sheet.foot.contains(event.currentTarget)) action.onclick();
+    if (storageMapSheetHere(ctx) && !ctx.busy && event.currentTarget.isConnected && ctx.sheet.foot.contains(event.currentTarget)) action.onclick(event.currentTarget);
   } })));
 }
 
@@ -175,8 +175,27 @@ function drawStorageMapDetail(ctx) {
     el("h3", { text: "Expected cards" }),
     el("ul", { class: "col-map-differences" }, rows.map(row => el("li", {}, storageMapRowIdentity(row),
       el("span", { class: "sub", text: storageMapExpected(row) })))));
-  storageMapSheetActions(ctx, canAudit ? { text: "Start audit", value: "start", kind: "primary",
+  const canScan = ctx.cv.editable && section.auditable !== false && Array.isArray(rows) &&
+    Array.isArray(ctx.data.excluded_names) && typeof ctx.data.scan?.available === "boolean";
+  storageMapSheetActions(ctx, canScan ? { text: "Scan to audit", value: "scan",
+    onclick: trigger => scanStorageMapSection(ctx, trigger) } : null,
+    canAudit ? { text: "Start audit", value: "start", kind: "primary",
     onclick: () => startStorageMapAudit(ctx) } : null);
+}
+
+function scanStorageMapSection(ctx, trigger) {
+  const data = ctx.data;
+  const current = () => storageMapSheetHere(ctx) && ctx.cv.mapSheet === ctx.sheet && ctx.data === data
+    && !ctx.busy && !ctx.cv.busy && ctx.cv.editable && trigger.isConnected && ctx.sheet.foot.contains(trigger);
+  if (!current() || [...document.querySelectorAll("dialog[open]")].at(-1) !== ctx.sheet.dialog) return;
+  const rows = data.rows.map(row => ({ ...row, manual: row.key.startsWith("token-") }));
+  const instructions = ["Scan the loose cards in this section. Check each printing and finish against the card in your hand.",
+    "Set basic lands aside. Deck Lab does not track how many are loose."];
+  if (rows.some(row => row.manual)) instructions.push("Count printed token cards by hand, checking both faces of each physical card.");
+  if (rows.some(row => row.estimated)) instructions.push("Some expected counts are estimates because the printing held elsewhere is uncertain.");
+  startCardAudit({ title: [data.section.container, data.section.place, data.section.label].filter((part, index, all) =>
+    part && all.indexOf(part) === index).join(" · "), instructions: instructions.join(" "), mode: "section",
+    space: data.space, scan: data.scan, excludedNames: data.excluded_names, rows, current });
 }
 
 function storageMapAuditHistory(audit) {

@@ -125,6 +125,15 @@ def _storage_rows(space, rows):
     return storage
 
 
+def _token_scan_label(row):
+    faces = []
+    for side in ("front", "back"):
+        if row[side]:
+            number = row[f"{side}_collector_number"]
+            faces.append(" · ".join(filter(None, (row[side], f"#{number}" if number else "", row[f"{side}_details"]))))
+    return " · ".join(filter(None, (" / ".join(faces), row["set"].upper(), row["finish"])))
+
+
 def _token_rows(space):
     token_list = tokens.read(space=space)
     warnings = list(token_list.problems)
@@ -142,6 +151,7 @@ def _token_rows(space):
             key = "token-" + digest(rules.token_identity(row))
             entry = by_key.setdefault(key, {"key": key, "name": rules.token_label(row), "set": row["set"],
                                             "collector_number": row["front_collector_number"], "finish": row["finish"],
+                                            "manualLabel": _token_scan_label(row),
                                             "description": " / ".join(filter(None, (row["front_details"], row["back_details"]))),
                                             "estimated": (row["front"], row["back"]) in packed_names, "quantity": 0})
             entry["quantity"] += quantity

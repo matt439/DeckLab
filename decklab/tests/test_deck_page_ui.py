@@ -46,6 +46,30 @@ class DeckPageUiTests(unittest.TestCase):
                                 capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_scan_audit_uses_the_physical_list_and_stays_with_its_own_deck_and_viewer(self):
+        self.run_js(r"""
+          const data = makePage(), launched = [];
+          data.summary.status = 'built';
+          data.scan_audit = {rows: [{name: 'Forest', quantity: 12}], scan: {available: true}};
+          globalThis.startCardAudit = options => launched.push(options);
+          location.hash = '#/deck?id=casual%2Ftest&v=owned';
+          drawDeck(data);
+          const item = deckMoreItems(data).find(choice => choice?.label === 'Scan to audit');
+          item.onclick();
+          assert.equal(launched.length, 1);
+          const audit = launched[0];
+          same(audit.rows, data.scan_audit.rows); same(audit.scan, {available: true});
+          assert.equal(audit.mode, 'deck'); assert.equal(audit.space, 'home'); assert(audit.current());
+          location.hash = '#/deck?id=casual%2Fother';
+          assert(!audit.current()); item.onclick(); assert.equal(launched.length, 1);
+          location.hash = '#/deck?id=casual%2Ftest';
+          state.profile = {id: 'user2', space: 'user2'};
+          assert(!audit.current()); item.onclick(); assert.equal(launched.length, 1);
+          assert(!deckMoreItems(data).some(choice => choice?.label === 'Scan to audit'));
+          delete data.scan_audit;
+          assert(!deckMoreItems(data).some(choice => choice?.label === 'Scan to audit'));
+        """)
+
     def test_saved_deck_checklist_selects_copies_and_reopens_to_set_purchases_aside(self):
         self.run_js(r"""
           const flush = async () => { for (let i = 0; i < 6; i++) await Promise.resolve(); };

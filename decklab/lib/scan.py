@@ -144,8 +144,9 @@ def _finish(printing, foil):
     return finishes[0] if finishes else ""
 
 
-def _proposal(printing, how, read):
-    return {"name": printing["name"], "set": printing["set"], "collector_number": printing["collector_number"],
+def _proposal(printing, canonical_name, how, read):
+    return {"name": printing["name"], "canonical_name": canonical_name,
+            "set": printing["set"], "collector_number": printing["collector_number"],
             "set_name": printing.get("set_name") or printing["set"].upper(),
             "finish": _finish(printing, read["foil"]), "language": read["language"], "how": how}
 
@@ -158,7 +159,8 @@ def _paper(printing):
 def propose(lines):
     """Printings the text read off one card may be, best first, from the card index.
 
-    Each proposal has name, set, collector_number, set_name, finish (foil only
+    Each proposal has name (that printing's name), canonical_name (its deck identity if known),
+    set, collector_number, set_name, finish (foil only
     when a star was read), language ("" when unread) and how: "name and number"
     (the number read, and the set code when one was, name a printing of the
     card whose name was read; several of them when reprints share the number
@@ -166,11 +168,16 @@ def propose(lines):
     "number" (they name a printing, but the name wasn't read or differs) or
     "name" (only the name was read: every paper printing, newest first).
     Raises FileNotFoundError or RuntimeError without a usable card index."""
+    lines = tuple(lines)
     read = read_lines(lines)
+    title = next(filter(None, map(_clean, lines)), None)
     name = None
+    name_exact = False
     for line in read["names"][:NAME_LINES]:     # lower down, "Vigilance" is a keyword, not the card
         name = cards.resolve(line)
         if name:
+            # A later exact match may be rules or flavour text when OCR missed the title.
+            name_exact = line == title
             break
     if name is None and read["names"]:
         # The name is the card's first line; OCR may misread a letter ("Éowynt Lady of Rohan").
@@ -185,7 +192,7 @@ def propose(lines):
                     continue
                 exact = cards.resolve(printing["name"])
                 (confirmed if name and exact == name else numbered).append(
-                    _proposal(printing, "name and number" if name and exact == name else "number", read))
+                    _proposal(printing, exact, "name and number" if name and exact == name else "number", read))
             if confirmed:
                 break       # this spelling named the card read: its look-alikes aren't wanted
     if name and not confirmed:
@@ -193,11 +200,12 @@ def propose(lines):
         # those with a number read first ("322" alone picks Path of Ancestry's BLC printing).
         shown = {(p["set"], p["collector_number"]) for p in numbered}
         others = [p for p in cards.printings(name) if _paper(p) and (p["set"], p["collector_number"]) not in shown]
-        confirmed = [_proposal(p, "name and number", read) for p in others if p["collector_number"] in read["numbers"]]
+        confirmed = [_proposal(p, name, "name and number", read) for p in others if p["collector_number"] in read["numbers"]]
         rest = [p for p in others if p["collector_number"] not in read["numbers"]]
-        numbered += [_proposal(p, "name", read) for p in rest[:MAX_NAME_ONLY]]
+        numbered += [_proposal(p, name, "name", read) for p in rest[:MAX_NAME_ONLY]]
     proposals = confirmed + numbered
-    return {"read": dict(read, name=name), "proposals": proposals, "message": _message(read, name, proposals)}
+    return {"read": dict(read, name=name, name_exact=name_exact),
+            "proposals": proposals, "message": _message(read, name, proposals)}
 
 
 def _token_name(read):

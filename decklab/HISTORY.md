@@ -1,5 +1,9 @@
 # Deck Lab: history
 
+## Scan a built deck or storage section for discrepancies (2026-11-22, E7-S32)
+
+**Scan to audit** compares cards in hand with a built deck's saved physical list or a storage section's expected loose copies. The report identifies each missing or extra card, including a wrong printing or finish in a storage section. The player can return to the scan and correct a count. Closing the report discards the observations. [Scan audit guide](README.md#scan-to-audit-a-deck-or-storage-section)
+
 ## Storage map and section audits (2026-11-22, E8-S28)
 
 Collection's **Storage map** shows the expected loose copies by physical section. Segment widths use copy counts, including the colour and type dividers where the filing rule calls for them. Open a section to see its last audit and record counts against its expected printings. The audit saves the date and differences in migration `0031`. Count corrections go through the usual collection and token editing tools. [Storage audit guide](README.md#audit-a-storage-section)

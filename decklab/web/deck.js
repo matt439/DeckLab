@@ -377,6 +377,12 @@ function deckMoreItems(data) {
   const retire = typeof canRetireDeck === "function" && canRetireDeck(data);
   const rename = typeof canRenameDeck === "function" && canRenameDeck(data);
   const token = routeToken, profile = state.profile?.id;
+  const audit = data.scan_audit;
+  const auditHere = () => {
+    const { path, params } = parseHash();
+    return profile && profile === state.profile?.id && token === routeToken && deckScreen?.data === data
+      && s.space === ownSpace() && path === "deck" && addressDeckId(params.get("id")) === s.id;
+  };
   // POST /api/deck/cover refuses products and pairings, so only a deck text the viewer may change.
   const cover = typeof openCoverPicker === "function" && !s.read_only
     && !/^(product|pairing)\//.test(s.id) && canEditDeck(s);
@@ -386,6 +392,14 @@ function deckMoreItems(data) {
     // compare.js: the other deck is chosen from the decks this viewer sees.
     typeof openCompareChooser === "function" ? { label: "Compare with…", onclick: () => {
       if (token === routeToken && profile === state.profile?.id) openCompareChooser(data);
+    } } : null,
+    audit && s.space === ownSpace() ? { label: "Scan to audit", onclick: () => {
+      if (!auditHere()) return;
+      startCardAudit({ title: "Audit " + s.title, space: s.space, mode: "deck", scan: audit.scan,
+        rows: audit.rows, current: auditHere,
+        instructions: "Scan the main deck, commanders, companion and sideboard together in any order. "
+          + "Set token cards aside. Copies count by physical card name across all printings."
+          + (audit.rows.some(row => row.manual) ? " Count unnamed stand-ins by hand." : "") });
     } } : null,
     "sep",
     { label: "Copy decklist", onclick: () => { if (token === routeToken && profile === state.profile?.id) copyDeck(data); } },

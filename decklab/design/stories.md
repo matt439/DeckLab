@@ -3823,6 +3823,8 @@ Evidence:
 
 The bulk scanning slice (2026-11-20) adds live camera capture and selectable grid slots to Collection, plus elapsed-time reporting through the completed import. Individual photos and manual entry still use the same review flow. [Guide](../README.md#scan-a-stack-or-binder-page) · [Live capture](../web/collection-scan-live.js) · [Grid capture](../web/collection-scan-grid.js) · [Import timing tests](../tests/test_collection_scan_rate_ui.py)
 
+The scan audit (2026-11-22) compares physical counts in the viewer's own space. A built deck uses its saved physical card names across all sections. A storage section uses loose copies by set, collector number and finish, with hand counts for printed tokens. The final report names missing and extra cards and flags skipped photos. Counts can be corrected in the open sheet and expire when it closes. [Scan audit guide](../README.md#scan-to-audit-a-deck-or-storage-section)
+
 Gap: Real phone and webcam capture, printed card and token photos, reflection through sleeves and binder pockets, and end-to-end physical throughput await a hands-on check.
 
 Next slice: try 10–20 real photos per household phone, including old cards, foils, sleeves and tokens. Run the [100-card comparison](scanning-spike.md#compare-cards-per-hour) with the physical stack and check exact printing, finish and quantity against the saved copies.

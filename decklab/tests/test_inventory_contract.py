@@ -320,7 +320,15 @@ def golden_path(name, adapted=False):
 def load_golden(name, adapted=False):
     """A golden as recorded, normalised (as every dump compared with it is) by gate_p4.EXPECTED_P4:
     the differences phase 4 makes on purpose (no git, deck ids, hidden inventory)."""
-    return expected_p4(json.loads(golden_path(name, adapted).read_text(encoding="utf-8")))
+    expected = expected_p4(json.loads(golden_path(name, adapted).read_text(encoding="utf-8")))
+    if SCENARIOS.get(name) is built_decks_and_kits:
+        # This historical fixture has one ordinary built deck, with a single physical list
+        # and no markers. Require its exact audit projection in raw and adapted readers.
+        page = expected["deck_view"]["casual/elves@target"]
+        rows = sorted(page["sections"]["Deck"], key=lambda row: row["name"])
+        page.setdefault("scan_audit", {"scan": {"available": True},
+                                      "rows": [{"name": row["name"], "quantity": row["qty"]} for row in rows]})
+    return expected
 
 
 def expected_p4(dump):
@@ -398,11 +406,13 @@ def run_readers(backend, root):
     """Every gate item's output over root, with backend as the inventory backend (the contract
     hook: gate.dump, whose GATE_READERS the areas keep calling their ported readers).
 
-    Shop evidence is explicitly absent in these historical inventory comparisons;
-    dedicated shop fixtures supply and check their own snapshots separately.
+    Shop evidence is absent and OCR is available in these fixtures. Neither backend's
+    reader contract depends on the current machine's shop cache or OCR installation.
     """
+    from decklab.lib import scan
     from decklab.lib.api import shop_prices
-    with mock.patch.object(shop_prices, "capture", return_value=None):
+    with mock.patch.object(shop_prices, "capture", return_value=None), \
+            mock.patch.object(scan, "engine_status", return_value={"available": True}):
         return gate.dump(root, backend=backend)
 
 
@@ -619,12 +629,14 @@ def subprocess_rev(rev):
 
 class GoldenNormalisationTests(unittest.TestCase):
     def test_reader_dump_keeps_shop_capture_explicitly_absent_and_restores_it(self):
+        from decklab.lib import scan
         from decklab.lib.api import shop_prices
 
         original, backend, answer = shop_prices.capture, object(), {"fixture": "unchanged"}
 
         def dump(root, *, backend):
             self.assertIsNone(shop_prices.capture())
+            self.assertEqual(scan.engine_status(), {"available": True})
             return answer
 
         with mock.patch.object(gate, "dump", side_effect=dump) as rendered, \

@@ -2,11 +2,11 @@
 from contextlib import nullcontext
 import re
 
-from decklab.lib import inventory, state, storage_setting
+from decklab.lib import decks, inventory, state, storage_setting
 from decklab.lib.state import collection_audits as audits
 
 from . import collection_storage_sections as sections, guard
-from .collection import space_choices, space_param
+from .collection import scan_flag, space_choices, space_param
 from .common import ApiError, _keys, _parse_body, state_errors
 from .settings import _web_actor, _writer
 
@@ -39,7 +39,9 @@ def _section(found, ident, *, stale=False):
 
 
 def _digest(space, section):
-    return sections.digest([1, space, section["id"], section["container"], section["place"], section["rows"]])
+    # The token key already identifies both faces. Its UI label is outside the saved receipt.
+    rows = [{k: v for k, v in row.items() if k != "manualLabel"} for row in section["rows"]]
+    return sections.digest([1, space, section["id"], section["container"], section["place"], rows])
 
 
 def _public(space, section, saved, *, detail=False):
@@ -81,6 +83,10 @@ def view(space=None, section=None):
     version = summary["revision"] if summary else 0
     result.update(section=_public(space, selected, summary, detail=True), rows=selected["rows"],
                   editable=editable, expect=f"{version}:{_digest(space, selected)}" if editable else None)
+    # The comparison needs fresh loose counts. Only recording an audit needs its history table.
+    if setup["ready"] and not stale and selected["auditable"]:
+        result["scan"] = scan_flag()
+        result["excluded_names"] = sorted(decks.BASIC_LANDS)
     if not selected["auditable"]:
         result["message"] = selected.get("message", _UNPLACED)
     return result
