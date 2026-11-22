@@ -1,5 +1,11 @@
 # Deck Lab: history
 
+## Phone scrolling and physical storage rows (2026-11-22)
+
+Settings fits the phone width and scrolls vertically. Pulling past the top reveals the header colour behind the page.
+
+**Expected loose cards** in Collection's Storage map shows each configured storage row, including empty rows. Open a row to see its colour and type dividers and audit their counts.
+
 ## More room for Collection results and dismissible warnings (2026-11-22)
 
 On phones, the Find cards and Card list search bars scroll away with the page. Find cards shows its search syntax under the filter button on smaller screens.

@@ -456,7 +456,7 @@ On the **Card list**, open **Filter and sort** and choose **Storage order**. Eac
 
 ### Audit a storage section
 
-Open **Collection → Storage map**. Each segment takes up the same share of the map as its share of the expected loose copies. Choose a segment such as **White creatures**, or use the section list for small and empty sections. The sheet shows the last audit and whether Deck Lab's expected list has changed since then.
+Open **Collection → Storage map**. **Expected loose cards** shows every section in Storage setup, including empty rows. Each bar shows that section's share of the expected loose copies. Open a row and choose a divider such as **White creatures**, or choose the section itself when it has no dividers. The sheet shows the last audit and whether Deck Lab's expected list has changed since then.
 
 Choose **Start audit** and count the listed printings and finishes in that section. Enter zero for missing copies and use **Unlisted cards counted** for copies the checklist doesn't include. Check the differences before recording the audit. The section keeps the most recent result and its discrepancies. To correct the inventory after investigating a difference, edit the relevant rows on the Card list or Tokens page.
 

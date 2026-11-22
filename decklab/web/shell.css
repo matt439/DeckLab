@@ -12,6 +12,12 @@
   border-bottom: 1px solid var(--border);
   padding-top: env(safe-area-inset-top);
 }
+/* WebKit blends the root and body background colors for elastic scrolling. Paint the page color within
+   the body with an image so the revealed canvas extends the header's surface in either theme. */
+@media (max-width: 599px), (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  html { background-color: var(--surface); }
+  body { min-height: 100dvh; background: linear-gradient(var(--page), var(--page)); }
+}
 .topbar-inner {
   display: flex; align-items: center; gap: var(--s-2);
   height: 56px;
@@ -351,7 +357,12 @@ svg.icon-more { stroke-width: 4; }
 
 /* ------------------------------------------------------------ settings */
 
+@media (max-width: 599px), (pointer: coarse) {
+  /* Clip stray horizontal overflow at the page gutter, outside the panels and their focus rings. */
+  #main:has(> .settings-parts) { overflow-x: clip; }
+}
 .settings-parts { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); align-items: start; }
+.settings-part { overflow-wrap: anywhere; }
 .settings-part h2 { margin-top: 0; font-size: var(--fs-lg); }
 /* Native fields and fieldsets must fit the panel, including Safari's intrinsic select widths. Both
    grid levels need a shrinkable track: max-width alone can still size against an overflowing auto track. */
@@ -360,6 +371,7 @@ svg.icon-more { stroke-width: 4; }
 .settings-fields fieldset { min-inline-size: 0; }
 .settings-fields .field { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--s-1); justify-items: start; }
 .settings-fields .field > :where(input, select, textarea) { min-width: 0; max-width: 100%; }
+#sim-workers, #pricing-currency { max-width: min(100%, 320px); }
 .settings-fields .field > span:where(:not(.field-hint)) { font-weight: var(--fw-semibold); }
 .settings-members-form { min-width: 0; }
 .settings-members-form .field { min-width: 0; justify-items: stretch; }

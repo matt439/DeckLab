@@ -4403,7 +4403,7 @@ Built (2026-11-12): Build decks' name-keyed location lookup moved to `lib/api/st
 
 As a collection owner, I want to see how big each storage section is and count one section at a time, so I can check the physical cards against Deck Lab.
 
-- Given a collection with colour and type filing, the Storage map shows sections such as White creatures and sizes them by expected loose copies. Recorded locations take precedence. The section list reaches small and empty dividers by keyboard and touch.
+- Given a storage setup, the Storage map shows every physical section in order and sizes its bar by expected loose copies. Colour and type dividers such as White creatures open inside their physical section. Recorded locations take precedence. Small and empty dividers can be reached by keyboard and touch.
 - Given a section with a saved audit, opening it shows the latest date, differences and whether the expected checklist changed. Opening or starting a count writes nothing.
 - Given a completed count, review missing, surplus and unlisted copies before saving. Save checks the current section and audit revision and records the result privately. Use the ordinary inventory edits for corrections.
 

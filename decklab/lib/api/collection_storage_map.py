@@ -73,6 +73,8 @@ def view(space=None, section=None):
     elif stale:
         result["message"] = "Deck Lab is showing its last available collection. Reload before recording an audit."
     if ident is None:
+        result["containers"] = [{"name": container["name"], "sections": container["sections"]}
+                                for container in setup["storage"]["containers"]]
         result.update(sections=[_public(space, item, saved["sections"].get(item["id"])) for item in found], excluded=excluded)
         if any(row["estimated"] for item in found for row in item["rows"]):
             result["notice"] = "Some counts are estimated where Deck Lab can't identify exactly which copies are in deck boxes."
