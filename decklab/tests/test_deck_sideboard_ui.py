@@ -46,14 +46,14 @@ class DeckSideboardUiTests(unittest.TestCase):
           const sheet = document.querySelector('.sheet');
           assert(sheet.textContent.includes('Bolt (2 in this list)'));
           assert(!sheet.textContent.includes('2 available'));
-          assert(sheet.textContent.includes('not necessarily cards you own'));
+          assert(sheet.textContent.includes('Planned list · The counts include planned cards.'));
           const picker = sheet.querySelector('select'); picker.value = '2'; picker.fire('change');
-          assert(sheet.textContent.includes('not a fresh collection check'));
-          assert(!sheet.textContent.includes('not necessarily cards you own'));
+          assert(sheet.textContent.includes('Alternative list · The counts below come from the saved list.'));
+          assert(!sheet.textContent.includes('The counts include planned cards.'));
           assert(sheet.textContent.includes('No sideboard cards yet.'));
           assert(!sheet.textContent.includes('Bolt (2 in this list)'));
           picker.value = '0'; picker.fire('change');
-          assert(sheet.textContent.includes('not necessarily cards you own'));
+          assert(sheet.textContent.includes('Planned list · The counts include planned cards.'));
           assert(sheet.textContent.includes('your saved deck is unchanged'));
         """)
 
