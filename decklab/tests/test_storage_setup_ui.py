@@ -194,6 +194,30 @@ class StorageSetupUiTests(unittest.TestCase):
           assert(review[1].textContent.includes('Row 3 holds creatures, Row 1 holds lands'));
         """)
 
+    def test_filing_guide_follows_each_drafts_rule_before_preview(self):
+        self.run_js("""
+          const cv = draw();
+          const binder = {...BOX, id: 'binder', name: 'Binder', order: 'set', sections: []};
+          api = async () => ({...VIEW, storage: {...VIEW.storage, containers: [BOX, binder]}});
+          const ctx = await openStorageSetup(cv);
+          const [boxRow, binderRow] = ctx.edit.querySelectorAll('.storage-container');
+          const guide = row => row.querySelector('.storage-filing-guide');
+          const visible = row => !!guide(row) && !guide(row).hidden;
+          assert(visible(boxRow)); assert(!visible(binderRow));
+          assert(guide(boxRow).matches('details'));
+          assert.equal(guide(boxRow).querySelector('summary').textContent, 'Colour order and where artifacts go');
+          const words = guide(boxRow).textContent.toLowerCase();
+          for (const phrase of ['White → Blue → Black → Red → Green → Multicolour → Colourless',
+            'artifact creatures', 'artifact lands', 'colour identity', 'creature tokens']) {
+            assert(words.includes(phrase.toLowerCase()), phrase);
+          }
+          const order = row => row.querySelectorAll('select').find(s => s.id.includes('-order-'));
+          type(order(boxRow), 'set', 'change'); assert(!visible(boxRow));
+          type(order(binderRow), 'colour-type', 'change'); assert(visible(binderRow));
+          type(order(boxRow), 'colour-type', 'change'); assert(visible(boxRow));
+          assert.equal(ctx.review, null);
+        """)
+
     def test_the_count_lines_change_opens_it(self):
         self.run_js("""
           const cv = draw();

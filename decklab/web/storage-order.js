@@ -4,6 +4,17 @@
 const STORAGE_COLOURS = ["White", "Blue", "Black", "Red", "Green", "Multicolour", "Colourless"];
 const STORAGE_NUMBERS = new Intl.Collator(LOCALE, { numeric: true });
 
+function storageFilingGuide() {
+  return el("details", { class: "storage-filing-guide" },
+    el("summary", { text: "Colour order and where artifacts go" }),
+    el("p", { text: `Pick the card group first. Within Creatures, Spells and Lands, the colour dividers go ${STORAGE_COLOURS.join(" → ")}.` }),
+    el("ul", {},
+      el("li", { text: "Artifact lands go in Lands. Artifact creatures go after Colourless in Creatures, and all remaining artifacts go after Colourless in Spells. Coloured artifacts use the same dividers." }),
+      el("li", { text: "Creatures and spells use the front face’s colours. Lands use the colours of mana they produce, falling back to colour identity when no coloured mana is listed." }),
+      el("li", { text: "The Token cards section includes creature tokens." })),
+    el("p", { text: "Within a divider, sort by mana value, then card name. A recorded storage section takes precedence over the card group." }));
+}
+
 /** The front face's type and actual colours determine its divider. Lands use the mana they produce. */
 function storageCardGroup(card) {
   const face = card?.faces?.[0] || card;

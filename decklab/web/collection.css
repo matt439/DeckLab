@@ -110,6 +110,11 @@ button.col-find-open { cursor: pointer; }
 /* A space's storage setup (E8-S25): one line per container in the Card list's count. */
 .col-storage-line { display: block; }
 .col-storage-change { min-height: var(--tap); padding-inline: var(--s-2); }
+.storage-filing-guide { color: var(--ink-2); font-size: var(--fs-sm); }
+.storage-filing-guide > summary { display: flex; align-items: center; min-height: var(--tap);
+  color: var(--link); font-weight: var(--fw-semibold); }
+.storage-filing-guide > p, .storage-filing-guide > ul { margin: 0 0 var(--s-2); }
+.storage-filing-guide > ul { padding-inline-start: var(--s-5); }
 /* Storage setup… (storage-setup.js): one fieldset per container, stacked; kind and capacity side by side
  * from tablet width, one above the other on a phone. */
 .storage-setup, .storage-review { display: grid; gap: var(--s-3); }

@@ -177,7 +177,13 @@ function storageFieldset(ctx, c, i, id) {
   const sections = el("textarea", { id: k("sections"), rows: 3, spellcheck: "false", value: c.sections,
     placeholder: "Row 1\nRow 2", oninput: (e) => { c.sections = e.target.value; }, onchange: () => storageHoldsBox(ctx, c, k, holds) });
   sections.value = c.sections;
-  const order = el("select", { id: k("order"), onchange: (e) => { c.order = e.target.value; storageHoldsBox(ctx, c, k, holds); } },
+  const guide = storageFilingGuide();
+  guide.hidden = c.order !== "colour-type";
+  const order = el("select", { id: k("order"), onchange: (e) => {
+    c.order = e.target.value;
+    guide.hidden = c.order !== "colour-type";
+    storageHoldsBox(ctx, c, k, holds);
+  } },
     Object.entries(STORAGE_ORDER_WORDS).map(([value, text]) => el("option", { value, text, selected: value === c.order || null })));
   const sleeved = el("input", { id: k("sleeved"), type: "checkbox", checked: c.sleeved || null,
     onchange: (e) => { c.sleeved = e.target.checked; } });
@@ -199,6 +205,7 @@ function storageFieldset(ctx, c, i, id) {
         el("small", { class: "field-hint", text: ctx.cv.space === HOME_SPACE
           ? "The Card list and Build decks use this when you sort by storage."
           : "The Card list uses this when you sort by storage." })),
+      guide,
       el("label", { class: "field", for: capacity.id }, el("span", { text: "Holds (cards)" }), capacity),
       el("label", { class: "field", for: sections.id }, el("span", { text: "Sections" }), sections,
         el("small", { class: "field-hint", text: "List sections in filing order, one per line, or enter “4 rows” for Row 1 to Row 4." })),
