@@ -65,6 +65,18 @@ def space_storage_row(row, spaces):
     return {"table": "space_storage", "op": row.get("op"), "summary": "Storage setup updated"}
 
 
+def collection_audit_row(row, spaces):
+    """A physical count's evidence stays in its collection's audit view."""
+    space = (row.get("key") or {}).get("space_id")
+    if not isinstance(space, str) or not space or (spaces is not None and space not in spaces):
+        return None
+    if any(record and record.get("space_id") != space for record in (row.get("before"), row.get("after"))):
+        return None
+    op = row.get("op")
+    return {"table": "collection_section_audit", "op": op,
+            "summary": "Collection audit removed" if op == "DELETE" else "Collection audit recorded"}
+
+
 def field_policy_row(row, scope, profiles, me):
     """HOME only, before generic admin handling; never relay rules or proof data."""
     if scope == "all":

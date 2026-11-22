@@ -43,6 +43,7 @@ ACCESS = MappingProxyType({
     ('GET', 'server/restart'): 'home-admin',
     ('GET', 'collection'): 'inventory',
     ('GET', 'collection/rows'): 'inventory',
+    ('GET', 'collection/storage-map'): 'inventory-edit',
     ('GET', 'collection/download'): 'inventory',
     ('GET', 'collection/loans'): 'inventory',
     ('GET', 'printings'): 'open',
@@ -155,6 +156,7 @@ ACCESS = MappingProxyType({
     ('POST', 'collection/return'): 'inventory-edit',
     ('POST', 'collection/bulk'): 'inventory-edit',
     ('POST', 'collection/locations/bulk'): 'inventory-edit',
+    ('POST', 'collection/storage-map'): 'inventory-edit',
     ('POST', 'collection/import/preview'): 'inventory-edit',
     ('POST', 'collection/import/apply'): 'inventory-edit',
     ('POST', 'collection/scan'): 'inventory-edit',
@@ -465,7 +467,7 @@ def route_tables():
     from decklab.lib.api import deck_cuts
     from decklab.lib.api import bracket_fixes
     from decklab.lib.api import error_reports
-    from decklab.lib.api import collection_loans
+    from decklab.lib.api import collection_loans, collection_storage_map
     from decklab.lib.api import practice
     from decklab.lib.api import product_kit_undo
     from decklab.lib.api import commander_lineup
@@ -490,6 +492,7 @@ def route_tables():
         ("collection",): (collection.collection_view,
                          ("q", "color", "type", "role", "mv", "availability", "page", "limit", "space")),
         ("collection", "rows"): (collection_edit.rows_view, ("space",)),
+        ("collection", "storage-map"): (collection_storage_map.view, ("space", "section")),
         ("collection", "download"): (collection_edit.download_view, ("space",)),
         ("collection", "loans"): (collection_loans.loans_view, ("space", "before", "include_returned")),
         ("printings",): (collection_edit.printings_view, ("name",)),
@@ -607,6 +610,7 @@ def route_tables():
         ("collection", "return"): collection_loans.return_loan,
         ("collection", "bulk"): (collection_edit.bulk_set, collection_edit.MAX_BULK_BODY),
         ("collection", "locations", "bulk"): (collection_locations.bulk_set, collection_edit.MAX_BULK_BODY),
+        ("collection", "storage-map"): (collection_storage_map.record, collection_storage_map.MAX_BODY),
         ("collection", "import", "preview"): (collection_edit.import_preview, collection_edit.MAX_IMPORT_BODY),
         ("collection", "import", "apply"): collection_edit.import_apply,
         ("collection", "scan"): (collection_scan.scan_photo, collection_scan.MAX_SCAN_BODY),     # nothing is written

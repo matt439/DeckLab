@@ -89,6 +89,8 @@ class MemoryStore:
         self.pricing_ready = True   # False: as before migration 0022
         self._space_storage = {}    # space id -> space_storage row (E8-S25)
         self.space_storage_ready = True   # False: as before migration 0028
+        self._collection_audits = {}  # space id -> latest audit records by section id
+        self.collection_audits_ready = True
         self._field_policies = {}   # format -> audited {format, revision, content: {v, rules}} row
         self._field_source = field_source
         self._deck_drafts = {}      # (profile, deck, version) -> deck_draft row (not audited, never batched)
@@ -520,6 +522,46 @@ class MemoryStore:
             self._log(actor, message, None, [("space_storage", "UPDATE" if before else "INSERT", ("space_id",),
                                               before, after)])
             return self.space_storage(space)
+
+    def collection_audits(self, space):
+        from .space_storage import space_id
+        space = space_id(space)
+        with self._lock:
+            self._check()
+            sections = self._collection_audits.get(space, {}) if self.collection_audits_ready else {}
+            return {"ready": self.collection_audits_ready,
+                    "sections": {key: self._collection_audit_view(row) for key, row in sections.items()}}
+
+    def collection_audit_record(self, space, section_id, expected_revision, review, actor, message):
+        from decklab.lib import inventory, storage_setting
+        from . import collection_audits as audit, space_storage
+
+        space = space_storage.space_id(space)
+        section_id = audit.section_key(section_id)
+        expected_revision = audit.expectation(expected_revision)
+        _, message, _ = rules.check_write(actor, message)
+        with self._lock:
+            self._check()
+            if self._batch is not None:
+                raise Invalid(audit.INDEPENDENT)
+            if not self.collection_audits_ready:
+                raise audit.MissingSchema(audit.MIGRATE)
+            before = self._collection_audits.get(space, {}).get(section_id)
+            if (before["revision"] if before else 0) != expected_revision:
+                raise Conflict(audit.CHANGED)
+            storage = storage_setting._view(space, self.space_storage(space), seed=False)
+            summary = review(inventory.backend().load(), storage)
+            audit.validate(summary)
+            after = {"space_id": space, "section_id": section_id, "revision": expected_revision + 1,
+                     "audited_at": datetime.now(timezone.utc).isoformat(), **_copy(summary)}
+            self._log(actor, message, None, [("collection_section_audit", "UPDATE" if before else "INSERT",
+                                            ("space_id", "section_id"), before, after)])
+            self._collection_audits.setdefault(space, {})[section_id] = after
+            return self._collection_audit_view(after)
+
+    @staticmethod
+    def _collection_audit_view(row):
+        return _copy({key: value for key, value in row.items() if key != "space_id"})
 
     # ------------------------------------------------------------------ HOME field policy
 

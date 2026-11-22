@@ -454,6 +454,14 @@ Home profile `plays_as` accepts the neutral aliases `first` and `second`, normal
 
 On the **Card list**, open **Filter and sort** and choose **Storage order**. Each printing follows its own recorded location, so two printings of the same card can appear in different parts of the list. If several binders use the same section name, record both names, for example `Blue binder, Page 1`. Home’s **Build decks** also uses that setup when you choose its storage sorting option.
 
+### Audit a storage section
+
+Open **Collection → Storage map**. Each segment takes up the same share of the map as its share of the expected loose copies. Choose a segment such as **White creatures**, or use the section list for small and empty sections. The sheet shows the last audit and whether Deck Lab's expected list has changed since then.
+
+Choose **Start audit** and count the listed printings and finishes in that section. Enter zero for missing copies and use **Unlisted cards counted** for copies the checklist doesn't include. Check the differences before recording the audit. The section keeps the most recent result and its discrepancies. To correct the inventory after investigating a difference, edit the relevant rows on the Card list or Tokens page.
+
+The map uses the saved storage setup and recorded locations. Expected counts exclude cards on the way, copies in built decks or intact products, and lent copies. Packed token cards are deducted when their counts are available. Ordinary basic lands aren't tracked, and recorded basic lands are listed outside the map because Deck Lab can't tell how many are loose. The map marks estimated counts and groups copies without a matched storage location separately. Audits are private to the collection's own space and need database migration `0031`.
+
 ### Scan a stack or binder page
 
 Open **Collection → More → Scan cards…** in the space where the physical copies belong. Choose a pile you haven't already recorded. Importing a printing that is already in the collection adds the scanned quantity to its existing count. Photos are read on the Deck Lab server using Windows OCR or Tesseract. Token cards have their own **Scan token cards…** action on the Tokens page.

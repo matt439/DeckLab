@@ -1,5 +1,9 @@
 # Deck Lab: history
 
+## Storage map and section audits (2026-11-22, E8-S28)
+
+Collection's **Storage map** shows the expected loose copies by physical section. Segment widths use copy counts, including the colour and type dividers where the filing rule calls for them. Open a section to see its last audit and record counts against its expected printings. The audit saves the date and differences in migration `0031`. Count corrections go through the usual collection and token editing tools. [Storage audit guide](README.md#audit-a-storage-section)
+
 ## Deck-building reviews and Commander pods (2026-11-21)
 
 - **Card checklist** on a saved deck starts with cards and quantities you choose from its Cards tab or a stand-in. Each profile has its own checklist for the deck, with per-copy check, buy and set-aside choices. Migration 0030 adds the linked checklists (`E5-S44`).

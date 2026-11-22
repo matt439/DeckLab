@@ -74,6 +74,11 @@ tests/test_state_contract.py checks):
   space's whole record replaced after checking its revision (E8-S25, Unavailable with
   space_storage.MIGRATE before 0028; space_storage.py has the rules and home's built-in box).
   An unchanged save writes nothing; saving no containers is a change (the opt-out).
+- collection_audits(space) -> {ready, sections}, the most recent physical count for each section.
+  collection_audit_record(space, section_id, expected_revision, review, actor, message) -> saved
+  evidence after an independent, audited revision check. review(snapshot, setup_view) validates
+  the current section and returns its count summary, under both inventory and storage claims
+  in PostgreSQL. Before migration 0031 the read has ready False and a save raises MissingSchema.
 - field_policy(format) -> {v, format, revision, rules}; only a confirmed existing schema's
   absent row is an empty policy. field_policy_apply(format, expected_revision, expected_proof,
   rule, actor, message, reason=None) -> {changed, snapshot}; one independent audited CAS write,

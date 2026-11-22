@@ -239,6 +239,12 @@
   --mana-r: #f9aa8f;
   --mana-g: #9bd3ae;
   --mana-c: #ccc2c0;
+  /* Storage map fills use dark text in both themes. */
+  --storage-map-neutral: #d9d5c4;
+  --storage-map-black: #cabed6;
+  --storage-map-multicolour: #e5c46c;
+  --storage-map-colourless: #d9d9d5;
+  --storage-map-artifact: #9caeb6;
   --mana-ink: #0b0b0b;
   --mana-edge: rgb(0 0 0 / .35);
   --mana-ring: rgb(28 33 31 / .22);   /* inset 1 px around a colour-identity pip */

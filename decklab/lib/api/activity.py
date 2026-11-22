@@ -353,6 +353,8 @@ def _row(row, scope, profiles, space_of, me=None, spaces=None, *, own=None, orde
         return activity_home.pricing_setting_row(row, scope, profiles, me)
     if table == "space_storage":
         return activity_home.space_storage_row(row, spaces)
+    if table == "collection_section_audit":
+        return activity_home.collection_audit_row(row, spaces)
     if table == "packing_tick":
         return ({"table": table, "op": op, "summary": "Packing progress updated"}
                 if _home_viewer(scope, profiles, me) else None)
