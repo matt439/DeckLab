@@ -69,9 +69,12 @@ async function settingsLayout(page) {
       horizontalScroll ||= Math.abs(scrollX)>1;
       if(document.activeElement!==control) focusFailures++;
     }
-    document.activeElement?.blur();scrollTo(0,0);
+    document.activeElement?.blur();
+    scrollTo(innerWidth, innerHeight);
+    const attemptedScroll={x:scrollX,y:scrollY};
+    scrollTo(0,0);
     return {width:innerWidth,clientWidth:document.documentElement.clientWidth,scrollWidth:document.documentElement.scrollWidth,
-      rows,controls:controls.length,horizontalScroll,focusFailures};
+      rows,controls:controls.length,horizontalScroll,focusFailures,attemptedScroll};
   });
 }
 
@@ -84,7 +87,8 @@ run('families', async review => {
       : (review.options.smoke ? [393,1440] : [393,820,1440]);
     for(const width of widths)
       specs.push({...p,theme,width,height:width<600?700:900,state:'populated',coarse:width<1000});
-    if(p.name==='settings') specs.push({...p,theme,width:393,height:700,state:'populated',coarse:true,root200:true});
+    if(p.name==='settings') for(const width of [320,393])
+      specs.push({...p,theme,width,height:700,state:'populated',coarse:true,root200:true});
     if(!review.options.smoke) for(const state of ['empty','failed','busy']) {
       if(p.name==='settings' && state==='empty') continue;
       specs.push({...p,theme,width:393,height:700,coarse:true,state});
@@ -97,6 +101,14 @@ run('families', async review => {
       review.select();context=await review.context(spec);const page=await context.newPage();
       review.observe(page,result.page_errors,result.http_errors);
       if(spec.name==='settings') {
+        await page.route('**/api/settings/members',async route=>{
+          if(new URL(route.request().url()).origin!==review.origin||route.request().method()!=='GET') return route.fallback();
+          const response=await route.fetch({maxRedirects:0});
+          assert(response.ok(),'Settings member adapter requires an ordinary successful read');
+          const data=await response.json();
+          data.members[0].emails.unshift(`${'a'.repeat(64)}@example.com`);
+          return route.fulfill({response,json:data});
+        });
         await page.route('**/api/pricing-setting',async route=>{
           if(new URL(route.request().url()).origin!==review.origin||route.request().method()!=='GET') return route.fallback();
           const response=await route.fetch({maxRedirects:0});
@@ -152,6 +164,8 @@ run('families', async review => {
         const layout=result.settingsLayout;
         assert.equal(layout.width,spec.width,'Settings expanded the layout viewport');
         assert(layout.scrollWidth<=layout.clientWidth+1,'Settings makes the document scroll horizontally');
+        assert.equal(layout.attemptedScroll.x,0,'Settings allows a sideways scroll');
+        assert(layout.attemptedScroll.y>0,'Settings can no longer scroll vertically');
         assert(layout.rows.every(row=>row.left>=-1&&row.right<=layout.clientWidth+1),'Settings content extends beyond the viewport');
         assert(layout.rows.every(row=>row.left>=row.panelLeft-1&&row.right<=row.panelRight+1),'Settings controls extend beyond their panel');
         assert(layout.controls>0&&!layout.horizontalScroll&&layout.focusFailures===0,'Settings controls need horizontal scrolling to receive focus');

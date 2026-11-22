@@ -54,7 +54,7 @@ function showSettings(params, token) {
   const mode = el("div", { class: "segmented", id: "sim-mode", role: "group", "aria-labelledby": "sim-mode-label" },
     SIM_MODE_WORDS.map(([value, text]) => el("button", { type: "button", "data-mode": value, "aria-pressed": "false", text,
       onclick: () => changeSimulations({ mode: value }) })));
-  const workers = el("select", { id: "sim-workers", style: "max-width: 320px", onchange: (event) => {   // not panel-wide on QHD
+  const workers = el("select", { id: "sim-workers", onchange: (event) => {
     const n = Number(event.target.value);
     changeSimulations({ workers: n >= Number(event.target.dataset.max) ? null : n });
   } });

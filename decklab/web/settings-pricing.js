@@ -68,7 +68,7 @@ function drawPricingSettings(host, data, token, profile) {
   const ctx = {host, token, profile, revision: data.revision, busy: false, stale: false};
   ctx.here = () => ctx.form.isConnected && ctx.token === routeToken && ctx.profile === (state.profile && state.profile.id) && pricingAdmin();
   const configCode = data.currency.config || "AUD, the default";
-  ctx.currency = el("select", {id: "pricing-currency", style: "max-width: 320px"},
+  ctx.currency = el("select", {id: "pricing-currency"},
     el("option", {value: "", text: `Use config.json's (${configCode})`}),
     data.currencies.map(item => el("option", {value: item.code, text: item.symbol && item.symbol.trim() !== item.code ? `${item.code} (${item.symbol.trim()})` : item.code})));
   ctx.currency.value = data.currency.saved || "";

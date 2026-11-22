@@ -16,18 +16,21 @@ FIXTURE = SETUP + """
     quantity: 1, colour: 'black', audit: null};
   const empty = {id: 'green', label: 'Green spells', container: 'Storage box', place: 'Row 2',
     quantity: 0, colour: 'green', audit: null};
+  const red = {id: 'red', label: 'Red creatures', container: 'Storage box', place: 'Row 1',
+    quantity: 2, colour: 'red', audit: null};
   const unknown = {id: 'unfiled', label: 'No storage location', quantity: 2, auditable: false, audit: null};
   const rows = [
     {key: 'fdn|1|nonfoil', name: 'Alpha', set: 'fdn', collector_number: '1', finish: 'nonfoil', quantity: 3, location: 'Row 1 B'},
     {key: 'fdn|1|foil', name: 'Alpha', set: 'fdn', collector_number: '1', finish: 'foil', quantity: 2, estimated: true},
   ];
   const render = (patch = {}) => drawCollectionStorageMap({space: 'home', ready: true, editable: true,
-    sections: [white, black, empty, unknown],
+    containers: [{name: 'Storage box', sections: ['Row 1', 'Row 2', 'Row 3', 'Row 4']}],
+    sections: [white, red, black, empty, unknown],
     excluded: [{label: 'Uncounted basic lands', quantity: 3}, {label: 'Token availability unknown', quantity: null}],
     ...patch}, 'home');
   const detail = (patch = {}) => ({space: 'home', ready: true, editable: true, section: white, expect: 'proof', rows, ...patch});
   const chooseSection = id => main.querySelector('.col-map-section[data-section="' + id + '"]');
-  const chooseVisual = id => main.querySelector('.col-map-segment[data-section="' + id + '"]');
+  const physicalRows = () => main.querySelectorAll('.col-map-row');
   const action = words => button(openDialog(), words);
   const countInput = words => openDialog().querySelector('input[aria-label="' + words + '"]');
   const nonfoil = 'Counted for Alpha, FDN 1 · Non-foil';
@@ -43,15 +46,17 @@ class StorageMapUiTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "ok")
 
-    def test_section_area_reflects_expected_copies_with_full_size_controls(self):
+    def test_expected_loose_cards_match_physical_rows_including_empty_rows(self):
         self.run_js("""
           render();
-          same(main.querySelectorAll('.col-map-segment').map(node => node.style.flexGrow), [5, 1, 2]);
-          same(main.querySelectorAll('.col-map-section').map(node => node.dataset.section), ['white', 'black', 'green', 'unfiled']);
+          same(physicalRows().map(node => node.querySelector('.col-map-section-name').textContent), ['Row 1', 'Row 2', 'Row 3', 'Row 4']);
+          same(physicalRows().map(node => node.querySelector('.col-map-section-count').textContent), ['7 cards', '1 card', '0 cards', '0 cards']);
+          same(physicalRows().map(node => node.querySelector('.col-map-row-bar').style['--col-map-share']), ['70%', '10%', '0%', '0%']);
+          same(physicalRows()[0].querySelectorAll('.col-map-section').map(node => node.dataset.section), ['white', 'red']);
+          assert(!chooseSection('unfiled').closest('.col-map-row'));
           assert(main.textContent.includes('Uncounted basic lands (3 cards)'));
           assert(main.textContent.includes('Token availability unknown'));
           assert(!main.textContent.includes('Token availability unknown (0 cards)'));
-          assert.equal(chooseVisual('white').getAttribute('tabindex'), '-1');
           assert.equal(chooseSection('green').getAttribute('tabindex'), null);
           assert(chooseSection('green').closest('details').textContent.includes('Empty sections (1)'));
           assert(chooseSection('white').getAttribute('aria-label').includes('Row 1, White creatures, 5 cards'));
@@ -59,15 +64,29 @@ class StorageMapUiTests(unittest.TestCase):
             assert.equal(path, '/api/collection/storage-map?section=white');
             return detail();
           };
-          chooseVisual('white').click(); await flush();
+          physicalRows()[0].setAttribute('open', '');
+          chooseSection('white').click(); await flush();
           assert(openDialog().textContent.includes('This section has never been audited.'));
           assert(action('Start audit'));
-          action('Close').click(); assert.equal(document.activeElement, chooseVisual('white'));
+          action('Close').click(); assert.equal(document.activeElement, chooseSection('white'));
+        """)
+
+    def test_custom_containers_keep_section_order_and_separate_unassigned_counts(self):
+        self.run_js("""
+          const binder = {id: 'binder', label: 'Binder', container: 'Binder', quantity: 4};
+          const unassigned = {...black, place: null};
+          render({containers: [{name: 'Storage box', sections: ['Row 2', 'Row 1']}, {name: 'Binder', sections: []}],
+            sections: [white, unassigned, binder]});
+          same(physicalRows().map(node => node.querySelector('.col-map-section-name').textContent), ['Row 2', 'Row 1', 'Binder']);
+          same(physicalRows().map(node => node.querySelector('.col-map-section-count').textContent), ['0 cards', '5 cards', '4 cards']);
+          assert(!chooseSection('black').closest('.col-map-row'));
+          assert(main.textContent.includes('Storage box · No section assigned'));
         """)
 
     def test_count_review_payload_and_saved_differences_are_section_scoped(self):
         self.run_js("""
           render(); const writes = [];
+          physicalRows()[0].setAttribute('open', '');
           api = async () => detail();
           apiWrite = async (path, body) => {
             writes.push([path, body]);
@@ -104,6 +123,7 @@ class StorageMapUiTests(unittest.TestCase):
           assert(openDialog().textContent.includes('3 expected · 0 counted'));
           assert(chooseSection('white').textContent.includes('Differences found'));
           assert(chooseSection('black').textContent.includes('Never audited'));
+          assert.equal(physicalRows()[0].getAttribute('open'), '');
           action('Close').click();
           assert.equal(document.activeElement, chooseSection('white'));
         """)

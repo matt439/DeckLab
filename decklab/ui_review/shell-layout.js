@@ -29,15 +29,20 @@ async function measure(page, configuredWidth) {
       if(Math.min(a.right,b.right)-Math.max(a.x,b.x) > 1
         && Math.min(a.bottom,b.bottom)-Math.max(a.y,b.y) > 1) overlaps.push([a.id || a.className,b.id || b.className]);
     }
+    const rootStyle = getComputedStyle(document.documentElement);
+    const bodyStyle = getComputedStyle(document.body);
+    const header = document.querySelector('#topbar');
     return { configuredWidth, innerWidth, innerHeight, scrollX, scrollY,
       clientWidth:document.documentElement.clientWidth, scrollWidth:document.documentElement.scrollWidth,
       visualViewport:window.visualViewport ? { width:visualViewport.width,height:visualViewport.height,
         scale:visualViewport.scale,offsetLeft:visualViewport.offsetLeft,offsetTop:visualViewport.offsetTop } : null,
       documentOverflow:document.documentElement.scrollWidth > document.documentElement.clientWidth,
       layoutViewportExpanded:innerWidth > configuredWidth,
-      rootFont:getComputedStyle(document.documentElement).fontSize,
+      rootFont:rootStyle.fontSize,
       coarse:matchMedia('(pointer:coarse)').matches,
-      header:box(document.querySelector('#topbar')), children, overlaps,
+      header:box(header), children, overlaps,
+      background: { canvas:rootStyle.backgroundColor, header:getComputedStyle(header).backgroundColor,
+        body:bodyStyle.backgroundColor, bodyImage:bodyStyle.backgroundImage },
       shellOutsideViewport:children.filter(b => b.x < -1 || b.right > configuredWidth + 1),
       controls:[...document.querySelectorAll('#topbar a,#topbar button,#topbar input')]
         .filter(visible).map(box),
@@ -62,8 +67,8 @@ function matrix(routes, smoke) {
     for(const width of (smoke ? [600] : [320,600,820,1000,1440]))
       add(`back-root200-${width}`,width,746,routes.member_variant,'user2',{root200:true});
     add('account-admin',1440,830,routes.populated_library,'matt');
+    add('landscape-740',740,360);
     if(!smoke) {
-      add('landscape-740',740,360);
       for(const width of [600,820]) add(`brand-${width}`,width,1106,routes.populated_library,'matt');
       add('receipt-600',600,746,routes.receipt,'matt');
       for(const width of [600,820]) for(const root200 of [false,true])
@@ -149,6 +154,12 @@ run('shell-layout', async review => {
       result.metrics = await measure(page,spec.width);
       result.configuredViewport = page.viewportSize();
       assert.deepEqual(result.configuredViewport,{width:spec.width,height:spec.height},'Unexpected configured viewport');
+      if(spec.width < 600 || (spec.coarse && spec.height <= 500 && spec.width > spec.height)) {
+        const { canvas, header, body, bodyImage } = result.metrics.background;
+        assert.equal(canvas,header,'The phone canvas should continue the header during elastic scrolling');
+        assert.equal(body,'rgba(0, 0, 0, 0)','The body color should let WebKit use the canvas for elastic scrolling');
+        assert.notEqual(bodyImage,'none','The body should paint the page color inside the document');
+      }
       result.png = spec.name + '.png';
       await page.screenshot({path:path.join(review.out,result.png),fullPage:false,animations:'disabled'});
       await keyboardChecks(page,result,review);

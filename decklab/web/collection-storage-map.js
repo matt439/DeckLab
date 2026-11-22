@@ -31,28 +31,46 @@ function storageMapPlace(section) {
 function storageMapGroup(sections) {
   const containers = new Map();
   for (const section of sections) {
-    const container = section.container || "Other locations";
+    const container = section.container ?? null;
     if (!containers.has(container)) containers.set(container, []);
     containers.get(container).push(section);
   }
   return containers;
 }
 
+function storageMapTotal(sections) {
+  return sections.reduce((total, section) => total + section.quantity, 0);
+}
+
 function drawStorageMapContent(cv) {
+  const expanded = new Set([...cv.mapContent.querySelectorAll("details[open][data-map-row]")]
+    .map(row => row.dataset.mapRow));
   const content = clear(cv.mapContent);
   const sections = cv.mapSections;
-  const total = sections.reduce((n, section) => n + section.quantity, 0);
-  if (!cv.data.ready && !sections.length) {
+  const groups = storageMapGroup(sections);
+  const containers = cv.data.containers ?? [...groups].filter(([name]) => name).map(([name, items]) => ({
+    name, sections: [...new Set(items.map(item => item.place).filter(Boolean))],
+  }));
+  if (!cv.data.ready && !sections.length && !containers.length) {
     content.append(el("p", { class: "box box-info", text: cv.data.message || "The storage map is unavailable." }));
     return;
   }
+  const total = storageMapTotal(sections);
   const intro = el("section", { class: "panel col-map-overview", "aria-label": "Storage overview" },
     el("div", { class: "col-map-overview-head" },
-      el("div", {}, el("h2", { text: "Expected loose cards" }),
-        el("p", { class: "sub", text: "Each section is sized by the copies Deck Lab expects to find. Choose a section to check it against the cards you count." })),
+      el("h2", { text: "Expected loose cards" }),
       el("strong", { class: "col-map-total", text: storageMapCount(total) })));
-  if (total > 0) intro.append(el("div", { class: "col-map-strip", role: "group", "aria-label": "Proportional storage sections" },
-    sections.filter(section => section.quantity > 0).map(section => storageMapButton(cv, section, true))));
+  const unplaced = [];
+  for (const { name, sections: places } of containers) {
+    const items = groups.get(name) || [];
+    groups.delete(name);
+    const rows = places.length ? places : [null];
+    intro.append(el("section", { class: "col-map-container" },
+      places.length ? el("h3", { text: name }) : null, rows.map(place => storageMapRow(cv, name, place,
+        items.filter(section => (section.place ?? null) === place), total, expanded))));
+    const outside = items.filter(section => !rows.includes(section.place ?? null));
+    if (outside.some(section => section.quantity || section.audit)) unplaced.push([`${name} · No section assigned`, outside]);
+  }
   if (cv.data.message) intro.append(el("p", { class: "box box-info", text: cv.data.message }));
   if (cv.data.notice) intro.append(el("p", { class: "sub col-map-excluded", text: cv.data.notice }));
   const excluded = cv.data.excluded || [];
@@ -60,22 +78,42 @@ function drawStorageMapContent(cv) {
     text: "Outside this map · " + excluded.map(item =>
       item.quantity == null ? item.label : `${item.label} (${storageMapCount(item.quantity)})`).join(" · ") }));
   content.append(intro);
-  if (!sections.length) {
+  if (!containers.length && !sections.length) {
     content.append(el("p", { class: "box box-info", text: "There are no recorded sections to audit." }));
-    return;
   }
-  for (const [container, items] of storageMapGroup(sections)) {
-    const populated = items.filter(section => section.quantity > 0 || section.audit);
-    const empty = items.filter(section => section.quantity === 0 && !section.audit);
-    const buttons = list => el("ul", { class: "col-map-sections" },
-      list.map(section => el("li", {}, storageMapButton(cv, section, false))));
-    content.append(el("section", { class: "col-map-container" },
-      el("div", { class: "col-map-container-head" }, el("h3", { text: container }),
-        el("span", { class: "sub", text: storageMapCount(items.reduce((n, section) => n + section.quantity, 0)) })),
-      populated.length ? buttons(populated) : null,
-      empty.length ? el("details", { class: "col-map-empty" },
-        el("summary", { text: `Empty sections (${thousands(empty.length)})` }), buttons(empty)) : null));
+  for (const [container, items] of [...unplaced, ...groups]) {
+    content.append(el("section", {},
+      el("div", { class: "col-map-container-head" }, el("h3", { text: container || "Other locations" }),
+        el("span", { class: "sub", text: storageMapCount(storageMapTotal(items)) })), storageMapDividers(cv, items)));
   }
+}
+
+function storageMapRow(cv, container, place, sections, total, expanded) {
+  const key = JSON.stringify([container, place]);
+  const label = place ?? container;
+  const quantity = storageMapTotal(sections);
+  const bar = el("span", { class: "col-map-row-bar", "aria-hidden": "true" });
+  bar.style.setProperty("--col-map-share", `${total ? quantity / total * 100 : 0}%`);
+  const row = { class: "col-map-row", "data-map-row": key };
+  if (sections.length === 1 && sections[0].label === label) {
+    return el("div", row, storageMapButton(cv, sections[0], bar));
+  }
+  const title = el("span", { class: "col-map-section-name", text: label });
+  const count = el("span", { class: "col-map-section-count", text: storageMapCount(quantity) });
+  if (!sections.length) return el("div", row, el("div", { class: "col-map-row-label" }, title, count, bar));
+  return el("details", { ...row, open: expanded.has(key) },
+    el("summary", { class: "col-map-row-label" }, title, count, bar), storageMapDividers(cv, sections));
+}
+
+function storageMapDividers(cv, sections) {
+  const populated = sections.filter(section => section.quantity > 0 || section.audit);
+  const empty = sections.filter(section => section.quantity === 0 && !section.audit);
+  const buttons = list => el("ul", { class: "col-map-sections" },
+    list.map(section => el("li", {}, storageMapButton(cv, section))));
+  if (sections.length === 1) return buttons(sections);
+  return [populated.length ? buttons(populated) : null,
+    empty.length ? el("details", { class: "col-map-empty" },
+      el("summary", { text: `Empty sections (${thousands(empty.length)})` }), buttons(empty)) : null];
 }
 
 function storageMapAuditStatus(audit) {
@@ -84,25 +122,18 @@ function storageMapAuditStatus(audit) {
   return audit.mismatch_rows || audit.extra ? "Differences found" : "Count matched";
 }
 
-function storageMapButton(cv, section, segment) {
+function storageMapButton(cv, section, bar) {
   const name = el("span", { class: "col-map-section-name", text: section.label });
   const count = el("span", { class: "col-map-section-count", text: storageMapCount(section.quantity) });
   const status = section.auditable === false ? "Audit unavailable" : storageMapAuditStatus(section.audit);
-  const button = el("button", { type: "button", class: segment ? "col-map-segment" : "col-map-section",
+  return el("button", { type: "button", class: "col-map-section",
     "data-colour": section.colour, "data-section": section.id,
-    "aria-label": [storageMapPlace(section), section.label, count.textContent].filter(Boolean).join(", ") +
-      (segment ? "" : `, ${status}`),
-    title: segment ? [storageMapPlace(section), section.label, count.textContent].filter(Boolean).join(" · ") : null,
-    tabindex: segment ? "-1" : null,
+    "aria-label": [storageMapPlace(section), section.label, count.textContent, status].filter(Boolean).join(", "),
     onclick: event => openStorageMapSection(cv, section, event.currentTarget) },
-  segment ? [name, count] : [
     el("span", { class: "col-map-swatch", "aria-hidden": true }),
     el("span", { class: "col-map-section-text" }, name,
       section.place && section.place !== section.label ? el("span", { class: "sub", text: section.place }) : null),
-    el("span", { class: "col-map-section-facts" }, count, el("span", { class: "sub", text: status })),
-  ]);
-  if (segment) button.style.flexGrow = section.quantity;
-  return button;
+    el("span", { class: "col-map-section-facts" }, count, el("span", { class: "sub", text: status })), bar);
 }
 
 function storageMapSheetHere(ctx) {

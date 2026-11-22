@@ -59,6 +59,8 @@ class StorageMapTests(CollectionEditTestCase):
         with mock.patch.object(pool, "load_pool", return_value=different):
             answer = storage_map.view()
             self.assertTrue(answer["ready"])
+            self.assertEqual(answer["containers"],
+                             [{"name": "Storage box", "sections": ["Row 1", "Row 2", "Row 3", "Row 4"]}])
             populated = {section["label"]: (section["quantity"], section["place"])
                          for section in answer["sections"] if section["quantity"]}
             self.assertEqual(populated, {"Green creatures": (3, "Row 1"), "White creatures": (9, "Row 2"),
@@ -70,6 +72,18 @@ class StorageMapTests(CollectionEditTestCase):
                          {"fdn|227|nonfoil": 2, "cmm|648|nonfoil": 1})
         self.assertNotIn("Hidden", str(green))
         self.assertNotIn("in the mail", str(answer))
+
+    def test_configured_sections_keep_the_setup_order_including_empty_ones(self):
+        record = {"default": "box", "containers": [
+            {"id": "box", "name": "Box", "kind": "box", "sections": ["Back", "Front"],
+             "order": "colour-type", "holds": {"Front": "creatures"}},
+            {"id": "binder", "name": "Binder", "kind": "binder", "sections": [], "order": "set"},
+        ]}
+        self.box.state.space_storage_put("home", record, 0, state.Actor("matt", "Matt", "home"), "Set storage")
+        answer = storage_map.view()
+        self.assertEqual(answer["containers"], [{"name": "Box", "sections": ["Back", "Front"]},
+                                                {"name": "Binder", "sections": []}])
+        self.assertFalse(any(item["place"] == "Back" for item in answer["sections"]))
 
     def test_double_faced_tokens_count_once_and_packed_copies_are_excluded(self):
         token = dict.fromkeys(tokens.FIELDS, "")
