@@ -76,6 +76,31 @@ class CollectionStorageOrderUiTests(unittest.TestCase):
           assert(!alphabetical.count.textContent.includes('Storage order'));
         """)
 
+    def test_filing_guide_tracks_storage_sort_and_survives_redraw(self):
+        self.run_js("""
+          const cv = draw({storage_setup: filing, locations});
+          const guides = () => main.querySelectorAll('.storage-filing-guide').filter(node => !node.hidden);
+          assert.equal(guides().length, 0);
+          chooseStorage();
+          assert.equal(guides().length, 1);
+          const [guide] = guides();
+          assert(guide.matches('details')); assert(!cv.list.contains(guide));
+          assert.equal(guide.querySelector('summary').textContent, 'Colour order and where artifacts go');
+          guide.open = true;
+          search('Alpha');
+          assert.equal(guides()[0], guide); assert(guide.isConnected && guide.open);
+          const select = options(); select.value = 'name:1'; select.fire('change'); colCloseSheets();
+          assert.equal(guides().length, 0);
+          chooseStorage(); assert.equal(guides().length, 1);
+          colChanged(cv, {rows, sha256: 's2', locations,
+            storage_setup: {...filing, default: 'binder', containers: [binder], placements: {}}}, '');
+          assert(cv.count.textContent.includes('Storage order')); assert.equal(guides().length, 0);
+          colChanged(cv, {rows, sha256: 's3', locations, storage_setup: filing}, '');
+          assert.equal(guides().length, 1);
+          colChanged(cv, {rows, sha256: 's4'}, '');
+          assert(!cv.count.textContent.includes('Storage order')); assert.equal(guides().length, 0);
+        """)
+
     def test_older_refresh_cannot_override_a_newer_write_and_open_sort_options_follow_fresh_rows(self):
         self.run_js("""
           const cv = draw({storage_setup: filing, locations});

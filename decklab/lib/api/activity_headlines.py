@@ -23,7 +23,7 @@ KINDS = ("decks", "collection", "tokens", "shopping", "wishlist", "sleeves", "ga
 _KIND_OF = {
     "collection_card": "collection", "collection_import": "collection", "token_card": "tokens",
     "dice_counter": "tokens",
-    "card_loan": "collection", "space_storage": "collection",
+    "card_loan": "collection", "space_storage": "collection", "collection_section_audit": "collection",
     **{table: "shopping" for table in ("product", "product_status", "purchase_order", "order_component",
                                         "watchlist_item", *ITEM_TABLES)},
     rules.DECK_TABLE: "decks", "deck_alias": "decks", "packing_tick": "decks", rules.ACCESSORY_TABLE: "sleeves", "wishlist_entry": "wishlist",
@@ -252,6 +252,11 @@ def describe(rows, actor_name, orders=None, groups=(), profiles=None, *, own=Non
         phrases.append(("updated the price settings", None))
     if take("space_storage"):
         phrases.append(("updated the storage setup", None))
+    audits = take("collection_section_audit")
+    if any(row["op"] != "DELETE" for row in audits):
+        phrases.append(("recorded a collection audit", None))
+    if any(row["op"] == "DELETE" for row in audits):
+        phrases.append(("removed collection audit evidence", None))
     kit = take(rules.ACCESSORY_TABLE)
     if len(kit) == 1:
         phrases.append((_lower(kit[0]["summary"]), None))

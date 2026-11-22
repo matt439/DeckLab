@@ -949,6 +949,14 @@ class PgStore:
         from . import pg_space_storage
         return pg_space_storage.put(self, space, storage, expected_revision, actor, message)
 
+    def collection_audits(self, space):
+        from . import pg_collection_audits
+        return pg_collection_audits.get(self, space)
+
+    def collection_audit_record(self, space, section_id, expected_revision, review, actor, message):
+        from . import pg_collection_audits
+        return pg_collection_audits.put(self, space, section_id, expected_revision, review, actor, message)
+
     # ------------------------------------------------------------------ the simulations mode
 
     def simulation_mode(self):

@@ -73,6 +73,45 @@ class BoxCheckCase(preparation.PreparationCase):
 
 
 class BoxCheckApiTests(BoxCheckCase):
+    def test_scan_counts_the_saved_build_across_zones_and_marks_unnamed_stand_ins_for_manual_count(self):
+        deck = self.parsed()
+        physical = decks.parse_decklist(f"Deck\n4 {ELF}\n12 Forest\n\nSideboard\n1 {ELF}\n")
+        assembled.install(deck, "owned", physical)
+        standins.set_stand_ins(deck, {"target": [], "owned": [], "built": {"version": "owned", "cards": [
+            {"for": ELF, "using": POISON, "qty": 1}, {"for": ELF, "using": None, "qty": 1}]}})
+        self.write_parsed(deck)
+        snapshot = inventory.current()
+        self.deck("a", "A", "built", f"Deck\n1 {MYSTIC}\n")
+        with inventory.pinned(snapshot), mock.patch.object(self.inventory, "apply", side_effect=AssertionError("Read wrote data")):
+            result = deck_page.deck_view("casual/a", version="target", omit="matchups")["scan_audit"]
+        self.assertEqual(result["rows"], [{"name": "Forest", "quantity": 12}, {"name": ELF, "quantity": 3},
+                                          {"name": POISON, "quantity": 1},
+                                          {"name": f"Unspecified stand-in for {ELF}", "quantity": 1, "manual": True}])
+        self.assertIsInstance(result["scan"]["available"], bool)
+
+    def test_scan_is_available_to_member_for_own_built_deck_but_never_visitors_to_public_inventory(self):
+        path = self.magic / "people/user2/decks/casual/own.md"
+        path.parent.mkdir(parents=True)
+        path.write_text(self.record().text.replace("- **Played by:** either\n", ""), encoding="utf-8")
+        self.deck("idea", "Later", "idea", MAIN)
+        self.assertNotIn("scan_audit", deck_page.deck_view("casual/idea", omit="matchups"))
+        for switch in ("decks", "collection"):
+            state.store().visibility_set("home", switch, True, Actor("matt", "Matt", source="web"), "Publish fixture")
+        with access.using({"profile": "user2", "email": "user2@example.com", "remote": True}):
+            own = deck_page.deck_view("user2/casual/own", omit="matchups")
+            self.assertEqual(sum(row["quantity"] for row in own["scan_audit"]["rows"]), 26)
+            self.assertTrue(guard.sees_inventory("home"))
+            with mock.patch.object(box_check, "physical", side_effect=AssertionError("Outside physical deck read")):
+                self.assertNotIn("scan_audit", deck_page.deck_view("casual/a", omit="matchups"))
+
+    def test_unreadable_scan_recipe_does_not_report_an_empty_box(self):
+        deck = self.parsed()
+        deck.header.append(decks.HeaderField("Assembled", "{bad"))
+        self.write_parsed(deck)
+        page = deck_page.deck_view("casual/a", omit="matchups")
+        self.assertNotIn("scan_audit", page)
+        self.assertTrue(any("scan audit" in warning for warning in page["warnings"]))
+
     def test_assembly_offer_uses_saved_physical_sections_and_has_no_read_side_effects(self):
         deck = self.parsed()
         physical = decks.parse_decklist(f"Deck\n1 {MYSTIC}\n12 Forest\n\nSideboard\n1 {POISON}\n")

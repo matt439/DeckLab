@@ -279,7 +279,7 @@ def _prices(rows):
     return answer
 
 
-def _storage(space, rows, prices):
+def _storage(space, rows, prices, *, sources=True):
     """Card list allocation counts by printing (E7-S28, E7-S42). Held counts built decks and intact
     products and is null for untracked basics. Lent counts active loans by exact printing.
     Both reduce the copies in storage. For each card name, deck allocations follow Printings in box
@@ -288,7 +288,8 @@ def _storage(space, rows, prices):
     A nonbasic row with neither held nor lent copies has no entry. Collection sources adds visible,
     uncontested hints as listed_holders and leaves the remaining deck copies unattributed.
     The rows are already only for viewers who may see this space's inventory.
-    Error says why counts are unavailable, or is None."""
+    Error says why counts are unavailable, or is None. Without sources, callers get just the
+    allocation counts and a flag for deck warnings, without fetching any holder visibility."""
     answer = {"rows": {}, "error": None}
     if not rows:
         return answer
@@ -361,6 +362,8 @@ def _storage(space, rows, prices):
     except (ValueError, OSError, csv.Error, RuntimeError) as error:
         return {"rows": {}, "error": "The copies in decks couldn't be worked out"
                 + ("." if space == spaces.HOME and not guard.sees_home_records() else f": {_public(error)}")}
+    if not sources:
+        return {**answer, "estimate": bool(p.warning_decks)}
     from .collection_sources import VISIBILITY_READ_ERRORS, annotate, anonymous
     try:
         sees, records = guard.deck_reader(), guard.sees_home_records()

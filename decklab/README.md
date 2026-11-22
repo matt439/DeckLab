@@ -454,6 +454,14 @@ Home profile `plays_as` accepts the neutral aliases `first` and `second`, normal
 
 On the **Card list**, open **Filter and sort** and choose **Storage order**. Each printing follows its own recorded location, so two printings of the same card can appear in different parts of the list. If several binders use the same section name, record both names, for example `Blue binder, Page 1`. Home’s **Build decks** also uses that setup when you choose its storage sorting option.
 
+### Audit a storage section
+
+Open **Collection → Storage map**. Each segment takes up the same share of the map as its share of the expected loose copies. Choose a segment such as **White creatures**, or use the section list for small and empty sections. The sheet shows the last audit and whether Deck Lab's expected list has changed since then.
+
+Choose **Start audit** and count the listed printings and finishes in that section. Enter zero for missing copies and use **Unlisted cards counted** for copies the checklist doesn't include. Check the differences before recording the audit. The section keeps the most recent result and its discrepancies. To correct the inventory after investigating a difference, edit the relevant rows on the Card list or Tokens page.
+
+The map uses the saved storage setup and recorded locations. Expected counts exclude cards on the way, copies in built decks or intact products, and lent copies. Packed token cards are deducted when their counts are available. Ordinary basic lands aren't tracked, and recorded basic lands are listed outside the map because Deck Lab can't tell how many are loose. The map marks estimated counts and groups copies without a matched storage location separately. Audits are private to the collection's own space and need database migration `0031`.
+
 ### Scan a stack or binder page
 
 Open **Collection → More → Scan cards…** in the space where the physical copies belong. Choose a pile you haven't already recorded. Importing a printing that is already in the collection adds the scanned quantity to its existing count. Photos are read on the Deck Lab server using Windows OCR or Tesseract. Token cards have their own **Scan token cards…** action on the Tokens page.
@@ -464,6 +472,13 @@ Open **Collection → More → Scan cards…** in the space where the physical c
 - **Review the batch.** Resolve the entries in **Check these**, then check each printing, finish and quantity under **To add**. For a large batch, **Show printings** selects a page of up to 24 groups. **Review** opens the import preview for the whole batch, where you confirm the add. To pause before importing, resolve uncertain entries and download the pending batch as CSV. Import the download only if the batch still needs adding.
 
 After a successful scan import, the copies/hour figure uses the number of physical copies the import added and the elapsed time from opening the scan sheet through confirmation. It includes pauses and review, including trips back from the import preview. A session using several capture methods has one combined rate. For files prepared on a scanner beforehand, time the physical scanning separately and include it in the [100-card trial](design/scanning-spike.md#compare-cards-per-hour). A batch downloaded and imported later has no continuous session time.
+
+### Scan to audit a deck or storage section
+
+- **Built deck.** Open the deck in your own space and choose **More → Scan to audit**. Set token cards aside and scan the main deck, commander, companion and sideboard in any order. The audit uses the saved physical build, including basic lands and installed substitutes. It counts a named stand-in by the name on the card. Enter a hand count for each unnamed stand-in. Copies of the same card count together across sections and printings.
+- **Storage section.** Open **Collection → Storage map**, choose the section and select **Scan to audit**. Check the set, collector number and finish on each loose card. A foil in place of an expected non-foil appears as one extra foil and one missing non-foil. The report marks estimated loose counts. Set basic lands aside. If scanned, they appear under **Outside this audit** because their loose quantities are unknown. Count printed token cards by hand, checking both faces.
+
+Choose **Start live camera** or use a photo, scanner image or typed card name. Scan one physical copy at a time or adjust its quantity to match the copies in hand. Resolve uncertain photos under **Check these**, or skip them and set those cards aside. Stop the camera and choose **Finish audit** to see expected and counted quantities for each missing or extra card. The report flags skipped photos. **Back to scanning** lets you correct a read or count another card. **Done** closes the report. The count stays in the open sheet and makes no changes to the deck, collection or audit history.
 
 ## People's own collections (spaces)
 

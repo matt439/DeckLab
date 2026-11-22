@@ -19,12 +19,13 @@ has an engine at all is the Collection and Tokens views' scan.available (collect
 a page can say so before a photo is taken.
 
 The answer is {ok, space, lines (what was read, at most MAX_LINES lines of MAX_LINE characters),
-read ({name, numbers, sets, foil, language}, or null when nothing could be read), proposals
-[{name, set, collector_number, set_name, finish, finishes, language, how, img_small, owned}] best
+read ({name, name_exact, numbers, sets, foil, language}, or null when nothing could be read), proposals
+[{name, canonical_name, set, collector_number, set_name, finish, finishes, language, how, img_small, owned}] best
 first (scan.propose's, with the printing's paper finishes, its small picture and the copies of that
 printing and finish the space's collection has now), message (one plain sentence) and unread (true when the OCR engine
 couldn't read the photo at all: missing on this host, too slow, or not a picture it can open;
-the page then offers the card's name typed in instead)}. Unknown condition stays blank: it's the
+the page then offers the card's name typed in instead)}. read.name_exact means the first nonblank
+OCR line resolved directly to the card. Unknown condition stays blank: it's the
 person holding the card who says; language is the one printed on the card when it was read, else
 blank (never assumed English). The pending list offers each card's proposals as its printing
 choices, with the shared printing picker (GET /api/cards/printings) for its other printings. The page adds a chosen proposal to its pending list, and its
@@ -146,5 +147,6 @@ def scan_photo(body):
         _scan_lock.release()
     read = answer["read"]
     return {"ok": True, "space": space, "lines": lines,
-            "read": {k: read[k] for k in ("name", "numbers", "sets", "foil", "language")},
+            "read": {**{k: read[k] for k in ("name", "numbers", "sets", "foil", "language")},
+                     "name_exact": read.get("name_exact") is True},
             "proposals": _proposals(answer["proposals"], space), "message": answer["message"], "unread": False}

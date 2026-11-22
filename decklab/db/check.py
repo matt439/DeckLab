@@ -514,6 +514,8 @@ def _space_departures(c):
             references += (("upgrade_checklist", "t.profile_id = d.space_id"),)
         if c.execute("select to_regclass('public.deck_upgrade_checklist') is not null").fetchone()[0]:
             references += (("deck_upgrade_checklist", "t.profile_id = d.space_id or starts_with(t.deck_id, d.space_id || '/')"),)
+        if c.execute("select to_regclass('public.collection_section_audit') is not null").fetchone()[0]:
+            references += (("collection_section_audit", "t.space_id = d.space_id"),)
         if ids:
             for table, condition in references:
                 count = c.execute(f"select count(*) from {table} t where exists "
@@ -617,6 +619,8 @@ def run(dbname=None, say=backup.say):
         result.sub("Shops' postage", _shop_postage(c), c)
         result.sub("Price settings", _pricing_setting(c), c)
         result.sub("storage setups", _space_storage(c), c)
+        from decklab.lib.state import pg_collection_audits
+        result.sub("collection audits", lambda: pg_collection_audits.check(c), c)
         result.sub("field policy", _field_policy(c), c)
         result.sub("visibility", _visibility(c), c)
         result.sub("member departures", _space_departures(c), c)

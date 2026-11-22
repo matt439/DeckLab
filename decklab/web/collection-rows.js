@@ -50,6 +50,7 @@ function drawCollectionRows(data, space, token = null) {
     onchange: () => { cv.storageOnly = cv.storageBox.checked; cv.page = 1; cv.casualLimit = COL_CASUAL_ROWS; drawColRowList(cv); } });
   cv.storageLabel = el("span");
   cv.storageChoice = el("label", { class: "filter-chip col-storage", for: cv.storageBox.id }, cv.storageBox, cv.storageLabel);
+  cv.storageGuide = storageFilingGuide();
   cv.count = el("p", { class: "result-count col-count", role: "status" });
   cv.boxNote = el("p", { class: "sub col-storage-box", hidden: true });
   cv.forecastNote = el("section", { class: "panel col-storage-forecast", hidden: true,
@@ -65,7 +66,7 @@ function drawCollectionRows(data, space, token = null) {
   const root = el("div", { class: "collection-page col-rows-page" }, colHead(cv),
     cv.unsupported ? null : [cv.boxNote, cv.forecastNote, cv.unrecordedChoice, tools,
       el("div", { class: "actions col-row-actions" }, colBulkButton(cv), colBulkSelectionTools(cv), cv.count),
-      colLocationBatchTools(cv),
+      colLocationBatchTools(cv), cv.storageGuide,
       el("div", { class: "col-row-layout" }, cv.list, cv.preview), cv.priceNote]);
   cv.root = root;
   $("#main").append(root);
@@ -135,7 +136,9 @@ function drawColRowList(cv) {
   const cards = rows.reduce((n, row) => n + Number(row.quantity || 0), 0);
   cv.count.textContent = shown.length === rows.length ? `${plural(rows.length, "row")}, ${plural(cards, "card")}`
     : `${num(shown.length)} of ${plural(rows.length, "row")}`;
-  if (colEffectiveSort(cv).key === "storage") cv.count.append(" · Storage order");
+  const storageOrder = colEffectiveSort(cv).key === "storage";
+  if (storageOrder) cv.count.append(" · Storage order");
+  cv.storageGuide.hidden = !storageOrder || !cv.storageSetup.containers.some(container => container.order === "colour-type");
   const pages = Math.max(1, Math.ceil(shown.length / COL_ROWS_PAGE));
   cv.page = Math.min(Math.max(1, cv.page), pages);
   const go = (page, control) => {

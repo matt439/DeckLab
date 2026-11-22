@@ -23,6 +23,7 @@ _TABLE_KEYS = {
     "dice": ("dice_counter", ("id",)),
     "loans": ("card_loan", ("space_id", "id")),
     "storage": ("space_storage", ("space_id",)),
+    "collection_audits": ("collection_section_audit", ("space_id", "section_id")),
     "imports": ("collection_import", ("id",)),
     "decks": ("deck", ("id",)),
     "texts": ("deck_text", ("deck_id",)),

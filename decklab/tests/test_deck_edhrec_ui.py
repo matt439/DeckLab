@@ -112,6 +112,21 @@ class DeckEdhrecUiTests(unittest.TestCase):
           assert(sheet.textContent.includes('High Synergy Cards'));
         """)
 
+    def test_a_cached_source_warning_can_be_closed_without_hiding_the_ideas(self):
+        self.run_js("""
+          answer.source.stale = "EDHREC couldn't be reached. Showing saved ideas.";
+          const sheet = await openIdeas(commanderPage());
+          const close = sheet.querySelector('[aria-label="Dismiss EDHREC warning"]');
+          const warning = close.parentNode;
+          assert(warning.textContent.includes('Showing saved ideas.'));
+          close.click();
+          assert.equal(warning.hidden, true);
+          assert(sheet.textContent.includes('High Synergy Cards'));
+          buttonText(sheet, 'To buy (1)').click();
+          assert.equal(sheet.querySelector('[aria-label="Dismiss EDHREC warning"]'), null);
+          assert(sheet.textContent.includes('Pick Your Poison'));
+        """)
+
     def test_the_page_choice_narrows_the_ideas(self):
         self.run_js("""
           answer = Object.assign(ANSWER(), {page: '', pages: PAGES});

@@ -226,14 +226,16 @@ class CollectionFindLayoutUiTests(unittest.TestCase):
           same(COL_FILTER_KEYS, ['q', 'color', 'type', 'role', 'mv', 'availability', 'page']);
           const search = main.querySelector('#collection-q'), mv = main.querySelector('#collection-mv');
           const form = main.querySelector('.col-filters'), extra = main.querySelector('#col-filter-extra');
+          const help = main.querySelector('#col-filter-help');
           assert(form.contains(search)); assert(form.contains(extra));
+          assert(form.contains(help)); assert(help.textContent.includes('Search terms'));
           assert.equal(form.fire('submit').defaultPrevented, true);
           // Match the browser return value omitted by the shared classList double.
           const changeClass = form.classList.toggle;
           form.classList.toggle = (name, force) => { changeClass(name, force); return form.classList.contains(name); };
           const toggle = cv.filterToggle; assert(toggle); assert.equal(cv.filterCount.textContent, '4');
           assert(toggle.getAttribute('aria-label').includes('4 active'));
-          assert.equal(toggle.getAttribute('aria-controls'), extra.id);
+          same(toggle.getAttribute('aria-controls').split(' '), [extra.id, help.id]);
           toggle.click(); assert.equal(toggle.getAttribute('aria-expanded'), 'true');
           toggle.click(); assert.equal(toggle.getAttribute('aria-expanded'), 'false');
           const colour = main.querySelector('#collection-color');
@@ -364,14 +366,14 @@ class CollectionFindLayoutUiTests(unittest.TestCase):
         """)
 
 
-def _declarations_at(css, selector, width):
+def _declarations_at(css, selector, width, height=1000):
     """Apply exact-selector declarations in source order, including matching media blocks.
 
     These checks cover page layout rules; they don't emulate browser rendering or
     selector specificity. Container and forced-colour rules are outside this fixture.
     """
     css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
-    device = {"width": width, "height": 1000, "pointer": "coarse" if width < 1000 else "fine",
+    device = {"width": width, "height": height, "pointer": "coarse" if width < 1000 else "fine",
               "hover": "none" if width < 1000 else "hover"}
 
     def rules(text):
@@ -386,7 +388,9 @@ def _declarations_at(css, selector, width):
             body = text[start + 1:end - 1]
             if header.startswith("@media"):
                 query = header.removeprefix("@media").strip()
-                if "forced-colors" not in query and "prefers-" not in query and _matches(query, device):
+                if "forced-colors" not in query and "prefers-" not in query and any(
+                    _matches(alternative, device) for alternative in query.split(",")
+                ):
                     yield from rules(body)
             elif not header.startswith("@"):
                 yield header, body
@@ -404,25 +408,30 @@ class CollectionFindDensityTests(unittest.TestCase):
     def setUp(self):
         self.css = (WEB / "collection.css").read_text(encoding="utf-8")
 
-    def style(self, selector, width):
-        return _declarations_at(self.css, selector, width)
+    def style(self, selector, width, height=1000):
+        return _declarations_at(self.css, selector, width, height)
 
-    def test_casual_widths_keep_rows_sticky_search_and_folded_extra_filters(self):
+    def test_casual_widths_keep_rows_and_folded_extra_filters_with_search_help(self):
         for width in [393, 820, 852, 900, 999]:
             with self.subTest(width=width):
                 self.assertEqual(self.style(".col-find-lab", width)["display"], "none")
                 self.assertEqual(self.style(".col-find-casual", width).get("display", "block"), "block")
-                form = self.style(".col-filters", width)
-                self.assertEqual(form["position"], "sticky")
-                self.assertEqual(form["top"], "var(--shell-top)")
                 self.assertEqual(self.style(".col-filter-q input", width)["min-height"], "48px")
                 toggle = self.style(".col-filter-toggle", width)
                 self.assertNotEqual(toggle.get("display"), "none")
                 self.assertEqual((toggle["width"], toggle["height"]), ("50px", "50px"))
                 self.assertEqual(self.style(".col-filter-extra", width)["display"], "none")
                 self.assertEqual(self.style(".col-filters.is-open .col-filter-extra", width)["display"], "grid")
-                self.assertEqual(self.style(".col-find-colour-note", width)["display"], "none")
-                self.assertEqual(self.style(".col-filters.is-open .col-find-colour-note", width)["display"], "block")
+                self.assertEqual(self.style(".col-filter-help", width)["display"], "none")
+                self.assertEqual(self.style(".col-filters.is-open .col-filter-help", width)["display"], "grid")
+
+    def test_phone_search_scrolls_with_the_results_in_both_collection_views(self):
+        for width, height, position in [(320, 700, "static"), (393, 852, "static"),
+                                        (852, 393, "static"), (820, 1180, "sticky"),
+                                        (1180, 820, "static")]:
+            with self.subTest(width=width, height=height):
+                for selector in (".col-filters", ".col-row-tools"):
+                    self.assertEqual(self.style(selector, width, height)["position"], position)
 
     def test_lab_widths_show_original_tiles_and_all_filters_at_normal_density(self):
         for width in [1000, 1180, 1470, 2560]:
@@ -433,7 +442,7 @@ class CollectionFindDensityTests(unittest.TestCase):
                 self.assertEqual(self.style(".col-filter-toggle", width)["display"], "none")
                 self.assertEqual(self.style(".col-filter-extra", width)["display"], "grid")
                 self.assertEqual(self.style(".col-filter-q input", width)["min-height"], "var(--input-h)")
-                self.assertEqual(self.style(".col-find-colour-note", width)["display"], "block")
+                self.assertEqual(self.style(".col-filter-help", width)["display"], "grid")
 
     def test_row_geometry_keeps_56px_art_count_and_wrappable_names(self):
         row = self.style(".col-find-open", 393)

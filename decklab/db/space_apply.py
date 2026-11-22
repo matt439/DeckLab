@@ -25,17 +25,19 @@ LOCK_TABLES = tuple(sorted({
     "ops.visit_day", "ops.visit_page", "public.space_departure", "public.deck_draft",
     "public.new_deck_draft", "public.dice_counter", "public.card_loan", "public.space_storage",
     "public.collection_batch", "public.upgrade_checklist", "public.deck_upgrade_checklist",
+    "public.collection_section_audit",
 }))
 # Locked only once their migration is applied (deck_draft: 0018, new_deck_draft: 0019, dice_counter:
-# 0020, card_loan: 0024, space_storage: 0028, upgrade_checklist: 0029, deck_upgrade_checklist: 0030).
+# 0020, card_loan: 0024, space_storage: 0028, upgrade_checklist: 0029, deck_upgrade_checklist: 0030,
+# collection_section_audit: 0031).
 OPTIONAL_TABLES = frozenset({"public.deck_draft", "public.new_deck_draft", "public.dice_counter", "public.card_loan",
                              "public.space_storage", "public.collection_batch", "public.upgrade_checklist",
-                             "public.deck_upgrade_checklist"})
+                             "public.deck_upgrade_checklist", "public.collection_section_audit"})
 DELETE_ORDER = ("ops.visit_page", "ops.visit_day", "deck_draft", "new_deck_draft", "deck_upgrade_checklist",
                 "collection_batch", "profile_email", "collection_import_content",
                 "collection_import", "card_loan", "collection_card", "token_card", "dice_counter", "deck_line", "deck_text",
                 "deck_revision", "deck_alias", "deck", "wishlist_entry", "upgrade_checklist", "profile_setting",
-                "visibility", "space_storage", "profile", "space")
+                "visibility", "space_storage", "collection_section_audit", "profile", "space")
 OPTIONS = "-c lock_timeout=2000 -c statement_timeout=15000"
 
 

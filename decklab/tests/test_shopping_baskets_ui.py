@@ -92,6 +92,9 @@ class ShoppingBasketsTests(unittest.TestCase):
           assert(mtg.textContent.includes('Printing not confirmed here, so no stock is claimed: Exact'));
           assert.equal(mtg.querySelector('.shop-basket-copy'), null);
           assert(gp.textContent.includes("couldn't be read, so no stock is claimed there"));
+          const warning = gp.querySelector('.note');
+          warning.querySelector('[aria-label="Dismiss Games Portal warning"]').click();
+          assert.equal(warning.hidden, true);
           assert.equal(gp.querySelector('.shop-basket-rows'), null);
           const missing = section().querySelector('[data-basket-unavailable]');
           assert.equal(missing.getAttribute('data-basket-unavailable'), 'Late');

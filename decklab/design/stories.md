@@ -42,11 +42,11 @@ Story numbers have gaps: ids are kept stable and never reused, and stories merge
 | [E5: Decide what to buy](#e5-decide-what-to-buy) | 42 | 38 | 1 | 1 | 2 |
 | [E6: Record orders and receive cards](#e6-record-orders-and-receive-cards) | 26 | 24 | 0 | 0 | 2 |
 | [E7: Keep the collection accurate](#e7-keep-the-collection-accurate) | 38 | 37 | 1 | 0 | 0 |
-| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 23 | 21 | 0 | 0 | 2 |
+| [E8: Sleeves, boxes and storage](#e8-sleeves-boxes-and-storage) | 24 | 22 | 0 | 0 | 2 |
 | [E9: Commander nights](#e9-commander-nights) | 35 | 32 | 2 | 0 | 1 |
 | [E10: Members, access and privacy](#e10-members-access-and-privacy) | 38 | 34 | 1 | 1 | 2 |
 | [E11: Run and trust the system](#e11-run-and-trust-the-system) | 88 | 70 | 10 | 4 | 4 |
-| **Total** | **417** | **371** | **23** | **6** | **17** |
+| **Total** | **418** | **372** | **23** | **6** | **17** |
 
 Generated from the story headers by `python scripts/audit_stories.py --write`; the lint workflow fails when this table or the design [README](README.md)'s epic table and totals disagree with them (`--check`). How each story got to its status is in its **Now** line and [HISTORY.md](../HISTORY.md).
 
@@ -3823,6 +3823,8 @@ Evidence:
 
 The bulk scanning slice (2026-11-20) adds live camera capture and selectable grid slots to Collection, plus elapsed-time reporting through the completed import. Individual photos and manual entry still use the same review flow. [Guide](../README.md#scan-a-stack-or-binder-page) · [Live capture](../web/collection-scan-live.js) · [Grid capture](../web/collection-scan-grid.js) · [Import timing tests](../tests/test_collection_scan_rate_ui.py)
 
+The scan audit (2026-11-22) compares physical counts in the viewer's own space. A built deck uses its saved physical card names across all sections. A storage section uses loose copies by set, collector number and finish, with hand counts for printed tokens. The final report names missing and extra cards and flags skipped photos. Counts can be corrected in the open sheet and expire when it closes. [Scan audit guide](../README.md#scan-to-audit-a-deck-or-storage-section)
+
 Gap: Real phone and webcam capture, printed card and token photos, reflection through sleeves and binder pockets, and end-to-end physical throughput await a hands-on check.
 
 Next slice: try 10–20 real photos per household phone, including old cards, foils, sleeves and tokens. Run the [100-card comparison](scanning-spike.md#compare-cards-per-hour) with the physical stack and check exact printing, finish and quantity against the saved copies.
@@ -4396,6 +4398,16 @@ As Matt, unpacking a delivery or an import, I want Where these go's "To storage"
 - Given the lookup fails, then the save and its other advice stand.
 
 Built (2026-11-12): Build decks' name-keyed location lookup moved to `lib/api/storage_places.py` (`by_name`, `advice`), shared by `assembly_locations` and a bounded `storage_locations` field on the receipt's answer (`lib/api/receipts.py`) and the filing advice's answer (`lib/api/collection_filing.py`), each read from the same saved snapshot as its advice and only for that answer's own readers; the CLI `collection merge` advice prints the same words. `web/storage-locations.js` renders each To storage line's "Usually in Row 2, B" (at most three, then "and N more") or "No location recorded yet" for `receipt-workflow.js` and `collection-filing.js`. Without migration 0016 the lines say locations aren't available yet, and a failed lookup drops only the location words. Tests: `tests/test_where_these_go_locations.py`, `tests/test_where_these_go_locations_ui.py`.
+
+**E8-S28** · Matt · should · M · built
+
+As a collection owner, I want to see how big each storage section is and count one section at a time, so I can check the physical cards against Deck Lab.
+
+- Given a collection with colour and type filing, the Storage map shows sections such as White creatures and sizes them by expected loose copies. Recorded locations take precedence. The section list reaches small and empty dividers by keyboard and touch.
+- Given a section with a saved audit, opening it shows the latest date, differences and whether the expected checklist changed. Opening or starting a count writes nothing.
+- Given a completed count, review missing, surplus and unlisted copies before saving. Save checks the current section and audit revision and records the result privately. Use the ordinary inventory edits for corrections.
+
+Built (2026-11-22): [Storage audit guide](../README.md#audit-a-storage-section). The map and count review use the same section server endpoint with a section receipt. Migration `0031` stores one latest audit per section in its own space. Fixture tests cover classification, allocation, stale counts, private access and isolated PostgreSQL persistence. Chromium exercises the proportional map and count flow with synthetic data.
 ---
 
 ## E9: Commander nights

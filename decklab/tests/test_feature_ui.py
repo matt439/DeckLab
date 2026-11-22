@@ -54,13 +54,14 @@ class FeatureUiTests(unittest.TestCase):
           assert(meta({condition: '', language: ''}).includes('Condition not recorded'));
           assert(meta({condition: '', language: ''}).includes('Language not recorded'));
           // The "not recorded" choice is unticked when its filter is reset (no such rows any more).
-          const box = el('input', {type: 'checkbox'}); box.checked = true;
-          const rows = {list: el('div'), rows: [{name: 'Alpha', set: 'fdn', collector_number: '1', finish: 'nonfoil',
-            quantity: 1, condition: 'NM', language: 'en', notes: ''}], unrecordedLabel: el('span'),
-            unrecordedChoice: el('label'), unrecorded: box, count: el('p'), sort: {key: 'name', dir: 1}, page: 1,
-            search: '', unrecordedOnly: true, editable: false, pictures: {}, busy: false};
+          const card = {name: 'Alpha', set: 'fdn', collector_number: '1', finish: 'nonfoil',
+            quantity: 1, condition: '', language: 'en', notes: ''};
+          const rows = drawCollectionRows({space: 'home', rows: [card], editable: false}, 'home');
+          rows.unrecorded.checked = true; rows.unrecorded.fire('change');
+          assert(rows.unrecordedOnly);
+          rows.rows = [{...card, condition: 'NM'}];
           drawColRowList(rows);
-          assert.equal(rows.unrecordedOnly, false); assert.equal(box.checked, false);
+          assert.equal(rows.unrecordedOnly, false); assert.equal(rows.unrecorded.checked, false);
         """)
 
     def test_library_filter_and_feature_routes_are_reachable(self):

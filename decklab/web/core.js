@@ -284,10 +284,20 @@ function note(...paragraphs) {
   return el("div", { class: "note" }, el("div", {}, paragraphs.map((p) => el("p", {}, p))));
 }
 
+function dismissibleWarning(box, label = "Dismiss warning", onDismiss = null) {
+  box.classList.add("warning-dismissible");
+  box.append(el("button", { type: "button", class: "btn btn-quiet warning-dismiss", text: "×",
+    "aria-label": label, title: label, onclick: () => {
+      box.hidden = true;
+      onDismiss?.();
+    } }));
+  return box;
+}
+
 function warningsBox(warnings, title) {
   if (!warnings || !warnings.length) return null;
-  return el("div", { class: "box box-warn" }, el("h2", { text: title }),
-    el("ul", {}, warnings.map((w) => el("li", { text: w }))));
+  return dismissibleWarning(el("div", { class: "box box-warn" }, el("h2", { text: title }),
+    el("ul", {}, warnings.map((w) => el("li", { text: w })))));
 }
 
 /** Put my changes to a row (mine, from base) on top of someone else's (theirs), field by field over keys:

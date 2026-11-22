@@ -6,6 +6,7 @@
  * Routes:
  *     #/collection[?space=<id>&q=&color=&type=&role=&mv=&availability=&page=]   finding cards
  *     #/collection?space=<id>&view=rows                                       the space's rows, to edit
+ *     #/collection?space=<id>&view=map                                        expected storage and section audits
  * Each space (lib/spaces.py) has its own collection: home's, and each person's. The page opens on
  * the visitor's own space. Home's addresses and requests leave ?space= out.
  *
@@ -74,13 +75,13 @@ function colPath(base, space, query) {
   return text ? `${base}?${text}` : base;
 }
 
-/** The page's own address for a space and view ("find" or "rows"), with the filters when finding. */
+/** The page's own address for its space and view, with the filters when finding. */
 function colHash(space, view = "find", query = null) {
   const params = new URLSearchParams(view === "find" && query ? query : "");
   params.delete("space");
   if (space && space !== HOME_SPACE) params.set("space", space);
   else if (space === HOME_SPACE && ownSpace() !== HOME_SPACE) params.set("space", HOME_SPACE);
-  if (view === "rows") params.set("view", "rows");
+  if (view === "rows" || view === "map") params.set("view", view);
   const text = params.toString();
   return `#/collection${text ? `?${text}` : ""}`;
 }
@@ -189,6 +190,10 @@ function showCollection(params, token) {
   if (params.get("view") === "rows") {
     return load(colPath("/api/collection/rows", space), token, (data) => drawCollectionRows(data, space, token),
       { title: "The collection couldn't be loaded" });
+  }
+  if (params.get("view") === "map") {
+    return load(colPath(COL_STORAGE_MAP_API, space), token, (data) => drawCollectionStorageMap(data, space, token),
+      { title: "The storage map couldn't be loaded" });
   }
   const query = new URLSearchParams();
   for (const key of COL_FILTER_KEYS) if (params.get(key)) query.set(key, params.get(key));
@@ -312,17 +317,19 @@ async function downloadCollection(cv) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** The head of both views: the title with Add card (where the visitor may change this collection) and
- * More (Import cards, Scan cards, Add a precon, Precons we could build, Commanders we could build, Record a trade, Loans, Storage setup, Download), then the space picker and Find cards / Card list. */
+/** The collection title, actions, space picker and tabs. */
 function colHead(cv, query) {
   const spaces = sortSpaces(Array.isArray(cv.data.spaces) && cv.data.spaces.length ? cv.data.spaces : spaceList())
     .filter((s) => seesInventory(s.id));
   const picker = spaces.length > 1 ? el("nav", { class: "segmented col-spaces", "aria-label": "Whose collection" },
-    spaces.map((s) => el("a", { href: colHash(s.id, cv.kind, query), text: s.id === HOME_SPACE ? "Home" : s.name,
+    spaces.map((s) => el("a", { href: colHash(s.id, cv.kind === "map" && s.id !== cv.space ? "rows" : cv.kind, query),
+      text: s.id === HOME_SPACE ? "Home" : s.name,
       "aria-current": s.id === cv.space ? "page" : null }))) : null;
   const tabs = el("nav", { class: "segmented col-views", "aria-label": "Collection view" },
     el("a", { href: colHash(cv.space, "find", query), text: "Find cards", "aria-current": cv.kind === "find" ? "page" : null }),
-    el("a", { href: colHash(cv.space, "rows"), text: "Card list", "aria-current": cv.kind === "rows" ? "page" : null }));
+    el("a", { href: colHash(cv.space, "rows"), text: "Card list", "aria-current": cv.kind === "rows" ? "page" : null }),
+    cv.editable && !cv.unsupported ? el("a", { href: colHash(cv.space, "map"), text: "Storage map",
+      "aria-current": cv.kind === "map" ? "page" : null }) : null);
   const owner = cv.space === HOME_SPACE ? "the people of the home collection" : spaceName(cv.space);
   const more = [
     cv.editable && !cv.unsupported ? { label: "Start recording a collection.", onclick: () => openCollectionStartSheet(cv) } : null,
@@ -339,10 +346,11 @@ function colHead(cv, query) {
       ? { label: "Download my space (zip)", onclick: () => downloadMemberSpace(cv) } : null];
   return [
     ...pageHead({ title: colTitle(cv.space),
-      description: cv.kind === "rows" ? "Every printing recorded, one row each." : "Cards you own or have on the way.",
-      primary: cv.editable ? el("button", { type: "button", class: "btn btn-primary col-mutate", text: "Add card",
+      description: cv.kind === "rows" ? "Every printing recorded, one row each."
+        : cv.kind === "find" ? "Cards you own or have on the way." : null,
+      primary: cv.editable && cv.kind !== "map" ? el("button", { type: "button", class: "btn btn-primary col-mutate", text: "Add card",
         "data-focus": "add", onclick: () => openCollectionSheet(cv) }) : null,
-      more }),
+      more: cv.kind === "map" ? [] : more }),
     el("div", { class: "col-switches" }, picker, tabs),
     cv.unsupported ? el("p", { class: "box box-info",
       text: `${spaceName(cv.space)}'s collection can't be shown until Deck Lab's server is updated.` })
@@ -514,7 +522,7 @@ function colFilters(cv) {
     onsubmit: (event) => event.preventDefault() });
   cv.filterCount = el("span", { class: "col-filter-count", "aria-hidden": "true" });
   const toggle = el("button", { type: "button", class: "btn col-filter-toggle", "aria-expanded": "false",
-    "aria-controls": "col-filter-extra", onclick: () => {
+    "aria-controls": "col-filter-extra col-filter-help", onclick: () => {
       if (colActive(cv)) toggle.setAttribute("aria-expanded", String(form.classList.toggle("is-open")));
     } }, el("span", { class: "sr-only", text: "Filter cards" }),
     svgEl("svg", { viewBox: "0 0 20 20", width: 20, height: 20, "aria-hidden": "true", focusable: "false" },
@@ -531,9 +539,9 @@ function colFilters(cv) {
       field("type", "Type", select("type", [["", "Any"], ...(data.types || []).map((v) => [v, v])])),
       field("role", "Role", select("role", [["", "Any"], ...(data.roles || []).map((v) => [v, capitalise(v)])])),
       field("mv", "Mana value", mv)),
-    el("p", { class: "sub col-find-colour-note",
-      text: "Colour identity, as the pips show it: cards within the chosen colours, colourless ones included." }),
-    el("p", { class: "sub col-find-search-note", text: 'Search terms: o:"draw a card", t:creature, -o:discard, -t:land; mana value mv<=2, mv>=5 or mv=3.' })]);
+    el("div", { id: "col-filter-help", class: "col-filter-help" },
+      el("p", { class: "sub col-find-colour-note", text: "Colour identity matches cards within the chosen colours, including colourless cards." }),
+      el("p", { class: "sub col-find-search-note", text: 'Search terms include o:"draw a card", t:creature, -o:discard and -t:land. For mana value, use mv<=2, mv>=5 or mv=3.' }))]);
   return form;
 }
 

@@ -87,6 +87,22 @@ class EditorEdhrecUiTests(unittest.TestCase):
           assert(mine.note.hidden);
         """)
 
+    def test_dismissed_source_warning_stays_closed_when_search_changes(self):
+        self.run_js(r"""
+          answer.source.stale = "EDHREC couldn't be reached. Showing saved ideas.";
+          const ac = commanderEditor();
+          tick(ac); await settle();
+          const close = ac.note.querySelector('[aria-label="Dismiss EDHREC warning"]');
+          const warning = close.parentNode;
+          assert(warning.textContent.includes('Showing saved ideas.'));
+          close.click();
+          assert.equal(warning.hidden, true);
+          ac.input.value = 'elvish'; ac.input.fire('input'); await settle();
+          same(names(ac), ['Elvish Mystic']);
+          assert.equal(ac.note.querySelector('[aria-label="Dismiss EDHREC warning"]'), null);
+          assert.equal(edhrecAsks(), 1);
+        """)
+
     def test_ideas_list_in_edhrec_order_without_the_draft_and_add_to_the_chosen_section(self):
         self.run_js(r"""
           const ac = commanderEditor();
@@ -306,9 +322,14 @@ class EditorEdhrecUiTests(unittest.TestCase):
           tick(none); await settle();
           assert(none.list.textContent.includes('EDHREC has no page for this commander yet'));
           assert(!none.list.querySelectorAll('button').some((b) => b.textContent === 'Try again'));
+          none.input.value = 'Alpha';
+          none.list.querySelector('[aria-label="Dismiss EDHREC warning"]').click();
+          assert.equal(none.list.hidden, true);
+          none.input.fire('input'); await settle();
+          assert.equal(none.list.hidden, true);
+          assert.equal(edhrecAsks(), 3);
           // The rest of the Add panel goes on: back to the search, whose results add as before.
           tick(none, false); await settle();
-          none.input.value = 'Alpha'; none.input.fire('input'); await settle();
           const finds = asked.filter((path) => path.startsWith('/api/deck/find'));
           assert.equal(finds.length, 1, 'the plain search asks /api/deck/find again');
           assert(finds[0].includes('q=Alpha'), finds[0]);
@@ -316,6 +337,9 @@ class EditorEdhrecUiTests(unittest.TestCase):
           none.list.querySelector('.ac-add').click();
           same(editor.lists.Deck.map((l) => l.name), ['Alpha', 'Llanowar Elves']);
           assert.equal(edhrecAsks(), 3, 'the plain search never asks EDHREC');
+          answer = ANSWER();
+          tick(none); await settle();
+          assert.equal(edhrecAsks(), 4, 'reopening EDHREC asks again after dismissal');
         """)
 
 

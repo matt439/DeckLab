@@ -611,6 +611,9 @@ def deck_view(deck_id, version="target", omit=()):
     separate from sections and their hashes; None for products and pairings. Its own warnings
     describe invalid saved mappings without changing the logical list.
 
+    scan_audit is the built deck's physical counts by card name and its scanner availability.
+    It is offered only within its own space, including when both decks and inventory are public.
+
     printings_in_box is a built home deck's Printings in box record (deck_printings.view: what it
     records that can still be true, why the rest is ignored, and its sheet's choices); absent
     otherwise.
@@ -735,6 +738,10 @@ def deck_view(deck_id, version="target", omit=()):
     if sees:
         # E7-S08: each token's suggested count from the list's saved Forge games (token_peaks.py).
         from .token_peaks import with_peaks
+        from .box_check import scan_audit
+        sheet = scan_audit(deck_file, warnings)
+        if sheet is not None:
+            answer["scan_audit"] = sheet
         answer.update(owned=owned, tokens=with_peaks(_view_tokens(summary, version, sections, info), summary, sections),
                       table=table)
         if deck_file is not None and space == spaces.HOME and guard.sees_home_records():
