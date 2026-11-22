@@ -11,8 +11,9 @@ ABSENT_MISSING_SNAPSHOT = {
     "url": None, "in_stock_printings": 0, "error": None,
     "back_in_stock": False, "newly_in_stock": False, "carried": False,
 }
-# Every snapshot shop's absent default, in order (E5-S08's second shop, 2026-10-31).
-ABSENT_MISSING_SNAPSHOTS = [ABSENT_MISSING_SNAPSHOT, {**ABSENT_MISSING_SNAPSHOT, "shop": "Games Portal"}]
+ABSENT_MISSING_SNAPSHOTS = [ABSENT_MISSING_SNAPSHOT]
+# Historical captures could include Games Portal's absent default before checks were disabled.
+LEGACY_ABSENT_SNAPSHOTS = [ABSENT_MISSING_SNAPSHOT, {**ABSENT_MISSING_SNAPSHOT, "shop": "Games Portal"}]
 
 
 def _home_selector(value):
@@ -41,8 +42,12 @@ def _absent(value, default=ABSENT_MISSING_SNAPSHOT):
 
 
 def _all_absent(value):
-    return (type(value) is list and len(value) == len(ABSENT_MISSING_SNAPSHOTS)
-            and all(_absent(item, default) for item, default in zip(value, ABSENT_MISSING_SNAPSHOTS)))
+    if type(value) is not list:
+        return False
+    return any(
+        len(value) == len(defaults) and all(_absent(item, default) for item, default in zip(value, defaults))
+        for defaults in (ABSENT_MISSING_SNAPSHOTS, LEGACY_ABSENT_SNAPSHOTS)
+    )
 
 
 def _deck_views(mine):

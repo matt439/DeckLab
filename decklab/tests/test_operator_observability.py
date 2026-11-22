@@ -108,6 +108,13 @@ class ShopHealthTests(DisposableOperations):
         self.assertEqual(health.read()["mtgmate"]["last_read"], "2026-11-01")
         self.assertEqual(health.heartbeat_steps(date(2026, 11, 2)), {"shop_mtgmate": False})
 
+    def test_same_night_heartbeat_omits_disabled_shop_but_keeps_its_receipt(self):
+        night = date(2026, 11, 22)
+        health.record("gamesportal", "failed", night)
+        health.record("mtgmate", "ok", night)
+        self.assertEqual(health.heartbeat_steps(night), {"shop_mtgmate": True})
+        self.assertEqual(health.read()["gamesportal"]["outcome"], "failed")
+
     def test_unknown_health_is_not_reported_as_success_or_empty_healthy_history(self):
         health.path().parent.mkdir(parents=True)
         health.path().write_text("{damaged", encoding="utf-8")

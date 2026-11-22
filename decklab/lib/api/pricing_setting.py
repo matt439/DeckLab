@@ -4,7 +4,7 @@ admin's choice on Settings' Prices panel, saved in the database over config.json
     GET /api/pricing-setting   home's record readers (permissions.sees_home_records), anyone else
                                403 before any read: {"revision",
                                  "currency": {saved, config, effective, symbol, source},
-                                 "shops": {saved, config, effective, choices: [{key, name, site}], source},
+                                 "shops": {saved, config, effective, choices: [{key, name, site}], unavailable, source},
                                  "currencies": ECB_CODES with their symbols, "can_edit"}
                                saved is the Settings choice (None: config.json's applies), config
                                config.json's (None when unset), effective what Deck Lab uses now and
@@ -59,7 +59,9 @@ def _answer(saved):
         "shops": {"saved": record["shops"], "config": config_shops,
                   "effective": [adapter.key for adapter in shops.enabled_adapters(merged)],
                   "choices": [{"key": adapter.key, "name": adapter.name, "site": adapter.site}
-                              for adapter in shops.SNAPSHOT_ADAPTERS],
+                              for adapter in shops.available_adapters()],
+                  "unavailable": [adapter.disabled_reason for adapter in shops.SNAPSHOT_ADAPTERS
+                                  if adapter.disabled_reason],
                   "source": pricing_setting.source(shops.SETTING, base, record)},
         "currencies": [{"code": code, "symbol": currency.symbol(code)} for code in currency.ECB_CODES],
         "listing_preferences": {"saved": record.get("listing_preferences"),

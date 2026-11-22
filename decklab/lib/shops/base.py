@@ -55,6 +55,7 @@ class Adapter:
     site = ""
     robots_path = "/robots.txt"
     counts_stock = True                     # False: its pages say only available or not (stock 1 or 0)
+    disabled_reason = None                   # A known shop whose adapter is kept for saved data
 
     def robots_url(self):
         return self.site + self.robots_path

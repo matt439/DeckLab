@@ -15,7 +15,7 @@ from unittest import mock
 from decklab.lib import shops
 from decklab.lib.api import shop_missing_prices, shop_prices
 from decklab.lib.shops import gamesportal, mtgmate
-from decklab.tests.test_shop_adapters import SavedShop
+from decklab.tests.test_shop_adapters import SavedShop, games_portal_fixture
 from decklab.tests.test_shops import SOL_RING, Clock, FakeShop
 from decklab.tests.test_shops import session as mtgmate_session
 
@@ -35,6 +35,7 @@ def gp_session(pages=None, fail=False):
 
 class TwoShopTestCase(unittest.TestCase):
     def setUp(self):
+        self.enterContext(games_portal_fixture())
         folder = tempfile.TemporaryDirectory()
         self.addCleanup(folder.cleanup)
         self.path = Path(folder.name) / "shops" / "mtgmate.json"
@@ -130,6 +131,9 @@ class SnapshotTests(TwoShopTestCase):
 
 
 class NightlyTests(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(games_portal_fixture())
+
     def test_the_shops_run_side_by_side_each_within_the_one_budget(self):
         both = threading.Barrier(2, timeout=10)
         calls = []

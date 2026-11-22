@@ -46,7 +46,7 @@ def by_name(lines):
 class BasketTests(unittest.TestCase):
     def build(self, rows, mtg=None, gp=None):
         captured = {key: value for key, value in (("mtgmate", mtg), ("gamesportal", gp)) if value}
-        return shop_baskets.build(rows, captured or None, "rev-1")
+        return shop_baskets.build(rows, captured or None, "rev-1", adapters=shops.SNAPSHOT_ADAPTERS)
 
     def basket(self, built, key):
         return next(item for item in built["shops"] if item["key"] == key)
@@ -261,8 +261,7 @@ class BasketShoppingTests(fixtures._Fixture, unittest.TestCase):
             answer = self.overview()
         baskets = answer["baskets"]
         self.assertEqual(baskets["queue_revision"], answer["queue_revision"])
-        self.assertEqual([item["key"] for item in baskets["shops"]], ["mtgmate", "gamesportal"])
-        self.assertFalse(baskets["shops"][1]["read"])
+        self.assertEqual([item["key"] for item in baskets["shops"]], ["mtgmate"])
         ready = {item["queue_row"] for item in answer["to_buy"] if item["state"] == "ready"}
         self.assertTrue(ready)
         shown = {item["queue_row"] for item in baskets["shops"][0]["rows"]} | {item["queue_row"] for item in baskets["unavailable"]}

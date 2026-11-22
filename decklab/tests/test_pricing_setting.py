@@ -76,9 +76,10 @@ class RulesTests(_Fresh):
 
 
 class ResolverTests(_Fresh):
-    def test_without_a_store_config_json_then_the_default_as_before(self):
+    def test_without_a_store_config_json_then_the_available_default(self):
         with configured():
-            self.assertEqual((currency.code(), shops.enabled_adapters()), ("AUD", shops.SNAPSHOT_ADAPTERS))
+            self.assertEqual(currency.code(), "AUD")
+            self.assertEqual([adapter.key for adapter in shops.enabled_adapters()], ["mtgmate"])
         with configured(currency="GBP", shops=["mtgmate"]):
             self.assertEqual(currency.code(), "GBP")
             self.assertEqual([a.key for a in shops.enabled_adapters()], ["mtgmate"])
@@ -140,7 +141,7 @@ class PricingApiTests(PermissionTestCase):
 
     def save(self, *, profile="matt", expect=0, currency_code="EUR", shops_keys=None, **other):
         return pricing_api.change(self.body(profile, expect=expect, currency=currency_code,
-                                            shops=["gamesportal"] if shops_keys is None else shops_keys, **other))
+                                            shops=["mtgmate"] if shops_keys is None else shops_keys, **other))
 
     def test_home_admin_saves_and_home_member_reads(self):
         with access.viewing("matt"):
@@ -149,11 +150,11 @@ class PricingApiTests(PermissionTestCase):
             self.assertEqual(shown["currency"], {"saved": None, "config": "GBP", "effective": "GBP", "symbol": "£",
                                                  "source": "config"})
             self.assertEqual((shown["shops"]["config"], shown["shops"]["effective"]), (["mtgmate"], ["mtgmate"]))
-            self.assertEqual([c["key"] for c in shown["shops"]["choices"]], ["mtgmate", "gamesportal"])
+            self.assertEqual([c["key"] for c in shown["shops"]["choices"]], ["mtgmate"])
             self.assertEqual(len(shown["currencies"]), len(currency.ECB_CODES))
             saved = self.save()
         self.assertEqual((saved["revision"], saved["currency"]["effective"], saved["currency"]["source"]), (1, "EUR", "saved"))
-        self.assertEqual(saved["shops"]["effective"], ["gamesportal"])
+        self.assertEqual(saved["shops"]["effective"], ["mtgmate"])
         self.assertEqual(currency.code(), "EUR")                  # at once: no restart
         with access.viewing("user1"):
             self.assertFalse(pricing_api.view()["can_edit"])
@@ -161,6 +162,14 @@ class PricingApiTests(PermissionTestCase):
         change, = self.box.state.changes()
         self.assertEqual((change["actor"], change["message"]), ("matt", "Set the price settings"))
         self.assertEqual((self.box.root / "config.json").read_bytes(), self.config_bytes)   # never written
+
+    def test_disabled_saved_shop_remains_readable_without_becoming_available(self):
+        self.box.state.pricing_setting_put({"shops": ["gamesportal", "mtgmate"]}, 0, MATT, "Old shop choice")
+        with access.viewing("matt"):
+            shown = pricing_api.view()["shops"]
+        self.assertEqual(shown["saved"], ["mtgmate", "gamesportal"])
+        self.assertEqual(shown["effective"], ["mtgmate"])
+        self.assertEqual([choice["key"] for choice in shown["choices"]], ["mtgmate"])
 
     def test_outsiders_are_refused_before_storage(self):
         for remote in (False, True):

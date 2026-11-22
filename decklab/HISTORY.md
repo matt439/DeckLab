@@ -1,5 +1,9 @@
 # Deck Lab: history
 
+## Disable Games Portal price checks (2026-11-22, E5-S08)
+
+Games Portal is disabled in nightly price checks and command-line fetches. MTGMate is the only shop offered in Settings. Existing `gamesportal` selections are ignored, and saved prices can still be read with `shops history NAME --shop gamesportal`. [Games Portal terms of service, section 12](https://gamesportal.com.au/policies/terms-of-service)
+
 ## Follow up on a physical audit (2026-11-22, E8-S28 and E7-S32)
 
 Collection's **Storage map** shows **Needs review** on sections with differences, even after the expectations change, and on collapsed rows that contain them. Hand counts and scans use the same storage audit review. The saved report names identified extras by printing and finish and keeps a separate count for unidentified copies. Open a relevant Collection or Tokens record from the saved difference, then return to the section. The count records what was found. Correcting inventory is a separate save, and a matching recount clears the review state. [Storage audit guide](README.md#audit-a-storage-section)

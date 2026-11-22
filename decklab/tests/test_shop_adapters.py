@@ -10,18 +10,24 @@ import io
 import json
 import os
 import re
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
-from decklab.lib import config, shops
-from decklab.lib.shops import base, gamesportal, mtgmate
+from decklab.lib import config, pricing_setting, shops
+from decklab.lib.shops import base, gamesportal, health, mtgmate
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "shops"
 
 
 def saved(key, name):
     return (FIXTURES / key / name).read_text(encoding="utf-8")
+
+
+def games_portal_fixture():
+    """Enable the adapter for tests that supply synthetic pages or snapshots."""
+    return mock.patch.object(gamesportal.ADAPTER, "disabled_reason", None)
 
 
 class SavedShop:
@@ -270,7 +276,8 @@ class GamesPortalPageTests(unittest.TestCase):
 
     def test_a_snapshot_over_the_saved_pages(self):
         shop, sess = session(self.adapter, {"Sol Ring": "sol-ring.html"})
-        data = shops.take(["Sol Ring", "Nothing Such"], session=sess)
+        with games_portal_fixture():
+            data = shops.take(["Sol Ring", "Nothing Such"], session=sess)
         self.assertEqual(shop.urls, ["https://gamesportal.com.au/robots.txt",
                                      "https://gamesportal.com.au/search?q=Sol%20Ring&type=product",
                                      "https://gamesportal.com.au/search?q=Nothing%20Such&type=product"])
@@ -287,7 +294,7 @@ class GamesPortalPageTests(unittest.TestCase):
     def test_lookup_asks_it_only_when_named(self):
         pages = SavedShop(self.adapter, {"Sol Ring": "sol-ring.html"})
         out = io.StringIO()
-        with mock.patch.object(shops, "_fetch", side_effect=lambda url, shop: pages(url)), \
+        with games_portal_fixture(), mock.patch.object(shops, "_fetch", side_effect=lambda url, shop: pages(url)), \
                 mock.patch.object(shops.time, "sleep"), contextlib.redirect_stdout(out):
             code = shops.main(["lookup", "Sol Ring", "--shop", "gamesportal"])
         self.assertEqual(code, 0)
@@ -308,6 +315,52 @@ class GamesPortalPageTests(unittest.TestCase):
                 self.assertIsNone(re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", text), "no email address")
                 body = text.removeprefix("<!doctype html>\n")
                 self.assertTrue(body.startswith(("<!-- Synthetic", "# Synthetic")), "marked synthetic in its first comment")
+
+
+class DisabledGamesPortalTests(unittest.TestCase):
+    def test_nightly_leaves_games_portal_out_even_if_previously_selected(self):
+        with mock.patch.object(pricing_setting, "settings", return_value={"shops": ["gamesportal", "mtgmate"]}), \
+                mock.patch.object(shops, "refresh", return_value=0) as refresh, \
+                mock.patch.object(health, "observe") as receipt:
+            self.assertEqual(shops.nightly(lambda words: None), 0)
+        refresh.assert_called_once()
+        self.assertIs(refresh.call_args.kwargs["adapter"], mtgmate.ADAPTER)
+        receipt.assert_called_once()
+        self.assertIs(receipt.call_args.args[0], mtgmate.ADAPTER)
+
+    def test_session_and_forced_snapshot_refuse_before_reading_any_page(self):
+        adapter = gamesportal.ADAPTER
+        fetch = mock.Mock(side_effect=AssertionError("no network"))
+        sess = shops.Session(fetch=fetch, adapter=adapter)
+        with self.assertRaises(base.ShopError) as refused:
+            sess.listings("Sol Ring")
+        self.assertEqual(str(refused.exception), adapter.disabled_reason)
+
+        with mock.patch.object(shops, "_queue", side_effect=AssertionError("no queue read")):
+            for args in (["lookup", "Sol Ring"], ["snapshot", "--force"], ["snapshot", "--dry-run"]):
+                with self.subTest(args=args), mock.patch.object(shops, "_fetch", fetch), \
+                        contextlib.redirect_stdout(io.StringIO()) as output, \
+                        contextlib.redirect_stderr(io.StringIO()) as errors:
+                    self.assertEqual(shops.main([*args, "--shop", adapter.key]), 1)
+                    self.assertIn(adapter.disabled_reason, output.getvalue() + errors.getvalue())
+            said = []
+            self.assertEqual(shops.refresh(adapter=adapter, say=said.append, force=True), 1)
+            self.assertEqual(said, [adapter.disabled_reason])
+        fetch.assert_not_called()
+
+    def test_explicit_history_remains_readable(self):
+        adapter = gamesportal.ADAPTER
+        with tempfile.TemporaryDirectory() as folder, \
+                mock.patch.object(shops, "SNAPSHOT", Path(folder) / "mtgmate.json"), \
+                mock.patch.object(shops, "_fetch", side_effect=AssertionError("no network")) as fetch, \
+                contextlib.redirect_stdout(io.StringIO()) as output:
+            history = {"Sol Ring": [{"on": "2026-11-19", "at": "2026-11-19T03:32:00+10:00", "listings": []}]}
+            shops._write_history(history, adapter)
+            self.assertEqual(shops.main(["history", "Sol Ring", "--shop", adapter.key, "--json"]), 0)
+            answer = json.loads(output.getvalue())
+        self.assertEqual([result["shop"] for result in answer["shops"]], [adapter.name])
+        self.assertEqual(answer["shops"][0]["days"][0]["on"], "2026-11-19")
+        fetch.assert_not_called()
 
 
 if __name__ == "__main__":

@@ -29,13 +29,13 @@ class EnabledAdaptersTests(unittest.TestCase):
         with setting(value, present), contextlib.redirect_stderr(io.StringIO()) as err:
             return [adapter.key for adapter in shops.enabled_adapters()], err.getvalue()
 
-    def test_unset_means_every_shop_as_before(self):
-        self.assertEqual(self.keys(present=False), (["mtgmate", "gamesportal"], ""))
-        self.assertEqual(self.keys(None), (["mtgmate", "gamesportal"], ""))
+    def test_unset_means_every_available_shop(self):
+        self.assertEqual(self.keys(present=False), (["mtgmate"], ""))
+        self.assertEqual(self.keys(None), (["mtgmate"], ""))
 
-    def test_a_list_keeps_only_those_in_the_page_order(self):
-        self.assertEqual(self.keys(["gamesportal"])[0], ["gamesportal"])
-        self.assertEqual(self.keys(["GamesPortal", " mtgmate "])[0], ["mtgmate", "gamesportal"])
+    def test_a_list_keeps_only_available_shops(self):
+        self.assertEqual(self.keys(["gamesportal"])[0], [])
+        self.assertEqual(self.keys(["GamesPortal", " mtgmate "])[0], ["mtgmate"])
 
     def test_empty_list_turns_the_check_off(self):
         self.assertEqual(self.keys([]), ([], ""))
@@ -48,7 +48,7 @@ class EnabledAdaptersTests(unittest.TestCase):
 
     def test_a_value_that_isnt_a_list_counts_as_unset(self):
         keys, said = self.keys("mtgmate")
-        self.assertEqual(keys, ["mtgmate", "gamesportal"])
+        self.assertEqual(keys, ["mtgmate"])
         self.assertIn("isn't a list", said)
 
 
@@ -62,16 +62,17 @@ class NightlyTests(unittest.TestCase):
         self.assertIn("skipped", lines[0])
         self.assertIn('"shops"', lines[0])
 
-    def test_one_shop_reads_only_that_one(self):
-        with setting(["gamesportal"]), mock.patch.object(shops, "refresh", return_value=0) as refresh:
+    def test_a_disabled_shop_is_not_dispatched(self):
+        with setting(["gamesportal"]), mock.patch.object(shops, "refresh") as refresh:
             self.assertEqual(shops.nightly(lambda _words: None), 0)
-        self.assertEqual([call.kwargs["adapter"].key for call in refresh.call_args_list], ["gamesportal"])
+        refresh.assert_not_called()
 
-    def test_unset_reads_both(self):
-        with setting(present=False), mock.patch.object(shops, "refresh", return_value=0) as refresh:
-            shops.nightly(lambda _words: None)
-        self.assertEqual(sorted(call.kwargs["adapter"].key for call in refresh.call_args_list),
-                         ["gamesportal", "mtgmate"])
+    def test_nightly_reads_only_the_available_shop(self):
+        for configured in (None, ["gamesportal", "mtgmate"]):
+            with self.subTest(configured=configured), setting(configured), \
+                    mock.patch.object(shops, "refresh", return_value=0) as refresh:
+                self.assertEqual(shops.nightly(lambda _words: None), 0)
+                self.assertEqual([call.kwargs["adapter"].key for call in refresh.call_args_list], ["mtgmate"])
 
 
 class CommandTests(unittest.TestCase):
@@ -86,7 +87,7 @@ class CommandTests(unittest.TestCase):
             for command in ("snapshot", "show"):
                 code, said = self.run_main(command)
                 self.assertEqual(code, 0)
-                self.assertIn("No price-check shop is set", said)
+                self.assertIn("No available price-check shop is enabled", said)
         refresh.assert_not_called()
         load.assert_not_called()
 
@@ -113,20 +114,20 @@ class PageTests(unittest.TestCase):
             answer = {"to_buy": [row("Sol Ring", 1)]}
             shop_prices.enrich(answer, data=self.captured())
         load.assert_not_called()
-        self.assertIn("No price-check shop is set", answer["shops_off"])
+        self.assertIn("No available price-check shop is enabled", answer["shops_off"])
         self.assertNotIn("shop_snapshots", answer)
         self.assertNotIn("shop_snapshots", answer["to_buy"][0])
 
-    def test_unset_leaves_the_answer_as_before(self):
+    def test_disabled_shop_snapshot_is_not_shown_as_a_current_source(self):
         with setting(present=False):
             answer = shop_prices.enrich({"to_buy": [row("Sol Ring", 1)]}, data=self.captured())
         self.assertNotIn("shops_off", answer)
-        self.assertEqual([item["shop"] for item in answer["shop_snapshots"]], ["MTGMate", "Games Portal"])
+        self.assertEqual([item["shop"] for item in answer["shop_snapshots"]], ["MTGMate"])
 
     def test_baskets_only_for_enabled_shops(self):
-        with setting(["gamesportal"]):
+        with setting(["gamesportal", "mtgmate"]):
             built = shop_baskets.build([row("Sol Ring", 1)], self.captured(), "rev-1")
-        self.assertEqual([basket["key"] for basket in built["shops"]], ["gamesportal"])
+        self.assertEqual([basket["key"] for basket in built["shops"]], ["mtgmate"])
 
     def test_missing_cards_get_no_shop_lines_when_off(self):
         rows = [{"name": "Sol Ring", "missing": 1}]
