@@ -23,28 +23,27 @@ const COL_SCAN_CHOICES = 8;             // initial choices and retained proposal
 const COL_SCAN_UNSURE_MAX = 50;         // bounded proposal metadata only; never photo bytes
 const COL_SCAN_OFF = "Photos can't be read on this server, so type each card's name instead.";
 
-/** A physical-pile first route: choices open existing guarded review flows, never write inventory. */
-function openCollectionStartSheet(cv) {
+/** One collection entry sends each method to its existing editor or review. */
+function openCollectionAddSheet(cv) {
   if (!colActive(cv) || cv.busy || !cv.editable || cv.unsupported) return null;
-  const sheet = colOpenSheet("Start recording your collection", {wide: true});
+  const profile = state.profile, hash = location.hash;
+  const current = () => state.profile === profile && location.hash === hash && colActive(cv)
+    && !cv.busy && cv.editable && !cv.unsupported;
+  const sheet = colOpenSheet("Add cards", {wide: true});
   const choose = (text, help, open) => el("li", {},
-    el("button", {type: "button", class: "btn", text, onclick: event => {
-      if (sheet.closed || !colActive(cv) || cv.busy || !cv.editable || cv.unsupported || !event.currentTarget.isConnected) return;
-      sheet.close(); open(cv);
-    }}), el("p", {class: "sub", text: help}));
+    el("button", {type: "button", class: "btn", text, "aria-haspopup": "dialog", onclick: event => {
+      if (sheet.closed || keyboardDialog() !== sheet.dialog || !current() || !event.currentTarget.isConnected) return;
+      boxCollectionAfterSheet(sheet, current, () => open(cv));
+    }}), el("span", {class: "lib-start-line", text: help}));
   sheet.body.append(
-    el("p", {text: "You don't need a spreadsheet, and you don't need to record everything today. Start with one deck or a small pile of loose cards."}),
+    el("p", {text: "Start with a small pile. Keep recorded copies separate so each one is entered once."}),
     el("ul", {class: "lib-start-ways"},
-      choose("Enter a pile of loose cards", scanAvailable(cv.data)
-        ? "Use a camera, a photo of one card or a page of cards, or type names. Check the printings and review the batch together."
-        : "Type names and choose printings. Photo reading isn't available on this server, but manual entry works.", openScanSheet),
-      choose("Add an unchanged precon", "Use its published list instead of entering every card. Only use this shortcut when the physical cards match that list; check the preview first.", openPreconSheet),
-      choose("Import a list or saved batch", "Use a collection export, or a pending batch downloaded before you added it. Preview it before saving; don't import a batch you already added.", openImportSheet)),
-    el("ol", {},
-      el("li", {text: "Keep unrecorded cards in one pile. Put cards you have checked in a separate pile so you don't count them twice."}),
-      el("li", {text: "Choose the printing using the set code and collector number at the bottom of the card. Enter the quantity once for identical copies. Leave condition or language blank when unsure."}),
-      el("li", {text: "Review and add each small batch before starting the next. Adding a printing already recorded increases its quantity; it does not replace the count."})),
-    el("p", {class: "sub", text: "The pending scan list stays only in its open sheet. Download the batch before closing if you need to pause. Photos and unresolved guesses are not included. Plain basic lands are left out of collection imports."}));
+      choose("Enter one", "Choose a printing and the number of identical copies to add.", openCollectionSheet),
+      choose("Scan", scanAvailable(cv.data)
+        ? "Use a camera, image files or typed names. Check the printings and review the batch together."
+        : "Photo reading is unavailable on this server. Type names and review the batch together.", openScanSheet),
+      choose("Import a list", "Preview a collection export, typed list or a saved pending batch.", openImportSheet),
+      choose("Add a precon", "Check the published list against the precon you own before adding its cards.", openPreconSheet)));
   sheetActions(sheet, [{text: "Close", value: "cancel", onclick: () => sheet.close()}]);
   return sheet;
 }

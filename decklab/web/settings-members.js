@@ -8,8 +8,8 @@ function settingsMembersAdmin() {
 function settingsMembersPanel() {
   if (!settingsMembersAdmin()) return null;
   return el("section", { class: "panel settings-part", id: "settings-members", "aria-labelledby": "settings-members-title" },
-    el("h2", { id: "settings-members-title", text: "Members" }),
-    el("p", { class: "sub", text: "Add a member with their own space, or replace one of an existing member's sign-in emails." }),
+    el("h3", { id: "settings-members-title", text: "Members" }),
+    el("p", { class: "sub", text: "Add a member or change their email here, then update the Cloudflare Access policy and check their sign-in." }),
     el("div", { id: "settings-members-content" }, loadingBox("Loading member emails…")));
 }
 
@@ -139,6 +139,7 @@ function drawSettingsMembers(host, data, members, token, profile, owner) {
     clear(preview).append(el("p", {}, el("strong", { text: member.name })),
       el("p", {}, el("strong", { text: "Replace: " }), old.value),
       el("p", {}, el("strong", { text: "With: " }), email),
+      el("p", { text: "After saving, update the Cloudflare Access policy and check sign-in with the new address." }),
       el("p", { text: "Other aliases, their space and their records stay as they are." }));
     preview.hidden = false; save.hidden = false;
   }
@@ -242,7 +243,7 @@ function drawSettingsMemberAdd(host, data, members, token, profile, owner) {
     clear(preview).append(el("p", {}, el("strong", { text: "Name: " }), request.name),
       el("p", {}, el("strong", { text: "Permanent id and own space: " }), request.member_id),
       el("p", {}, el("strong", { text: "Sign-in email: " }), request.email),
-      el("p", { text: "Role: Member. The space starts empty, with collection, decks and games set to Private." }));
+      el("p", { text: "Role: Member. Saving creates an empty space set to Private. Add this email to Cloudflare Access and check sign-in afterward." }));
     preview.hidden = false; save.hidden = false;
   }
 

@@ -14,14 +14,15 @@ class ReadinessHierarchyTests(unittest.TestCase):
           answering(answer); state.profile = matt;
           clear(main); drawPlay(data, ''); await settle(); await show();
           const section = main.querySelector('.commander-lineup');
-          assert(section.textContent.includes('A counted minimum, not a power rating'));
+          assert(section.textContent.includes('The counted minimum covers only what the bracket rules name'));
           assert(section.querySelector('details').querySelector('summary').textContent.includes('What the bracket check covers'));
           const [alpha, beta] = main.querySelectorAll('.commander-lineup-deck');
-          assert(alpha.querySelector('.commander-lineup-readiness'));
+          assert(alpha.querySelector('.commander-lineup-readiness').textContent.includes('Packed in this box'));
           assert(alpha.querySelector('.commander-lineup-standins').getAttribute('class').includes('note-warn'));
-          assert(!beta.querySelector('.commander-lineup-standins').getAttribute('class').includes('note-warn'));
-          assert(beta.querySelector('.commander-lineup-box').getAttribute('class').includes('note-warn'));
-          assert(alpha.textContent.indexOf('Stand-ins:') < alpha.textContent.indexOf('Last played'));
+          assert.equal(beta.querySelector('.commander-lineup-standins'), null);
+          assert.equal(beta.querySelector('.commander-lineup-box'), null);
+          assert(beta.querySelector('.commander-lineup-readiness').textContent.includes('Needs packing'));
+          assert(alpha.textContent.indexOf('Physical placeholders:') < alpha.textContent.indexOf('Last played'));
           assert(!beta.textContent.includes('Ready to play'), 'being in Fits is not readiness certification');
         """)
 
@@ -34,8 +35,10 @@ class PublicationHierarchyTests(unittest.TestCase):
         self.run_js(r"""
           await openVisibility(); failPreview=true;
           row('home','decks').querySelector('[data-public=true]').fire('click'); await flush();
-          assert(sheet().textContent.includes('including members, and visitors on the home network'));
-          assert(sheet().textContent.includes('Nothing becomes public on the internet'));
+          const audience = sheet().textContent;
+          assert(audience.includes('read-only access to everyone signed in to Deck Lab'));
+          assert(audience.includes('visitors on the home network, even without a chosen profile'));
+          assert(audience.includes('Away from home, sign-in is required'));
           const warning = sheet().querySelector('[role=alert]');
           assert(warning.getAttribute('class').includes('note-warn'));
           assert(warning.textContent.includes('Preview unavailable'));

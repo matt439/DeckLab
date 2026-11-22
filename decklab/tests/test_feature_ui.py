@@ -38,7 +38,8 @@ class FeatureUiTests(unittest.TestCase):
           const card = main.querySelector('.card-tile-open'); assert(card);
           assert.equal(card.getAttribute('data-viewer'), 'collection');
           card.fire('click'); assert.equal(inspections.length,1); assert.equal(changes,0);
-          assert(main.textContent.includes('3 owned · 2 free'));
+          assert(main.querySelector('.col-find-count').textContent.includes('3 owned'));
+          assert(main.querySelector('.col-find-meta').textContent.includes('2 free now'));
           assert(main.textContent.includes('1 on the way'));
           assert(main.textContent.includes('×3'));
         """)
@@ -71,7 +72,8 @@ class FeatureUiTests(unittest.TestCase):
           // The nine-button row is gone: the shell's nav (core.js's ROUTES) has every page, under one name each.
           for(const name of ['Accessories','Plan decks','Played games','Activity']) assert(!main.textContent.includes(name), name);
           same([...navRoutes('main'), ...navRoutes('more')].map(r => r.label),
-            ['Decks','Testing','Collection','Shopping','Tokens','Sleeves & boxes','Build decks','Game log','Wishlist','Activity']);
+            ['Decks','Collection','Shopping','At the table','Simulate','Pack decks together','Tokens',
+              'Sleeves & boxes','Wishlist','Changes & undo','Help']);
           assert.equal(main.querySelector('#filter-readiness').value,'ready');
           let seen=[];
           showCollection=()=>seen.push('collection'); showAssembly=()=>seen.push('assembly');
@@ -84,7 +86,7 @@ class FeatureUiTests(unittest.TestCase):
             location.hash=hash; route();
           }
           same(seen,['collection','assembly','play','history','receipt','accessories','tokens','activity']);
-          // E3-S35: #/testing opens Testing (#/matchups) and leaves only that address, its query kept.
+          // #/testing opens Simulate (#/matchups) at the canonical address with its query kept.
           const replaced=[];history.replaceState=(s,t,url)=>replaced.push(url);
           let shown=null;showMatchups=(params)=>{shown=params.get('view');};
           location.hash='#/testing?view=popular'; route();
@@ -149,18 +151,17 @@ class FeatureUiTests(unittest.TestCase):
                         need:60,short:0,spare:0,warnings:[],info:[]}, 'red'),
                    deck('casual/none','None',null,'Not recorded')]},routeToken);
           const text = main.textContent;
-          for (const words of ['Sleeve with Dragon Shield Matte (black): 75 needed, 60 owned', short,
+          for (const words of ['Sleeves: Dragon Shield Matte (black) · 75 needed, 60 owned', short,
                                'Get out 75 Dragon Shield Matte (black) sleeves',
                                'Pack into Ultimate Guard Boulder 100+ (black)',
-                               'Sleeves: “red” (not in the accessories list), 60 needed',
-                               'Get out 60 “red” sleeves', 'Sleeves: Not recorded']) {
+                               'Sleeves: “red”',
+                               'Get out 60 “red” sleeves', 'Sleeves: Not recorded', 'Deck box: Not recorded']) {
             assert(text.includes(words), words);
           }
-          assert(main.querySelectorAll('a').some(a => a.getAttribute('href') === '#/accessories'));
           assert.equal(main.querySelectorAll('.assembly-kit').flatMap(k => k.querySelectorAll('.box-warn')).length, 1);
-          // No sleeves recorded on a deck that isn't building or built (or isn't a choice): a way to the deck, not a picker.
+          // The plan reports unrecorded kit on a deck without an editable built or building choice.
           const none = main.querySelectorAll('.assembly-kit')[2];
-          assert.equal(none.querySelector('a').getAttribute('href'), '#/deck?id=casual%2Fnone&v=target');
+          assert.equal(none.querySelector('button'), null);
         """)
 
     def test_assembly_not_recorded_sleeves_on_a_built_deck_open_the_picker(self):
@@ -174,11 +175,12 @@ class FeatureUiTests(unittest.TestCase):
           drawAssembly({choices:[{id:'casual/gruul',title:'Gruul',status:'built',versions:['target']}],rows:[],ready:true,
             counts_confirmed:true,unresolved:[],warnings:[],note:'',token_note:'',totals:{waiting:0,missing:0},tokens:[],
             token_plan:[],decks:[deck]},routeToken);
-          const choose = main.querySelector('.assembly-kit').querySelector('button');
-          assert.equal(choose.textContent, 'Choose sleeves');
-          choose.click();
-          same(picked.map(o => [o.holder, o.field, o.need, o.title]), [['casual/gruul', 'sleeves', 60, 'Gruul']]);
-          // A deck being built may hold kit too: the same picker; an idea gets a way to the deck.
+          const choices = main.querySelector('.assembly-kit').querySelectorAll('button');
+          same(choices.map(button => button.textContent), ['Choose sleeves', 'Choose a deck box']);
+          choices.forEach(button => button.click());
+          same(picked.map(o => [o.holder, o.field, o.need, o.title]),
+            [['casual/gruul', 'sleeves', 60, 'Gruul'], ['casual/gruul', 'deck_box', 60, 'Gruul']]);
+          // A deck being built may hold kit too. An idea can choose when marking built.
           for (const [status, picks] of [['building', true], ['idea', false]]) {
             clear(main);
             drawAssembly({choices:[{id:'casual/gruul',title:'Gruul',status,versions:['target']}],rows:[],ready:true,
@@ -186,7 +188,6 @@ class FeatureUiTests(unittest.TestCase):
               token_plan:[],decks:[deck]},routeToken);
             const kit = main.querySelector('.assembly-kit');
             assert.equal(Boolean(kit.querySelector('button')), picks, status);
-            if (!picks) assert.equal(kit.querySelector('a').textContent, 'Open the deck');
           }
         """)
 
@@ -212,14 +213,14 @@ class FeatureUiTests(unittest.TestCase):
           assert(steps.every(s => s.querySelector('.pack-step-n').getAttribute('aria-hidden') === 'true'));
           same(steps.map(s => s.querySelector('.pack-step-spoken').textContent),
             ['Step 1. ', 'Step 2. ', 'Step 3. ', 'Step 4. ', 'Step 5. ']);
-          const titles = ['Sleeves', 'Pull from storage (2 cards)', 'Move from other decks (1 card)',
-            'Basic lands (20 cards)', 'Put back (1 card)'];
+          const titles = ['Sleeves and deck box', 'Pull from storage (2 cards)', 'Move from other decks (1 card)',
+            'Basic lands (20 cards)', 'Return to storage (1 card)'];
           assert(steps.every((s, i) => s.querySelector('h3').textContent.endsWith(titles[i])));
           // Kept and still-waiting cards are folded, never ticks.
           const folds = main.querySelectorAll('.pack-fold');
-          assert(folds[0].textContent.includes('Already in this deck (1 card)'));
-          assert(folds[1].textContent.includes('Wait for 1 × Bolt'));
-          assert(folds[1].textContent.includes('Unavailable: 1 × Bolt'));
+          assert(folds[0].textContent.includes('Keep in this box (1 card)'));
+          assert(folds[1].textContent.includes('On the way: 1 × Bolt'));
+          assert(folds[1].textContent.includes('To check: 1 × Bolt'));
           // Every tile opens the viewer over the whole plan.
           const tiles = main.querySelectorAll('.card-tile');
           assert.equal(tiles.length, 4);
@@ -297,8 +298,8 @@ class FeatureUiTests(unittest.TestCase):
           assert(!chooser.isConnected);assert(document.activeElement===main.querySelector('.pack-chooser-launcher'));
           media.matches=true;media.fire('change');assert(main.contains(chooser));
           // A deck with two lists offers them once it's chosen.
-          const play = main.querySelectorAll('button').find(b => b.textContent === 'Play-now list');
-          play.click(); flushTimers(); await null; await null;
+          const alternative = main.querySelectorAll('button').find(b => b.textContent === 'Alternative list');
+          alternative.click(); flushTimers(); await null; await null;
           same(posts.at(-1)[1].decks[1], {id:'casual/b',version:'owned'});
           // Unticking a deck takes it out.
           const boxes = main.querySelectorAll('input');
@@ -355,7 +356,11 @@ class FeatureUiTests(unittest.TestCase):
           assert(labelled(head, 'Choose a deck box for Otters'));
           // An editable deck idea explains when kit is chosen (E8-S05); a deck being built chooses it.
           clear(main);
-          assert(deckKit({...page, summary: {...summary, status: 'idea'}}).textContent.includes('choose them once you start building it'));
+          const ideaKit = deckKit({...page, summary: {...summary, status: 'idea'}});
+          assert(ideaKit.textContent.includes('Choose sleeves and a deck box when you start building'));
+          const build = ideaKit.querySelector('a');
+          assert.equal(build.textContent, 'Build deck');
+          assert.equal(build.getAttribute('href'), '#/assembly?deck=casual%2Fotters&version=target');
           head = deckKit({...page, summary: {...summary, status: 'building'}});
           assert(labelled(head, 'Choose sleeves for Otters') && labelled(head, 'Choose a deck box for Otters'));
           // A product gets Choose… once the accessories list says it's kept intact.
@@ -472,7 +477,7 @@ class FeatureUiTests(unittest.TestCase):
           same(revs[0].querySelectorAll('.history-delta').map(b => b.textContent), ['→SB', '+2 SB']);
           // The planned list's line is whole, and the play-now list's changes past the cap still get a line.
           assert(revs[1].textContent.includes('+1 Card 0'));
-          assert(revs[1].textContent.includes('Play-now list: 3 card changes'));
+          assert(revs[1].textContent.includes('Alternative list: 3 card changes'));
           const tile = revs[1].querySelector('.history-pic-more');
           assert(tile);
           assert.equal(tile.querySelector('.history-more-phone').textContent, '+6 more changes');   // 7 shown on a phone

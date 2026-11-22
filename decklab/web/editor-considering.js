@@ -114,7 +114,7 @@ function drawEditorConsidering() {
     return;
   }
   const empty = !ed.considering.length;
-  const section = ed.dom.considering = el("section", { class: `edit-considering${empty ? " is-empty" : ""}`,
+  const section = ed.dom.considering = el("section", { id: "edit-considering", class: `edit-considering${empty ? " is-empty" : ""}`,
     "aria-labelledby": "h-edit-considering" });
   const heading = el("h2", { id: "h-edit-considering", text: "Considering" });
   const explanation = el("p", { class: "sub", text:
@@ -194,12 +194,25 @@ function editorConsideringRow(ed, line) {
   return row;
 }
 
-function openEditorConsideringAdd(ed = editor) {
+function editorFocusConsidering(ed, proposal) {
+  if (!ed?.dom.considering?.isConnected) { toast("Considering is unavailable for this draft."); return; }
+  jumpTo("edit-considering");
+  if (proposal === null || !editorConsideringMutable(ed) || proposal.length > 200) return;
+  const name = proposal.trim();
+  if (name && ed.considering.some(line => line.name.toLowerCase() === name.toLowerCase())) {
+    toast(`${name} is already in this Considering draft.`);
+    return;
+  }
+  openEditorConsideringAdd(ed, name);
+}
+
+function openEditorConsideringAdd(ed = editor, proposal = "") {
   if (!editorConsideringMutable(ed)) return null;
   const section = ed.dom.considering;
   const sheet = openSheet("Add a card to consider");
   const nameId = `editor-consider-name-${sheet.heading.id}`, qtyId = `editor-consider-qty-${sheet.heading.id}`;
-  const name = el("input", { id: nameId, class: "editor-considering-name", type: "text", autocomplete: "off", required: true });
+  const name = el("input", { id: nameId, class: "editor-considering-name", type: "text", autocomplete: "off",
+    value: proposal, required: true });
   const qty = el("input", { id: qtyId, class: "editor-considering-copies", type: "number", inputmode: "numeric",
     min: 1, max: MAX_COPIES, step: 1, value: "1" });
   const message = el("p", { class: "form-error", role: "alert" });

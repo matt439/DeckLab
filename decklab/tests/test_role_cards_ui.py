@@ -1,6 +1,5 @@
-"""The Stats tab's "Free cards by role" (E9-S26, stats.js rolePoolPart) under Node: shown only on a Commander deck
-whose collection the visitor may see, it asks GET /api/deck/role-cards once when opened and lists each role's free
-cards, says when the card data has no role tags, and handles refusals and failures.
+"""The Stats tab's "Find cards by role" under Node: it queries the visible collection for each role's candidates,
+separates physically free and incoming copies, and handles missing tags, refusals and failures.
 
 Runs the real page scripts in tests/fixtures/workspace_ui_runner.js; nothing is sent to a server.
 """
@@ -18,8 +17,8 @@ SETUP = PAGE + """
     page.summary.id = 'commander/ghalta'; page.summary.kind = 'commander'; page.version = 'owned';
     page.stats = {commander: {}}; return page; };
   const asks = [];
-  let answer = {tags_available: true, colours: ['G'], roles: [
-    role('ramp', [pick('Sol Ring', 2, 1), pick('Llanowar Elves')], {more: 3}), role('removal'),
+  let answer = {version: 'owned', tags_available: true, colours: ['G'], roles: [
+    role('ramp', [pick('Sol Ring', 2, 1), pick('Llanowar Elves'), pick('Elvish Mystic', 1, 0)], {more: 3}), role('removal'),
     role('counterspell', [], {tagged: false})]};
   api = async (path) => { asks.push(path); if (answer instanceof Error) throw answer; return answer; };
   const settle = async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); };
@@ -37,15 +36,17 @@ class RoleCardsUiTests(unittest.TestCase):
     def test_opening_lists_each_roles_free_cards_once(self):
         self.run_js("""
           const part = rolePoolPart(commanderPage());
-          assert.equal(part.querySelector('summary').textContent, 'Free cards by role');
+          assert.equal(part.querySelector('summary').textContent, 'Find cards by role');
           assert.equal(asks.length, 0);
           await openPart(part);
           assert.deepEqual(asks, ['/api/deck/role-cards?id=commander%2Fghalta&version=owned']);
           const text = part.textContent;
-          assert(text.includes('Ramp') && text.includes('Sol Ring 2 free, 1 on the way'), text);
-          assert(text.includes('Llanowar Elves 1 free') && !text.includes('Llanowar Elves 1 free,'), text);
+          assert(text.includes(LIST_NAME.owned), text);
+          assert(text.includes('Ramp') && text.includes('Sol Ring 1 free now, 1 on the way'), text);
+          assert(text.includes('Llanowar Elves 1 free now') && !text.includes('Llanowar Elves 1 free now,'), text);
+          assert(text.includes('Elvish Mystic 1 on the way') && !text.includes('Elvish Mystic 1 free'), text);
           assert(text.includes('And 3 more cards.'), text);
-          assert(text.includes('Removal') && text.includes('None free in the commander\\'s colours.'), text);
+          assert(text.includes('Removal') && text.includes('No copies free now or on the way'), text);
           assert(text.includes('Unavailable: the card data has no cards with Scryfall\\'s "counterspell" tag.'), text);
           // Closing and opening again doesn't ask again.
           part.open = false; part.fire('toggle'); await openPart(part);
@@ -110,7 +111,7 @@ class RoleCardsUiTests(unittest.TestCase):
           answer = new ApiError(500, 'The collection couldn\\'t be read.');
           const failed = rolePoolPart(commanderPage());
           await openPart(failed);
-          assert(failed.textContent.includes('Free cards by role couldn\\'t be loaded.'), failed.textContent);
+          assert(failed.textContent.includes('Cards by role couldn\\'t be loaded.'), failed.textContent);
           answer = {tags_available: true, colours: [], roles: [role('ramp', [pick('Sol Ring')])]};
           buttonText(failed, 'Try again').click();
           await settle();

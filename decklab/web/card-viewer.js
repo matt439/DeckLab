@@ -50,11 +50,11 @@ const VIEWER_USE_DECKS = 4;      // decks the use line names before "and 3 more 
 
 /** The card overlay every page uses: card big, or card's viewer group (cards-ui.js viewerItem) when trigger
  * belongs to one. trigger gets the focus back afterwards. */
-function openCard(card, trigger) {
+function openCard(card, trigger, opts = {}) {
   if (!card) return null;
   const group = viewerGroup(trigger && typeof trigger.closest === "function" ? trigger.closest("[data-viewer]") : null);
-  if (group && group.items[group.index].card === card) return openCardViewer(group.items, group.index, { trigger });
-  return openCardViewer([card], 0, { trigger });
+  if (group && group.items[group.index].card === card) return openCardViewer(group.items, group.index, { ...opts, trigger });
+  return openCardViewer([card], 0, { ...opts, trigger });
 }
 
 /** Shows items (cards, or {card, caption}) in the viewer, starting at items[start]. opts: trigger (what gets
@@ -76,7 +76,7 @@ function openCardViewer(items, start = 0, opts = {}) {
     trigger: open ? viewerState.trigger : opts.trigger || document.activeElement,
     history: !opts.address && open ? viewerState.history : false, token: open ? viewerState.token : 0,
     commander: opts.commander ?? viewerCommanderContext(), address: opts.address || null,
-    profile: state.profile,
+    profile: state.profile, inventorySpace: opts.inventorySpace || null,
     fromHistory: false, drag: null, settling: false, dragEnded: 0, pressTarget: null,
   };
   dom.dialog.classList.toggle("show-text", viewerTextOpen);
@@ -393,11 +393,13 @@ function viewerRulingsParts(data) {
  * null otherwise, which asks nothing. */
 function viewerUseSpace() {
   if (typeof parseHash !== "function") return null;         // app.js
+  if (viewerState && viewerState.profile !== state.profile) return null;
   const { path, params } = parseHash();
   const id = params.get("id");
-  const space = (path === "deck" || path === "edit") && id ? deckSpaceOf(id)
+  const pageSpace = (path === "deck" || path === "edit") && id ? deckSpaceOf(id)
     : path === "collection" ? (typeof colSpace === "function" ? colSpace(params) : params.get("space") || ownSpace())
       : params.get("space") || ownSpace();
+  const space = viewerState?.inventorySpace || pageSpace;
   return space && seesInventory(space) ? space : null;
 }
 
@@ -426,10 +428,10 @@ function viewerUsePart(box, card) {
     viewerUses.set(key, answer);
   }
   answer.then((data) => {
-    if (box.useToken !== token || !viewerState) return;
+    if (box.useToken !== token || !viewerState || viewerUseSpace() !== space) return;
     const words = viewerUseWords(data);
     box.classList.remove("is-loading");
-    box.textContent = words || "";
+    box.textContent = words && space !== ownSpace() ? `${spaceName(space)} collection · ${words}` : words || "";
     box.hidden = !words;
   });
 }
@@ -451,8 +453,8 @@ function viewerUseWords(data) {
   if (data.decks_complete === false) parts.push("Deck check incomplete");
   else if (!decks.length && data.decks_complete === true) parts.push("In no decks");
   if (data.lent > 0) parts.push(`${num(data.lent)} lent out`);
-  if (data.owned || data.free) parts.push(`${num(data.free)} free`);
-  else if (!data.incoming) parts.push("none in the collection");
+  if (data.owned || data.free) parts.push(`${num(data.free)} free now`);
+  else if (!data.incoming) parts.push("none recorded in this collection");
   if (data.incoming) parts.push(`${num(data.incoming)} on the way`);
   return parts.join(" \u00b7 ");
 }

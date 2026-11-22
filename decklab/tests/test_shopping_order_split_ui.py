@@ -17,7 +17,7 @@ class ShoppingOrderSplitInteractionTests(unittest.TestCase):
         setup = """
           clear(main);
           state.profiles = [{id: "user1", name: "User1", plays_as: "wife"}, {id: "matt", name: "Matt", plays_as: "user"}];
-          state.profile = state.profiles[0]; location.hash = "#/shopping";
+          state.profile = state.profiles[0]; location.hash = "#/shopping?view=orders";
           closeEditor = () => {}; stopMatchupRefresh = () => {};
           const empty = {to_buy: [], orders: [], checks: [], warnings: []};
           const component = (extra = {}) => ({id: "cards", kind: "cards", status: "pending",

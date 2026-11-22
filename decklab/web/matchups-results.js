@@ -202,10 +202,10 @@ function resultPart(data, page, ctx = {}) {
   const section = el("section", { class: "mu-result", "aria-labelledby": "h-result" });
   section.append(el("div", { class: `panel mu-verdict mu-verdict-${verdict.kind}` },
     el("h2", { id: "h-result", text: verdict.text }),
+    caveatLine(r, data, [ta, tb], ctx.newer || null),
     el("div", { class: "mu-figure" }, winRateFigure(wr, { size: "hero", what, games: r.games, barred: true }),
       freshnessBadge(r.updated, { changed: data.sides.some((s) => s.current === false) })),
     rangeBar(wr, { axis: true, muted, decorative: true }),
-    caveatLine(r, data, [ta, tb], ctx.newer || null),
     actionsPart(page, data)));
   // The folded reading, in one column (beside the verdict from 1,600 px, from its top: MU-14).
   const reading = el("div", { class: "mu-reading" });
@@ -358,8 +358,8 @@ function actionsPart(page, data) {
     // first check is the next one past them).
     const fresh = earlierEngine(data.result);
     const words = ({ mode, games: n }) => mode === "fixed"
-      ? (fresh ? `Play ${thousands(n)} games with today's engine` : `Play ${thousands(n)} more games`)
-      : (fresh ? "Play with today's engine" : "Play more");
+      ? (fresh ? `Simulate ${thousands(n)} games with today's engine` : `Simulate ${thousands(n)} more games`)
+      : (fresh ? "Simulate with today's engine" : "Simulate more games");
     const error = el("p", { class: "form-error", role: "alert", "data-play-error": true });
     const choice = runModeChoice(data, () => { button.textContent = words(choice.value()); });
     const button = el("button", { type: "button", class: "btn btn-primary", disabled: !ready, "data-run": true,

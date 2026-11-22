@@ -7,7 +7,7 @@ from decklab.tests.test_workspace_ui import NODE
 
 @unittest.skipUnless(NODE, "Node.js isn't installed")
 class ShoppingOrderEditInteractionTests(unittest.TestCase):
-    run_js = test_shopping_ui.ShoppingInteractionTests.run_js
+    run_js = test_shopping_ui.ShoppingInteractionTests.run_orders_js
 
     def edit_js(self, scenario):
         self.run_js("""

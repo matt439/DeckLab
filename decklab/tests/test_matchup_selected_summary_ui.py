@@ -64,7 +64,7 @@ class MatchupSelectedSummaryUiTests(unittest.TestCase):
     def test_built_play_now_context_requires_an_available_owned_list(self):
         self.run_js(r"""
           for(const [status,built,versions,expected,words] of [
-            ['built','owned',['target','owned'],'owned','Play-now list'],
+            ['built','owned',['target','owned'],'owned','Alternative list'],
             ['built','owned',['target'],'target','Planned list'],
             ['idea','owned',['target','owned'],'target','Planned list'],
             ['built','target',['target','owned'],'target','Planned list']]){
@@ -91,7 +91,7 @@ class MatchupSelectedSummaryUiTests(unittest.TestCase):
           library.decks_revision='library-two';mount();await muRefreshSelectedSummary(view);await settle();assert.equal(calls.length,8);
           Object.assign(library.decks[0],{status:'built',built_version:'owned'});
           host=mount();await muRefreshSelectedSummary(view);await settle();assert.equal(calls.length,10);
-          assert(calls.slice(-2).every(url=>params(url).get('version')==='owned'));assert(host.textContent.includes('Play-now list'));
+          assert(calls.slice(-2).every(url=>params(url).get('version')==='owned'));assert(host.textContent.includes('Alternative list'));
         """)
 
     def test_pending_read_is_reused_by_a_same_context_redraw(self):
@@ -235,9 +235,9 @@ class MatchupSelectedSummaryUiTests(unittest.TestCase):
           };
           const host=el('div');main.append(host);drawHome(host,data,library,view);
           assert(host.querySelector('.mu-selected-summary'));assert(host.querySelector('.mu-opponents'));
-          assert(host.textContent.includes('Saved matchup rows below may use different lists or earlier engines'));
+          assert(host.textContent.includes('Saved Forge 1v1 results'));
           assert(host.textContent.includes('Planned list'));muRefreshSelectedSummary(view);await settle();assert.equal(pending.length,2);
-          button(host,'Rankings').click();await settle();assert(pending.every(read=>read.signal.aborted));
+          button(host,'Field rankings').click();await settle();assert(pending.every(read=>read.signal.aborted));
           assert(host.querySelector('.mu-rankings'));assert(!host.querySelector('.mu-selected-summary'));
           for(const read of pending)read.resolve(isField(read.url)?field():{tests:[swap()]});await settle();
           assert(!host.textContent.includes('Bolt'));assert(!host.textContent.includes('64'));assert.equal(writes,0);

@@ -36,8 +36,17 @@ SETUP = PAGE + """
     deck_spaces: ['home'], home_player: null, create: []};
   const showMissing = (page) => { clear(main); location.hash = '#/deck?id=casual%2Ftest&tab=cards&filter=missing';
     drawDeck(page, deckViewOf(parseHash().params)); };
-  const queueButton = () => main.querySelectorAll('button').find((b) => b.textContent === 'Queue missing cards…');
   const sheet = () => document.body.querySelectorAll('dialog').pop();
+  const buying = () => buttonText(main, 'Find and buy cards');
+  const openRecorded = () => {
+    buying()?.click();
+    if (sheet()) buttonText(sheet(), 'Use recorded collection')?.click();
+  };
+  const queueButton = () => sheet() && buttonText(sheet(), 'Review Planned list for the shared queue');
+  const reviewQueue = () => {
+    openRecorded();
+    queueButton().click();
+  };
 """
 
 
@@ -49,23 +58,26 @@ class DeckQueueMissingUiTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "ok")
 
-    def test_offered_only_to_a_home_admin_under_missing(self):
+    def test_offer_the_queue_review_only_for_a_home_admin(self):
         self.run_js("""
           state.may = admin; state.profile.role = 'admin';
           showMissing(makePage());
-          assert(queueButton(), 'a home admin sees it under Missing');
+          assert(buying());
+          openRecorded();
+          assert(queueButton(), 'a home admin can review Planned shortages');
+          sheet().querySelector('.sheet-close').click();
           buttonText(main, 'All').click();
-          assert.equal(queueButton(), undefined);
-          // User1 (a home member who may not edit orders), an unknown answer, a product deck: never.
-          state.may = {...admin, admin: false, orders: false}; state.profile.role = 'member';
-          showMissing(makePage()); assert.equal(queueButton(), undefined);
-          state.may = null; state.profile.role = 'admin';
-          showMissing(makePage()); assert.equal(queueButton(), undefined);
-          state.may = admin;
+          openRecorded();
+          assert(queueButton(), 'the review is reachable independent of the card filter');
+          sheet().querySelector('.sheet-close').click();
+          const hidden = makePage(); hidden.summary.id = 'user2/casual/test'; hidden.summary.space = 'user2';
           const product = makePage(); product.summary.id = 'product/fdn-beginner-box/elves';
-          showMissing(product); assert.equal(queueButton(), undefined);
-          const theirs = makePage(); theirs.summary.id = 'user2/casual/test'; theirs.summary.space = 'user2';
-          showMissing(theirs); assert.equal(queueButton(), undefined);
+          for (const [page, may] of [[makePage(), {...admin, admin:false, orders:false}], [makePage(), null],
+              [product, admin], [hidden, admin]]) {
+            showMissing(page); state.may = may; openRecorded();
+            assert(!queueButton());
+            sheet()?.querySelector('.sheet-close').click();
+          }
           same(calls, []);
         """)
 
@@ -73,7 +85,7 @@ class DeckQueueMissingUiTests(unittest.TestCase):
         self.run_js("""
           state.may = admin; state.profile.role = 'admin';
           showMissing(makePage());
-          queueButton().click(); await settle();
+          reviewQueue(); await settle();
           same(calls, [['/api/shopping/queue/missing', {profile: 'matt', deck: 'casual/test'}]]);
           const text = sheet().textContent;
           assert(text.includes('2 copies to queue · 3 missing · 1 already queued for this deck'), text);
@@ -98,10 +110,11 @@ class DeckQueueMissingUiTests(unittest.TestCase):
           page.owned.rows = [row('Opt', 4, 1, [['Incoming', 1]]), row('Elf', 6, 0)];
           page.owned.totals.missing = 1;
           navigator.clipboard = {writeText: async (text) => copied.push(text)};
-          showMissing(page);
-          assert(!queueButton());
-          const planned = buttonText(main, 'Review Planned list shortages'); assert(planned);
-          buttonText(main, 'Copy missing cards').click(); await settle();
+          showMissing(page); openRecorded();
+          const planned = queueButton(); assert(planned);
+          assert(sheet().textContent.includes('Alternative list'));
+          assert(sheet().textContent.includes('1 on the way'));
+          buttonText(sheet(), 'Copy missing for this list').click(); await settle();
           same(copied, ['1 Opt\n']); same(calls, []);
           planned.click(); await settle();
           assert(sheet().textContent.includes('Bolt')); assert(!sheet().textContent.includes('Opt'));
@@ -114,22 +127,34 @@ class DeckQueueMissingUiTests(unittest.TestCase):
           state.may = {...admin, orders: false, see_inventory: ['user2']};
           const page = makePage();
           page.summary = {...page.summary, id: 'user2/casual/test', space: 'user2'};
-          showMissing(page); assert(!queueButton());
+          showMissing(page); openRecorded(); assert(!queueButton());
           navigator.clipboard = {writeText: async () => { throw Error('Unavailable'); }};
-          buttonText(main, 'Copy missing cards').click(); await settle();
+          buttonText(sheet(), 'Copy missing for this list').click(); await settle();
           assert.equal(sheet().querySelector('textarea').value, '3 Bolt\n');
           assert(sheet().textContent.includes('Planned list'));
-          shopCloseQueueSheets(); assert(!sheet());
+          shopCloseQueueSheets(); colCloseSheets(); assert(!sheet());
           const hidden = makePage(); delete hidden.owned; showMissing(hidden);
-          assert(!buttonText(main, 'Copy missing cards')); same(calls, []);
+          assert(!buying()); same(calls, []);
+        """)
+
+    def test_unconfirmed_availability_cannot_be_copied_even_when_rows_are_present(self):
+        self.run_js("""
+          state.may = admin; state.profile.role = 'admin';
+          const page = makePage(); page.owned.availability_confirmed = false;
+          showMissing(page); openRecorded();
+          assert(sheet().textContent.includes('Availability needs checking'));
+          assert(!sheet().textContent.includes('3 × Bolt'));
+          assert(!buttonText(sheet(), 'Copy missing for this list'));
+          assert(buttonText(sheet(), 'Check copies at home'));
+          same(calls, []);
         """)
 
     def test_old_sheet_cannot_submit_as_another_profile_or_after_its_deck_redraws(self):
         self.run_js("""
           state.may = admin; state.profile.role = 'admin';
           for (const change of ['profile','route','deck']) {
-            showMissing(makePage()); queueButton().click(); await settle();
-            const button = buttonText(sheet(), 'Queue 2 copies (To buy)');
+            showMissing(makePage()); reviewQueue(); await settle();
+            const button = buttonText(sheet(), 'Queue 2 copies (Ready to buy)');
             const before = calls.length;
             if (change === 'profile') state.profile = {...state.profile, id:'user2'};
             if (change === 'route') routeToken++;
@@ -144,7 +169,7 @@ class DeckQueueMissingUiTests(unittest.TestCase):
         self.run_js("""
           state.may = admin; state.profile.role = 'admin';
           review.rows[1] = {...review.rows[1], queued: 0, copies: 1, joins: 'long_term'};
-          showMissing(makePage()); queueButton().click(); await settle();
+          showMissing(makePage()); reviewQueue(); await settle();
           const check = (name, checked) => {
             const input = sheet().querySelector('[aria-label="Queue ' + name + '"]');
             input.checked = checked; input.fire('change');
@@ -152,7 +177,7 @@ class DeckQueueMissingUiTests(unittest.TestCase):
           check('Elf', false);
           assert(!sheet().querySelector('.queue-missing-joins'));
           check('Bolt', false);
-          assert(buttonText(sheet(), 'Queue 0 copies (To buy)').disabled);
+          assert(buttonText(sheet(), 'Queue 0 copies (Ready to buy)').disabled);
           check('Bolt', true);
           buttonText(sheet(), 'Long-term').click();
           saveAnswer = new ApiError(409, 'Review again.');
@@ -170,13 +195,13 @@ class DeckQueueMissingUiTests(unittest.TestCase):
           state.may = admin; state.profile.role = 'admin';
           review.rows[0].joins = 'waiting_for_stock';
           showMissing(makePage());
-          queueButton().click(); await settle();
+          reviewQueue(); await settle();
           const text = sheet().textContent;
           assert(text.includes('added to the existing Waiting for stock row'), text);
           const warn = () => sheet().querySelector('.queue-missing-joins');
           assert(warn() && warn().textContent.includes('Bolt (Waiting for stock)'), text);
-          assert(warn().textContent.includes('not To buy'));
-          buttonText(sheet(), 'Queue 2 copies (To buy)').click(); await settle();
+          assert(warn().textContent.includes('keeping that state'));
+          buttonText(sheet(), 'Queue 2 copies (Ready to buy)').click(); await settle();
           same(calls[1][1].cards, [{name: 'Bolt', copies: 2, joins: 'waiting_for_stock'}]);
         """)
 
@@ -185,8 +210,8 @@ class DeckQueueMissingUiTests(unittest.TestCase):
           state.may = admin; state.profile.role = 'admin';
           review.rows[0].joins = 'long_term';
           showMissing(makePage());
-          queueButton().click(); await settle();
-          assert(sheet().querySelector('.queue-missing-joins'), 'To buy is chosen first');
+          reviewQueue(); await settle();
+          assert(sheet().querySelector('.queue-missing-joins'), 'Ready to buy is chosen first');
           buttonText(sheet(), 'Long-term').click();
           assert.equal(sheet().querySelector('.queue-missing-joins'), null);
           assert(sheet().textContent.includes('added to the existing Long-term row'));
@@ -197,8 +222,8 @@ class DeckQueueMissingUiTests(unittest.TestCase):
           state.may = admin; state.profile.role = 'admin';
           saveAnswer = new ApiError(409, 'The deck, the collection or the purchase queue changed since this review. Review the missing cards again.');
           showMissing(makePage());
-          queueButton().click(); await settle();
-          buttonText(sheet(), 'Queue 2 copies (To buy)').click(); await settle();
+          reviewQueue(); await settle();
+          buttonText(sheet(), 'Queue 2 copies (Ready to buy)').click(); await settle();
           assert(sheet().textContent.includes('changed since this review'));
           buttonText(sheet(), 'Review again').click(); await settle();
           same(calls.map((c) => c[0]), ['/api/shopping/queue/missing', '/api/shopping/queue', '/api/shopping/queue/missing']);
@@ -209,11 +234,11 @@ class DeckQueueMissingUiTests(unittest.TestCase):
           state.may = admin; state.profile.role = 'admin';
           review.rows = [review.rows[1]]; review.totals = {cards: 0, copies: 0};
           showMissing(makePage());
-          queueButton().click(); await settle();
+          reviewQueue(); await settle();
           assert(sheet().textContent.includes('Every missing card is already on the purchase queue for this deck.'));
           assert.equal(sheet().querySelectorAll('button').find((b) => b.textContent.startsWith('Queue ')), undefined);
           sheet().querySelector('.sheet-close').click(); await settle();
           review.ready = false; review.reason = 'Missing cards cannot be counted until the home card pool is complete.';
-          queueButton().click(); await settle();
+          reviewQueue(); await settle();
           assert(sheet().textContent.includes('cannot be counted'));
         """)

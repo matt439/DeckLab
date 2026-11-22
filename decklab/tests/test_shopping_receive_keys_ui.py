@@ -10,7 +10,7 @@ SETUP = r'''
   api = async () => {reads++; throw new Error('Shortcut must not read');};
   apiWrite = async () => {writes++; throw new Error('Shortcut must not write');};
   const make = (extra={}) => {
-    clear(main); location.hash='#/shopping';
+    clear(main); location.hash='#/shopping?view=orders';
     const current=order(extra), view=drawShopping({...empty,orders:[current]});
     const summary=main.querySelector('.shop-delivery-summary');
     summary.focus();
@@ -22,7 +22,7 @@ SETUP = r'''
 @unittest.skipUnless(NODE, "Node.js isn't installed")
 class ShoppingReceiveKeysUiTests(unittest.TestCase):
     def run_js(self, scenario):
-        test_shopping_ui.ShoppingInteractionTests.run_js(self, SETUP+scenario)
+        test_shopping_ui.ShoppingInteractionTests.run_js(self, SETUP+scenario, task="orders")
 
     def test_r_opens_only_the_focused_current_delivery_without_reading_or_recording(self):
         self.run_js(r'''
@@ -35,7 +35,7 @@ class ShoppingReceiveKeysUiTests(unittest.TestCase):
             assert(summary.fire('keydown',{key}).defaultPrevented);
             assert.equal(location.hash,'#/receipt?order='+encodeURIComponent(index?second.id:first.id));
             assert.equal(document.activeElement,summary); assert.equal(delivery.getAttribute('open'),before);
-            location.hash='#/shopping';
+            location.hash='#/shopping?view=orders';
           }
           assert.equal(reads,0); assert.equal(writes,0);
         ''')
@@ -47,10 +47,10 @@ class ShoppingReceiveKeysUiTests(unittest.TestCase):
               {key:'r',ctrlKey:true},{key:'r',metaKey:true},{key:'r',altKey:true},
               {key:'r',isComposing:true},{key:'r',repeat:true}]) {
             assert(!summary.fire('keydown',props).defaultPrevented);
-            assert.equal(location.hash,'#/shopping');
+            assert.equal(location.hash,'#/shopping?view=orders');
           }
           summary.fire('keydown',{key:'r',defaultPrevented:true});
-          assert.equal(location.hash,'#/shopping'); assert.equal(reads,0); assert.equal(writes,0);
+          assert.equal(location.hash,'#/shopping?view=orders'); assert.equal(reads,0); assert.equal(writes,0);
         ''')
 
     def test_stale_detached_busy_and_changed_permission_or_order_context_cannot_navigate(self):
@@ -64,7 +64,7 @@ class ShoppingReceiveKeysUiTests(unittest.TestCase):
             state.profile=state.profiles[1]; state.may.receipts=true;
             const x=make(); mutate(x);
             assert(!x.summary.fire('keydown',{key:'r'}).defaultPrevented,'blocked context '+index);
-            assert.equal(location.hash,'#/shopping');
+            assert.equal(location.hash,'#/shopping?view=orders');
           }
           assert.equal(reads,0); assert.equal(writes,0);
         ''')
@@ -75,7 +75,7 @@ class ShoppingReceiveKeysUiTests(unittest.TestCase):
           for(const tag of ['input','textarea','select','button','a','span']) {
             const child=el(tag); summary.append(child); child.focus();
             assert(!summary.fire('keydown',{key:'r',target:child}).defaultPrevented);
-            assert.equal(location.hash,'#/shopping'); child.remove();
+            assert.equal(location.hash,'#/shopping?view=orders'); child.remove();
           }
           assert.equal(summary.getAttribute('aria-keyshortcuts'),'R');
           const description=main.querySelector('#'+summary.getAttribute('aria-describedby'));
@@ -88,5 +88,5 @@ class ShoppingReceiveKeysUiTests(unittest.TestCase):
           assert.equal(readOnly.summary.getAttribute('aria-describedby'),null);
           assert.equal(main.querySelector('.shop-receive-hint'),null);
           assert(!readOnly.summary.fire('keydown',{key:'r'}).defaultPrevented);
-          assert.equal(location.hash,'#/shopping'); assert.equal(reads,0); assert.equal(writes,0);
+          assert.equal(location.hash,'#/shopping?view=orders'); assert.equal(reads,0); assert.equal(writes,0);
         ''')

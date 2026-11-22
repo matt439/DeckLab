@@ -377,6 +377,7 @@ async function saveStorage(ctx) {
     const saved = await apiWrite("/api/storage", { profile: ctx.profile, space: cv.space, expect: ctx.revision, storage: answer.storage }, "PUT");
     if (!ctx.here()) return;
     ctx.sheet.close();
+    if (cv.kind === "map") { colReload(cv, "Storage setup saved."); return; }
     const setup = answer.after && !answer.counts_error ? { ...answer.after, source: saved.source || "saved" }
       : { source: "saved", default: saved.storage.default, containers: saved.storage.containers.map(c => ({ ...c, cards: null })),
         suggestions: saved.storage.containers.flatMap(c => c.sections.length ? c.sections : [c.name]) };

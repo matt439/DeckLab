@@ -4,7 +4,7 @@
  * private deck of its space like any other: every privacy rule follows from that, and runs follow the
  * simulations setting (runGate), which this file only explains, never bypasses.
  *
- * openTrialSearch(space): the "Try a precon" sheet (Testing's "Try a precon…", #/matchups?open=precon): a search
+ * openTrialSearch(space): the "Try a precon" sheet (New deck or #/matchups?open=precon): a search
  *   over GET /api/precons, then openTrialPrecon(file, space): GET /api/precons/trial says whether a trial already
  *   exists, whether this viewer may make one and whether the precon can be tested; "Try it in Forge" is
  *   POST /api/precons/trial, then the new deck's Testing tab (a 409 naming an existing trial opens that one).
@@ -58,12 +58,14 @@ function openTrialSearch(space = ptrDefaultSpace()) {
   const ctx = ptrSheet(space);
   ctx.input = el("input", { id: `ptr-q-${ctx.sheet.heading.id}`, type: "search", autocomplete: "off", placeholder: "Deck or set name" });
   ctx.input.addEventListener("input", () => {
+    ctx.seq++;
+    clear(ctx.area);
     clearTimeout(ctx.timer);
     ctx.timer = setTimeout(() => ptrSearch(ctx), PTR_SEARCH_MS);
   });
   ctx.searchField = el("div", { class: "ptr-search" },
     el("p", { class: "sub", text: `Test a published precon you don't own in Forge, against ${ptrWhose(space)} and popular decks, ` +
-      "before buying it. It's saved as a trial deck idea; nothing is added to the collection." }),
+      "before buying it. A trial saves a deck idea for simulations. It adds no inventory copies or reservations." }),
     el("label", { class: "field precon-search", for: ctx.input.id }, el("span", { class: "sr-only", text: "Find a precon" }), ctx.input));
   ctx.sheet.body.insertBefore(ctx.searchField, ctx.message);
   ctx.search = true;
@@ -99,7 +101,9 @@ async function ptrSearch(ctx) {
     const decks = answer.decks || [];
     add(clear(ctx.area), [
       decks.length ? el("ul", { class: "precon-list" }, decks.map((d) => el("li", {},
-        el("button", { type: "button", class: "precon-pick", onclick: () => openTrialPrecon(d.file, ctx.space, ctx) },
+        el("button", { type: "button", class: "precon-pick", onclick: event => {
+          if (ptrHere(ctx, seq) && event.currentTarget.isConnected) openTrialPrecon(d.file, ctx.space, ctx);
+        } },
           el("span", { class: "precon-pick-words" }, el("strong", { text: d.name }),
             el("small", { text: [d.set_name || String(d.code || "").toUpperCase(), d.type].filter(Boolean).join(" · ") })),
           d.released ? el("small", { class: "precon-pick-date", text: String(d.released).slice(0, 4) }) : null))))
@@ -174,9 +178,8 @@ function ptrDrawPrecon(ctx, back) {
     action = el("div", { class: "ptr-make" },
       el("label", { class: "field ptr-title", for: ctx.titleInput.id }, el("span", { text: "Trial deck's title" }), ctx.titleInput),
       ctx.titleNote,
-      el("p", { class: "sub", text: `Try it in Forge saves it as a trial deck idea in ${ptrWhose(ctx.space)}, with MTGJSON's list, ` +
-        "and opens its Testing tab. Nothing is added to the collection. " +
-        "Remove it on its deck page when you're done; Add a precon offers to once it's bought." }));
+      el("p", { class: "sub", text: `Try it in Forge saves a trial deck idea in ${ptrWhose(ctx.space)} using MTGJSON's list and opens its simulations. ` +
+        "It adds no inventory copies or reservations. Start a simulation there when ready." }));
     primary = { text: "Try it in Forge", kind: "primary", value: "try", onclick: () => ptrTryTitled(ctx, d.file || ctx.detail.file) };
   }
   add(clear(ctx.area), [
@@ -294,19 +297,13 @@ async function ptrCoverageTry(ctx) {
 
 // ------------------------------------------------------------------ the pages' hooks
 
-/** Testing's "Try a precon…" beside Play a matchup (matchups-overview.js drawMatchups), for a viewer who may
- * add decks somewhere; #/matchups?open=precon opens the sheet once (the address loses ?open= first). */
-function ptrTestingButton(main, params, token) {
+/** Keep shared #/matchups?open=precon links working from the original Testing doorway. */
+function openLinkedPreconTrial(params, token) {
   const space = ptrDefaultSpace();
-  if (!space || !state.profile) return;
-  const head = main.querySelector(".page-head");
-  if (!head) return;
-  let buttons = head.querySelector(".page-head-buttons");
-  if (!buttons) head.append(buttons = el("div", { class: "actions page-head-buttons" }));
-  buttons.append(el("button", { type: "button", class: "btn btn-quiet", text: "Try a precon…", onclick: () => openTrialSearch(space) }));
-  if (params.get("open") !== "precon") return;
+  const profile = state.profile?.id;
+  if (!space || !profile || params.get("open") !== "precon") return;
   setTimeout(() => {
-    if (token !== routeToken) return;
+    if (token !== routeToken || profile !== state.profile?.id) return;
     const query = new URLSearchParams(params);
     query.delete("open");
     history.replaceState(history.state, "", `#/matchups${query.toString() ? `?${query}` : ""}`);
@@ -319,18 +316,17 @@ function ptrDeckNotice(data) {
   const s = data.summary;
   const editable = canEditDeck(s) && !s.read_only;
   const space = s.space || deckSpaceOf(s.id);
-  const bought = colHash(space);
   const ctx = { ...ptrPageContext(), sending: false };
   const keep = editable ? el("button", { type: "button", class: "btn", text: "Keep as a deck idea",
     onclick: () => ptrKeep(data, keep, ctx) }) : null;
   return el("section", { class: "deck-section ptr-notice", "aria-labelledby": "h-overview-trial" },
     el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-trial", text: "A trial" })),
-    el("p", {}, "You don't own this precon. Test it against your decks and popular decks on ",
-      el("a", { href: ptrTrialHref(s.id), text: "Testing" }), "."),
+    el("p", {}, "This published list is saved as a trial. Test it against your decks and popular decks in ",
+      el("a", { href: ptrTrialHref(s.id), text: "Simulate" }), "."),
     editable ? el("div", { class: "actions ptr-actions" },
       canRetireDeck(data) ? el("button", { type: "button", class: "btn", text: "Remove trial", onclick: () => openRetireDeck(data) }) : null,
       keep,
-      el("a", { class: "btn btn-quiet", href: `${bought}${bought.includes("?") ? "&" : "?"}open=precon`, text: "Bought it? Add a precon" })) : null);
+      canEditSpace(space) ? el("a", { class: "btn btn-quiet", href: ownedPreconHref(space, s.trial), text: "I own this precon" }) : null) : null);
 }
 
 /** The page a late answer belongs to: the deck page's deck (its tabs rewrite the address in place, which is no

@@ -130,6 +130,31 @@ async function keyboardChecks(page, result, review) {
   result.keyboard_checked = true;
 }
 
+async function navigationChecks(page, result) {
+  const mobile = await page.locator('#tabbar').isVisible();
+  const nav = page.locator(mobile ? '#tabbar' : '#main-nav');
+  const primary = await nav.locator(mobile ? ':scope > a' : 'a.nav-item')
+    .evaluateAll(links => links.map(link => link.dataset.route));
+  const isHome = result.spec.profile === 'matt';
+  assert.deepEqual(primary, isHome ? ['library','collection','shopping'] : ['library','collection']);
+  await nav.getByRole('button',{name:/^More destinations/}).click();
+  const more = page.locator(mobile ? '#more-sheet' : '#nav-more-menu');
+  await more.waitFor();
+  for(const target of ['help','play','matchups']) assert(await more.locator(`a[data-route=${target}]`).isVisible());
+  assert.equal(await more.locator('a[data-route=assembly]').isVisible(),isHome);
+  await more.locator('a[data-route=help]').click();
+  await page.getByRole('heading',{name:'Help',level:1,exact:true}).waitFor();
+  assert.equal(await more.isVisible(),false);
+  if(isHome) {
+    await page.locator('#avatar-button').click();
+    await page.getByRole('link',{name:'Administration',exact:true}).click();
+    await page.getByRole('heading',{name:'Administration',level:1,exact:true}).waitFor();
+    await page.getByRole('button',{name:'Service & data',exact:true}).click();
+    assert.equal(await page.evaluate(() => document.activeElement?.id),'settings-service');
+  }
+  result.navigation_checked = true;
+}
+
 run('shell-layout', async review => {
   review.report.results = [];
   const specs = matrix(review.config.ready.routes,review.options.smoke);
@@ -166,6 +191,7 @@ run('shell-layout', async review => {
       await page.evaluate(() => window.scrollTo(0,300));
       await page.waitForTimeout(100);
       result.scrolled = await measure(page,spec.width);
+      if(/^back-393-|^back-820-|^account-admin-/.test(spec.name)) await navigationChecks(page,result);
       assert.equal(result.page_errors.length,0,'Uncaught page error');
       assert(!result.http_errors.some(r => r.category==='unexpected_http_error'),'Unexpected fixture HTTP failure');
       result.status='captured';

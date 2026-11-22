@@ -79,7 +79,7 @@ def coverage_view(space=None, format=None, type=None, limit=None):
         raise ApiError(502, _public(e)) from None
     return {"space": space, "date": ranked["date"], "decks": ranked["decks"][:limit],
             "total": len(ranked["decks"]), "types": ranked["types"], "status": ranked["status"],
-            "may_start": _may_start(space)}
+            "collection_incomplete": bool(p.warnings or p.unresolved), "may_start": _may_start(space)}
 
 
 def _sections(read, kind):
@@ -117,7 +117,8 @@ def _card(name):
 
 def coverage_deck(file=None, space=None):
     """GET /api/precons/coverage/deck: {"deck" (its /api/precons entry), "kind", "title" (a
-    suggested deck title), "cards", "covered", "share" (as the ranking counts them), "missing"
+    suggested deck title), "cards", "covered", "free_now", "on_the_way", "incoming_cards"
+    (copies needed from incoming orders), "share" (as the ranking counts them), "missing"
     ([{"name", "need", "free", "missing", "aud_each", "aud_missing", "priced_printing", "card"}],
     the dearest first, unpriced last), "totals" ({"missing", "aud_missing", "unpriced"}),
     "rate", "rate_date", "price_date", "price_error" (pool.compare's), "problems" (cards of
@@ -140,6 +141,14 @@ def coverage_deck(file=None, space=None):
     result = pool.compare(sections, _pool(space), prices=True)
     total = sum(r["need"] for r in result["rows"])
     covered = sum(min(r["need"], r["available"]) for r in result["rows"])
+    free_now = 0
+    incoming = []
+    for row in result["rows"]:
+        here = max(0, row["available"] - row["on_the_way"])
+        free_now += min(row["need"], here)
+        needed_incoming = min(row["need"], row["available"]) - min(row["need"], here)
+        if needed_incoming:
+            incoming.append({"name": row["name"], "quantity": needed_incoming})
     missing = [{"name": r["name"], "need": r["need"], "free": r["available"], "missing": r["missing"],
                 "aud_each": r["aud_each"], "aud_missing": r["aud_missing"], "priced_printing": r["priced_printing"],
                 "card": _card(r["name"])} for r in result["rows"] if r["missing"]]
@@ -148,6 +157,8 @@ def coverage_deck(file=None, space=None):
     title = f"{' & '.join(add._short(n) for n in commanders)}: {entry['name']}" if commanders else entry["name"]
     why = why_not_testable(*kind_and_cards(entry, sections))
     return {"deck": entry, "kind": kind, "title": title[:saving.MAX_TITLE], "cards": total, "covered": covered,
+            "free_now": free_now, "on_the_way": covered - free_now, "incoming_cards": incoming,
+            "collection_incomplete": bool(result["warnings"] or result["unresolved"]), "list_complete": not read["problems"],
             "share": round(covered / total, 4) if total else None, "missing": missing,
             "totals": {k: result["totals"][k] for k in ("missing", "aud_missing", "unpriced")},
             "rate": result["rate"], "rate_date": result["rate_date"], "price_date": result["price_date"],

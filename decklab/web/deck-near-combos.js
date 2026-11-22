@@ -3,13 +3,13 @@
  * card to add, what the combo does, what it would do to the minimum bracket, an AUD estimate, and (only to a
  * viewer who sees the space's collection: the server sends "availability" to no one else) whether a copy is
  * free, on the way, in another deck or to buy. Whoever may change the deck adds the card to its Considering
- * list (E2-S23, saveConsidering), never straight into the lists. */
+ * draft in the editor. */
 "use strict";
 
 const NEAR_SHOWN = 8;       // combos shown before "Show all"
 const NEAR_ORDER = { free: 0, on_the_way: 1, in_use: 2, to_buy: 3 };
-const NEAR_STATUS = { free: ["good", "Free in the pool"], on_the_way: ["info", "On the way"],
-  in_use: ["plain", "In another deck"], to_buy: ["outline", "To buy"] };
+const NEAR_STATUS = { free: ["good", "Free now"], on_the_way: ["info", "On the way"],
+  in_use: ["plain", "Held or lent out"], to_buy: ["outline", "Short in collection"] };
 
 /** bracket.near_combos when the combo list could be read, else null (an older server, or no commander). */
 function nearCombos(br) {
@@ -53,13 +53,8 @@ function nearComboItem(m, data, editable) {
   item.append(marks);
   if (m.considering) item.append(el("p", { class: "sub", text: "On the Considering list." }));
   else if (editable) {
-    item.append(el("button", { type: "button", class: "btn btn-quiet", text: "Add to Considering",
-      onclick: async (event) => {
-        // Off while it saves; a refused save (its toast says why) turns it back on to try again.
-        const button = event.currentTarget;
-        button.disabled = true;
-        if (!await saveConsidering(data, { action: "add", line: { name: m.missing, qty: 1 } })) button.disabled = false;
-      } }));
+    item.append(el("a", { class: "btn btn-quiet", text: "Consider in editor", href: consideringEditHref(data, m.missing),
+      "aria-label": `Consider ${m.missing} in the editor` }));
   }
   return item;
 }

@@ -17,7 +17,12 @@ SETUP = PAGE + """
   const toasts = []; toast = (text) => toasts.push(text);
   const settle = async () => { for (let i = 0; i < 5; i++) { await null; flushTimers(); } };
   const sheet = () => document.querySelector('.proxy-sheet');
-  const menu = (page) => deckMoreItems(page).filter((i) => i && i !== 'sep').map((i) => i.label);
+  const offersPrint = page => {
+    const exports = openDeckExportSheet(page);
+    const offered = !!buttonText(exports.body, 'Print proxies for the Planned list');
+    exports.close();
+    return offered;
+  };
 """
 
 
@@ -32,7 +37,7 @@ class DeckProxiesUiTests(unittest.TestCase):
     def test_one_card_size_proxy_per_missing_copy(self):
         self.run_js("""
           const page = makePage();
-          assert(menu(page).includes('Print proxies'));
+          assert(offersPrint(page));
           const copies = proxyCopies(page);
           same(copies.map((c) => c.name), ['Bolt', 'Bolt', 'Bolt']);
           printProxies(page); await settle();
@@ -73,7 +78,7 @@ class DeckProxiesUiTests(unittest.TestCase):
           same(proxyCopies(page).map((c) => c.covers), ['Shock', 'any card', null]);
           printProxies(page); await settle();
           same(sheet().querySelector('.proxy-list').querySelectorAll('li').map((li) => li.textContent),
-               ['1. Bolt: covers the stand-in (Shock)', '2. Bolt: covers the stand-in (any card)', '3. Bolt']);
+               ['1. Bolt: covers the physical placeholder (Shock)', '2. Bolt: covers the physical placeholder (any card)', '3. Bolt']);
           // The Play-now list's markers aren't the Planned list's.
           page.standins.version = 'owned';
           same(proxyCopies(page).map((c) => c.covers), [null, null, null]);
@@ -101,15 +106,15 @@ class DeckProxiesUiTests(unittest.TestCase):
         self.run_js("""
           const page = makePage();
           page.owned.rows[1] = row('Bolt', 3, 0); page.owned.totals.missing = 0;
-          assert(!menu(page).includes('Print proxies'));
+          assert(!offersPrint(page));
           printProxies(page); await settle();
           assert.equal(printed, 0); assert(toasts.at(-1).includes('Nothing in the Planned list is missing'));
           const hidden = makePage(); delete hidden.owned;
-          assert(!menu(hidden).includes('Print proxies'));
+          assert(!offersPrint(hidden));
           printProxies(hidden); await settle();
           assert.equal(printed, 0); assert.equal(sheet(), null);
           state.may = {see_inventory: ['user2']};
-          assert(!menu(makePage()).includes('Print proxies'));
+          assert(!offersPrint(makePage()));
         """)
 
     def test_the_play_now_list_prints_the_planned_lists_proxies(self):
@@ -118,7 +123,7 @@ class DeckProxiesUiTests(unittest.TestCase):
           shown.version = 'owned'; shown.owned.totals.missing = 0;
           const asked = [];
           api = async (url) => { asked.push(url); return planned; };
-          assert(menu(shown).includes('Print proxies'));
+          assert(offersPrint(shown));
           printProxies(shown); await settle();
           same(asked, ['/api/deck?id=casual%2Ftest&version=target&omit=matchups']);
           assert.equal(sheet().querySelectorAll('.proxy-card').length, 3);

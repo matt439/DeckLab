@@ -22,10 +22,11 @@ function playTonightSection(data) {
   const section = el("section", { class: "play-section play-tonight", "aria-labelledby": "play-tonight-title" },
     el("h2", { id: "play-tonight-title", text: "Tonight's pairs" }),
     el("p", { class: "sub", text: "Ready decks, one each, the evenest and least lately played first." }), body);
-  const token = routeToken;
-  const fill = (answer) => { if (token === routeToken) clear(body).append(...playTonightBody(answer, data)); };
+  const token = routeToken, profile = state.profile;
+  const here = () => token === routeToken && profile === state.profile && section.isConnected;
+  const fill = (answer) => { if (here()) clear(body).append(...playTonightBody(answer, data)); };
   api("/api/play/pairs").then(fill, (error) => {
-    if (token === routeToken) clear(body).append(loadFailed("Tonight's pairs", error));
+    if (here()) clear(body).append(loadFailed("Tonight's pairs", error));
   });
   return section;
 }
@@ -49,7 +50,7 @@ function playTonightCard(pair, data) {
   const [first, second] = pair.sides;
   return el("article", { class: "panel play-record play-tonight-pair" },
     el("h3", { text: `${first.title} vs ${second.title}` }),
-    el("p", { class: "sub", text: pair.sides.map((side) => `${playTonightPlayer(side.seat)}: ${side.title}`).join(" · ") }),
+    el("p", { class: "sub", text: pair.sides.map(side => `${playTonightPlayer(side.seat)}: ${side.title} (${listName(side.version || "target", true)})`).join(" · ") }),
     el("ul", { class: "play-tonight-reasons" }, pair.reasons.map((reason) => el("li", { text: reason }))),
     el("button", { type: "button", class: "btn btn-quiet", text: "Use this pair", onclick: () => playTonightUse(pair, data) }));
 }

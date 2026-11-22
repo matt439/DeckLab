@@ -46,11 +46,11 @@ function drawCharts() {
 function statsSection(data) {
   const st = data.stats;
   const section = el("section", { class: "deck-section", id: "sec-stats", "aria-labelledby": "h-stats" },
-    el("h2", { id: "h-stats", class: "sr-only", text: "Stats" }));
+    el("h2", { id: "h-stats", text: `Checks for the ${listName(data.version, true)}` }));
   if (!st) {
     // They come with the deck, so Try again loads the deck page again.
     section.append(el("div", { class: "box box-warn" },
-      el("h3", { class: "box-head", text: "The stats couldn't be worked out" }),
+      el("h3", { class: "box-head", text: "Deck checks couldn't be worked out" }),
       el("p", { text: "The warnings at the top say why." }),
       el("div", { class: "actions" }, el("button", { type: "button", class: "btn", text: "Try again", onclick: () => route() }))));
     return section;
@@ -60,21 +60,36 @@ function statsSection(data) {
   if (st.unresolved && st.unresolved.length) {
     notes.push(`Left out of the stats (not Scryfall card names): ${st.unresolved.map((u) => `${u.qty} ${u.name}`).join(", ")}.`);
   }
-  add(section, [statsVerdict(st, data.summary), warningsBox([...notes, ...(st.warnings || [])], "About these stats")]);
+  add(section, [statsVerdict(st, data.summary), warningsBox([...notes, ...(st.warnings || [])], "About these checks")]);
+  const rules = st.commander ? commanderPanel(st, data.summary, data) : casualRulesPanel(st, data.summary);
+  if (rules) section.append(rules);
   section.append(el("div", { class: "panels" },
     curvePanel(st),
     landPanel(st),
     colourPanel(st, data),
-    st.commander ? commanderPanel(st, data.summary, data) : null,
-    st.commander ? nearCombosPanel(data) : null,
-    drawOddsPanel(data),
     compositionPanel(st, data),
-    st.answers ? answersPanel(st.answers, data) : null,
     categoriesPanel(data),
-    tribesPanel(st),
-    st.sideboard && st.sideboard.count ? sideboardPanel(st) : null,
-    sourcesPanel(st)));
+    st.sideboard && st.sideboard.count ? sideboardPanel(st) : null));
+  const details = [st.answers ? answersPanel(st.answers, data) : null, drawOddsPanel(data),
+    tribesPanel(st), st.commander ? nearCombosPanel(data) : null, sourcesPanel(st)];
+  section.append(el("div", { class: "deck-check-detail" }, details.filter(Boolean).map(panel => {
+    const heading = panel.querySelector("h3");
+    heading.classList.add("sr-only");
+    return el("details", { class: "more" }, el("summary", { text: heading.textContent }), panel);
+  })));
   return section;
+}
+
+function casualRulesPanel(st, summary) {
+  if (summary.kind !== "casual" || /^(?:[^/]+\/)?(?:product|pairing)\//.test(summary.id)
+      || !Array.isArray(st.casual_problems)) return null;
+  const problems = st.casual_problems;
+  const rules = el("section", { class: "panel", "aria-labelledby": "h-casual-rules" },
+    el("h3", { id: "h-casual-rules", text: "Casual 60-card rules" }),
+    problems.length ? el("ul", { class: "checks" }, problems.map(problem => checkItem(false, problem)))
+      : el("p", { text: "Meets the local 60-card rules." }),
+    explain("Which rules apply?", "At least 60 cards and normally up to four copies of each nonbasic card across the deck and sideboard. Card text can change its own copy limit. All printings are welcome in casual play."));
+  return rules;
 }
 
 /** The stats' answers in one strip, before any chart: the average mana value, the lands against the
@@ -104,7 +119,7 @@ function statsVerdict(st, summary) {
   }
   const k = st.commander;
   if (k) {
-    items.push(verdictItem("Deck rules", k.ok ? "Followed" : "Broken", k.ok ? "100 cards, one of each, in colour"
+    items.unshift(verdictItem("Deck rules", k.ok ? "Followed" : "Broken", k.ok ? "100 cards, one of each, in colour"
       : ruleProblemShort(k.problems) || "see Commander rules", k.ok ? null : status("crit", "Breaks a rule")));
     const br = k.bracket || {};
     if (br.label) {
@@ -112,8 +127,8 @@ function statsVerdict(st, summary) {
       // The value is just the numbers ("1 or 2", "4 or higher"); a label's "(theme and intent decide)" goes in
       // the small line under it, with what the deck aims for.
       const m = /^(?:Bracket\s+)?(.*?)\s*(?:\((.*)\))?$/.exec(br.label);
-      const hint = [m[2], aim ? `aims for Bracket ${aim}` : "the lowest it fits"].filter(Boolean).join("; ");
-      items.push(verdictItem("Bracket", m[1] || br.label, hint));
+      const hint = [m[2], aim ? `aims for Bracket ${aim}` : "the lowest it fits"].filter(Boolean).join(" · ");
+      items.splice(1, 0, verdictItem("Bracket", m[1] || br.label, hint));
     }
   }
   if (!items.length) return null;
@@ -649,8 +664,8 @@ function roleRangesPart(data, targets) {
   return fold;
 }
 
-/** "Free cards by role" under a Commander deck's role bars (E9-S26), or null: only for a deck (not a product or
- * pairing) with a commander whose collection the visitor may see (the server sends "owned" to no one else). Opening
+/** "Find cards by role" under a deck's role bars (E9-S26), or null: only for a deck (not a product or pairing)
+ * whose collection the visitor may see (the server sends "owned" to no one else). Opening
  * it asks GET /api/deck/role-cards once for the list on screen; a refusal (400, 403, 404) says so without retrying,
  * any other failure offers Try again. */
 function rolePoolPart(data) {
@@ -659,7 +674,7 @@ function rolePoolPart(data) {
   const version = data.version === "owned" ? "owned" : "target";
   const body = el("div", { class: "role-pool" });
   const part = el("details", { class: "more role-pool-part" },
-    el("summary", { text: "Free cards by role" }), body);
+    el("summary", { text: "Find cards by role" }), body);
   const profile = state.profile, token = routeToken, hash = location.hash;
   const current = () => part.isConnected && profile === state.profile && token === routeToken && hash === location.hash;
   let asked = false;
@@ -675,7 +690,7 @@ function rolePoolPart(data) {
           body.replaceChildren(el("p", { class: "sub", text: (e && e.message) || "Not available for this deck." }));
           return;
         }
-        body.replaceChildren(loadFailed("Free cards by role", e, ask));
+        body.replaceChildren(loadFailed("Cards by role", e, ask));
       });
   };
   part.addEventListener("toggle", () => { if (part.open && !asked) ask(); });
@@ -685,22 +700,28 @@ function rolePoolPart(data) {
 /** The answer of GET /api/deck/role-cards drawn: a line on where the cards come from, then each role's free cards. */
 function rolePoolBody(answer) {
   const colours = answer?.kind === "casual" ? "list's non-land colours" : "commander's colours";
-  const out = [el("p", { class: "sub", text: "Cards in the collection with a copy free for this deck, inside the " +
-    colours + " and not in the list yet. Cards other built decks or intact products hold aren't counted." })];
+  const list = LIST_NAME[answer?.version] || LIST_NAME.target;
+  const out = [el("p", { class: "sub", text: `Cards outside the ${list} that fit the ${colours}. ` +
+    "Free now counts copies you can use today. On the way counts incoming copies available to this deck." })];
+  if (answer?.warnings?.length) out.push(el("p", { class: "note note-warn",
+    text: "Some collection records could not be checked. Verify copies before making a change." }));
   if (answer?.kind === "casual") out.push(el("p", {class: "sub", text: "No format legality filter or Commander role target is applied to this 60-card list."}));
   if (!answer || !answer.tags_available) {
     out.push(el("p", { class: "note note-warn", text: "Role tags are unavailable: Deck Lab's card data has no " +
-      "Scryfall role tags, so free cards can't be found by role." }));
+      "Scryfall role tags, so cards can't be found by role." }));
     return out;
   }
   for (const r of answer.roles || []) {
     const name = (ROLE_WORDS[r.role] || [capitalise(r.role)])[0];
     let content;
     if (!r.tagged) content = el("p", { class: "sub", text: `Unavailable: the card data has no cards with Scryfall's "${r.tag}" tag.` });
-    else if (!r.cards.length) content = el("p", { class: "sub", text: `None free in the ${colours}.` });
+    else if (!r.cards.length) content = el("p", { class: "sub", text: `No copies free now or on the way in the ${colours}.` });
     else {
-      content = el("ul", { class: "card-names" }, r.cards.map((c) => el("li", {}, cardLink(c, "role-pool"),
-        el("span", { class: "sub", text: ` ${c.free} free${c.here < c.free ? `, ${c.free - c.here} on the way` : ""}` }))));
+      content = el("ul", { class: "card-names" }, r.cards.map((c) => {
+        const incoming = c.free - c.here;
+        const counts = [c.here > 0 ? `${num(c.here)} free now` : "", incoming > 0 ? `${num(incoming)} on the way` : ""];
+        return el("li", {}, cardLink(c, "role-pool"), el("span", { class: "sub", text: ` ${counts.filter(Boolean).join(", ")}` }));
+      }));
     }
     out.push(el("h5", { text: name }), content,
       r.more ? el("p", { class: "sub", text: `And ${plural(r.more, "more card")}.` }) : null);

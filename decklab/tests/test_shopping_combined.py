@@ -65,6 +65,15 @@ class CombinedShortfallTests(_Combined, unittest.TestCase):
         self.assertEqual(sorted((held["title"], held["copies"]) for held in rows["Llanowar Elves"]["held_elsewhere"]),
                          [("Cats (Foundations Beginner Box)", 1), ("Elves (Foundations Beginner Box)", 1), ("Holding", 1)])
 
+    def test_lent_copies_are_reported_separately_from_deck_holds(self):
+        supply = pool.load_pool()
+        supply.in_use.append(pool.InUse("loans/home", "lent out", "lent out", {RIDER: 1}))
+        with mock.patch.object(pool, "load_pool", return_value=supply):
+            row = by_name(self.combined("casual/alpha", "casual/beta"))[RIDER]
+        self.assertEqual(row["missing"], 4)
+        self.assertEqual(row["lent_out"], 1)
+        self.assertEqual(row["held_elsewhere"], [])
+
     def test_a_chosen_built_deck_counts_its_own_copies(self):
         answer = self.combined("casual/alpha", "casual/holding")
         rows = by_name(answer)

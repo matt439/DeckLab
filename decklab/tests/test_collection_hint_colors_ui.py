@@ -28,7 +28,7 @@ class CollectionHintColorsUiTests(unittest.TestCase):
             const paint = swatch.getAttribute('style');
             assert(paint.includes('--stripe-r')); assert(paint.includes('--stripe-g'));
             assert(!paint.includes('--stripe-u')); assert(!paint.includes('--stripe-c'));
-            assert.equal(link.textContent, '2 \u00d7 Saved deck (Play-now list)');
+            assert.equal(link.textContent, '2 \u00d7 Saved deck (Alternative list)');
             assert.equal(link.getAttribute('href'), deckHref('casual/saved', 'owned'));
             assert(root.textContent.includes('Saved packing lists may differ from the boxes and current deck lists.'));
             assert(root.textContent.includes('Links open current lists.'));

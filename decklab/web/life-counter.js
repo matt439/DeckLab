@@ -106,13 +106,13 @@ function lifeCounterLauncher(data, chosen) {
     const saved = lifeSaved(data);
     clear(box);
     if (!saved) {
-      box.append(el("button", { type: "button", class: "btn", text: "Life counter", onclick: start }));
+      box.append(el("button", { type: "button", class: "btn", text: "Start a 1v1 game", "data-play-start": "", onclick: start }));
       return;
     }
     add(box, [el("button", { type: "button", class: "btn", text: "Resume life counter",
       onclick: event => openLifeCounter(data, lifeSaved(data) || saved, draw, { resume: true, source: event.currentTarget }) }),
     el("span", { class: "sub", text: saved.players.map((p) => `${p.name} ${p.life}`).join(" · ") }),
-    el("button", { type: "button", class: "btn btn-quiet", text: "New life counter", onclick: start })]);
+    el("button", { type: "button", class: "btn btn-quiet", text: "Start a new 1v1 game", "data-play-start": "", onclick: start })]);
   }
   draw();
   return box;
@@ -475,8 +475,8 @@ function lifeV2Launcher(data, chosen, resumeOnly = false) {
     if (!game) { error.textContent = lifeSourceNewError(input) || "Check the selected players and commander sources."; return; }
     openLifeSourceCounter(data, game, { source: button, isCurrent: () => lifeV2LaunchHere(ctx, button), replace: true, onClose: draw });
   };
-  function button(words, action) {
-    const value = el("button", { type: "button", class: "btn", text: words });
+  function button(words, action, attrs = {}) {
+    const value = el("button", { type: "button", class: "btn", text: words, ...attrs });
     value.addEventListener("click", () => { if (lifeV2LaunchHere(ctx, value) && lifeV2Foreground(value)) action(value); });
     return value;
   }
@@ -488,7 +488,7 @@ function lifeV2Launcher(data, chosen, resumeOnly = false) {
         if (current) openLifeSourceCounter(data, current, { source: value, isCurrent: () => lifeV2LaunchHere(ctx, value), onClose: draw });
       }), el("span", { class: "sub", text: saved.players.map(player => `${player.name} ${player.life}`).join(" · ") }));
     }
-    if (!resumeOnly) box.append(button(saved ? "New life counter" : "Life counter", start));
+    if (!resumeOnly) box.append(button(saved ? "Start a new 1v1 game" : "Start a 1v1 game", start, { "data-play-start": "" }));
     if (legacy) box.append(button("Resume legacy life counter", value => {
       if (lifeV2LaunchHere(ctx, value)) openLifeCounter(data, lifeSaved(data) || legacy, draw,
         { resume: true, source: value, isCurrent: () => lifeV2LaunchHere(ctx, value) });

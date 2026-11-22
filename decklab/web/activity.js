@@ -32,7 +32,7 @@ const ACTIVITY_ORDER_TABLES = ["purchase_order", "order_component", "order_card_
 function showActivity(params, token) {
   const filter = activityFilter(params);
   return load(activityPath(filter), token, (data) => activityDraw(data, token, filter),
-    { title: "Activity couldn't be loaded" });
+    { title: "Changes couldn't be loaded" });
 }
 
 /** The filter the address asks for: {kind, actor}, each null for all (an unknown kind is ignored). */

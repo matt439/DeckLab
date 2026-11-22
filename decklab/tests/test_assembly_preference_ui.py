@@ -30,7 +30,7 @@ class AssemblyPreferenceUiTests(unittest.TestCase):
           const data=preferredPlan(),before=JSON.stringify(data),view=await openPreferences(data),select=preferenceSelect(view);
           assert(select);assert.equal(select.tag,'select');assert.equal(select.value,'');
           same(select.querySelectorAll('option').map(n=>[n.value,n.textContent]),
-            [['','Default selection order'],['casual/a','Elves (Planned list)'],['casual/b','Burn (Play-now list)']]);
+            [['','Default selection order'],['casual/a','Elves (Planned list)'],['casual/b','Burn (Alternative list)']]);
           assert.equal(select.getAttribute('aria-label'),'Give free copies of Alpha first to');
           assert(select.parentNode.textContent.includes('Give free copies of Alpha first to'));
           assert(view.results.querySelector('.pack-overlap').textContent.includes('Checking tasks does not change'));
@@ -97,7 +97,7 @@ class AssemblyPreferenceUiTests(unittest.TestCase):
             data.choices[0].sideboards={target:[{name:'Gamma',quantity:2}],owned:[{name:'Gamma',quantity:1}]};return data;};
           let view=await openPreferences(make()),picked=view.selected[0];
           packChooseVersion(view,picked,'target');same(picked.prefer,['Alpha']);
-          view.picks.querySelectorAll('button').find(n=>n.textContent==='Play-now list').click();
+          view.picks.querySelectorAll('button').find(n=>n.textContent==='Alternative list').click();
           assert(!('prefer' in picked));same(view.selected[1].prefer,['Beta']);
           for(const mode of ['main','custom','all']){view=await openPreferences(make());
             if(mode==='all'){view.selected[0].sideboard={};drawPackPicks(view);}
@@ -181,8 +181,8 @@ class AssemblyPreferenceUiTests(unittest.TestCase):
           data.decks[0].standins={rows:[],choices:[],retired:[],version:'target',editable:true,sha256:'s'.repeat(64),
             needs:[{for:'Beta',qty:1,suggestion:null}],candidates:[],warnings:[]};const calls=[];
           mockApi(async(path,body)=>{calls.push([path,body]);return path.endsWith('/preview')?data:{saved:true};});
-          const view=await openPreferences(data);view.results.querySelectorAll('button').find(n=>n.textContent==='Choose stand-ins').click();
-          const sheet=[...assemblySheets][0];assert(sheet);document.querySelectorAll('dialog[open]')[0].querySelectorAll('button').find(n=>n.textContent==='Save stand-ins').click();
+          const view=await openPreferences(data);view.results.querySelectorAll('button').find(n=>n.textContent==='Choose physical placeholders').click();
+          const sheet=[...assemblySheets][0];assert(sheet);document.querySelectorAll('dialog[open]')[0].querySelectorAll('button').find(n=>n.textContent==='Save placeholder choices').click();
           await settle();assert.equal(calls[0][0],'/api/assembly/standins');same(calls[0][1].decks,data.selections);
           assert.equal(calls[1][0],'/api/assembly/preview');same(calls[1][1].decks,data.selections);
         """)

@@ -5,6 +5,8 @@
 .acc-message { margin: var(--s-3) 0; }
 .acc-section { margin-top: var(--s-5); }
 .acc-section > h3 { font-size: var(--fs-lg); }
+.acc-section > summary { min-height: var(--tap); cursor: pointer; font-weight: var(--fw-semibold); }
+.acc-section > summary > h3 { display: inline; margin: 0; font-size: var(--fs-lg); }
 /* Each owner's group starts clear of the last group's chips (the first sits under the filter as before). */
 .acc-section + .acc-owner-title { margin-top: var(--s-7); }
 /* The tiles: two a row on a phone, the picture first, one line under the name, then chips. */
@@ -84,6 +86,7 @@ button.acc-tile:hover .acc-thumb-fill { border-color: var(--accent); }
 .acc-sheet-message:empty { display: none; }
 .acc-sheet-message .box { margin: 0; }
 .acc-picture { display: grid; gap: var(--s-2); }
+.acc-photo-settings > :not(summary) { margin-top: var(--s-3); }
 .acc-preview { margin: 0; max-width: 240px; }
 .acc-preview figcaption { margin-top: var(--s-1); font-size: var(--fs-sm); }
 .acc-picture-actions { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-2); }

@@ -159,7 +159,7 @@ class EditorActionBarTests(unittest.TestCase):
           assert(noOwnedList());assert(ed.dom.barParts.changes.hidden);
           ed.prose.notes+='\n\nOnly shared notes changed.';changed({list:false});
           assert.equal(ed.dom.barParts.changeCount.textContent,'Unsaved changes');startOwned();
-          assert.equal(editorBarChangeSummary(ed),null);assert.equal(ed.dom.barParts.changeCount.textContent,'Unsaved play-now list');assert(ed.dom.barParts.changeCopies.hidden);
+          assert.equal(editorBarChangeSummary(ed),null);assert.equal(ed.dom.barParts.changeCount.textContent,'Unsaved alternative list');assert(ed.dom.barParts.changeCopies.hidden);
           ed=full({may_save:false});setQty(ed.lists.Deck[0].uid,5);assert.equal(ed.dom.barParts.changeCount.textContent,'Trial changes');
           assert(ed.dom.barParts.discard.hidden);assert(!ed.dom.barParts.undo.disabled);assert(!ed.dom.barParts.save);
         ''')

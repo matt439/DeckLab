@@ -134,7 +134,7 @@ async function openSwapSheet(uid) {
   const name = found.line.name;
   const hash = location.hash, profile = state.profile && state.profile.id;
   const here = () => editor === ed && !ed.leaving && location.hash === hash && (state.profile && state.profile.id) === profile;
-  const sheet = openSheet({ title: `Stand-ins for ${name}`, side: true });
+  const sheet = openSheet({ title: `Substitute cards for ${name}`, side: true });
   sheet.dialog.classList.add("swap-sheet");
   // Asked again in place by Try again, with the list as it is then.
   const ask = async () => {
@@ -144,7 +144,7 @@ async function openSwapSheet(uid) {
       answer = await apiWrite("/api/deck/swaps", { id: ed.id, list: sendList(ed.lists), card: name });
     } catch (e) {
       if (!(e instanceof ApiError)) throw e;
-      if (here() && !sheet.closed) clear(sheet.body).append(loadFailed("The stand-ins", e, () => { if (here() && !sheet.closed) ask(); }));
+      if (here() && !sheet.closed) clear(sheet.body).append(loadFailed("Substitute cards", e, () => { if (here() && !sheet.closed) ask(); }));
       return;
     }
     if (!here() || sheet.closed) return;          // a late answer: the editor, the page or the person changed
@@ -168,6 +168,7 @@ function drawSwapSheet(sheet, uid, entry, answer) {
   });
   add(clear(sheet.body), [
     el("p", { class: "sub swap-head", text: `${plural(entry.missing, "copy", "copies")} missing · ${swapLooksFor(entry)}` }),
+    rows.length ? el("p", { class: "sub", text: "Using a substitute changes your draft. Check and save to apply it to the Alternative list." }) : null,
     price ? el("p", { class: "sub", text: price }) : null,
     rows.length ? el("ul", { class: "swap-list" }, rows) : el("div", { class: "empty swap-none" },
       el("p", { text: "No free card fits (the same type, a shared colour, mana value within 1)." }),

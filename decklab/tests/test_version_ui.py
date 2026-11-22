@@ -190,6 +190,32 @@ class VersionInteractionTests(unittest.TestCase):
           assert.equal(close(), null);
         """)
 
+    def test_profile_change_discards_pending_admin_status_and_checks_again(self):
+        self.run_js("""
+          state.profile = {id: "matt", role: "admin"};
+          const warning = document.querySelector("#build-warning");
+          const admin = {...answer(), cards: {ready: true,
+            freshness: {stale: true, warning: "Card data needs attention on the server."}}};
+          renderVersionStatus(admin);
+          assert.equal(warning.hidden, false);
+          const replies = [];
+          api = (path) => path === "/api/status" ? new Promise(resolve => replies.push(resolve))
+            : Promise.resolve({mode: "admins"});
+          startVersionMonitor();
+          state.profile = {id: "user1", role: "member"};
+          resetVersionAudience();
+          assert.equal(warning.hidden, true);
+          assert.equal(state.status, null);
+          replies[0](admin); await settle();
+          assert.equal(warning.hidden, true);
+          assert.equal(state.status, null);
+          flushTimer();
+          assert.equal(replies.length, 2);
+          replies[1](answer()); await settle();
+          assert.equal(warning.hidden, true);
+          assert.equal(state.status.cards.ready, true);
+        """)
+
     def test_why_runs_cant_start_shows_beside_each_run_control(self):
         # WP2: no page-wide notice for anyone; each Play or Start (data-run) is disabled with the reason under
         # its row, and goes back to how its page left it when runs are allowed again.

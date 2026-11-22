@@ -374,7 +374,7 @@ async function showMatchups(params, token) {
   // answer 503, and the page still works with the matchup answers' defaults. The loading state shows
   // at once, so a slow answer doesn't leave the last page on screen.
   const pending = api(`/api/profiles/${encodeURIComponent(state.profile.id)}/settings`).catch(() => null);
-  clear($("#main")).append(loadingBox("Loading Testing…"));
+  clear($("#main")).append(loadingBox("Loading simulations…"));
   const mine = await pending;
   if (token !== routeToken) return;
   return load(["/api/decks", "/api/matchups"], token, ([library, matchups]) => {
@@ -515,7 +515,7 @@ function deckMatchupList(deck, decks, pairs, format, engines = false) {
  * the sheet's preset) is given and the viewer may start runs. */
 function noDeckMatchups(deck, play = null) {
   return emptyBox(`${deck.title} hasn't played a matchup yet.`, play && runsAllowed()
-    ? el("button", { type: "button", class: "btn", text: "Play a matchup", onclick: () => play({ a: deck.id }) }) : null);
+    ? el("button", { type: "button", class: "btn", text: "Simulate a 1v1 matchup", onclick: () => play({ a: deck.id }) }) : null);
 }
 
 function drawMatchups(library, matchups, params, token) {
@@ -529,17 +529,18 @@ function drawMatchups(library, matchups, params, token) {
   const opener = () => openPlaySheet(library, () => data, token, {}, view.format);
   // The empty states' Play a matchup (drawHome), with a deck picked or this format's first.
   view.openPlay = (preset = {}) => openPlaySheet(library, () => data, token, preset, view.format);
-  const play = gate.may ? el("button", { type: "button", class: `btn ${view.mode === "matchups" ? "btn-primary" : "btn-quiet"}`, text: "Play a matchup",
+  const play = gate.may ? el("button", { type: "button", class: "btn btn-primary", text: "Simulate a 1v1 matchup",
+    hidden: view.mode !== "matchups" || null,
     onclick: opener }) : null;
   view.playButton = play;
   add(main, [
-    pageHead({ title: routeH1("matchups"), description: "Test your decks against popular decks or each other.",
+    pageHead({ title: routeH1("matchups"), description: "Test a deck against popular opponents or another saved deck.",
       primary: play, badge: simulationsChip() }),
-    el("p", {}, el("a", { href: "#/forge-pods", text: "Four-player pods" })),
+    el("p", {}, el("a", { href: "#/forge-pods", text: "Simulate a four-player pod" })),
     gate.may ? null : el("p", { class: "run-blocked mu-gate", text: gate.why }),
     forgeBox(data.forge),
     updates.node, lists]);
-  if (typeof ptrTestingButton === "function") ptrTestingButton(main, params, token);   // precon-trial.js: Try a precon… (E3-S39)
+  if (typeof openLinkedPreconTrial === "function") openLinkedPreconTrial(params, token);
   const needsLibrary = fresh => typeof fresh.decks_revision === "string" && fresh.decks_revision !== library.decks_revision;
   const prepare = async (fresh, { signal }) => {
     if (!needsLibrary(fresh)) return false;
@@ -569,10 +570,7 @@ function drawHome(host, data, library, view) {
   if (running.length) host.append(el("section", { class: "mu-group", "aria-labelledby": "h-running" },
     el("h2", { id: "h-running", text: "Playing now" }), el("ul", { class: "mu-list" }, running.map(r => runningRow(r)))));
   view.mode = GB_VIEWS.includes(view.mode) ? view.mode : "matchups";
-  if (view.playButton) {
-    view.playButton.classList.toggle("btn-primary", view.mode === "matchups");
-    view.playButton.classList.toggle("btn-quiet", view.mode !== "matchups");
-  }
+  if (view.playButton) view.playButton.hidden = view.mode !== "matchups";
   const formats = view.mode === "popular" ? [] : view.mode === "rankings" ? MATRIX_FORMATS
     : MATRIX_FORMATS.filter(([format]) => matrixDecks(library, results, format).length > 1);
   if (view.mode !== "popular" && !formats.some(([f]) => f === view.format)) {
@@ -582,7 +580,7 @@ function drawHome(host, data, library, view) {
   const section = el("section", { class: "mu-group mu-home", "aria-labelledby": "h-results" });
   const head = el("div", { class: "mu-home-head" }, el("h2", { id: "h-results", class: "sr-only", text: "Results" }),
     el("div", { class: "tabs mu-view", role: "group", "aria-label": "Results view" },
-      [["popular", "Popular decks"], ["matchups", "Matchups"], ["rankings", "Rankings"]].map(([mode, text]) => el("button", { type: "button", text,
+      [["popular", "Against popular decks"], ["matchups", "1v1 matchups"], ["rankings", "Field rankings"]].map(([mode, text]) => el("button", { type: "button", text,
         "aria-pressed": String(view.mode === mode), onclick: () => {
           if (view.token != null && (view.token !== routeToken || view.profile !== state.profile?.id)) return;
           view.mode = mode;
@@ -621,7 +619,7 @@ function drawHome(host, data, library, view) {
   if (keptPick !== storedPick) local.set(HOME_DECK_KEY, keptPick);
   const pairs = pairsOf(results);
   const playButton = (preset = {}) => view.openPlay && runGate().may
-    ? el("button", { type: "button", class: "btn", text: "Play a matchup", onclick: () => view.openPlay(preset) }) : null;
+    ? el("button", { type: "button", class: "btn", text: "Simulate a 1v1 matchup", onclick: () => view.openPlay(preset) }) : null;
   if (!shown.length) section.append(emptyBox("No matchups have been played yet.", playButton()));
   add(section, [allEarlierLine(shown)]);
   const choose = (id) => {
@@ -644,7 +642,7 @@ function drawHome(host, data, library, view) {
   add(body, [deckListbox({ id: "mu-deck-pick", label: "Show matchups for", decks, names, library, selected: view.deck,
     onChoose: choose, cls: "mu-deck-field" }),
     muSelectedSummary(view, library, data, deck),
-    el("p", { class: "sub", text: "Saved matchup rows below may use different lists or earlier engines. Open a row for its exact lists." }),
+    el("p", { class: "sub", text: "Saved Forge 1v1 results. Open a row for the tested list versions and AI limitations." }),
     el("div", { class: "mu-opponents" }, entries.length
       ? [matchupOpponentTable(entries), matchupOpponentLinks(entries)]
       // With no matchups of this format at all, the empty state above already says so.
@@ -740,7 +738,7 @@ async function muRefreshRankings(view, data) {
 
 function muRankingRow(row) {
   const versions = row.versions?.length ? row.versions : [row.version || "target"];
-  const list = versions.length > 1 ? "Planned and play-now lists (same cards and pilot)" : capitalise(listName(versions[0], true));
+  const list = versions.length > 1 ? "Planned and alternative lists (same cards and pilot)" : listName(versions[0]);
   const r = row.rating, rated = r && Number.isFinite(r.value);
   const rate = rated ? { value: r.value, low: Number.isFinite(r.low) ? r.low : null,
     high: Number.isFinite(r.high) ? r.high : null } : null;
@@ -788,8 +786,8 @@ function muRankingContent(host, entry, format) {
   if (entry.loading) host.append(loadingBox(answer ? "Updating rankings…" : "Loading rankings…", { small: !!answer }));
   if (!answer) return;
   const rows = answer.rows || [], groups = answer.groups || [];
-  host.append(el("p", { text: `Current ${format === "Constructed" ? "60-card" : format} lists, using saved games with today's engine. ` +
-    "The current field chooses its planned or play-now list for each deck, with its saved additions and exclusions. " +
+  host.append(el("p", { text: `Current ${format === "Constructed" ? "60-card" : format} lists, using saved Forge 1v1 simulations with today's engine. ` +
+    "The field uses the selected planned or alternative list for each deck, with its saved additions and exclusions. " +
     "Other current lists stay visible below. A rating is the model's estimated win rate against an average current field list in the same group, balanced for who starts. " +
     "Rank ranges show how uncertain the order is; Forge's AI is not a promise about a real game." }));
   host.append(manualFieldExclusionNote(answer.manual_excluded, "sub mu-manual-excluded"));
@@ -807,7 +805,7 @@ function muRankingContent(host, entry, format) {
   section("Unsettled without a rating", rows.filter(row => !shown.has(row) && row.in_field !== false));
   section("Outside the field", rows.filter(row => !shown.has(row)));
   if (!rows.length && !answer.error && !entry.error) host.append(emptyBox("There are no current lists of this format to rank.",
-    host.openPlay && runsAllowed() ? el("button", { type: "button", class: "btn", text: "Play a matchup", onclick: () => host.openPlay() }) : null));
+    host.openPlay && runsAllowed() ? el("button", { type: "button", class: "btn", text: "Simulate a 1v1 matchup", onclick: () => host.openPlay() }) : null));
   if (answer.notes?.length) host.append(el("details", { class: "more" }, el("summary", { text: "How rankings are worked out" }),
     el("ul", {}, answer.notes.map(text => el("li", { text })))));
 }
@@ -949,7 +947,7 @@ function findItem(items, a, b) {
  * estimates are the two lists' own (GET /api/matchup's "estimates", as their pair page shows them), asked for
  * whenever the decks change; until they come, the rough ones for the format. */
 function openPlaySheet(library, live, token, preset, format = null) {
-  const sheet = openSheet("Play a matchup", { wide: true });
+  const sheet = openSheet("Simulate a 1v1 matchup", { wide: true });
   sheet.dialog.classList.add("mu-play-sheet");
   const one = deckPicker(1, library, () => changed(true));
   const two = deckPicker(2, library, () => changed(false));
@@ -1056,7 +1054,7 @@ function openPlaySheet(library, live, token, preset, format = null) {
     }
   }
 
-  sheet.body.append(el("form", { class: "mu-play", novalidate: true, onsubmit: submit, "aria-label": "Play a matchup" },
+  sheet.body.append(el("form", { class: "mu-play", novalidate: true, onsubmit: submit, "aria-label": "Simulate a 1v1 matchup" },
     el("div", { class: "mu-picker" }, one.node, two.node),
     el("p", { class: "sub mu-kind-note", text: "Commander decks play Commander decks (1v1, 40 life); the others " +
       "play each other." }),

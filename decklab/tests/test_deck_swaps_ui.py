@@ -44,19 +44,19 @@ class DeckSwapsUiTests(unittest.TestCase):
           await settle();
           same(calls, ['/api/deck/swaps?id=casual%2Ftest&version=target']);
           const text = finder().textContent;
-          assert(text.includes('3 missing · 1 could stand in'));
-          assert(text.includes('1 missing · no close stand-in: worth buying first'));
+          assert(text.includes('3 missing · 1 substitute card'));
+          assert(text.includes('1 missing · no close substitute'));
           // Asked for once: back to All and Missing again uses the same answer.
           buttonText(main, 'All').click(); assert.equal(finder(), null);
           main.querySelectorAll('button').find((b) => b.textContent.startsWith('Missing')).click();
           await settle();
           same(calls.length, 1);
           // See them: the stand-ins, with the way into the editor's Play-now list.
-          buttonText(finder(), 'See them').click();
+          buttonText(finder(), 'View substitutes').click();
           const sheet = document.body.querySelectorAll('dialog').pop();
           assert(sheet.textContent.includes('Close to even: the same job.'));
           assert(sheet.textContent.includes('On the way'));
-          const link = sheet.querySelectorAll('a').find((a) => a.textContent === 'Swap into the play-now list');
+          const link = sheet.querySelectorAll('a').find((a) => a.textContent === 'Swap into the alternative list');
           assert.equal(link.getAttribute('href'), '#/edit?id=casual%2Ftest&v=owned&swap=Bolt');
         """)
 
@@ -65,7 +65,7 @@ class DeckSwapsUiTests(unittest.TestCase):
           // The Planned list is short of Bolt, but the Play-now list plays the copies owned and something else.
           swapsAnswer.cards[0].in_list = 2; swapsAnswer.cards[0].list_missing = 0;
           showMissing(makePage()); await settle();
-          buttonText(finder(), 'See them').click();
+          buttonText(finder(), 'View substitutes').click();
           const sheet = document.body.querySelectorAll('dialog').pop();
           assert.equal(sheet.querySelectorAll('a').length, 0);
           assert(sheet.textContent.includes("isn't short of it"));
@@ -81,7 +81,7 @@ class DeckSwapsUiTests(unittest.TestCase):
             : previousApi(path);
           apiWrite = async () => assert.fail('Choosing a stand-in must not save any lists');
           showMissing(makePage()); await settle();
-          buttonText(finder(), 'See them').click();
+          buttonText(finder(), 'View substitutes').click();
           const standIns = openDialog();
           buttonText(standIns, 'Add one to checklist').click(); await settle();
           const checklist = openDialog();
@@ -107,7 +107,7 @@ class DeckSwapsUiTests(unittest.TestCase):
         self.run_js("""
           const page = makePage(); page.summary.read_only = true;
           showMissing(page); await settle();
-          buttonText(finder(), 'See them').click();
+          buttonText(finder(), 'View substitutes').click();
           const sheet = document.body.querySelectorAll('dialog').pop();
           assert.equal(sheet.querySelectorAll('a').length, 0);         // read-only: the list, no swap
           // A visitor who may not see the collection gets no owned rows, so neither the filter nor the box.
@@ -129,16 +129,16 @@ class DeckSwapsUiTests(unittest.TestCase):
             {for: 'Ghost', out_qty: 1, using: [], note: null, note_line: null, card: null}],
             unpaired: [{name: 'Elf', qty: 1, card: elf}]};
           page.owned.rows.push(row('Shock', 2, 0, [['order x', 2]])); page.owned.rows.at(-1).on_the_way = 2;
-          clear(main); drawDeck(page);
+          clear(main); drawDeck(page, {tab: 'cards', filter: 'all'});
           const section = main.querySelector('.deck-swaps');
-          assert(section, 'the Overview has the swaps');
+          assert(section && section.parentNode.querySelector('#h-improve'), 'Improve deck groups list changes');
           const text = section.textContent;
-          assert(text.includes('Swaps from the planned list'));
+          assert(text.includes('Substitute cards from the planned list'));
           assert(text.includes('2 Shock for 3 Bolt'));
           assert(text.includes('Close to even.'));
           assert(text.includes('1 Ghost out'));
           assert(text.includes('No note yet in Substitutes'));
-          assert(text.includes('Also in the play-now list: 1 Elf.'));
+          assert(text.includes('Also in the alternative list: 1 Elf.'));
           assert(text.includes('On the way'));
           assert.equal(section.querySelector('a').getAttribute('href'), '#/edit?id=casual%2Ftest&v=owned&tab=notes');
           // The Planned list doesn't show them; a read-only visitor gets no Edit notes.

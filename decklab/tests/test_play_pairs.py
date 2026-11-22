@@ -219,6 +219,22 @@ class PairsViewTests(ApiTestCase):
             answer = play_tonight.pairs_view()
         self.assertEqual((answer["error"], answer["pairs"]), (play_tonight.NO_GAMES, []))
 
+    def test_incoming_copies_do_not_fill_a_pair_for_tonight(self):
+        comparison = {"rows": [{"need": 1, "available": 1, "on_the_way": 1}], "unresolved": [], "warnings": []}
+        with mock.patch.object(play_tonight.pool, "owned_vs_needed", return_value=comparison):
+            self.assertFalse(any(row["ready"] for row in play_tonight._decks()))
+            comparison["rows"][0]["available"] = 2
+            self.assertTrue(all(row["ready"] for row in play_tonight._decks()))
+
+    def test_an_older_packed_list_is_not_suggested_as_the_current_saved_list(self):
+        path = self.box.magic / "decks" / "casual" / "beta.md"
+        text = path.read_text(encoding="utf-8")
+        packed = json.dumps({"version": "target", "sections": {"Deck": ["1 Elvish Mystic"]}})
+        _write(path, text.replace("- **Status:** built", "- **Status:** built\n- **Assembled:** " + packed))
+        with access.viewing("matt"):
+            row = next(deck for deck in play_tonight._decks() if deck["id"] == "casual/beta")
+        self.assertIsNone(row["ready"])
+
     def test_decks_whose_availability_can_t_be_confirmed_are_never_suggested(self):
         _write(self.broken, self.broken_text)
         with access.viewing("matt"):

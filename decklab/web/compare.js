@@ -82,7 +82,7 @@ function compareHead(data, label, sameDeck, sides = null, index = 0) {
   const s = data.summary;
   const colours = data.stats_unknown ? null : deckColourPieces(Array.isArray(s.colors) ? s.colors : deckPageColours(data));
   const { main, side } = compareCounts(data);
-  const facts = [s.format, data.comparison?.kind === "revision" || data.versions && data.versions.length > 1 && !sameDeck ? listName(data.version) : null,
+  const facts = [s.format, data.comparison?.kind === "precon" || sameDeck ? null : listName(data.version),
     plural(main, "card"), side ? `${num(side)} in the sideboard` : null].filter(Boolean);
   return el("div", { class: "compare-head" },
     colours ? colours.pips(20) : null,
@@ -391,24 +391,25 @@ function compareSharedParts(answer, labels, sameDeck) {
   const notes = [answer.why_no_counts, ...(answer.warnings || [])].filter(Boolean);
   const box = notes.length ? warningsBox(notes, "About these counts") : null;
   if (!cards.length) return [box, emptyBox("No card is in both lists (basic lands aren't counted).")];
-  const short = cards.filter((c) => c.short > 0).length;
-  const free = "Free copies are the collection's (on the way included) that no other built deck or intact product holds";
-  const lead = !counts ? `${plural(cards.length, "card")} in both lists (basic lands aren't counted).`
+  const here = (c) => Math.max(0, c.free - (c.on_the_way || 0));
+  const short = counts ? cards.filter((c) => c.short > 0).length : 0;
+  const waiting = counts && cards.some((c) => here(c) < c.need);
+  const lead = !counts ? `${plural(cards.length, "card")} in both lists, excluding basic lands.`
     : answer.together === false
-      ? `${plural(cards.length, "card")} in both lists. ${free}; one deck's two lists are never put together at once, ` +
-        "so each card needs the larger count."
-      : `${plural(cards.length, "card")} in both lists. ${free}, against what both lists need at once.`;
+      ? `${plural(cards.length, "card")} in both lists. Either list uses the same collection. For each card the larger quantity is needed.`
+      : `${plural(cards.length, "card")} in both lists. Building both at once requires both quantities, with each free copy counted once.`;
   const whom = answer.together === false ? "either list" : "both at once";
   const verdict = !counts ? null : short ? status("warn", `${plural(short, "card")} short for ${whom}`)
-    : status("ok", `Enough of every card for ${whom}`);
-  const cover = (c) => el("span", {}, `${num(c.free)} of ${num(c.need)}`,
+    : waiting ? status("info", `Enough shared cards for ${whom} after delivery`)
+      : status("ok", `Enough shared cards for ${whom} now`);
+  const cover = (c) => el("span", {}, `${num(here(c))} of ${num(c.need)}`,
     c.short > 0 ? [" ", status("warn", `${num(c.short)} short`)] : null,
-    c.on_the_way ? el("small", { class: "compare-hint", text: ` ${num(c.on_the_way)} on the way` }) : null);
+    c.free > here(c) ? el("small", { class: "compare-hint", text: ` ${num(c.free - here(c))} on the way` }) : null);
   const table = el("table", { class: "data compare-table compare-shared-table" },
     el("caption", { class: "sr-only", text: "Cards both lists use" }),
     el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "Card" }),
       labels.map((label) => el("th", { scope: "col", class: "num", text: label })),
-      counts ? el("th", { scope: "col", class: "num", text: "Free" }) : null)),
+      counts ? el("th", { scope: "col", class: "num", text: "Free now" }) : null)),
     el("tbody", {}, cards.map((c) => el("tr", {},
       el("th", { scope: "row" }, cardLink({ name: c.name }, "compare-shared")),
       el("td", { class: "num", text: num(c.a) }), el("td", { class: "num", text: num(c.b) }),
@@ -435,7 +436,7 @@ function compareHeadToHead(sides, labels) {
   compareFetch(games, `/api/play?id=${encodeURIComponent(a.summary.id)}`, "The Game log",
     (answer) => compareGameParts(answer, a, b, labels));
   return comparePart("h-compare-h2h", "Head to head",
-    el("h3", { text: "Forge" }), forge, el("h3", { text: "Game log" }), games);
+    el("h3", { text: "Simulated 1v1 · Forge" }), forge, el("h3", { text: "Recorded 1v1 · Game log" }), games);
 }
 
 /** The newest saved Forge result of a's list against b's (with an earlier list of either too, faded as on the
@@ -449,10 +450,11 @@ function compareForgeParts(answer, a, b) {
   if (answer.matchups === null) return el("p", { class: "sub", text: "Forge's results couldn't be worked out for this list." });
   const latest = compareLatestResult((answer.matchups || {}).results, b);
   const play = !latest && runsAllowed() ? el("a", { class: "btn",
-    href: matchupHref({ id: a.summary.id, version: a.version }, { id: b.summary.id, version: b.version }), text: "Play a matchup" }) : null;
+    href: matchupHref({ id: a.summary.id, version: a.version }, { id: b.summary.id, version: b.version }), text: "Simulate a matchup" }) : null;
   if (!latest) return emptyBox("Forge hasn't played these two lists against each other yet.", play);
-  return [el("ul", { class: "mu-list" }, resultRow(latest, { against: true, deckId: a.summary.id })),
-    el("p", { class: "sub", text: "The latest saved result: open it for its games." })];
+  const basis = latest.sides.map(side => `${side.title} · ${listName(side.version)}${side.current === false ? " (earlier revision)" : ""}`);
+  return [el("p", { class: "sub", text: basis.join(" vs ") }),
+    el("ul", { class: "mu-list" }, resultRow(latest, { against: true, deckId: a.summary.id }))];
 }
 
 /** The Game log's games between the two lists: how many, each side's wins and the draws, linked to the log. */
@@ -460,6 +462,9 @@ function compareGameParts(answer, a, b, labels) {
   const mirror = compareIsSide({ id: b.summary.id, version: b.version }, a);
   let played = 0, draws = 0;
   const wins = [0, 0];
+  const exact = [a, b].map(data => (answer.lists || []).find(side => compareIsSide(side, data))?.sha256);
+  const sameSave = exact.every(Boolean);
+  let current = 0;
   for (const entry of answer.games || []) {
     const record = (entry && entry.record) || {};
     if (Object.hasOwn(record, "mode") || Object.hasOwn(record, "game_version") ||
@@ -468,6 +473,7 @@ function compareGameParts(answer, a, b, labels) {
     const straight = compareIsSide(x, a) && compareIsSide(y, b), turned = compareIsSide(x, b) && compareIsSide(y, a);
     if (!straight && !turned) continue;
     played += 1;
+    if (sameSave && (straight ? [x, y] : [y, x]).every((side, i) => side.sha256 === exact[i])) current += 1;
     if (record.result === "draw") draws += 1;
     else if (record.result === "a" || record.result === "b") wins[(record.result === "a") === straight ? 0 : 1] += 1;
   }
@@ -475,7 +481,11 @@ function compareGameParts(answer, a, b, labels) {
   if (!played) return emptyBox("No games between these two lists have been recorded.", log);
   const words = mirror ? `${plural(played, "game")}, both with this list`
     : `${plural(played, "game")}: ${labels[0]} ${plural(wins[0], "win")}, ${labels[1]} ${plural(wins[1], "win")}`;
-  return [el("p", { class: "compare-games-count", text: words + (draws ? `, ${plural(draws, "draw")}` : "") + "." }),
+  const basis = sameSave && current === played ? "With the displayed saved lists."
+    : sameSave ? `${plural(current, "game")} ${current === 1 ? "matches" : "match"} both displayed saved lists. Other records may use earlier saves or sideboard changes.`
+      : "By list choice. Saved revisions and sideboard changes may differ from the lists displayed here.";
+  return [el("p", { class: "sub", text: basis }),
+    el("p", { class: "compare-games-count", text: words + (draws ? `, ${plural(draws, "draw")}` : "") + "." }),
     el("p", {}, log)];
 }
 

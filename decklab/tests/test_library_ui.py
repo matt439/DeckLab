@@ -94,7 +94,7 @@ class LibraryShelfTests(_Shelf):
           same(gruul.querySelector(".deck-meta").querySelectorAll(".fact").map((f) => f.textContent), ["Matt", " · 60 cards"]);
           // A built deck with every card: the owned bar and its words, no chip at all (chips are for exceptions).
           assert.equal(gruul.querySelector(".deck-missing"), null);
-          assert.equal(gruul.querySelector(".deck-owned-words").textContent, "60 owned");
+          assert.equal(gruul.querySelector(".deck-owned-words").textContent, "60 covered now");
           assert.equal(gruul.querySelector(".owned-bar").getAttribute("aria-hidden"), "true");
           assert.equal(gruul.querySelector(".owned-bar-fill").getAttribute("style"), "width: 100%");
           assert.equal(gruul.getAttribute("href"), deckHref("casual/gruul"));
@@ -102,18 +102,18 @@ class LibraryShelfTests(_Shelf):
           // link goes to the missing cards.
           const otters = tile("Otters");
           same(otters.querySelector(".deck-owned-words").querySelectorAll(".fact").map((f) => f.textContent),
-               ["51 owned", " · 1 on the way", " · 8 to get"]);
+               ["51 covered now", " · 1 on the way", " · 8 missing"]);
           assert.equal(otters.querySelector(".owned-bar-fill").getAttribute("style"), "width: 85%");
           assert.equal(otters.querySelector(".owned-bar-way").getAttribute("style"), "width: 1.7%");
-          same(otters.querySelectorAll(".status").map((s) => s.textContent), ["Play-now list ready"]);
+          same(otters.querySelectorAll(".status").map((s) => s.textContent), ["Alternative list covered now"]);
           assert.equal(otters.getAttribute("href"), deckHref("casual/otters") + "&tab=cards&filter=missing");
           // Every card here is the usual case: no chip, mine or anyone's (Ready first puts them first).
           assert.equal(tile("Angels").querySelector(".deck-missing"), null);
           assert.equal(tile("Angels").querySelector(".deck-meta").textContent, "Either · 60 cards");
-          assert.equal(tile("Giada").querySelector(".deck-owned-words").textContent, "57 owned · 3 to get");
+          assert.equal(tile("Giada").querySelector(".deck-owned-words").textContent, "57 covered now · 3 missing");
           assert.equal(tile("Giada").querySelector(".status"), null);
           assert(!main.textContent.includes("Ready to play"));
-          assert.equal(tile("Vampires").querySelector(".deck-owned-words").textContent, "58 owned · 2 on the way");
+          assert.equal(tile("Vampires").querySelector(".deck-owned-words").textContent, "58 covered now · 2 on the way");
           // A count that can't be trusted keeps its chip and gets no bar.
           clear(main);
           drawLibrary({ ...DATA, decks: [deck("casual/q", "Q", { ...counts(2, 0, { availability_confirmed: { target: false } }) })] },
@@ -123,7 +123,7 @@ class LibraryShelfTests(_Shelf):
           clear(main);
           drawLibrary(DATA, libraryFilters(new URLSearchParams("all=1")));
           // The availability filter says what the chips say.
-          same(Object.values(LIB_READINESS), ["All cards here", "Cards on the way", "Cards to get", "Availability needs checking"]);
+          same(Object.values(LIB_READINESS), ["All counted cards here", "Cards on the way", "Missing from records", "Availability needs checking"]);
           assert.equal(tile("Giada").querySelector(".deck-meta").textContent, "User1 · 60 cards · Bracket 2");
           // A visitor who may not see the space's collection gets no counts, so no chip and a plain link.
           clear(main);
@@ -177,15 +177,15 @@ class LibraryShelfTests(_Shelf):
           assert.equal(gruul.querySelector(".deck-status"), null);
           assert(gruul.querySelector(".deck-pips").getAttribute("class").includes("id-pips-sm"));
           // The row says what each count is, as a tile does (not "51 +1").
-          assert.equal(rows()[4].querySelector(".deck-owned-words").textContent, "51 owned · 1 on the way · 8 to get");
+          assert.equal(rows()[4].querySelector(".deck-owned-words").textContent, "51 covered now · 1 on the way · 8 missing");
           // The first row is selected, and its detail is beside the list with every status pill and the ways in.
           assert.equal(rows()[0].getAttribute("aria-current"), "true");
           let detail = main.querySelector(".lib-detail");
           assert.equal(detail.getAttribute("data-id"), "commander/giada");
           assert.equal(detail.querySelector(".deck-status").textContent, "Building");
           assert.equal(detail.querySelector(".lib-detail-body").getAttribute("class"), "lib-detail-body");
-          same(detail.querySelectorAll(".btn").map((b) => b.textContent), ["Edit deck", "Open deck"]);
-          assert.equal(detail.querySelector(".btn-primary").getAttribute("href"), editHref("commander/giada"));
+          same(detail.querySelectorAll(".btn").map((b) => b.textContent), ["Open deck", "Edit cards"]);
+          assert.equal(detail.querySelector(".btn-primary").getAttribute("href"), deckHref("commander/giada") + "&tab=cards&filter=missing");
           // A click selects (the page stays) and keeps the choice in the address.
           const click = rows()[4].fire("click", { detail: 1, button: 0 });
           assert(click.defaultPrevented);
@@ -867,7 +867,7 @@ class LibraryTablesTests(_Shelf):
           await flush();
           assert(!panel().hidden);
           assert(!isOpen(panel().querySelector("details")));
-          assert.equal(panel().querySelector("summary").textContent, "Deck availability may be out of date");
+          assert.equal(panel().querySelector("summary").textContent, "Availability needs updating");
           // Under the warnings, before the filters.
           assert(main.children.indexOf(panel()) < main.children.indexOf(main.querySelector(".lib-filters")));
           // A blocked deck is listed only under "Can't be updated", once, with every reason in plain words.
@@ -1008,9 +1008,9 @@ class LibraryTablesTests(_Shelf):
           assert.equal(staleTablesNote([]), null);
           assert.equal(staleTablesNote(undefined), null);
           const two = staleTablesNote(STALE.stale.slice(0, 2));
-          assert.equal(two.textContent, "2 decks' owned-vs-needed tables are now out of date. See them on Decks");
+          assert.equal(two.textContent, "Availability needs updating for 2 decks. Review on Decks");
           assert.equal(two.querySelector("a").getAttribute("href"), "#/library?tables=1");
-          assert(staleTablesNote(STALE.stale.slice(0, 1)).textContent.startsWith("1 deck's owned-vs-needed table is now out of date."));
+          assert(staleTablesNote(STALE.stale.slice(0, 1)).textContent.startsWith("Availability needs updating for 1 deck."));
           // The Collection page's message carries it under what the save did.
           const cv = { message: el("div") };
           colSay(cv, "Shock (FDN 1) added.", STALE.stale.slice(0, 2));
@@ -1026,12 +1026,12 @@ class LibraryTablesTests(_Shelf):
           const redrawn = { space: "home", message: el("div") };
           colTakeNotice(redrawn);
           assert.equal(redrawn.message.querySelector("a").getAttribute("href"), TABLES_HREF);
-          assert(redrawn.message.textContent.includes("2 decks' owned-vs-needed tables are now out of date."));
+          assert(redrawn.message.textContent.includes("Availability needs updating for 2 decks."));
           assert.equal(state.colNotice, null);
           // Receive delivery's note: one sentence (a .note is a flex row), with the link in it.
           const note = tablesLaterNote("Not updated: Beta Deck.");
           assert.equal(note.children.length, 1);
-          assert.equal(note.textContent, "Not updated: Beta Deck. They're on the Decks page's Tables out of date list, where Update all refreshes them.");
+          assert.equal(note.textContent, "Not updated: Beta Deck. On Decks, open Availability needs updating and choose Update all.");
         """)
 
 

@@ -78,7 +78,7 @@ class EditorCurveUiTests(unittest.TestCase):
           const lists={target:{Deck:[one(elves,7)]},owned:{Deck:[one(bolt,2)]}};
           let ed=full({lists},{version:'owned'});setQty(ed.lists.Deck[0].uid,3);
           assert.equal(ed.base.lists.Deck[0].name,bolt.name);same(deltas(),['+1']);
-          assert(curve().getAttribute('aria-label').includes('saved play-now list'));
+          assert(curve().getAttribute('aria-label').includes('saved alternative list'));
           assert(curve().getAttribute('aria-label').includes('1: 2 saved, 3 now'));
           assert(!curve().getAttribute('aria-label').includes('7 saved'));
           closeEditor();

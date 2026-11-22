@@ -14,8 +14,10 @@ import json
 import tarfile
 import time
 import urllib.error
+from collections import Counter
 from unittest import mock
 
+from decklab.lib import pool
 from decklab.lib import precon_coverage as coverage
 from decklab.lib import precons
 from decklab.lib.api import precon_coverage as api
@@ -176,6 +178,22 @@ class RankingTests(CoverageTestCase):
 
 
 class DeckTests(CoverageTestCase):
+
+    def test_rank_and_detail_distinguish_physical_copies_from_arrivals(self):
+        stock = pool.Pool(Counter({"Llanowar Elves": 1, "Sol Ring": 3}), {"Sol Ring": [("Fixture order", 3)]}, [])
+        with mock.patch.object(api, "_pool", return_value=stock):
+            rank = next(row for row in self.ranked("home")["decks"] if row["file"] == "TestDinos_TST")
+            detail = api.coverage_deck("TestDinos_TST", "home")
+        for row in (rank, detail):
+            self.assertEqual((row["covered"], row["free_now"], row["on_the_way"]), (2, 1, 1))
+        self.assertEqual(detail["incoming_cards"], [{"name": "Sol Ring", "quantity": 1}])
+        self.assertNotIn("Fixture order", json.dumps(detail))
+        self.assertFalse(detail["collection_incomplete"])
+        stock.warnings.append("Private fixture record")
+        with mock.patch.object(api, "_pool", return_value=stock):
+            for answer in (self.ranked("home"), api.coverage_deck("TestDinos_TST", "home")):
+                self.assertTrue(answer["collection_incomplete"])
+                self.assertNotIn("Private fixture record", json.dumps(answer))
 
     def test_missing_cards_with_their_estimates(self):
         view = api.coverage_deck("TestDinos_TST", "user2")

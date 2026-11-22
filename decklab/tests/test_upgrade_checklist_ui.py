@@ -30,12 +30,14 @@ SETUP = SHELF + r"""
   function library(data = empty) {
     clear(main);
     drawLibrary(data, libraryFilters(new URLSearchParams()));
-    const trigger = button(main, "Check cards for a deck");
+    const trigger = button(main, "Find and buy cards");
     assert(trigger, "Missing checklist on Decks");
     return trigger;
   }
   async function openFrom(trigger) {
     trigger.click();
+    await flush();
+    button(openDialog(), "Check copies at home").click();
     await flush();
     const sheet = openDialog();
     assert(sheet?.isConnected, "Checklist did not open");
@@ -116,6 +118,7 @@ class UpgradeChecklistTests(unittest.TestCase):
             return new Promise(done => { resolve = done; });
           };
           trigger.click(); await flush();
+          button(openDialog(), "Check copies at home").click(); await flush();
           const old = openDialog();
           assert(old?.isConnected);
           drawWho();
@@ -145,7 +148,7 @@ class UpgradeChecklistTests(unittest.TestCase):
           };
           route(); await flush();
           assert(main.textContent.includes("The card data isn't ready yet"));
-          const cold = button(main, "Check cards for a deck");
+          const cold = button(main, "Find and buy cards");
           assert(cold, "No checklist on the first-start card download screen");
           const sheet = await openFrom(cold);
           paste(sheet, "Alpha"); choose(sheet, 0, "buy");

@@ -62,7 +62,7 @@ class ActivityMixedUndoUiTests(unittest.TestCase):
           giveReason(sheet,'  Imported\t the wrong file ');assert(sheet.body.textContent.includes('Reason to be saved: Imported the wrong file'));
           save(sheet).click();await settle();
           same(sent,[['/api/activity/mixed-undo',{id:42,expect:'a'.repeat(64),reason:'Imported the wrong file'}]]);
-          assert(sheet.body.textContent.includes('Undo saved as a new change.'));assert(sheet.body.textContent.includes('2 deck tables were worked out again'));
+          assert(sheet.body.textContent.includes('Undo saved as a new change.'));assert(sheet.body.textContent.includes('Updated availability for 2 decks.'));
           assert(button(sheet.dialog,'Done'));
         ''')
 

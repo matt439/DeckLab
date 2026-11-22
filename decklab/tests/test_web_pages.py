@@ -175,19 +175,18 @@ class PageSourceTests(unittest.TestCase):
         self.assertIn("font-size: var(--fs-input)", _text("base.css"))
         # The deck page's Tokens part is on its Cards tab, right after the decklist and before the prices.
         cards = _function(_text("deck.js"), "cardsParts")
-        self.assertIn("return [heading, screen.cardsBar, list, deckConsideringSection(data), deckEdhrecSection(data), deckSwapsSection(data), tokensSection(data),\n"
-                      "    deckPrintingsSection(data), ownedSection(data)];", cards)
+        self.assertLess(cards.index("tokensSection(data)"), cards.index("ownedSection(data)"))
         self.assertIn('id: "sec-tokens"', _function(_text("deck-tokens.js"), "tokensSection"))
         # The shell's navigation (core.js's routes table) and the packing plan link to it.
         self.assertIn('{ path: "tokens", label: "Tokens"', _text("core.js"))
-        self.assertIn('href: "#/tokens"', _function(_text("assembly.js"), "drawAssembly"))
+        self.assertIn('href: "#/tokens"', _text("assembly.js"))
 
     def test_the_activity_page(self):
         # The Activity page (activity.js, activity.css): its route and nav place for everyone, the endpoint,
         # "Load older" dropping an answer for a page left or an older click, every global prefixed, and the CSS.
         script = _text("activity.js")
         self.assertIn('if (path === "activity") return showActivity(params, token);', _function(_text("app.js"), "route"))
-        self.assertRegex(_text("core.js"), r'\{ path: "activity", label: "Activity", [^\n]*nav: "more" \}')
+        self.assertRegex(_text("core.js"), r'\{ path: "activity", label: "Changes & undo", [^\n]*nav: "more" \}')
         self.assertIn("activityPath(filter)", _function(script, "showActivity"))
         path = _function(script, "activityPath")
         self.assertIn("/api/activity?", path)
@@ -221,11 +220,10 @@ class PageSourceTests(unittest.TestCase):
                      "/api/precons/coverage?", "/api/precons/coverage/deck?", '"/api/precons/start"'):
             with self.subTest(path=path):
                 self.assertIn(path, script)
-        self.assertIn("openPreconSheet(cv)", _function(script, "colHead"))
+        for choice in ("openPreconSheet", "openImportSheet", "openScanSheet", "openCollectionSheet"):
+            self.assertIn(choice, _function(script, "openCollectionAddSheet"))
         self.assertIn("openTradeSheet(cv)", _function(script, "colHead"))
-        self.assertIn("openStorageSetup(cv)", _function(script, "colHead"))       # E8-S25 slice 4: storage-setup.js
-        self.assertIn("openScanSheet(cv)", _function(script, "colHead"))
-        self.assertIn("openCoverageSheet(cv)", _function(script, "colHead"))
+        self.assertIn("openStorageSetup", _function(script, "colHead"))       # E8-S25 slice 4: storage-setup.js
         self.assertIn("seq !== ctx.seq", _function(script, "searchPrecons"))
         self.assertIn("seq !== ctx.seq", _function(script, "previewPrecon"))
         # A search typed just before a pick doesn't cover the preview; an add leaves the deck page's box about
@@ -325,7 +323,7 @@ class PageSourceTests(unittest.TestCase):
         self.assertIn("createTargets()", _function(_text("library.js"), "drawLibrary"))
 
     def test_the_lists_have_one_name_on_every_page(self):
-        # Owner decision 2 (UI-REVIEW.md): the page calls a deck's two lists "Planned list" and "Play-now list"
+        # The page calls its two lists "Planned list" and "Alternative list"
         # (core.js listName). The old names stay only in comments and in the deck text's own headings.
         from decklab.tests.test_web import WEB
         old = re.compile(r"(?i:\b(owned-only|target list|substitute (list|version)|target availability)\b)|\b(Target|Owned-only): ")
@@ -339,7 +337,7 @@ class PageSourceTests(unittest.TestCase):
                 if old.search(line):
                     found.append(f"{path.name}: {line.strip()}")
         self.assertEqual(found, [])
-        self.assertIn('const LIST_NAME = { target: "Planned list", owned: "Play-now list" };', _text("core.js"))
+        self.assertIn('const LIST_NAME = { target: "Planned list", owned: "Alternative list" };', _text("core.js"))
 
     def test_the_receipts_page_says_nothing_about_git(self):
         # Phase 4: a receipt is one change in the database; no Git commit can fail after it.

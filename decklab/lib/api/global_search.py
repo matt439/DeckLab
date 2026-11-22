@@ -6,12 +6,12 @@ Decided (Matt, 2026-10-31): three sources, grouped in this order:
   space's: Matt's decision says nothing outside the viewer's own space, so another space's Public decks stay
   out; home's for a script naming nobody), matched on the title as the library's title filter matches it
   (NFKC, lower case, anywhere in the title), so the group's See all total is what the library shows;
-- "collection" ("In your collection"): the viewer's own space's collection, only when it may see that
+- "collection" ("Collection & arrivals"): the viewer's own space's collection, only when it may see that
   space's inventory (guard.sees_inventory; home's for a script naming nobody), matched on the card name,
   matched as "cards" matches a name (cards.search_names' order: starts, word starts, the words typed in
   order, anywhere), each with the Collection page's counts (owned, incoming, in_use, free and lent when
   positive; null in_use and free for a tracked basic land) and never a holder's name or loan details;
-- "cards" ("Other cards"): every Scryfall card in the local card index (cards.search_names, paper cards),
+- "cards" ("Card catalogue"): every Scryfall card in the local card index (cards.search_names, paper cards),
   leaving out every name the viewer's collection holds, so an owned card never shows as another card.
 
 To a viewer who may see the space's inventory, each card shown under "collection" and "cards" also carries
@@ -40,7 +40,7 @@ MAX_QUERY = 100                 # characters of search text
 LIMIT = (5, 50)                 # default and largest items per group
 TOTAL_CAP = 200                 # a group's total is counted up to this ("200+")
 GROUPS = ("decks", "collection", "cards")
-LABELS = {"decks": "Decks", "collection": "In your collection", "cards": "Other cards"}
+LABELS = {"decks": "Your decks", "collection": "Collection & arrivals", "cards": "Card catalogue"}
 UNREADABLE = "Your collection couldn't be read just now."
 
 

@@ -763,10 +763,10 @@ class PageTests(EngineCase):
         text, = _run_page([f"actionsPart({{}}, {json.dumps(data)}).textContent"])
         self.assertIn("This result was played with an earlier engine. Playing more starts a new result with today's "
                       "engine; this one stays as it is.", text)
-        self.assertIn("Play with today's engine", text)       # wave 3: an adaptive run by default (test_web)
+        self.assertIn("Simulate with today's engine", text)       # wave 3: an adaptive run by default (test_web)
         data["result"]["engine"]["current"] = True
         text, = _run_page([f"actionsPart({{}}, {json.dumps(data)}).textContent"])
-        self.assertIn("Play more", text)
+        self.assertIn("Simulate more games", text)
         self.assertNotIn("earlier engine", text)
 
 

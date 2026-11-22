@@ -149,7 +149,7 @@ class VariantScriptTests(unittest.TestCase):
         self.assertIn("Better against the field", verdict)
         self.assertIn("Pairing the games saved about 50%", verdict)
         self.assertIn("didn't get the same games (30 of 1,800", verdict)
-        self.assertIn("Play more", verdict)
+        self.assertIn("Simulate more games", verdict)
         self.assertIn("Save this change", verdict)
         self.assertIn("1,800 of up to 14,400 games", playing)
         self.assertIn("Next check at 400 games a deck", playing)
@@ -251,14 +251,14 @@ class VariantScriptTests(unittest.TestCase):
                       "0 paired games"):
             self.assertIn(label, rendered)
         self.assertIn("saved about 50%", how)
-        self.assertIn("Play more", verdict)
+        self.assertIn("Simulate more games", verdict)
 
     def test_the_sheet_offers_popular_decks(self):
         sheet = _function(SCRIPT, "vtOpenTestSheet")
         # Asked once as it opens; offered only when the server says the sample is available, with its size.
         self.assertIn("estimateFor(VT_POPULAR).then(", sheet)
         self.assertIn("if (!current() || !est?.available || !est.opponents) return;", sheet)
-        self.assertIn('popular ? radio("vt-against", VT_POPULAR, `Popular decks (${size(popular)}, a sample)`',
+        self.assertIn('popular ? radio("vt-against", VT_POPULAR, `Against popular decks (${size(popular)})`',
                       sheet)
         # Start sends "gauntlet" itself (the server resolves the standard sample); a deck stays {id, version}.
         self.assertIn('const against = named(pick.against) ? { id: pick.against, version: "target" } : pick.against;', sheet)
@@ -286,6 +286,7 @@ class VariantSavedSampleSheetTests(unittest.TestCase):
           const requests=[],writes=[];
           const estimate=(against,opponents,extra={})=>({against,opponents,available:opponents>0,...extra});
           let savedEstimate=async()=>estimate(custom,1);
+          let standardEstimate=async()=>estimate('gauntlet',2);
           let launched=async()=>({test:{test:'a'.repeat(64)}});
           api=async path=>{
             if(!path.startsWith('/api/variant/estimate?'))return {};
@@ -293,6 +294,7 @@ class VariantSavedSampleSheetTests(unittest.TestCase):
             const against=q.get('against');
             requests.push([q.get('id'),q.get('version'),against]);
             if(against===custom)return savedEstimate();
+            if(against==='gauntlet')return standardEstimate();
             return estimate(against,against==='field'?3:2);
           };
           apiWrite=async (path,body)=>{writes.push({path,body});return launched();};
@@ -301,10 +303,10 @@ class VariantSavedSampleSheetTests(unittest.TestCase):
           const drain=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
           const data={catalogue:{},sample:{id:sid,saved:true,decks:2},is_standard:false};
           const context={id:'casual/sample',version:'owned',canTestChange:true};
-          function openTest() {
+          function openTest(useSaved=true) {
             const handoff=gtTrySampleChange(context,data);
             assert(handoff.textContent.includes('Try a change against this sample'));
-            location.hash=handoff.querySelector('a').getAttribute('href');
+            location.hash=useSaved?handoff.querySelector('a').getAttribute('href'):editHref(context.id,context.version);
             showEditor(parseHash().params,routeToken);
             const ed=editor;
             setQty(ed.lists.Deck[0].uid,3);
@@ -315,6 +317,26 @@ class VariantSavedSampleSheetTests(unittest.TestCase):
             return {ed,draft,dialog,start:button(dialog,'Start')};
           }
         ''' + scenario)
+
+    def test_standard_sample_leads_when_available_without_overriding_an_explicit_choice(self):
+        self.run_js(r'''
+          let release;
+          standardEstimate=()=>new Promise(resolve=>{release=resolve;});
+          let {dialog,start}=openTest(false);
+          assert(start.disabled);await drain();assert(start.disabled);
+          standardEstimate=async()=>estimate('gauntlet',2);
+          release(estimate('gauntlet',2));await drain();
+          assert(dialog.querySelector('input[value="gauntlet"]').getAttribute('checked')!==null);
+          start.click();await drain();assert.equal(writes[0].body.against,'gauntlet');
+          closeAllSheets();
+
+          standardEstimate=()=>new Promise(resolve=>{release=resolve;});
+          ({dialog,start}=openTest(false));await drain();
+          dialog.querySelector('input[value="field"]').fire('change');await drain();
+          release(estimate('gauntlet',2));await drain();
+          assert(dialog.querySelector('input[value="field"]').getAttribute('checked')!==null);
+          start.click();await drain();assert.equal(writes[1].body.against,'field');
+        ''')
 
     def test_the_current_testing_sample_is_selected_and_only_start_sends_it(self):
         self.run_js(r'''
@@ -327,7 +349,7 @@ class VariantSavedSampleSheetTests(unittest.TestCase):
           same(requests.map(r=>r.slice(0,2)),[['casual/sample','owned'],['casual/sample','owned'],['casual/sample','owned']]);
           same(requests.map(r=>r[2]),['field','gauntlet',custom]);
           assert(dialog.querySelector('input[value="'+custom+'"]').getAttribute('checked')!==null);
-          assert(dialog.textContent.includes('Saved sample from Testing (1 deck)'));
+          assert(dialog.textContent.includes('Saved popular-deck sample (1 deck)'));
           assert(!start.disabled);assert.equal(writes.length,0);
           start.click();start.click();await drain();
           assert.equal(writes.length,1);
@@ -348,7 +370,7 @@ class VariantSavedSampleSheetTests(unittest.TestCase):
         self.run_js(r'''
           savedEstimate=async()=>estimate(custom,3,{distinct_matchups:2});
           const {dialog,start}=openTest(); await drain();
-          assert(dialog.textContent.includes('Saved sample from Testing (3 decks, 2 distinct matchups)'));
+          assert(dialog.textContent.includes('Saved popular-deck sample (3 decks, 2 distinct matchups)'));
           assert(!start.disabled);
         ''')
 

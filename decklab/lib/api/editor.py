@@ -634,7 +634,8 @@ def find_cards(q=None, scope=None, colors=None, type=None, mv=None, deck_id=None
 
     Returns {"cards": [card (_card_json) + "default" (the printing a new line gets, _default_printing; None
     for basic lands), "have" {"owned", "on_the_way"} (copies of any printing in the space, all zero for a
-    visitor who may not see its inventory), "free" (scope owned only), "aud" (cards.price_aud's estimate
+    visitor who may not see its inventory), "free" (including arrivals) and "free_now" (physical copies)
+    in scope owned only, "aud" (cards.price_aud's estimate
     of the cheapest paper printing, or None)], "total", "page", "pages", "did_you_mean", "price_date",
     "rate", "rate_date"}."""
     from .collection import space_param
@@ -681,11 +682,12 @@ def find_cards(q=None, scope=None, colors=None, type=None, mv=None, deck_id=None
                     have[key] += qty
         return have
 
-    did_you_mean, free = [], {}
+    did_you_mean, free, free_now = [], {}, {}
     if scope == "owned":
         guard.require_sees_inventory(space)
         p = pool.load_pool() if space == spaces.HOME else pool.load_pool(space)
         spares = pool.free_copies(p, pool.self_ids(deck_id) if deck_id else ())
+        free_now = pool.physical_free_copies(p, spares)
         words = q.casefold().split()
         names = []
         for name in sorted(spares, key=str.casefold):
@@ -733,6 +735,7 @@ def find_cards(q=None, scope=None, colors=None, type=None, mv=None, deck_id=None
                      aud=price.aud if price else None)
         if scope == "owned":
             entry["free"] = free[name]
+            entry["free_now"] = free_now[name]
         out.append(entry)
     return {"cards": out, "total": len(names), "page": page, "pages": max(1, -(-len(names) // n)),
             "did_you_mean": did_you_mean, "price_date": price_date, "rate": rate, "rate_date": rate_date, **tag}

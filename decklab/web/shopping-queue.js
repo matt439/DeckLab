@@ -241,10 +241,10 @@ function shopQueuePresentation(groups, view, {showFor = true, group = "to-buy", 
   return holder;
 }
 
-/** A view-local order choice: the same immediate purchase intent, not a filter or a new shop check. */
+/** A view-local grouping within each purchase queue scope. */
 function shopQueueControls(view) {
   const slot = el("span", {class: "shop-add-casual"});
-  const choices = el("div", {class: "segmented", role: "group", "aria-label": "Group immediate purchase queue"},
+  const choices = el("div", {class: "segmented", role: "group", "aria-label": "Group purchase queue rows"},
     [["state", "By state"], ["shop", "By shop"]].map(([value, text]) => el("button", {type: "button", text,
       "data-queue-order": value, "aria-pressed": String((view.queueOrder || "state") === value), onclick: event => {
         if (!event.currentTarget.isConnected || !shopQueueActive(view) || shopQueueLab() || view.queueOrder === value) return;

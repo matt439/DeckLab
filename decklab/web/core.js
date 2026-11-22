@@ -505,30 +505,29 @@ function createTargets() {
 the phone's tab bar (shell.js), the crumbs, document.title and who sees which page. A route is
   {path, label (in the nav), h1 (the page heading), title (the tab title), icon (shell.js's ICONS),
    nav: "main" (the top bar and the phone's tab bar) | "more" (the More menu and sheet) | "account" (the avatar
-   menu), pill (a "more" page that is also a pill in the lab's top bar from 1000 px wide, and left out of the
-   top bar's More there; below 1000 px, a phone on its side included, it stays only in More: E11-S61),
+   menu and phone's More sheet),
    visible(profile, may) (absent: everyone), parent (a child page's parent route)}.
 Pages refine the tab title with their subject (setTitle). */
 const ROUTES = [
   { path: "library", label: "Decks", h1: "Decks", title: "Decks", icon: "decks", nav: "main" },
-  { path: "matchups", label: "Testing", h1: "Testing", title: "Testing", icon: "matchups", nav: "main" },
   { path: "collection", label: "Collection", h1: "Collection", title: "Collection", icon: "collection", nav: "main" },
   { path: "shopping", label: "Shopping", h1: "Shopping", title: "Shopping", icon: "shopping", nav: "main",
     visible: (profile, may) => seesHomeInventory(may) },
+  { path: "play", label: "At the table", h1: "At the table", title: "At the table", icon: "log", nav: "more" },
+  { path: "matchups", label: "Simulate", h1: "Simulate", title: "Simulate", icon: "matchups", nav: "more" },
+  { path: "assembly", label: "Pack decks together", h1: "Pack decks together", title: "Pack decks together",
+    icon: "plan", nav: "more", visible: (profile, may) => seesHomeInventory(may) },
   { path: "tokens", label: "Tokens", h1: "Tokens", title: "Tokens", icon: "tokens", nav: "more" },
   { path: "accessories", label: "Sleeves & boxes", h1: "Sleeves & boxes", title: "Sleeves & boxes", icon: "sleeves",
     nav: "more", visible: (profile, may) => may ? may.see_accessories !== false : seesAccessoriesAs(profile) },
-  { path: "assembly", label: "Build decks", h1: "Build decks", title: "Build decks", icon: "plan", nav: "more",
-    pill: true, visible: (profile, may) => seesHomeInventory(may) },
-  { path: "play", label: "Game log", h1: "Game log", title: "Game log", icon: "log", nav: "more" },
   { path: "wishlist", label: "Wishlist", h1: "Wishlist", title: "Wishlist", icon: "wishlist", nav: "more" },
-  { path: "activity", label: "Activity", h1: "Activity", title: "Activity", icon: "activity", nav: "more" },
+  { path: "activity", label: "Changes & undo", h1: "Changes & undo", title: "Changes & undo", icon: "activity", nav: "more" },
+  { path: "help", label: "Help", h1: "Help", title: "Help", icon: "help", nav: "more" },
   { path: "visibility", label: "Who sees what", h1: "Who sees what", title: "Who sees what", icon: "settings", nav: "account",
     visible: (profile, may) => Boolean(profile) && Boolean(may && may.visibility && may.visibility.length) },
-  { path: "settings", label: "Settings", h1: "Settings", title: "Settings", icon: "settings", nav: "account",
+  { path: "settings", label: "Administration", h1: "Administration", title: "Administration", icon: "settings", nav: "account",
     visible: (profile, may) => isAdminProfile(profile, may) },
   // Child pages: reached from a page above, never from the nav.
-  { path: "help", label: "What these words mean", h1: "What these words mean", title: "Deck Lab words", parent: "library" },
   { path: "deck", label: "Deck", h1: "Deck", title: "Deck", parent: "library" },
   { path: "edit", label: "Edit deck", h1: "Edit deck", title: "Edit deck", parent: "deck" },
   { path: "new", label: "New deck", h1: "New deck", title: "New deck", parent: "library" },
@@ -537,7 +536,8 @@ const ROUTES = [
   { path: "variant", label: "Test of a change", h1: "Test of a change", title: "Test of a change", parent: "deck" },
   { path: "receipt", label: "Receive delivery", h1: "Receive delivery", title: "Receive delivery", parent: "shopping" },
   { path: "matchup", label: "Matchup", h1: "Matchup", title: "Matchup", parent: "matchups" },
-  { path: "forge-pods", label: "Four-player pods", h1: "Four-player Commander pods", title: "Four-player pods", parent: "matchups" },
+  { path: "forge-pods", label: "Simulate a four-player pod", h1: "Four-player Commander simulations",
+    title: "Four-player Commander simulations", parent: "matchups" },
 ];
 
 /** The route of a path ("library", "deck", ...); the library's for an unknown one, as route() shows it. */
@@ -604,9 +604,9 @@ function scrollBehaviour() {
 /* The two lists a deck can have, in all of the page's wording (decision 2 of the review). The deck text's own
 headings ("## Decklist", "### Substitute version (owned and incoming cards)") and the version keys (target,
 owned) don't change. */
-const LIST_NAME = { target: "Planned list", owned: "Play-now list" };
+const LIST_NAME = { target: "Planned list", owned: "Alternative list" };
 
-/** "Planned list" or "Play-now list" for a version key; lower: "planned list", inside a sentence. */
+/** The name for a saved list version; lower: "planned list", inside a sentence. */
 function listName(version, lower = false) {
   const name = LIST_NAME[version] || LIST_NAME.target;
   return lower ? name[0].toLowerCase() + name.slice(1) : name;

@@ -1355,6 +1355,8 @@ As a deck builder, I want Matchups renamed Testing and moved next to Decks, with
 
 Decided (Matt, 2026-11-03): yes, rename Matchups to Testing and move it next to Decks, with the Popular decks board.
 
+Current entry (2026-11-22): **Simulate** is in More. The deck and its proposed changes link to simulations in context, with **Against popular decks** as the leading choice. The board and its existing links still use `#/matchups`. [Feature focus review](feature-focus-review-2026-11-22.md)
+
 Now: built 2026-11-03 ([HISTORY.md](../HISTORY.md#testing-next-to-decks-with-the-popular-decks-board-2026-11-03-e3-s35)). The nav reads Decks, Testing, Collection, Shopping, More (a member's leaves out Shopping; `TAB_COUNT` stays 4), in the top bar and the tab bar alike; Testing is still `#/matchups`, and `#/testing` opens it with the address rewritten. Its heading, crumbs and tab title say Testing, and the deck page's Matchups tab is called Testing too (its key stays `matchups`, so `?tab=matchups`, `?tab=testing` and `?part=field|gauntlet` open it); "matchup" stays the word for one pairing. Popular decks is the page's first and default view (Popular decks, Matchups, Rankings, kept in `?view=`, else `testing.view`), Commander first (`testing.popularFormat`). `GET /api/gauntlet/board?format=commander|constructed` lists only the decks `guard.visible_decks` lets the viewer see (hidden ones never read, counted or named; Beginner Box halves and pairings left out), each its Planned list's standard-sample standing from the summary's own logic (`_summary_of`): overall and range, played of the sample, games, updated, hardest opponent, `before` and `older`, and the states `untested`, `partial`, `done`, `stale_list`, `stale_older` and `unreadable`, sorted by figure, then the out-of-date states, untested and unreadable. Rows are cached on their own result-file and run-note stamps (`forge/gauntlet.stamps`, `noted`), answers per format, viewer space and public spaces for up to 10 minutes; the history walk for an untested list runs at most 8 times a request, the rest said as "still being looked at". It never plans, estimates or plays, and carries no inventory fields, revisions or Rankings numbers. Each row has Details (the deck's Testing tab at the popular-decks part) and its own Play (`POST /api/gauntlet/run` with `expected_card_sha`, the standard sample at `fixed:100`, after a question), shown only when the simulations setting allows and nothing of that list waits or plays; there's no Play all. The intro says a figure isn't a rating and Rankings are separate. Known limits: no device check; partly tested rows rank by their figure among complete ones.
 
 Evidence:
@@ -2633,6 +2635,8 @@ Built (2026-11-04): the second slice. Each price-check shop's flat postage and f
 **E5-S28** · Matt · should · M · built
 
 As a buyer with several unbuilt decks drawing on one pool, I want to pick decks on Shopping and see what to buy so that all of them can be built at the same time, so that I don't buy for one deck a card another chosen deck will take.
+
+Current entry (2026-11-22): the **Combined shortages** workspace compares what the chosen Planned lists need together. It shows physical copies and incoming copies separately and opens **Pack decks together** with the same lists.
 
 - Given two or more decks of the viewer's space, when I choose them under Missing cards across decks, then the list shows each card's shortfall with the chosen decks built together: each free copy counted once, copies held by other built decks and intact products not counted, and cards on the way counted as E5-S04 counts them.
 - Given the chosen set, then each card names which chosen decks share the shortage, and the total rises above the sum of the single-deck shortfalls where they compete.
@@ -4979,7 +4983,7 @@ Awaiting: player review
 
 ## E10: Members, access and privacy
 
-Who Deck Lab's profiles are, where each one's cards and decks live, and who may see or change what. Matt (admin) and User1 share the home space; User2, User3, User4 and User5 (`user5`, the template for every member, [member-template.md](member-template.md)) each have their own, and sign in only through decklab.example.com. Each space's collection, decks and games, and each kit owner's accessories, are private unless the owner makes them public: read-only, to everyone signed in through Cloudflare Access, with no admin override ([privacy-by-default.md](privacy-by-default.md)). The command line still reads every space, so Claude relays upkeep, not contents, and adding a person still means editing config.json and the Access policy by hand.
+Who Deck Lab's profiles are, where each one's cards and decks live, and who may see or change what. Matt (admin) and User1 share the home space. User2, User3, User4 and User5 (`user5`, the template for every member) each have their own space and sign in through decklab.example.com. Each space's collection, decks and games, and each kit owner's accessories, are private until the owner makes them Public. That grants read-only access to configured profiles through Cloudflare Access and to trusted home-network visitors, including visitors who have yet to pick a profile. Admins follow the same read rules as everyone else. The command line can read every space and follows the documented relay limits. [Member template](member-template.md) · [Privacy by default](privacy-by-default.md)
 
 Open: E10-S18, E10-S41.
 
@@ -5231,12 +5235,12 @@ Evidence:
 
 **E10-S22** · Matt · wont · S · not_wanted
 
-As Matt, I want no public pages, share links or sign-up, so that Deck Lab stays a private tool and nobody without a set-up login is ever served.
+As Matt, I want internet access to require a configured login, so that Deck Lab stays a private tool.
 
-- Given any page, then nothing offers a link to a deck that works without signing in, or a sign-up.
-- Given a visitor without a set-up email, then they never get past Access and Deck Lab's 403.
+- Given any page, then there is no public internet share link or open sign-up.
+- Given an internet visitor without a configured email, then Access or Deck Lab refuses the request.
 
-Decided (Matt, 2026-10-18): the privacy switches' Public means read-only to every profile signed in through Cloudflare Access, never a page on the open internet, so this story stands; members are still added by hand, one email at a time.
+Decided (Matt, 2026-10-18): remote access requires a configured profile through Cloudflare Access. Public access also includes read-only visits from the trusted home network. Adding a remote member requires an email on the Access policy.
 
 **E10-S23** · User1 · could · S · built
 
@@ -5299,7 +5303,7 @@ As Matt, I want one switch for each thing our space owns (collection, decks, gam
 - Given the database after migration 0012, when no switch has been flipped, then `python -m decklab.db visibility list` shows every thing as Private.
 - Given User1 is the viewer, when she opens Who sees what in the avatar menu, then she sees switches for home's collection, decks and games, her own kit and the shared kit, and none for Matt's kit or another space.
 - Given User2 or User5 is the viewer, then he sees switches only for his own collection, decks and games.
-- Given any switch, then it reads Private or Public, and the page says Public means read-only to everyone signed in to Deck Lab, members included, not anyone on the internet; the decks switch also says the Play-now list hints at what's owned.
+- Given any switch, then it reads Private or Public. Public grants read-only access to configured visitors through Cloudflare Access and to visitors on the trusted home network, including before profile selection. The decks switch also says the Alternative list can hint at what's owned.
 - Given Matt makes home's decks public, then one change set by Matt is saved, and Activity shows 'Make the home decks public' to Matt and User1 only.
 - Given Matt sends a flip for User2's space, then the answer is 403 'Only the owner can change who sees this.', naming no one.
 - Given Claude is asked to flip a member's switch, then there is no command for it (`visibility set` takes home's switches only): the member does it on the page.
@@ -5650,9 +5654,9 @@ Evidence:148 transport/scan tests pass (one native skip), plus132 accessory uplo
 
 **E10-S46** · Space members · should · M · built
 
-As a member (or User1, for home) about to make my decks, collection, games or kit Public, I want to see what signed-in readers would get and confirm before it flips, so that I share on purpose and never by a stray tap.
+As a member (or User1, for home) about to make my decks, collection, games or kit Public, I want to see who can read it and what they would get before I confirm.
 
-- Given a Private switch, when its owner turns it on, then a confirm sheet shows counts from their own space (decks, collection rows and cards, token rows, games or kit rows), and for decks the ones whose write-ups mention orders or purchases; nothing changes until Confirm.
+- Given a Private switch, when its owner turns it on, then a confirm sheet names both audiences, shows counts from their own space (decks, collection rows and cards, token rows, games or kit rows), and for decks lists the ones whose write-ups mention orders or purchases. The switch changes on confirmation.
 - Given the preview can't be worked out, then the sheet says so and still offers Confirm.
 - Given anyone but the owner, an admin included, then the preview is refused before anything is read, and it never names another space, deck or person.
 - Given a Public switch, then turning it Private stays one tap.
@@ -6772,6 +6776,8 @@ Evidence:
 **E11-S61** · Matt · could · S · built
 
 As Matt, finding things on Deck Lab, I want to know whether the More menus help or hide things, so that what people use often is in plain sight.
+
+Current entry (2026-11-22): Decks offers **Pack decks together** where supported, with **Build deck** or **Review build** on an individual deck. More includes the packing workspace, At the table, Simulate and Help at all widths. The [household walkthrough](feature-focus-review-2026-11-22.md#household-acceptance) checks whether players find the right task unprompted.
 
 - Given the top bar's More and the deck page's More, when they're reviewed, then each item has a recorded answer: keep it there, move it into plain sight, or remove it, using Settings, Visits for how much pages are opened.
 - Given that review, when Matt has decided, then the agreed moves are made and the reasons are recorded here.

@@ -44,7 +44,7 @@ class FieldChoicesUiTests(unittest.TestCase):
           const p=choices(details);assert(p);assert(p.textContent.includes('Change the field'));
           const options=p.querySelector('[data-field-choice-list]').querySelectorAll('option');
           same(options.map(o=>o.textContent),['Test Deck: Planned list','Other Deck: Planned list',
-            'Manual Deck: Play-now list','Removed Deck: Planned list','Other Deck: Play-now list']);
+            'Manual Deck: Alternative list','Removed Deck: Planned list','Other Deck: Alternative list']);
           assert.equal(p.querySelector('[data-field-choice-list]').value,'0');
           assert(button(details,'save').disabled);
           pick(details,1,'include');button(details,'preview').click();await settle();

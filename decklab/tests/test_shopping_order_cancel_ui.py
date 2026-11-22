@@ -18,7 +18,7 @@ SETUP = r"""
   const matt = {id: 'matt', name: 'Matt', role: 'admin', space: 'home'};
   state.profiles = [matt]; state.profile = matt;
   state.may = {admin: true, orders: true, see_inventory: ['home']};
-  location.hash = '#/shopping';
+  location.hash = '#/shopping?view=orders';
   const component = (extra = {}) => ({id: 'cards', kind: 'cards', status: 'pending', quantity: 3, rows: 2,
     checks: ['Confirm the printing'], ...extra});
   const order = (extra = {}) => ({id: '2026-10-08-order', seller: 'Card shop', ordered_on: '2026-10-08',
@@ -123,7 +123,7 @@ class ShoppingOrderCancelInteractionTests(unittest.TestCase):
           same(applyRequests()[0], ['/api/shopping/order/change/apply', {profile: 'matt', preview: 'signed-cancel'}]);
           assert.equal(applyRequests().length, 1); assert(!sheet.closed); assert.equal(refreshes, 0);
           assert(sheet.body.textContent.includes('Opt')); assert(sheet.body.textContent.includes('Keep this saved warning'));
-          assert(sheet.body.querySelectorAll('a').some(link => link.textContent === 'Tables out of date'));
+          assert(sheet.body.querySelectorAll('a').some(link => link.textContent === 'Availability needs updating'));
           action(sheet, 'Done').click(); await settle(); flushTimers(); await settle();
           assert(sheet.closed); assert.equal(refreshes, 1);
         """)

@@ -31,7 +31,7 @@ async function downloadMemberSpace(cv) {
 async function openMemberNeeds() {
   if (!memberOwnSpace()) return null;
   const profile = state.profile, token = routeToken, hash = location.hash;
-  const sheet = colOpenSheet("Cards to get");
+  const sheet = colOpenSheet("Combined shortages");
   const current = () => !sheet.closed && state.profile === profile && token === routeToken
     && hash === location.hash && memberOwnSpace();
   const close = {text: "Close", onclick: () => sheet.close()};
@@ -46,13 +46,13 @@ async function openMemberNeeds() {
       data = await api(colPath("/api/space/needed", ownSpace()));
     } catch (error) {
       if (current()) {
-        clear(sheet.body).append(loadFailed("Your cards to get", error));
+        clear(sheet.body).append(loadFailed("Your combined shortages", error));
         sheetActions(sheet, [close, retry]);
       }
       return;
     }
     if (!current()) return;
-    clear(sheet.body).append(el("p", {class: "sub", text: "All your saved Planned decks together, excluding trials. Each owned copy counts once; lent-out copies aren't free. This list isn't saved and includes no shop prices."}));
+    clear(sheet.body).append(el("p", {class: "sub", text: "From your recorded collection and saved Planned lists, excluding trials. Each available copy counts once across the decks. The calculation excludes lent-out copies."}));
     if (!data.ready) {
       sheet.body.append(el("p", {class: "box box-warn", text: data.reason || "Your missing cards couldn't be counted completely."}));
       if (data.check_collection) sheet.body.append(el("a", {href: colHash(ownSpace(), "rows"), text: "Check my collection"}));
@@ -69,12 +69,12 @@ async function openMemberNeeds() {
         el("a", {href: deckHref(deck.id), text: deck.title})])))));
     const text = rows.map(row => `${row.quantity} ${row.name}`).join("\n");
     if (text) sheetActions(sheet, [close,
-      {text: "Copy list", kind: "primary", onclick: async event => {
+      {text: "Copy combined shortages", kind: "primary", onclick: async event => {
         if (!current() || !event.currentTarget.isConnected) return;
         try {
           if (!navigator.clipboard?.writeText) throw Error("Clipboard unavailable");
           await navigator.clipboard.writeText(text);
-          if (current()) toast("Cards list copied.");
+          if (current()) toast("Combined shortages copied.");
         } catch (_) {
           if (!current()) return;
           const area = el("textarea", {readonly: true, rows: 12, class: "export-copy", "aria-label": "Cards list to copy"});

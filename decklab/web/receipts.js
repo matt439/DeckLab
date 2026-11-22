@@ -34,7 +34,7 @@ let rcptKeys = 0;
 function showReceipt(params, token) {
   return load(`/api/receipt?order=${encodeURIComponent(params.get("order") || "")}`, token,
     data => drawReceipt(data, token),
-    { title: "This delivery couldn't be loaded", back: ["#/shopping", "Back to Shopping"] });
+    { title: "This delivery couldn't be loaded", back: ["#/shopping?view=orders", "Back to orders & deliveries"] });
 }
 
 
@@ -157,7 +157,7 @@ function drawReceipt(data, token) {
   add(view.root, [rcptHead(data, null, view)]);
   if (!pending.length) {
     view.root.append(el("div", { class: "empty" }, el("p", { text: "Everything in this order has arrived." }),
-      el("a", { class: "btn btn-primary", href: "#/shopping", text: "Back to Shopping" })));
+      el("a", { class: "btn btn-primary", href: "#/shopping?view=orders", text: "Back to orders & deliveries" })));
     $("#main").append(view.root);
     return view;
   }

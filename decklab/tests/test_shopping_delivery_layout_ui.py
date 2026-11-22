@@ -8,7 +8,7 @@ from decklab.tests.test_workspace_ui import NODE, WEB
 
 @unittest.skipUnless(NODE, "Node.js isn't installed")
 class ShoppingDeliveryLayoutUiTests(unittest.TestCase):
-    run_js = test_shopping_ui.ShoppingInteractionTests.run_js
+    run_js = test_shopping_ui.ShoppingInteractionTests.run_orders_js
     run_queue_js = test_shopping_queue_manage_ui.ShoppingQueueManagementInteractionTests.run_queue_js
 
     def test_native_disclosure_summary_contains_only_the_order_identity_state_and_pending_count(self):
@@ -38,7 +38,7 @@ class ShoppingDeliveryLayoutUiTests(unittest.TestCase):
           assert.equal(delivery.querySelector('.shop-delivery-body'), body); assert.equal(document.activeElement, summary);
           assert.equal(reads, 0); assert.equal(writes, 0); assert.equal(inspections.length, 0);
           assert.equal(main.querySelectorAll('.btn-primary').length, 1);
-          assert.equal(main.querySelector('.btn-primary').textContent, 'New order');
+          assert.equal(main.querySelector('.btn-primary').textContent, 'Record an order');
         """)
 
     def test_part_received_preorder_token_and_unknown_date_words_stay_distinct(self):

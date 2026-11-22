@@ -182,7 +182,7 @@ function gbBoard(view, a, words) {
   const size = a.sample?.size || 0;
   const rows = a.rows || [];
   return el("div", { class: "gb-board" },
-    el("p", { class: "gb-scope", text: `${words} · 1v1 · ${plural(size, "sampled opponent")} · Win rate, not a rating` }),
+    el("p", { class: "gb-scope", text: `Forge simulation · ${words} · 1v1 · ${plural(size, "sampled opponent")}` }),
     el("details", { class: "gb-help" }, el("summary", { text: "About these results" }),
       el("p", { class: "sub gb-intro", text: `Each deck against the same ${plural(size, `popular ${words} deck`)} ` +
       `(${GB_SOURCES[a.format] || GB_SOURCES.commander}). A figure is its average win rate against those decks only: ` +
@@ -200,6 +200,7 @@ function gbRow(view, row) {
   const d = row.deck || {}, o = row.overall;
   const rate = o && o.rate != null ? gtRate(o.rate, o.low, o.high) : null;
   const facts = row.trial || d.trial ? [ptrNotOwnedChip()] : [];     // precon-trial.js: a precon trial (E3-S39)
+  facts.push(el("p", { class: "gb-meta", text: listName(d.version || "target") }));
   if (row.state === "unreadable") facts.push(el("p", { class: "gb-state", text: row.problem || "Forge can't read this list." }));
   else if (!rate && row.games) facts.push(el("p", { class: "gb-state", text: gtRateUnavailable(row) }));
   else if (!rate && !row.before && !row.older) facts.push(el("p", { class: "gb-state", text: "Not tested against popular decks yet." }));

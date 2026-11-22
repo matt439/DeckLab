@@ -31,6 +31,23 @@ class PreconTokensUiTests(unittest.TestCase):
           const textButton=(ctx,text)=>ctx.sheet.foot.querySelectorAll('button').find(node=>node.textContent===text);
         ''' + scenario)
 
+    def test_owned_precon_link_opens_the_exact_read_only_preview(self):
+        self.run_js(r'''
+          const made = await make(), p = preview(), paths = [];
+          made.ctx.sheet.close();
+          const hash = ownedPreconHref('home', p.deck.file);
+          location.hash = hash;
+          api = async path => { paths.push(path); return p; };
+          apiWrite = async () => { throw new Error('The link must not add copies'); };
+          const params = parseHash().params;
+          colOpenAsked(made.cv, params.get('open'), params.get('precon'));
+          flushTimers(); await flush();
+          same(paths, ['/api/precons/preview?file=Fixture_TST']);
+          const ctxSheet = [...colSheets].at(-1);
+          assert.equal(ctxSheet.heading.textContent, p.deck.name);
+          assert.equal(ctxSheet.foot.querySelector('[data-action="add"]').textContent, `Add ${p.deck.name}`);
+        ''')
+
     def test_older_api_keeps_original_opt_out_request_and_checked_tokens_link(self):
         self.run_js(r'''
           const p=preview();delete p.token_import;const ctx=await open(p),calls=[];

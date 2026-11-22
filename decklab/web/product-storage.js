@@ -19,7 +19,11 @@ function productStorageSection(data) {
   const root = el("section", { class: "deck-section product-storage", "aria-labelledby": "h-product-storage" },
     el("h2", { id: "h-product-storage", text: "Product storage" }));
   const content = el("div");
-  add(root, [content, productBoxDecks(data)]);
+  const label = typeof offersBoxLabel === "function" && offersBoxLabel(data)
+    ? el("button", { type: "button", class: "btn btn-quiet", text: "Print box label", onclick: event => {
+      if (productStorageHere(ctx) && event.currentTarget.isConnected) printBoxLabel(data);
+    } }) : null;
+  add(root, [content, productBoxDecks(data), label]);
   const ctx = { root, content, id, stem: id.split("/")[1], token: routeToken,
     profile: state.profile?.id, seq: 0, busy: false, product: null };
   ctx.refresh = async () => {
@@ -82,7 +86,7 @@ function productStorageTables(tables, saved = false) {
   skipped.length ? el("div", {}, el("h3", { text: "Tables needing attention" }),
     el("ul", {}, skipped.map(deck => el("li", { text: `${deck.title || deck.id}: ${deck.why}` })))) : null,
   tables.error ? el("p", { class: "form-error", text: tables.error }) : null,
-  skipped.length || tables.error ? el("a", { href: TABLES_HREF, text: "Tables out of date" }) : null);
+  skipped.length || tables.error ? el("a", { href: TABLES_HREF, text: TABLES_TITLE }) : null);
 }
 
 /** A preview never changes storage. The final explicit action applies its opaque review token. */

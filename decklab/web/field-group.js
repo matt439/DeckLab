@@ -73,8 +73,8 @@ function grDraw(ctx, a) {
   clear(ctx.content);
   const choices = a.choices || [];
   add(ctx.content, [
-    el("p", { class: "sub", text: "Choose decks to play this list against, such as another player's Public decks. " +
-      "The games are ordinary matchups, so they count in Rankings too." }),
+    el("p", { class: "sub", text: `${listName(ctx.version)} · Forge simulation · 1v1, best of one. ` +
+      "Choose the opponents. These games contribute to field rankings when both lists qualify." }),
     choices.length ? grChoices(ctx, a) : el("p", { class: "empty", text: "There's no other deck of this format " +
       "you can choose." }),
     ctx.chosen.length ? el("div", { class: "fv-layout" },

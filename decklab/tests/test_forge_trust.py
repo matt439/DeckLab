@@ -519,7 +519,7 @@ class PageFileTests(unittest.TestCase):
         # The deck page's Matchups tab (deck-tools.js) puts the flag above its results.
         tab = _function(_text("deck-tools.js"), "drawDeckMatchups")
         self.assertIn("pilotFlag(m.ai, s.title, {deckPage: true})", tab)
-        self.assertLess(tab.index("    flag,"), tab.index('"Head to head"'))
+        self.assertLess(tab.index("    flag,"), tab.index('id: "h-mu-results"'))
 
     def test_the_result_has_the_trust_part_and_the_starter_tile(self):
         script = _scripts(MATCHUP_SCRIPTS)

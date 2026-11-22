@@ -1,6 +1,6 @@
 """The deck page's Considering part (E2-S23, deck-considering.js) under Node: its cards after the decklist on
 the Cards tab with whether a copy is free, nothing about the pool for a viewer the server sent no counts,
-and the move, remove and add saves (POST /api/deck/considering) for whoever may change the deck.
+and the handoff to the normal edit draft for whoever may change the deck.
 
 Runs the real page scripts in tests/fixtures/workspace_ui_runner.js; nothing is sent to a server.
 """
@@ -22,11 +22,6 @@ SETUP = PAGE + """
       Object.assign({qty: 1, name: 'Elf', set: 'fdn', number: '1', finish: 'nonfoil', card: elf},
         counts ? {free: 0, on_the_way: 0} : {})]};
     return page; };
-  const writes = [];
-  api = async (path, opts) => { writes.push([path, JSON.parse(opts.body)]); return {saved: true}; };
-  let routed = 0; route = () => { routed += 1; };
-  const toasts = []; toast = (text) => toasts.push(text);
-  const settle = async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); };
   const showCards = (page) => { clear(main); location.hash = '#/deck?id=casual%2Ftest&tab=cards';
     drawDeck(page, deckViewOf(parseHash().params)); return main.querySelector('.deck-considering'); };
 """
@@ -45,13 +40,13 @@ class DeckConsideringUiTests(unittest.TestCase):
           assert(part, 'the Cards tab has the part');
           assert.equal(part.querySelector('h2').textContent, 'Considering');
           const text = part.textContent;
-          assert(text.includes('Free in the pool'), text);
-          assert(text.includes('1 of 2 free (1 on the way)'), text);
-          assert(text.includes('None free'), text);
+          assert(text.includes('Free now'), text);
+          assert(text.includes('0 of 2 free now · 1 on the way'), text);
+          assert(text.includes('0 of 1 free now'), text);
           // After the decklist, never in it.
           const list = main.querySelector('.deck-cards');
           assert(!list.textContent.includes('Black Lotus'));
-          assert.equal(part.querySelectorAll('.deck-considering-row').length, 3);
+          assert.equal(part.querySelectorAll('.card-row').length, 3);
         """)
 
     def test_no_counts_and_no_actions_for_a_viewer_who_may_not(self):
@@ -61,12 +56,12 @@ class DeckConsideringUiTests(unittest.TestCase):
           const part = showCards(page);
           assert(!part.textContent.includes('free'), part.textContent);
           assert.equal(part.querySelectorAll('.deck-considering-row').length, 0);
-          assert(!part.textContent.includes('Add a card'));
+          assert.equal(part.querySelectorAll('a').find(a => a.getAttribute('href')?.includes('focus=considering')), undefined);
           // A name Scryfall doesn't know (only deck push gets one in) is still listed, without card data.
           page.considering.lines.push({qty: 1, name: 'Ghost Card', set: null, number: null, finish: 'nonfoil', card: null});
           const ghost = showCards(page);
           assert(ghost.textContent.includes('Ghost Card'), ghost.textContent);
-          assert(ghost.textContent.includes('Not a card Deck Lab knows'), ghost.textContent);
+          assert(ghost.textContent.includes('Card details unavailable'), ghost.textContent);
           assert(!main.querySelector('.deck-cards').textContent.includes('Ghost Card'));
           // An empty list nobody here may fill isn't shown at all.
           const empty = makePage(); empty.summary.read_only = true; empty.considering = {sha256: 'a', lines: []};
@@ -75,50 +70,19 @@ class DeckConsideringUiTests(unittest.TestCase):
           assert.equal(showCards(product), null);
         """)
 
-    def test_moves_removes_and_adds_are_saves(self):
+    def test_edit_and_add_enter_the_same_ordinary_draft(self):
         self.run_js("""
           const page = withConsidering();
-          const part0 = showCards(page);
-          // Each row's ⋯ is a menu button (UI-KIT: a row's ⋯ is a menuButton).
-          const more = part0.querySelector('.menu-button');
-          assert.equal(more.getAttribute('aria-haspopup'), 'menu');
-          assert.equal(more.getAttribute('aria-label'), 'Black Lotus: move or remove');
-          location.hash = '#/deck?id=casual%2Ftest&tab=cards';
-          await saveConsidering(page, {action: 'move', index: 1});
-          // A move gets the deck page's box about the save (its mark, table, warnings), not a toast.
-          assert.equal(state.saved.hash, location.hash);
-          same(state.saved.answer, {saved: true});
-          state.saved = null;
-          let undo = null, undoWords = null;
-          showToast = (text, opts) => { undoWords = text; undo = opts?.undo; return {close() {}}; };
-          api = async (path, opts) => { writes.push([path, JSON.parse(opts.body)]); return {saved: true, sha256: 'c'.repeat(64)}; };
-          await removeConsidering(page, 0);
-          await settle();
-          assert.equal(undoWords, 'Took Black Lotus off Considering.');
-          assert.equal(state.saved, null);
-          undo();
-          await settle();
-          same(writes.map(([path, body]) => [path, body.action, body.index ?? null, body.id, body.sha256]),
-            [['/api/deck/considering', 'move', 1, 'casual/test', 'a'.repeat(64)],
-             ['/api/deck/considering', 'remove', 0, 'casual/test', 'a'.repeat(64)],
-             ['/api/deck/considering', 'add', null, 'casual/test', 'c'.repeat(64)]]);
-          same(writes[2][1].line, {name: 'Black Lotus', qty: 1, set: 'lea', number: '232', finish: 'nonfoil'});
-          assert.equal(routed, 3);        // the page is drawn again from the saved deck
-          same(toasts.filter(Boolean), ['Added to Considering.']);
-          // Warnings or other decks' tables out of date after any save: the box, not the toast.
-          api = async (path, opts) => { writes.push([path, JSON.parse(opts.body)]);
-            return {saved: true, sha256: 'd'.repeat(64), warnings: ['4 copies'], stale_tables: [{id: 'casual/other'}]}; };
-          await saveConsidering(page, {action: 'add', line: {name: 'Bolt', qty: 1}});
-          same(state.saved.answer.stale_tables, [{id: 'casual/other'}]);
-          state.saved = null;
+          const part = showCards(page);
+          const edit = part.querySelectorAll('a').find(a => a.getAttribute('href')?.includes('focus=considering'));
+          assert.equal(edit.textContent, 'Edit Considering');
+          assert.equal(edit.getAttribute('href'), '#/edit?id=casual%2Ftest&v=target&focus=considering');
+          assert.equal(part.querySelectorAll('.menu-button').length, 0);
+          page.version = 'owned';
+          const alternative = showCards(page).querySelectorAll('a').find(a => a.getAttribute('href')?.includes('focus=considering'));
+          assert.equal(alternative.getAttribute('href'), '#/edit?id=casual%2Ftest&v=owned&focus=considering');
           const empty = makePage(); empty.considering = {sha256: 'b', lines: []};
-          const part = showCards(empty);
-          assert(part.textContent.includes('No cards being considered'));
-          buttonText(part, 'Add a card to consider…').click();
-          const sheet = document.body.querySelectorAll('dialog').pop();
-          const [name, qty] = sheet.querySelectorAll('input');
-          name.value = 'Opt'; qty.value = '2';
-          sheet.querySelectorAll('button').find((b) => b.textContent === 'Add').click();
-          await settle();
-          same(writes[4][1].line, {name: 'Opt', qty: 2});
+          const add = showCards(empty).querySelectorAll('a').find(a => a.getAttribute('href')?.includes('focus=considering'));
+          assert.equal(add.textContent, 'Add a card to consider…');
+          assert.equal(add.getAttribute('href'), '#/edit?id=casual%2Ftest&v=target&focus=considering&consider=');
         """)

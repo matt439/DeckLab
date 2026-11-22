@@ -1,7 +1,7 @@
 "use strict";
 
 /* P1's deck Overview panels. Field and swap-test summaries use the same result components as Matchups,
-   with their own ids and one read per panel; the 1v1 games part comes with /api/deck itself. Nothing here starts a simulation or polls in the background.
+   with their own ids and one read per panel; recorded game counts come with /api/deck itself. Nothing here starts a simulation or polls in the background.
    Late reads belong to the original screen, route and person, and never redraw a replacement page. */
 
 function deckOverviewHere(section, context) {
@@ -18,8 +18,8 @@ function deckOverviewForge(data) {
   if (data.summary.id.startsWith(BOX_PREFIX)) return null;
   const body = el("div", { class: "deck-overview-forge-body" }, loadingBox("Loading the Forge field…", { small: true }));
   const section = el("section", { class: "deck-section deck-overview-forge", "aria-labelledby": "h-overview-forge" },
-    el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-forge", text: "Forge field" }),
-      el("button", { type: "button", class: "btn", text: "Field view",
+    el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-forge", text: "Household field" }),
+      el("button", { type: "button", class: "btn", text: "View field simulations",
         onclick: () => openDeckTab("matchups", { to: "sec-field" }) })), body);
   const context = deckOverviewContext();
   const profile = context.profile ? `&profile=${encodeURIComponent(context.profile)}` : "";
@@ -35,11 +35,11 @@ function deckOverviewForge(data) {
         body.append(el("p", { class: "empty", text: "No other decks in this field yet." }));
         return;
       }
-      add(body, [fvHeadline(answer, { panel: false }), deckOverviewPilot(answer.pilot), fvChips(answer),
+      add(body, [deckOverviewSimBasis(data), fvHeadline(answer, { panel: false }), deckOverviewPilot(answer.pilot), fvChips(answer),
         answer.rating?.h_points != null ? el("p", { class: "sub", text:
           `Going first is worth about ${Math.round(answer.rating.h_points)} points of win rate in these games.` }) : null,
         fvPlaying(answer) ? el("p", { class: "sub", text: "A field run is in progress. Open Field view for its latest progress." }) : null,
-        el("p", { class: "sub", text: "Forge's AI, best of one. The field view has each matchup and the limits of these estimates." })]);
+        el("p", { class: "sub", text: "The field view has each matchup and the limits of these estimates." })]);
     } catch (error) {
       if (!deckOverviewHere(section, context)) return;
       clear(body).append(loadFailed("The Forge field", error, () => {
@@ -53,13 +53,15 @@ function deckOverviewForge(data) {
   return section;
 }
 
-/** The Overview's Forge panels, stacked: for a Commander deck the popular decks first (E3-S33: the house Commander
-   field is only a handful of decks), for a 60-card deck the field first. Null for a Beginner Box half. */
+/** Keep the standard popular-decks simulation first, with the household field alongside. */
 function deckOverviewStrength(data) {
   const field = deckOverviewForge(data), popular = deckOverviewGauntlet(data);
   if (!field && !popular) return null;
-  return el("div", { class: "deck-overview-sims" },
-    data.summary.kind === "commander" ? [popular, field] : [field, popular]);
+  return el("div", { class: "deck-overview-sims" }, popular, field);
+}
+
+function deckOverviewSimBasis(data) {
+  return el("p", { class: "sub", text: `Forge simulation · 1v1, best of one · ${listName(data.version)}` });
 }
 
 /** How the list does against its format's standard sample of popular decks (E3-S33), from one read of
@@ -69,7 +71,7 @@ function deckOverviewGauntlet(data) {
   if (data.summary.id.startsWith(BOX_PREFIX)) return null;
   const body = el("div", { class: "deck-overview-gauntlet-body" },
     loadingBox("Loading how it does against popular decks…", { small: true }));
-  const button = el("button", { type: "button", class: "btn", text: "Popular decks",
+  const button = el("button", { type: "button", class: "btn", text: "View popular-deck simulations",
     onclick: () => openDeckTab("matchups", { to: "sec-gauntlet" }) });
   const section = el("section", { class: "deck-section deck-overview-gauntlet", "aria-labelledby": "h-overview-gauntlet" },
     el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-gauntlet", text: "Against popular decks" }),
@@ -82,7 +84,7 @@ function deckOverviewGauntlet(data) {
         `&version=${data.version}${profile}`);
       if (!deckOverviewHere(section, context)) return;
       clear(body);
-      add(body, deckOverviewGauntletBody(answer, button));
+      add(body, [deckOverviewSimBasis(data), ...deckOverviewGauntletBody(answer, button)]);
     } catch (error) {
       if (!deckOverviewHere(section, context)) return;
       clear(body).append(loadFailed("How it does against popular decks", error, () => {
@@ -124,8 +126,7 @@ function deckOverviewGauntletBody(a, button) {
     hardest.length ? el("div", { class: "deck-overview-hardest" },
       el("p", { class: "sub", text: (a.hardest || []).every(o => o.high != null && o.high < .5)
         ? "Hardest here:" : "Lowest observed here:" }), el("ul", {}, hardest)) : null,
-    el("p", { class: "sub", text: `These ${a.of} sampled opponents only, not every deck of that colour or style. ` +
-      "Forge's AI, best of one, 1v1." })];
+    el("p", { class: "sub", text: `The result covers the ${a.of} opponents in the standard sample.` })];
 }
 
 /** Matchups' poor-AI caveat (matchups-results.js pilotReason) for the list the field line is about; null
@@ -150,7 +151,7 @@ function deckOverviewSwap(data) {
     clear(body);
     const latest = (answer.tests || [])[0];
     // None yet: the editor is where a change is tested (Test this change), for whoever may edit the deck.
-    body.append(latest ? el("ul", { class: "vt-test-list" }, vtTestItem(latest))
+    body.append(latest ? el("ul", { class: "vt-test-list" }, vtTestItem(latest, data.version))
       : emptyBox("No swap tests yet.", canEditDeck(data.summary)
         ? el("a", { class: "btn", href: editHref(data.summary.id, data.version), text: "Try a change in the editor" }) : null));
   }).catch((error) => {
@@ -186,32 +187,35 @@ function deckOverviewCurve(data) {
         el("span", { class: "deck-overview-mv", text: String(bucket.mv) })))));
 }
 
-/** Physical 1v1 games (E1-S27), with the list changes since the last game and a link to the deck's Game log. */
+/** Recorded 1v1 games and Commander pods stay independently scoped. */
 function deckOverviewPlayed(data) {
   if (data.summary.trial) return ptrDeckNotice(data);         // precon-trial.js: a trial isn't played at home (E3-S39)
   const p = data.played;
   if (!p) return null;
-  // The Game log narrowed to this deck, in plain sight (E11-S61): recording a game is a common step after one.
+  const gameHref = `#/play?id=${encodeURIComponent(data.summary.id)}&version=${data.version === "owned" ? "owned" : "target"}`;
   const log = (text) => el("a", { class: "btn btn-quiet deck-more-link deck-played-log",
-    href: `#/play?id=${encodeURIComponent(data.summary.id)}`, text });
-  if (!p.games || !p.last) {
+    href: gameHref + (text === "Record a game" ? "&action=record" : ""), text });
+  if ((!p.games || !p.last) && !p.pods) {
     return el("div", { class: "deck-overview-played deck-played-empty" },
       el("p", {}, deckPlayed(data)),
       // Only a viewer the Game log would let record one with this deck (play.record) is offered to.
-      el("p", {}, log(p.can_record === true ? "Record a game" : "Open the Game log")));
+      el("p", {}, log(p.can_record === true ? "Record a game" : "View recorded games")));
   }
-  const parts = [el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-played", text: "1v1 games" }),
-    log("Open the Game log"))];
-  parts.push(el("p", {}, deckPlayed(data)));
-  parts.push(deckPlayedSince(p.since, data.summary));
-  return el("section", { class: "deck-section deck-overview-played", "aria-labelledby": "h-overview-played" }, parts);
+  return el("section", { class: "deck-section deck-overview-played", "aria-labelledby": "h-overview-played" },
+    el("div", { class: "deck-section-head" }, el("h2", { id: "h-overview-played", text: "Recorded games" }),
+      log(p.can_record === true && !p.games && !p.pods?.last ? "Record a game" : "View recorded games")),
+    el("p", {}, deckPlayed(data)), deckPlayedSince(p.since, data.summary),
+    p.pods ? el("p", { class: "deck-played-pods" }, p.pods.last
+      ? [`Last Commander pod ${p.pods.last} · ${plural(p.pods.three_player, "3-player game")} · ${plural(p.pods.four_player, "4-player game")} · `,
+        el("a", { href: `${gameHref}&action=pods`, text: "View pod history" })]
+      : "No Commander pods recorded yet") : null);
 }
 
 /** played.since in words: its list unchanged, or each card it gained or lost (a sideboard's named), the History
  * holding the rest. */
 function deckPlayedSince(since, summary) {
   if (!since) return null;
-  const list = since.version === "owned" ? "Play-now list" : "list";
+  const list = listName(since.version, true);
   if (!since.changes.length && !since.more) {
     return el("p", { class: "sub", text: `Its ${list} hasn't changed since that game.` });
   }

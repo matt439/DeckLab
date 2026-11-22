@@ -40,18 +40,18 @@ class ShoppingQueueTableInteractionTests(unittest.TestCase):
             qrow('Ready',3,{listed_aud:'0',listed_at:' Store ',checked:'2026-10-24',in_stock:'yes',deck:{id:'casual/otters',title:'Otters'}}),
             qrow('Stock',4,{state:'waiting_for_stock',in_stock:'no'}), qrow('Unknown',5,{state:'legacy',card:null})];
           const before=JSON.stringify(queue); drawShopping(data(queue));
-          const table=main.querySelector('.shop-queue-table'); assert(table);
+          const tables=main.querySelectorAll('.shop-queue-table'); assert.equal(tables.length,2); const table=tables[0];
           same(table.querySelector('thead').querySelectorAll('th').map(node=>node.textContent),
             ['Card','Printing','For','Qty','Ref AUD','Shop','Stock','Checked','Actions']);
           assert.equal(table.querySelector('.shop-q-head-stock').getAttribute('aria-label'),'Stock when checked');
           assert(table.querySelector('thead').querySelectorAll('th').every(node=>node.getAttribute('scope')==='col'));
-          same(table.querySelectorAll('.group-row').map(node=>node.textContent), ['Ready · 1 row','Waiting · 2 rows','Deferred · 1 row','State not recorded · 1 row']);
+          same(main.querySelectorAll('.group-row').map(node=>node.textContent), ['Ready · 1 row','Waiting · 2 rows','Deferred · 1 row','State not recorded · 1 row']);
           assert(table.querySelectorAll('.group-row').every(node=>node.querySelector('th').getAttribute('colspan')==='9' && node.querySelector('th').getAttribute('scope')==='rowgroup'));
-          assert.equal(table.querySelectorAll('tbody').length,4);
+          same(tables.map(node=>node.querySelectorAll('tbody').length),[1,3]);
           assert(table.querySelectorAll('tbody').every(node=>node.children[0].getAttribute('class')==='group-row'));
           assert(table.children.every(node=>['caption','thead','tbody'].includes(node.tag)));
           assert(table.querySelector('tbody').children.every(node=>node.tag==='tr'));
-          same(table.querySelectorAll('[data-shop-queue]').map(node=>Number(node.getAttribute('data-shop-queue'))), [3,2,4,1,5]);
+          same(main.querySelectorAll('[data-shop-queue]').map(node=>Number(node.getAttribute('data-shop-queue'))), [3,2,4,1,5]);
           assert.equal(entry(3).querySelector('.shop-q-price').textContent,'0.00');
           assert.equal(entry(3).querySelector('.shop-q-shop').textContent,'Store');
           assert.equal(entry(3).querySelector('.shop-q-checked').textContent,'2026-10-24');

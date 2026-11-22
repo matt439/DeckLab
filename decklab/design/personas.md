@@ -1,6 +1,6 @@
 # Deck Lab personas
 
-> **Dated 2026-10-13.** Part of Deck Lab's design set: [README.md](README.md) (method and index), personas (this file), [journeys.md](journeys.md), [stories.md](stories.md) and [gap-analysis.md](gap-analysis.md). The deck states, page names and permissions below describe Deck Lab on that date. Matt's answers to the open questions, given the same day, are worked in as facts sourced "Matt, 2026-10-13" and listed under [Answered 2026-10-13](#answered-2026-10-13). Updated 2026-10-18 for the member template ([member-template.md](member-template.md)): User5 joins as the member persona, "visible to the family" becomes **public** (read-only to everyone signed in), and Matt's decisions A to K are under [Answered 2026-10-18](#answered-2026-10-18). Updated 2026-10-19 to match [stories.md](stories.md): private by default, the Public / Private switches and member departure are built and live (migrations 0012 and 0013 applied 2026-10-19), nothing is switched Public yet, and gaps that have since been built are marked so. Updated 2026-11-04 after a review against the code: the self-hoster persona was added (Matt's choice of 2026-11-04), the stranger narrowed to people wanting into Matt's instance, and Matt's devices brought up to the spare server PC.
+> **Dated 2026-10-13.** Part of Deck Lab's design set: [README.md](README.md) (method and index), personas (this file), [journeys.md](journeys.md), [stories.md](stories.md) and [gap-analysis.md](gap-analysis.md). The deck states, page names and permissions below describe Deck Lab on that date. Matt's answers to the open questions, given the same day, are worked in as facts sourced "Matt, 2026-10-13" and listed under [Answered 2026-10-13](#answered-2026-10-13). Updated 2026-10-18 for the member template ([member-template.md](member-template.md)): User5 joins as the member persona, "visible to the family" becomes **Public** ([current audience](privacy-by-default.md#the-rule)), and Matt's decisions A to K are under [Answered 2026-10-18](#answered-2026-10-18). Updated 2026-10-19 to match [stories.md](stories.md): private by default, the Public / Private switches and member departure are built and live (migrations 0012 and 0013 applied 2026-10-19), nothing is switched Public yet, and gaps that have since been built are marked so. Updated 2026-11-04 after a review against the code: the self-hoster persona was added (Matt's choice of 2026-11-04), the stranger narrowed to people wanting into Matt's instance, and Matt's devices brought up to the spare server PC.
 
 ## What a persona is here
 
@@ -50,7 +50,7 @@ Newer Magic player who collects only to play physical cards. His main job in Dec
 
 ### Role in Deck Lab
 
-Profile `matt`, role `admin`, home space, `plays_as` `user`. He edits everything at home, but not User1's accessories or anyone else's wishlist (`permissions.accessory_owners`; wishlist privacy). Under private by default ([privacy-by-default.md](privacy-by-default.md), [member-template.md](member-template.md); built 2026-10-18, live since 2026-10-19) the admin role doesn't open another space on the page: he reads a member's collection, decks or games only if they make them **public** (read-only to everyone signed in), writes only in home, and asks Claude for upkeep in their spaces. Nothing is switched Public yet. When he passes on a member's request to Claude, that counts as the owner asking, for upkeep only, and Claude reports counts and "done" to him, never the contents (decision D). He picks the simulations setting on Settings (`#/settings`) and may stop any run, shown to him anonymously if he can't see its decks.
+Profile `matt`, role `admin`, home space, `plays_as` `user`. He edits everything at home, but not User1's accessories or anyone else's wishlist (`permissions.accessory_owners`; wishlist privacy). Under private by default ([privacy-by-default.md](privacy-by-default.md), [member-template.md](member-template.md); built 2026-10-18, live since 2026-10-19) the admin role doesn't open another space on the page: he reads a member's collection, decks or games only if they make them **Public** ([read-only audience](privacy-by-default.md#the-rule)), writes only in home, and asks Claude for upkeep in their spaces. Nothing is switched Public yet. When he passes on a member's request to Claude, that counts as the owner asking, for upkeep only, and Claude reports counts and "done" to him, never the contents (decision D). He picks the simulations setting on Settings (`#/settings`) and may stop any run, shown to him anonymously if he can't see its decks.
 
 His main role, and the pages it governs:
 
@@ -365,7 +365,7 @@ Only through decklab.example.com, behind Cloudflare Access with his email (Matt,
 - **Check:** as User5, stopping a run is refused unless he started it or one of its decks is his own (E10-S31).
 - **Check:** the page's JavaScript contains no profile names, real deck titles or results, and a grep test keeps it so (E10-S39).
 - **Check:** Matt, signed in as admin, gets a missing-thing answer for User5's collection, decks, Game log and Activity on the page (E10-S29).
-- Word everything Public / Private. Public means read-only to every signed-in profile behind Cloudflare Access, never the open internet: there are still no open pages, share links or sign-up (see [the stranger](#the-stranger-on-the-internet-anti-persona)).
+- Word everything Public / Private. The [Public audience](privacy-by-default.md#the-rule) includes signed-in readers and visitors on the home network. Remote readers require Cloudflare Access sign-in.
 - Don't build features justified only by him until he asks; read Visits first.
 
 ---
@@ -382,7 +382,7 @@ Members, each with their own space holding their own collection and decks. They 
 
 Profiles `user2`, `user3` and `user4`, role `member`, each with their own space (deck ids like `user2/commander/...`). Each edits their own collection, tokens, decks and wishlist.
 
-- Under private by default ([privacy-by-default.md](privacy-by-default.md); built 2026-10-18, live since 2026-10-19) they see only their own space, plus whatever another space makes **public** (read-only to everyone signed in). Nothing is public yet, so they see no home decks, no other member's decks and none of User5's, and never home's Shopping, Receive delivery, Packing plan or anyone's sleeves and boxes. Their own spaces are private from Matt too. Home's decks stayed private when they moved onto the template (decision K).
+- Under private by default ([privacy-by-default.md](privacy-by-default.md); built 2026-10-18, live since 2026-10-19) they see only their own space, plus whatever another space makes **Public** ([read-only audience](privacy-by-default.md#the-rule)). Nothing is public yet, so they see no home decks, no other member's decks and none of User5's, and never home's Shopping, Receive delivery, Packing plan or anyone's sleeves and boxes. Their own spaces are private from Matt too. Home's decks stayed private when they moved onto the template (decision K).
 - They can start Forge runs only when the admin's simulations setting is Everyone.
 - Their spaces have no orders, products, watchlist or accessories.
 - They see only the games and sideboard plans with one of their own decks on the Game log, not the household's (Matt, 2026-10-13; E10-S24, E10-S32).
@@ -775,7 +775,7 @@ None.
 
 ### Summary
 
-Anyone not invited who finds decklab.example.com or wants a public deck site. Matt's Deck Lab is a private tool for the household and the members he invites (User5 since 2026-10-18), not a public service. Someone who wants Deck Lab for themselves is welcome to install their own copy: that's [the self-hoster](#the-self-hoster), not this persona (Matt, 2026-10-31). "Public" in Deck Lab's switches means read-only to everyone signed in, never to this persona.
+Anyone not invited who finds decklab.example.com or wants a public deck site. Matt's Deck Lab is a private tool for the household and the members he invites (User5 since 2026-10-18), not a public service. Someone who wants Deck Lab for themselves is welcome to install their own copy: that's [the self-hoster](#the-self-hoster), not this persona (Matt, 2026-10-31). A stranger on the internet still needs Cloudflare Access sign-in and a Deck Lab profile to read anything under a Public switch.
 
 ### Role in Deck Lab
 
@@ -810,7 +810,7 @@ None.
 
 ### Design implications
 
-- No pages open to the internet, share links, sign-up or social features. A Public switch shares only with signed-in profiles.
+- Open-internet pages, share links, sign-up and social features remain out of scope. Public grants read-only access to signed-in profiles and home-network visitors without a profile.
 - Never bypass Access; fail closed when identity is missing.
 - Design copy may assume every visitor was invited, but not that every visitor belongs to the household (members don't).
 
@@ -851,7 +851,7 @@ Matt and User1 sit down with a shared tablet between them. User1 picks her name,
 ### User5
 
 **user5-1. A first sign-in** (future-state)
-After the invite, User5 opens decklab.example.com and signs in with his email code. Deck Lab shows his own empty space and nobody else's: no home decks, no other members, no matchups. He imports a collection export on his Collection page and builds a deck. Nothing he adds is seen by anyone else until he sets it to Public, and then only by people signed in.
+After the invite, User5 opens decklab.example.com and signs in with his email code. Deck Lab shows his own empty space and nobody else's: no home decks, no other members, no matchups. He imports a collection export on his Collection page and builds a deck. His additions start Private. Setting them to Public gives the [read-only audience](privacy-by-default.md#the-rule) access.
 
 ### User2, User3 and User4
 
@@ -901,7 +901,7 @@ Matt's answers to the design model's open questions, each a dated owner decision
 | 12 | Should members outside home see the household's Game log? | No. A must privacy story (E10-S24), built 2026-10-13. |
 | 13 | How much should Deck Lab teach rules and play to newer players? | Minimal; products like the Beginner Box do that. The in-context help that exists stays (E4-S07 not wanted, E4-S09 could). |
 | 14 | Do Forge results need backing up? | No; they can be regenerated (E11-S17 not wanted). |
-| 15 | Who sees another space's data? (asked later the same day) | Nobody, unless that space makes it visible to everyone with a profile, read-only; the admin role doesn't override, and the home chooser offers home profiles only. See [privacy-by-default.md](privacy-by-default.md), section 4 (E10-S28 to E10-S36). Changed 2026-10-18: "visible to the family" is now **public**, read-only to everyone signed in (see below). |
+| 15 | Who sees another space's data? (asked later the same day) | Nobody, unless that space makes it visible to everyone with a profile, read-only; the admin role doesn't override, and the home chooser offers home profiles only. See [privacy-by-default.md](privacy-by-default.md), section 4 (E10-S28 to E10-S36). Changed 2026-10-18: "visible to the family" is now **Public** ([current audience](privacy-by-default.md#the-rule)). |
 
 ## Answered 2026-10-18
 
@@ -909,7 +909,7 @@ Matt accepted every recommendation of [member-template.md](member-template.md) o
 
 | # | Question | Answer |
 |---|---|---|
-| Base | What do members see? | Everything in an account is private by default; its owner can make it **public**, read-only to every signed-in profile, future members included. No family flag or family audience. Public never means the open internet: still no open pages, share links or sign-up. |
+| Base | What do members see? | Everything in an account is private by default; its owner can make it **Public** under the [read-only audience rule](privacy-by-default.md#the-rule). Remote access requires sign-in. |
 | A | One switch per list, or per deck too? | One per list (collection, decks, games, each owner's accessories) now; per-deck public later (E10-S41, could). |
 | B | Wording? | Public / Private everywhere, never "visible to the family". |
 | C | Who's on the profile roster? | A viewer's own profile plus profiles whose space has something public, and the admin's display name; no answer names a space the viewer can't see (E10-S38, must). |

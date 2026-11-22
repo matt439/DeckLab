@@ -7,7 +7,7 @@ and matchups-cards.js. The classic scripts share helpers; resultPart is called o
 
 // A matchup page that can't be drawn: its error, and the way back to Matchups (asking again can't help
 // with a bad address or a matchup that isn't there, so errorBox leaves "Try again" out for those).
-const MATCHUP_ERROR = { title: "This matchup couldn't be opened", back: ["#/matchups", "Back to Testing"] };
+const MATCHUP_ERROR = { title: "This matchup couldn't be opened", back: ["#/matchups", "Back to Simulate"] };
 
 function showMatchup(params, token) {
   const q = new URLSearchParams();
@@ -110,8 +110,9 @@ function drawMatchup(page, data) {
     crumb("#/matchups", routeFor("matchups").label),
     el("header", { class: "mu-head" },
       el("h1", {}, sideTitle(a), el("span", { class: "mu-vs-word", text: " vs " }), sideTitle(b)),
-      el("p", { class: "mu-meta-line" }, el("span", { text: metaWords(commander ? "Commander, 1v1, 40 life" : "60-card, 1v1, 20 life",
-        r ? gamesWords(r.games) : null, r && r.forge_version ? `Forge ${r.forge_version}` : null) }), tags)),
+      el("p", { class: "mu-meta-line" }, el("span", { text: metaWords("Forge simulation", commander ? "Commander · 1v1 · 40 life" : "60-card · 1v1 · 20 life",
+        r ? gamesWords(r.games) : null, r?.forge_version ? `Forge ${r.forge_version}` : null) }), tags),
+      el("p", { class: "sub", text: data.sides.map(side => `${side.title} (${listName(side.version, true)}${side.current === false ? ", earlier revision" : ""})`).join(" · ") })),
     page.refreshStatus.node,
     forgeBox(data.forge),
     data.error ? markedBox("crit", "h2", "The last run didn't work", el("p", { text: data.error }),
@@ -223,12 +224,12 @@ function playBox(page, history) {
   const choice = runModeChoice(data);
   const error = el("p", { class: "form-error", role: "alert", "data-play-error": true });
   const button = el("button", { type: "button", class: "btn btn-primary", disabled: !ready, "data-run": true,
-    text: "Play", onclick: () => play(page, choice.value(), button, error) });
+    text: "Start 1v1 simulation", onclick: () => play(page, choice.value(), button, error) });
   const older = history ? history.length > 0 : (data.earlier || []).length > 0;
   choice.node.hidden = !runsAllowed();      // the disabled Play says why (syncRunControls)
   return el("section", { class: "panel mu-play", "aria-labelledby": "h-not-played" },
-    el("h2", { id: "h-not-played", text: older ? "Not played with the current lists yet"
-      : "These two decks haven't played each other yet" }),
+    el("h2", { id: "h-not-played", text: older ? "Current lists haven't been simulated yet"
+      : "No simulation for these lists yet" }),
     older && history ? earlierResults(history, data, true) : history ? null : earlierBox(data),
     el("p", { class: "sub", text: "Forge plays the games on the PC, the decks taking turns to go first. You can " +
       "leave this page meanwhile: the games go on, and the result is saved." }),

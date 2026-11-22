@@ -246,21 +246,21 @@ class DeckOverviewUiTests(unittest.TestCase):
           assert.equal(empty.querySelector('h2'), null);
           // The Game log narrowed to the deck, in plain sight (E11-S61).
           assert.equal(empty.querySelector('.deck-played-log').textContent, 'Record a game');
-          assert.equal(empty.querySelector('.deck-played-log').getAttribute('href'), '#/play?id=casual%2Ftest');
+          assert.equal(empty.querySelector('.deck-played-log').getAttribute('href'), '#/play?id=casual%2Ftest&version=target&action=record');
           // A viewer who may not record a game with it (another space's Public deck) is only shown the Game log.
           for (const can_record of [false, undefined]) {
             const shown = draw({last: null, games: 0, since: null, can_record});
-            assert.equal(shown.querySelector('.deck-played-log').textContent, 'Open the Game log');
-            assert.equal(shown.querySelector('.deck-played-log').getAttribute('href'), '#/play?id=casual%2Ftest');
+            assert.equal(shown.querySelector('.deck-played-log').textContent, 'View recorded games');
+            assert.equal(shown.querySelector('.deck-played-log').getAttribute('href'), '#/play?id=casual%2Ftest&version=target');
           }
           let part = draw({last: '2026-10-20', games: 3, since: {version: 'target', changes: [], more: 0}});
           assert.equal(part.querySelector('.deck-played').textContent, 'Last 1v1 game 2026-10-20 · 3 games');
-          assert.equal(part.querySelector('h2').textContent, '1v1 games');
+          assert.equal(part.querySelector('h2').textContent, 'Recorded games');
           const log = part.querySelector('.deck-played-log');
           assert(log.closest('.deck-section-head'));
-          assert.equal(log.textContent, 'Open the Game log');
-          assert.equal(log.getAttribute('href'), '#/play?id=casual%2Ftest');
-          assert(part.textContent.includes("Its list hasn't changed since that game."));
+          assert.equal(log.textContent, 'View recorded games');
+          assert.equal(log.getAttribute('href'), '#/play?id=casual%2Ftest&version=target');
+          assert(part.textContent.includes("Its planned list hasn't changed since that game."));
           part = draw({last: '2026-10-20', games: 1, since: null});
           assert(part.textContent.includes('1 game'));
           assert(!part.textContent.includes('changed'));
@@ -270,14 +270,19 @@ class DeckOverviewUiTests(unittest.TestCase):
             {section: 'Sideboard', name: 'Pick Your Poison', delta: 0, printing: true}]}});
           same(part.querySelectorAll('li').map((li) => li.textContent), ['Added 1 Sol Ring',
             'Took out 2 Elvish Mystic, another printing', 'Changed the printing of Pick Your Poison (sideboard)']);
-          assert(part.textContent.includes('Its Play-now list has changed since that game:'));
+          assert(part.textContent.includes('Its alternative list has changed since that game:'));
           assert(part.textContent.includes('And 2 more changes; its History has them all.'));
           assert.equal(part.querySelector('.deck-played-since').querySelector('a').getAttribute('href'), '#/history?id=casual%2Ftest&v=owned');
           // A read-only (product or pairing) page has no History link, but keeps its Game log.
           part = draw({last: '2026-10-20', games: 2, since: {version: 'target', more: 1, changes: []}}, {read_only: true});
           assert.equal(part.querySelector('.deck-played-since').querySelector('a'), null);
-          same(part.querySelectorAll('a').map((a) => a.textContent), ['Open the Game log']);
+          same(part.querySelectorAll('a').map((a) => a.textContent), ['View recorded games']);
           assert(part.textContent.includes('And 1 more change.'));
+          part = draw({last: null, games: 0, since: null, pods: {last: '2026-11-01', three_player: 1, four_player: 2}});
+          assert(part.textContent.includes('No 1v1 games recorded yet'));
+          assert(part.textContent.includes('Last Commander pod 2026-11-01 · 1 3-player game · 2 4-player games'));
+          const pods = part.querySelector('.deck-played-pods').querySelector('a');
+          assert.equal(pods.getAttribute('href'), '#/play?id=casual%2Ftest&version=target&action=pods');
         """)
 
     # ------------------------------------------------------------------ E3-S33: Against popular decks
@@ -308,7 +313,7 @@ class DeckOverviewUiTests(unittest.TestCase):
         build_command: null, ...extra});
     """
 
-    def test_popular_decks_lead_a_commander_overview_and_follow_the_field_for_60_card(self):
+    def test_popular_decks_lead_the_overview_for_both_formats(self):
         self.run_js(self.GAUNTLET + """
           summary = done();
           await show(commanderPage());
@@ -317,7 +322,7 @@ class DeckOverviewUiTests(unittest.TestCase):
           same(order(), ['deck-overview-gauntlet', 'deck-overview-forge']);
           summary = done({format: 'constructed'});
           await show();
-          same(order(), ['deck-overview-forge', 'deck-overview-gauntlet']);
+          same(order(), ['deck-overview-gauntlet', 'deck-overview-forge']);
           const page = makePage(); page.summary.id = BOX_PREFIX + 'cats';
           assert.equal(deckOverviewGauntlet(page), null); assert.equal(deckOverviewStrength(page), null);
         """)
@@ -334,8 +339,10 @@ class DeckOverviewUiTests(unittest.TestCase):
           assert(part.textContent.includes('Hardest here:'));
           assert(part.querySelector('.deck-overview-hardest').textContent.includes('Krenko, Mob Boss'));
           assert(part.querySelector('.deck-overview-hardest').textContent.includes(', behind'));
-          assert(part.textContent.includes("These 20 sampled opponents only, not every deck of that colour or style. " +
-            "Forge's AI, best of one, 1v1."));
+          assert(part.textContent.includes('The result covers the 20 opponents in the standard sample.'));
+          const words = part.textContent;
+          assert(words.includes('Forge simulation · 1v1, best of one · Planned list'));
+          assert(words.indexOf('Forge simulation') < words.indexOf('47'));
           // Figures in ink: no strong or weak colours, no flags.
           assert(!part.querySelector('.flag')); assert(!part.querySelector('.is-good'));
           // One read, with the list and the viewer; no timer, no write.
@@ -345,7 +352,7 @@ class DeckOverviewUiTests(unittest.TestCase):
           assert.equal(calls.filter((u) => u.startsWith('/api/gauntlet')).length, 1);
           assert.equal(writes.length, 0);
           // Its button opens Matchups at the part, and starts nothing.
-          const button = buttonText(part, 'Popular decks'); assert(button && !button.hidden);
+          const button = buttonText(part, 'View popular-deck simulations'); assert(button && !button.hidden);
           button.click(); await settle();
           assert.equal(tab('matchups').getAttribute('aria-selected'), 'true');
           assert(main.querySelector('#sec-gauntlet'));
@@ -357,7 +364,7 @@ class DeckOverviewUiTests(unittest.TestCase):
           summary = done({state: 'partial', played: 5, tally: {ahead: 1, even: 3, behind: 1, unsettled: 0}});
           let part = await show(commanderPage());
           assert(part.textContent.includes('5 of 20 opponents tested so far.'));
-          assert(buttonText(part, 'Popular decks'));
+          assert(buttonText(part, 'View popular-deck simulations'));
           summary = done({state: 'untested', overall: null, played: 0, games: 0, hardest: [], updated: null,
             tally: {ahead: 0, even: 0, behind: 0, unsettled: 0}});
           part = await show(commanderPage());
@@ -374,7 +381,7 @@ class DeckOverviewUiTests(unittest.TestCase):
           part = await show(commanderPage());
           assert(part.textContent.includes("Popular decks aren't set up on this PC yet."));
           assert.equal(part.querySelector('code'), null);
-          assert.equal(buttonText(part, 'Popular decks').hidden, true);
+          assert.equal(buttonText(part, 'View popular-deck simulations').hidden, true);
           summary = done({state: 'no_catalogue', overall: null, played: 0, of: 0, sample: null, hardest: [],
             build_command: 'python -m decklab.lib.forge gauntlet build --format commander'});
           part = await show(commanderPage());
@@ -426,7 +433,7 @@ class DeckOverviewUiTests(unittest.TestCase):
             'Before this change 41% (33–49) · Now 47% (39–55), same 20 opponents.');
           assert(part.querySelector('.gt-headline-panel'));
           assert.equal(part.querySelector('.gt-older').textContent, "Results from an older Forge aren't shown.");
-          assert(buttonText(part, 'Popular decks'));
+          assert(buttonText(part, 'View popular-deck simulations'));
           summary = done({state: 'stale_older', overall: null, played: 0, games: 0, hardest: [], updated: null,
             before: null, compare: null,
             older: {reason: 'forge', opponents: 18, of: 20, updated: day,

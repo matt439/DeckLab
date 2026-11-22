@@ -55,17 +55,15 @@ class MatchupFileTests(unittest.TestCase):
         route = _function(app, "route")
         self.assertIn('path === "matchups"', route)
         self.assertIn('path === "matchup"', route)
-        self.assertIn('{ path: "matchups", label: "Testing"', app)
+        self.assertIn('{ path: "matchups", label: "Simulate"', app)
         self.assertNotIn('href: "#/matchups"', _function(app, "drawLibrary"))     # the shell has it, not the page
         # The deck page's tabs: Matchups after Practice, drawn when it opens (the matchups part, the field and
         # popular decks, and the tests of changes). The price table is on the Cards tab, null for a visitor who may not see the
         # deck's collection.
         tabs = re.search(r"const DECK_TABS = \[(.*?)\];", app, re.S).group(1)
-        self.assertLess(tabs.index('"practice"'), tabs.index('["matchups", "Testing"]'))
+        self.assertLess(tabs.index('"practice"'), tabs.index('["matchups", "Simulate"]'))
         parts = _function(app, "deckTabParts")
-        self.assertIn("return [deckMatchupsPart(data), fieldSection(data), groupSection(data), gauntletSection(data), variantTestsSection(data), crosscheckSection(data)];",
-                      parts)
-        # E3-S33: a Commander deck's popular decks come first.
+        # The popular-deck simulation leads for both formats.
         self.assertIn("return [gauntletSection(data), deckMatchupsPart(data), fieldSection(data), groupSection(data), variantTestsSection(data), crosscheckSection(data)];",
                       parts)
         self.assertIn("ownedSection(data)", _function(app, "cardsParts"))
@@ -269,7 +267,7 @@ class MatchupFileTests(unittest.TestCase):
         self.assertLess(show.index("/^[0-9a-f]{64}$/i.test("), show.index("load("))
         self.assertIn("That link isn't a matchup's address", show)
         self.assertIn("MATCHUP_ERROR);", show)
-        self.assertIn('back: ["#/matchups", "Back to Testing"]', script)
+        self.assertIn('back: ["#/matchups", "Back to Simulate"]', script)
 
     def test_pairing_links_name_both_halves(self):
         # PAGE-11: "+ Vampires" looked like an "add" button and read as "plus Vampires"; the Matchups part
@@ -532,7 +530,7 @@ class MatchupFileTests(unittest.TestCase):
         # Since the UI review (DK-13) the results come first, as they answer the question.
         section = _function(_scripts(["deck-tools.js"]), "drawDeckMatchups")
         ai = "aiLimitsParts(m.ai, s.title, {deckPage: true, otherSaid: !!otherLine, earlier})"
-        self.assertLess(section.index('text: "Head to head"'), section.index(ai))
+        self.assertLess(section.index('text: "Simulated 1v1 matchups"'), section.index(ai))
         self.assertLess(section.index(ai), section.index("deckCardStats(m, version, {otherSaid: !!otherLine, data})"))
         deck = _function(script, "deckCardStats")
         self.assertIn('el("h3", { text: "How its cards played" })', deck)

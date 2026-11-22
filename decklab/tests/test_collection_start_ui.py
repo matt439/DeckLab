@@ -13,23 +13,22 @@ class CollectionStartTests(unittest.TestCase):
         self.run_js(r'''
           const cv=draw({scan:{available:false}}); let writes=0;
           apiWrite=async()=>{writes++;throw new Error('no writes');};
-          const guide=openCollectionStartSheet(cv);
-          assert(guide.body.textContent.includes("You don't need a spreadsheet"));
-          assert(guide.body.textContent.includes("Photo reading isn't available"));
-          assert(guide.body.textContent.includes('increases its quantity'));
-          button(guide.body,'Enter a pile of loose cards').click();
+          const guide=openCollectionAddSheet(cv);
+          assert(guide.body.textContent.includes('Start with a small pile'));
+          assert(guide.body.textContent.includes('Photo reading is unavailable'));
+          button(guide.body,'Scan').click();
           assert(guide.closed); assert.equal(writes,0);
           assert(document.body.textContent.includes('Type a card'));
           colCloseSheets(); cv.editable=false;
-          assert.equal(openCollectionStartSheet(cv),null);
+          assert.equal(openCollectionAddSheet(cv),null);
           cv.editable=true;cv.unsupported=true;
-          assert.equal(openCollectionStartSheet(cv),null);
+          assert.equal(openCollectionAddSheet(cv),null);
         ''')
 
     def test_guide_stale_action_does_not_reopen_for_other_profile(self):
         self.run_js(r'''
-          const cv=draw(); const guide=openCollectionStartSheet(cv);
-          const action=button(guide.body,'Enter a pile of loose cards');
+          const cv=draw(); const guide=openCollectionAddSheet(cv);
+          const action=button(guide.body,'Scan');
           cv.unsupported=true; action.click(); assert(!guide.closed);
           cv.unsupported=false; routeToken++; action.click(); assert(!guide.closed);
         ''')

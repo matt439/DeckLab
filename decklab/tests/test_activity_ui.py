@@ -48,8 +48,8 @@ class ActivityInteractionTests(unittest.TestCase):
           apiWrite = async () => { throw new Error("Must not write"); };
           await route();
           same(reads, ["/api/activity"]);
-          assert.equal(document.title, "Activity – Deck Lab");
-          assert.equal(main.querySelector("h1").textContent, "Activity");
+          assert.equal(document.title, "Changes & undo – Deck Lab");
+          assert.equal(main.querySelector("h1").textContent, "Changes & undo");
           let days = main.querySelectorAll(".activity-day");
           assert.equal(days.length, 1);
           assert.equal(days[0].querySelector(".activity-day-head").textContent, "Today");
@@ -294,7 +294,7 @@ class ActivityInteractionTests(unittest.TestCase):
           api = async () => { throw new ApiError(503, "Deck Lab's database isn't reachable right now. Try again in a minute.",
                                                  {reason: "database"}); };
           await showActivity(new URLSearchParams(), routeToken);
-          assert(main.textContent.includes("Activity couldn't be loaded"));
+          assert(main.textContent.includes("Changes couldn't be loaded"));
           assert(main.textContent.includes("database isn't reachable"));
           assert(main.textContent.includes("Try again"));
           assert(!main.textContent.includes("card data"));
@@ -304,7 +304,7 @@ class ActivityInteractionTests(unittest.TestCase):
         self.run_js("""
           api = async () => { throw new ApiError(500, "The audit trail couldn't be read."); };
           await showActivity(new URLSearchParams(), routeToken);
-          assert(main.textContent.includes("Activity couldn't be loaded"));
+          assert(main.textContent.includes("Changes couldn't be loaded"));
           assert(main.textContent.includes("The audit trail couldn't be read."));
           assert(main.textContent.includes("Try again"));
           api = async () => page([change(3)], 3);

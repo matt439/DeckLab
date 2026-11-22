@@ -47,7 +47,7 @@ class GroupsTests(GlobalSearchTestCase):
         with self.at_home("matt"):
             self.assertEqual([d["id"] for d in self.groups(gs.search_view("elf"))["decks"]["items"]],
                              ["commander/elf-commander"])
-        self.assertEqual([g["label"] for g in answer["groups"]], ["Decks", "In your collection", "Other cards"])
+        self.assertEqual([g["label"] for g in answer["groups"]], ["Your decks", "Collection & arrivals", "Card catalogue"])
         groups = self.groups(answer)
         self.assertEqual([d["id"] for d in groups["decks"]["items"]], ["product/fdn-beginner-box/elves"])
         mine = {i["name"]: i for i in groups["collection"]["items"]}

@@ -1,5 +1,5 @@
 """Try a precon before buying it (E3-S39, precon-trial.js) through the real page scripts, with fixture answers:
-the "Try a precon" sheet and its create flow, the Testing page's button, Precons we could build's secondary
+the "Try a precon" sheet and its create flow, the legacy Testing link, Precons we could build's secondary
 action, a trial deck's Overview notice, the library's Trying out group, the board's Not owned chip and the
 offer to retire a trial after Add a precon. No server, database or Forge."""
 import json
@@ -143,28 +143,28 @@ class PreconTrialUiTests(unittest.TestCase):
           assert(!sheet.textContent.includes('Try it in Forge saves'), sheet.textContent);
         """)
 
-    def test_the_testing_page_button_and_open_precon(self):
+    def test_the_old_testing_link_opens_without_a_duplicate_button(self):
         self.run_js("""
           as('matt', MAY.admin); location.hash = '#/matchups?open=precon';
           stub();
           add(main, pageHead({title: 'Testing', primary: el('button', {class: 'btn btn-primary', text: 'Play a matchup'})}));
-          ptrTestingButton(main, new URLSearchParams('open=precon'), routeToken);
+          openLinkedPreconTrial(new URLSearchParams('open=precon'), routeToken);
           const buttons = main.querySelector('.page-head-buttons');
-          assert(button(buttons, 'Try a precon…'), buttons.textContent);
+          assert.equal(button(buttons, 'Try a precon…'), null);
           assert.equal(buttons.querySelectorAll('.btn-primary').length, 1);
           let replaced = null; history.replaceState = (s, t, url) => { replaced = url; };
           flushTimers(); await flush();
           assert.equal(replaced, '#/matchups');
           assert.equal(openDialog().querySelector('h2')?.textContent || openDialog().textContent.slice(0, 11), 'Try a precon');
-          // No run button (runs refused) still leaves room for it; a viewer who may add no decks gets none.
-          clear(main);
-          add(main, pageHead({title: 'Testing'}));
-          ptrTestingButton(main, new URLSearchParams(''), routeToken);
-          assert(button(main, 'Try a precon…'));
+          // Opening the Simulate page normally leaves precon discovery under New deck.
+          openDialog().querySelector('.sheet-close').click();
+          openLinkedPreconTrial(new URLSearchParams(''), routeToken);
+          flushTimers();
+          assert(!openDialog());
           as('user1', {...MAY.user1, create: []});
-          add(main, pageHead({title: 'Testing'}));
-          ptrTestingButton(main, new URLSearchParams(''), routeToken);
-          assert.equal(button(main, 'Try a precon…'), null);
+          openLinkedPreconTrial(new URLSearchParams('open=precon'), routeToken);
+          flushTimers();
+          assert(!openDialog());
         """)
 
     def test_precons_we_could_build_offers_it_too(self):
@@ -213,10 +213,10 @@ class PreconTrialUiTests(unittest.TestCase):
           const notice = deckOverviewPlayed(data);
           main.append(notice);
           const words = notice.textContent;
-          assert(words.includes("You don't own this precon.") && !words.includes('1v1 games'), words);
+          assert(words.includes('This published list is saved as a trial.') && !words.includes('1v1 games'), words);
           assert.equal(notice.querySelector('a').getAttribute('href'), '#/deck?id=commander%2Fghalta-test-dinos&v=target&tab=matchups&part=gauntlet');
-          const bought = notice.querySelectorAll('a').find((a) => a.textContent === 'Bought it? Add a precon');
-          assert.equal(bought.getAttribute('href'), '#/collection?open=precon');
+          const bought = notice.querySelectorAll('a').find((a) => a.textContent === 'I own this precon');
+          assert.equal(bought.getAttribute('href'), '#/collection?open=precon&precon=Dinos_TST');
           // Remove trial: the existing retirement sheet.
           const retired = []; openRetireDeck = (d) => { retired.push(d.summary.id); return {}; };
           button(notice, 'Remove trial').click();
@@ -307,7 +307,7 @@ class PreconTrialSourceTests(unittest.TestCase):
     def test_globals_writes_and_css(self):
         script = (WEB / "precon-trial.js").read_text(encoding="utf-8")
         names = re.findall(r"(?m)^(?:async )?function (\w+)\(", script) + re.findall(r"(?m)^const (\w+)", script)
-        self.assertEqual([n for n in names if not (n.startswith("ptr") or n.startswith("PTR_") or n.startswith("openTrial"))], [])
+        self.assertEqual([n for n in names if not n.startswith(("ptr", "PTR_", "openTrial", "openLinkedPreconTrial"))], [])
         self.assertNotIn("fetch(", script)
         for path in ('"/api/precons/trial"', '"/api/precons/trial/keep"'):
             self.assertIn(f"apiWrite({path}", script)

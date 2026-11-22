@@ -226,12 +226,9 @@ function browsing(ac) { return ac.mode === "collection" || ac.mode === "edhrec" 
 /** The search's filters on one row: My collection (a tick, not a second switch beside Add to's: every card
  * when it's off), Free only, then "Filters" (colours, type and mana value, folded away until opened). */
 function drawSearchControls(ac) {
-  const mine = ac.sees ? el("label", { class: "choice ac-mine", title: "Only the cards in your collection that are free for this deck" },
+  const mine = ac.sees ? el("label", { class: "choice ac-mine", title: "Find copies available for this deck in the recorded collection or on the way" },
     el("input", { type: "checkbox", checked: ac.mode === "collection" || null, onchange: (e) => {
-      ac.mode = e.target.checked ? "collection" : "search";
-      // My collection starts in the deck's colours.
-      if (ac.mode === "collection" && !ac.colors.size) deckColours().forEach((c) => ac.colors.add(c));
-      refilter(ac);
+      editorFinderCollection(ac, e.target.checked);
       const again = ac.filters.querySelector(".ac-mine input");
       if (again) again.focus();
     } }), "My collection") : null;
@@ -269,6 +266,12 @@ function drawSearchControls(ac) {
       el("div", { class: "ac-colours", role: "group", "aria-label": "Colours the cards fit" }, colourButtons),
       type, mv)]);
   if (ac.mode !== "edhrec" && ac.mode !== "wishlist") drawEditorEdhrecNote(ac);
+}
+
+function editorFinderCollection(ac, on) {
+  ac.mode = on ? "collection" : "search";
+  if (on && !ac.colors.size) deckColours().forEach(colour => ac.colors.add(colour));
+  refilter(ac);
 }
 
 function refilter(ac) {
@@ -489,13 +492,15 @@ function oracleLine(card) {
   return text ? renderSymbols(text, { small: true }) : null;
 }
 
-/** The owned badge of a result: "2 free" (My collection), "3 owned" or "1 on the way". */
+/** Keep physical availability and expected deliveries distinct in the finder. */
 function ownedBadge(c) {
-  if (c.free != null) return el("span", { class: "chip chip-good", text: `${c.free} free` });
+  if (c.free_now != null) return [
+    c.free_now > 0 ? el("span", { class: "chip chip-good", text: `${num(c.free_now)} free now` }) : null,
+    c.free > c.free_now ? el("span", { class: "chip chip-info", text: `${num(c.free - c.free_now)} on the way` }) : null];
+  if (c.free != null) return el("span", { class: "chip chip-info", text: `${num(c.free)} available for this list` });
   const have = c.have || {};
-  if (have.owned) return el("span", { class: "chip chip-good", text: `${have.owned} owned` });
-  if (have.on_the_way) return el("span", { class: "chip chip-info", text: `${have.on_the_way} on the way` });
-  return null;
+  return [have.owned ? el("span", { class: "chip chip-good", text: `${num(have.owned)} owned` }) : null,
+    have.on_the_way ? el("span", { class: "chip chip-info", text: `${num(have.on_the_way)} on the way` }) : null];
 }
 
 /** Whether the draft is a Commander deck: a saved one, or a new one being made as one. */

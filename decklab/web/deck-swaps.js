@@ -30,8 +30,8 @@ function deckSwapFinder(screen) {
   const data = screen.data;
   if (screen.view.filter !== "missing" || !deckSwapsOffered(data)) return null;
   const box = el("section", { class: "box deck-swap-finder", "aria-labelledby": "h-swap-finder" },
-    el("h3", { id: "h-swap-finder", text: "Owned stand-ins" }));
-  const body = el("div", {}, loadingBox("Looking for stand-ins…", { small: true }));
+    el("h3", { id: "h-swap-finder", text: "Find substitute cards" }));
+  const body = el("div", {}, loadingBox("Looking for substitute cards…", { small: true }));
   box.append(body);
   if (!screen.swapFinder || screen.swapFinder.version !== data.version) {
     screen.swapFinder = { version: data.version,
@@ -44,7 +44,7 @@ function deckSwapFinder(screen) {
   }, (e) => {
     // A failure isn't kept: Try again (or the next redraw) asks again.
     if (screen.swapFinder === asked) screen.swapFinder = null;
-    if (deckScreen === screen && body.isConnected) clear(body).append(loadFailed("Stand-ins", e, () => {
+    if (deckScreen === screen && body.isConnected) clear(body).append(loadFailed("Substitute cards", e, () => {
       if (deckScreen === screen) redrawCards(screen);
     }));
   });
@@ -65,10 +65,10 @@ function drawSwapFinder(body, data, answer) {
     const n = entry.candidates.length + entry.more;
     return el("li", { class: "swap-finder-row" },
       el("span", { class: "swap-finder-name" }, entry.name,
-        el("small", { text: n ? `${entry.missing} missing · ${n} could stand in`
-          : `${entry.missing} missing · no close stand-in: worth buying first` })),
-      n ? el("button", { type: "button", class: "btn", text: "See them",
-        "aria-label": `See the stand-ins for ${entry.name}`, onclick: () => openDeckSwapSheet(data, entry, answer) }) : null);
+        el("small", { text: n ? `${entry.missing} missing · ${plural(n, "substitute card")}`
+          : `${entry.missing} missing · no close substitute` })),
+      n ? el("button", { type: "button", class: "btn", text: "View substitutes",
+        "aria-label": `View substitute cards for ${entry.name}`, onclick: () => openDeckSwapSheet(data, entry, answer) }) : null);
   };
   // The first few, with the rest behind "Show all", so a long list doesn't push the missing cards off a phone's screen.
   const list = el("ul", { class: "swap-finder-list" }, answer.cards.slice(0, SWAP_FINDER_ROWS).map(row));
@@ -76,7 +76,7 @@ function drawSwapFinder(body, data, answer) {
   const more = rest.length ? el("button", { type: "button", class: "btn btn-quiet", text: `Show all ${answer.cards.length}`,
     onclick: () => { list.append(...rest.map(row)); more.remove(); } }) : null;
   add(clear(body), [
-    el("p", { class: "sub", text: "Cards you have that could play these slots tonight, the most worth buying first." }),
+    el("p", { class: "sub", text: "Using a substitute card changes the list. Candidates can include incoming copies." }),
     list, more]);
 }
 
@@ -87,7 +87,7 @@ function openDeckSwapSheet(data, entry, answer) {
   const canCheck = deckUpgradeChecklistOffered(data);
   // Only when the Play-now list is short of it too: else the editor would have nothing to swap.
   const out = !(entry.list_missing > 0);
-  const sheet = openSheet({ title: `Stand-ins for ${entry.name}`, side: true });
+  const sheet = openSheet({ title: `Substitute cards for ${entry.name}`, side: true });
   sheet.dialog.classList.add("swap-sheet");
   add(sheet.body, [
     el("p", { class: "sub swap-head", text: `${plural(entry.missing, "copy", "copies")} missing · ${swapLooksFor(entry)}` }),
@@ -120,7 +120,7 @@ function deckSwapsSection(data) {
     ? `${swap.using.map((u) => `${u.qty} ${u.name}`).join(" + ")} for ${swap.out_qty} ${swap.for}`
     : `${swap.out_qty} ${swap.for} out`);
   return el("section", { class: "deck-section deck-swaps", "aria-labelledby": "h-swaps" },
-    el("h2", { id: "h-swaps", text: `Swaps from the ${listName("target", true)}` }),
+    el("h2", { id: "h-swaps", text: `Substitute cards from the ${listName("target", true)}` }),
     el("div", {}, found.swaps.map((swap) => {
       const card = (swap.using[0] && swap.using[0].card) || swap.card;
       return cardRow(card, { name: words(swap), meta: swap.note || "No note yet in Substitutes",

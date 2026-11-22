@@ -176,7 +176,10 @@ function registerLibraryKeyboardHelp(results, token, profile) {
 }
 
 function registerCollectionKeyboardHelp(cv) {
-  const search = () => cv.kind === "rows" ? cv.rowSearch : cv.filterControls?.q;
+  const search = () => {
+    const control = cv.kind === "rows" ? cv.rowSearch : cv.filterControls?.q;
+    return keyboardShown(control) ? control : null;
+  };
   const searchReady = () => !cv.busy && keyboardRouteControl(search()) && cv.root.contains(search());
   const region = () => cv.list?.querySelector(".table-wrap");
   registerKeyboardHelp(cv.root, () => [

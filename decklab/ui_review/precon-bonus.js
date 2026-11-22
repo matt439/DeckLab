@@ -47,6 +47,14 @@ run('precon-bonus', async review => {
       review.select('matt');
       context=await review.context(spec);
       const page=await context.newPage();
+      const conflictConsole=[];
+      page.on('console', message=>{
+        const url=new URL(message.location().url,review.origin);
+        if(message.type()==='error' && url.origin===review.origin && url.pathname==='/api/precons/add' && !url.search
+          && message.text()==='Failed to load resource: the server responded with a status of 409 (Conflict)') {
+          conflictConsole.push('Console error: '+message.text());
+        }
+      });
       review.observe(page,result.page_errors,result.http_errors);
       let previews=0,adds=0;
       await page.route('**/api/precons**',async route=>{
@@ -72,7 +80,7 @@ run('precon-bonus', async review => {
         assert.equal(body.bonus_source_sha256,adds===1?SOURCE:NEXT_SOURCE);
         assert.deepEqual(body.bonus_choices,adds===1?[2]:[1]);
         assert(adds<=2,'Unexpected automatic or repeated add');
-        // Even explicit clicks receive synthetic refusals, so no inventory write or route change occurs.
+        // Every write is intercepted. Only the cards-only drop gets a synthetic success receipt.
         if(adds===2 && cardsOnly) return route.fulfill({status:200,json:{cards_only:true,deck:null,
           collection:{added:{cards:6,rows:2}},stale_tables:[],trials:[]}});
         return route.fulfill({status:409,json:adds===1
@@ -134,9 +142,18 @@ run('precon-bonus', async review => {
         await page.screenshot({path:path.join(review.out,result.savedPng),fullPage:false,animations:'disabled'});
       } else await dialog.getByText('Synthetic title is already in use.',{exact:true}).waitFor();
       assert.equal(adds,2);assert.equal(previews,2);
-      for(const error of result.http_errors) if(error.status===409
-          && new URL(error.url,review.origin).pathname==='/api/precons/add') error.category='expected_synthetic_refusal';
-      assert.equal(result.page_errors.length,0,'Uncaught page error');
+      const conflicts=result.http_errors.filter(error=>error.status===409 && error.url==='/api/precons/add');
+      assert.equal(conflicts.length,cardsOnly?1:2,'Synthetic refusals must match the submitted previews');
+      for(const error of conflicts) error.category='expected_synthetic_refusal';
+      if(review.options.strictConsole) {
+        assert.equal(conflictConsole.length,conflicts.length,'Native conflict errors must match the synthetic replies');
+        for(const message of conflictConsole) {
+          const index=result.page_errors.indexOf(message);
+          assert(index>=0);result.page_errors.splice(index,1);
+        }
+        result.expected_console_errors=conflictConsole;
+      }
+      assert.equal(result.page_errors.length,0,'Uncaught browser or strict-console error');
       assert(!result.http_errors.some(error=>error.category==='unexpected_http_error'),'Unexpected HTTP failure');
       result.reads=previews;result.status='captured';
     } catch(error) {result.error=review.safeText(error.message);}

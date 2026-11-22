@@ -12,7 +12,7 @@ function pricingAdmin() { return ownSpace() === HOME_SPACE && isAdminProfile(); 
 function settingsPricingPanel() {
   if (!pricingAdmin()) return null;
   return el("section", {class: "panel settings-part", id: "settings-prices", "aria-labelledby": "settings-prices-title"},
-    el("h2", {id: "settings-prices-title", text: "Prices"}),
+    el("h3", {id: "settings-prices-title", text: "Prices"}),
     el("p", {class: "sub", text: "The currency Deck Lab's price estimates are in, converted from Scryfall's US prices at the ECB's rate, and the shops the nightly price check reads."}),
     el("div", {id: "pricing-settings"}, loadingBox("Loading the price settings…", {small: true})));
 }
@@ -60,7 +60,7 @@ function drawPricingSettings(host, data, token, profile) {
   }
   const notes = [
     el("p", {class: "sub", id: "pricing-source", text: pricingSourceLine(data)}),
-    el("p", {class: "sub", text: "No restart needed: Deck Lab uses a change within a minute. Deck tables keep their old currency until they're repriced: Decks, Tables out of date, Update all, or deck tables --reprice --apply on the PC. Shops' own prices and postage stay in A$, as the shops list them."})];
+    el("p", {class: "sub", text: "Deck Lab uses the new setting within a minute. Reprice existing availability tables under Decks → Availability needs updating → Update all, or with deck tables --reprice --apply on the PC. Shops list prices and postage in A$."})];
   if (!data.can_edit) {
     clear(host).append(...notes);
     return null;

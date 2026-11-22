@@ -1,4 +1,4 @@
-/* The Collection page's "Commanders we could build…" (E9-S28, first slice; lib/api/commander_candidates.py):
+/* New deck's "Commanders we could build" (E9-S28, lib/api/commander_candidates.py):
  * the space's free legendary creatures (and other cards that may be a commander) ranked by how much of a
  * Commander deck the rest of the free pool covers in each one's colours, counted by the Command Zone
  * template's role targets (ramp, card advantage, targeted and mass disruption), best first. Opening one shows
@@ -24,7 +24,7 @@ function openCommanderCandidates(cv) {
 function commanderCandidatesSheet(space, sheet, here, onChoose = null) {
   const whose = colWhose(space);
   const ctx = { space, sheet, here, onChoose, whose, seq: 0, detail: null };
-  ctx.intro = el("p", { class: "sub", text: `Commanders ranked by the ramp, card advantage and disruption available in ${whose}. Role coverage includes incoming copies. A draft for tonight uses only cards in storage.` });
+  ctx.intro = el("p", { class: "sub", text: `Role coverage uses ${whose} and expected deliveries. A draft for tonight uses only copies free now.` });
   ctx.input = el("input", { type: "search", class: "search-input", maxlength: 150, autocomplete: "off",
     "aria-label": "Find a commander by name", placeholder: "Find a commander by name" });
   ctx.search = el("form", { class: "actions", role: "search" }, ctx.input,
@@ -98,16 +98,18 @@ function candidateSource(source) {
 
 /** The decks holding a held candidate, in the server's words: "Elf Stompy and one of the home decks". */
 function candidateHolders(c) {
-  const titles = (c.held_by || []).map((h) => h.title);
-  return titles.length ? titles.join(" and ") : "a deck";
+  const holders = c.held_by || [];
+  const decks = holders.filter(h => h.id != null || h.title !== "lent out").map(h => h.title);
+  return [decks.length ? `in ${decks.join(" and ")}` : null,
+    holders.some(h => h.id == null && h.title === "lent out") ? "lent out" : null].filter(Boolean).join(" or ") || "held";
 }
 
 /** One row of the ranking (or of the held list): a button opening it. */
 function candidatePick(ctx, c) {
   const pair = c.kind === "pair";
-  const words = [plural(c.cards, "other free card"), plural(c.lands, "non-basic land"),
+  const words = [plural(c.cards, "other covered card"), plural(c.lands, "non-basic land"),
     pair ? `together by ${c.pairing}` : c.partner && c.partner.length ? `has ${c.partner.join(", ")}` : null,
-    c.kind === "held" ? `in ${candidateHolders(c)}` : candidateFaces(c).filter(f => f.incoming > 0)
+    c.kind === "held" ? candidateHolders(c) : candidateFaces(c)
       .map(f => `${pair ? f.name + ": " : ""}${candidateStock(f)}`).join(" · ")];
   return el("li", { class: pair ? "ccand-pair" : c.kind === "held" ? "ccand-held" : null },
     el("button", { type: "button", class: "pcov-pick", onclick: () => openCandidate(ctx, c) },
@@ -138,8 +140,8 @@ function drawCandidates(ctx, answer) {
       text: ctx.query ? `Showing ${num(list.length)} of ${num(answer.total)} matches.` : `The best ${num(list.length)} of ${num(answer.total)}.` }) : null,
     candidatePairsNote(answer.pairs),
     held.length ? el("section", { class: "ccand-held-list" },
-      el("h3", { text: "Held by a deck" }),
-      el("p", { class: "sub", text: "Every copy is in a built deck or a product kept intact. Each counts only the free cards, as if it came out of its deck." }),
+      el("h3", { text: "Held or lent out" }),
+      el("p", { class: "sub", text: "To use one of these commanders, review the deck holdings or wait for a loan to come back." }),
       el("ol", { class: "pcov-list" }, held.map((c) => candidatePick(ctx, c))),
       answer.held_total > held.length ? el("p", { class: "result-count", text: `${num(held.length)} of ${num(answer.held_total)} held.` }) : null) : null,
     candidateSource(answer.source)]);
@@ -169,9 +171,9 @@ function candidateFaces(c) { return c.faces || [c]; }
 
 function candidateStock(face) {
   const words = [];
-  if (face.free > 0) words.push(`${num(face.free)} free`);
+  if (face.free > 0) words.push(`${num(face.free)} free now`);
   if (face.incoming > 0) words.push(face.free > 0 ? `${num(face.incoming)} on the way` : `On the way (${num(face.incoming)})`);
-  return words.join(" · ") || "None free";
+  return words.join(" · ") || "None free now";
 }
 
 /** New deck from it and See EDHREC ideas. */
@@ -222,11 +224,11 @@ function drawCandidateCards(ctx, answer) {
       : `${plural(p.count, "free non-basic land")}; basics fill the rest`));
   const others = answer.others || { cards: [], more: 0, count: 0 };
   add(clear(ctx.cards), [
-    el("h2", { class: "ccand-cards-head", text: "Free cards by role" }),
-    el("p", { class: "sub", text: "Most-printed first. A card in two categories is listed in both." }),
+    el("h2", { class: "ccand-cards-head", text: "Available cards by role" }),
+    el("p", { class: "sub", text: "Counts include copies free now and on the way. A card in two categories appears in both." }),
     groups,
     candidateCardGroup("Other free cards", others.cards || [], others.more,
-      `${num(others.count || 0)} that fit no counted category: creatures and the deck's plan`)]);
+      `${num(others.count || 0)} for the deck's plan or for other roles`)]);
 }
 
 /** One candidate: its card, each template category's free cards beside its target, and what else fits. */
@@ -250,14 +252,14 @@ function openCandidate(ctx, c) {
       el("div", { class: "ccand-words" },
         el("p", { class: "precon-summary" }, candidateShare(c)),
         el("p", { text: candidateShort(c) + "." }),
-        el("p", { class: "sub", text: `${plural(c.cards, "other free non-land card")} and ${plural(c.lands, "free non-basic land")} in its colours. A Commander deck plays one of each, so extra copies don't count.` }),
+        el("p", { class: "sub", text: `${plural(c.cards, "other covered non-land card")} and ${plural(c.lands, "non-basic land")} in its colours. Counts include incoming copies and count each card name once.` }),
         c.kind === "pair" ? el("p", { class: "box box-info", text: `Two commanders together (${c.pairing}), counted over both their colours.` })
           : c.partner && c.partner.length ? el("p", { class: "box box-info", text: `It has ${c.partner.join(" and ")}: its pairs with free cards are rows of their own in the ranking.` }) : null,
-        c.kind === "held" ? el("p", { class: "box box-warn", text: `Every copy is in ${candidateHolders(c)}: take it out of that deck to build this one.` }) : null,
+        c.kind === "held" ? el("p", { class: "box box-warn", text: `Every copy is ${candidateHolders(c)}.` }) : null,
         candidateActions(ctx, c))),
     el("table", { class: "data ccand-table" },
       el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "Template category" }), el("th", { scope: "col", class: "num", text: "Target" }),
-        el("th", { scope: "col", class: "num", text: "Free" }), el("th", { scope: "col", text: "" }))),
+        el("th", { scope: "col", class: "num", text: "Covered" }), el("th", { scope: "col", text: "" }))),
       el("tbody", {}, rows)),
     el("p", { class: "result-count", text: "Free cards count as the Stats tab counts the roles (Scryfall's oracle tags): card advantage is the draw role only, targeted disruption is removal or counterspells that aren't board wipes." }),
     ctx.cards = el("div", { class: "ccand-cards" }),

@@ -186,10 +186,10 @@ class AssemblyStorageOrderUiTests(unittest.TestCase):
               returns: [{name: 'Back', quantity: 1}]});
             if (order !== undefined) data.storage_order = order;
             drawAssembly(data, routeToken);
-            const back = main.querySelectorAll('.pack-step').find(s => s.querySelector('h3').textContent.includes('Put back'));
+            const back = main.querySelectorAll('.pack-step').find(s => s.querySelector('h3').textContent.includes('Return to storage'));
             assert(back, steps());
-            const words = unsleeved ? 'put them back in storage, unsleeved.' : 'put them back in storage.';
-            assert(back.textContent.includes('Take these out of the deck and ' + words), back.textContent);
+            const words = unsleeved ? 'Return these from A to storage, unsleeved.' : 'Return these from A to storage.';
+            assert(back.textContent.includes(words), back.textContent);
           }
         """)
 

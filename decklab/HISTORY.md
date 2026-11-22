@@ -1,5 +1,17 @@
 # Deck Lab: history
 
+## From a deck plan to the table (2026-11-22)
+
+- Deck pages name the active list beside its physical readiness. Incoming, held and lent copies have their own labels. Packed in this box has its own record and reservations, and the packing workflow distinguishes physical placeholders from substitute cards in a list.
+- **Find and buy cards** brings private copy checklists and recorded shortages together. Shopping separates **What to buy** from **Orders & deliveries**, ready rows from waiting or later rows, and individual shortfalls from shared-copy requirements. Combined shortages can open the packing plan for the same decks.
+- **Add cards** opens single entry, Scan, import and owned precon entry. Storage and box checks explain when a hand count records a dated audit and when a scan shows a temporary report.
+- The main navigation follows Decks, Collection and household Shopping. More has **At the table**, **Simulate** and **Help**. Real games and simulations show their evidence separately. **Against popular decks** leads the simulation choices.
+- **Who sees what** names configured profiles through Cloudflare Access and trusted home-network visitors before a Public grant. **Changes & undo** and **Administration** group the existing recovery and operator tools.
+
+The [feature review](design/feature-focus-review-2026-11-22.md#household-acceptance)
+owns the phone and portrait iPad walkthrough. The existing device, camera and
+live-engine acceptance checks remain in [TODO.md](../TODO.md#now).
+
 ## Phone scrolling and physical storage rows (2026-11-22)
 
 Settings fits the phone width and scrolls vertically. Pulling past the top reveals the header colour behind the page.

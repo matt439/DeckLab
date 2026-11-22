@@ -1,12 +1,12 @@
 /* The run activity (the UI review's WP12; P1's activity icon since E11-S30 slice 6, design/visual-design.md 4.9
 and section 6 decision 3): while Forge plays a matchup, a field run or a test of a change on the PC, the shell's
 #shell-status slot shows one small turning ring on every page, in a 44 px button named "Forge is playing: show
-progress" (a still ring with a dot under prefers-reduced-motion), and the casual tab bar's Matchups tab an 8 px
+progress" (a still ring with a dot under prefers-reduced-motion), and the phone's More tab an 8 px
 dot. Nothing shows while nothing plays or waits. The
 button opens the details: a popover under it from 1,000 px, a sheet below that (a bottom sheet on a phone). They
 hold each run playing (A vs B, a progress ring, "game 37 of 200", about how long is left, Stop for a viewer the
 server lets stop it, and a link to its page unless it's of a space the viewer can't see), the runs waiting, and a
-link to Matchups. Stop asks first, as every Stop does (matchups-overview.js stopListedRun).
+link to Simulate. Stop asks first, as every Stop does (matchups-overview.js stopListedRun).
 
 It asks GET /api/matchups?running=1 (only the runs, without reading a saved result) every RUNS_PILL_BUSY_MS
 while a run plays and every RUNS_PILL_IDLE_MS while none does, and only while the page is visible: a hidden page
@@ -136,10 +136,10 @@ function drawRunsPill() {
   const host = document.getElementById("shell-status");
   if (!host) return;
   const runs = state.profile ? runsPill.running : [];
-  // The Matchups tab's 8 px dot (shell.css) while anything plays or waits; the icon's name says it in words.
-  const tabbar = document.getElementById("tabbar");
-  for (const link of tabbar ? tabbar.querySelectorAll("[data-route]") : []) {
-    if (link.getAttribute("data-route") === "matchups") link.classList.toggle("has-run", runs.length > 0);
+  const more = document.getElementById("tabbar")?.querySelector(".tab-more");
+  if (more) {
+    more.classList.toggle("has-run", runs.length > 0);
+    more.setAttribute("aria-label", runs.length ? "More destinations, simulations active" : "More destinations");
   }
   const recovery = state.profile && ((runsPill.unfinished || []).length || runsPill.recoveryAvailable === false || runsPill.recoveryMessage);
   if (!runs.length && !recovery) {
@@ -183,7 +183,7 @@ function runDetailsParts(runs) {
         runStop(run, named))))) : null,
     typeof runRecoveryParts === "function" ? runRecoveryParts() : null,
     el("p", { class: "run-details-foot" }, el("a", { class: "btn btn-quiet btn-inline", href: "#/matchups",
-      "data-focus": "matchups", text: "Every run on Testing", onclick: () => closeRunDetails(false) }))];
+      "data-focus": "matchups", text: "Every run in Simulate", onclick: () => closeRunDetails(false) }))];
 }
 
 /** One run playing: "Forge playing: A vs B" (its status line), its progress ring and "game 37 of 200", about how
@@ -286,11 +286,6 @@ function fillRunDetails() {
   const details = runsPill.details;
   if (!details || runsPill.stopping || runsPill.recoveryAction?.details === details) return;
   const runs = state.profile ? runsPill.running : [];
-  // The Matchups tab's 8 px dot (shell.css) while anything plays or waits; the icon's name says it in words.
-  const tabbar = document.getElementById("tabbar");
-  for (const link of tabbar ? tabbar.querySelectorAll("[data-route]") : []) {
-    if (link.getAttribute("data-route") === "matchups") link.classList.toggle("has-run", runs.length > 0);
-  }
   if (!runs.length && !(runsPill.unfinished || []).length && runsPill.recoveryAvailable !== false && !runsPill.recoveryMessage) {
     closeRunDetails(false); return;
   }

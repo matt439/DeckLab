@@ -163,7 +163,7 @@ run('small-swaps', async review => {
         await page.waitForURL(url => url.hash.startsWith('#/edit?'));
         if(testing) {
           // The explicit test action only opens the normal test review; it cannot press its Start button.
-          await page.getByRole('heading',{name:/Test this change|Test a change/}).last().waitFor();
+          await page.getByRole('heading',{name:/Simulate this change|Test a change/}).last().waitFor();
         } else await page.locator('.edit-row').first().waitFor();
         const saved = await page.evaluate(() => Object.entries(localStorage).map(([,value]) => {
           try {return JSON.parse(value);} catch {return null;}

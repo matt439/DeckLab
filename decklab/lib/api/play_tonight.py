@@ -9,15 +9,19 @@ Only for home's two players (a profile of the home space), or a script naming no
 member, a request naming nobody) gets {"available": false, "pairs": []} and nothing about home's decks,
 games or Forge numbers, not even a count. The decks are home's built casual decks the viewer may see
 (guard.visible_decks); a deck is ready when its built list (pool._built_version) has nothing missing in
-home's pool and its availability is confirmed (no unknown card, no pool warning), as the library's
-readiness chip says (E1-S03). The games are the Game log's own (library_played._games: its visibility and
+home's pool, needs no incoming copies and its availability is confirmed (no unknown card or pool warning).
+A recorded box must match that saved list and use no physical placeholders, so choosing the pair
+selects the list actually available to play and record.
+The games are the Game log's own (library_played._games: its visibility and
 damage checks, renamed decks' old ids resolved, pods left out); a game with a removed side counts for
 nothing. Forge's numbers are the Constructed field's saved pairs this viewer sees (library_forge.pair_rates,
 cached; never a game played), each kept only when both its lists are the two decks' built lists, so a
 field addition's other list never stands for the built one (the pair then goes by the real record). When the games can't be read nothing is suggested (error says so); when
 Forge's numbers can't be, the pairs go by the real record only (forge_error says so).
 """
-from decklab.lib import decks, permissions, play_pairs, pool, spaces
+from decklab.lib import decks, inventory, permissions, play_pairs, pool, spaces
+from decklab.lib.decks import assembled, standins
+from decklab.lib.inventory.ops_decks import parsed_deck
 
 from . import guard, library_forge, library_played, play_records
 from .library import _load_pool, is_half
@@ -34,16 +38,27 @@ def _home_viewer():
     return permissions._space_of(viewer) == spaces.HOME and guard.sees_inventory(spaces.HOME)
 
 
-def _ready(summary, version, p):
+def _ready(summary, version, p, deck):
     """True when the built list has every card here, False when it misses some, None when that can't be
     confirmed (an unknown card, a pool warning: the library's "Availability needs checking")."""
+    if deck is None:
+        return None
     try:
+        packed = assembled.get(deck)
+        placeholders = standins.installed_for(deck)
+        if placeholders and placeholders["cards"]:
+            return None
+        if packed:
+            selected = deck.owned if version == "owned" else deck.target
+            same_list = selected and play_records.snapshot_sections(packed["sections"]) == play_records.snapshot_sections(selected)
+            if packed["version"] != version or not same_list:
+                return None
         result = pool.owned_vs_needed(summary["id"], version, pool=p, prices=False)
     except (decks.DeckNotFound, decks.DeckFileError, OSError, ValueError):
         return None
     if result["unresolved"] or result["warnings"]:
         return None
-    return result["totals"]["missing"] == 0
+    return all(row["need"] <= row["available"] - row["on_the_way"] for row in result["rows"])
 
 
 def _decks():
@@ -57,11 +72,13 @@ def _decks():
     p = _load_pool([])
     if p is None:
         return None
+    snapshot = inventory.current()
     found = []
     for s in summaries:
         version = pool._built_version(s, [])
+        deck = parsed_deck(snapshot.deck(s["id"]))
         found.append({"id": s["id"], "title": s.get("title") or s["id"], "player": s.get("player"),
-                      "status": "built", "kind": "casual", "version": version, "ready": _ready(s, version, p)})
+                      "status": "built", "kind": "casual", "version": version, "ready": _ready(s, version, p, deck)})
     return found
 
 

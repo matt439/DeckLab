@@ -112,7 +112,7 @@ class MatchupsPlayUiTests(unittest.TestCase):
           const mirrored=matchupRealGames(match({sides:[{title:'Same',version:'target'},{title:'Same',version:'target'}]})).textContent;
           assert(mirrored.includes('Same (deck 1): 4 wins; Same (deck 2): 3 wins'));
           const owned=matchupRealGames(match({sides:[{title:'Alpha',version:'owned'},{title:'Beta',version:'target'}]})).textContent;
-          assert(owned.includes('Alpha (play-now list)'));assert(owned.includes('4 / 9 = 44.4%'));
+          assert(owned.includes('Alpha (alternative list)'));assert(owned.includes('4 / 9 = 44.4%'));
         ''')
 
     def test_plain_forge_fallback_is_labelled_and_malformed_forge_rate_is_not_invented(self):

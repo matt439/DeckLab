@@ -179,6 +179,9 @@ class FindCardsTests(EditorTestCase):
         self.assertEqual(paged["total"], api.find_cards(scope="owned", deck_id="casual/table-test")["total"])
         words = api.find_cards("llan elv", scope="owned", deck_id="casual/table-test")
         self.assertEqual([c["name"] for c in words["cards"]], ["Llanowar Elves"])
+        self.assertGreater(words["cards"][0]["free_now"], 0)
+        incoming = api.find_cards("Sol Ring", scope="owned", deck_id="casual/table-test")["cards"]
+        self.assertEqual([(c["name"], c["free"], c["free_now"]) for c in incoming], [("Sol Ring", 1, 0)])
 
 
 class FindCardsPrivacyTests(EditorTestCase):

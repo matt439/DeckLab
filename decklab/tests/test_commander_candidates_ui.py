@@ -61,7 +61,7 @@ class CommanderCandidatesUiTests(unittest.TestCase):
           assert(ctx.area.querySelectorAll('.ccand-short').length === 3);
           // Its free cards by name, asked once it's opened.
           same(asked, ['/api/commanders/candidates?', '/api/commanders/candidate?name=Kraum%2C+Ludevic%27s+Opus']);
-          assert(words.includes('Free cards by role') && words.includes('Sol Ring') && words.includes('2 free'), words);
+          assert(words.includes('Available cards by role') && words.includes('Sol Ring') && words.includes('2 free now'), words);
           assert(words.includes('12 of 10') && words.includes('11 more cards not listed.'), words);
           assert(words.includes('0 of 6, 6 short') && words.includes('None free in its colours.'), words);
           assert(words.includes('Shivan Reef') && words.includes('basics fill the rest'), words);
@@ -146,13 +146,16 @@ class CommanderPairsUiTests(unittest.TestCase):
           api = async (path) => path.startsWith('/api/commanders/candidate?') ? CARDS : WITH;
           const ctx = openCommanderCandidates(cv); await flush();
           const list = ctx.area.textContent;
-          assert(list.indexOf('Held by a deck') > list.indexOf('Kraum, Ludevic'), list);
+          assert(list.indexOf('Held or lent out') > list.indexOf('Kraum, Ludevic'), list);
           const held = ctx.area.querySelector('.ccand-held-list');
           assert(held.textContent.includes('in Ghalta Stompy and one of the home decks'), held.textContent);
           assert.equal(ctx.area.querySelectorAll('.ccand-held').length, 1);
           held.querySelector('.pcov-pick').click(); await flush();
           const words = ctx.area.textContent;
           assert(words.includes('Every copy is in Ghalta Stompy and one of the home decks') && words.includes('None free'), words);
+          openCandidate(ctx, {...HELD, held_by: [{id:null, title:'lent out', quantity:1}]});
+          await flush();
+          assert(ctx.area.textContent.includes('Every copy is lent out.'));
         """)
 
     def test_single_and_pair_arrivals_keep_only_the_planning_action(self):

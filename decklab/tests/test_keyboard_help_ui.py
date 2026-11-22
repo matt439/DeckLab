@@ -359,6 +359,7 @@ class KeyboardHelpUiTests(unittest.TestCase):
 
     def test_delivery_r_gate_preserves_disclosure_defaults_and_reenables_the_original_summary(self):
         self.run_js(SHOPPING, r'''
+          const ordersRoute='#/shopping?view=orders';location.hash=ordersRoute;
           const view=drawShopping({...empty,orders:[pending]}),summary=main.querySelector('.shop-delivery-summary');summary.focus();
           const record=summary.keyboardDelivery,description=record.description,hint=record.hint;
           assert.equal(summary.getAttribute('aria-keyshortcuts'),'R');assert(!hint.hidden);assert(description.textContent.includes('Press R'));
@@ -368,7 +369,7 @@ class KeyboardHelpUiTests(unittest.TestCase):
           setKeyboardCharactersEnabled(false);refreshKeyboardHints();
           assert.equal(summary.getAttribute('aria-keyshortcuts'),null);assert(hint.hidden);
           assert(!description.textContent.includes('Press R'));assert(description.textContent.includes('Enter or Space'));
-          assert(!summary.fire('keydown',{key:'r'}).defaultPrevented);assert.equal(location.hash,'#/shopping');
+          assert(!summary.fire('keydown',{key:'r'}).defaultPrevented);assert.equal(location.hash,ordersRoute);
           for(const key of ['Enter',' ','Escape'])assert(!summary.fire('keydown',{key}).defaultPrevented);
           assert(main.querySelector('.shop-delivery-summary')===summary);assert.equal(view.data.orders[0],pending);
           setKeyboardCharactersEnabled(true);refreshKeyboardHints();summary.focus();
@@ -376,12 +377,12 @@ class KeyboardHelpUiTests(unittest.TestCase):
           assert(summary.keyboardDelivery===record&&record.description===description&&record.hint===hint);
           assert(summary.fire('keydown',{key:'r'}).defaultPrevented);
           assert.equal(location.hash,'#/receipt?order=illustrative-order');same([reads,writes],[0,0]);
-          clear(main);location.hash='#/shopping';
+          clear(main);location.hash=ordersRoute;
           state.profile={id:'user1',name:'User1',space:'home',role:'member'};state.profiles.push(state.profile);
           state.may={admin:false,orders:false,receipts:false,see_inventory:['home']};assert(!mayDo('receipts'));
           drawShopping({...empty,orders:[pending]});const readonly=main.querySelector('.shop-delivery-summary');
           setKeyboardCharactersEnabled(false);setKeyboardCharactersEnabled(true);
           assert.equal(readonly.getAttribute('aria-keyshortcuts'),null);assert.equal(readonly.keyboardDelivery.description,null);
-          readonly.focus();assert(!readonly.fire('keydown',{key:'r'}).defaultPrevented);assert.equal(location.hash,'#/shopping');
+          readonly.focus();assert(!readonly.fire('keydown',{key:'r'}).defaultPrevented);assert.equal(location.hash,ordersRoute);
           assert(!keyboardHelpCommands().some(c=>c.keys.includes('R')));same([reads,writes],[0,0]);
         ''')

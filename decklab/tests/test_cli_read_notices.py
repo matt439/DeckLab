@@ -108,7 +108,8 @@ class ReadNoticeTests(unittest.TestCase):
         before = copy.deepcopy(self.token_rows)
         code, out, err = self.capture(lambda: inv_tokens._list("user2", self.args(json=True)))
         self.assertEqual((code, out), (0, json.dumps({"sha256": SHA, "rows": before}, ensure_ascii=False, indent=2) + "\n"))
-        self.assertIn("tokens in space user2: collection Public switch enabled for signed-in profiles, read-only", err)
+        self.assertIn("tokens in space user2: collection Public switch enabled, read-only for signed-in profiles "
+                      "and visitors on the home network", err)
         self.assertEqual(self.token_rows, before)
 
     def test_public_decks_do_not_publish_tokens_and_public_collection_does_not_publish_decks(self):
@@ -155,7 +156,7 @@ class ReadNoticeTests(unittest.TestCase):
         before = copy.deepcopy(self.rows)
         code, out, err = self.capture(lambda: inv_accessories._list(self.args(json=True)))
         self.assertEqual((code, out), (0, json.dumps({"sha256": SHA, "rows": before, "problems": []}, ensure_ascii=False, indent=2) + "\n"))
-        self.assertIn("row 1, owner matt: kit Public to signed-in profiles", err)
+        self.assertIn("row 1, owner matt: kit Public, read-only for signed-in profiles and visitors on the home network", err)
         self.assertIn("row 2, shared home kit: Private", err)
         self.assertEqual(self.rows, before)
 
@@ -163,7 +164,7 @@ class ReadNoticeTests(unittest.TestCase):
         self.store.visibility.return_value = {("shared", "accessories"): {}}
         _, _, err = self.capture(lambda: inv_accessories._list(self.args()))
         self.assertIn("row 1, owner matt: Private", err)
-        self.assertIn("row 2, shared home kit: kit Public to signed-in profiles, read-only", err)
+        self.assertIn("row 2, shared home kit: kit Public, read-only for signed-in profiles and visitors on the home network", err)
 
     def test_reporter_is_lazy_reads_once_and_uses_a_new_store_for_each_command(self):
         reporter = read_notices.Reporter("chosen-fixture-db")

@@ -11,7 +11,7 @@ function rcptHead(data, title, view = null) {
       e.currentTarget.setAttribute("aria-expanded", String(!open));
       e.currentTarget.textContent = open ? "More" : "Less";
     } }) : null;
-  const head = pageHead({ crumb: ["#/shopping", routeFor("shopping").label], title: title || routeH1("receipt"),
+  const head = pageHead({ crumb: ["#/shopping?view=orders", "Orders & deliveries"], title: title || routeH1("receipt"),
     description: data.seller || "Seller not recorded" });
   const progress = view ? el("div", { class: "rcpt-head-progress" }) : null;
   if (view) { view.headProgress = progress; rcptHeadProgress(view); }

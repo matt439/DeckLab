@@ -4,8 +4,8 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const {run} = require('./common.js');
 
-const PRIMARY = ['shop-on-the-way', 'shop-to-buy', 'shop-decks', 'shop-missing-cards'];
-const SECONDARY = ['shop-combined', 'shop-by-shop', 'shop-baskets', 'shop-follow-ups', 'shop-long-term'];
+const PRIMARY = ['shop-to-buy', 'shop-waiting', 'shop-decks', 'shop-missing-cards'];
+const SECONDARY = ['shop-combined', 'shop-by-shop', 'shop-baskets'];
 
 function payload() {
   const decks = Array.from({length: 7}, (_, i) => ({id: `casual/synthetic-${i + 1}`,
@@ -100,6 +100,11 @@ run('shopping-navigation', async review => {
         body: JSON.stringify(payload())}));
       await page.goto(review.pageUrl('/#/shopping', spec.theme), {waitUntil: 'domcontentloaded'});
       const nav = page.locator('.shop-jumps'); await nav.waitFor({state: 'attached'});
+      const tasks = page.getByRole('navigation', {name: 'Shopping tasks'});
+      const buy = tasks.getByRole('link', {name: 'What to buy'});
+      const orders = tasks.getByRole('link', {name: /^Orders & deliveries/});
+      assert.equal(await buy.getAttribute('aria-current'), 'page');
+      assert.equal(await page.locator('.shop-list-pane').isVisible(), false);
       await page.evaluate(() => document.fonts.ready);
       if (spec.root200) await page.evaluate(() => {document.documentElement.style.fontSize = '200%';});
       await page.waitForTimeout(100);
@@ -109,7 +114,7 @@ run('shopping-navigation', async review => {
       // that broader diagnostic while strictly qualifying this nav's own bounds.
       if (!spec.root200) assert.equal(result.document_overflow, false, 'Shopping caused document overflow');
       if (spec.width >= 1281) {
-        assert.equal(await nav.isVisible(), false, 'Wide two-pane Shopping should not show section shortcuts');
+        assert.equal(await nav.isVisible(), false, 'Wide Shopping hides section shortcuts');
       } else {
         assert.equal(await nav.isVisible(), true);
         assert.deepEqual(await nav.locator('.shop-jump-primary a').evaluateAll(nodes => nodes.map(node => node.hash.slice(1))), PRIMARY);
@@ -158,6 +163,12 @@ run('shopping-navigation', async review => {
         await summary.focus(); await page.keyboard.press('Space');
         assert.equal(await more.evaluate(node => node.open), false, 'Native Space did not close More sections');
       }
+      await orders.click();
+      await page.getByRole('heading', {name: 'On the way', exact: true}).waitFor();
+      assert.equal(await orders.getAttribute('aria-current'), 'page');
+      assert.equal(new URL(page.url()).hash, '#/shopping?view=orders');
+      assert.equal(await page.locator('.shop-detail-pane').isVisible(), false);
+      assert.equal(await page.getByRole('button', {name: 'Record an order', exact: true}).isVisible(), true);
       assert.equal(result.page_errors.length, 0, 'Uncaught page error');
       assert(!result.http_errors.some(error => error.category === 'unexpected_http_error'), 'Unexpected fixture HTTP failure');
       assert.equal(result.mutations.length, 0, 'Section navigation attempted a write');

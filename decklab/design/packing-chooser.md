@@ -1,6 +1,6 @@
 # P1 Decks chooser drawing
 
-Since this was drawn (2026-11-04, E4-S28): a home deck page's head links straight to a plan of that deck (**Build deck**, or **Review build** once built), and the plan's cards are tiles at every width. The chooser itself is as below.
+Since this was drawn (2026-11-04, E4-S28), a home deck page links straight to its plan (**Build deck** or **Review build**). The deck library's **Pack decks together** opens the chooser, and combined shortages in Shopping can preselect its planned lists. Each deck's plan labels the list being packed separately from **Packed in this box**.
 
 `packing-chooser.svg` draws the chooser boundary before implementation, against `f9aa281`. All names and the **17 eligible choices** are illustrative. No real records, availability, deck colours or shortfall figures are represented. The self-contained SVG uses P1 light tokens and local font fallbacks. The drawing was reviewed before implementation; this does not claim Matt approval or device acceptance.
 
@@ -11,7 +11,7 @@ Since this was drawn (2026-11-04, E4-S28): a home deck page's head links straigh
 
 Existing labels/control scope: **Decks**, **N chosen**, **Built and being built**, **Clear**, **Show the plan**; groups **Usual opponents**, **Built**, **Being built**, **Ideas (N)**, **Products (N)**. Usual suggestions remain unselected and do not duplicate status-group choices. Existing error/no-version choice filtering and group folding stay intact.
 
-Selected choices retain **Planned list / Play-now list**, **Cards to assemble**, and **Main deck + whole sideboard / Main deck only / Choose sideboard cards**. Custom quantities use the existing bounded native inputs, exact validation text and saved-intention/returns explanation. Product/pairing exclusions and list-change recipe resets remain unchanged. Choice metadata supplies no authoritative colours or independent shortfalls, so draw no inferred swatches, tints or “9 to buy”.
+Selected choices show **Planned list / Alternative list**, **Cards to assemble**, and **Main deck + whole sideboard / Main deck only / Choose sideboard cards**. Custom quantities use the existing bounded native inputs, exact validation text and saved-intention/returns explanation. Product/pairing exclusions and list-change recipe resets remain unchanged. Choice metadata supplies no authoritative colours or independent shortfalls, so draw no inferred swatches, tints or “9 to buy”.
 
 Close, Show the plan, Escape, Back and backdrop dismissal only dismiss; selections and pending calculations stay. Choices keep the existing **250ms read-only preview**. The chooser lifecycle is separate from revision-bound assembly review sheets. Redraws resolve fresh controls by deck/control identity using the focus current at that redraw; outside focus is not reclaimed. Group expansion and scroll are preserved where feasible. Show the controller's one current status/error node in its visible home, without duplicate live announcements. Busy, permission, view/person/route and stale-object guards remain authoritative.
 

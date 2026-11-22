@@ -115,12 +115,12 @@ async function checkBoardControls(page, width) {
     assert(extent.right <= extent.viewport && extent.page <= extent.viewport, 'The enlarged stale badge overflows the phone');
   }
   const views = page.getByRole('group', {name:'Results view'});
-  const matchups = views.getByRole('button', {name:'Matchups', exact:true});
+  const matchups = views.getByRole('button', {name:'1v1 matchups', exact:true});
   await matchups.focus();
   await page.keyboard.press('Enter');
   assert(await matchups.evaluate(node => document.activeElement === node), 'Selecting Matchups lost focus');
   await page.keyboard.press('Tab');
-  assert(await views.getByRole('button', {name:'Rankings'}).evaluate(node => document.activeElement === node),
+  assert(await views.getByRole('button', {name:'Field rankings'}).evaluate(node => document.activeElement === node),
     'Tab did not advance from the selected view');
 }
 

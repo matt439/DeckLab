@@ -32,7 +32,7 @@ SETUP = PAGE + """
   route=()=>routes.push(location.hash);toast=message=>messages.push(message);
   const realSheet=openSheet;openSheet=(...args)=>{const sheet=realSheet(...args);sheets.push(sheet);return sheet;};
   const mount=(data=packet())=>{clear(main);add(main,[playPodActions(data,''),playPodSection(data)]);return main;};
-  const launch=(data=packet())=>{const section=mount(data);buttonText(section,'Record a pod').click();return sheets.at(-1);};
+  const launch=(data=packet())=>{const section=mount(data);buttonText(section,'Record a pod game').click();return sheets.at(-1);};
   const controls=sheet=>({count:sheet.body.querySelector('#pod-count'),result:sheet.body.querySelector('#pod-result'),
     date:sheet.body.querySelector('#pod-date'),notes:sheet.body.querySelector('#pod-notes')});
   const set=(node,value,event='input')=>{node.value=value;node.fire(event);};
@@ -54,10 +54,10 @@ class PodUiTests(unittest.TestCase):
     def test_real_page_loads_new_script_after_play_and_renders_separate_pod_section(self):
         self.run_js("""
           const saved=entry();drawPlay(packet({pods:[saved]}),'');
-          assert(main.textContent.includes('Commander pods'));assert(main.textContent.includes('Played 1v1 games'));
+          assert(main.textContent.includes('Commander pods'));assert(main.textContent.includes('Recorded 1v1 games'));
           assert(main.textContent.includes('No 1v1 games have been recorded here yet.'));
-          assert(main.textContent.includes('1 pod game recorded.'));assert(!main.textContent.includes('Head to headGames'));
-          assert(buttonText(main,'Record a pod'));assert(main.querySelector('#play-filter'));assert.equal(writes.length,0);
+          assert(main.textContent.includes('1 pod game recorded.'));assert(!main.textContent.includes('Recorded 1v1 head to head'));
+          assert(buttonText(main,'Record a pod game'));assert(main.querySelector('#play-filter'));assert.equal(writes.length,0);
         """)
 
     def test_new_pod_requires_explicit_preview_and_one_explicit_save(self):
@@ -83,16 +83,16 @@ class PodUiTests(unittest.TestCase):
               result:'a',sides:[{...a,player:'A',mulligans:0},{...b,player:'B',mulligans:0}]},can:{sides:[true,true],result:true}}));
             clear(main);drawPlay(packet({lists:[a,b],games,pods:[entry()]}),'');
             const words=main.textContent;
-            assert(words.indexOf('Start a pod')<words.indexOf('Played 1v1 games'));
-            assert(words.indexOf('Record a pod')<words.indexOf("Matt's deck"));
-            buttonText(main,'Record a 1v1').click();assert.equal(document.activeElement.id,'play-quick-deck-0');
+            assert(words.indexOf('Start a real pod')<words.indexOf('Recorded 1v1 games'));
+            assert(words.indexOf('Record a pod game')<words.indexOf("Matt's deck"));
+            assert(words.includes('1v1 at the table'));
             const filter=main.querySelector('#play-filter');assert(filter);
             filter.fire('change',{target:{value:a.id}});assert.equal(location.hash,'#/play?id=commander%2Ftest');
             location.hash='#/play';
-            buttonText(main,'Start a pod').click();const setup=sheets.at(-1);
+            buttonText(main,'Start a real pod').click();const setup=sheets.at(-1);
             assert.equal(controls(setup).result,null);assert(buttonText(setup.foot,'Start pod counter'));
             assert.equal(buttonText(setup.foot,'Review pod game'),undefined);setup.close();
-            buttonText(main,'Record a pod').click();const record=sheets.at(-1);
+            buttonText(main,'Record a pod game').click();const record=sheets.at(-1);
             assert(controls(record).result);assert(buttonText(record.foot,'Review pod game'));record.close();
           }
           assert.equal(writes.length,0);
@@ -108,6 +108,23 @@ class PodUiTests(unittest.TestCase):
           set(seat(edit,'s2','commander'),'Kept external leader');set(seat(edit,'s2','type'),'deck','change');
           set(seat(edit,'s2','type'),'external','change');assert.equal(seat(edit,'s2','commander').value,'Kept external leader');
           await review(edit);assert.equal(writes[0][1].seats.length,4);assert.equal(writes[0][1].seats[3].player,'Fourth label');
+        """)
+
+    def test_deck_link_focuses_the_right_action_and_preserves_the_selected_list(self):
+        self.run_js("""
+          const a=snapshot(),alt=snapshot({version:'owned',sha256:shaB});
+          const data=packet({lists:[a,alt],pod_lists:[a,alt],pods:[entry()]});
+          drawPlay(data,a.id,'owned','start');flushTimers();
+          const start=buttonText(main,'Start a real pod');
+          assert(document.activeElement===start);assert.equal(sheets.length,0);assert.equal(writes.length,0);
+          start.click();const setup=sheets.at(-1);
+          const choice=seat(setup,'s1','list');
+          assert.equal(choice.value,'1');assert.match(choice.children[1].textContent, /alternative list/i);
+          setup.close();clear(main);
+          drawPlay(data,a.id,'owned','record');flushTimers();
+          assert(document.activeElement===buttonText(main,'Record a pod game'));
+          clear(main);drawPlay(data,a.id,'owned','pods');flushTimers();
+          assert.equal(document.activeElement.id,'play-pods-title');assert.equal(writes.length,0);
         """)
 
     def test_back_to_editing_retains_typed_fields_and_server_preview_identity(self):
@@ -132,10 +149,10 @@ class PodUiTests(unittest.TestCase):
     def test_launcher_and_correction_require_explicit_positive_server_rights(self):
         self.run_js("""
           for(const can_record of [false,undefined,1,'true']){const section=mount(packet({pod_lists:[snapshot({can_record})]}));
-            assert.equal(buttonText(section,'Record a pod'),undefined);assert.equal(buttonText(section,'Start a pod'),undefined);}
+            assert.equal(buttonText(section,'Record a pod game'),undefined);assert.equal(buttonText(section,'Start a real pod'),undefined);}
           for(const can of [undefined,{}, {edit:false},{edit:1},{edit:'true'}]){
             const section=mount(packet({pods:[entry({can})],pod_lists:[]}));assert.equal(buttonText(section,'Correct this pod game'),undefined);}
-          state.profile=null;assert.equal(buttonText(mount(),'Record a pod'),undefined);assert.equal(writes.length,0);
+          state.profile=null;assert.equal(buttonText(mount(),'Record a pod game'),undefined);assert.equal(writes.length,0);
         """)
 
     def test_external_labels_and_notes_are_literal_text_and_public_generic_seats_render(self):

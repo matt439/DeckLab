@@ -81,6 +81,9 @@ class CompareUiTests(unittest.TestCase):
           same(main.querySelectorAll('.compare-title').map((a) => [a.textContent, a.getAttribute('href')]),
             [['Test Deck', '#/deck?id=casual%2Ftest&v=target'], ['Burn', '#/deck?id=casual%2Fburn&v=target']]);
           assert(main.querySelector('.compare-facts').textContent.includes('29 cards'));
+          assert(main.querySelectorAll('.compare-facts').every(n => n.textContent.includes('Planned list')));
+          const changeList = main.querySelector('.compare-head').querySelectorAll('a').find(a => a.textContent === 'Alternative list');
+          assert.equal(changeList.getAttribute('href'), '#/compare?a=casual%2Ftest&b=casual%2Fburn&av=owned');
           same(rows('The two lists in brief'), [['Cards', '29', '29'], ['Average mana value', '1.8', '2.1'],
             ['Lands', '20 formula 23.5', '22 formula 23.5'], ['Creatures', '10', '5'], ['Other spells', '2', '13'],
             ['Colour sources', 'Enough', 'Short: red']]);
@@ -137,8 +140,8 @@ class CompareUiTests(unittest.TestCase):
           assert.equal(document.title, 'Test Deck: its two lists – Deck Lab');
           same(main.querySelectorAll('.compare-title').map((a) => [a.textContent, a.getAttribute('href')]),
             [['Test Deck: Planned list', '#/deck?id=casual%2Ftest&v=target'],
-             ['Test Deck: Play-now list', '#/deck?id=casual%2Ftest&v=owned']]);
-          same(main.querySelector('thead').querySelectorAll('th').slice(1, 3).map((th) => th.textContent), ['Planned list', 'Play-now list']);
+             ['Test Deck: Alternative list', '#/deck?id=casual%2Ftest&v=owned']]);
+          same(main.querySelector('thead').querySelectorAll('th').slice(1, 3).map((th) => th.textContent), ['Planned list', 'Alternative list']);
         """)
 
     def test_each_sides_bar_cards_are_their_own_viewer_group(self):
@@ -170,7 +173,7 @@ class CompareUiTests(unittest.TestCase):
           await show('#/compare?a=pairing%2Fcats%2Bvampires&b=pairing%2Fvampires%2Bcats&bv=owned');
           // A pairing's halves in either order are one deck, so these are its two lists.
           assert.equal(document.title, 'Cats + Vampires: its two lists – Deck Lab');
-          same(main.querySelector('thead').querySelectorAll('th').slice(1, 3).map((th) => th.textContent), ['Planned list', 'Play-now list']);
+          same(main.querySelector('thead').querySelectorAll('th').slice(1, 3).map((th) => th.textContent), ['Planned list', 'Alternative list']);
         """)
 
     def test_missing_stats_say_why(self):
@@ -193,12 +196,16 @@ class CompareUiTests(unittest.TestCase):
           await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
           assert(asked.includes('/api/compare/shared?a=casual%2Ftest&av=target&b=casual%2Fburn&bv=target'));
           const part = main.querySelector('.compare-shared');
-          same(part.querySelector('thead').querySelectorAll('th').map((th) => th.textContent), ['Card', 'Test Deck', 'Burn', 'Free']);
-          same(rows('Cards both lists use'), [['Elf', '4', '2', '3 of 6 3 short 1 on the way'], ['Sol Ring', '1', '1', '2 of 2']]);
+          same(part.querySelector('thead').querySelectorAll('th').map((th) => th.textContent), ['Card', 'Test Deck', 'Burn', 'Free now']);
+          same(rows('Cards both lists use'), [['Elf', '4', '2', '2 of 6 3 short 1 on the way'], ['Sol Ring', '1', '1', '2 of 2']]);
           assert(part.querySelector('.compare-verdict').textContent.includes('1 card short for both at once'));
-          assert(part.textContent.includes('against what both lists need at once'));
+          assert(part.textContent.includes('each free copy counted once'));
           // Each name opens the card viewer, in its own group.
           assert.equal(part.querySelector('tbody').querySelector('[data-viewer]').getAttribute('data-viewer'), 'compare-shared');
+          answers['/api/compare/shared?'].cards = [{name: 'Elf', a: 1, b: 1, need: 2, on_the_way: 1, free: 2, short: 0}];
+          await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
+          same(rows('Cards both lists use'), [['Elf', '1', '1', '1 of 2 1 on the way']]);
+          assert(main.querySelector('.compare-verdict').textContent.includes('after delivery'));
         """)
 
     def test_the_cards_both_use_without_counts(self):
@@ -231,7 +238,7 @@ class CompareUiTests(unittest.TestCase):
           answers['/api/compare/shared?'] = {together: true, counts: true, cards: [{name: 'Opt', a: 1, b: 1, need: 2, free: 2, short: 0}]};
           part.querySelectorAll('button').find((b) => b.textContent === 'Try again').click(); await settle();
           same(rows('Cards both lists use'), [['Opt', '1', '1', '2 of 2']]);
-          assert(main.querySelector('.compare-verdict').textContent.includes('Enough of every card for both at once'));
+          assert(main.querySelector('.compare-verdict').textContent.includes('Enough shared cards for both at once now'));
         """)
 
     def test_head_to_head_from_forge_and_the_game_log(self):
@@ -245,18 +252,23 @@ class CompareUiTests(unittest.TestCase):
             result(side('casual/burn', 'target', 'Burn'), '2026-10-20T00:00:00Z', 0.7),
             result(side('casual/burn', 'owned', 'Burn'), '2026-10-26T00:00:00Z', 0.2)]};
           const game = (x, y, result) => ({record: {sides: [x, y], result, date: '2026-10-2' + result.length}});
-          const T = {id: 'casual/test', version: 'target', title: 'Test Deck'}, B = {id: 'casual/burn', version: 'target', title: 'Burn'};
+          const T = {id: 'casual/test', version: 'target', title: 'Test Deck', sha256: 'test-current'};
+          const B = {id: 'casual/burn', version: 'target', title: 'Burn', sha256: 'burn-current'};
           answers = {'/api/deck?id=casual%2Ftest&version=target&omit': deckA(), '/api/deck?id=casual%2Ftest&version=target': full,
             '/api/deck?id=casual%2Fburn&': deckB(),
-            '/api/play?id=casual%2Ftest': {games: [game(T, B, 'a'), game(B, T, 'a'), game(B, T, 'b'), game(T, B, 'draw'),
+            '/api/play?id=casual%2Ftest': {lists: [T, B], games: [game(T, B, 'a'), game(B, T, 'a'),
+              game(B, {...T, sha256: 'test-previous'}, 'b'), game(T, B, 'draw'),
               game(T, {id: 'casual/zoo', version: 'target', title: 'Zoo'}, 'a'), game(T, {hidden: true, title: 'one of the home decks'}, 'b')]}};
           await show('#/compare?a=casual%2Ftest&b=casual%2Fburn');
           assert(asked.includes('/api/play?id=casual%2Ftest'));
-          // The newest result against Burn's Planned list: not Zoo's, not its Play-now list's.
+          // The newest result against Burn's Planned list: not Zoo's, not its Alternative list's.
           const rowsShown = main.querySelector('.compare-forge').querySelectorAll('.mu-row');
           assert.equal(rowsShown.length, 1);
           assert.equal(rowsShown[0].getAttribute('href'), '#/matchup?a=casual%2Ftest&av=target&b=casual%2Fburn&bv=target');
           assert(rowsShown[0].textContent.includes('70%'));
+          assert(main.textContent.includes('Simulated 1v1 · Forge'));
+          assert(main.textContent.includes('Recorded 1v1 · Game log'));
+          assert(main.querySelector('.compare-games').textContent.includes('3 games match both displayed saved lists'));
           // The Game log: Test Deck won 2 (once as the second side), Burn 1, 1 draw; the others aren't counted.
           assert.equal(main.querySelector('.compare-games-count').textContent, '4 games: Test Deck 2 wins, Burn 1 win, 1 draw.');
           const log = main.querySelector('.compare-games').querySelector('a');
@@ -290,7 +302,7 @@ class CompareUiTests(unittest.TestCase):
           const forge = main.querySelector('.compare-forge');
           assert(forge.textContent.includes("Forge hasn't played these two lists against each other yet."));
           const play = forge.querySelector('a');
-          same([play.textContent, play.getAttribute('href')], ['Play a matchup', '#/matchup?a=casual%2Ftest&av=target&b=casual%2Fburn&bv=target']);
+          same([play.textContent, play.getAttribute('href')], ['Simulate a matchup', '#/matchup?a=casual%2Ftest&av=target&b=casual%2Fburn&bv=target']);
           const games = main.querySelector('.compare-games');
           assert(games.textContent.includes('No games between these two lists have been recorded.'));
           same([games.querySelector('a').textContent, games.querySelector('a').getAttribute('href')], ['Record a game', '#/play?id=casual%2Ftest']);
@@ -310,7 +322,7 @@ class CompareUiTests(unittest.TestCase):
             '/api/play?': {games: [{record: {sides: [O, T], result: 'a'}}, {record: {sides: [T, T], result: 'a'}}]}};
           await show('#/compare?a=casual%2Ftest&b=casual%2Ftest&bv=owned');
           // Named by list; a game of the Planned list against itself isn't one of theirs.
-          assert.equal(main.querySelector('.compare-games-count').textContent, '1 game: Planned list 0 wins, Play-now list 1 win.');
+          assert.equal(main.querySelector('.compare-games-count').textContent, '1 game: Planned list 0 wins, Alternative list 1 win.');
         """)
 
     def test_differences_show_unique_cards_and_quantity_changes(self):
@@ -476,10 +488,10 @@ class CompareUiTests(unittest.TestCase):
             '/api/deck?id=casual%2Ftest&version=owned': owned};
           await show('#/compare?a=casual%2Ftest&b=casual%2Ftest&bv=owned');
           same(rows('Main deck: Quantity changed'), [['Elf', '4', '2']]);
-          same(rows('Main deck: Only in Play-now list'), [['Opt', '0', '2']]);
+          same(rows('Main deck: Only in Alternative list'), [['Opt', '0', '2']]);
           const table = main.querySelector('.compare-difference-table');
           same(table.querySelector('thead').querySelectorAll('th').map((th) => th.textContent),
-            ['Card', 'Planned list', 'Play-now list']);
+            ['Card', 'Planned list', 'Alternative list']);
         """)
 
     def test_a_hidden_first_deck_reveals_no_difference_cards_from_either_list(self):
@@ -517,7 +529,7 @@ class CompareUiTests(unittest.TestCase):
           // Its own other list first, then the other readable decks by title; never itself or an unreadable one.
           const links = () => sheet.querySelectorAll('.compare-choice').filter((a) => !a.parentNode.hidden);
           same(links().map((a) => [a.textContent, a.getAttribute('href')]), [
-            ['Test Deck: its play-now list', '#/compare?a=casual%2Ftest&b=casual%2Ftest&bv=owned'],
+            ['Test Deck: its alternative list', '#/compare?a=casual%2Ftest&b=casual%2Ftest&bv=owned'],
             ['Burn', '#/compare?a=casual%2Ftest&b=casual%2Fburn'],
             ['Zoo', '#/compare?a=casual%2Ftest&b=casual%2Fzoo']]);
           const search = sheet.querySelector('.compare-search');
@@ -543,7 +555,7 @@ class CompareUiTests(unittest.TestCase):
           assert(!asked.includes('/api/decks'));
           sheet = document.querySelectorAll('.sheet').find((s) => s.querySelector('h2').textContent === 'Compare with…');
           same(sheet.querySelectorAll('.compare-choice').map((a) => [a.textContent, a.getAttribute('href')]), [
-            ['Test Deck: its play-now list', '#/compare?a=casual%2Ftest&b=casual%2Ftest&bv=owned'],
+            ['Test Deck: its alternative list', '#/compare?a=casual%2Ftest&b=casual%2Ftest&bv=owned'],
             ['Zoo', '#/compare?a=casual%2Ftest&b=casual%2Fzoo']]);
           // One deck isn't two.
           openCompareFirst(decks.slice(0, 1)); await settle();
@@ -559,7 +571,7 @@ class CompareUiTests(unittest.TestCase):
           answers = {'/api/decks': {decks: []}};
           sheet.querySelectorAll('button').find((b) => b.textContent === 'Try again').click(); await settle();
           // Only its own other list is left to choose.
-          same(sheet.querySelectorAll('.compare-choice').map((a) => a.textContent), ['Test Deck: its play-now list']);
+          same(sheet.querySelectorAll('.compare-choice').map((a) => a.textContent), ['Test Deck: its alternative list']);
         """)
 
 

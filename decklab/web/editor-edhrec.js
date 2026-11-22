@@ -120,12 +120,12 @@ function editorEdhrecSide(c) {
   const out = [row.inclusion != null ? el("span", { class: "ac-price", text: `${row.inclusion}% of decks`,
     title: "The share of EDHREC's decks with this commander that play it" }) : null];
   if (marks) {
-    if (row.status === "free") out.push(el("span", { class: "chip chip-good", text: `${num(row.free)} free` }));
-    else if (row.status === "in_use") out.push(el("span", { class: "chip chip-plain", text: "In other decks",
-      title: "Owned, but every copy is in another deck" }));
-    else if (row.status === "in_deck") out.push(el("span", { class: "chip chip-plain", text: "In the saved deck" }));
+    const freeNow = edhrecFreeNow(row);
+    if (row.status === "free" && freeNow > 0) out.push(el("span", { class: "chip chip-good", text: `${num(freeNow)} free now` }));
+    else if (row.status === "in_use") out.push(el("span", { class: "chip chip-plain", text: "Owned, currently held" }));
+    else if (row.status === "in_deck") out.push(el("span", { class: "chip chip-plain", text: "In the saved planned list" }));
     else if (row.status === "to_buy") out.push(el("span", { class: "chip chip-warn",
-      text: row.aud_each != null ? `To buy · ~${ansMoney(row.aud_each, answer)}` : "To buy · no price" }));
+      text: row.aud_each != null ? `Short · ~${ansMoney(row.aud_each, answer)}` : "Short · no price estimate" }));
     if (row.on_the_way) out.push(el("span", { class: "chip chip-info", text: `${num(row.on_the_way)} on the way` }));
   }
   if (row.considering) out.push(el("span", { class: "chip chip-outline", text: "Considering" }));

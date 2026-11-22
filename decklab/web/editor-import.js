@@ -95,7 +95,7 @@ function openPaste(seed = null) {
   const has = Object.values(ed.lists).some((lines) => lines.length);
   sheet.body.append(el("label", { class: "field", for: "paste-text" },
     el("span", { text: seeded?.answer ? "Imported list text" : "Text from Arena, MTGO, Moxfield or ManaBox" }), area));
-  if (!seeded) sheet.body.append(el("button", {type: "button", class: "btn btn-quiet", text: "Import a deck link…",
+  if (!seeded?.answer && !seeded?.check) sheet.body.append(el("button", {type: "button", class: "btn btn-quiet", text: "Import a deck link…",
     onclick: event => {
       if (!editorImportHere(owner, event.currentTarget)) return;
       sheet.close();
@@ -303,25 +303,47 @@ async function startFromCommander(name, partner = null) {
   return true;
 }
 
-/** A new deck with no cards yet: start from a paste, a precon or another deck. */
+/** The starting choices share the usual editor, import review and collection readers. */
 function startFromPart() {
   const ed = editor;
-  const precon = seesInventory(ed.space || HOME_SPACE);
-  // One action that fills it (a pasted list); a precon and another deck are quieter ways to the same start.
+  const inventory = seesInventory(ed.space);
+  const act = (name, action) => el("button", {type: "button", class: "btn", text: name,
+    onclick: event => { if (editorKeyboardCurrent(ed) && event.currentTarget.isConnected) action(); } });
   return el("div", { class: "empty edit-start" },
-    el("p", { text: precon ? "Add cards with the search, or start from a pasted list, a precon or another deck."
-      : "Add cards with the search, or start from a pasted list or another deck." }),
     el("div", { class: "actions" },
-      precon && ed.fields.kind === "commander" && createTargets().some(t => t.space === ed.space)
-        ? el("button", { type: "button", class: "btn", text: "Build from my collection",
-          onclick: event => { if (event.currentTarget.isConnected) openEditorCommanderCandidates(ed); } }) : null,
+      act("Start empty", openEditorSearchDock),
+      act("Import a list", () => openPaste({text: "", title: "Import a list"})),
+      inventory && createTargets().some(target => target.space === ed.space)
+        ? act("Build from my cards", () => openEditorCollectionStarter(ed)) : null,
       ed.tonight && !ed.notice && !isDirty() ? el("button", { type: "button", class: "btn", text: "Review collection draft",
-        onclick: event => { if (editor === ed && event.currentTarget.isConnected) openTonightDraft(ed.tonight); } }) : null,
-      el("button", { type: "button", class: "btn", text: "Paste a list…", onclick: openPaste }),
-      el("button", { type: "button", class: "btn btn-quiet", text: "Import a deck link…",
-        onclick: event => { if (event.currentTarget.isConnected) openDeckLinkImport(); } }),
-      precon ? el("button", { type: "button", class: "btn btn-quiet", text: "A precon…", onclick: openPreconStart }) : null,
-      el("button", { type: "button", class: "btn btn-quiet", text: "Another deck…", onclick: openDeckStart })));
+        onclick: event => { if (editor === ed && event.currentTarget.isConnected) openTonightDraft(ed.tonight); } }) : null),
+    el("details", {class: "more"}, el("summary", {text: "Other ways to start"}),
+      el("div", {class: "actions"},
+        act("Copy another deck’s planned list", openDeckStart),
+        inventory ? act("Use a published precon list", openPreconStart) : null,
+        inventory ? act("Try a precon", () => openTrialSearch(ed.space)) : null,
+        inventory && ed.space === ownSpace() ? el("a", {class: "btn", text: "I own this precon",
+          href: ownedPreconHref(ed.space)}) : null),
+      inventory ? el("p", {class: "sub", text: "Using a list fills this draft. Trying a precon saves a deck idea for simulations. Recording an owned precon adds its cards after review."}) : null));
+}
+
+function openEditorCollectionStarter(ed) {
+  if (!editorKeyboardCurrent(ed) || ed.mode !== "new" || ed.from || ed.saving || ed.asking || ed.leaving
+      || !seesInventory(ed.space) || Object.values(ed.lists).some(lines => lines.length)
+      || !createTargets().some(target => target.space === ed.space)) return null;
+  const sheet = colOpenSheet("Build from my cards"), owner = editorImportOwner(ed, sheet), initial = ed.snap;
+  const choose = (text, action) => el("button", {type: "button", class: "btn", text, onclick: event => {
+    if (!editorImportHere(owner, event.currentTarget) || ed.snap !== initial) return;
+    sheet.close();
+    action();
+  }});
+  sheet.body.append(el("p", {class: "sub", text: `Find a starting list using copies recorded in ${colWhose(ed.space)}.`}),
+    el("div", {class: "actions"},
+      choose("Find cards to add", () => openEditorSearchDock("collection")),
+      ed.fields.kind === "commander" ? choose("Find commanders", () => openEditorCommanderCandidates(ed)) : null,
+      choose("Find precons I can build", () => openCoverageSheet({space: ed.space, profile: ed.profile,
+        token: owner.token, root: owner.page}))));
+  return sheet;
 }
 
 /** Choose in the current editor so a title, player or other draft details stay in place. */
@@ -347,12 +369,17 @@ function openEditorCommanderCandidates(ed) {
  * words: what it says while it looks ("Looking for precons…"), what failed ("The precons", for loadFailed),
  * none (nothing at all) and noMatch(text) (nothing for that search). */
 function choiceSheet(title, placeholder, words, find, onPick) {
+  const ed = editor;
+  if (!editorKeyboardCurrent(ed) || ed.saving || ed.asking || ed.leaving) return null;
   const sheet = openSheet({ title, wide: true });
+  const owner = editorImportOwner(ed, sheet), initial = ed.snap;
+  const here = (sequence, control = null) => sequence === seq && ed.snap === initial && editorImportHere(owner, control);
   const input = el("input", { type: "search", class: "search-input", placeholder, "aria-label": placeholder, autocomplete: "off" });
   const list = el("ul", { class: "choice-list", "aria-live": "polite" });
   let seq = 0, timer = 0;
   const run = async () => {
     const mine = ++seq;
+    if (!here(mine)) return;
     clear(list).append(el("li", {}, loadingBox(words.looking, { small: true })));
     const q = input.value.trim();
     let items;
@@ -360,18 +387,29 @@ function choiceSheet(title, placeholder, words, find, onPick) {
       items = await find(q);
     } catch (e) {
       if (!(e instanceof ApiError)) throw e;
-      if (mine === seq && !sheet.closed) clear(list).append(el("li", {}, loadFailed(words.what, e, () => run())));
+      if (here(mine)) clear(list).append(el("li", {}, loadFailed(words.what, e, () => run())));
       return;
     }
-    if (mine !== seq || sheet.closed) return;
+    if (!here(mine)) return;
     clear(list).append(...(items.length ? items.map((item) => el("li", {}, el("button", { type: "button", class: "choice-item",
-      onclick: async (e) => { busy(e.currentTarget, "Loading…"); if (await onPick(item.value)) sheet.close(); else unbusy(e.currentTarget); } },
+      onclick: async event => {
+        const button = event.currentTarget;
+        if (!here(mine, button)) return;
+        busy(button, "Loading…");
+        if (await onPick(item.value, () => here(mine) && button.isConnected)) sheet.close();
+        else if (button.isConnected) unbusy(button);
+      } },
     el("b", { text: item.label }), item.sub ? el("small", { text: item.sub }) : null)))
       : [el("li", {}, q ? emptyBox(words.noMatch(q), el("button", { type: "button", class: "btn btn-quiet", text: "Clear the search",
         onclick: () => { input.value = ""; clearTimeout(timer); run(); input.focus(); } }))
         : emptyBox(words.none))]));
   };
-  input.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(run, 250); });
+  input.addEventListener("input", () => {
+    seq++;
+    clear(list);
+    clearTimeout(timer);
+    timer = setTimeout(run, 250);
+  });
   sheet.body.append(input, list);
   sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() }]);
   input.focus();
@@ -383,23 +421,23 @@ function choiceSheet(title, placeholder, words, find, onPick) {
  * changes nothing) go into the new deck. */
 function openPreconStart() {
   const ed = editor;
-  choiceSheet("Start from a precon", "Search precons, e.g. Goblins", { looking: "Looking for precons…", what: "The precons",
+  return choiceSheet("Use a published precon list", "Search precons, e.g. Goblins", { looking: "Looking for precons…", what: "The precons",
     none: "No precons found.", noMatch: (q) => `No precons have “${q}” in their name.` }, async (q) => {
     const a = await api(`/api/precons${q ? `?q=${encodeURIComponent(q)}` : ""}`);
     return (a.decks || []).map((d) => ({ label: d.name, sub: [d.set_name || d.code.toUpperCase(), d.type, d.released].filter(Boolean).join(" · "),
       value: d }));
-  }, async (deck) => {
+  }, async (deck, here) => {
     let p;
     try {
       p = await api(`/api/precons/preview?file=${encodeURIComponent(deck.file)}&space=${encodeURIComponent(ed.space || HOME_SPACE)}`);
     } catch (e) {
       if (!(e instanceof ApiError)) throw e;
-      toast(`That precon couldn't be read: ${e.message}`);
+      if (here()) toast(`That precon couldn't be read: ${e.message}`);
       return false;
     }
-    if (editor !== ed) return true;
+    if (!here()) return false;
     if (!norm("title", ed.fields.title)) ed.fields.title = p.title;
-    if (!ed.from && p.kind && p.kind !== ed.fields.kind) setField("kind", p.kind);
+    if (!ed.from && p.kind && p.kind !== ed.fields.kind) setField("kind", p.kind, false);
     const n = mergeLines(p.lists || {});
     drawDetails();
     toast(`Started from ${deck.name}: ${plural(n, "card")}.`);
@@ -409,24 +447,22 @@ function openPreconStart() {
 
 /** "Another deck": any deck in the library; its planned list goes into the new deck (it stays as it is). */
 function openDeckStart() {
-  const ed = editor;
-  choiceSheet("Start from another deck", "Search decks", { looking: "Looking for decks…", what: "The decks",
+  return choiceSheet("Copy another deck’s planned list", "Search decks", { looking: "Looking for decks…", what: "The decks",
     none: "No decks yet.", noMatch: (q) => `No decks have “${q}” in their title.` }, async (q) => {
-    if (!state.library) cacheLibrary(await api("/api/decks"));
-    if (!state.library) return [];
+    const library = state.library || await api("/api/decks");
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
-    return state.library.decks.filter((d) => words.every((w) => d.title.toLowerCase().includes(w)))
+    return (library.decks || []).filter((d) => words.every((w) => d.title.toLowerCase().includes(w)))
       .slice(0, 40).map((d) => ({ label: d.title, sub: d.format || FORMAT_WORDS[d.kind] || "", value: d }));
-  }, async (deck) => {
+  }, async (deck, here) => {
     let view;
     try {
       view = await api(`/api/deck/edit?id=${encodeURIComponent(deck.id)}`);
     } catch (e) {
       if (!(e instanceof ApiError)) throw e;
-      toast(`That deck couldn't be read: ${e.message}`);
+      if (here()) toast(`That deck couldn't be read: ${e.message}`);
       return false;
     }
-    if (editor !== ed) return true;
+    if (!here()) return false;
     const n = mergeLines(view.lists.target || {});
     toast(`Started from ${deck.title}: ${plural(n, "card")}.`);
     return true;

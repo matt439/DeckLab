@@ -32,7 +32,7 @@ const LIB_SORTS = { ready: "Ready first", recent: "Recently changed", played: "L
 const LIB_KIND_ORDER = ["commander", "casual"];
 // The availability filter's words are the tiles' chips' words: "3 on the way", "8 to get", "Availability
 // needs checking"; a deck with every card here has no chip (it's the usual case, and Ready first puts it first).
-const LIB_READINESS = { ready: "All cards here", waiting: "Cards on the way", missing: "Cards to get",
+const LIB_READINESS = { ready: "All counted cards here", waiting: "Cards on the way", missing: "Missing from records",
   unknown: "Availability needs checking" };
 const LIB_PRODUCTS_KEY = "library.products.open";      // "1" when the products part is open (folded by default)
 const LIB_LAB_QUERY = "(min-width: 1000px)";           // the lab: rows and the detail pane beside them
@@ -155,16 +155,7 @@ function showLibrary(params, token) {
       return;
     }
     drawLibrary(data, libraryFilters(params));
-  }, { cardWaitAction: () => libChecklistButton(() => state.profile === profile && routeToken === token && parseHash().path === "library") });
-}
-
-/** The warm library and the first card download both lead to the same name-only checklist. */
-function libChecklistButton(currentPage) {
-  if (!state.profile?.id) return null;
-  return el("button", { type: "button", class: "btn", text: "Check cards for a deck", "aria-haspopup": "dialog",
-    onclick: event => {
-      if (event.currentTarget.isConnected && currentPage()) openUpgradeChecklist(currentPage);
-    } });
+  }, { cardWaitAction: () => findAndBuyButton(() => state.profile === profile && routeToken === token && parseHash().path === "library") });
 }
 
 /** A labelled select for the filter row (its words hidden: each option says what it is) or, with shown,
@@ -300,10 +291,9 @@ function drawLibrary(data, filters) {
     const first = results.querySelector(".lib-pick");
     if (first) first.focus();
   } }] : [];
-  const personalNeeds = memberOwnSpace() ? el("button", { type: "button", class: "btn", text: "Cards to get", onclick: () => {
-    if (view.current?.()) openMemberNeeds();
-  } }) : null;
-  const checklist = libChecklistButton(view.current);
+  const buying = findAndBuyButton(view.current);
+  const packing = routeVisible(routeFor("assembly"))
+    ? el("a", { class: "btn", href: "#/assembly", text: "Pack decks together" }) : null;
   // Compare two decks (compare.js, E1-S13): choose the two from the decks shown here.
   if (data.decks.filter((d) => !d.error).length > 1) more.push({ label: "Compare two decks…", onclick: () => openCompareFirst(data.decks) });
   // New deck is the page's one primary action for whoever may make a deck (on a phone it opens in the Quick
@@ -323,9 +313,8 @@ function drawLibrary(data, filters) {
 
   // The warnings go first: they say when the missing-card counts can't be trusted.
   add(main, [
-    ...pageHead({ title: routeH1("library"), description: data.decks.length ? "Tap a deck for its cards, play guide and stats."
-      : "Planning an upgrade? Start with just the names of the cards you want to check.",
-      primary: [primary, checklist, personalNeeds].filter(Boolean), more: rowMore ? [] : more }),
+    ...pageHead({ title: routeH1("library"),
+      primary: [primary, packing, buying].filter(Boolean), more: rowMore ? [] : more }),
     warningsBox(data.warnings, "Warnings"),
     tables,
     libOfficialPanel(data),           // library-official.js: Game Changer and ban changes (E9-S36)
@@ -465,9 +454,9 @@ function deckReadiness(d) {
     const held = libCounts(d, version);
     let chip = null;
     if (!held.known) chip = status("plain", "Availability needs checking");
-    else if (held.missing) chip = status("warn", `${num(held.missing)} to get`);
+    else if (held.missing) chip = status("warn", `${num(held.missing)} missing from records`);
     else if (version === "owned" && target.known && target.missing) {
-      chip = status("plain", `${listName("target")}: ${num(target.missing)} to get`);
+      chip = status("plain", `${listName("target")} · ${num(target.missing)} missing`);
     }
     return { rank: 0, chip, missing: target.known ? target.missing : 0 };
   }
@@ -480,13 +469,13 @@ function deckReadiness(d) {
   if (!target.missing) {
     return { rank: 2, chip: status("info", `${num(target.waiting)} on the way`), missing: 0 };
   }
-  const parts = [`${num(target.missing)} to get`];
+  const parts = [`${num(target.missing)} missing`];
   if (target.waiting) parts.push(`${num(target.waiting)} on the way`);
   if ((d.versions || []).includes("owned")) {
     const owned = libCounts(d, "owned");
     if (owned.known && !owned.missing) {
       parts.push(owned.waiting ? `${listName("owned", true)} once ${num(owned.waiting)} arrive`
-        : `${listName("owned", true)} ready`);
+        : `${listName("owned", true)} covered`);
     }
   }
   return { rank: 3, chip: status("warn", parts.join(" · ")), missing: target.missing };
@@ -781,9 +770,11 @@ function libOwnedCounts(d) {
 function deckOwned(d, lab = false) {
   const c = libOwnedCounts(d);
   if (!c) return null;
-  const words = factLine("deck-owned-words" + (lab ? " sim-num" : ""), [`${num(c.owned)} owned`,
+  const words = factLine("deck-owned-words" + (lab ? " sim-num" : ""), [`${num(c.owned)} covered now`,
     c.waiting ? (lab ? el("span", { class: "deck-owned-way", text: `${num(c.waiting)} on the way` }) : `${num(c.waiting)} on the way`) : null,
-    c.missing ? (lab ? el("span", { class: "deck-owned-get", text: `${num(c.missing)} to get` }) : `${num(c.missing)} to get`) : null]);
+    c.missing ? (lab ? el("span", { class: "deck-owned-get", text: `${num(c.missing)} missing` }) : `${num(c.missing)} missing`) : null]);
+  words.setAttribute("aria-label", `${listName("target")} · ${words.textContent}`);
+  words.setAttribute("title", `${listName("target")} availability. Basic lands are treated as covered.`);
   return el("span", { class: "deck-owned" }, ownedBar(c.owned, c.waiting, c.total), words);
 }
 
@@ -794,7 +785,7 @@ function deckOwnedExtra(d) {
   if (d.status === "built" || !target.missing || !(d.versions || []).includes("owned")) return null;
   const owned = libCounts(d, "owned");
   if (!owned.known || owned.missing) return null;
-  return status("plain", owned.waiting ? `${listName("owned")} once ${num(owned.waiting)} arrive` : `${listName("owned")} ready`);
+  return status("plain", owned.waiting ? `${listName("owned")} once ${num(owned.waiting)} arrive` : `${listName("owned")} covered now`);
 }
 
 /** The tile's one meta line: who plays it (home decks; "Either" for a deck either of you plays), its size and
@@ -840,7 +831,7 @@ function deckCard(d, product, compact, kitShown = false, ctx = {}) {
       compact ? null : deckMeta(d, ctx.person),
       compact ? null : deckPlayed(d),
       deckStatusPill(d),
-      d.assembled && "missing" in d && !assembledComplete(d.assembled)
+      d.assembled && "missing" in d
         ? el("span", { class: "deck-assembled", text: assembledStateWords(d.assembled) }) : null,
       owned,
       d.error ? el("span", { class: "deck-error", text: `Can't be read: ${d.error}` })
@@ -923,7 +914,7 @@ function libDetail(d, ctx) {
   const owned = d.error ? null : deckOwned(d);
   const chip = owned ? deckOwnedExtra(d) : ready.chip;
   const open = deckHref(d.id) + (ready.missing > 0 ? "&tab=cards&filter=missing" : "");
-  const edit = canEditDeck(d) && !d.error ? el("a", { class: "btn btn-primary", href: editHref(d.id), text: "Edit deck" }) : null;
+  const edit = canEditDeck(d) && !d.error ? el("a", { class: "btn", href: editHref(d.id), text: "Edit cards" }) : null;
   const glance = libGlance(d);                                  // library-glance.js
   return el("section", { class: "lib-detail", "aria-label": `Selected deck: ${d.title}`, "data-id": d.id },
     el("div", { class: "lib-detail-card" },
@@ -933,13 +924,13 @@ function libDetail(d, ctx) {
        el("div", { class: "lib-detail-main" },
         el("h2", { class: "lib-detail-title", text: d.title }),
         el("div", { class: "lib-detail-chips" }, deckStatusPill(d, true), deckMeta(d, ctx.person)),
-        el("div", { class: "actions lib-detail-actions" }, edit,
-          el("a", { class: edit ? "btn btn-secondary" : "btn btn-primary", href: open, text: "Open deck" })),
+        el("div", { class: "actions lib-detail-actions" },
+          el("a", { class: "btn btn-primary", href: open, text: "Open deck" }), edit),
         deckPlayed(d),
         owned,
         d.error ? el("p", { class: "deck-error", text: `Can't be read: ${d.error}` })
           : chip ? el("div", { class: "deck-missing" }, chip) : null,
-        d.assembled && "missing" in d && !assembledComplete(d.assembled)
+        d.assembled && "missing" in d
           ? el("p", { class: "deck-assembled", text: assembledStateWords(d.assembled) }) : null,
         d.error ? null : libDetailForge(d),
         d.error ? null : libDetailGauntlet(d),

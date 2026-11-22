@@ -231,7 +231,7 @@ Before the slices start, one commit adds `decklab/design/gauntlet.md` with secti
 
 ## 11. The standard sample, the headline and where it shows (E3-S33 to E3-S38)
 
-Matt decided on 2026-11-03 that Against popular decks is Deck Lab's lead feature. A deck's result is only comparable with another's, or with its own before an edit, when both faced the same opponents, so every deck of a format is scored against one **standard sample**.
+Against popular decks is Deck Lab's leading simulation choice. Its results are comparable across decks or revisions when both faced the same opponents, so each format uses one **standard sample**. [Feature focus review](feature-focus-review-2026-11-22.md)
 
 **The standard sample** (`sample.STANDARD`, `sample.standard_sample`, `forge/gauntlet.standard`; E3-S33):
 - Commander: 20 opponents from `core` and `upgraded`, seed `''` (Matt, 2026-11-03: not the page's earlier 12 `core`). 60-card: 24 `medium` and `hard` duels, seed `''`, as before.

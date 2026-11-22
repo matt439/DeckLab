@@ -1,8 +1,8 @@
 # Private by default, public read-only
 
-Design, 2026-10-13, updated 2026-10-18. This is part of the design set in `decklab/design/`. It follows Matt's decision of 2026-10-13: "default is no visibility". Paths are relative to `decklab/` and the original audit line numbers are as of 2026-10-13. Status 2026-10-19: everything in this design is built (phases 1 to 4 before the invite, the switches, full Forge rules, public accessories, Activity, history masking and member departure after it, all on 2026-10-18) and live since 2026-10-19, when migrations 0012 (visibility) and 0013 (member departure) were applied and the server restarted on committed code. Nothing has been switched Public yet, and no member has left. Only per-deck public (E10-S41) waits until someone asks. Matt confirmed on 2026-10-18 that User5's invite has been sent. Section 5 records the phases; [stories.md](stories.md) owns each story's current status and acceptance criteria. Matt's settled decisions are in section 4.
+Design, 2026-10-13, updated 2026-10-18. This is part of the design set in `decklab/design/`. It follows Matt's decision of 2026-10-13: "default is no visibility". Paths are relative to `decklab/` and the original audit line numbers are as of 2026-10-13. Status 2026-10-19: everything in this design is built (phases 1 to 4 before the invite, the switches, full Forge rules, public accessories, Activity, history masking and member departure after it, all on 2026-10-18) and live since 2026-10-19, when migrations 0012 (visibility) and 0013 (member departure) were applied and the server restarted on committed code. The switches started Private. Only per-deck public (E10-S41) waits until someone asks. Matt confirmed on 2026-10-18 that User5's invite has been sent. Section 5 records the phases; [stories.md](stories.md) owns each story's current status and acceptance criteria. Matt's settled decisions are in section 4.
 
-Update 2026-10-18: [member-template.md](member-template.md) (MT below) makes this the setup of every member, starting with User5 (`user5`, the first real member), and Matt accepted its decisions A to K as recommended. "Visible to the family" is now **public**: read-only to every signed-in profile, future members included. There is no family flag or family audience. Public still means behind Cloudflare Access, never the open internet: E10's rule of no public pages, share links or sign-up holds. The new build order is in section 5.
+Update 2026-10-18: [member-template.md](member-template.md) (MT below) makes this the setup of every member, starting with User5 (`user5`, the first real member), and Matt accepted its decisions A to K as recommended. The new name for "Visible to the family" is **Public**. See the current audience and ownership rules below. The build order is in section 5.
 
 ---
 
@@ -14,7 +14,7 @@ Nobody sees another space's data unless that space has made it public.
 
 - **Spaces.** Home is one space, shared by Matt and User1. Each member (User5, User2, User3 and User4) has their own, on the same template (MT §1).
 - **Accessory owners.** Accessories belong to `matt`, `user1` or `shared`, and each owner's kit is a separate thing that can be made public.
-- **What "public" means.** A public thing is seen by every signed-in profile, future members included, and it is **read-only** to them. Only its owner changes it (at home, Matt and User1, exactly as today). Signed in means through Cloudflare Access or the home chooser; nothing is public to the open internet.
+- **What "public" means.** Public items give **read-only** access to every signed-in profile, including future members, and to visitors on the home listener without a chosen profile. Remote readers sign in through Cloudflare Access. Only the owner can change a switch. Matt or User1 can change the home space and shared kit switches. The open-internet, share link and sign-up exclusions still apply.
 - **The admin role doesn't open anything.**
   - Matt reads User2's collection only if User2 made it public.
   - On the page, Matt writes only in his own space.
@@ -53,7 +53,7 @@ Per space keeps each space all-or-nothing, so the field, the in-use labels and t
 
 **The decks switch shows the text as written.** The switches page says so next to it: "Shows each deck's write-up as written, including notes about cards you own or ordered."
 
-**Words.** `shared` already means "Matt's and User1's together", so the new state is called **"Public"**, its opposite is **"Private"**, and the internal name is `visibility`, never "share". Every page string, command message and audit message says Public and Private. Where the page explains it, it says "public (to everyone signed in)".
+**Words.** `shared` means "Matt's and User1's together". The switches say **Public** and **Private**. Page and CLI notices explain that Public gives read-only access both to signed-in readers and to visitors on the home network without a profile. The internal name is `visibility`.
 
 Update 2026-10-18: the 2026-10-13 word was "Visible to the family". MT decision B replaced it with Public, since "family" was wrong once members from outside the household joined.
 
@@ -61,7 +61,7 @@ Update 2026-10-18: the 2026-10-13 word was "Visible to the family". MT decision 
 
 Use the next unused migration number when implementation starts: 0010 is deck aliases and 0011 is Commander-night notes, so neither is available for visibility. Visibility storage can be developed now; the old October 19 build date is superseded by the current order in section 5. A switch can be enabled only when its public-reader criteria are complete.
 
-Built: the table shipped as migration `0012`, applied on 2026-10-19. It is empty, so everything is Private.
+Built: the table shipped as migration `0012`, applied on 2026-10-19. The migration seeds no grants, so each switch starts Private.
 
 The migration follows `db/migrate.py`'s conventions: it runs as `decklab_owner` in one transaction, is never edited once applied, and writes no data.
 
@@ -600,8 +600,8 @@ Evidence:
 - "Who may change what": replace "an admin edits everything".
 - Rewrite "Who may read the inventory": the switches, no admin override, home records for home profiles only, the script header, and the home-only chooser.
 - Delete "anyone may see a deck's list, prose, stats and matchups".
-- Accessories paragraph: add "public (to everyone signed in), read-only".
-- Replace every "visible to the family" with public and private (MT decision B), and say that public means signed-in profiles, not the open internet.
+- Accessories paragraph: refer to the Public audience above and keep the read-only scope clear.
+- Use Public and Private (MT decision B). Public includes home-network visitors without a profile. Remote readers require sign-in.
 - Add the Claude relaying rule (decision 3).
 - Add `visibility` to the `sql` tables in "Wishlists and other database data", and `visibility list|set` and `collection add-precon` to the Layout block and "The inventory".
 

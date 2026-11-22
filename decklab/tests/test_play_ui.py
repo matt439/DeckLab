@@ -213,7 +213,7 @@ class PlayUiTests(unittest.TestCase):
           assert.equal(card.querySelector('summary').getAttribute('aria-describedby'),h3.id);
           const correct=[...card.querySelectorAll('button')].find(b=>b.textContent==='Correct this game');
           if(correct)assert.equal(correct.getAttribute('aria-describedby'),h3.id);
-          assert.ok(card.textContent.includes('Alpha (Matt) vs Beta (User1)'));
+          assert.ok(card.textContent.includes('Alpha · planned list (Matt) vs Beta · planned list (User1)'));
           assert.ok(card.textContent.includes('User1 took 1 mulligan'));
           assert.ok(!card.textContent.includes('Matt took'));
         """)
@@ -408,7 +408,7 @@ class PlayUiTests(unittest.TestCase):
           const entry={record,sha256:'s',can:{sides:[true,false],result:false}};
           const data={lists:[mine],sideboards:[],today:'2026-10-08'};
           const card=playGameCard(entry,data);
-          assert.ok(card.textContent.includes('Elves (User2) vs one of the home decks (Matt)'));
+          assert.ok(card.textContent.includes('Elves · planned list (User2) vs one of the home decks (Matt)'));
           assert.equal(card.querySelectorAll('h4').length,1);
           assert.equal(playMatchupSummaries([entry]).length,1);
           const requests=[]; apiWrite=async(endpoint,payload)=>{requests.push(payload);throw new Error('Preview stopped for test');};

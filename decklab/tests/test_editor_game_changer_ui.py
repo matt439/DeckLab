@@ -129,7 +129,8 @@ class EditorGameChangerUiTests(unittest.TestCase):
           const side = mystic.querySelector('.ac-side');
           same(chips(side), [WOULD(3)]);
           assert(side.textContent.includes('64% of decks'), 'its share of decks is still there');
-          assert(side.textContent.includes('2 free'));
+          assert(side.textContent.includes('1 free now'));
+          assert(side.textContent.includes('1 on the way'));
           same(chips(poison), []);
           assert.equal(writes.length, 0);
         """)

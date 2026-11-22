@@ -18,7 +18,7 @@ SETUP = r"""
       ["button", "avatar-button"], ["div", "avatar-menu"], ["span", "menu-name"], ["button", "my-device"],
       ["button", "menu-reload"], ["button", "switch-profile"], ["span", "profile-name"], ["span", "signed-in"], ["div", "topbar-actions"],
       ["a", "topbar-back"], ["span", "topbar-back-label"], ["span", "topbar-title"], ["header", "topbar"],
-      ["div", "admin-sep"], ["a", "menu-settings"], ["a", "menu-about"], ["p", "toast"], ["p", "footer-data"]]) {
+      ["div", "admin-sep"], ["a", "menu-settings"], ["p", "toast"], ["p", "footer-data"]]) {
     document.body.append(el(tag, { id }));
   }
   document.body.append(el("a", { class: "skip" }));
@@ -99,11 +99,12 @@ class ShellUiTests(unittest.TestCase):
     def test_one_name_per_page_from_the_routes_table(self):
         self.run_js("""
           const names = Object.fromEntries(ROUTES.map((r) => [r.path, r.label]));
-          same(names, { library: "Decks", collection: "Collection", shopping: "Shopping", matchups: "Testing",
-            tokens: "Tokens", accessories: "Sleeves & boxes", assembly: "Build decks", play: "Game log",
-            wishlist: "Wishlist", activity: "Activity", visibility: "Who sees what", settings: "Settings", deck: "Deck", edit: "Edit deck",
+          same(names, { library: "Decks", collection: "Collection", shopping: "Shopping", play: "At the table",
+            matchups: "Simulate", assembly: "Pack decks together", tokens: "Tokens", accessories: "Sleeves & boxes",
+            wishlist: "Wishlist", activity: "Changes & undo", help: "Help", visibility: "Who sees what",
+            settings: "Administration", deck: "Deck", edit: "Edit deck",
             new: "New deck", history: "History", compare: "Compare decks", variant: "Test of a change", receipt: "Receive delivery",
-            matchup: "Matchup", "forge-pods": "Four-player pods", help: "What these words mean" });
+            matchup: "Matchup", "forge-pods": "Simulate a four-player pod" });
           for (const r of ROUTES) assert(r.nav || r.parent, r.path);
           // A child page sits under its parent's place in the nav.
           assert.equal(routeSection("deck").path, "library");
@@ -112,9 +113,9 @@ class ShellUiTests(unittest.TestCase):
           assert.equal(routeSection("matchup").path, "matchups");
           assert.equal(routeSection("forge-pods").path, "matchups");
           assert.equal(routeSection("nowhere").path, "library");
-          // E3-S35: Testing keeps its address, #/matchups; #/testing is its other one, rewritten to it.
-          assert.equal(routeFor("matchups").h1, "Testing");
-          assert.equal(routeFor("matchups").title, "Testing");
+          // Simulate keeps #/matchups and the #/testing alias.
+          assert.equal(routeFor("matchups").h1, "Simulate");
+          assert.equal(routeFor("matchups").title, "Simulate");
           location.hash = "#/testing?view=rankings";
           const parsed = parseHash();
           assert.equal(parsed.path, "matchups"); assert.equal(parsed.alias, true);
@@ -122,8 +123,8 @@ class ShellUiTests(unittest.TestCase):
           location.hash = "#/matchups";
           assert.equal(parseHash().alias, false);
           // The lists' names (decision 2), for every page.
-          same(LIST_NAME, { target: "Planned list", owned: "Play-now list" });
-          assert.equal(listName("owned"), "Play-now list");
+          same(LIST_NAME, { target: "Planned list", owned: "Alternative list" });
+          assert.equal(listName("owned"), "Alternative list");
           assert.equal(listName("target", true), "planned list");
           assert.equal(listName("anything"), "Planned list");
           setTitle("Gruul Ramp");
@@ -137,17 +138,12 @@ class ShellUiTests(unittest.TestCase):
           location.hash = "#/library";
           drawShell(); await flush();
           const nav = document.getElementById("main-nav"), bar = document.getElementById("tabbar");
-          // Build decks is a pill from 1000 px (E11-S61) and in More below that: the stylesheet shows one of the two.
-          same(labels(nav), ["Decks", "Testing", "Collection", "Shopping", "Build decks", "Tokens", "Sleeves & boxes",
-            "Build decks", "Game log", "Wishlist", "Activity"]);
-          const pill = nav.querySelector(".nav-wide");
-          assert.equal(pill.querySelector("a").getAttribute("href"), "#/assembly");
-          same(nav.querySelectorAll(".nav-wide").length, 1);
-          same(nav.querySelectorAll(".nav-narrow").map((a) => a.getAttribute("data-route")), ["assembly"]);
-          same(labels(bar), ["Decks", "Testing", "Collection", "Shopping"]);
+          const destinations = ["At the table", "Simulate", "Pack decks together", "Tokens", "Sleeves & boxes",
+            "Wishlist", "Changes & undo", "Help"];
+          same(labels(nav), ["Decks", "Collection", "Shopping", ...destinations]);
+          same(labels(bar), ["Decks", "Collection", "Shopping"]);
           assert(bar.textContent.includes("More"));
-          same(labels(document.getElementById("more-list")), ["Tokens", "Sleeves & boxes", "Build decks",
-            "Game log", "Wishlist", "Activity", "Settings"]);
+          same(labels(document.getElementById("more-list")), [...destinations, "Administration"]);
           assert(document.body.classList.contains("has-shell"));
           // The deliveries waiting: orders with a part still pending.
           const badge = nav.querySelector("[data-deliveries]");
@@ -158,7 +154,7 @@ class ShellUiTests(unittest.TestCase):
           assert.equal(badge.getAttribute("aria-label"), null);
           assert.equal(badge.closest("a").getAttribute("aria-label"), "Shopping, 2 deliveries waiting");
           assert.equal(bar.querySelector("[data-deliveries]").closest("a").getAttribute("aria-label"), "Shopping, 2 deliveries waiting");
-          // Settings and About are an admin's.
+          // Administration is an admin's.
           assert.equal(document.getElementById("menu-settings").hidden, false);
           assert.equal(document.getElementById("avatar-initial").textContent, "M");
 
@@ -168,28 +164,31 @@ class ShellUiTests(unittest.TestCase):
           syncShell("tokens");
           assert(current().every((path) => path === "tokens"));
           assert(nav.querySelector(".nav-more").classList.contains("is-current"));
-          assert(!nav.querySelector(".nav-more").classList.contains("is-current-narrow"));
           assert(bar.querySelector(".tab-more").classList.contains("is-current"));
-          // Build decks marks its pill; the top bar's More only below 1000 px (is-current-narrow), the tab bar's More always.
-          syncShell("assembly");
-          assert(current().every((path) => path === "assembly") && current().length >= 3);
-          assert(!nav.querySelector(".nav-more").classList.contains("is-current"));
-          assert(nav.querySelector(".nav-more").classList.contains("is-current-narrow"));
-          assert(bar.querySelector(".tab-more").classList.contains("is-current"));
+          for (const path of ["assembly", "help", "matchups"]) {
+            syncShell(path);
+            assert(current().every((route) => route === path) && current().length === 2);
+            assert(nav.querySelector(".nav-more").classList.contains("is-current"));
+            assert(bar.querySelector(".tab-more").classList.contains("is-current"));
+          }
           syncShell("library");
-          assert(!nav.querySelector(".nav-more").classList.contains("is-current-narrow"));
+          assert(!nav.querySelector(".nav-more").classList.contains("is-current"));
 
           // User1 (a member at home): no Settings, the rest as Matt.
           as("user1");
           drawShell(); await flush();
           assert.equal(document.getElementById("menu-settings").hidden, true);
-          assert(!labels(document.getElementById("more-list")).includes("Settings"));
+          same(labels(document.getElementById("more-list")), destinations);
           assert(labels(nav).includes("Shopping"));
-          // User2 (his own space): nothing of home's shopping, packing plan or sleeves; Testing is the second tab.
+          // User2 (his own space) keeps Simulate and Help in More.
           as("user2");
+          state.may = { ...state.may, see_inventory: ["home", "user2"], see_home_records: false };
+          const reads = [], read = api;
+          api = (path) => { reads.push(path); return read(path); };
           drawShell(); await flush();
-          same(labels(nav), ["Decks", "Testing", "Collection", "Tokens", "Game log", "Wishlist", "Activity"]);
-          same(labels(bar), ["Decks", "Testing", "Collection"]);
+          same(labels(nav), ["Decks", "Collection", "At the table", "Simulate", "Tokens", "Wishlist", "Changes & undo", "Help"]);
+          same(labels(bar), ["Decks", "Collection"]);
+          assert(!reads.includes("/api/shopping"), "Public collection access does not open home deliveries");
           assert.equal(document.getElementById("my-device").hidden, true);       // over the tunnel: the login is him
           hideShell();
           assert.equal(document.getElementById("main-nav").hidden, true);
@@ -197,22 +196,20 @@ class ShellUiTests(unittest.TestCase):
           assert(!document.body.classList.contains("has-shell"));
         """)
 
-    def test_the_matchups_tab_has_a_dot_while_forge_plays(self):
-        # E11-S30 slice 7: the casual tab bar's Matchups tab gets an 8 px dot while a run plays or waits; the
-        # header's activity icon has the words.
+    def test_more_indicates_active_simulations(self):
         self.run_js("""
           document.body.append(el("div", { id: "shell-status" }));
           as("matt");
           location.hash = "#/library";
           drawShell(); await flush();
-          const route = (root) => root.querySelectorAll("[data-route]").find((a) => a.getAttribute("data-route") === "matchups");
-          const tab = route(document.getElementById("tabbar"));
+          const tab = byId("tabbar").querySelector(".tab-more");
           assert(tab && !tab.classList.contains("has-run"));
           noteRuns([{ status: "running", sides: [{ title: "A" }, { title: "B" }], done: 3, games: 10 }]);
           assert(tab.classList.contains("has-run"));
-          assert(!route(document.getElementById("main-nav")).classList.contains("has-run"));
+          assert.equal(tab.getAttribute("aria-label"), "More destinations, simulations active");
           noteRuns([]);
           assert(!tab.classList.contains("has-run"));
+          assert.equal(tab.getAttribute("aria-label"), "More destinations");
           stopRunsPill();
         """)
 
@@ -304,8 +301,7 @@ class ShellUiTests(unittest.TestCase):
         """)
 
     def test_a_menu_item_the_stylesheet_hides_takes_no_focus(self):
-        # E11-S61: from 1000 px the top bar's More hides Build decks (a.nav-narrow), its pill showing instead.
-        # This fake DOM has no layout, so each item's getClientRects says what a browser would: [] when hidden.
+        # This DOM double gives hidden items no client rects, like the browser.
         self.run_js("""
           as("matt", false);
           location.hash = "#/library";
@@ -313,20 +309,19 @@ class ShellUiTests(unittest.TestCase):
           const nav = document.getElementById("main-nav");
           const button = nav.querySelector(".nav-more"), menu = document.getElementById("nav-more-menu");
           const items = menu.querySelectorAll("[role=menuitem]");
-          for (const item of items) item.getClientRects = () => item.matches(".nav-narrow") ? [] : [{}];
+          for (const item of items) item.getClientRects = () => item.dataset.route === "assembly" ? [] : [{}];
           const label = () => document.activeElement.textContent;
           const key = (k) => menu.fire("keydown", { key: k, target: document.activeElement });
-          same(items.map((a) => a.textContent).slice(0, 4), ["Tokens", "Sleeves & boxes", "Build decks", "Game log"]);
+          same(items.map((a) => a.textContent).slice(0, 4), ["At the table", "Simulate", "Pack decks together", "Tokens"]);
           button.click();
           assert.equal(menu.hidden, false);
-          assert.equal(label(), "Tokens");
-          key("ArrowDown"); assert.equal(label(), "Sleeves & boxes");
+          assert.equal(label(), "At the table");
+          key("ArrowDown"); assert.equal(label(), "Simulate");
           assert(key("ArrowDown").defaultPrevented);
-          assert.equal(label(), "Game log", "ArrowDown steps over the hidden Build decks");
-          key("ArrowUp"); assert.equal(label(), "Sleeves & boxes", "and so does ArrowUp");
-          // Below 1000 px it shows, and the arrow keys stop on it.
+          assert.equal(label(), "Tokens", "ArrowDown steps over a hidden item");
+          key("ArrowUp"); assert.equal(label(), "Simulate", "and so does ArrowUp");
           for (const item of items) item.getClientRects = () => [{}];
-          key("ArrowDown"); assert.equal(label(), "Build decks");
+          key("ArrowDown"); assert.equal(label(), "Pack decks together");
           closeMenus();
 
           // A hidden first item: opening focuses the first one shown, and wrapping skips the hidden one both ways.
@@ -351,11 +346,17 @@ class ShellUiTests(unittest.TestCase):
           showFooter = () => {}; loadServerRestart = () => {};          // the version check is version.js's (test_version_ui)
           as("user1");
           showSettings(new URLSearchParams(), routeToken);
-          assert(main.textContent.includes("settings are for admins"));
+          assert(main.textContent.includes("Administration is for admins"));
           assert.equal(main.querySelector("#sim-mode"), null);
           as("matt", false);
           showSettings(new URLSearchParams(), routeToken); await flush();
-          assert.equal(document.title, "Settings – Deck Lab");
+          assert.equal(document.title, "Administration – Deck Lab");
+          const sections = main.querySelector(".settings-jumps").querySelectorAll("button");
+          same(sections.map(button => button.textContent), ["Decks & simulations", "Buying", "Members & visits", "Service & data"]);
+          sections[1].click();
+          assert.equal(document.activeElement.id, "settings-buying");
+          showSettings(new URLSearchParams("part=postage"), routeToken);
+          assert.equal(document.activeElement.id, "settings-postage");
           for (const id of ["sim-mode", "sim-workers", "build-version", "build-check", "build-checked"]) {
             assert(main.querySelector("#" + id), id);
           }

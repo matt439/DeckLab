@@ -44,10 +44,10 @@ class MatchupRankingsUiTests(unittest.TestCase):
             rows:[row('casual/a','Alpha')]});};
           view.mode='matchups';drawHome(host,data,library,view);
           assert(host.querySelector('.mu-opponents'));assert.equal(calls.length,0);
-          button(host,'Rankings').click();await settle();
+          button(host,'Field rankings').click();await settle();
           same(calls,['/api/rankings?format=Constructed']);assert.equal(writes,0);
-          assert.equal(button(host,'Rankings').getAttribute('aria-pressed'),'true');
-          assert.equal(button(host,'Matchups').getAttribute('aria-pressed'),'false');
+          assert.equal(button(host,'Field rankings').getAttribute('aria-pressed'),'true');
+          assert.equal(button(host,'1v1 matchups').getAttribute('aria-pressed'),'false');
           assert(host.querySelector('.mu-rankings'));assert(!host.querySelector('.mu-opponents'));
           assert.equal(storage.get('decklab.testing.view'),'rankings');
           assert(!host.querySelector('[data-run]'));
@@ -103,10 +103,10 @@ class MatchupRankingsUiTests(unittest.TestCase):
           const merged=muRankingRow(row('casual/a','Alpha',{versions:['target','owned']}));
           const owned=muRankingRow(row('casual/b','Beta',{version:'owned',versions:['owned']}));
           host.append(merged,owned);assert.equal(host.querySelectorAll('.mu-ranking-row').length,2);
-          assert(merged.textContent.includes('Planned and play-now lists (same cards and pilot)'));
+          assert(merged.textContent.includes('Planned and alternative lists (same cards and pilot)'));
           assert.equal(merged.querySelector('a').getAttribute('href'),deckHref('casual/a','target'));
           assert.equal(owned.querySelector('a').getAttribute('href'),deckHref('casual/b','owned'));
-          assert(owned.textContent.toLowerCase().includes('play-now'));
+          assert(owned.textContent.toLowerCase().includes('alternative list'));
         """)
 
     def test_unknown_nonfinite_and_partial_ratings_do_not_invent_ranks(self):
@@ -143,9 +143,9 @@ class MatchupRankingsUiTests(unittest.TestCase):
           drawHome(host,data,library,view);await settle();drawHome(host,{running:[],results:[]},library,view);await settle();
           assert.equal(view.mode,'rankings');assert.equal(view.format,'Commander');assert.equal(view.deck,'commander/d');
           assert.equal(calls,1);assert.equal(button(host,'Commander').getAttribute('aria-pressed'),'true');
-          button(host,'Matchups').click();assert.equal(view.deck,'commander/d');
+          button(host,'1v1 matchups').click();assert.equal(view.deck,'commander/d');
           assert.equal(view.format,'Commander');assert(host.querySelector('.mu-opponents'));
-          button(host,'Rankings').click();await settle();assert.equal(view.deck,'commander/d');assert.equal(writes,0);
+          button(host,'Field rankings').click();await settle();assert.equal(view.deck,'commander/d');assert.equal(writes,0);
         """)
 
     def test_format_changes_are_single_flight_and_only_latest_choice_is_queued(self):
@@ -204,7 +204,7 @@ class MatchupRankingsUiTests(unittest.TestCase):
           state.may={simulations:false};runsAllowed=()=>false;
           api=async()=>answer('Constructed',{rows:[row('casual/a','Saved Alpha')]});
           drawHome(host,data,library,view);await settle();
-          assert(host.textContent.includes('Saved Alpha'));assert(button(host,'Rankings'));
+          assert(host.textContent.includes('Saved Alpha'));assert(button(host,'Field rankings'));
           assert.equal(writes,0);assert(!host.querySelector('[data-run]'));
         """)
 
@@ -275,10 +275,10 @@ class MatchupRankingsUiTests(unittest.TestCase):
     def test_leaving_rankings_aborts_the_read_and_returning_fetches_immediately(self):
         self.run_js("""
           const pending=[];api=(url,opts)=>new Promise(resolve=>pending.push({url,resolve,signal:opts.signal}));
-          drawHome(host,data,library,view);button(host,'Matchups').click();await settle();
+          drawHome(host,data,library,view);button(host,'1v1 matchups').click();await settle();
           assert(pending[0].signal.aborted);assert.equal(view.rankingsRequest,null);
           assert(host.querySelector('.mu-opponents'));assert(!host.querySelector('.mu-rankings'));
-          button(host,'Rankings').click();assert.equal(pending.length,2);
+          button(host,'Field rankings').click();assert.equal(pending.length,2);
           pending[1].resolve(answer('Constructed',{rows:[row('casual/a','New visit')]}));await settle();
           pending[0].resolve(answer('Constructed',{rows:[row('casual/a','Cancelled visit')]}));await settle();
           assert(host.textContent.includes('New visit'));assert(!host.textContent.includes('Cancelled visit'));

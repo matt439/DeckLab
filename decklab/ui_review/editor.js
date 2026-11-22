@@ -194,7 +194,8 @@ run('editor', async review => {
         picked:1, target:99, open_slots:98, open_lands:38, open_spells:60, roles:[], mana_sources:[], incoming:[]}});
     });
     await starter.goto(review.pageUrl('#/new?kind=commander'));
-    await starter.getByRole('button', {name:'Build from my collection', exact:true}).click();
+    await starter.getByRole('button', {name:'Build from my cards', exact:true}).click();
+    await starter.getByRole('button', {name:'Find commanders', exact:true}).click();
     await starter.getByRole('searchbox', {name:'Find a commander by name'}).fill('Marwyn');
     await starter.locator('.pcov-pick').filter({hasText:name}).click();
     await starter.getByRole('button', {name:'Build from cards free tonight', exact:true}).click();
@@ -204,7 +205,7 @@ run('editor', async review => {
     await starter.waitForFunction(() => editor.lists.Commander?.[0]?.name === 'Marwyn, the Nurturer'
       && editor.lists.Deck?.[0]?.name === 'Llanowar Elves' && !document.querySelector('dialog[open]'));
     await starter.locator('.bar-undo').click();
-    await starter.getByRole('button', {name:'Build from my collection', exact:true}).waitFor();
+    await starter.getByRole('button', {name:'Build from my cards', exact:true}).waitFor();
     report.cases.collection_starter = { searched:'Marwyn', open_slots:98, restored_empty_editor:true };
 
     assert.equal(report.screenshots.length, 3, 'Editor review screenshots are incomplete');

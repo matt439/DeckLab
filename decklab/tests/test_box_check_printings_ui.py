@@ -27,7 +27,7 @@ class BoxCheckPrintingsUiTests(unittest.TestCase):
           assert.equal(sheet.body.querySelectorAll('.box-check-printing').length,2);
           assert(commander(sheet));assert.equal(commander(sheet).value,'');
           assert.equal(elfCount(sheet,'FDN 227').value,'1');assert.equal(elfCount(sheet,'M19 314').value,'0');
-          assert(sheet.body.textContent.includes('Which printing?'));assert(sheet.body.textContent.includes('Printings in box with the check date'));
+          assert(sheet.body.textContent.includes('Which printing?'));assert(sheet.body.textContent.includes('choose which you found in the box to record them with the date'));
           assert(sheet.body.textContent.includes('SLD 2 (all in other boxes)'));
         ''')
 

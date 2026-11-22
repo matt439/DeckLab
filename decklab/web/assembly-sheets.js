@@ -59,8 +59,8 @@ function packTakeApartContents(info) {
 function packTakeApartButton(view, deck) {
   if (!deck.take_apart || deck.completion?.status !== "built") return null;
   const data = view.data, recipe = JSON.stringify(view.selected.map(packSelectedChoice));
-  const button = el("button", { type: "button", class: "btn btn-quiet pack-take-apart", text: "Take-apart checklist",
-    "aria-label": `${deck.title}: take-apart checklist`, onclick: () => {
+  const button = el("button", { type: "button", class: "btn btn-quiet pack-take-apart", text: "Review take-apart",
+    "aria-label": `${deck.title}: review taking apart the packed cards`, onclick: () => {
       if (!assemblyActive(view) || view.hash !== location.hash || view.data !== data || !data.decks.includes(deck)
           || !button.isConnected || !view.results.contains(button) || view.previewing || view.reviewing || view.saving
           || document.querySelector("dialog[open]") || recipe !== JSON.stringify(view.selected.map(packSelectedChoice))) return;
@@ -98,7 +98,7 @@ function packReviewTakeApart(view, deck) {
     } });
     checks.push(input); parent.append(el("label", { class: "choice" }, input, el("span", { text })));
   };
-  ctx.sheet.body.append(el("p", { text: "Unsleeve the recorded physical cards and return them to storage. Check the box before recording that this deck is taken apart. Its intended lists stay saved." }));
+  ctx.sheet.body.append(el("p", { text: "Unsleeve the packed cards and return them to storage. Mark deck taken apart frees the cards, tokens and kit for other decks and sets this deck to Building." }));
   if (!info) {
     ctx.sheet.body.append(el("p", { class: "box box-warn", text: deck.take_apart.reason || "The recorded physical contents cannot be checked. Refresh the plan or repair the deck record first." }));
   } else {
@@ -181,7 +181,7 @@ function packReviewTakeApart(view, deck) {
   return ctx;
 }
 
-/** Choose kit now, then save it with the status, built list and physical stand-ins. */
+/** Choose kit now, then save it with the status, built list and physical placeholders. */
 function packReviewBuilt(view) {
   return new Promise(resolve => {
     const ctx = openAssemblySheet(view, "Finish building", { onClose: result => resolve(result || null) });
@@ -190,7 +190,7 @@ function packReviewBuilt(view) {
     const error = el("p", { class: "form-error", role: "alert" });
     let items = [], loading = decks.some(deck => deck.kit?.editable), failed = false;
     const fields = el("div", {});
-    ctx.sheet.body.append(el("p", { text: "Confirm the list you put together and choose its sleeves and deck box. They are saved together." }), fields, error);
+    ctx.sheet.body.append(el("p", { text: "Confirm the cards in each box and choose its sleeves and deck box. Mark as built records these packed copies and reserves them for their decks." }), fields, error);
     function actions() {
       sheetActions(ctx.sheet, [
         failed ? { text: "Try again", onclick: load } : null,
@@ -278,11 +278,13 @@ function packReviewBuilt(view) {
             el("small", { class: "field-hint", text: "Changing the list returns to the plan so you can check its cards." })));
         } else part.append(el("p", { text: listName(deck.version) }));
         const packed = ctx.data.decks.find(item => item.id === deck.id), scope = packed?.build_scope;
+        if (packed?.completion?.status === "built" && packed.completion.built_version) part.append(
+          el("p", { class: "sub", text: `Previously packed: ${listName(packed.completion.built_version)}.` }));
         if (scope) {
           part.append(el("p", { class: "pack-review-scope", text: `${scope.label}: `
             + `${plural(scope.main_count, "main-deck card")} + ${scope.sideboard_count} of ${scope.sideboard_intended} intended sideboard cards.` }));
           if (scope.return_count) part.append(el("div", { class: "box box-warn" },
-            el("p", { text: `Put back ${plural(scope.return_count, "card")} from the previous assembly. Confirm these removals before marking built.` }),
+            el("p", { text: `Return ${plural(scope.return_count, "card")} from the previous build to storage before marking built.` }),
             el("ul", {}, (packed.returns || []).map(row => el("li", { text: `${row.quantity} x ${row.name}` })))));
           const intent = remainingIntentPart(packed.remaining_intent);
           if (intent) part.append(intent);
@@ -339,13 +341,13 @@ function packReviewBuilt(view) {
   });
 }
 
-/** Stand-ins are physical markers, so a saved choice never changes the logical list. */
+/** Placeholder choices are stored separately from the logical list. */
 function packStandinsPart(view, deck) {
   const info = deck.standins;
   if (!info) return null;
   const mappings = info.rows || [], retired = info.retired || [];
   if (!mappings.length && !retired.length && !(info.needs || []).length && !(info.warnings || []).length) return null;
-  const part = el("div", { class: "pack-standins" }, el("h3", { text: "Stand-ins" }));
+  const part = el("div", { class: "pack-standins" }, el("h3", { text: "Physical placeholder choices" }));
   if (mappings.length) part.append(el("ul", {}, mappings.map(row => el("li", {},
     `${row.qty} × ${row.using || "Any spare card"} stands for `,
     view.cards[row.for] ? cardLink({ name: row.for, card: view.cards[row.for] }, "packing-standins") : row.for))));
@@ -353,8 +355,8 @@ function packStandinsPart(view, deck) {
     (row.reason === "real_available" ? `${row.qty} × ${row.for} is now available.`
       : `${row.qty} × ${row.using || "Any spare card"} will no longer stand for ${row.for}.`)
     + " Finish this plan to record the change." }))));
-  if ((info.warnings || []).length) add(part, [warningsBox(info.warnings, "Check stand-ins")]);
-  if (info.editable && (info.needs || []).length) part.append(el("button", { type: "button", class: "btn", text: "Choose stand-ins",
+  if ((info.warnings || []).length) add(part, [warningsBox(info.warnings, "Check physical placeholders")]);
+  if (info.editable && (info.needs || []).length) part.append(el("button", { type: "button", class: "btn", text: "Choose physical placeholders",
     onclick: () => { if (assemblyActive(view) && !view.saving) openPackStandins(view, deck); } }));
   return part;
 }
@@ -362,12 +364,12 @@ function packStandinsPart(view, deck) {
 function openPackStandins(view, deck) {
   if (!assemblyActive(view) || view.saving || view.reviewing || !deck.standins?.editable
       || !view.data.decks.includes(deck)) return null;
-  const ctx = openAssemblySheet(view, `Stand-ins for ${deck.title}`), info = deck.standins;
+  const ctx = openAssemblySheet(view, `Physical placeholders for ${deck.title}`), info = deck.standins;
   const error = el("p", { class: "form-error", role: "alert" }), inputs = [];
   let sending = false, stale = false;
-  ctx.sheet.body.append(el("p", { text: "A stand-in represents the missing card. Its rules and your decklist stay the same; a named stand-in uses one of your free physical copies." }));
+  ctx.sheet.body.append(el("p", { text: "Choose spare cards to represent missing cards when you pack this box. Saving records your choices for this list. Finishing the build reserves any named spare copies." }));
   for (const [index, need] of (info.needs || []).entries()) {
-    const select = el("select", { "aria-label": `Stand-in for ${need.for}, group ${index + 1}` },
+    const select = el("select", { "aria-label": `Placeholder for ${need.for}, group ${index + 1}` },
       el("option", { value: "", text: "Any spare card" }),
       (info.candidates || []).filter(item => item.free >= need.qty || item.name === need.suggestion).map(item =>
         el("option", { value: item.name, text: `${item.name} (${item.free} free)` })));
@@ -380,7 +382,7 @@ function openPackStandins(view, deck) {
     sheetActions(ctx.sheet, [stale ? { text: "Refresh plan", kind: "primary", onclick: () => {
       if (!assemblySheetHere(ctx)) return;
       ctx.sheet.close(); packChanged(view); clearTimeout(view.timer); view.run();
-    } } : { text: "Save stand-ins", kind: "primary", disabled: sending, onclick: save },
+    } } : { text: "Save placeholder choices", kind: "primary", disabled: sending, onclick: save },
       { text: "Cancel", onclick: () => ctx.sheet.close() }]);
   }
   async function save() {

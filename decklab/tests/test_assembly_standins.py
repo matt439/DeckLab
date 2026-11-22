@@ -5,7 +5,7 @@ from unittest import mock
 
 from decklab.lib import access, api, config, decks, inventory, pool
 from decklab.lib.api import assembly, assembly_completion, assembly_standins as endpoint, history
-from decklab.lib.decks import standins
+from decklab.lib.decks import assembled, standins
 from decklab.tests import test_collection_edit as collection_tests
 from decklab.tests import test_editor as editor_tests
 from decklab.tests import test_deck_history as history_tests
@@ -154,6 +154,24 @@ class StandInApiTests(StandInFixtures):
                 mock.patch.object(endpoint, "project", side_effect=AssertionError("inventory hidden")):
             answer = api.deck_view(OWN, omit=("matchups",))
         self.assertNotIn("standins", answer)
+
+    def test_packed_placeholders_describe_the_saved_box_across_list_switches(self):
+        deck = self.parsed()
+        original = deck.target
+        decks.apply_edit(deck, owned=original, fields={"status": "built", "built_version": "owned"})
+        assembled.install(deck, "owned", original)
+        standins.install_stand_ins(deck, "owned", [ROW])
+        decks.apply_edit(deck, owned=decks.parse_decklist("Deck\n20 Forest\n"))
+        _write(self.path(OWN), decks.render_deck_file(deck))
+        for version in ("target", "owned"):
+            answer = api.deck_view(OWN, version, omit=("matchups",))
+            packed = answer["packed_placeholders"]
+            self.assertEqual(packed["version"], "owned")
+            self.assertEqual(packed["rows"][0]["card"]["name"], "Black Lotus")
+            self.assertEqual(packed["rows"][0]["using"], "Aerie Mystics")
+        with mock.patch.object(api.deck_page.guard, "sees_inventory", return_value=False), \
+                mock.patch.object(endpoint, "project_packed", side_effect=AssertionError("inventory hidden")):
+            self.assertNotIn("packed_placeholders", api.deck_view(OWN, omit=("matchups",)))
 
     def test_projection_picture_failure_preserves_mapping_and_product_has_none(self):
         self.choose()

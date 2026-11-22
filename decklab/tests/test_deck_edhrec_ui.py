@@ -1,7 +1,7 @@
 """A Commander deck's EDHREC ideas (E9-S07, deck-edhrec.js) under Node: a button on the Cards tab of a
 Commander deck only, nothing asked of the server until it's pressed, the sheet's cards grouped by EDHREC's
 categories with their share and marks (none for a viewer the server sent none), a failure said plainly,
-the Page choice narrowing them to one of EDHREC's budget, bracket or theme pages, and Consider adding a card to the deck's Considering list (POST /api/deck/considering).
+the Page choice narrowing them to one of EDHREC's budget, bracket or theme pages, and the editor handoff for editable suggestions.
 
 Runs the real page scripts in tests/fixtures/workspace_ui_runner.js; nothing is sent to a server.
 """
@@ -39,8 +39,6 @@ SETUP = PAGE + """
     }
     return {saved: true, sha256: 'b'.repeat(64)};
   };
-  let routed = 0; route = () => { routed += 1; };
-  const toasts = []; toast = (text) => toasts.push(text);
   const settle = async () => { for (let i = 0; i < 8; i += 1) await Promise.resolve(); };
   const commanderPage = () => { const page = makePage(); page.summary.kind = 'commander'; page.summary.id = 'commander/test'; return page; };
   const showCards = (page) => { clear(main); location.hash = '#/deck?id=' + encodeURIComponent(page.summary.id) + '&tab=cards';
@@ -74,17 +72,17 @@ class DeckEdhrecUiTests(unittest.TestCase):
           assert(text.includes(`Ghalta, Primal Hunger on EDHREC, from ${num(1000)} decks, fetched 2026-10-28`), text);
           assert(text.includes('High Synergy Cards') && text.includes('Lands'), text);
           // Not in the deck by default: the deck's own Elf is left out until All.
-          assert(!text.includes('In the deck'), text);
-          assert(text.includes('64% of decks · 2 free · 1 on the way'), text);
-          assert(text.includes('26% of decks · To buy · ~A$0.39'), text);
-          assert(text.includes('Owned, all in other decks'), text);
+          assert(!text.includes('In planned list'), text);
+          assert(text.includes('64% of decks · 1 free now · 1 on the way'), text);
+          assert(text.includes('26% of decks · Short · ~A$0.39'), text);
+          assert(text.includes('Owned, currently held'), text);
           assert(text.includes(`1 USD = ${num(1.43, 4)} AUD (ECB rate of 2026-10-27)`), text);
           assert(text.includes('1 card left out'), text);
-          buttonText(sheet, 'To buy (1)').click();
+          buttonText(sheet, 'Short in collection (1)').click();
           assert(!sheet.textContent.includes('Elvish Mystic'));
           assert(!sheet.textContent.includes('Lands'));
           buttonText(sheet, 'All (4)').click();
-          assert(sheet.textContent.includes('80% of decks · In the deck'));
+          assert(sheet.textContent.includes('80% of decks · In planned list'));
           const link = sheet.querySelectorAll('a').find((a) => a.textContent === 'Open on EDHREC');
           assert.equal(link.getAttribute('rel'), 'noopener noreferrer');
         """)
@@ -94,10 +92,10 @@ class DeckEdhrecUiTests(unittest.TestCase):
           answer = ANSWER(false);
           const sheet = await openIdeas(commanderPage());
           const text = sheet.textContent;
-          assert(!/free|To buy|Owned/.test(text.replace("isn't yours to see", '')), text);
+          assert(!/free|Short in collection|Owned/.test(text.replace("isn't yours to see", '')), text);
           assert(text.includes("nothing here says what's owned"), text);
-          assert(!buttonText(sheet, 'Consider'));
-          same(sheet.querySelector('.segmented').querySelectorAll('button').map((b) => b.textContent), ['Not in the deck (3)', 'All (4)', 'Cuts']);
+          assert(!sheet.querySelectorAll('a').some(a => a.getAttribute('href')?.includes('focus=considering')));
+          same(sheet.querySelector('.segmented').querySelectorAll('button').map((b) => b.textContent), ['Outside planned list (3)', 'All (4)', 'Cuts']);
         """)
 
     def test_a_failure_is_said_plainly(self):
@@ -122,7 +120,7 @@ class DeckEdhrecUiTests(unittest.TestCase):
           close.click();
           assert.equal(warning.hidden, true);
           assert(sheet.textContent.includes('High Synergy Cards'));
-          buttonText(sheet, 'To buy (1)').click();
+          buttonText(sheet, 'Short in collection (1)').click();
           assert.equal(sheet.querySelector('[aria-label="Dismiss EDHREC warning"]'), null);
           assert(sheet.textContent.includes('Pick Your Poison'));
         """)
@@ -165,25 +163,15 @@ class DeckEdhrecUiTests(unittest.TestCase):
           assert.equal(sheet.querySelector('#edhrec-page'), null);
         """)
 
-    def test_consider_adds_to_the_considering_list(self):
+    def test_consider_opens_the_existing_draft_without_saving(self):
         self.run_js("""
-          const page = commanderPage();
-          const sheet = await openIdeas(page);
-          const buttons = sheet.querySelectorAll('button').filter((b) => b.textContent === 'Consider');
-          assert.equal(buttons.length, 3);
-          assert.equal(buttons[0].getAttribute('aria-label'), 'Add Elvish Mystic to the Considering list');
-          buttons[0].click(); await settle();
-          buttons[1].click(); await settle();
-          const writes = asked.filter(([path]) => path === '/api/deck/considering').map(([, body]) => body);
-          same(writes.map((b) => [b.id, b.sha256, b.action, b.line]),
-            [['commander/test', 'a'.repeat(64), 'add', {name: 'Elvish Mystic', qty: 1}],
-             ['commander/test', 'b'.repeat(64), 'add', {name: 'Pick Your Poison', qty: 1}]]);
-          assert.equal(buttons[0].textContent, 'Considering');
-          assert(buttons[0].disabled);
-          same(toasts, ['Added Elvish Mystic to Considering.', 'Added Pick Your Poison to Considering.']);
-          assert.equal(routed, 0);
-          buttonText(sheet, 'Close').click();
-          assert.equal(routed, 1);              // the page drawn again with its Considering list
+          const sheet = await openIdeas(commanderPage());
+          const links = sheet.querySelectorAll('a').filter(link => link.textContent === 'Consider in editor');
+          assert.equal(links.length, 3);
+          assert.equal(links[0].getAttribute('aria-label'), 'Consider Elvish Mystic in the editor');
+          assert.equal(links[0].getAttribute('href'),
+            '#/edit?id=commander%2Ftest&v=target&focus=considering&consider=Elvish%20Mystic');
+          assert.equal(asked.some(([path, body]) => body || path === '/api/deck/considering'), false);
         """)
 
 

@@ -341,7 +341,7 @@ function rowMenuButton(line) {
       const found = findLine(uid);
       if (!found) return;
       openMenu(button, [
-        swapsAvailableFor(found.line) ? { text: "Stand-ins…", onclick: () => openSwapSheet(uid) } : null,
+        swapsAvailableFor(found.line) ? { text: "Find substitute cards", onclick: () => openSwapSheet(uid) } : null,
         { text: "Change printing…", onclick: () => openPrintings(uid) },
         // deck-categories.js's sheet; a page without that script has no Category… item.
         typeof openCategorySheet === "function" ? { text: found.line.category ? `Category: ${found.line.category}…`

@@ -25,6 +25,7 @@ import time
 import traceback
 
 from decklab.lib import commander_lineup, decks, inventory, permissions, pool, spaces, state
+from decklab.lib.decks import assembled, standins
 from decklab.lib.state import rules
 
 from . import common, guard, play_records
@@ -108,7 +109,7 @@ def _entry(summary, deadline, shows_standins, shows_box):
     entry = {"id": deck_id, "title": summary.get("title") or deck_id, "kind": "commander",
              "status": summary.get("status"), "version": version, "trial": bool(summary.get("trial")),
              "target_bracket": summary.get("target_bracket"), "bracket": None, "unknown": None}
-    deck_file = None
+    deck_file = packed = None
     try:
         _space, kind, slug = spaces.split_deck_id(deck_id)
         deck_file = decks.read_deck_file(decks.find_deck_file(kind, slug, spaces.HOME), space=spaces.HOME)
@@ -118,13 +119,23 @@ def _entry(summary, deadline, shows_standins, shows_box):
         if shows_box:
             from decklab.lib.decks import boxcheck
             entry["box_checked_on"] = boxcheck.checked_on(deck_file)
+        if built and shows_box and shows_standins:
+            try:
+                packed = assembled.get(deck_file)
+            except assembled.AssembledError:
+                entry["unknown"] = "Its packed list needs checking. Review the build from the deck page."
+            if packed is not None:
+                entry["packed_version"] = packed["version"]
         if shows_standins:
-            from decklab.lib.decks import standins
-            found = standins.project(deck_file, version)
-            entry["stand_ins"] = [{"for": row["for"], "using": row["using"], "qty": row["qty"]}
-                                  for row in found["rows"]]
+            try:
+                markers = (standins.installed_for(deck_file) or {}).get("cards", []) if packed is not None \
+                    else standins.project(deck_file, version)["rows"]
+            except standins.StandInsError:
+                entry["unknown"] = "Its physical placeholders need checking. Review the build from the deck page."
+            else:
+                entry["stand_ins"] = [{"for": row["for"], "using": row["using"], "qty": row["qty"]} for row in markers]
     if entry["unknown"] is None:
-        sections = deck_file.target if version == "target" else deck_file.owned
+        sections = packed["sections"] if packed is not None else (deck_file.target if version == "target" else deck_file.owned)
         if not sections:
             entry["unknown"] = NO_FILE
         elif time.monotonic() > deadline:

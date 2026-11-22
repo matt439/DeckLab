@@ -1,5 +1,5 @@
 /* Printings in box (lib/decks/printings.py): which physical printing of a built deck's cards went in
- * its box. The deck page's Cards tab shows the record and its sheet (POST /api/deck/printings); Build
+ * its box. The deck page's Packed in this box section shows the record and its sheet (POST /api/deck/printings); Build
  * decks' pull tiles and big view ask "Which printing?" and Finish building writes the choices. A record reserves
  * nothing: cards are still counted by name. */
 "use strict";
@@ -13,8 +13,8 @@ function boxPrintingWords(chosen) {
 function deckPrintingsSection(data) {
   const info = data.printings_in_box;
   if (!info) return null;
-  const section = el("section", { class: "deck-section deck-printings", id: "sec-printings", "aria-labelledby": "h-printings" },
-    el("h2", { id: "h-printings", text: "Printings in box" }));
+  const section = el("section", { class: "deck-printings", id: "sec-printings", "aria-labelledby": "h-printings" },
+    el("h3", { id: "h-printings", text: "Printings in box" }));
   const byName = new Map();
   for (const line of info.recorded || []) {
     if (!byName.has(line.name)) byName.set(line.name, []);
@@ -25,7 +25,7 @@ function deckPrintingsSection(data) {
       el("li", {}, el("span", { class: "deck-printings-name", text: name }), " ",
         el("span", { class: "sub", text: boxPrintingWords(lines) })))));
   } else {
-    section.append(el("p", { class: "sub", text: "Not recorded yet. Build decks asks which printing you pull, or record it here." }));
+    section.append(el("p", { class: "sub", text: "No exact printings recorded. Choose them here or while packing." }));
   }
   if ((info.stale || []).length) {
     add(section, [warningsBox(info.stale, "Printings in box out of date"),

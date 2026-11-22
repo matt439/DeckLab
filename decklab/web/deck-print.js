@@ -14,9 +14,31 @@ too).
 const PRINT_WAIT_MS = 15000;         // the longest a sheet waits for its pictures before printing anyway
 const CARDS_PER_PAGE = 9;            // 3 × 3 cards of 63 × 88 mm fit A4 and US Letter inside a 6 mm margin
 
+/** The current deck's exports, with the different proxy scope visible before printing. */
+function openDeckExportSheet(data) {
+  const profile = state.profile, token = routeToken, hash = location.hash;
+  const sheet = openSheet({ title: "Export & print" });
+  const current = () => !sheet.closed && sheet.dialog.isConnected && state.profile === profile
+    && routeToken === token && location.hash === hash && deckScreen?.data === data;
+  const button = (label, action) => el("button", { type: "button", class: "btn", text: label,
+    onclick: event => { if (current() && sheet.dialog.contains(event.currentTarget)) action(event.currentTarget); } });
+  add(sheet.body, [
+    el("h3", { text: `Decklist · ${listName(data.version)}` }),
+    el("div", { class: "actions" }, button("Copy decklist", trigger => copyDeck(data, {}, trigger)),
+      button("Copy with categories", trigger => copyDeck(data, { categories: true }, trigger)),
+      button("Download decklist", () => downloadDeck(data))),
+    el("h3", { text: `Play sheet · ${listName(data.version)}` }),
+    el("div", { class: "actions" }, button("Print play sheet", () => printDeck(data)),
+      button("Download play sheet", () => downloadPlaySheet(data))),
+    offersProxies(data) ? el("div", {}, el("h3", { text: "Missing cards · Planned list" }),
+      button("Print proxies for the Planned list", () => printProxies(data, current))) : null]);
+  sheetActions(sheet, [{ text: "Done", onclick: () => sheet.close() }]);
+  return sheet;
+}
+
 /** Show sheet (a .print-sheet) once its pictures have loaded (or PRINT_WAIT_MS has passed), print it, and
  * take it away after printing. An earlier sheet still there is replaced. */
-async function printCardSheet(sheet) {
+async function printCardSheet(sheet, current = () => true) {
   document.querySelector(".print-sheet")?.remove();
   document.body.append(sheet);
   const pictures = [...sheet.querySelectorAll("img")].filter((img) => !img.complete);
@@ -29,6 +51,7 @@ async function printCardSheet(sheet) {
       new Promise((done) => setTimeout(done, PRINT_WAIT_MS))]);
   }
   if (!sheet.isConnected) return;           // a later sheet took its place
+  if (!current()) { sheet.remove(); return; }
   window.addEventListener("afterprint", () => sheet.remove(), {once: true});
   window.print();
 }
@@ -110,7 +133,7 @@ function proxyIntro(target, copies) {
     coming ? el("p", {text: `${plural(coming, "copy is", "copies are")} on the way and not printed.`}) : null,
     el("ul", {class: "proxy-list"}, entries.map((e) => el("li", {text:
       `${e.to > e.from ? `${e.from}–${e.to}` : e.from}. ${e.words}` +
-      (e.covers ? `: covers the stand-in (${e.covers})` : "")}))));
+      (e.covers ? `: covers the physical placeholder (${e.covers})` : "")}))));
 }
 
 /** The Planned list's answer: data when it is the Planned list, else /api/deck's. */
@@ -119,24 +142,27 @@ async function plannedListOf(data) {
   return api(`/api/deck?id=${encodeURIComponent(data.summary.id)}&version=target&omit=matchups`);
 }
 
-/** More menu's Print proxies: print the Planned list's missing copies at card size. */
-async function printProxies(data) {
-  const token = typeof routeToken === "undefined" ? null : routeToken;
+/** Print the Planned list's missing copies at card size. */
+async function printProxies(data, owns = () => true) {
+  if (!seesInventory(data.summary.space || deckSpaceOf(data.summary.id))) return;
+  const token = routeToken, profile = state.profile, hash = location.hash;
+  const current = () => routeToken === token && state.profile === profile && location.hash === hash && owns();
   let target;
   try {
     target = await plannedListOf(data);
   } catch (e) {
-    toast(`The Planned list couldn't be loaded: ${e.message}`);
+    if (current()) toast(`The Planned list couldn't be loaded: ${e.message}`);
     return;
   }
-  if (token !== null && token !== routeToken) return;          // the page was left meanwhile
+  if (!current()) return;
+  if (!deckAvailabilityConfirmed(target?.owned)) { toast("Check availability before using the missing-card quantities."); return; }
   const copies = proxyCopies(target);
   if (copies === null) { toast("Missing cards show only to the people whose collection this deck uses."); return; }
   if (!copies.length) { toast("Nothing in the Planned list is missing."); return; }
   toast(`Getting ${plural(copies.length, "picture", "pictures")} ready to print…`);
   const sheet = el("article", {class: "print-sheet proxy-sheet"},
     proxyIntro(target, copies), cardSizePages(copies.map(proxyPiece)));
-  await printCardSheet(sheet);
+  await printCardSheet(sheet, current);
 }
 
 /** Whether More offers Print proxies: to a viewer who sees the deck's inventory, when the Planned list has
@@ -144,5 +170,6 @@ async function printProxies(data) {
 function offersProxies(data) {
   const s = data.summary;
   if (!data.owned || !(data.versions || []).includes("target") || !seesInventory(s.space || deckSpaceOf(s.id))) return false;
+  if (data.version === "target" && !deckAvailabilityConfirmed(data.owned)) return false;
   return data.version !== "target" || (data.owned.totals?.missing || 0) > 0;
 }

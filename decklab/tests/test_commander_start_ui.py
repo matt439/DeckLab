@@ -117,7 +117,12 @@ class CommanderStartTests(unittest.TestCase):
               roles:[], mana_sources:[], incoming:[], picks:[{quantity:1,name:elves.name,card:elves,reason:'Provides ramp'}]};
           };
           const namedButton = (host, label) => host.querySelectorAll('button').find(b => b.textContent === label);
-          const start = () => namedButton(ed.dom.page, 'Build from my collection').click();
+          const start = () => {
+            namedButton(ed.dom.page, 'Build from my cards').click();
+            const choice = [...colSheets].at(-1);
+            assert(namedButton(choice.body, 'Find precons I can build'));
+            namedButton(choice.body, 'Find commanders').click();
+          };
           const before = ed.history.length;
           start(); await Promise.resolve();
           let sheet = [...colSheets].at(-1);
@@ -157,6 +162,36 @@ class CommanderStartTests(unittest.TestCase):
           // A draft already holding both is left as it is.
           assert.equal(await startFromCommander('Ghalta, Primal Hunger', 'Tymna the Weaver'), false);
           assert.equal(ed.lists.Commander.length, 2);
+        ''')
+
+    def test_new_deck_has_one_import_review_and_contextual_precon_choices(self):
+        self.run_js(r'''
+          state.may = {create: [{space:'home'}], see_inventory: ['home']};
+          location.hash = '#/new';
+          startEditor({mode:'new', kind:'casual', restoreDraft:false});
+          const path = editor.dom.page, part = path.querySelector('.edit-start');
+          const namedButton = (host, label) => host.querySelectorAll('button').find(b => b.textContent === label);
+          const paths = [];
+          api = async path => { paths.push(path); return {decks: []}; };
+          assert(namedButton(part, 'Start empty'));
+          namedButton(part, 'Import a list').click();
+          const importDialog = [...document.querySelectorAll('dialog[open]')].at(-1);
+          assert.equal(importDialog.querySelector('h2').textContent, 'Import a list');
+          assert(importDialog.querySelector('textarea'));
+          assert(namedButton(importDialog, 'Import a deck link…'));
+          importDialog.querySelector('.sheet-close').click();
+          const other = part.querySelector('details');
+          assert(namedButton(other, 'Use a published precon list'));
+          assert(namedButton(other, 'Try a precon'));
+          const owned = other.querySelector('a');
+          assert.equal(owned.textContent, 'I own this precon');
+          assert.equal(owned.getAttribute('href'), '#/collection?open=precon');
+          namedButton(part, 'Build from my cards').click();
+          const choice = [...colSheets].at(-1);
+          assert(!namedButton(choice.body, 'Find commanders'));
+          namedButton(choice.body, 'Find precons I can build').click();
+          assert(paths.includes('/api/precons/coverage?'));
+          assert.equal(editor.history.length, 0);
         ''')
 
 

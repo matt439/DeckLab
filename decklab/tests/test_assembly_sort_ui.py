@@ -135,7 +135,7 @@ class AssemblySortUiTests(unittest.TestCase):
           assert.equal(tick('pull|Alpha').getAttribute('aria-pressed'), 'true');
           assert.equal(progress(), 'Pulled 22 of 25 cards');
           assert(!steps().some(s => s.includes('Basic lands')));
-          assert(steps().findIndex(s => s.endsWith('Tokens (optional)')) > steps().findIndex(s => s.includes('Put back')));
+          assert(steps().findIndex(s => s.endsWith('Tokens (optional)')) > steps().findIndex(s => s.includes('Return to storage')));
           const pull = main.querySelectorAll('.pack-step').find(s => s.querySelector('h3').textContent.includes('Pull from storage'));
           same(names(pull), ['Zebra','Alpha','Forest']);
           const basicsGroup = pull.querySelectorAll('.pack-storage-group').find(g => names(g).includes('Forest'));

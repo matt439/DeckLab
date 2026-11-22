@@ -286,6 +286,7 @@ class DeckViewTests(ApiTestCase):
             if type(row.get("missing")) is int and row["missing"] > 0:
                 row["shop_snapshot"] = dict(ABSENT_MISSING_SNAPSHOT)
                 row["shop_snapshots"] = [dict(each) for each in ABSENT_MISSING_SNAPSHOTS]
+        expected["availability_confirmed"] = not expected["warnings"] and not expected["unresolved"]
         expected["warnings"] = [api._strip_paths(w) for w in expected["warnings"]]    # no paths
         self.assertEqual(owned, json.loads(json.dumps(expected)))
         self.assertEqual((owned["rate"], owned["rate_date"], owned["price_date"]), (2.0, "2026-09-28", "2026-09-28"))

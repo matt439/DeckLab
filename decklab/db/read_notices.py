@@ -8,6 +8,9 @@ import sys
 from decklab.lib.state import pg, visibility as rules
 
 
+PUBLIC_AUDIENCE = "read-only for signed-in profiles and visitors on the home network"
+
+
 def _owner(value):
     return value if isinstance(value, str) and rules.OWNER.fullmatch(value) else "unknown"
 
@@ -64,8 +67,7 @@ class Reporter:
         subject = f"{label or thing} in space {_owner(owner)}"
         status = self._status(owner, thing)
         if status == "public":
-            _say(f"{subject}: {thing} Public switch enabled for signed-in profiles, read-only, "
-                 "when checked for this command.")
+            _say(f"{subject}: {thing} Public switch enabled, {PUBLIC_AUDIENCE}, when checked for this command.")
         elif status == "private":
             _say(f"{subject} is Private to that space. Do not relay it outside that space.")
         else:
@@ -84,7 +86,7 @@ class Reporter:
                                                     else f"owner {_owner(owner)}")
             status = self._status(owner, "accessories")
             if status == "public":
-                _say(f"{subject}: kit Public to signed-in profiles, read-only, when checked for this command.")
+                _say(f"{subject}: kit Public, {PUBLIC_AUDIENCE}, when checked for this command.")
             elif status == "private":
                 scope = "the shared home kit" if owner == "shared" else "that owner"
                 _say(f"{subject}: Private to {scope}. Do not relay it outside that scope.")

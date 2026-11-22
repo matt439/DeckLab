@@ -4,15 +4,15 @@
 function shopCompareButton(view) {
   if (shopCombinedChoices(view).length < 3) return null;
   return el("button", {type: "button", class: "btn shop-compare-choose",
-    text: view.compare ? "Change deck groups…" : "Compare deck groups…", onclick: () => shopCompareSheet(view)});
+    text: view.compare ? "Change deck groups…" : "Compare which decks to finish…", onclick: () => shopCompareSheet(view)});
 }
 
 function shopCompareSheet(view) {
   if (!shopQueueActive(view)) return;
   const initial = view.compare?.ids || [shopCombinedState(view).chosen, shopCombinedState(view).chosen];
   const groups = initial.map(ids => new Set(ids));
-  const sheet = openSheet({title: "Compare deck groups"});
-  sheet.body.append(el("p", {text: "Choose 2 to 12 decks per group. A deck can appear in both."}));
+  const sheet = shopTrackQueueSheet(openSheet({title: "Compare which decks to finish"}), view);
+  sheet.body.append(el("p", {text: "Choose two alternative groups of 2 to 12 decks. The same deck may appear in both groups. Each group gets its own allocation of the collection."}));
   const hint = el("p", {class: "field-hint", role: "status"});
   const sync = () => {
     const issue = groups.findIndex(group => group.size < SHOP_COMBINED_MIN || group.size > SHOP_COMBINED_MAX);
@@ -68,7 +68,7 @@ function shopCompareContent(view) {
   if (comparison.error) return loadFailed("Deck group comparison", comparison.error, () => shopCompareLoad(view, comparison.ids));
   const pairs = [comparison.answer.left, comparison.answer.right];
   return el("div", {}, el("p", {class: "shop-pair-summary", role: "status", text: shopCompareSummary(pairs)}),
-    el("p", {class: "sub", text: "Counts use each deck's Planned list and assume enough ordinary basic lands."}),
+    el("p", {class: "sub", text: "Choose one group to finish. Each group uses its Planned lists and assumes enough ordinary basic lands."}),
     el("div", {class: "shop-pair-results"}, pairs.map(pair => shopComparePair(pair, view))));
 }
 
@@ -149,6 +149,7 @@ function shopComparePair(pair, view) {
       shop.read ? shopSnapshotWhen(shop.fetched_at) || "Date unknown" : "No readable check",
       shop.unchecked ? ` · ${plural(shop.unchecked, "card")} unchecked` : null,
       shop.failed ? ` · Checks failed for ${plural(shop.failed, "card")}` : null)))));
+  if (isAdminProfile()) card.append(el("a", {class: "btn btn-quiet", href: "#/settings?part=prices", text: "Price settings"}));
   const canQueue = shopCombinedQueueOffered(view);
   const otherFinish = price.shops?.some(shop => shop.rows.some(row => row.printings?.some(item => item.finish !== "nonfoil")));
   if (canQueue && otherFinish) card.append(el("p", {class: "field-hint",

@@ -130,6 +130,28 @@ class EditorConsideringUiTests(unittest.TestCase):
           assert.equal(requests,0);
         """)
 
+    def test_deck_suggestion_deep_link_reviews_without_saving_and_can_undo(self):
+        self.run_js(r"""
+          const writes=[];
+          apiWrite=async(...args)=>{writes.push(args);throw new Error('No immediate write');};
+          history.replaceState=(data,unused,hash)=>{history.state=data;if(hash)location.hash=hash;};
+          load=(path,token,ready)=>ready(consideringView());
+          location.hash=editHref('casual/sample','owned')+'&focus=considering&consider=Opt';
+          showEditor(parseHash().params,routeToken);
+          const ed=editor, before=plainConsidering(ed);
+          assert.equal(location.hash,editHref('casual/sample','owned'));
+          assert.equal(ed.version,'owned');
+          assert(!editorConsideringChanged(ed));
+          const sheet=document.querySelector('dialog');
+          assert.equal(sheet.querySelector('.editor-considering-name').value,'Opt');
+          sheet.querySelector('[data-action="add"]').click();
+          same(plainConsidering(ed).at(-1),{qty:1,name:'Opt'});
+          assert(!listChanged());
+          assert(undoLast());
+          same(plainConsidering(ed),before);
+          same(writes,[]);
+        """)
+
     def test_empty_section_add_remove_and_undo_keep_the_same_local_draft_contract(self):
         self.run_js(r"""
           let requests=0;apiWrite=async()=>{requests++;throw new Error('No immediate write');};

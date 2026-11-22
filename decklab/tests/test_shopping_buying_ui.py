@@ -71,7 +71,7 @@ class ShoppingBuyingInteractionTests(unittest.TestCase):
           assert.equal(rows[0].querySelector(".card-row").querySelector("a"), null);
           rows[0].querySelector(".card-row").click();
           assert.equal(inspections.at(-1).card.name, "Alpha");
-          assert(section.textContent.includes("shared copy may count twice"));
+          assert(section.textContent.includes("The same loose copy can cover more than one list"));
         """)
 
     def test_all_queue_categories_annotate_shortfalls_without_suggesting_duplicates(self):

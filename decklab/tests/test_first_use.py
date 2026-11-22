@@ -60,17 +60,25 @@ class FirstUseUiTests(unittest.TestCase):
           same(allowedPlayers(),[['either','Shared']]);assert.equal(newDeckPlayer('home'),'either');
         """)
 
-    def test_empty_collection_has_four_reviewed_starts_and_stale_controls_do_nothing(self):
+    def test_empty_collection_has_one_entry_and_four_reviewed_methods(self):
         self.run_js("""
-          as('matt',MAY.admin);const cv={token:routeToken,profile:'matt',space:'home',editable:true};
+          as('matt',MAY.admin);
+          const data={space:'home',cards:[],total:0,editable:true};
+          const cv=drawCollection(data,new URLSearchParams(),'home');
+          assert(!cv.results.querySelector('button'));
+          assert(cv.filters.hidden); assert(cv.views.hidden);
+          const add=button(main,'Add cards'); assert(add);
           const calls=[];openImportSheet=()=>calls.push('import');openPreconSheet=()=>calls.push('precon');
           openScanSheet=()=>calls.push('scan');openCollectionSheet=()=>calls.push('one');
-          const node=colFindEmpty(cv,false);main.append(node);
-          for(const label of ['Import cards','Add a precon','Scan cards','Add one card'])button(node,label).click();
-          same(calls,['import','precon','scan','one']);
-          state.profile=PROFILES[1];button(node,'Import cards').click();assert.equal(calls.length,4);
-          assert.equal(colFindEmpty({...cv,editable:false},false).querySelectorAll('button').length,0);
-          assert.equal(colFindEmpty(cv,true).querySelectorAll('button').length,0);
+          for(const label of ['Enter one','Scan','Import a list','Add a precon']) {
+            assert(!button(main,label)); add.click(); button(openDialog(),label).click();
+          }
+          same(calls,['one','scan','import','precon']);
+          add.click(); const stale=button(openDialog(),'Import a list');
+          state.profile=PROFILES[1];stale.click();assert.equal(calls.length,4);
+          colCloseSheets(); clear(main);
+          drawCollection({...data,editable:false},new URLSearchParams(),'home');
+          assert.equal(button(main,'Add cards'),null);
         """)
 
     def test_import_help_names_formats_printing_requirement_and_blank_template(self):
@@ -86,7 +94,9 @@ class FirstUseUiTests(unittest.TestCase):
     def test_help_is_static_and_optional_forge_is_distinct_from_broken(self):
         self.run_js("""
           as('user2',MAY.user2);api=()=>{throw new Error('Help must not read records');};showTerminology();
-          for(const word of ['Idea','Building','Built','Planned list','Play-now list','Owned vs needed','Tables out of date'])assert(main.textContent.includes(word));
+          assert.equal(main.querySelector('h1').textContent, 'Help');
+          for(const word of ['Idea','Building','Planned list','Alternative list','Packed in this box',
+            'Check copies at home','Use recorded collection','Availability needs updating'])assert(main.textContent.includes(word));
           const missing=forgeBox({ready:false,installed:false,problem:'private local error'}).textContent;
           assert(missing.includes('Simulations are optional'));assert(missing.includes('SELF-HOSTING.md step 8'));
           assert(!missing.includes('private local error'));assert(!missing.includes("until it's fixed"));

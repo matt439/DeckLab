@@ -50,7 +50,7 @@ const COL_LANGUAGES = [["", "Not recorded"], ["en", "English"], ["ja", "Japanese
   ["he", "Hebrew"], ["la", "Latin"], ["grc", "Ancient Greek"], ["ar", "Arabic"],
   ["sa", "Sanskrit"], ["ph", "Phyrexian"], ["qya", "Quenya"]];
 const COL_FILTER_KEYS = ["q", "color", "type", "role", "mv", "availability", "page"];
-const COL_AVAILABILITY = [["all", "All"], ["free", "Free now"], ["incoming", "On the way"], ["held", "In decks"],
+const COL_AVAILABILITY = [["all", "All"], ["free", "Free now"], ["incoming", "On the way"], ["held", "Held"],
   ["lent", "Lent out"], ["spare", "Spare"]];
 const COL_IMPORT_MAX = 4 * 1024 * 1024;     // bytes: the server's limit (collection_edit.MAX_IMPORT; 20,000 rows)
 const COL_NOTES_MAX = 500;
@@ -202,18 +202,20 @@ function showCollection(params, token) {
   const asked = new URLSearchParams(query);
   asked.set("limit", String(colPageSize()));
   const open = params.get("open");
-  return load(colPath("/api/collection", space, asked), token, (data) => colOpenAsked(drawCollection(data, query, space, token), open));
+  const precon = open === "precon" ? params.get("precon") : null;
+  return load(colPath("/api/collection", space, asked), token,
+    data => colOpenAsked(drawCollection(data, query, space, token), open, precon));
 }
 
 /** #/collection?open=precon or ?open=import, the empty library's ways to start (E11-S56): that sheet, once, where the
  * visitor may change this collection, after load() has focused the page; the address loses ?open= first, so
  * Back or a reload doesn't reopen it. */
-function colOpenAsked(cv, open) {
+function colOpenAsked(cv, open, precon = null) {
   if (open) setTimeout(() => {
     if (!colActive(cv)) return;
     history.replaceState(history.state, "", colHash(cv.space, "find", cv.query));
-    const sheet = { precon: openPreconSheet, import: openImportSheet, start: openCollectionStartSheet }[open];
-    if (sheet && cv.editable && !cv.unsupported) sheet(cv);
+    const sheet = { precon: openPreconSheet, import: openImportSheet, start: openCollectionAddSheet }[open];
+    if (sheet && cv.editable && !cv.unsupported) sheet(cv, precon);
   });
 }
 
@@ -304,13 +306,17 @@ function colKeyboardReady(cv, event) {
 /** Save the space's collection as a CSV in the collection's columns, named after the space and the date
  * (GET /api/collection/download, guarded as the page is: E7-S30). */
 async function downloadCollection(cv) {
+  const profile = state.profile, hash = location.hash;
+  const here = () => colActive(cv) && state.profile === profile && location.hash === hash && seesInventory(cv.space);
+  if (!here()) return;
   let data;
   try {
     data = await api(colPath("/api/collection/download", cv.space));
   } catch (e) {
-    colSay(cv, `The collection couldn't be downloaded: ${e.message}`);
+    if (here()) colSay(cv, `The collection couldn't be downloaded: ${e.message}`);
     return;
   }
+  if (!here()) return;
   const url = URL.createObjectURL(new Blob([data.csv], { type: "text/csv;charset=utf-8" }));
   const link = el("a", { href: url, download: data.filename });
   document.body.append(link); link.click(); link.remove();
@@ -325,38 +331,53 @@ function colHead(cv, query) {
     spaces.map((s) => el("a", { href: colHash(s.id, cv.kind === "map" && s.id !== cv.space ? "rows" : cv.kind, query),
       text: s.id === HOME_SPACE ? "Home" : s.name,
       "aria-current": s.id === cv.space ? "page" : null }))) : null;
-  const tabs = el("nav", { class: "segmented col-views", "aria-label": "Collection view" },
+  cv.views = el("nav", { class: "segmented col-views", "aria-label": "Collection view" },
     el("a", { href: colHash(cv.space, "find", query), text: "Find cards", "aria-current": cv.kind === "find" ? "page" : null }),
     el("a", { href: colHash(cv.space, "rows"), text: "Card list", "aria-current": cv.kind === "rows" ? "page" : null }),
     cv.editable && !cv.unsupported ? el("a", { href: colHash(cv.space, "map"), text: "Storage map",
       "aria-current": cv.kind === "map" ? "page" : null }) : null);
   const owner = cv.space === HOME_SPACE ? "the people of the home collection" : spaceName(cv.space);
-  const more = [
-    cv.editable && !cv.unsupported ? { label: "Start recording a collection.", onclick: () => openCollectionStartSheet(cv) } : null,
-    cv.editable ? { label: "Import cards…", onclick: () => openImportSheet(cv) } : null,
-    cv.editable && !cv.unsupported ? { label: "Scan cards…", onclick: () => openScanSheet(cv) } : null,
-    cv.editable ? { label: "Add a precon…", onclick: () => openPreconSheet(cv) } : null,
-    cv.unsupported ? null : { label: "Precons we could build…", onclick: () => openCoverageSheet(cv) },
-    cv.unsupported ? null : { label: "Commanders we could build…", onclick: () => openCommanderCandidates(cv) },
-    cv.editable && !cv.unsupported ? { label: "Record a trade…", onclick: () => openTradeSheet(cv) } : null,
-    cv.editable && !cv.unsupported ? { label: "Loans…", onclick: () => openCollectionLoans(cv) } : null,
-    cv.editable && !cv.unsupported ? { label: "Storage setup…", onclick: () => openStorageSetup(cv) } : null,
-    cv.unsupported ? null : { label: "Download collection (CSV)", onclick: () => downloadCollection(cv) },
+  const canAdd = cv.editable && !cv.unsupported;
+  const action = (text, open) => el("button", { type: "button", class: "btn btn-primary col-mutate", text,
+    "data-focus": "add", "aria-haspopup": "dialog", onclick: event => {
+      if (event.currentTarget.isConnected && colActive(cv) && !cv.busy) open(cv);
+    } });
+  const primary = canAdd ? action(cv.kind === "map" ? "Storage setup" : "Add cards",
+    cv.kind === "map" ? openStorageSetup : openCollectionAddSheet) : null;
+  const manage = cv.kind === "map" || cv.unsupported ? null : menuButton("Manage collection", [
+    canAdd ? { label: "Record a trade…", onclick: () => openTradeSheet(cv) } : null,
+    canAdd ? { label: "Loans…", onclick: () => openCollectionLoans(cv) } : null,
+    canAdd ? "sep" : null,
+    { label: "Download collection (CSV)", onclick: () => downloadCollection(cv) },
     typeof memberOwnSpace === "function" && memberOwnSpace() && cv.space === ownSpace()
-      ? { label: "Download my space (zip)", onclick: () => downloadMemberSpace(cv) } : null];
+      ? { label: "Download my space (zip)", onclick: () => openCollectionDownload(cv) } : null,
+  ], { buttonClass: "btn btn-quiet" });
+  cv.emptyTools = cv.kind === "find" && canAdd ? el("a", { class: "btn btn-quiet", href: colHash(cv.space, "map"),
+    text: "Storage map", hidden: true }) : null;
   return [
     ...pageHead({ title: colTitle(cv.space),
-      description: cv.kind === "rows" ? "Every printing recorded, one row each."
-        : cv.kind === "find" ? "Cards you own or have on the way." : null,
-      primary: cv.editable && cv.kind !== "map" ? el("button", { type: "button", class: "btn btn-primary col-mutate", text: "Add card",
-        "data-focus": "add", onclick: () => openCollectionSheet(cv) }) : null,
-      more: cv.kind === "map" ? [] : more }),
-    el("div", { class: "col-switches" }, picker, tabs),
+      description: cv.kind === "rows" ? "Every recorded printing and finish." : null,
+      primary: primary || manage ? [primary, manage] : null }),
+    cv.switches = el("div", { class: "col-switches" }, picker, cv.views),
     cv.unsupported ? el("p", { class: "box box-info",
       text: `${spaceName(cv.space)}'s collection can't be shown until Deck Lab's server is updated.` })
       : !cv.editable && cv.data.space !== undefined ? el("p", { class: "sub col-read-only",
         text: `Read only: only ${owner} can change ${cv.space === HOME_SPACE ? "the home collection" : "this collection"}.` }) : null,
     cv.message];
+}
+
+function openCollectionDownload(cv) {
+  if (!colActive(cv) || cv.busy || !memberOwnSpace() || cv.space !== ownSpace()) return;
+  const profile = state.profile, hash = location.hash;
+  const sheet = colOpenSheet("Download my space");
+  const here = () => colActive(cv) && state.profile === profile && location.hash === hash
+    && !cv.busy && memberOwnSpace() && cv.space === ownSpace();
+  sheet.body.append(el("p", { text: "Your personal zip contains recorded cards, tokens, dice, storage locations, raw collection imports and saved deck lists with their notes." }));
+  sheetActions(sheet, [{ text: "Cancel", onclick: () => sheet.close() },
+    { text: "Download zip", kind: "primary", onclick: event => {
+      if (sheet.closed || keyboardDialog() !== sheet.dialog || !here() || !event.currentTarget.isConnected) return;
+      boxCollectionAfterSheet(sheet, here, () => downloadMemberSpace(cv));
+    } }]);
 }
 
 function setCollectionBusy(cv, busy, shown = null) {
@@ -378,6 +399,10 @@ function colSay(cv, words, stale) {
   if (!words) return;
   add(cv.message, [el("p", { text: words }), staleTablesNote(stale)]);
   toast(words);
+}
+
+function colChangeLink(cv) {
+  cv.message.append(el("p", {}, el("a", { href: "#/activity?kind=collection", text: "Changes & undo" })));
 }
 
 /** Fetch the rows for Find cards, or refresh their filing locations after a storage setup save. */
@@ -436,17 +461,18 @@ function colChanged(cv, answer, words, filing = null) {
   if (cv.kind === "rows") {
     drawColRowList(cv);
     colSay(cv, words, answer && answer.stale_tables);
+    if (words) colChangeLink(cv);
     if (filing) add(cv.message, [colFilingGuide(cv, filing)]);
     setCollectionBusy(cv, false);
     return;
   }
-  colReload(cv, words, answer && answer.stale_tables, filing);
+  colReload(cv, words, answer && answer.stale_tables, filing, true);
 }
 
 /** Load the view again from the server, then say what happened there: the Find cards counts, or the Card
  * list after an import, come from the server. */
-function colReload(cv, words, stale, filing = null) {
-  state.colNotice = { space: cv.space, profile: cv.profile, words, stale, filing };
+function colReload(cv, words, stale, filing = null, changed = false) {
+  state.colNotice = { space: cv.space, profile: cv.profile, words, stale, filing, changed };
   route();
 }
 
@@ -456,6 +482,7 @@ function colTakeNotice(cv) {
   state.colNotice = null;
   if (notice && notice.space === cv.space && (!notice.profile || notice.profile === cv.profile) && notice.words) {
     colSay(cv, notice.words, notice.stale);
+    if (notice.changed) colChangeLink(cv);
     if (notice.filing) add(cv.message, [colFilingGuide(cv, notice.filing)]);
   }
 }
@@ -473,7 +500,8 @@ function drawCollection(data, query, space = HOME_SPACE, token = null) {
     cv.results = el("div", { class: "col-results" });
     // While a search is fetched: a small spinner and words over the dimmed old results.
     cv.findLoading = el("div", { class: "col-find-loading" });
-    add(root, [colFilters(cv), cv.findLoading, cv.results]);
+    cv.filters = colFilters(cv);
+    add(root, [cv.filters, cv.findLoading, cv.results]);
     drawCollectionResults(cv, data);
   }
   $("#main").append(root);
@@ -628,6 +656,14 @@ async function colLoadFind(cv, query, paging) {
 function drawCollectionResults(cv, data) {
   const cards = data.cards || [];
   const filtered = COL_FILTER_KEYS.some((key) => key !== "page" && cv.query.get(key));
+  const empty = !filtered && data.total === 0 && !cards.length;
+  cv.filters.hidden = cv.views.hidden = empty;
+  cv.switches.hidden = empty && !cv.switches.querySelector(".col-spaces");
+  if (cv.emptyTools) cv.emptyTools.hidden = !empty;
+  if (empty) {
+    add(clear(cv.results), [warningsBox(data.warnings, "Collection counts need attention"), colFindEmpty(cv, false)]);
+    return;
+  }
   const go = (page) => colFilter(cv, "page", page > 1 ? String(page) : "");
   const counted = data.spares?.ready === false ? "Spare copies unavailable"
     : filtered ? `${plural(data.total || 0, "card name")} match` : plural(data.total || 0, "card name");
@@ -647,8 +683,7 @@ function drawCollectionResults(cv, data) {
     colPager(data.page, data.pages, go, "Pages, bottom")]);
 }
 
-/** An empty page of Find cards: nothing matches, the page is past the cards (total > 0), or there are none. The
- * head's Add card stays the page's one primary button. */
+/** Keep search recovery separate from starting an empty collection. */
 function colFindEmpty(cv, filtered, total = 0) {
   if (total > 0) {
     return el("div", { class: "empty" }, el("p", { text: "No cards on this page." }),
@@ -658,28 +693,19 @@ function colFindEmpty(cv, filtered, total = 0) {
     return el("div", { class: "empty" }, el("p", { text: "No cards match these filters." }),
       el("a", { class: "btn", href: colHash(cv.space, "find"), text: "Clear the filters" }));
   }
-  const ways = cv.editable && !cv.unsupported ? [
-    ["Start with physical cards", openCollectionStartSheet, "No list yet? Work through a small pile at a time."],
-    ["Import cards", openImportSheet, "Bring in a collection export or a saved pending batch."],
-    ["Add a precon", openPreconSheet, "Add an opened precon's cards and deck."],
-    ["Scan cards", openScanSheet, "Review photos of your cards."],
-    ["Add one card", openCollectionSheet, "Choose a card and its printing."]
-  ] : [];
-  return el("div", { class: "empty lib-start" }, el("p", { text: ways.length ? "No cards recorded yet. Start with one of these:" : "No cards recorded yet." }),
-    ways.length ? el("ul", {class: "lib-start-ways"}, ways.map(([text, open, line]) => el("li", {},
-      el("button", {type: "button", class: "btn col-mutate", text, onclick: event => {
-        if (event.currentTarget.isConnected && colActive(cv) && !cv.busy) open(cv);
-      }}), el("span", {class: "lib-start-line", text: line})))) : null);
+  return el("div", { class: "empty col-empty" }, el("p", { text: cv.editable
+    ? "No cards recorded yet. Start with one card or a small pile." : "No cards recorded yet." }), cv.emptyTools);
 }
 
-/** The name-level count shown on both the casual row and lab tile. */
-function colCountWords(row) {
-  if (Number.isSafeInteger(row.spares?.spare) && row.spares.spare > 0) return `${row.spares.spare} spare`;
-  if (!row.owned) return row.incoming ? `${row.incoming} on the way` : "";
-  if (row.basic || row.free_now == null) return `${row.owned} owned`;
-  if (row.lent > 0) return [`${row.owned} owned`, row.held > 0 ? `${row.held} in decks` : null,
-    `${row.lent} lent out`, `${row.free_now} free`].filter(Boolean).join(" · ");
-  return `${row.owned} owned · ${row.free_now ? `${row.free_now} free` : "all in decks"}`;
+/** Name-level availability is shared by the casual list, lab grid and card viewer. */
+function colAvailabilityWords(row, incoming = true) {
+  const { owned, free_now: free, held, lent = 0 } = row;
+  const short = held + lent > owned;
+  return [!row.basic && free > 0 ? `${free} free now` : null,
+    incoming && row.incoming > 0 ? `${row.incoming} on the way` : null,
+    !row.basic && held > 0 ? `${held} ${short ? "reserved" : "held"}` : null,
+    lent > 0 ? `${lent} lent out` : null,
+    !row.basic && owned > 0 && (free == null || short) ? "Availability to check" : null].filter(Boolean);
 }
 
 /** One card of Find cards: its picture with ×N for the copies owned, one line of counts, and chips only for
@@ -689,13 +715,11 @@ function colCountWords(row) {
 function colFindCaption(cv, row) {
   return el("span", { class: "col-viewer-words" },
     el("span", { class: "col-viewer-counts", text: [row.owned ? `${row.owned} owned` : "None owned yet",
-      !row.basic && row.owned && row.free_now != null ? `${row.free_now} free now` : null,
-      row.lent > 0 ? `${row.lent} lent out` : null,
-      row.incoming ? `${row.incoming} on the way` : null].filter(Boolean).join(" · ") }),
+      ...colAvailabilityWords(row)].join(" · ") }),
     row.spares ? el("span", {class: "col-viewer-note", text: row.spares.reason
       + (row.spares.printing_uncertain ? " Printing assignment is unconfirmed; check the deck boxes." : "")}) : null,
     row.basic ? el("span", { class: "col-viewer-note", text: "Special basic land: which deck uses it isn't tracked." }) : null,
-    row.holders && row.holders.length ? el("span", { class: "col-viewer-decks" }, "In decks: ",
+    row.holders && row.holders.length ? el("span", { class: "col-viewer-decks" }, "Reserved copies: ",
       row.holders.map((h, i) => [i ? ", " : "", `${h.quantity} in `, colViewerLink(deckHref(h.id), h.title)])) : null,
     cv.editable && row.owned ? el("button", { type: "button", class: "btn col-viewer-edit", text: "Edit copies",
       onclick: () => colAfterViewer(() => openCopiesSheet(cv, row.name)) }) : null);
@@ -711,9 +735,11 @@ function colTile(cv, row) {
   const chips = [];
   if (row.incoming && row.owned) chips.push(status("info", `${row.incoming} on the way`));
   if (!row.card) chips.push(status("warn", "Name not matched"));
-  const tile = cardTile(row.card || null, { qty: row.owned, name: row.name, meta: colCountWords(row) || null, chips,
+  const facts = colAvailabilityWords(row, !row.owned);
+  if (row.spares?.spare > 0) facts.unshift(`${row.spares.spare} spare`);
+  const tile = cardTile(row.card || null, { qty: row.owned, name: row.name, meta: facts.join(" · ") || null, chips,
     viewerGroup: "collection", caption: colFindCaption(cv, row),
-    label: `${row.name}, ${colCountWords(row) || "none owned"}`,
+    label: [row.name, row.owned ? `${row.owned} owned` : "none owned", ...colAvailabilityWords(row)].join(", "),
     onclick: row.card ? null : (cv.editable ? () => openCopiesSheet(cv, row.name) : null) });
   add(tile, [colFindIdentity(row.card)]);
   if (row.spares) add(tile, [el("p", {class: "sub col-spare-reason", text: row.spares.reason})]);
@@ -723,20 +749,19 @@ function colTile(cv, row) {
 /** Casual Find cards is a name-level list, not a printing-level price or an allocation calculation. */
 function colFindRows(cv, cards) {
   return el("ul", { class: "col-find-rows" }, cards.map((row) => {
-    const caption = colFindCaption(cv, row), words = colCountWords(row) || "None owned";
-    const extra = [row.incoming && row.owned ? `${row.incoming} on the way` : null,
-      row.basic ? "Deck allocation not tracked" : null,
-      !row.basic && !row.lent && !(row.owned && row.free_now === 0 && row.held === row.owned)
-        && Number.isFinite(row.held) && row.held > 0 ? `${row.held} in decks` : null].filter(Boolean);
+    const caption = colFindCaption(cv, row), owned = `${row.owned || 0} owned`;
+    const facts = colAvailabilityWords(row);
+    if (row.spares?.spare > 0) facts.unshift(`${row.spares.spare} spare`);
+    if (row.basic) facts.push("Deck allocation not tracked");
     const open = row.card ? (event) => { if (colActive(cv)) openCard(row.card, event.currentTarget); }
       : cv.editable ? () => openCopiesSheet(cv, row.name) : null;
     const node = el(open ? "button" : "div", { class: "col-find-open", type: open ? "button" : null,
-      "aria-label": open ? `${row.name}, ${words}` : null, "aria-haspopup": open ? "dialog" : null, onclick: open },
+      "aria-label": open ? [row.name, owned, ...facts].join(", ") : null, "aria-haspopup": open ? "dialog" : null, onclick: open },
       el("span", { class: row.card?.img_small ? "col-find-picture" : "col-find-picture thumb-missing", "aria-hidden": "true" }, row.card?.img_small
         ? el("img", { src: row.card.img_small, alt: "", loading: "lazy", decoding: "async", width: 56, height: 78 }) : null),
       el("span", { class: "col-find-heading" }, el("span", { class: "col-find-name", text: row.name }), colFindIdentity(row.card, 20)),
-      el("span", { class: "col-find-count", text: `${row.owned || 0} owned` }),
-      el("span", { class: "col-find-meta", text: [words, ...extra].join(" · ") }),
+      el("span", { class: "col-find-count", text: owned }),
+      facts.length ? el("span", { class: "col-find-meta", text: facts.join(" · ") }) : null,
       ...(row.spares ? [el("span", {class: "col-find-spare-reason", text: row.spares.reason
         + (row.spares.printing_uncertain ? " Printing assignment unconfirmed." : "")})] : []),
       row.card?.type_line ? el("span", { class: "col-find-type", text: row.card.type_line })
@@ -814,7 +839,7 @@ async function openCopiesSheet(cv, name, opts = {}) {
   };
   add(clear(body), [
     rows.length ? el("div", { class: "col-copy-rows" }, rows.map((row) => cardRow(cv.pictures[colKey(row)] || null, {
-      qty: Number(row.quantity), name: colPrinting(row), meta: colRowFacts(row) || "Condition and language recorded",
+      qty: Number(row.quantity), name: colPrinting(row), meta: [colStorageWords(cv, row), colRowFacts(row)].filter(Boolean).join(" · "),
       aside: el("span", { class: "col-copy-edit", "aria-hidden": "true", text: "Edit" }),
       onclick: () => open(row) }))) : emptyBox(repair
         ? "No printing is recorded for this card. Count copies across every location before adding a printing."
@@ -1026,7 +1051,7 @@ async function applyImport(ctx, skipProblems) {
     invalidateLibrary();
     const words = `Imported ${plural(added.cards || 0, "card")} (${plural(added.rows || 0, "row")}).`
       + (answer.skipped ? ` ${plural(answer.skipped, "row")} with problems skipped.` : "") + colImportExcludedWords(answer) + scanRate;
-    if (here && !document.querySelector("dialog[open]")) colReload(cv, words, answer.stale_tables, colFilingSnapshot(answer, cv));
+    if (here && !document.querySelector("dialog[open]")) colReload(cv, words, answer.stale_tables, colFilingSnapshot(answer, cv), true);
     else if (state.profile?.id === cv.profile) toast(words);
   } catch (error) {
     if (ctx.sheet.closed || !colActive(cv) || selection !== ctx.seq || ctx.preview !== reviewed) return;
