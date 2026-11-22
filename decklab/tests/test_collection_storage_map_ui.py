@@ -67,7 +67,9 @@ class StorageMapUiTests(unittest.TestCase):
           physicalRows()[0].setAttribute('open', '');
           chooseSection('white').click(); await flush();
           assert(openDialog().textContent.includes('This section has never been audited.'));
-          assert(action('Start audit'));
+          const count = action('Count by hand');
+          assert.equal(document.getElementById(count.getAttribute('aria-describedby')).textContent,
+            'Review your counts and save a dated audit with any differences.');
           action('Close').click(); assert.equal(document.activeElement, chooseSection('white'));
         """)
 
@@ -95,7 +97,7 @@ class StorageMapUiTests(unittest.TestCase):
               differences: [{...rows[0], expected: 3, observed: 0}]}}};
           };
           chooseSection('white').click(); await flush();
-          action('Start audit').click();
+          action('Count by hand').click();
           assert(openDialog().textContent.includes('2 expected (estimate)'));
           assert(openDialog().textContent.includes('Row 1 B'));
           const describedBy = countInput(foil).getAttribute('aria-describedby');
@@ -142,11 +144,11 @@ class StorageMapUiTests(unittest.TestCase):
           assert(openDialog().textContent.includes('Assign a storage location'));
           assert(openDialog().textContent.includes('Expected cards'));
           assert(openDialog().textContent.includes('FDN 1 · Non-foil'));
-          assert.equal(action('Start audit'), null);
+          assert.equal(action('Count by hand'), null);
           assert(openDialog().querySelectorAll('button').every(button => button.textContent.trim()));
           action('Close').click();
           chooseSection('white').click(); await flush();
-          action('Start audit').click(); action('Unentered counts match').click();
+          action('Count by hand').click(); action('Unentered counts match').click();
           action('Review count').click();
           assert(openDialog().textContent.includes('The count matched.'));
           assert(!openDialog().textContent.includes('null'));
@@ -155,7 +157,7 @@ class StorageMapUiTests(unittest.TestCase):
           assert(openDialog().textContent.includes('This section changed.'));
           assert.equal(action('Save audit'), null);
           action('Reload section').click(); await flush();
-          assert.equal(reads, 3); assert(action('Start audit')); assert.equal(writes, 1);
+          assert.equal(reads, 3); assert(action('Count by hand')); assert.equal(writes, 1);
         """)
 
     def test_late_section_read_and_detached_controls_stay_with_the_original_profile(self):
@@ -167,7 +169,7 @@ class StorageMapUiTests(unittest.TestCase):
           old.click(); const loading = openDialog();
           as('user1', MAY.user1);
           render(); resolveRead(detail()); await flush();
-          assert(!loading.textContent.includes('Start audit'));
+          assert(!loading.textContent.includes('Count by hand'));
           old.click(); assert.equal(reads, 1);
           colCloseSheets(); chooseSection('white').click(); assert.equal(reads, 2);
         """)

@@ -404,6 +404,7 @@ def deck_stats(sections, kind):
         "sideboard": {"count": counts["sideboard"], "cards": card_list(by_section["Sideboard"]),
                       "checks": sideboard_checks},
         "commander": commander,
+        "casual_problems": _constructed_problems(sections, entries, unresolved)[0] if kind == "constructed" else None,
         "sources": sources,
     }
 
@@ -446,12 +447,19 @@ def deck_rules(sections, kind):
         raise ValueError(f"kind must be one of {KINDS}, not {kind!r}")
     warnings = []
     entries, unresolved = resolve_entries(sections, warnings)
-    by_section = {s: [e for e in entries if e.section == s] for s in decks.SECTIONS}
     if kind == "commander":
+        by_section = {s: [e for e in entries if e.section == s] for s in decks.SECTIONS}
         checks = _commander_checks(by_section, sections, unresolved, warnings)
         return {"kind": kind, "problems": list(checks["problems"]),
                 "problem_cards": [list(names) for names in checks["problem_cards"]], "commander": checks,
                 "warnings": warnings}
+    problems, problem_cards = _constructed_problems(sections, entries, unresolved)
+    return {"kind": kind, "problems": problems, "problem_cards": problem_cards, "commander": None,
+            "warnings": warnings}
+
+
+def _constructed_problems(sections, entries, unresolved):
+    """Local casual deck rules for the saved-list summary and editor review."""
     problems, problem_cards = [], []
     size = decks.card_count(sections)
     if size < CONSTRUCTED_MIN_SIZE:
@@ -464,7 +472,7 @@ def deck_rules(sections, kind):
     for (_, name), qty in unresolved.items():
         if not decks.is_basic_land(name):
             copies[name] += qty
-    in_sideboard = {e.name for e in by_section["Sideboard"]} | {n for s, n in unresolved if s == "Sideboard"}
+    in_sideboard = {e.name for e in entries if e.section == "Sideboard"} | {n for s, n in unresolved if s == "Sideboard"}
     for name, n in sorted(copies.items()):
         card = by_name.get(name)
         if n < 2 or (card is not None and is_basic(card)):
@@ -474,8 +482,7 @@ def deck_rules(sections, kind):
             where = " (deck and sideboard together)" if name in in_sideboard else ""
             problems.append(f"{n} copies of {name}{where}; a deck can have at most {limit}.")
             problem_cards.append([name])
-    return {"kind": kind, "problems": problems, "problem_cards": problem_cards, "commander": None,
-            "warnings": warnings}
+    return problems, problem_cards
 
 
 def headline(result):

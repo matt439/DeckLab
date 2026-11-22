@@ -345,7 +345,7 @@ class LifeSourceBridgeUiTests(unittest.TestCase):
 
     def test_production_v2_counter_hands_off_through_the_same_strict_bridge(self):
         self.run_js(r"""
-          const data=makeData();currentData=data;clear(main);drawPlay(data,'');buttonText(main,'Life counter').click();
+          const data=makeData();currentData=data;clear(main);drawPlay(data,'');buttonText(main,'Start a 1v1 game').click();
           const dialog=document.querySelector('.life-source-counter');assert(dialog);assert.equal(writes.length,0);
           const loser=dialog.querySelectorAll('button').find(button=>button.getAttribute('aria-label')==='Opponent: concede'
             ||button.getAttribute('aria-label')==='User1: concede');assert(loser);loser.click();await settle();
@@ -356,7 +356,7 @@ class LifeSourceBridgeUiTests(unittest.TestCase):
 
     def test_zero_current_lists_still_offer_v2_resume_and_explicit_replacement_form(self):
         self.run_js(r"""
-          const data=makeData();currentData=data;clear(main);drawPlay(data,'');buttonText(main,'Life counter').click();
+          const data=makeData();currentData=data;clear(main);drawPlay(data,'');buttonText(main,'Start a 1v1 game').click();
           assert(document.querySelector('.life-source-counter'));closeLifeCounter();const fresh=makeData({lists:[],decks:{}});
           currentData=fresh;clear(main);drawPlay(fresh,'');assert(buttonText(main,'Resume life counter'));
           buttonText(main,'Resume life counter').click();const dialog=document.querySelector('.life-source-counter');assert(dialog);

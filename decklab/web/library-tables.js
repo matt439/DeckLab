@@ -1,4 +1,4 @@
-/* Deck Lab's page: the Decks page's "Tables out of date" list (E7-S09), and the notes that point at it.
+/* The Decks page's availability refresh (E7-S09), and the notices that link to it.
 
 The list (libTablesPanel, drawn by library.js's drawLibrary between the warnings and the filters) comes from
 GET /api/tables/stale, fetched after the shelf is drawn so it never holds the shelf up: the decks whose
@@ -14,14 +14,15 @@ The Collection page's note after a save (staleTablesNote) and Receive delivery's
 "use strict";
 
 const TABLES_HREF = "#/library?tables=1";
+const TABLES_TITLE = "Availability needs updating";
 
-/** The "Tables out of date" panel: hidden until GET /api/tables/stale has something to show. A failure leaves it
+/** The availability refresh panel: hidden until GET /api/tables/stale has something to show. A failure leaves it
  * hidden on a normal visit (the shelf is what matters), but when the address asked for it (?tables=1) the panel
  * says so with Try again. scrolled: the address asked for it, so it's scrolled to once it's filled (or failed),
  * and then called (the address drops the ask). onUpdated: after Update all. */
 function libTablesPanel(scrolled, onUpdated) {
   const host = el("section", { class: "box box-stale lib-tables", id: "stale-tables", tabindex: "-1",
-    "aria-label": "Tables out of date", hidden: true });
+    "aria-label": TABLES_TITLE, hidden: true });
   const asked = Boolean(scrolled);
   const show = () => { host.hidden = false; host.removeAttribute("hidden"); };
   // Failed or loading again, the panel is only its crit note or spinner line: not inside the stale box's
@@ -55,7 +56,7 @@ function libTablesPanel(scrolled, onUpdated) {
       const summary = el("summary");
       const content = staleTablesPart(stale, { standalone: true, blocked, held, onUpdated, after: (remaining) => {
         summary.textContent = remaining.alone && !remaining.blocked.length && !remaining.held.length
-          ? "Deck availability tables are up to date" : "Deck availability may be out of date";
+          ? "Deck availability tables are up to date" : TABLES_TITLE;
         return blockedTablesPart(remaining);
       } });
       host.append(el("details", { class: "warning-details", open: asked }, summary, content));
@@ -146,13 +147,13 @@ function staleTablesNote(stale) {
   if (!stale || !stale.length) return null;
   const one = stale.length === 1;
   return el("p", { class: "stale-note" },
-    one ? "1 deck's owned-vs-needed table is now out of date. " : `${num(stale.length)} decks' owned-vs-needed tables are now out of date. `,
-    el("a", { href: TABLES_HREF, text: "See them on Decks" }));
+    one ? "Availability needs updating for 1 deck. " : `Availability needs updating for ${num(stale.length)} decks. `,
+    el("a", { href: TABLES_HREF, text: "Review on Decks" }));
 }
 
 /** Receive delivery's warning about tables it didn't update (lead: what happened), pointing at the list. The
  * words are one span: a .note is a flex row, which would set a bare link apart from its sentence. */
 function tablesLaterNote(lead) {
-  return el("p", { class: "note note-warn" }, el("span", {}, `${lead} They're on the Decks page's `,
-    el("a", { href: TABLES_HREF, text: "Tables out of date" }), " list, where Update all refreshes them."));
+  return el("p", { class: "note note-warn" }, el("span", {}, `${lead} On Decks, open `,
+    el("a", { href: TABLES_HREF, text: TABLES_TITLE }), " and choose Update all."));
 }

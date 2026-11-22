@@ -79,7 +79,7 @@ class ViewerUseLineTests(unittest.TestCase):
           show([elves]);
           await flush();
           assert.deepEqual(reads, [path("Llanowar Elves")]);
-          assert.equal(shown(), "In decks: Elf Stompy holds 1, Cats holds 1, Gruul Test wants 6 \\u00b7 3 free");
+          assert.equal(shown(), "In decks: Elf Stompy holds 1, Cats holds 1, Gruul Test wants 6 \\u00b7 3 free now");
           // The line is a row of its own, after the foot with the opening list's own chips.
           const kids = viewerDom.dialog.children;
           assert.equal(kids.indexOf(line()), kids.indexOf(viewerDom.foot) + 1);
@@ -98,15 +98,15 @@ class ViewerUseLineTests(unittest.TestCase):
         self.run_js("""
           location.hash = "#/deck?id=casual/gruul-test";
           const words = (extra) => viewerUseWords(answer(extra));
-          assert.equal(words({holds: [], wants: [], owned: 0, free: 0}), "In no decks \\u00b7 none in the collection");
-          assert.equal(words({holds: [], wants: [], decks_complete: undefined}), "3 free");
+          assert.equal(words({holds: [], wants: [], owned: 0, free: 0}), "In no decks \\u00b7 none recorded in this collection");
+          assert.equal(words({holds: [], wants: [], decks_complete: undefined}), "3 free now");
           assert.equal(words({holds: [], wants: [], owned: 0, free: 0, incoming: 2}), "In no decks \\u00b7 2 on the way");
           assert.equal(words({incoming: 1}),
-                       "In decks: Elf Stompy holds 1, Cats holds 1, Gruul Test wants 6 \\u00b7 3 free \\u00b7 1 on the way");
+                       "In decks: Elf Stompy holds 1, Cats holds 1, Gruul Test wants 6 \\u00b7 3 free now \\u00b7 1 on the way");
           const many = Array.from({length: 6}, (_, i) => ({id: `casual/d${i}`, title: `D${i}`, status: "idea", copies: 1}));
-          assert.equal(words({holds: [], wants: many}), "In decks: D0 wants 1, D1 wants 1, D2 wants 1, D3 wants 1, and 2 more decks \\u00b7 3 free");
-          assert.equal(words({holds: [], wants: many.slice(0, 5)}), "In decks: D0 wants 1, D1 wants 1, D2 wants 1, D3 wants 1, and 1 more deck \\u00b7 3 free");
-          assert.equal(words({holds: [], wants: many, more: true}), "In decks: D0 wants 1, D1 wants 1, D2 wants 1, D3 wants 1, and 2+ more decks \\u00b7 3 free");
+          assert.equal(words({holds: [], wants: many}), "In decks: D0 wants 1, D1 wants 1, D2 wants 1, D3 wants 1, and 2 more decks \\u00b7 3 free now");
+          assert.equal(words({holds: [], wants: many.slice(0, 5)}), "In decks: D0 wants 1, D1 wants 1, D2 wants 1, D3 wants 1, and 1 more deck \\u00b7 3 free now");
+          assert.equal(words({holds: [], wants: many, more: true}), "In decks: D0 wants 1, D1 wants 1, D2 wants 1, D3 wants 1, and 2+ more decks \\u00b7 3 free now");
           answers[path("Forest")] = {name: "Forest", space: "home", basic: true, holds: [], wants: [], owned: null, free: null};
           show([{name: "Forest", type_line: "Basic Land — Forest"}]);
           await flush();
@@ -118,11 +118,11 @@ class ViewerUseLineTests(unittest.TestCase):
           location.hash = "#/deck?id=casual/gruul-test";
           answers[path("Llanowar Elves")] = answer({decks_complete: false, holds: []});
           show([elves]); await flush();
-          assert.equal(shown(), "In decks: Gruul Test wants 6 \\u00b7 Deck check incomplete \\u00b7 3 free");
+          assert.equal(shown(), "In decks: Gruul Test wants 6 \\u00b7 Deck check incomplete \\u00b7 3 free now");
           shut();
           answers[path("Llanowar Elves")] = answer({decks_complete: false, holds: [], wants: []});
           show([elves]); await flush();
-          assert.equal(shown(), "Deck check incomplete \\u00b7 3 free");
+          assert.equal(shown(), "Deck check incomplete \\u00b7 3 free now");
         """)
 
     def test_a_members_deck_and_collection_page_ask_for_their_own_space(self):
@@ -139,7 +139,26 @@ class ViewerUseLineTests(unittest.TestCase):
           show([elves]);
           await flush();
           assert.deepEqual(reads, [path("Llanowar Elves", "user2"), path("Llanowar Elves", "user2")]);
-          assert.equal(shown(), "In no decks \\u00b7 3 free");
+          assert.equal(shown(), "In no decks \\u00b7 3 free now");
+        """)
+
+    def test_search_results_keep_their_collection_scope_over_a_different_deck(self):
+        self.run_js("""
+          state.profile = state.profiles[1];
+          state.may = {see_inventory: ["user2", "home"]};
+          location.hash = "#/deck?id=casual/gruul-test";
+          answers[path("Llanowar Elves", "user2")] = answer({space:"user2", holds:[], wants:[], free:1});
+          openCardViewer([elves], 0, {inventorySpace:"user2"});
+          viewerDom.dialog.open = true;
+          await flush();
+          assert.deepEqual(reads, [path("Llanowar Elves", "user2")]);
+          assert.equal(shown(), "In no decks \\u00b7 1 free now");
+          shut();
+          state.may = {see_inventory:["home"]};
+          openCardViewer([elves], 0, {inventorySpace:"user2"});
+          await flush();
+          assert.equal(shown(), null);
+          assert.equal(reads.length, 1);
         """)
 
     def test_no_request_without_the_spaces_inventory(self):
@@ -167,7 +186,7 @@ class ViewerUseLineTests(unittest.TestCase):
             location.hash = hash;
             show([elves]);
             await flush();
-            assert.equal(shown(), "In decks: Elf Stompy holds 1, Cats holds 1, Gruul Test wants 6 \\u00b7 3 free", hash);
+            assert.equal(shown(), "In decks: Elf Stompy holds 1, Cats holds 1, Gruul Test wants 6 \\u00b7 3 free now", hash);
             shut();
           }
           assert.deepEqual(reads, Array(5).fill(path("Llanowar Elves")));
@@ -200,10 +219,10 @@ class ViewerUseLineTests(unittest.TestCase):
           assert.equal(shown(), null);
           goViewer(1);
           await flush();
-          assert.equal(shown(), "In no decks \\u00b7 1 free");
+          assert.equal(shown(), "In no decks \\u00b7 1 free now");
           release();
           await flush();
-          assert.equal(shown(), "In no decks \\u00b7 1 free", "the slow answer for the card swiped away is dropped");
+          assert.equal(shown(), "In no decks \\u00b7 1 free now", "the slow answer for the card swiped away is dropped");
         """)
 
     def test_refusals_show_nothing_and_failures_say_so_and_are_asked_again(self):
@@ -222,7 +241,7 @@ class ViewerUseLineTests(unittest.TestCase):
           answers[path("Black Lotus")] = answer({name: "Black Lotus", holds: [], wants: [], owned: 1, free: 1});
           drawViewer();
           await flush();
-          assert.equal(shown(), "In no decks \\u00b7 1 free");
+          assert.equal(shown(), "In no decks \\u00b7 1 free now");
         """)
 
 

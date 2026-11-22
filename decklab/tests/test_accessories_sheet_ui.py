@@ -1,5 +1,4 @@
-"""The accessories add/edit sheet's first focus (accessories.js accSheetFocus): Add starts on the link field,
-Edit on Name with a mouse, and on a touch screen the heading, so no keyboard pops up over the picture.
+"""The accessories add/edit sheet starts on Name with a mouse or on its heading with touch.
 
 Loads every page script into the event/DOM double (fixtures/workspace_ui_runner.js): no browser, server or save.
 """
@@ -20,19 +19,19 @@ SCENARIO = r"""
     sheet.close();
     return { sheet, active };
   }
-  // A mouse: Edit starts on Name, Add on the link.
+  // A mouse: Name comes first; the picture and link are optional.
   let { sheet, active } = opened(false, { row });
   assert.equal(active.getAttribute("id"), `acc-name-${sheet.heading.id}`);
   ({ sheet, active } = opened(false, { kind: "sleeves" }));
-  assert.equal(active.getAttribute("type"), "url");
-  // A finger: Edit focuses the heading without scrolling, so the sheet opens at its top with the picture showing.
+  assert.equal(active.getAttribute("id"), `acc-name-${sheet.heading.id}`);
+  assert(!sheet.body.querySelector('.acc-photo-settings').open);
+  // Touch focuses the heading instead of bringing up the keyboard.
   ({ sheet, active } = opened(true, { row }));
   assert.equal(active, sheet.heading);
   assert.equal(sheet.heading.getAttribute("tabindex"), "-1");
   assert.equal(active.focusOptions.preventScroll, true);
-  // Add still starts on the link (there's no picture yet to keep in view).
   ({ sheet, active } = opened(true, { kind: "sleeves" }));
-  assert.equal(active.getAttribute("type"), "url");
+  assert.equal(active, sheet.heading);
 """
 
 

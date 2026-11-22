@@ -85,7 +85,7 @@ class AssemblySwitcherTests(unittest.TestCase):
           assert(!buttons[0].querySelector('.id-pips'));assert(!buttons[0].getAttribute('style'));
           assert.equal(buttons[1].querySelector('.id-pips').getAttribute('aria-label'),'Colourless');
           assert(buttons[2].querySelector('.id-pips').getAttribute('aria-label').toLowerCase().includes('green'));
-          assert(buttons.every(b=>b.getAttribute('aria-label')===null));assert(buttons[1].textContent.includes('Play-now list'));
+          assert(buttons.every(b=>b.getAttribute('aria-label')===null));assert(buttons[1].textContent.includes('Alternative list'));
         """)
 
     def test_redraw_keeps_id_version_then_same_deck_version_and_removal_fallback(self):

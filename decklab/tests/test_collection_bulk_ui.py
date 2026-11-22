@@ -119,7 +119,7 @@ class CollectionBulkUiTests(unittest.TestCase):
           await flush();
           const said = main.querySelector('.col-message').textContent;
           assert(said.includes('Condition and language saved on 3 rows.'), said);
-          assert(said.includes('See them on Decks'), said);           // the out-of-date tables, as a single save says
+          assert(said.includes('Review on Decks'), said);           // the out-of-date tables, as a single save says
         """)
 
     def test_when_nothing_is_shown_after_a_save_the_search_keeps_the_focus(self):

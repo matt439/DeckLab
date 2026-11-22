@@ -9,7 +9,7 @@ Design note, 2026-10-18. It sits beside [privacy-by-default.md](privacy-by-defau
 2. User5 uses only decklab.example.com, never the home network.
 3. **Everything in an account is private by default.** Its owner can set something to **public** so other people can see their decks and the rest. This applies to home's data too.
 
-Decision 3 is PBD's rule with one word changed. PBD already says "a visible thing is visible to everyone with a profile, read-only" (PBD:15). The word "family" was wrong once members from outside the household joined, so it is replaced by **public**. There is no family flag and no separate family audience. Public means public to everyone signed in, behind Cloudflare Access, never the open internet: E10's rule of no public pages, share links or sign-up still holds.
+Decision 3 replaces "Visible to the family" with **Public**. The [current audience rule](privacy-by-default.md#the-rule) gives read-only access to signed-in profiles, including future members, and to visitors to the home listener without a chosen profile. Remote access requires Cloudflare Access sign-in. E10's rule excluding open-internet pages, share links and sign-up still holds.
 
 ---
 
@@ -42,7 +42,7 @@ The gap was at home: the home chooser offered `user5`, so anyone on Matt's Wi-Fi
 
 ### The switches
 
-These are PBD's switches (one per owner and thing: `collection`, `decks`, `games`, and each owner's `accessories` at home), worded **Private** / **Public**. With no row a switch is Private. Public always means read-only, to every signed-in profile, future members included. Only the owner changes a switch. At home that's Matt or User1, and the accessories switch belongs to the owner of each kit.
+These are PBD's switches (one per owner and thing: `collection`, `decks`, `games`, and each owner's `accessories` at home), worded **Private** / **Public**. With no row a switch is Private. Public grants read-only access to signed-in profiles and visitors on the home network, including those without a chosen profile. Only the owner changes a switch. Either home profile can change the home and shared kit switches, and an individual kit's switch belongs to its owner.
 
 **A, how fine-grained.** Is it one switch per list (all my decks public), or per deck as well?
 **Decided (Matt, 2026-10-18), as recommended:** one switch per list now, as PBD builds it, with per-deck public as a later `could` (E10-S41). Per-deck is the more natural "show User5 this one deck", but every Forge rule (a matchup is visible only when both sides are) then works per deck instead of per space. That is much more to build and test. It's worth doing only once someone actually wants it.
@@ -53,7 +53,7 @@ These are PBD's switches (one per owner and thing: `collection`, `decks`, `games
 
 Matt accepted every recommendation below on 2026-10-18.
 
-**B. Wording.** Every page string, command message and audit message says "public" and "private", never "visible to the family" (PBD:54, :93). **Decided (Matt, 2026-10-18), as recommended:** adopt this as written; where public and E10's "no public pages" rule meet, say "public (to everyone signed in)".
+**B. Wording.** **Decided (Matt, 2026-10-18):** use Public and Private in the page, command messages and audit entries. The page explains the current audience before confirmation and notes that remote readers must sign in.
 
 **C. The profile roster.** `GET /api/profiles` lists every profile's id, name, role, space and `plays_as` to anyone (`lib/api/settings.py:30-47`). So User5 learns who the admin is, that Matt and User1 share home, and the other members' names.
 **Decided (Matt, 2026-10-18), as recommended:** a viewer gets their own profile, plus any profile whose space has something public. The one exception is the admin's display name, used in "ask Matt" wording. Fix it together with the 403 wording, so that no answer names a space the viewer can't see (`lib/api/guard.py:396-405`, `lib/api/collection.py:71-80`). Story E10-S38.

@@ -77,7 +77,7 @@ class CollectionTradeUiTests(unittest.TestCase):
           assert.equal(cv.sha256, 's2');
           const said = main.querySelector('.col-message').textContent;
           assert(said.includes('Trade saved: gave 2 cards, got 1 card.'), said);
-          assert(said.includes('See them on Decks'), said);
+          assert(said.includes('Review on Decks'), said);
         """)
 
     def test_held_copies_need_save_it_anyway(self):

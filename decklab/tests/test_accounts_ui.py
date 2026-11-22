@@ -440,14 +440,15 @@ class AccountsUiTests(unittest.TestCase):
           drawCollectionRows({ space: "user2", sha256: "s1", rows: [row], editable: false, spaces }, "user2");
           assert(main.textContent.includes("User2's collection") && main.textContent.includes("Llanowar Elves"));
           const edits = () => main.querySelectorAll("button").filter((b) => (b.getAttribute("aria-label") || "").startsWith("Edit "));
-          for (const text of ["Add card", "Import cards…", "Add a precon…", "Edit", "Remove"]) assert.equal(button(main, text), null, text);
+          for (const text of ["Add cards", "Import a list", "Add a precon", "Edit", "Remove"]) assert.equal(button(main, text), null, text);
           assert.equal(edits().length, 0);
           assert(main.textContent.includes("Read only"));
           same(main.querySelector(".col-spaces").querySelectorAll("a").map((a) => a.getAttribute("href")),
             ["#/collection?view=rows", "#/collection?space=user2&view=rows"]);
           as("user2", MAY.user2);
           drawCollectionRows({ space: "user2", sha256: "s1", rows: [row], editable: true, spaces }, "user2");
-          for (const text of ["Add card", "Import cards…", "Add a precon…"]) assert(button(main, text), text);
+          assert(button(main, "Add cards"));
+          assert(button(main, "Manage collection"));
           // Click to edit: the row's name opens its sheet; there's no Edit and Remove pair on each row.
           same(edits().map((b) => b.getAttribute("aria-label")), ["Edit Llanowar Elves (FDN 227)"]);
           assert.equal(button(main, "Remove"), null);
@@ -456,7 +457,7 @@ class AccountsUiTests(unittest.TestCase):
           // The Find cards view takes the space too.
           drawCollection({ space: "user2", spaces, editable: true, types: [], roles: [], total: 0, page: 1, pages: 1,
             note: "", warnings: [], cards: [] }, new URLSearchParams(), "user2");
-          assert(button(main, "Add card") && button(main, "Import cards…"));
+          assert(button(main, "Add cards") && !button(main, "Import a list"));
           // Home's collection: Build decks is the top bar's pill or More's now, not the Collection page's (E11-S61).
           as("user1", MAY.user1);
           drawCollectionRows({ space: "home", sha256: "s1", rows: [row], editable: true, spaces }, "home");
@@ -468,7 +469,7 @@ class AccountsUiTests(unittest.TestCase):
         """)
 
     def test_download_saves_the_spaces_collection_for_whoever_sees_it(self):
-        # E7-S30: in More for anyone the collection page answers, read only too; the server names the file.
+        # E7-S30: in Manage collection for anyone who can read this space. The server names the file.
         self.run_js("""
           const row = { name: "Llanowar Elves", set: "fdn", collector_number: "227", finish: "nonfoil", quantity: 2,
             condition: "NM", language: "en", notes: "" };
@@ -494,6 +495,13 @@ class AccountsUiTests(unittest.TestCase):
           api = async () => { throw new ApiError(403, "That collection isn't public."); };
           await downloadCollection(cv);
           assert(main.textContent.includes("The collection couldn't be downloaded: That collection isn't public."));
+          assert.equal(saved.length, 1);
+          let respond;
+          api = () => new Promise(resolve => { respond = resolve; });
+          const pending = downloadCollection(cv);
+          state.profile = PROFILES[0];
+          respond({space: 'user2', filename: 'user2-collection.csv', csv: 'name,set'});
+          await pending;
           assert.equal(saved.length, 1);
         """)
 

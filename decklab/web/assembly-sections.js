@@ -104,26 +104,66 @@ function remainingIntentPart(rows, title = "Still intended for this deck", folde
     el("ul", {}, lines));
 }
 
-function assembledStateWords(info) {
-  return `In the box: ${plural(info.main_count, "main-deck card")}`
+function assembledCountWords(info) {
+  return plural(info.main_count, "main-deck card")
     + (info.sideboard_intended || info.sideboard_count
       ? ` + ${info.sideboard_count} of ${info.sideboard_intended} sideboard` : "");
 }
 
-/** True when the box holds the whole intended list: then "In the box" says nothing a Built chip doesn't. */
+function assembledStateWords(info) {
+  return `Packed in this box: ${assembledCountWords(info)}`;
+}
+
+/** Whether the box holds the whole intended list. */
 function assembledComplete(info) {
   return Boolean(info) && !info.changed && !info.remaining_count
     && (info.sideboard_count || 0) >= (info.sideboard_intended || 0);
 }
 
 function deckAssemblySection(data) {
-  if (!("owned" in data)) return null;
-  const info = data.assembled || data.summary.assembled;
-  if (!info) return null;
+  const summary = data.summary, space = summary.space || deckSpaceOf(summary.id);
+  if (!("owned" in data) || !seesInventory(space) || /^(product|pairing)\//.test(summary.id)) return null;
+  const info = data.assembled || summary.assembled;
+  const audit = data.scan_audit;
+  const scan = audit && space === ownSpace();
+  const packed = info || scan || summary.status === "built";
+  if (!packed) return deckStandinsSection(data);
+  const label = typeof offersBoxLabel === "function" && offersBoxLabel(data);
+  const review = info && ownSpace() === HOME_SPACE && space === HOME_SPACE && seesHomeInventory(state.may);
+  const reviewVersion = data.versions?.includes(info?.version) ? info.version : data.version;
+  const token = routeToken, profile = state.profile?.id;
+  const current = () => {
+    const { path, params } = parseHash();
+    return token === routeToken && profile === state.profile?.id && seesInventory(space)
+      && deckScreen?.data === data && path === "deck" && addressDeckId(params.get("id")) === summary.id;
+  };
+  const scanButton = scan ? el("button", { type: "button", class: "btn", text: "Scan for differences", onclick: event => {
+    if (!current() || space !== ownSpace() || !event.currentTarget.isConnected) return;
+    const rows = audit.rows.map(row => row.manual ? { ...row,
+      manualLabel: row.name.replace(/^Unspecified stand-in for /, "Unnamed physical placeholder for ") } : row);
+    startCardAudit({ title: `Scan ${summary.title}`, space, mode: "deck", scan: audit.scan, rows,
+      current: () => current() && space === ownSpace(),
+      instructions: "Scan the main deck, commanders, companion and sideboard together. "
+        + "Set token cards aside. Copies count by physical card name across all printings."
+        + (audit.rows.some(row => row.manual) ? " Count unnamed physical placeholders by hand." : "") });
+  } }) : null;
+  const printLabel = label ? el("button", { type: "button", class: "btn btn-quiet", text: "Print box label", onclick: event => {
+    if (current() && event.currentTarget.isConnected) printBoxLabel(data);
+  } }) : null;
   return el("section", { class: "deck-section deck-assembly", "aria-label": "Physically assembled cards" },
-    el("h2", { text: "In its box" }), el("p", { text: capitalise(assembledStateWords(info).replace(/^In the box: /, "")) + "." }),
-    info.changed ? el("p", { class: "box box-warn", text: "The box differs from the intended list. Check Build decks before changing it." }) : null,
-    remainingIntentPart(info.remaining),
-    el("a", { class: "btn", href: `#/assembly?deck=${encodeURIComponent(data.summary.id)}&version=${info.intended_version || info.version}`,
-      text: "Review build" }));
+    el("h2", { text: "Packed in this box" }),
+    info ? el("p", { text: `${listName(info.version)} · ${assembledCountWords(info)}` }) : null,
+    boxCheckDateNote(data),
+    info?.changed ? el("p", { class: "box box-warn", text:
+      `The packed cards differ from the ${listName(info.intended_version, true)}.` }) : null,
+    deckStandinsSection(data, true),
+    remainingIntentPart(info?.remaining, `Still on the ${listName(info?.intended_version, true)}`),
+    review || scanButton || printLabel ? el("div", { class: "actions" },
+      review ? el("a", { class: "btn", href: `#/assembly?deck=${encodeURIComponent(summary.id)}&version=${reviewVersion}`,
+        text: "Check packed cards by hand" }) : null,
+      scanButton, printLabel) : null,
+    review || scan ? el("p", { class: "sub", text: [review
+      ? "A hand count can record a check date or let you review a correction." : null,
+      scan ? "Scanning gives a temporary comparison with the recorded box." : null].filter(Boolean).join(" ") }) : null,
+    deckPrintingsSection(data));
 }

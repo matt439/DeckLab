@@ -7,7 +7,6 @@ Runs the real page scripts in tests/fixtures/workspace_ui_runner.js; nothing is 
 import json
 import subprocess
 import unittest
-from pathlib import Path
 
 from decklab.tests.test_workspace_ui import NODE, RUNNER, WEB
 
@@ -94,15 +93,25 @@ class AnswersUiTests(unittest.TestCase):
 
     def test_the_pool_pointer_shows_only_to_inventory_readers(self):
         self.run_js("""
-          const words = 'Free cards by role';
+          const words = 'Find cards by role';
           assert(answersPanel(found([creatures]), {owned: {}}).textContent.includes(words));
           assert(!answersPanel(found([creatures]), {owned: null}).textContent.includes(words));
           assert(!answersPanel(found([creatures])).textContent.includes(words));
         """)
 
-    def test_the_stats_tab_draws_it_after_types_and_roles(self):
-        source = (Path(WEB) / "stats.js").read_text(encoding="utf-8")
-        self.assertIn("compositionPanel(st, data),\n    st.answers ? answersPanel(st.answers, data) : null,", source)
+    def test_the_check_deck_tab_names_the_list_and_folds_advanced_answers(self):
+        self.run_js("""
+          curvePanel = landPanel = colourPanel = categoriesPanel = drawOddsPanel = tribesPanel = sourcesPanel = () => null;
+          compositionPanel = () => el('section', {text: 'Card types and roles'});
+          const section = statsSection({version: 'owned', summary: {kind: 'casual', id: 'casual/test'},
+            stats: {casual_problems: ['59 cards; a casual deck has at least 60.'], answers: found([creatures])}});
+          assert.equal(section.querySelector('h2').textContent, 'Checks for the alternative list');
+          assert(section.querySelector('#h-casual-rules').parentNode.textContent.includes('59 cards'));
+          const fold = section.querySelector('.answers').parentNode;
+          assert.equal(fold.querySelector('summary').textContent, 'What it can answer');
+          assert.equal(fold.getAttribute('open'), null);
+          assert(section.textContent.indexOf('Card types and roles') < section.textContent.indexOf('What it can answer'));
+        """)
 
 
 if __name__ == "__main__":

@@ -16,11 +16,11 @@ SETUP = SHELL + r'''
   const ELVES = { name: "Llanowar Elves", type_line: "Creature — Elf Druid" };
   const MYSTIC = { name: "Elvish Mystic", type_line: "Creature — Elf Druid" };
   const ANSWER = { q: "elv", groups: [
-    { id: "decks", label: "Decks", items: [{ id: "user2/casual/r-elves", title: "Elves", kind: "casual", format: "casual",
+    { id: "decks", label: "Your decks", items: [{ id: "user2/casual/r-elves", title: "Elves", kind: "casual", format: "casual",
       status: "built" }], total: 7, capped: false, more: true },
-    { id: "collection", label: "In your collection", space: "user2", items: [{ name: "Llanowar Elves", owned: 2, incoming: 1,
+    { id: "collection", label: "Collection & arrivals", space: "user2", items: [{ name: "Llanowar Elves", owned: 2, incoming: 1,
       in_use: 2, free: 0, basic: false, card: ELVES }], total: 1, capped: false, more: false },
-    { id: "cards", label: "Other cards", items: [{ name: "Elvish Mystic", card: MYSTIC }], total: 200, capped: true, more: true }] };
+    { id: "cards", label: "Card catalogue", items: [{ name: "Elvish Mystic", card: MYSTIC }], total: 200, capped: true, more: true }] };
   let searches = [], pending = [];
   const realApi = api;
   api = async (path) => {
@@ -31,7 +31,7 @@ SETUP = SHELL + r'''
     return realApi(path);
   };
   const viewed = [];
-  openCardViewer = (items, start, opts) => { viewed.push(items); };
+  openCardViewer = (items, start, opts) => { viewed.push({items, space: opts.inventorySpace}); };
   const box = () => gsBar;
   async function type(text) {
     box().input.value = text; box().input.fire("input"); flushTimers(); await flush();
@@ -64,12 +64,12 @@ class GlobalSearchUiTests(unittest.TestCase):
           const results = box().results;
           assert.equal(results.hidden, false);
           assert.equal(box().input.getAttribute("aria-expanded"), null);
-          same(results.querySelectorAll("h3").map((h) => h.textContent), ["Decks", "In your collection", "Other cards"]);
+          same(results.querySelectorAll("h3").map((h) => h.textContent), ["Your decks", "Collection & arrivals", "Card catalogue"]);
           const deck = results.querySelector("a");
           assert.equal(deck.getAttribute("href"), "#/deck?id=user2%2Fcasual%2Fr-elves&v=target");
           assert(deck.textContent.includes("casual · built"));
           const items = results.querySelectorAll(".gs-item");
-          assert(items[1].textContent.includes("0 free · 2 in decks · 1 on the way"));
+          assert(items[1].textContent.includes("0 free now · 2 held · 1 on the way"));
           items[1].click();
           assert.equal(inspections.at(-1).card.name, "Llanowar Elves");
           const all = results.querySelectorAll(".gs-all");
@@ -79,7 +79,8 @@ class GlobalSearchUiTests(unittest.TestCase):
           all[1].click(); await flush();
           assert.equal(searches.at(-1), "/api/search?q=elv&group=cards&limit=50");
           await answer({ q: "elv", groups: [{ id: "cards", items: [{ name: "A", card: MYSTIC }, { name: "B", card: ELVES }] }] });
-          same(viewed[0].map((c) => c.name), ["Elvish Mystic", "Llanowar Elves"]);
+          same(viewed[0].items.map((c) => c.name), ["Elvish Mystic", "Llanowar Elves"]);
+          assert.equal(viewed[0].space, "user2");
           assert(box().status.textContent.includes("3 results"));
         ''')
 
@@ -96,9 +97,9 @@ class GlobalSearchUiTests(unittest.TestCase):
             { name: "Hidden", card: { name: "Hidden", type_line: "Sorcery" } }];
           await answer(data);
           const meta = box().results.querySelectorAll(".gs-item").slice(1).map((b) => b.querySelector(".gs-meta").textContent);
-          same(meta, ["in 2 decks · deck check incomplete · 1 free · 1 on the way", "3 owned · in decks not tracked",
-            "in 1 deck · none free · Creature — Elf Druid", "in no decks · none free · Instant",
-            "deck check incomplete · none free · Aura",
+          same(meta, ["in 2 decks · deck check incomplete · 1 free now · 1 on the way", "3 owned · in decks not tracked",
+            "in 1 deck · none free now · Creature — Elf Druid", "in no decks · none free now · Instant",
+            "deck check incomplete · none free now · Aura",
             "in decks not tracked · Basic Land — Forest", "Sorcery"]);
         ''')
 

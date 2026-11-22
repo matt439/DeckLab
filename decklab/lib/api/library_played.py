@@ -25,6 +25,9 @@ History's own comparison (history._list_changes) of that list and today's; no ch
 the list is as it was. Of the last day's games, a side that matches today's list wins (it
 was the latest list played), else the newest matching revision. Nothing in it names the
 other side of a game: only this deck's own list, which the viewer already sees.
+
+When requested for a Commander deck, a separate "pods" summary counts visible
+records once per table and records the latest date. It never changes the 1v1 totals.
 """
 import traceback
 
@@ -43,9 +46,8 @@ def _legacy(record):
             and isinstance(record.get("sides"), list) and len(record["sides"]) == 2)
 
 
-def _games():
-    """The visible two-player games as (date, deck ids, [(deck id, side)], result "a", "b" or "draw"),
-    or None when they can't be read (play_tonight's real records use the result)."""
+def _game_index(pod_deck_id=None):
+    """Index the visible 1v1 games and, when requested, one deck's pod dates by table size."""
     try:
         viewer, script = guard.viewer(), guard.script()
         records = state.store().play_list("games")
@@ -58,22 +60,39 @@ def _games():
         snapshot = inventory.current()
     except Exception:           # old ids then stay as recorded
         snapshot = None
-    found = []
+    def canonical(deck_id):
+        return inventory.resolve_deck_id(deck_id, snapshot) if snapshot is not None else deck_id
+
+    found, pod_dates = [], {3: [], 4: []}
+    reads = guard.deck_reader(viewer) if pod_deck_id else None
     for record in records:
-        if not _legacy(record) or not play_records._sees_record("games", record, viewer, script):
+        legacy = _legacy(record)
+        if not legacy and (not pod_deck_id or not isinstance(record, dict) or record.get("mode") != "pod"):
+            continue
+        if not play_records._sees_record("games", record, viewer, script):
             continue
         try:
             play_records._checked("games", record.get("id"), record)
         except common.ApiError:
             continue            # the Game log warns about it; it counts nowhere
+        if not legacy:
+            ids = rules.record_deck_ids("games", record)
+            if any(canonical(deck_id) == pod_deck_id and reads(deck_id) for deck_id in ids):
+                pod_dates[len(record["seats"])].append(record["date"])
+            continue
         sides = []
         for side in record["sides"]:
             if rules.is_removed_deck(side) or not isinstance(side.get("id"), str):
                 continue
-            sides.append((inventory.resolve_deck_id(side["id"], snapshot) if snapshot is not None else side["id"],
-                          side))
+            sides.append((canonical(side["id"]), side))
         found.append((record["date"], {deck_id for deck_id, _ in sides}, sides, record.get("result")))
-    return found
+    return found, pod_dates
+
+
+def _games():
+    """Visible 1v1 games as (date, deck ids, [(deck id, side)], result), or None when unreadable."""
+    index = _game_index()
+    return index[0] if index is not None else None
 
 
 def played_extras(summaries):
@@ -88,23 +107,26 @@ def played_extras(summaries):
     return summaries
 
 
-def deck_played(deck_id):
-    """One deck's {"last", "games", "since"} (the module docstring), or None when the games
-    can't be read."""
-    games = _games()
-    if games is None:
+def deck_played(deck_id, *, include_pods=False):
+    """One deck's 1v1 history and optional separate pod counts, or None when unreadable."""
+    index = _game_index(deck_id if include_pods else None)
+    if index is None:
         return None
+    games, pod_dates = index
     dates = [day for day, ids, *_ in games if deck_id in ids]
-    if not dates:
-        return {"last": None, "games": 0, "since": None}
-    last = max(dates)
-    sides = [side for day, _, found, _result in games if day == last for side_id, side in found if side_id == deck_id]
-    try:
-        since = _since(deck_id, sides)
-    except Exception:           # optional: the Last played line stands without it
-        common._log("What changed since the last game couldn't be worked out:\n" + traceback.format_exc())
-        since = None
-    return {"last": last, "games": len(dates), "since": since}
+    last = max(dates, default=None)
+    since = None
+    if last:
+        sides = [side for day, _, found, _result in games if day == last for side_id, side in found if side_id == deck_id]
+        try:
+            since = _since(deck_id, sides)
+        except Exception:       # optional: the Last played line stands without it
+            common._log("What changed since the last game couldn't be worked out:\n" + traceback.format_exc())
+    result = {"last": last, "games": len(dates), "since": since}
+    if include_pods:
+        result["pods"] = {"last": max((day for days in pod_dates.values() for day in days), default=None),
+                          "three_player": len(pod_dates[3]), "four_player": len(pod_dates[4])}
+    return result
 
 
 def _played_with(side):

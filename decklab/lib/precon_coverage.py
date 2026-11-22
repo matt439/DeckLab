@@ -14,7 +14,8 @@ lists are kept here in a compact index, INDEX in precons' cache folder
 (gitignored), with only each deck's card names and counts:
 
     {"version": 1, "archive_at": <when the archive was last read>,
-     "decks": {<file>: {"at": <when read>, "cards": [[name, count], ...], "total": cards}}}
+     "decks": {<file>: {"at": <when read>, "cards": [[name, count], ...], "total": cards,
+                       "list_complete": <whether every deck line could be read>}}}
 
 It's filled from MTGJSON's AllDeckFiles archive (ARCHIVE_URL, one download of
 about 150 MB, streamed and never saved), read again after ARCHIVE_TTL. A
@@ -119,9 +120,11 @@ def _entry(data, now):
     """A deck's index entry from its MTGJSON data: every readable card of its boards (not the
     display commander), counted by name."""
     counts = Counter()
-    for line in precons.cards_of(data)["lines"]:
+    read = precons.cards_of(data)
+    for line in read["lines"]:
         counts[line["name"]] += line["count"]
-    return {"at": now, "cards": sorted([name, n] for name, n in counts.items()), "total": sum(counts.values())}
+    return {"at": now, "cards": sorted([name, n] for name, n in counts.items()),
+            "total": sum(counts.values()), "list_complete": not read["problems"]}
 
 
 def _recent(deck, today):
@@ -321,15 +324,18 @@ def coverage(need, free):
 def rank(p, kind=None, deck_type=None, background=True):
     """The listed precons the index has read, best covered by p's free copies first:
     {"date" (MTGJSON's build), "decks": [deck_list() entry plus "kind", "cards" (non-basic
-    cards), "covered", "missing", "share" (covered / cards)], "types" (the deck types of
+    cards), "covered", "free_now", "on_the_way", "missing", "share" (covered / cards)], "types" (the deck types of
     that format), "status": {"listed", "indexed" (of those, the decks read), "updating", "error"
     (the last refresh's first problem, or None), "read_at" (when the archive was read)}}. kind: "commander" or
     "casual" (None: both); deck_type: one of precons.TYPES (None: every one). background: start
     a refresh when one is due. PreconError when MTGJSON's deck list can't be had."""
+    from decklab.lib import pool
+
     listed = precons.deck_list()
     updating = ensure(listed["decks"]) if background else False
     index = _index()
-    free = _free(p)
+    free = pool.free_copies(p)
+    physical = pool.physical_free_copies(p, free)
     rows, types = [], set()
     shown = [d for d in listed["decks"] if kind in (None, kind_of(d))]
     for d in shown:
@@ -337,9 +343,13 @@ def rank(p, kind=None, deck_type=None, background=True):
         entry = index["decks"].get(d["file"])
         if deck_type not in (None, d["type"]) or entry is None:
             continue
-        total, covered = coverage(_need(d["file"], entry), free)
+        need = _need(d["file"], entry)
+        total, covered = coverage(need, free)
         if total:
+            _, free_now = coverage(need, physical)
             rows.append({**d, "kind": kind_of(d), "cards": total, "covered": covered, "missing": total - covered,
+                         "free_now": free_now, "on_the_way": covered - free_now,
+                         "list_complete": entry.get("list_complete"),
                          "share": round(covered / total, 4)})
     rows.sort(key=lambda r: (r["released"], r["name"]), reverse=True)
     rows.sort(key=lambda r: (-r["covered"] / r["cards"], r["missing"]))
@@ -349,11 +359,6 @@ def rank(p, kind=None, deck_type=None, background=True):
             "status": {"listed": len(shown), "indexed": sum(1 for d in shown if d["file"] in index["decks"]),
                        "updating": updating, "error": error,
                        "read_at": index.get("archive_at")}}
-
-
-def _free(p):
-    from decklab.lib import pool
-    return pool.free_copies(p)
 
 
 def main(argv=None):

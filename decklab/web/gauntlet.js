@@ -155,8 +155,8 @@ function gtDraw(ctx, a) {
   const played = (a.games || 0) > 0;
   const stale = !played && (a.before || a.older);
   add(ctx.content, [
-    el("p", { class: "sub", text: "How this list does against popular decks from outside the house, from Forge's AI " +
-      "playing them (best of one). They never count in Rankings." }),
+    el("p", { class: "sub", text: `${listName(ctx.version)} · Forge simulation · 1v1, best of one. ` +
+      "The result covers the sampled opponents and depends on Forge's AI." }),
     gtStandardLine(ctx, a),
     gtTrySampleChange(ctx, a),
     // Results first at every width (E3-S33); from 1,600 px the play box sits to their right.

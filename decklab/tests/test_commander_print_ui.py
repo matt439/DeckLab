@@ -184,11 +184,11 @@ class CommanderPrintUiTests(unittest.TestCase):
     def test_saved_sheet_menu_action_stays_with_its_page_and_profile(self):
         self.run_js("""
           const data=makePage();let downloaded=0;downloadPlaySheet=()=>downloaded++;
-          const item=deckMoreItems(data).find(item=>item?.label==='Download play sheet');
-          assert(item);item.onclick();assert.equal(downloaded,1);
-          routeToken++;item.onclick();assert.equal(downloaded,1);
-          const newer=deckMoreItems(data).find(item=>item?.label==='Download play sheet');
-          state.profile={id:'user2',space:'user2'};newer.onclick();assert.equal(downloaded,1);
+          drawDeck(data);
+          const openExports=()=>{const sheet=openDeckExportSheet(data);return buttonText(sheet.body,'Download play sheet');};
+          const item=openExports();assert(item);item.click();assert.equal(downloaded,1);
+          routeToken++;item.click();assert.equal(downloaded,1);
+          const newer=openExports();state.profile={id:'user2',space:'user2'};newer.click();assert.equal(downloaded,1);
         """)
 
     def test_another_viewer_prints_no_inventory_or_household_night(self):

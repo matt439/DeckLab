@@ -147,10 +147,10 @@ class AssemblySheetsUiTests(unittest.TestCase):
           const data=withStandins(plan()); const posts=[];
           mockApi(async(path,body)=>{posts.push([path,body]);return path.endsWith('preview')?data:{saved:true};});
           drawAssembly(data,routeToken); await settle();
-          main.querySelectorAll('button').find(button=>button.textContent==='Choose stand-ins').click();
+          main.querySelectorAll('button').find(button=>button.textContent==='Choose physical placeholders').click();
           assert.equal(posts.length,0,'suggestions are advisory');
-          select('Stand-in for Beta, group 1').value='';
-          action('Save stand-ins').click(); action('Save stand-ins').click(); await settle();
+          select('Placeholder for Beta, group 1').value='';
+          action('Save placeholder choices').click(); action('Save placeholder choices').click(); await settle();
           same(posts[0],['/api/assembly/standins',{id:'casual/a',version:'target',sha256:'s'.repeat(64),
             decks:[{id:'casual/a',version:'target'}],fingerprint:'first-plan',
             rows:[{for:'Beta',using:null,qty:1}]}]);
@@ -165,8 +165,8 @@ class AssemblySheetsUiTests(unittest.TestCase):
           mockApi(async(path,body)=>{posts.push([path,body]);if(path.endsWith('standins'))
             throw Object.assign(new Error('Deck changed'),{status:409}); return data;});
           drawAssembly(data,routeToken); await settle(); openPackStandins(view,data.decks[0]);
-          action('Save stand-ins').click(); await settle();
-          assert(!action('Save stand-ins')); assert(select('Stand-in for Beta, group 1').disabled);
+          action('Save placeholder choices').click(); await settle();
+          assert(!action('Save placeholder choices')); assert(select('Placeholder for Beta, group 1').disabled);
           action('Refresh plan').click(); await settle();
           assert.equal(assemblySheets.size,0); assert.equal(posts.length,2);
         """)
@@ -175,7 +175,7 @@ class AssemblySheetsUiTests(unittest.TestCase):
         self.run_js("""
           const data=withStandins(plan(),[{for:'Beta',using:null,qty:2}]);
           drawAssembly(data,routeToken); await settle();
-          assert(main.textContent.includes('Ready to pack with 2 stand-ins'));
+          assert(main.textContent.includes('Ready to pack with 2 physical placeholders'));
           assert.equal(ticks().length,2); ticks()[0].click(); await settle();
           assert(builtBlocked()); ticks()[1].click(); await settle(); assert(!builtBlocked());
           assert(main.querySelectorAll('.card-tile').some(tile=>tile.textContent.includes('Use any spare card')));

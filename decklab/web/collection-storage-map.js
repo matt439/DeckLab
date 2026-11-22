@@ -13,6 +13,7 @@ function drawCollectionStorageMap(data, space, token) {
   cv.root = el("div", { class: "collection-page col-map-page" }, colHead(cv), cv.mapContent);
   $("#main").append(cv.root);
   if (!cv.unsupported && data.space === space) drawStorageMapContent(cv);
+  colTakeNotice(cv);
   return cv;
 }
 
@@ -197,30 +198,50 @@ async function loadStorageMapSection(ctx) {
 function drawStorageMapDetail(ctx) {
   const { section, rows, ready, editable, expect, message } = ctx.data;
   const canAudit = ready && editable && ctx.cv.editable && section.auditable !== false && expect && Array.isArray(rows);
+  const canScan = ctx.cv.editable && section.auditable !== false && Array.isArray(rows) &&
+    Array.isArray(ctx.data.excluded_names) && typeof ctx.data.scan?.available === "boolean";
   ctx.sheet.heading.textContent = section.label;
   clear(ctx.content).append(
-    el("p", { class: "sub", text: [storageMapPlace(section), `${storageMapCount(section.quantity)} expected`].filter(Boolean).join(" · ") }),
-    storageMapAuditHistory(section.audit));
+    el("p", { class: "sub", text: [storageMapPlace(section), `${storageMapCount(section.quantity)} expected`].filter(Boolean).join(" · ") }));
+  if (canAudit || canScan) ctx.content.append(storageMapCheckOptions(ctx, canAudit, canScan));
+  ctx.content.append(storageMapAuditHistory(section.audit));
   if (message) storageMapReport(ctx, message, "info");
   if (!canAudit && rows?.length && !ctx.saved) ctx.content.append(
     el("h3", { text: "Expected cards" }),
     el("ul", { class: "col-map-differences" }, rows.map(row => el("li", {}, storageMapRowIdentity(row),
       el("span", { class: "sub", text: storageMapExpected(row) })))));
-  const canScan = ctx.cv.editable && section.auditable !== false && Array.isArray(rows) &&
-    Array.isArray(ctx.data.excluded_names) && typeof ctx.data.scan?.available === "boolean";
-  storageMapSheetActions(ctx, canScan ? { text: "Scan to audit", value: "scan",
-    onclick: trigger => scanStorageMapSection(ctx, trigger) } : null,
-    canAudit ? { text: "Start audit", value: "start", kind: "primary",
-    onclick: () => startStorageMapAudit(ctx) } : null);
+  storageMapSheetActions(ctx);
+}
+
+function storageMapCheckHere(ctx, trigger) {
+  return storageMapSheetHere(ctx) && ctx.cv.mapSheet === ctx.sheet && !ctx.busy && !ctx.cv.busy &&
+    ctx.cv.editable && trigger.isConnected && ctx.content.contains(trigger);
+}
+
+function storageMapCheckOptions(ctx, canAudit, canScan) {
+  const options = el("div", { class: "col-map-check-options" });
+  const addOption = (id, label, description, choose) => {
+    const describedBy = `${ctx.sheet.heading.id}-${id}`;
+    options.append(el("div", {}, el("button", { type: "button", class: "btn btn-secondary", text: label,
+      "aria-describedby": describedBy, onclick: event => {
+        const trigger = event.currentTarget;
+        if (storageMapCheckHere(ctx, trigger) && [...document.querySelectorAll("dialog[open]")].at(-1) === ctx.sheet.dialog) choose(trigger);
+      } }), el("p", { id: describedBy, class: "sub", text: description })));
+  };
+  if (canAudit) addOption("manual", "Count by hand", "Review your counts and save a dated audit with any differences.",
+    () => startStorageMapAudit(ctx));
+  if (canScan) addOption("scan", ctx.data.scan.available ? "Scan" : "Look up cards", ctx.data.scan.available
+    ? "Scan printings for a temporary difference report. Closing clears the report."
+    : "Photo scanning is unavailable. Look up printings for a temporary difference report.",
+    trigger => scanStorageMapSection(ctx, trigger));
+  return el("section", { class: "col-map-check" }, el("h3", { text: "Check this section" }), options);
 }
 
 function scanStorageMapSection(ctx, trigger) {
   const data = ctx.data;
-  const current = () => storageMapSheetHere(ctx) && ctx.cv.mapSheet === ctx.sheet && ctx.data === data
-    && !ctx.busy && !ctx.cv.busy && ctx.cv.editable && trigger.isConnected && ctx.sheet.foot.contains(trigger);
-  if (!current() || [...document.querySelectorAll("dialog[open]")].at(-1) !== ctx.sheet.dialog) return;
+  const current = () => storageMapCheckHere(ctx, trigger) && ctx.data === data;
   const rows = data.rows.map(row => ({ ...row, manual: row.key.startsWith("token-") }));
-  const instructions = ["Scan the loose cards in this section. Check each printing and finish against the card in your hand.",
+  const instructions = ["Check each loose card's printing and finish against the card in your hand.",
     "Set basic lands aside. Deck Lab does not track how many are loose."];
   if (rows.some(row => row.manual)) instructions.push("Count printed token cards by hand, checking both faces of each physical card.");
   if (rows.some(row => row.estimated)) instructions.push("Some expected counts are estimates because the printing held elsewhere is uncertain.");

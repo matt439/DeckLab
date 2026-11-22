@@ -159,7 +159,7 @@ function projectEditorSearchDock(dock = editor?.dom?.searchDock) {
   }
 }
 
-function openEditorSearchDock() {
+function openEditorSearchDock(scope = "all") {
   const ed = editor;
   if (!editorKeyboardCurrent(ed) || ed.leaving || ed.asking || ed.saving || noOwnedList()
     || keyboardMenuOpen() || document.querySelector("dialog[open]")) return;
@@ -181,6 +181,7 @@ function openEditorSearchDock() {
   if (dock.panes) projectEditorPanes(dock.panes);
   else projectEditorSearchDock(dock);
   if (!editorSearchCurrent(dock.ac)) return;
+  if (scope === "collection" && dock.ac.sees && dock.ac.mode !== "collection") editorFinderCollection(dock.ac, true);
   if (dock.ac.items.length && dock.ac.query === parseQuery(dock.ac.input.value).q
     && (!dock.ac.resultScope || dock.ac.resultScope === editorSearchScope(dock.ac))) drawOptions(dock.ac);
   else schedule(dock.ac, 0); // A cancelled first lookup resumes as a read, with no pending Add intent.

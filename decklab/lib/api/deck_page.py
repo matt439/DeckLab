@@ -9,7 +9,7 @@ import re
 import traceback
 from collections import Counter
 
-from decklab.lib import accessories, decks, inventory, pool, spaces, tokens
+from decklab.lib import accessories, cards, decks, inventory, pool, spaces, tokens
 from decklab.lib.inventory import paths as inventory_paths
 from decklab.lib.state import StateError
 
@@ -128,7 +128,7 @@ def _own_collection_empty():
     only its own people learn whether a collection is empty, and nothing else about it."""
     try:
         profile = guard.viewer()
-    except ApiError:
+    except (ApiError, *cards.INDEX_ERRORS):
         return None
     space = profile.get("space") if isinstance(profile, dict) else None
     if not isinstance(space, str) or not space or not guard.sees_inventory(space, profile):
@@ -529,10 +529,25 @@ def _played(deck_id, summary):
     """library_played.deck_played's answer with "can_record": whether this viewer may record a game
     with this deck (the Game log's own per-deck play.record answer, so the Overview offers Record a game
     only where the Game log's quick record would take it: never a Public deck of another space)."""
-    played = deck_played(deck_id)
+    played = deck_played(deck_id, include_pods=decks.engine_kind(summary) == "commander")
     if played is not None:
         played["can_record"] = guard.allowed(guard.viewer(), "play.record", [summary])
     return played
+
+
+def _play_list(summary, version, sections, deck_file):
+    """Identity for an exact Game log link, with physical matching where visible."""
+    from . import play_records
+    if summary.get("trial"):
+        return None
+    try:
+        captured = play_records.snapshot_from_sections(summary, version, sections)
+    except ApiError:
+        return None
+    choice = {"sha256": captured["sha256"]}
+    if play_records.may_check_packed_list(summary):
+        choice["packed_match"] = play_records.packed_list_matches(deck_file, version)
+    return choice
 
 
 def deck_view(deck_id, version="target", omit=()):
@@ -554,7 +569,8 @@ def deck_view(deck_id, version="target", omit=()):
     quantity, order_id, component_id, product_id, status}]}. The pairs match
     the deck file's Notes cell; incoming_sources names those same copies'
     order/product and ordered/preordered status (ids None for unrecorded
-    sources). owned is None if the pool can't be read. Also practice and warnings.
+    sources). owned is None if the pool can't be read. Its availability_confirmed
+    flag uses the complete comparison before redacting warnings. Also practice and warnings.
 
     guide is the existing gameplay prose from the deck file's Notes, grouped
     by topic, with changed_on when a list edit marked that prose stale, and departed
@@ -610,6 +626,8 @@ def deck_view(deck_id, version="target", omit=()):
     standins is this ordinary deck's saved physical-marker mappings, with desired-card pictures,
     separate from sections and their hashes; None for products and pairings. Its own warnings
     describe invalid saved mappings without changing the logical list.
+    packed_placeholders, when present, uses the actual box record and is independent of the
+    list being viewed.
 
     scan_audit is the built deck's physical counts by card name and its scanner availability.
     It is offered only within its own space, including when both decks and inventory are public.
@@ -627,6 +645,8 @@ def deck_view(deck_id, version="target", omit=()):
     never named), with "since", what its list changed after its last game, from the deck's own
     revisions, and "can_record", whether this viewer may record a game with it (play.record, as the
     Game log's decks say); None when the games can't be read.
+    play_list identifies the selected list in the Game log, or None if it cannot be used there.
+    Its optional packed_match verdict follows the inventory's visibility.
 
     box_label is an owned intact product's box label (product_label.box_label: its name,
     colours, decks and the deck page its QR code opens), only for a viewer who sees home's
@@ -684,7 +704,10 @@ def deck_view(deck_id, version="target", omit=()):
             warnings.extend(pool_warnings)
         else:
             try:
-                owned = _owned_json(pool.owned_vs_needed(deck_id, version, pool=p), p)
+                result = pool.owned_vs_needed(deck_id, version, pool=p)
+                confirmed = not result["unresolved"] and not result["warnings"]
+                owned = _owned_json(result, p)
+                owned["availability_confirmed"] = confirmed
                 from .reprints import enrich
                 enrich(owned["rows"])
                 _saved_shop_prices(owned, space, requested_id)
@@ -713,6 +736,7 @@ def deck_view(deck_id, version="target", omit=()):
         "usual_opponents": usual_opponents(deck_id),
         # When it was last played at home and what its list changed since (E1-S27): the Game log's games.
         "played": _played(deck_id, summary),
+        "play_list": _play_list(summary, version, sections, deck_file),
         "swaps": view_swaps(deck_file),
         # The Considering list (E2-S23): its free counts only for a viewer who sees the inventory.
         "considering": considering_view(deck_file, deck_id, p, sees, warnings),
@@ -747,7 +771,7 @@ def deck_view(deck_id, version="target", omit=()):
         if deck_file is not None and space == spaces.HOME and guard.sees_home_records():
             from decklab.lib.decks import boxcheck
             answer["box_checked_on"] = boxcheck.checked_on(deck_file)
-        from .assembly_standins import project
+        from .assembly_standins import project, project_packed
         answer["standins"] = project(deck_file, version) if deck_file is not None else None
         if deck_file is not None and space == spaces.HOME:
             from .deck_printings import view as printings_view
@@ -757,6 +781,13 @@ def deck_view(deck_id, version="target", omit=()):
         assembled = _assembled_view(summary, p, warnings, deck=deck_file, result=owned if version == "target" else None)
         if assembled is not None:
             answer["assembled"] = assembled
+            try:
+                packed = project_packed(deck_file)
+            except ValueError:
+                warnings.append("The physical placeholders in this box need checking.")
+            else:
+                if packed:
+                    answer["packed_placeholders"] = packed
     from .product_label import box_label
     label = box_label(deck_id)
     if label is not None:

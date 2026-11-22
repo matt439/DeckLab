@@ -355,7 +355,7 @@ function shopOrderChangePreview(answer, body = null, saved = false, targetContex
     el("li", {}, el("a", {href: deckHref(deck.id), text: deck.title || deck.id})))));
   if ((tables.skipped || []).length) box.append(el("p", {class: "note note-warn", text: `Not updated: ${tables.skipped.map(deck => deck.title || deck.id).join(", ")}.`}));
   if (tables.error) box.append(el("p", {class: "note note-warn", text: tables.error}));
-  if ((tables.skipped || []).length || tables.error) box.append(el("a", {href: TABLES_HREF, text: "Tables out of date"}));
+  if ((tables.skipped || []).length || tables.error) box.append(el("a", {href: TABLES_HREF, text: TABLES_TITLE}));
   if ((answer.warnings || []).length) add(box, [warningsBox(answer.warnings, saved ? "Saved, with notes" : "Check before saving")]);
   return box;
 }

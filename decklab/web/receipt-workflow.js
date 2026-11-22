@@ -434,7 +434,7 @@ function rcptSuccess(view, answer) {
   const received = view.received || rcptReceived(view);
   const tables = receiptTables(answer.tables);
   const written = (answer.tables && answer.tables.written) || [];
-  add(clear(view.root), [pageHead({ crumb: ["#/shopping", routeFor("shopping").label], title: "Arrival recorded",
+  add(clear(view.root), [pageHead({ crumb: ["#/shopping?view=orders", "Orders & deliveries"], title: "Arrival recorded",
     description: `${view.data.seller || view.data.order} · arrived ${rcptDate(view.date.value)}` }),
   el("div", { class: "box box-good rcpt-recorded", role: "status" },
     el("h2", { text: rcptAddedWords(answer.totals) }), rcptOutcome(answer.totals)),
@@ -445,7 +445,8 @@ function rcptSuccess(view, answer) {
     answer.remaining?.length ? el("button", { type: "button", class: "btn btn-primary", text: "Continue pending delivery", onclick: () => {
       if (receiptActive(view)) route();
     } }) : null,
-    el("a", { class: answer.remaining?.length ? "btn" : "btn btn-primary", href: "#/shopping", text: "Back to Shopping" }),
+    el("a", { class: answer.remaining?.length ? "btn" : "btn btn-primary", href: "#/shopping?view=orders", text: "Back to orders & deliveries" }),
+    el("a", { class: "btn", href: "#/activity?kind=shopping", text: "Changes & undo" }),
     written.slice(0, 6).map((d) => el("a", { class: "btn", href: deckHref(d.id), text: d.title })))]);
   const head = view.root.querySelector("h1");
   if (head && head.focus) { head.setAttribute("tabindex", "-1"); head.focus(); }

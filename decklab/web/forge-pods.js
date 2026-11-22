@@ -137,9 +137,8 @@ async function showForgePods(params, token) {
     key: params.get("key") || null, answer: null, selected: ["", "", "", ""], games: FP_GAMES[0],
     selectedControls: [], lineup: "", plan: null, busy: false, uncertain: false, initialized: false, watcher: null,
     choicesSignature: null, lineupsSignature: null };
-  add(root, [crumb("#/matchups", "Testing"), pageHead({ title: "Four-player pods",
-    description: "Test four Commander decks together with Forge's AI." }),
-    el("p", { class: "note", text: "These are simulated pod games, separate from the Game log and all head-to-head results. Pod games do not replay exactly: read their win shares as statistics only." })]);
+  add(root, [crumb("#/matchups", routeFor("matchups").label), pageHead({ title: "Simulate a four-player pod",
+    description: "Test four Commander decks together with Forge's AI." })]);
   if (ctx.key && !FP_KEY.test(ctx.key)) {
     root.append(errorBox("This pod couldn't be opened", new ApiError(404, "That link is not a pod run's address."), null,
       [fpHref(), "Choose a pod"]));
@@ -248,8 +247,11 @@ function fpAnswer(ctx, answer) {
     ctx.plan = null;
     ctx.selectedControls.forEach((select, i) => {
       clear(select).append(el("option", { value: "", text: "Choose a Commander deck…" }),
-        ...choices.map(deck => el("option", { value: fpChoiceKey(deck),
-          text: `${deck.title}${deck.version === "owned" ? " (play-now list)" : ""} · ${deck.target_bracket == null ? "target bracket not set" : `target bracket ${deck.target_bracket}`}${deck.public ? " · Public" : ""}` })));
+        ...choices.map(deck => {
+          const title = deck.version === "owned" ? `${deck.title} (${listName(deck.version)})` : deck.title;
+          const bracket = deck.target_bracket == null ? "target bracket not set" : `target bracket ${deck.target_bracket}`;
+          return el("option", { value: fpChoiceKey(deck), text: `${title} · ${bracket}${deck.public ? " · Public" : ""}` });
+        }));
       if (!choices.some(deck => fpChoiceKey(deck) === ctx.selected[i])) ctx.selected[i] = "";
       select.value = ctx.selected[i];
     });
@@ -441,7 +443,8 @@ function fpResultPart(answer) {
     ? sides.map(side => ({ ...byDeck[side.id], ...side })) : result.decks || [];
   const section = el("section", { class: "box fp-results", "aria-labelledby": "fp-results-heading" },
     el("h2", { id: "fp-results-heading", text: "Pod win shares" }),
-    el("p", { class: "note", text: "Statistics only: four-player pod games do not replay exactly. Equal shares in a four-player pod would be 25% for each deck." }));
+    el("p", { class: "sub", text: "Forge simulation · 4-player Commander · Default AI" }),
+    el("p", { class: "note", text: "Use the results to compare the decks in this pod. Individual games cannot be replayed exactly." }));
   const planned = result.planned ?? result.games, completed = result.completed ?? summary.pods;
   if (Number.isInteger(planned) && planned > 0 && Number.isInteger(completed) && completed >= 0) {
     const remaining = Number.isInteger(result.remaining) ? result.remaining : Math.max(0, planned - completed);
@@ -451,12 +454,11 @@ function fpResultPart(answer) {
     section.append(el("p", { class: "note", text: result.state === "stopped" ? "This run was stopped. Completed games are kept."
       : "This run did not finish. Completed games are kept; its remaining games have no result." }));
   }
-  section.append(el("p", { class: "sub", text: "Forge's default AI plays these pods. They do not use the head-to-head pilot settings or contribute to card statistics." }));
   if (!Number.isInteger(counted) || counted < 0 || rows.length !== 4) {
     section.append(el("p", { text: "This saved result does not have complete win-share statistics." }));
     return section;
   }
-  section.append(el("p", { text: `${thousands(counted)} counted pod games. Ranges are 95% Wilson uncertainty ranges, not predictions for a social table.` }),
+  section.append(el("p", { text: `${thousands(counted)} counted pod games. Equal shares would be 25% per deck. The 95% Wilson ranges describe sampling uncertainty.` }),
     el("ul", { class: "fp-shares" }, rows.map((row, index) => {
       const side = sides.find(deck => deck.id === row.id) || sides[index] || row;
       const rate = row.rate, range = row.range;
@@ -465,9 +467,11 @@ function fpResultPart(answer) {
         range[0] >= 0 && range[0] <= range[1] && range[1] <= 1;
       const known = validRate && validRange && counted > 0;
       const source = fpPreconSource(side);
+      const list = side.version === "target" || side.version === "owned" ? listName(side.version) : "List version unavailable";
+      const reference = FP_KEY.test(side.card_sha || "") ? `List ID ${side.card_sha.slice(0, 8)}` : null;
       return el("li", { class: "fp-share" },
         el("h3", { text: side.title || row.title || `Deck ${index + 1}` }),
-        source ? el("p", { class: "sub" }, source) : null,
+        el("p", { class: "sub" }, source || list, reference ? ` · ${reference}` : null),
         winRateFigure(known ? { value: rate, low: range[0], high: range[1] } : null,
           { size: "hero", what: "Pod win share" }),
         el("p", { class: "sub", text: Number.isInteger(row.wins) && row.wins >= 0

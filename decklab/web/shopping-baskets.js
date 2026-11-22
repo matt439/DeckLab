@@ -155,7 +155,7 @@ function shopBasketPostage(postage) {
   const unset = !postage.postage_aud && !postage.free_over_aud;
   return el("p", {class: `shop-basket-postage${postage.known ? "" : " shop-basket-postage-unknown"}`,
     "data-basket-postage": postage.charged_aud || ""}, words,
-    unset && isAdminProfile() ? [" ", el("a", {href: "#/settings?part=postage", text: "Set postage in Settings"})] : null);
+    unset && isAdminProfile() ? [" ", el("a", {href: "#/settings?part=postage", text: "Set shop postage"})] : null);
 }
 
 /** What the marked add-ons do for the basket's postage, or that even all of them fall short. */

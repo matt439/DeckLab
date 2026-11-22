@@ -42,8 +42,8 @@ class BoxCheckUiTests(unittest.TestCase):
           const {sheet}=await openBox();assert.equal(localChecks(sheet).length,7);assert(localChecks(sheet).every(input=>!input.checked));
           same(nums(sheet).map(input=>input.value),['','','','','','','']);assert(reviewButton(sheet).disabled);
           for(const words of ['Commander','Companion','Deck','Sideboard','Recorded commander','Recorded companion','Recorded Elf','Forest',
-            'Named physical marker (marked for Represented spell)','Unspecified stand-in (marked for Missing spell)','Packed sideboard card',
-            'representative name-only art','historical date','counts and differences stay only in this review'])assert(sheet.body.textContent.includes(words),words);
+            'Named physical marker (marked for Represented spell)','Unnamed physical placeholder (marked for Missing spell)','Packed sideboard card',
+            'Card art represents names only','Save check date records the date','Counts and differences stay in this review'])assert(sheet.body.textContent.includes(words),words);
           assert(!sheet.body.textContent.includes('2 x Alpha'));assert(!dateButton(sheet));
         ''')
 
@@ -53,7 +53,7 @@ class BoxCheckUiTests(unittest.TestCase):
           same(images,['/img/name-only-art']);assert(!images.includes('/img/intended-printing'));assert(!images.includes('/img/represented-spell'));
           const tiles=sheet.body.querySelectorAll('.card-tile');assert.equal(tiles.length,7);
           assert(tiles.every(tile=>tile.tag==='label'));assert(tiles.every(tile=>!tile.getAttribute('class').includes('is-foil')));
-          assert(tiles[5].textContent.includes('Unspecified physical stand-in'));
+          assert(tiles[5].textContent.includes('Unnamed physical placeholder'));
         ''')
 
     def test_ticks_fill_full_quantity_and_untick_returns_to_unreviewed_zero_is_explicit(self):
@@ -100,7 +100,7 @@ class BoxCheckUiTests(unittest.TestCase):
         self.run_js(r'''
           const {sheet}=await openBox();allFound(sheet);found(sheet,0,'0');found(sheet,2,'1');found(sheet,3,'21');found(sheet,5,'0');extraCard(sheet);
           reviewButton(sheet).click();const text=sheet.body.textContent;
-          for(const words of ['Commander: 1 x Recorded commander','Deck: 1 x Recorded Elf','Deck: 1 x Unspecified stand-in (marked for Missing spell)',
+          for(const words of ['Commander: 1 x Recorded commander','Deck: 1 x Recorded Elf','Deck: 1 x Unnamed physical placeholder (marked for Missing spell)',
             'Deck: 1 x Forest','Sideboard: 2 x Mountain','29 recorded physical cards; 29 cards found'])assert(text.includes(words),words);
           assert(dateButton(sheet));button(sheet.dialog,'Back to counts').click();same(nums(sheet).slice(0,7).map(input=>input.value),['0','1','1','21','1','0','3']);
           assert(reviewButton(sheet));assert(!dateButton(sheet));
@@ -276,10 +276,10 @@ class BoxCheckUiTests(unittest.TestCase):
 
     def test_historical_deck_date_is_private_calendar_valid_and_does_not_certify_current_contents(self):
         self.run_js(r'''
-          const data={summary:{status:'built'},version:'target',versions:['target'],owned:{rows:[],totals:{missing:0,aud_missing:0}},box_checked_on:'2026-10-27'};
-          const banner=availabilityBanner(data,null);assert(banner.textContent.includes('Last box check recorded: 2026-10-27'));
-          assert(banner.textContent.includes('Contents may have changed since'));assert.equal(banner.querySelector('time').getAttribute('datetime'),'2026-10-27');
-          delete data.owned;assert.equal(availabilityBanner(data,null),null);
+          const data={summary:{id:'casual/a',status:'built'},version:'target',versions:['target'],owned:{rows:[],totals:{missing:0,aud_missing:0}},box_checked_on:'2026-10-27'};
+          const box=deckAssemblySection(data);assert(box.textContent.includes('Last box check recorded: 2026-10-27'));
+          assert(box.textContent.includes('Contents may have changed since'));assert.equal(box.querySelector('time').getAttribute('datetime'),'2026-10-27');
+          delete data.owned;assert.equal(deckAssemblySection(data),null);
           assert.equal(boxCheckDate('2026-02-30'),null);assert.equal(boxCheckDate('2026-02-29'),null);assert.equal(boxCheckDate('2024-02-29'),'2024-02-29');
           assert.equal(boxCheckDateNote({box_checked_on:null}),null);assert.equal(boxCheckDateNote({box_checked_on:'not a date'}),null);
         ''')

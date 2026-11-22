@@ -168,7 +168,7 @@ def _row(entry, today):
            "played_known": entry.get("played_known", True) is not False}
     if row["last_played"]:
         row["days_since_played"] = _days(today, row["last_played"])
-    for key in ("stand_ins", "box_checked_on"):
+    for key in ("stand_ins", "box_checked_on", "packed_version"):
         if key in entry:
             row[key] = entry[key]
     return row

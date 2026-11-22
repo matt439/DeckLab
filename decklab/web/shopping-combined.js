@@ -1,4 +1,4 @@
-/* Shopping's "Build decks together" (E5-S28): choose two or more home decks, then see what to buy so all
+/* Shopping's combined shortages (E5-S28): choose two or more home decks, then see what to buy so all
  * of them can be built at once (GET /api/shopping/combined), each card with its matching purchase queue rows
  * (any purpose or state, from Shopping's current local queue). A home admin's Queue these… opens the reviewed
  * queue sheet (deck-queue-missing.js's openQueueCombinedSheet): the shortfall less the copies already queued
@@ -64,8 +64,8 @@ function shopCombinedSection(view) {
     () => shopCombinedLoad(view, combined.chosen)));
   else if (combined.result) add(content, [shopCombinedResult(combined.result, view)]);
   add(content, [shopCompareContent(view)]);
-  return shopSection("shop-combined", "Build decks together", 0,
-    "Choose decks to build at the same time: each free copy counts once, and cards on the way count as yours.", content);
+  return shopSection("shop-combined", "Combined shortages", 0,
+    "Check what to buy to build the Planned lists together. Each available copy goes into one deck. Incoming copies reduce what you need to buy.", content);
 }
 
 /** Tick two or more decks, then Show what to buy. */
@@ -73,7 +73,7 @@ function shopCombinedSheet(view) {
   if (!shopQueueActive(view)) return null;
   const combined = shopCombinedState(view);
   const chosen = new Set(combined.chosen);
-  const sheet = openSheet({title: "Build decks together"});
+  const sheet = shopTrackQueueSheet(openSheet({title: "Enough to build these decks together?"}), view);
   sheet.body.append(el("p", {text: `Tick ${SHOP_COMBINED_MIN} to ${SHOP_COMBINED_MAX} decks to build at the same time.`}));
   const count = el("p", {class: "field-hint shop-combined-count", role: "status"});
   const list = el("div", {class: "shop-combined-choices"});
@@ -160,11 +160,11 @@ function shopCombinedChosen(view) {
   return Boolean(view.combined?.chosen.length || view.compare);
 }
 
-/** The empty page's way in: Build decks together… when there are two or more decks to choose. */
+/** The empty page's way into the combined calculation. */
 function shopCombinedStart(view) {
   if (shopCombinedChoices(view).length < SHOP_COMBINED_MIN) return null;
   return el("p", {class: "shop-combined-start-line"}, el("button", {type: "button", class: "btn btn-quiet shop-combined-start",
-    text: "Build decks together…", onclick: () => shopCombinedSheet(view)}), shopCompareButton(view));
+    text: "Check combined shortages…", onclick: () => shopCombinedSheet(view)}), shopCompareButton(view));
 }
 
 /** A deck's Cards tab, filtered to Missing only when that deck misses something on its own (a card
@@ -190,8 +190,12 @@ function shopCombinedResult(result, view) {
     return out;
   }
   const totals = result.totals || {};
+  const pack = el("a", {class: "btn", href: `#/assembly?decks=${encodeURIComponent(decks.map(deck => deck.id).join(","))}`,
+    text: "Pack these decks"});
   if (!(result.rows || []).length) {
-    out.push(emptyBox("Nothing to buy: these decks can all be built at the same time."));
+    out.push(emptyBox(totals.on_the_way
+      ? `Nothing to buy. Wait for ${plural(totals.on_the_way, "incoming copy", "incoming copies")} before building these decks together.`
+      : "Nothing to buy. These decks can all be built at the same time.", pack));
     return out;
   }
   const extra = (totals.copies || 0) - (totals.copies_alone || 0);
@@ -201,9 +205,10 @@ function shopCombinedResult(result, view) {
       ? `, ${extra} more than the decks miss one at a time (${totals.copies_alone}), because they need the same copies.`
       : "."),
     totals.on_the_way ? el("span", {class: "chips"}, status("info", `${totals.on_the_way} on the way counted`)) : null));
-  if (view && shopCombinedQueueOffered(view)) out.push(el("div", {class: "actions shop-combined-queue-line"},
-    el("button", {type: "button", class: "btn shop-combined-queue shop-queue-write", text: "Queue these…",
-      disabled: view.busy || view.stale, onclick: () => shopCombinedQueue(view)})));
+  out.push(el("div", {class: "actions shop-combined-queue-line"}, pack,
+    view && shopCombinedQueueOffered(view)
+      ? el("button", {type: "button", class: "btn shop-combined-queue shop-queue-write", text: "Review combined queue…",
+        disabled: view.busy || view.stale, onclick: () => shopCombinedQueue(view)}) : null));
   const queue = (view && view.data.to_buy) || [];
   out.push(el("div", {class: "shop-missing-rows shop-combined-rows"}, result.rows.map(item => shopCombinedRow(item, queue))));
   return out;
@@ -212,14 +217,17 @@ function shopCombinedResult(result, view) {
 function shopCombinedRow(item, queue = []) {
   const queued = shopMissingQueue(item, queue);
   const competing = item.missing - (item.missing_alone || 0);
+  const incoming = (item.on_the_way || []).reduce((sum, source) => sum + source.copies, 0);
+  const freeNow = Math.max(0, item.need - item.missing - incoming);
   const row = cardRow(item.card || null, {name: item.name, qty: item.missing, aside: null,
-    meta: `${plural(item.missing, "copy", "copies")} to buy · ${item.need} wanted, ${item.available} free`,
+    meta: `${plural(item.missing, "copy", "copies")} to buy · ${item.need} wanted · ${freeNow} available now`,
     unknownMeta: "Missing from the chosen Planned lists", viewerGroup: "shopping-combined"});
   const wants = el("ul", {class: "shop-missing-decks", "aria-label": "Decks needing this card"},
     (item.decks || []).map(deck => el("li", {},
       el("a", {href: shopCombinedDeckHref(deck)}, el("span", {class: "shop-missing-deck-label"}, deck.title,
         el("span", {class: "shop-missing-count", text: ` ×${deck.need}`}))))));
   const chips = [shopQueuedChip(queued), competing > 0 ? status("warn", `${competing} more because the decks share it`) : null,
+    item.lent_out ? status("warn", `${item.lent_out} lent out`) : null,
     ...(item.on_the_way || []).map(way => status("info", `${way.copies} on the way (${way.source})`))].filter(Boolean);
   const held = (item.held_elsewhere || []).length ? el("small", {class: "shop-combined-held",
     text: "Held by " + item.held_elsewhere.map(h => `${h.title} ×${h.copies}`).join(", ")}) : null;

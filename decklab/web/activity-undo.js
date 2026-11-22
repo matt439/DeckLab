@@ -1027,9 +1027,10 @@ function activityUndoMixedShow(ctx) {
       if (!activityUndoOwner(ctx)) return;
       ctx.saved = true;
       if (ctx.current()) {
-        const tables = answer.tables_error ? " The deck tables couldn't all be worked out again: see Tables out of date on the Decks page."
-          : answer.tables_refreshed ? " " + answer.tables_refreshed + (answer.tables_refreshed === 1 ? " deck table was" : " deck tables were") + " worked out again." : "";
-        const confirmation = el("p", { role: "status", tabindex: "-1", text: "Undo saved as a new change. " + answer.summary + tables });
+        const confirmation = el("p", { role: "status", tabindex: "-1" }, "Undo saved as a new change. " + answer.summary);
+        if (answer.tables_error) confirmation.append(" Some deck availability still needs updating. ",
+          el("a", { href: TABLES_HREF, text: "Review on Decks" }));
+        else if (answer.tables_refreshed) confirmation.append(` Updated availability for ${plural(answer.tables_refreshed, "deck")}.`);
         sheet.body.append(confirmation); actions(); if (ctx.here()) confirmation.focus();
       }
     } catch (failure) {

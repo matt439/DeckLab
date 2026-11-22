@@ -28,9 +28,10 @@ function incomingBannerSources(owned) {
     const words = incomingSourceWords(source);
     sources.set(words, (sources.get(words) || 0) + source.quantity);
   }
-  if (!sources.size) return null;
-  return el("p", { class: "sub deck-avail-sources", text: "On the way: " +
-    [...sources].map(([words, quantity]) => `${quantity}${words ? ` from ${words}` : ""}`).join("; ") });
+  if (![...sources.keys()].some(Boolean)) return null;
+  return el("details", { class: "more deck-arrival-details" }, el("summary", { text: "Arrival details" }),
+    el("p", { class: "sub deck-avail-sources", text: "On the way: " +
+      [...sources].map(([words, quantity]) => `${quantity}${words ? ` from ${words}` : ""}`).join("; ") }));
 }
 
 // ------------------------------------------------------------- availability
@@ -43,6 +44,7 @@ function asListedWords(d, owned) {
 /** The banner's second line, only when the list's own printings would cost materially more than the
  * cheapest ones (totals.as_listed, lib/listed_prices.py): the dearest 3 cards, then "and N more". */
 function asListedLine(owned) {
+  if (owned?.price_error) return null;
   const listed = owned && owned.totals && Array.isArray(owned.totals.as_listed) ? owned.totals.as_listed
     .filter((d) => d && typeof d.name === "string" && typeof d.printing === "string" && Number.isFinite(d.aud_missing)) : [];
   if (!listed.length) return null;
@@ -83,20 +85,29 @@ function boxCheckDateNote(data) {
     el("time", { datetime: date, text: date }), ". Contents may have changed since.") : null;
 }
 
-/** What the deck's owned rows add up to: {missing, aud, priced, coming, held} (copies missing, their
- * estimated A$, whether every missing card has a price, copies on the way, copies other decks hold that this
- * deck is short of). null when there's no answer to give. */
+/** The server checks before redacting private warnings. Older answers have only the visible warnings. */
+function deckAvailabilityConfirmed(owned) {
+  return Boolean(owned && owned.availability_confirmed !== false && !owned.unresolved?.length && !owned.warnings?.length);
+}
+
+/** Copies this list needs from the inventory; basic lands are excluded by the pool. */
 function deckAvailability(owned) {
   if (!owned) return null;
-  let coming = 0, held = 0;
+  let here = 0, coming = 0, held = 0, lent = 0;
   for (const r of owned.rows) {
     const labels = rowLabels(r);
-    coming += labels.on_the_way.reduce((n, [, qty]) => n + qty, 0);
-    if (labels.in_use.length) held += Math.min(r.missing, labels.in_use.reduce((n, [, qty]) => n + qty, 0));
+    const waiting = labels.on_the_way.reduce((n, [, qty]) => n + qty, 0);
+    here += Math.max(r.need - r.missing - waiting, 0);
+    coming += waiting;
+    if (r.missing) {
+      held += labels.in_use.reduce((n, [, qty]) => n + qty, 0);
+      lent += labels.lent_out || 0;
+    }
   }
   const t = owned.totals;
-  return { missing: t.missing, aud: owned.price_error ? null : t.aud_missing,
-    priced: !owned.price_error && !(t.unpriced && t.unpriced.length), coming, held };
+  const confirmed = deckAvailabilityConfirmed(owned);
+  return { missing: t.missing, aud: owned.price_error ? null : t.aud_missing, confirmed, here, coming, held, lent,
+    priced: !owned.price_error && !(t.unpriced && t.unpriced.length) };
 }
 
 /** Check the displayed list, including basic lands that the availability table omits. */
@@ -104,74 +115,62 @@ function deckNeedsMainCards(data) {
   return data.sections != null && !data.sections.Deck?.length;
 }
 
-/** The banner under the head: can this list be built now? "Ready to build", "3 cards on the way", or
- * "32 missing, about A$40 · 3 held by other decks" with Show missing. The Planned list / Play-now list picker
- * is folded into it (with its explanation behind an i). A visitor who may not see the collection gets only the
- * picker (when there are two lists). */
+/** Keep the selected list, its recorded availability and the actual box together. */
 function availabilityBanner(data, screen) {
   const sees = "owned" in data;
   const picker = data.versions.length > 1 ? versionPicker(data, screen) : null;
+  const current = listName(data.version);
+  const buying = screen?.data === data ? deckFindAndBuyButton(screen) : null;
+  if (!sees) return el("div", { class: "deck-avail deck-avail-plain" }, picker || el("p", { class: "sub", text: current }), buying);
   const a = deckAvailability(data.owned);
   const needsMain = deckNeedsMainCards(data);
-  if (!sees || (needsMain && !a?.missing && !a?.coming)) {
-    return picker ? el("div", { class: "deck-avail deck-avail-plain" }, picker) : null;
-  }
-  const which = data.versions.length > 1 ? ` (${listName(data.version, true)})` : "";
-  let kind, head, more = [], action = null;
-  if (!a) {
-    kind = "warn";
-    head = "Whether you have every card couldn't be worked out";
-    more.push("The warnings below say why.");
-  } else if (a.missing > 0) {
-    kind = "warn";
-    head = `${a.missing} missing` + (a.aud != null ? `, about ${ansMoney(a.aud, data.owned)} at the cheapest printings${a.priced ? "" : ", and more"}` : "");
-    if (a.held) more.push(`${a.held} held by other decks`);
-    if (a.coming) more.push(`${plural(a.coming, "card")} on the way`);
-    action = el("button", { type: "button", class: "btn deck-avail-action", text: "Show missing",
-      onclick: () => openDeckTab("cards", { filter: "missing", to: "deck-panel-cards" }) });
-  } else if (a.coming > 0) {
-    kind = "info";
-    head = needsMain ? `${plural(a.coming, "card")} on the way`
-      : `Ready once ${plural(a.coming, "card")} ${a.coming === 1 ? "arrives" : "arrive"}`;
-    action = el("button", { type: "button", class: "btn deck-avail-action", text: "Show them",
-      onclick: () => openDeckTab("cards", { filter: "coming", to: "deck-panel-cards" }) });
-  } else {
-    kind = "good";
-    head = data.summary.status === "built" || data.summary.read_only ? "Every card is here" : "Ready to build: you have every card";
-  }
   const assembled = data.assembled || data.summary.assembled;
-  if (assembled?.remaining_count || assembled?.changed) head = `Intended list: ${head}`;
+  const fromBox = data.summary.status === "built" || data.summary.read_only;
+  const counts = [];
+  let kind, verdict, action = null;
+  if (needsMain && !a?.missing && !a?.coming) {
+    kind = "info";
+    verdict = "No main-deck cards yet";
+  } else if (!a || !a.confirmed) {
+    kind = "warn";
+    verdict = "To check · Availability could not be confirmed";
+    action = el("button", { type: "button", class: "btn deck-avail-action", text: "Review availability",
+      onclick: () => openDeckTab("cards", { to: "sec-owned" }) });
+  } else {
+    kind = a.missing ? "warn" : a.coming ? "info" : "good";
+    const missing = `${a.missing} missing from recorded copies`;
+    verdict = needsMain ? "No main-deck cards yet" : a.missing ? missing : a.coming
+      ? `Ready once ${plural(a.coming, "card")} ${a.coming === 1 ? "arrives" : "arrive"}`
+      : fromBox ? "All counted copies are here" : "Ready to build from recorded copies";
+    if (a.here) counts.push(`${fromBox ? "Here for this list" : "Free now"} ${a.here}`);
+    if (a.coming) counts.push(`On the way ${a.coming}`);
+    if (needsMain && a.missing) counts.push(missing);
+    if (a.held) counts.push(`Held in another deck or product ${a.held}`);
+    if (a.lent) counts.push(`Lent out ${a.lent}`);
+    if (a.missing || a.coming) {
+      const filter = a.missing ? "missing" : "coming";
+      action = el("button", { type: "button", class: "btn deck-avail-action", text: a.missing ? "Show missing" : "Show on the way",
+        onclick: () => openDeckTab("cards", { filter, to: "deck-panel-cards" }) });
+    }
+  }
   // On the Cards tab its filter chips are right there: the banner's button would say the same again.
   const onCards = screen && screen.view && screen.view.tab === "cards";
-  return el("div", { class: `deck-avail box box-${kind}${onCards ? " is-on-cards" : ""}`, role: "status" },
+  return el("section", { class: `deck-avail box box-${kind}${onCards ? " is-on-cards" : ""}`, "aria-label": "This list and its availability" },
+    picker,
     el("div", { class: "deck-avail-text" },
-      el("p", { class: "deck-avail-head" }, el("b", { text: head + which }),
-        more.length ? el("span", { class: "deck-avail-more", text: more.join(" · ") }) : null),
-      a && a.missing > 0 && a.aud != null ? asListedLine(data.owned) : null,
-      a && a.coming ? incomingBannerSources(data.owned) : null,
-      boxCheckDateNote(data),
-      assembled && !assembledComplete(assembled)
-        ? el("p", { class: "sub deck-avail-assembled", text: assembledStateWords(assembled) + "." }) : null),
-    action, picker);
+      el("p", { class: "deck-avail-head", role: "status" }, el("b", { text: `${current} · ${verdict}` })),
+      counts.length ? el("p", { class: "sub deck-avail-more", text: counts.join(" · ") }) : null,
+      a?.confirmed && a.here + a.coming + a.missing > 0 ? el("p", { class: "sub", text: "Basic lands are outside this count." }) : null,
+      assembled ? el("p", { class: "sub deck-avail-assembled", text: `${assembledStateWords(assembled)} · ${listName(assembled.version)}.` }) : null),
+    buying, action, a?.confirmed && a.coming ? incomingBannerSources(data.owned) : null, staleTableBox(data));
 }
 
-/** Planned list | Play-now list, as links that keep the tab, and an i that says what the two are. */
+/** The list links carry the current tab. */
 function versionPicker(data, screen) {
-  const about = el("p", { class: "deck-lists-about", id: "deck-lists-about", hidden: true,
-    text: `The ${listName("target", true)} is the deck as planned, cards still to buy included. The ` +
-      `${listName("owned", true)} is the same idea using only cards you have or have on the way.` });
-  const info = el("button", { type: "button", class: "btn btn-quiet deck-lists-info", "aria-expanded": "false",
-    "aria-controls": "deck-lists-about", "aria-label": "What are the two lists?", text: "i",
-    onclick: () => {
-      about.hidden = !about.hidden;
-      info.setAttribute("aria-expanded", String(!about.hidden));
-    } });
-  // Each link's address carries the tab shown (deckAddress keeps it up to date as the tab changes).
   const links = data.versions.map((v) => el("a", { href: versionHref(data, v, screen.view.tab), text: listName(v),
     "aria-current": v === data.version ? "page" : null }));
   screen.versionLinks = data.versions.map((v, i) => [v, links[i]]);
   return el("div", { class: "deck-lists" },
-    el("nav", { class: "deck-lists-row", "aria-label": "Which list" },
-      el("div", { class: "segmented" }, links), info),
-    el("p", { class: "sub", text: "Planned is the list you want; Play-now uses cards owned or on the way. Check availability before playing." }), about);
+    el("nav", { class: "deck-lists-row", "aria-label": "Which list" }, el("div", { class: "segmented" }, links)),
+    el("p", { class: "sub", text: "The Alternative list can use incoming cards. Check availability before packing." }));
 }

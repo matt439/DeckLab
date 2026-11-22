@@ -41,11 +41,15 @@ run('ui-priorities', async review => {
         await page.screenshot({path:path.join(review.out,filename),fullPage:true,animations:'disabled'});
       };
       await page.goto(review.pageUrl('/#/play',theme),{waitUntil:'domcontentloaded'});
+      await page.locator('.play-choose-tonight > summary').click();
       await page.getByRole('button',{name:'Show the line-up',exact:true}).click();
       await page.getByRole('heading',{name:'Synthetic deck needing packing',exact:true}).waitFor();
       const card=page.locator('.commander-lineup-deck').filter({hasText:'Synthetic deck needing packing'});
       assert.equal(await card.locator('.commander-lineup-standins.note-warn').count(),1);
-      assert.equal(await card.locator('.commander-lineup-box.note-warn').count(),1);
+      assert((await card.locator('.commander-lineup-readiness').innerText()).includes('Needs packing'));
+      assert.equal(await card.locator('.commander-lineup-box').count(),0);
+      const built=page.locator('.commander-lineup-deck').filter({hasText:'Synthetic above-aim deck'});
+      assert.equal(await built.locator('.commander-lineup-box.note-warn').innerText(),'Box to check');
       await capture('lineup');
       await page.getByText('What the bracket check covers',{exact:true}).click();
       assert.equal(await page.locator('.commander-lineup-help').getAttribute('open'),'');
@@ -53,8 +57,9 @@ run('ui-priorities', async review => {
       await page.locator('[data-public=true]').click();
       let dialog=page.locator('dialog[open]').last();
       await dialog.getByRole('button',{name:'Make public',exact:true}).waitFor();
-      assert((await dialog.innerText()).includes('visitors on the home network'));
-      assert((await dialog.innerText()).includes('Nothing becomes public on the internet'));
+      assert((await dialog.innerText()).includes('visitors on the home network, even without a chosen profile'));
+      assert((await dialog.innerText()).includes('Away from home, sign-in is required'));
+      assert.equal(await page.evaluate(() => document.activeElement?.textContent?.trim()),'Keep private');
       await capture('public-preview');
       await dialog.getByRole('button',{name:'Keep private',exact:true}).click();
       await page.waitForFunction(()=>!document.querySelector('dialog[open]'));
@@ -68,42 +73,52 @@ run('ui-priorities', async review => {
       await page.keyboard.press('Escape');
       await page.waitForFunction(()=>!document.querySelector('dialog[open]'));
       assert.equal(await page.locator('[data-public=false]').getAttribute('aria-pressed'),'true');
-      await page.goto(review.pageUrl('/#/visibility',theme),{waitUntil:'domcontentloaded'});
-      await page.locator('[data-public=true]').waitFor({state:'visible'});
-      // Exercise the actual renderers with explicitly invented answers; these calls never invoke a server write.
-      await page.evaluate(() => {
-        const box={id:'box',name:'Synthetic storage box',kind:'box',capacity:100,sections:['Row 1','Row 2'],order:'name',sleeved:false};
-        const sheet=openSheet('Synthetic storage setup',{wide:true});
-        const ctx={cv:{space:'home'},sheet,busy:false,review:null,keys:0,profile:'matt',here:()=>!sheet.closed};
-        ctx.message=el('div');ctx.edit=el('div',{class:'col-form storage-setup'});
-        ctx.reviewBox=el('div',{class:'storage-review',hidden:true});
-        sheet.body.append(ctx.message,ctx.edit,ctx.reviewBox);
-        storageTake(ctx,{ready:true,can_edit:true,revision:1,storage:{default:'box',containers:[box]}});
-        window.syntheticStorageContext=ctx;
-        window.syntheticStorageAnswer={storage:{default:'box',containers:[box]},
-          now:{containers:[{...box,cards:80}],unplaced:0,elsewhere:0},
-          after:{containers:[{...box,cards:140}],unplaced:4,elsewhere:9},
-          moves:[{from:null,to:box.name,locations:2}],counts_error:null};
+      const box={id:'box',name:'Synthetic storage box',kind:'box',capacity:100,sections:['Row 1','Row 2'],order:'name',sleeved:false};
+      const section={id:'fixture-row-1',label:'Row 1',container:box.name,place:'Row 1',quantity:2,auditable:true};
+      await page.route('**/api/collection/storage-map*',route=>{
+        const base={space:'home',editable:true,ready:true};
+        const detail=new URL(route.request().url()).searchParams.get('section');
+        const json=detail===section.id ? {...base,section,expect:'fixture-proof',excluded_names:['Forest'],
+          scan:{available:true},rows:[{name:'Llanowar Elves',key:'fdn|227|nonfoil',quantity:2,set:'fdn',collector_number:'227',finish:'nonfoil'}]}
+          : {...base,containers:[{name:box.name,sections:box.sections}],sections:[section]};
+        return route.fulfill({status:200,json});
       });
+      await page.route('**/api/storage?*',route=>route.fulfill({status:200,json:{
+        ready:true,can_edit:true,revision:1,storage:{default:box.id,containers:[box]},
+      }}));
+      let countsError=null;
+      await page.route('**/api/storage/preview',route=>{
+        assert.equal(route.request().method(),'POST');
+        const {space,storage}=route.request().postDataJSON();
+        assert.equal(space,'home');
+        assert.equal(storage.containers[0].order,'set');
+        return route.fulfill({status:200,json:{storage,
+          now:{containers:[{...box,cards:80}],unplaced:0,elsewhere:0},
+          after:{containers:[{...storage.containers[0],cards:140}],unplaced:4,elsewhere:9},
+          moves:[{from:null,to:storage.containers[0].name,locations:2}],counts_error:countsError,
+        }});
+      });
+      await page.goto(review.pageUrl('/#/collection?view=map',theme),{waitUntil:'domcontentloaded'});
+      await page.getByRole('button',{name:/Synthetic storage box.*Row 1.*2 cards/}).click();
+      dialog=page.locator('dialog[open]').last();
+      await dialog.getByRole('button',{name:'Count by hand',exact:true}).waitFor();
+      await dialog.getByRole('button',{name:'Scan',exact:true}).waitFor();
+      assert((await dialog.innerText()).includes('save a dated audit'));
+      assert((await dialog.innerText()).includes('temporary difference report'));
+      await capture('storage-check');
+      await dialog.locator('[data-action=close]').click();
+      await page.getByRole('button',{name:'Storage setup',exact:true}).click();
       dialog=page.locator('dialog[open]').last();
       await dialog.locator('.storage-name').fill('Synthetic renamed box');
       assert.equal(await dialog.locator('.storage-container > fieldset > legend').innerText(),'Synthetic renamed box');
       assert.equal(await dialog.locator('select').last().locator('option:checked').innerText(),'Synthetic renamed box');
       assert.equal(await dialog.locator('.storage-options').getAttribute('open'),null);
       await dialog.getByLabel(/^Filing order/).selectOption('set');
-      assert.equal(await page.evaluate(()=>storageRecord(syntheticStorageContext).containers[0].order),'set');
       await capture('storage-edit');
       await dialog.getByText('Kind, section contents and sleeves',{exact:true}).click();
       await dialog.locator('.storage-options select[id*=-kind-]').waitFor({state:'visible'});
       await capture('storage-options');
-      await page.evaluate(()=>{
-        const storage=storageRecord(syntheticStorageContext);
-        syntheticStorageAnswer.storage=storage;
-        syntheticStorageAnswer.after.containers[0]={...storage.containers[0],cards:140};
-        syntheticStorageAnswer.moves[0].to=storage.containers[0].name;
-        syntheticStorageContext.review=syntheticStorageAnswer;
-        drawStorageReview(syntheticStorageContext);
-      });
+      await dialog.getByRole('button',{name:'Preview',exact:true}).click();
       await dialog.getByText('Before you save',{exact:true}).waitFor();
       assert((await dialog.locator('.storage-impact').innerText()).includes('40 cards over capacity'));
       assert((await dialog.locator('.storage-impact').innerText()).includes('4 cards'));
@@ -112,7 +127,9 @@ run('ui-priorities', async review => {
       await capture('storage-impact');
       await dialog.getByRole('button',{name:'Back',exact:true}).click();
       assert.equal(await dialog.locator('.storage-name').inputValue(),'Synthetic renamed box');
-      await page.evaluate(()=>{syntheticStorageContext.review={...syntheticStorageAnswer,counts_error:'Synthetic collection unavailable.'};drawStorageReview(syntheticStorageContext);});
+      countsError='Synthetic collection unavailable.';
+      await dialog.getByRole('button',{name:'Preview',exact:true}).click();
+      await dialog.getByText('Before you save',{exact:true}).waitFor();
       assert.equal(await dialog.locator('.storage-comparison').count(),0);
       assert((await dialog.locator('.storage-impact').innerText()).includes('counts are unavailable'));
       await capture('storage-unknown');

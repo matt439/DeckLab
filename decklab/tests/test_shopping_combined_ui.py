@@ -69,9 +69,9 @@ class ShoppingCombinedTests(unittest.TestCase):
           assert(card.textContent.includes("1 more because the decks share it"));
           assert(card.textContent.includes("1 on the way (order incoming)"));
           assert(card.textContent.includes("Held by Holding ×1"));
-          // Nothing queued for it yet; an admin is offered Queue these… (the only write control here).
+          // Nothing queued for it yet; an admin is offered Review combined queue… (the only write control here).
           assert(card.textContent.includes("Not queued"));
-          same(section().querySelectorAll(".shop-queue-write").map(button => button.textContent), ["Queue these…"]);
+          same(section().querySelectorAll(".shop-queue-write").map(button => button.textContent), ["Review combined queue…"]);
           // A local redraw keeps the answer; Change decks… reopens with the choice ticked.
           section().querySelector(".shop-combined-choose").click();
           same(sheet().querySelectorAll("input").filter(input => input.checked).map(input => input.value),
@@ -242,12 +242,12 @@ class ShoppingCombinedTests(unittest.TestCase):
         self.run_combined_js("""
           api = async () => answer;
           drawShopping(data({decks_missing: []}));
-          assert(main.textContent.includes("Nothing to buy, and nothing on the way."));
+          assert(main.textContent.includes("Nothing is ready to buy."));
           assert.equal(main.querySelector(".empty").querySelector("a").getAttribute("href"), "#/wishlist");
           assert(!section(), "no two-pane layout for the chooser alone");
           assert(!main.querySelectorAll("a").some(a => a.getAttribute("href") === "#shop-combined"));
           const start = main.querySelector(".shop-combined-start");
-          assert.equal(start.textContent, "Build decks together…");
+          assert.equal(start.textContent, "Check combined shortages…");
           start.focus(); start.click();
           tick("casual/alpha"); tick("casual/beta"); primary().click();
           await null; await null; await null;
@@ -268,6 +268,19 @@ class ShoppingCombinedTests(unittest.TestCase):
           finish(answer);
           await null; await null;
           assert.equal(main.textContent, "Another page");
+        """)
+
+    def test_incoming_only_shortage_links_to_packing_without_claiming_physical_readiness(self):
+        self.run_combined_js("""
+          const shipping = {...answer, rows: [], totals: {cards: 0, copies: 0, on_the_way: 1}};
+          const result = el('div', {}, shopCombinedResult(shipping, null));
+          assert(result.textContent.includes('Wait for 1 incoming copy'));
+          const pack = result.querySelectorAll('a').find(link => link.textContent === 'Pack these decks');
+          assert.equal(pack.getAttribute('href'), '#/assembly?decks=casual%2Falpha%2Ccasual%2Fbeta');
+          const cardResult = shopCombinedRow({name:'Borrowed spell', need:5, missing:2, available:3, lent_out:1,
+            on_the_way:[{copies:2,source:'Order'}], held_elsewhere:[]});
+          assert(cardResult.textContent.includes('1 available now'));
+          assert(cardResult.textContent.includes('1 lent out'));
         """)
 
     def test_each_card_shows_its_matching_queue_rows(self):
@@ -306,7 +319,7 @@ class ShoppingCombinedTests(unittest.TestCase):
           await null; await null; await null;
           same(writes, [["/api/shopping/queue/combined", {decks: ["casual/alpha", "casual/beta"]}]]);
           const text = sheet().textContent;
-          assert(text.includes("Queue these: Alpha + Beta"), text);
+          assert(text.includes("Review combined shortages: Alpha + Beta"), text);
           assert(text.includes("3 copies to queue · 7 missing · 4 already queued for these decks · for Alpha, Beta"), text);
           assert(text.includes("Already queued (1)"), text);
           sheet().querySelectorAll("button").find(b => b.textContent === "Long-term").click();

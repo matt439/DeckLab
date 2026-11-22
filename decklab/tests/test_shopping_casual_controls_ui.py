@@ -21,7 +21,7 @@ class ShoppingCasualControlsInteractionTests(unittest.TestCase):
           const immediate=()=>main.querySelector('#shop-to-buy')?.closest('section');
           const entries=()=>main.querySelectorAll('[data-shop-queue]');
           const entry=n=>entries().find(node=>Number(node.getAttribute('data-shop-queue'))===n);
-          const immediateIds=()=>immediate().querySelectorAll('[data-shop-queue]').map(node=>Number(node.getAttribute('data-shop-queue')));
+          const scopedIds=()=>entries().map(node=>Number(node.getAttribute('data-shop-queue')));
           const trigger=n=>entry(n).querySelector('.card-row');
           const edit=n=>entry(n).querySelector('.shop-queue-edit');
           const move=n=>entry(n).querySelector('.shop-category-move');
@@ -47,14 +47,14 @@ class ShoppingCasualControlsInteractionTests(unittest.TestCase):
           const rows=new Map(entries().map(node=>[Number(node.getAttribute('data-shop-queue')),node])),
             viewers=new Map(queue.map(item=>[item.queue_row,trigger(item.queue_row)])),
             writers=new Map(queue.map(item=>[item.queue_row,entry(item.queue_row).querySelector('.shop-queue-actions')]));
-          same(immediateIds(),[2,4,3,1]);const selected=group('shop');
-          same(immediateIds(),[2,1,3,4]);assert(document.activeElement===selected);
+          same(scopedIds(),[2,4,3,1]);const selected=group('shop');
+          same(scopedIds(),[2,4,1,3]);assert(document.activeElement===selected);
           assert.equal(selected.getAttribute('aria-pressed'),'true');assert.equal(control('state').getAttribute('aria-pressed'),'false');
           for(const item of queue){assert(entry(item.queue_row)===rows.get(item.queue_row));assert(trigger(item.queue_row)===viewers.get(item.queue_row));
             assert(entry(item.queue_row).querySelector('.shop-queue-actions')===writers.get(item.queue_row))}
-          sameNodes(viewerGroup(trigger(2)).items.map(item=>item.card),[queue[1].card,queue[0].card,queue[2].card,queue[3].card]);
+          sameNodes(viewerGroup(trigger(2)).items.map(item=>item.card),[queue[1].card,queue[3].card,queue[0].card,queue[2].card]);
           assert.equal(main.querySelectorAll('[data-viewer]').length,4);assert.equal(main.querySelectorAll('.shop-queue-edit').length,4);
-          group('state');same(immediateIds(),[2,4,3,1]);assert.equal(JSON.stringify(queue),before);assert.equal(view.data.queue_revision,'q1');
+          group('state');same(scopedIds(),[2,4,3,1]);assert.equal(JSON.stringify(queue),before);assert.equal(view.data.queue_revision,'q1');
         """)
 
     def test_by_shop_keeps_every_state_meaning_and_explicit_unchecked_group_visible(self):
@@ -63,14 +63,16 @@ class ShoppingCasualControlsInteractionTests(unittest.TestCase):
             qrow('Reprint',3,{state:'waiting_for_reprint',listed_at:'Store'}),qrow('Deferred',4,{state:'deferred',listed_at:'Store'}),
             qrow('Older',5,{state:'older_state',listed_at:'   ',card:null})];
           drawShopping(queueData(queue));group('shop');
-          same(immediate().querySelectorAll('[data-queue-shop]').map(node=>node.getAttribute('data-queue-shop')),['Store','']);
+          same(immediate().querySelectorAll('[data-queue-shop]').map(node=>node.getAttribute('data-queue-shop')),['Store']);
+          const waiting=main.querySelector('#shop-waiting').closest('section');
           const expected=['Ready to buy','Waiting for stock','Waiting for reprint','Deferred','State: older_state'];
           for(let i=1;i<=5;i++){const words=entry(i).querySelector('.shop-queue-category');assert(!words.hidden);assert.equal(words.textContent,expected[i-1])}
-          const unchecked=immediate().querySelectorAll('[data-queue-shop]').find(node=>node.getAttribute('data-queue-shop')==='');
+          const unchecked=waiting.querySelectorAll('[data-queue-shop]').find(node=>node.getAttribute('data-queue-shop')==='');
           assert(unchecked.querySelector('h3').textContent.includes('Not checked at any shop'));assert(unchecked.contains(entry(5)));
           assert.equal(entry(5).querySelector('.card-row').getAttribute('tabindex'),'-1');
           group('state');assert(immediate().querySelectorAll('.shop-queue-category').every(node=>node.hidden));
-          assert.equal(immediate().querySelectorAll('.shop-queue-row').length,5);
+          assert.equal(immediate().querySelectorAll('.shop-queue-row').length,1);
+          assert.equal(waiting.querySelectorAll('.shop-queue-row').length,4);
         """)
 
     def test_grouping_and_shop_marks_are_independent_and_leave_longterm_nodes_and_expansion_alone(self):
@@ -139,8 +141,7 @@ class ShoppingCasualControlsInteractionTests(unittest.TestCase):
             assert(add.classList.contains('shop-queue-add-round'));assert.equal(add.getAttribute('aria-label'),'Add card to the purchase queue');
             assert(add.querySelector('.shop-queue-add-label').classList.contains('sr-only'));
             assert.equal(main.querySelectorAll('.btn-primary').length,1);
-            assert.equal(Boolean(main.querySelector('.shop-order-add')),admin);
-            if(admin)assert(main.querySelector('.shop-order-add').closest('.page-head-buttons'));
+            assert.equal(main.querySelector('.shop-order-add'),null);
             add.focus();add.click();const sheet=[...shopQueueSheets][0];assert(sheet);
             density(true);assert(view.addButton===add);assert(add.closest('.shop-add-home'));
             assert(!add.classList.contains('shop-queue-add-round'));assert(!add.querySelector('.shop-queue-add-label').classList.contains('sr-only'));assert(!sheet.closed);

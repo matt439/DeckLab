@@ -118,9 +118,13 @@ class CollectionLayoutUiTests(unittest.TestCase):
           open.click(); assert.equal(inspections.length, 1); assert.equal(inspections[0].card.name, 'Alpha');
           const group = viewerGroup(open); assert.equal(group.items.length, 4);
           assert(group.items[group.index].caption.textContent.includes('Edit copies'));
-          assert(casualRows()[0].textContent.includes('1.25')); assert(!casualRows()[0].textContent.includes('5.00'));
-          assert(casualRows()[2].textContent.includes('Condition not recorded'));
-          assert(casualRows()[2].textContent.includes('Language not recorded'));
+          assert(group.items[group.index].caption.textContent.includes('1.25'));
+          assert(!casualRows()[0].textContent.includes('1.25'));
+          main.querySelector('.col-th-price').querySelector('button').click();
+          const alphaRow = casualRows().find(row => row.getAttribute('data-key') === 'fdn|1|nonfoil');
+          assert(alphaRow.textContent.includes('1.25')); assert(!alphaRow.textContent.includes('5.00'));
+          const incomplete = casualRows().find(row => row.textContent.includes('Condition not recorded'));
+          assert(incomplete.textContent.includes('Language not recorded'));
         """)
 
     def test_read_only_casual_notes_and_alternate_printing_warning_remain_readable(self):

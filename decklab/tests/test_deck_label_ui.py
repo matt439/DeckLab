@@ -84,6 +84,12 @@ SETUP = PAGE + """
   const sheet = () => document.querySelector('.label-sheet');
   const menu = (page) => deckMoreItems(page).filter((i) => i && i !== 'sep').map((i) => i.label);
   const built = () => { const page = makePage(); page.summary.status = 'built'; return page; };
+  const boxLabel = (page) => {
+    clear(main);
+    location.hash = '#/deck?id=' + encodeURIComponent(page.summary.id);
+    drawDeck(page);
+    return buttonText(panel('overview'), 'Print box label');
+  };
 """
 
 
@@ -97,22 +103,24 @@ class DeckLabelUiTests(unittest.TestCase):
 
     def test_offered_only_on_built_decks(self):
         self.run_js("""
-          assert(!menu(makePage()).includes('Print box label'));          // building
+          assert(!boxLabel(makePage()));                                  // building
           const idea = makePage(); idea.summary.status = 'idea';
-          assert(!menu(idea).includes('Print box label'));
-          assert(menu(built()).includes('Print box label'));
+          assert(!boxLabel(idea));
+          assert(boxLabel(built()).closest('.deck-assembly'));
+          const publicDeck = built(); delete publicDeck.owned;
+          assert(menu(publicDeck).includes('Print box label'));
           const product = built(); product.summary.id = 'product/fdc-test'; product.summary.read_only = true;
-          assert(!menu(product).includes('Print box label'));             // not kept intact: no box_label
+          assert(!boxLabel(product));                                    // no intact box label
           product.box_label = {name: 'Test Box', colors: ['G'], link: 'product/fdc-test', decks: [{id: 'product/fdc-test', title: 'Test Box'}]};
-          assert(menu(product).includes('Print box label'));
+          assert(boxLabel(product).closest('.product-storage'));
           const pairing = built(); pairing.summary.id = 'pairing/a+b'; pairing.summary.read_only = true;
-          assert(!menu(pairing).includes('Print box label'));
+          assert(!boxLabel(pairing));
         """)
 
     def test_the_label_has_colours_title_player_and_the_code(self):
         self.run_js("""
           const page = built();
-          deckMoreItems(page).find((i) => i && i.label === 'Print box label').onclick(); await settle();
+          boxLabel(page).click(); await settle();
           assert.equal(printed, 1);
           const label = sheet().querySelector('.box-label');
           assert.equal(label.parentNode.getAttribute('class'), 'card-page');
@@ -161,7 +169,7 @@ class DeckLabelUiTests(unittest.TestCase):
           page.box_label = {name: 'Box', colors: ['W', 'U', 'G'], link: 'product/box/elves',
             decks: [{id: 'product/box/elves', title: 'Elves'}, {id: 'product/box/control', title: 'Control'}]};
           assert.equal(boxLabelTarget(page), 'product/box/elves');
-          deckMoreItems(page).find((i) => i && i.label === 'Print box label').onclick(); await settle();
+          boxLabel(page).click(); await settle();
           assert.equal(printed, 1);
           const label = sheet().querySelector('.box-label');
           assert.equal(label.querySelector('.box-label-title').textContent, 'Box');

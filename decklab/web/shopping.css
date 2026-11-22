@@ -1,8 +1,13 @@
-/* Shopping's page frame: the existing delivery/follow-up/shop views in a 560 px list pane, buying in the
-   detail pane. Stacked through 1280 px, with links to its parts; the order history stays below both panes.
-   Queue grouping, radio matching and the receipt board have their own later layout slices. */
+/* Shopping's two tasks share a route and each has its own content and actions. */
 .shop-layout { display: grid; gap: var(--s-6); align-items: start; margin-top: var(--s-4); }
 .shop-main, .shop-side { display: grid; gap: var(--s-6); min-width: 0; align-content: start; }
+.shop-main[hidden], .shop-side[hidden], .shop-research[hidden] { display: none; }
+.shop-tasks { width: fit-content; max-width: 100%; margin: var(--s-3) 0; }
+.shop-tasks > a { display: inline-flex; align-items: center; gap: var(--s-2); min-height: var(--tap); }
+.shop-task-count { font-variant-numeric: tabular-nums; font-weight: var(--fw-semibold); }
+.shop-research > summary { min-height: var(--tap); cursor: pointer; font-weight: var(--fw-semibold); }
+.shop-research > .shop-section + .shop-section, .shop-later { margin-top: var(--s-5); }
+.shop-later > h3 { margin: 0 0 var(--s-2); }
 .shop-section { min-width: 0; }
 .shop-page > .shop-section { margin-top: var(--s-6); }
 .shop-queue-slot:empty { display: none; }
@@ -24,7 +29,7 @@
   border-radius: var(--r-pill); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border);
   font-size: var(--fs-sm); font-weight: var(--fw-semibold); text-align: center; font-variant-numeric: tabular-nums;
 }
-.shop-section-head h2 { scroll-margin-top: calc(var(--shell-top) + var(--s-3)); }
+.shop-section-head h2, .shop-later > h3 { scroll-margin-top: calc(var(--shell-top) + var(--s-3)); }
 
 /* One bounded navigation surface: labels and counts share a control. Secondary parts stay in a disclosure. */
 .shop-jumps { margin-top: var(--s-3); border: 1px solid var(--border); border-radius: var(--r-control);
@@ -357,9 +362,6 @@
 @media (min-width: 1000px) {
   .shop-pasts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .shop-long-slot .shop-rows { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
-}
-@media (min-width: 1281px) {
-  .shop-layout { grid-template-columns: 560px minmax(0, 1fr); gap: var(--s-6) var(--s-6); }
 }
 @media (min-width: 1600px) {
   .shop-pasts { grid-template-columns: repeat(3, minmax(0, 1fr)); }

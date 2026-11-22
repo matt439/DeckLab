@@ -23,20 +23,23 @@ run('first-use', async review => {
         const target = mode==='help' ? '/#/help' : '/#/collection';
         await page.goto(review.pageUrl(target,theme),{waitUntil:'domcontentloaded'});
         if(mode==='help') {
-          await page.getByRole('heading',{name:'What these words mean',exact:true}).waitFor();
-          assert((await page.locator('#main').innerText()).includes('Tables out of date'));
+          await page.getByRole('heading',{name:'Help',exact:true}).waitFor();
+          assert((await page.locator('#main').innerText()).includes('Availability needs updating'));
         } else {
-          await page.getByRole('button',{name:'Add one card',exact:true}).waitFor();
-          for(const name of ['Import cards','Add a precon','Scan cards'])
-            assert.equal(await page.getByRole('button',{name,exact:true}).count(),1);
+          const start = page.getByRole('button',{name:'Add cards',exact:true});
+          await start.waitFor();
+          assert.equal(await start.count(),1);
+          assert.equal(await page.getByRole('navigation',{name:'Collection view'}).count(),0);
+          assert.equal(await page.getByRole('button',{name:'Filter cards'}).count(),0);
+          const methods = ['Enter one','Scan','Import a list','Add a precon'];
+          for(const name of methods) assert.equal(await page.getByRole('button',{name,exact:true}).count(),0);
+          if(mode!=='empty') await start.click();
           if(mode==='pile') {
-            await page.getByRole('button',{name:'Start with physical cards',exact:true}).click();
             let sheet=page.locator('dialog[open]').last();
-            await sheet.getByRole('button',{name:'Enter a pile of loose cards',exact:true}).waitFor();
-            assert((await sheet.innerText()).includes("You don't need a spreadsheet"));
-            assert.equal(await sheet.getByRole('button',{name:'Add an unchanged precon',exact:true}).count(),1);
+            for(const name of methods) assert.equal(await sheet.getByRole('button',{name,exact:true}).count(),1);
+            assert((await sheet.innerText()).includes('Start with a small pile'));
             await page.screenshot({path:path.join(review.out,`guide-${width}-${theme}.png`),fullPage:false});
-            await sheet.getByRole('button',{name:'Enter a pile of loose cards',exact:true}).click();
+            await sheet.getByRole('button',{name:'Scan',exact:true}).click();
             sheet=page.locator('dialog[open]').last();
             await sheet.getByRole('button',{name:'Find its printings',exact:true}).waitFor();
             await page.route('**/api/printings?*', route=>route.fulfill({status:200,json:{
@@ -66,12 +69,12 @@ run('first-use', async review => {
             }
             await sheet.getByRole('button',{name:'Cancel',exact:true}).click();
             await sheet.getByRole('button',{name:'Discard batch',exact:true}).click();
-            await page.getByRole('button',{name:'Start with physical cards',exact:true}).click();
+            await start.click();
             await page.locator('dialog[open]').last().locator('[data-action=cancel]').click();
             assert.equal(await page.locator('dialog[open]').count(),0);
           }
           if(mode==='import') {
-            await page.getByRole('button',{name:'Import cards',exact:true}).click();
+            await page.getByRole('button',{name:'Import a list',exact:true}).click();
             const sheet = page.locator('dialog[open]').last();
             await sheet.getByText('Where to export, or start a CSV',{exact:true}).click();
             await sheet.getByRole('button',{name:'Download blank collection CSV',exact:true}).waitFor();

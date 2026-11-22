@@ -24,7 +24,7 @@ function matchesReadiness(deck, filter) {
 
 function exportedDeck(data, {categories = false, missing = false} = {}) {
   if (missing) {
-    if (!seesInventory(data.summary.space || deckSpaceOf(data.summary.id))) return "";
+    if (!seesInventory(data.summary.space || deckSpaceOf(data.summary.id)) || !deckAvailabilityConfirmed(data.owned)) return "";
     return (data.owned?.rows || []).filter(row => row.missing > 0)
       .map(row => `${row.missing} ${row.name}\n`).join("");
   }
@@ -72,7 +72,7 @@ function playSheet(data) {
     el("p", {text: version}), el("pre", {text: exportedDeck(data)}));
   const standins = deckStandinsOf(data);
   if ((standins?.rows || []).length || (standins?.warnings || []).length) {
-    sheet.append(el("h2", {text: "Stand-ins"}));
+    sheet.append(el("h2", {text: "Physical placeholders"}));
     if (standins.rows?.length) sheet.append(el("ul", {}, standins.rows.map(row =>
       el("li", {text: `${row.qty} x ${deckStandinWords(row)}`}))));
     for (const text of standins.warnings || []) sheet.append(el("p", {class: "print-warning", text}));
@@ -243,7 +243,7 @@ function drawDeckMatchups(host, data, m, retry = null) {
   }
   // The tab's one primary action, for a viewer who may start runs (the field's Play is an outlined button).
   const play = runsAllowed() ? el("div", {class: "actions mu-deck-actions"}, el("a", {class: "btn btn-primary",
-    href: `#/matchups?a=${encodeURIComponent(s.id)}&av=${data.version}`, text: "Play a matchup"})) : null;
+    href: `#/matchups?a=${encodeURIComponent(s.id)}&av=${data.version}`, text: "Simulate a 1v1 matchup"})) : null;
   const flag = pilotFlag(m.ai, s.title, {deckPage: true});
   const otherLine = earlierEngineLine(m);
   const earlier = earlierFlags(m);
@@ -254,7 +254,8 @@ function drawDeckMatchups(host, data, m, retry = null) {
       el("h2", {id: "h-mu-running", text: "Playing now"}),
       el("ul", {class: "mu-list"}, running.map((r) => runningRow(r, {against: true})))) : null,
     el("section", {class: "deck-mu-part", "aria-labelledby": "h-mu-results"},
-      el("h2", {id: "h-mu-results", text: "Head to head"}),
+      el("h2", {id: "h-mu-results", text: "Simulated 1v1 matchups"}),
+      el("p", {class: "sub", text: `Forge simulation · ${listName(data.version)}`}),
       deckResultParts(m, s, version, state.library || null, data.version),
       play),
     otherLine,

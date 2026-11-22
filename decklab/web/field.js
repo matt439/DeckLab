@@ -98,6 +98,7 @@ function fvDraw(ctx, a) {
   const opponents = a.opponents || [];
   const played = opponents.some((o) => o.games);
   const list = ctx.version === "owned" ? listName("owned", true) : "list";
+  ctx.content.append(el("p", { class: "sub", text: `${listName(ctx.version)} · Forge simulation · 1v1, best of one` }));
   if (!opponents.length) {
     ctx.content.append(emptyBox(`There's no other ${a.format} deck in the field for it to play.`,
       createTargets().length ? el("a", { class: "btn", href: newDeckHref(), text: "New deck" }) : null));
@@ -115,8 +116,6 @@ function fvDraw(ctx, a) {
     return;
   }
   add(ctx.content, [
-    el("p", { class: "sub", text: `How this ${list} does against the house's other ${a.format} decks, from Forge's ` +
-      "AI playing them (best of one)." }),
     el("div", { class: "fv-layout" },
       el("div", { class: "fv-side" }, fvHeadline(a), fvChips(a), fvPlayBox(ctx, a)),
       el("div", { class: "fv-main" }, fvRows(a))),

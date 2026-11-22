@@ -23,7 +23,7 @@ SETUP = """
     night_error: null, played_error: null, timed_out: 0, today: '2026-11-12',
     groups: {
       fits: [row('commander/a', 'Alpha', { stand_ins: [{ for: 'Sol Ring', using: null, qty: 1 }, { for: 'Mana Crypt', using: 'Arcane Signet', qty: 2 }],
-        box_checked_on: '2026-11-01', last_played: '2026-11-02', days_since_played: 10 }),
+        packed_version: 'target', box_checked_on: '2026-11-01', last_played: '2026-11-02', days_since_played: 10 }),
              row('commander/b', 'Beta', { status: 'idea', built: false, stand_ins: [], box_checked_on: null })],
       above: [row('commander/c', 'Gamma', { minimum: 3, deciding: [{ reason: '1 Game Changer (none in Brackets 1-2)', cards: ['Sol Ring'] }] })],
       unknown: [row('commander/d', 'Delta', { minimum: null, minimum_so_far: 1, version: 'owned',
@@ -63,20 +63,22 @@ class CommanderLineupUiTests(unittest.TestCase):
           same(texts('.commander-lineup-deck', 'h4'), ['Alpha', 'Beta', 'Gamma', 'Delta']);
           const [alpha, beta, gamma, delta] = main.querySelectorAll('.commander-lineup-deck');
           assert.equal(alpha.querySelector('a').getAttribute('href'), '#/deck?id=commander%2Fa&v=target');
-          assert.match(alpha.textContent, /Built · Counted minimum: Bracket 1 · Target Bracket 2/);
-          assert.match(alpha.textContent, /Stand-ins: a spare card for Sol Ring; 2 × Arcane Signet for Mana Crypt/);
+          assert.equal(alpha.querySelector('.commander-lineup-readiness').textContent, `Packed in this box · ${listName('target')}`);
+          assert.match(alpha.textContent, /Checked against the packed list · Counted minimum: Bracket 1 · Target Bracket 2/);
+          assert.match(alpha.textContent, /Physical placeholders: a spare card for Sol Ring; 2 × Arcane Signet for Mana Crypt/);
           assert.match(alpha.textContent, /Box checked 2026-11-01/);
           assert.match(alpha.textContent, /Last played 2026-11-02 [(]10 days ago[)]/);
-          assert.match(beta.textContent, /Idea · Counted minimum: Bracket 1/);
-          assert.match(beta.textContent, /No stand-ins/);
-          assert.match(beta.textContent, /Box not checked yet/);
+          assert.match(beta.textContent, /Idea · Needs packing/);
+          assert.match(beta.textContent, /Counted minimum: Bracket 1/);
+          assert.equal(beta.querySelector('.commander-lineup-standins'), null);
+          assert.equal(beta.querySelector('.commander-lineup-box'), null);
           assert.match(beta.textContent, /Not played at home yet/);
           assert.match(gamma.textContent, /1 Game Changer [(]none in Brackets 1-2[)]: Sol Ring/);
           // Gamma's answer had no stand-in or box keys (a viewer who may not see them): no line at all.
-          assert.ok(!/Stand-ins|stand-ins|Box/.test(gamma.textContent));
+          assert.ok(!/Physical placeholders|physical placeholders|Box/.test(gamma.textContent));
           assert.match(delta.textContent, /At least Bracket 1 so far/);
           assert.match(delta.textContent, /oracle tags couldn't be read/);
-          assert.match(delta.textContent, /Judged on its Play-now list/);
+          assert.equal(delta.querySelector('.commander-lineup-readiness').textContent, `Marked built · ${listName('owned')}`);
           assert.equal(delta.querySelector('a').getAttribute('href'), '#/deck?id=commander%2Fd&v=owned');
           assert.ok(!main.textContent.includes('undefined') && !main.textContent.includes('null'));
         """)

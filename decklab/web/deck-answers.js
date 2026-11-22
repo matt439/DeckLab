@@ -71,7 +71,7 @@ function answersPanel(found, data = null) {
       "\"Not split\" means the tags don't say.",
     "Speed is read from the card: instants and cards with flash are instant speed, sorceries sorcery speed. An " +
       "ability or an enters trigger is \"On a permanent\": its timing isn't read.",
-    data && data.owned ? "To fill a gap from the pool, Free cards by role (under Card types and roles) lists the " +
+    data && data.owned ? "To fill a gap from the pool, Find cards by role (under Card types and roles) lists the " +
       "removal and counterspells free in the collection." : null,
     "The counts only inform: they don't change the bracket."));
   return panel;

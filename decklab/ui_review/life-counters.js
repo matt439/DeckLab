@@ -79,11 +79,11 @@ run('life-counters',async review=>{
         assert.equal(route.request().method(),'GET');return route.fulfill({status:200,json:payload()});
       });
       await page.goto(review.pageUrl('/#/play',spec.theme),{waitUntil:'domcontentloaded'});
-      await page.getByRole('button',{name:'Life counter',exact:true}).waitFor();
-      if(spec.mode==='duel')await page.getByRole('button',{name:'Life counter',exact:true}).click();
+      await page.getByRole('button',{name:'Start a 1v1 game',exact:true}).waitFor();
+      if(spec.mode==='duel')await page.getByRole('button',{name:'Start a 1v1 game',exact:true}).click();
       else{
-        const start=page.getByRole('button',{name:'Start a pod',exact:true});
-        const record=page.getByRole('button',{name:'Record a pod',exact:true});
+        const start=page.getByRole('button',{name:'Start a real pod',exact:true});
+        const record=page.getByRole('button',{name:'Record a pod game',exact:true});
         for(const action of [start,record]){
           const box=await action.boundingBox();
           assert(box&&box.y>=0&&box.y+box.height<=spec.height,'Pod action is outside the opening viewport');

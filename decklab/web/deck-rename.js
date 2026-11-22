@@ -176,7 +176,7 @@ async function sendRenameDeck(ctx) {
 }
 
 /** Old addresses may hold another device draft. Choosing one is explicit; only a successful copy permits removal. */
-function openSavedDeckEditor(view, version) {
+function openSavedDeckEditor(view, version, after = null) {
   canonicalDeckAddress(view.id);
   const profile = state.profile?.id, token = routeToken, hash = location.hash;
   const here = () => token === routeToken && profile === state.profile?.id && hash === location.hash;
@@ -187,9 +187,10 @@ function openSavedDeckEditor(view, version) {
     if (!raw) return null;
     return { id, key: oldKey, raw };
   }).filter(Boolean);
-  if (!drafts.length) { startEditor({ mode: "edit", view, version }); return; }
+  const enter = () => { startEditor({ mode: "edit", view, version }); if (after) after(); };
+  if (!drafts.length) { enter(); return; }
   const current = local.get(key), error = el("p", { class: "form-error", role: "alert" });
-  const open = () => { if (here()) { clear($("#main")); startEditor({ mode: "edit", view, version }); } };
+  const open = () => { if (here()) { clear($("#main")); enter(); } };
   const recover = draft => {
     if (!here()) return;
     const sheet = openDeckRetirementSheet({ title: "Review an earlier-address draft?" });

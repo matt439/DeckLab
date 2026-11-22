@@ -68,6 +68,25 @@ class AssemblyCompletionUiTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "ok")
 
+    def test_combined_shortage_link_previews_only_visible_distinct_planned_lists(self):
+        self.run_js("""
+          const selected = [item(), item('casual/b')];
+          const model = plan(selected);
+          const calls = [];
+          location.hash = '#/assembly?decks=casual%2Fa%2Ccasual%2Fhidden%2Ccasual%2Fa%2Ccasual%2Fb';
+          load = (path, token, draw) => {
+            assert.equal(path, '/api/assembly?'); assert.equal(token, routeToken);
+            return draw({...model, decks:[], selections:[]});
+          };
+          mockApi((path, body) => { calls.push([path, body]); return model; });
+          const view = showAssembly(parseHash().params, routeToken);
+          await settle();
+          const decks = selected.map(({id}) => ({id, version:'target'}));
+          same(calls, [['/api/assembly/preview',{decks}]]);
+          same(view.selected, decks);
+          assert.equal(main.querySelectorAll('.pack-deck').length, 2);
+        """)
+
     def test_owned_list_completes_here_and_duplicate_clicks_do_not_save_twice(self):
         self.run_js("""
           const data = plan([item('casual/a','owned')]);
@@ -93,6 +112,7 @@ class AssemblyCompletionUiTests(unittest.TestCase):
           assert.equal(ticks().length, originalTiles.length);
           same(checked(), ['true']);
           assert(!builtButton() || builtBlocked());
+          assert.equal(main.querySelector('.pack-completion'), null);
           assert(/built/i.test(main.textContent));
         """)
 
@@ -125,7 +145,7 @@ class AssemblyCompletionUiTests(unittest.TestCase):
           assert(main.textContent.includes('Elves is now marked built.'));
           assert(main.textContent.includes('availability tables could not be updated'));
           assert(main.textContent.includes('Another deck has no availability table.'));
-          assert.equal(main.querySelectorAll('a').find(link=>link.textContent==='Tables out of date').getAttribute('href'),TABLES_HREF);
+          assert.equal(main.querySelectorAll('a').find(link=>link.textContent==='Availability needs updating').getAttribute('href'),TABLES_HREF);
           assert(!builtButton());
           same(checked(),['true']);
         """)
@@ -191,7 +211,7 @@ class AssemblyCompletionUiTests(unittest.TestCase):
           });
           drawAssembly(data,routeToken); await settle(); checkCards(); await settle();
           assert.equal(builtBlocked(),false);
-          const owned = main.querySelectorAll('button').find(b => b.textContent === 'Play-now list');
+          const owned = main.querySelectorAll('button').find(b => b.textContent === 'Alternative list');
           owned.click();
           assert.equal(builtBlocked(),true);
           builtButton().click(); assert.equal(posts.length,0);

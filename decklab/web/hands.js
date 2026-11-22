@@ -45,7 +45,7 @@ class OpeningHand {
  * make the first mulligan free, as at a multiplayer table. */
 function manualHandsSection(data) {
   const section = el("section", { class: "deck-section hands-section", id: "sec-hands", "aria-labelledby": "h-hands" },
-    el("h2", { id: "h-hands", text: "Deal a hand" }));
+    el("h2", { id: "h-hands", text: "Deal a practice hand" }));
   if (data.summary.id.startsWith(BOX_PREFIX)) {
     section.append(note("A Beginner Box half is only played shuffled with another half: deal a hand from one of its pairings."),
       pairingLinks(data.summary.id, "Its pairings:"));

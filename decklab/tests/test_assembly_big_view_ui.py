@@ -254,7 +254,7 @@ class AssemblyBigViewUiTests(unittest.TestCase):
           assert.equal(panel.task.textContent,'Pull 3 from storage for Elves');
           const words=v.packViewerEntries.map((_,i)=>{goViewer(i);return panel.task.textContent;});
           assert(words.includes('Move 1 from B to Elves; change sleeves'));assert(words.includes('1 for Elves'));
-          assert(words.includes('Elves: Use or keep 1 spare cards to stand for Gamma'),'a caption without the deck gets it');
+          assert(words.includes('Pack 1 spare card for Gamma in Elves'),'the caption names the packed deck');
         """)
 
     def test_nothing_about_printings_blocks_finishing(self):

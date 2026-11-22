@@ -57,7 +57,7 @@ class ShoppingCopyInteractionTests(unittest.TestCase):
           drawShopping(shopping(queue, {orders: [order({components: [component({items: [{name: 'Already ordered', quantity: 8}]})]}),
             { ...order({id: 'received', status: 'received'}), components: [component({status: 'received'})]}],
             missing_cards: {ready: true, rows: [{name: 'Unqueued missing demand', missing: 20, decks: []}], errors: [], warnings: []}}));
-          const long = main.querySelector('#shop-long-term').closest('section');
+          const long = main.querySelector('#shop-long-term').closest('.shop-later');
           assert.equal(long.querySelectorAll('[data-shop-queue]').length, 12);
           copyButton('Shop').click(); await settle();
           same(copies, ['2 Ready\n3 Waiting\n4 Reprint\n5 Deferred\n14 Later\n']);

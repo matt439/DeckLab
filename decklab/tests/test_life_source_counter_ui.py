@@ -30,7 +30,7 @@ SETUP = """
   const mount=()=>{clear(main);const panel=el('section',{class:'fixture-quick'});panel.append(lifeCounterLauncher(data,chosen));
     lifeV2BindLauncher(panel);main.append(panel);return panel;};
   const counter=()=>document.body.querySelector('.life-source-counter');
-  const start=(choices=[0,1])=>{selection=choices;mount();(named(main,'Life counter')||named(main,'New life counter')).click();assert(counter());return lifeV2Open.game;};
+  const start=(choices=[0,1])=>{selection=choices;mount();(named(main,'Start a 1v1 game')||named(main,'Start a new 1v1 game')).click();assert(counter());return lifeV2Open.game;};
   const press=label=>counter().querySelectorAll('button').find(button=>button.getAttribute('aria-label')===label);
   const active=()=>lifeV2Open.game,kept=()=>lifeV2Saved(data);
   const packetKey=game=>STORE+lifeV2Key(state.profile,game.session_id);
@@ -115,7 +115,7 @@ class LifeSourceCounterUiTests(unittest.TestCase):
           selection=[2,3];const legacy=lifeNewGame(chosen(),'matt',clockNow-1000);legacy.players[0].commander=15;
           legacy.compatible_note='Kept';const raw=JSON.stringify(legacy,null,3)+String.fromCharCode(10);store.set(STORE+LIFE_KEY,raw);
           mount();assert(main.textContent.includes('Legacy combined commander damage'));assert.equal(store.get(STORE+LIFE_KEY),raw);
-          named(main,'Life counter').click();assert(counter());assert.equal(store.get(STORE+LIFE_KEY),raw);closeLifeCounter();
+          named(main,'Start a 1v1 game').click();assert(counter());assert.equal(store.get(STORE+LIFE_KEY),raw);closeLifeCounter();
           named(main,'Resume legacy life counter').click();assert(lifeOpen);assert.equal(lifeOpen.game.players[0].commander,15);
           flushTimers();document.fire('visibilitychange');assert.equal(store.get(STORE+LIFE_KEY),raw);closeLifeCounter();
           assert.equal(store.get(STORE+LIFE_KEY),raw);
@@ -126,7 +126,7 @@ class LifeSourceCounterUiTests(unittest.TestCase):
           const legacy=lifeNewGame(chosen(),'matt',clockNow-1000);legacy.ended={result:'draw',why:'chosen',at:clockNow};
           store.set(STORE+LIFE_KEY,JSON.stringify(legacy));mount();named(main,'Resume legacy life counter').click();
           let callback;playGameForm=(...args)=>{callback=args[3].onSaved;};lifeRecord(lifeOpen);closeLifeCounter();
-          named(main,'Life counter').click();const session=active().session_id,before=store.get(packetKey(active())),old=store.get(STORE+LIFE_KEY);
+          named(main,'Start a 1v1 game').click();const session=active().session_id,before=store.get(packetKey(active())),old=store.get(STORE+LIFE_KEY);
           assert.equal(callback(),false);assert(counter());assert.equal(active().session_id,session);
           assert.equal(store.get(packetKey(active())),before);assert.equal(store.get(STORE+LIFE_KEY),old);
         """)
@@ -195,7 +195,7 @@ class LifeSourceCounterUiTests(unittest.TestCase):
 
     def test_whole_original_launcher_panel_relocation_blocks_start_and_resume(self):
         self.run_js("""
-          const panel=mount(),startButton=named(panel,'Life counter'),wrapper=el('div');main.append(wrapper);wrapper.append(panel);
+          const panel=mount(),startButton=named(panel,'Start a 1v1 game'),wrapper=el('div');main.append(wrapper);wrapper.append(panel);
           startButton.click();assert.equal(counter(),null);main.append(panel);startButton.click();assert(counter());closeLifeCounter();
           const resume=named(panel,'Resume life counter');wrapper.append(panel);resume.click();assert.equal(counter(),null);
           assert(kept());
@@ -213,7 +213,7 @@ class LifeSourceCounterUiTests(unittest.TestCase):
         self.run_js("""
           start([2,3]);press('Matt: 5 life less').click();const before=kept();closeLifeCounter();data.lists=[];data.decks={};
           clear(main);const wrapper=el('section');wrapper.append(lifeV2EmptyLauncher(data));lifeV2BindLauncher(wrapper);main.append(wrapper);
-          assert.equal(named(wrapper,'Life counter'),undefined);named(wrapper,'Resume life counter').click();assert(counter());
+          assert.equal(named(wrapper,'Start a 1v1 game'),undefined);named(wrapper,'Resume life counter').click();assert(counter());
           same(active().players.map(player=>player.list),before.players.map(player=>player.list));assert.equal(active().players[0].life,35);
           assert.equal(writes.length,0);
         """)
@@ -335,8 +335,8 @@ class LifeSourceCounterUiTests(unittest.TestCase):
 
     def test_production_quick_record_and_empty_resume_bind_the_original_panel(self):
         self.run_js("""
-          clear(main);drawPlay(data,'');named(main,'Life counter').click();assert(counter());const game=kept();closeLifeCounter();
-          const empty={...data,lists:[],decks:{}};clear(main);drawPlay(empty,'');assert.equal(named(main,'Life counter'),undefined);
+          clear(main);drawPlay(data,'');named(main,'Start a 1v1 game').click();assert(counter());const game=kept();closeLifeCounter();
+          const empty={...data,lists:[],decks:{}};clear(main);drawPlay(empty,'');assert.equal(named(main,'Start a 1v1 game'),undefined);
           named(main,'Resume life counter').click();assert(counter());same(active().players.map(player=>player.list),game.players.map(player=>player.list));
           assert.equal(writes.length,0);
         """)

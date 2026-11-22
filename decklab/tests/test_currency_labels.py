@@ -221,14 +221,14 @@ class PageTests(unittest.TestCase):
           state.status = {pricing: {currency: 'EUR', symbol: '€', currency_default: false, shops: []}};
           const audAnswer = {rate: 1.42};
           // The status says EUR, but these answers have no currency: they're AUD, and say so.
-          assert.equal(edhrecMarkWords({status: 'to_buy', aud_each: 1.2}, true, audAnswer)[0], 'To buy · ~A$1.20');
-          assert.equal(edhrecMarkWords({status: 'to_buy', aud_each: 1.2}, true, {currency: 'EUR'})[0], 'To buy · ~€1.20');
+          assert.equal(edhrecMarkWords({status: 'to_buy', aud_each: 1.2}, true, audAnswer)[0], 'Short · ~A$1.20');
+          assert.equal(edhrecMarkWords({status: 'to_buy', aud_each: 1.2}, true, {currency: 'EUR'})[0], 'Short · ~€1.20');
           const listed = {missing: 1, listed_printing: 'FIC 207', listed_aud_each: 5, aud_each: 1};
           assert.equal(listedPriceWords(listed, audAnswer), 'As listed (FIC 207): A$5.00 each');
           assert.equal(asListedWords({missing: 2, name: 'Alpha', printing: 'FIC 207', aud_missing: 9}, {currency: 'EUR'}),
             '2 Alpha (FIC 207) about €9.00');
           const side = editorEdhrecSide({edhrec: {row: {status: 'to_buy', aud_each: 2}, marks: true, answer: audAnswer}});
-          assert(side.some(node => node && node.textContent === 'To buy · ~A$2.00'));
+          assert(side.some(node => node && node.textContent === 'Short · ~A$2.00'));
           assert.equal(searchResultSide({name: 'Alpha', aud: 3, aud_currency: 'AUD', have: 0})[0].textContent, 'A$3.00');
           assert.equal(searchResultSide({name: 'Alpha', aud: 3, aud_currency: 'EUR', have: 0})[0].textContent, '€3.00');
           const near = {checked: true, total: 1, prices: {rate: 1.42, rate_date: '2026-10-30', price_date: '2026-10-31'},

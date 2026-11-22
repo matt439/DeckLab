@@ -44,7 +44,7 @@ class PricingSettingUiTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "ok")
 
-    def test_a_home_admin_sees_the_choices_and_the_restart_words(self):
+    def test_a_home_admin_sees_the_choices_and_how_to_apply_them(self):
         self.run_js(r'''
           const panel = await openSettings();
           assert(panel && !panel.hidden);
@@ -55,7 +55,7 @@ class PricingSettingUiTests(unittest.TestCase):
           assert(byId('pricing-shops-config').checked);
           assert(byId('pricing-shop-mtgmate').checked && byId('pricing-shop-mtgmate').disabled);
           const text = panel.textContent;
-          for (const words of ['No restart needed', 'Deck tables keep their old currency until', 'Shops\' own prices and postage stay in A$'])
+          for (const words of ['uses the new setting within a minute', 'Availability needs updating', 'Shops list prices and postage in A$'])
             assert(text.includes(words), words);
           assert(byId('pricing-source').textContent.includes('estimates in AUD (the default)'));
         ''')
@@ -106,7 +106,7 @@ class PricingSettingUiTests(unittest.TestCase):
           view = answer({can_edit: false});
           let panel = await openSettings();
           assert(!byId('pricing-currency'));
-          assert(panel.textContent.includes('No restart needed'));
+          assert(panel.textContent.includes('uses the new setting within a minute'));
           failure = new ApiError(403, 'The price settings are private to home.');
           panel = await openSettings();
           assert(panel.hidden);

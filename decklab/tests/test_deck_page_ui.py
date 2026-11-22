@@ -19,6 +19,7 @@ PAGE = """
       player: 'user', status: 'building', read_only: false, card_count: 29, sideboard_count: 0,
       versions: ['target', 'owned'], kit: null},
     version: 'target', versions: ['target', 'owned'],
+    play_list: {sha256: 'a'.repeat(64)},
     sections: {Deck: [
       {qty: 4, name: 'Elf', set: 'fdn', number: '1', finish: 'nonfoil', card: elf},
       {qty: 2, name: 'Elf', set: 'm21', number: '2', finish: 'foil', card: elf},
@@ -54,20 +55,24 @@ class DeckPageUiTests(unittest.TestCase):
           globalThis.startCardAudit = options => launched.push(options);
           location.hash = '#/deck?id=casual%2Ftest&v=owned';
           drawDeck(data);
-          const item = deckMoreItems(data).find(choice => choice?.label === 'Scan to audit');
-          item.onclick();
+          const item = buttonText(panel('overview'), 'Scan for differences');
+          assert(item.closest('.deck-assembly').textContent.includes('temporary comparison'));
+          item.click();
           assert.equal(launched.length, 1);
           const audit = launched[0];
           same(audit.rows, data.scan_audit.rows); same(audit.scan, {available: true});
           assert.equal(audit.mode, 'deck'); assert.equal(audit.space, 'home'); assert(audit.current());
           location.hash = '#/deck?id=casual%2Fother';
-          assert(!audit.current()); item.onclick(); assert.equal(launched.length, 1);
+          assert(!audit.current()); item.click(); assert.equal(launched.length, 1);
           location.hash = '#/deck?id=casual%2Ftest';
           state.profile = {id: 'user2', space: 'user2'};
-          assert(!audit.current()); item.onclick(); assert.equal(launched.length, 1);
-          assert(!deckMoreItems(data).some(choice => choice?.label === 'Scan to audit'));
+          state.may = {see_inventory: ['user2']};
+          assert(!audit.current()); item.click(); assert.equal(launched.length, 1);
+          assert.equal(deckAssemblySection(data), null);
           delete data.scan_audit;
-          assert(!deckMoreItems(data).some(choice => choice?.label === 'Scan to audit'));
+          state.profile = state.profiles[0];
+          state.may = {see_inventory: ['home']};
+          assert(!buttonText(deckAssemblySection(data), 'Scan for differences'));
         """)
 
     def test_saved_deck_checklist_selects_copies_and_reopens_to_set_purchases_aside(self):
@@ -94,11 +99,15 @@ class DeckPageUiTests(unittest.TestCase):
             saved = {revision: saved.revision + 1, title: body.title, rows: structuredClone(body.rows)};
             return structuredClone(saved);
           };
-          const launch = buttonText(panel('cards'), 'Card checklist');
+          const launch = buttonText(main.querySelector('.deck-avail'), 'Find and buy cards');
           assert(launch, 'Checklist should work without inventory data');
           assert.equal(reads.length, 0, 'Loading a deck must not read its private checklist');
-          launch.click(); await flush();
-          let sheet = openDialog();
+          const openChecklist = async () => {
+            launch.click();
+            buttonText(openDialog(), 'Check copies at home').click(); await flush();
+            return openDialog();
+          };
+          let sheet = await openChecklist();
           const chooser = sheet.querySelector('.upgrade-checklist-picker');
           const selection = chooser.querySelector('select'), qty = chooser.querySelector('input');
           assert(selection.querySelectorAll('option').some(option => option.textContent === 'Elf (6)'));
@@ -113,7 +122,7 @@ class DeckPageUiTests(unittest.TestCase):
           assert.equal(writes.length, 0);
           buttonText(sheet, 'Save checklist').click(); await flush();
           colCloseSheets();
-          launch.click(); await flush(); sheet = openDialog();
+          sheet = await openChecklist();
           same(plans().map(plan => plan.value), ['buy', 'check']);
           plans()[0].value = 'set_aside'; plans()[0].fire('change');
           buttonText(sheet, 'Save checklist').click(); await flush();
@@ -125,13 +134,13 @@ class DeckPageUiTests(unittest.TestCase):
         self.run_js(r"""
           state.profile = {id: 'user2', space: 'user2', name: 'User2'};
           open('#/deck?id=casual%2Ftest&tab=cards');
-          assert.equal(buttonText(panel('cards'), 'Card checklist'), undefined);
+          assert.equal(deckUpgradeChecklistOffered(deckScreen.data), false);
         """)
 
     def test_tabs_are_lazy_and_in_the_address(self):
         self.run_js("""
           open('#/deck?id=casual%2Ftest&v=target');
-          same(main.querySelectorAll('[role=tab]').map((b) => b.textContent), ['Overview', 'Cards', 'Stats', 'Practice', 'Testing']);
+          same(main.querySelectorAll('[role=tab]').map((b) => b.textContent), ['Overview', 'Cards', 'Check deck', 'Practice', 'Simulate']);
           assert.equal(tab('overview').getAttribute('aria-selected'), 'true');
           assert.equal(panel('overview').hidden, false);
           assert.equal(panel('cards').hidden, true);
@@ -216,12 +225,10 @@ class DeckPageUiTests(unittest.TestCase):
         self.run_js("""
           open('#/deck?id=casual%2Ftest&v=target');
           const banner = main.querySelector('.deck-avail');
-          assert(banner.textContent.includes('3 missing, about A$3.75 at the cheapest printings (planned list)'), banner.textContent);
-          assert(banner.textContent.includes('1 held by other decks · 2 cards on the way'));
-          assert(banner.querySelector('.segmented'));          // the two lists' picker is folded in
-          const info = banner.querySelector('.deck-lists-info');
-          assert.equal(banner.querySelector('#deck-lists-about').hidden, true);
-          info.click(); assert.equal(banner.querySelector('#deck-lists-about').hidden, false);
+          assert(banner.textContent.includes('Planned list · 3 missing from recorded copies'), banner.textContent);
+          assert(banner.textContent.includes('Free now 4 · On the way 2 · Held in another deck or product 1'));
+          same(banner.querySelector('.segmented').querySelectorAll('a').map(a => a.textContent), ['Planned list', 'Alternative list']);
+          assert(banner.textContent.includes('The Alternative list can use incoming cards'));
           // Show missing opens the Cards tab on its Missing filter.
           buttonText(banner, 'Show missing').click();
           assert.equal(tab('cards').getAttribute('aria-selected'), 'true');
@@ -234,6 +241,38 @@ class DeckPageUiTests(unittest.TestCase):
           assert(availabilityBanner(page, {view: {tab: 'overview'}}).textContent.includes('Ready to build'));
           page.owned.rows = [row('Elf', 6, 0, [['order x', 2]])];
           assert(availabilityBanner(page, {view: {tab: 'overview'}}).textContent.includes('Ready once 2 cards arrive'));
+        """)
+
+    def test_banner_distinguishes_the_selected_list_from_the_packed_box_and_unknown_counts(self):
+        self.run_js("""
+          const data = makePage(), view = {tab: 'overview'};
+          data.summary.status = 'built'; data.version = 'owned';
+          data.assembled = {version: 'target', main_count: 29, sideboard_count: 0, changed: true, remaining_count: 1};
+          data.owned.rows[1].labels.lent_out = 2;
+          const banner = () => availabilityBanner(data, {view}).textContent;
+          assert(banner().includes('Alternative list · 3 missing from recorded copies'));
+          assert(banner().includes('Packed in this box: 29 main-deck cards · Planned list'));
+          assert(banner().includes('Here for this list 4 · On the way 2 · Held in another deck or product 1 · Lent out 2'));
+          assert(!banner().includes('Free now'));
+          data.owned.availability_confirmed = false;
+          assert(banner().includes('To check · Availability could not be confirmed'));
+          assert(!banner().includes('missing from recorded copies'));
+          assert(banner().includes('Packed in this box'));
+        """)
+
+    def test_incoming_commander_does_not_make_an_empty_main_deck_ready(self):
+        self.run_js("""
+          const page = makePage();
+          page.summary.kind = 'commander';
+          page.summary.status = 'idea';
+          page.sections = {Commander: [{name: 'Commander', qty: 1}]};
+          page.owned.rows = [row('Commander', 1, 0, [['order x', 1]])];
+          page.owned.totals.missing = 0;
+          const banner = availabilityBanner(page, {view: {tab: 'overview'}});
+          assert(banner.textContent.includes('Planned list · No main-deck cards yet'), banner.textContent);
+          assert(banner.textContent.includes('On the way 1'));
+          assert(buttonText(banner, 'Show on the way'));
+          assert(!banner.textContent.includes('Ready'));
         """)
 
     def test_empty_idea_directs_the_player_to_add_cards_for_the_selected_list(self):
@@ -271,9 +310,9 @@ class DeckPageUiTests(unittest.TestCase):
           assert.equal(main.querySelector('.deck-filter'), null);
           assert.equal(main.querySelectorAll('.status').length, 0);
           assert.equal(main.querySelector('#sec-owned'), null);
-          // One list only: no banner at all.
+          // One list only: name the list without exposing inventory.
           page.versions = ['target'];
-          assert.equal(availabilityBanner(page, {view: {tab: 'cards'}}), null);
+          assert.equal(availabilityBanner(page, {view: {tab: 'cards'}}).textContent, 'Planned list');
         """)
 
     def test_incoming_only_cards_name_each_source_in_banner_cards_and_prices(self):
@@ -310,11 +349,11 @@ class DeckPageUiTests(unittest.TestCase):
           }
         """)
 
-    def test_incoming_sources_are_once_per_card_and_banner_combines_order(self):
+    def test_incoming_copies_allocate_across_sections_and_banner_combines_order(self):
         self.run_js("""
           const page = makePage();
           const source = {source: 'order x', quantity: 2, order_id: 'x', status: 'ordered'};
-          page.owned.rows = [row('Elf', 6, 0, [['order x', 2]]), row('Bolt', 3, 1, [['order x', 1]])];
+          page.owned.rows = [row('Elf', 7, 0, [['order x', 2]]), row('Bolt', 3, 1, [['order x', 1]])];
           page.owned.rows[0].labels.incoming_sources = [source];
           page.owned.rows[1].labels.incoming_sources = [{...source, quantity: 1}];
           page.owned.totals.missing = 1;
@@ -322,9 +361,11 @@ class DeckPageUiTests(unittest.TestCase):
           const groups = deckGroups(page), marks = lineMarks(groups, cardMarks(page));
           const elves = groups.flatMap((g) => g.lines).filter((line) => line.name === 'Elf');
           assert.equal(elves.length, 2);
-          same(marks.get(elves[0]).sources, [source]);
-          same(marks.get(elves[1]).sources, []);
-          assert.equal(marks.get(elves[1]).coming, 0);
+          const received = {...source, quantity: 1};
+          same(marks.get(elves[0]).sources, [received]);
+          same(marks.get(elves[1]).sources, [received]);
+          assert.equal(marks.get(elves[1]).coming, 1);
+          assert.equal(source.quantity, 2, 'source rows remain unchanged');
           const banner = availabilityBanner(page, {view: {tab: 'cards'}});
           assert(banner.textContent.includes('1 missing'));
           assert.equal(banner.querySelector('.deck-avail-sources').textContent, 'On the way: 3 from order x · ordered');
@@ -345,13 +386,13 @@ class DeckPageUiTests(unittest.TestCase):
           // Bolt: every copy missing, greyed, and held by another deck.
           const boltRow = cards.querySelectorAll('.card-row').find((r) => r.textContent.includes('Bolt'));
           assert(boltRow.classList.contains('is-missing'));
-          assert(boltRow.textContent.includes('Missing') && boltRow.textContent.includes('1 in Gruul Ramp'));
+          assert(boltRow.textContent.includes('Missing') && boltRow.textContent.includes('1 held by Gruul Ramp'));
           // Basic lands have no marks; the filters offer only what has cards in it.
           const forestRow = cards.querySelectorAll('.card-row').find((r) => r.textContent.includes('Forest'));
           assert.equal(forestRow.querySelectorAll('.status').length, 0);
           // The filters count copies, as the banner does ("3 missing"); the line under one counts different cards.
           same(cards.querySelector('.deck-filter').querySelectorAll('button').map((b) => b.textContent),
-               ['All', 'Missing3', 'On the way2', 'In other decks1']);
+               ['All', 'Missing3', 'On the way2', 'Held elsewhere1']);
           buttonText(cards.querySelector('.deck-filter'), 'On the way2').click();
           assert(location.hash.endsWith('filter=coming'), location.hash);
           assert(cards.querySelector('.deck-cards').textContent.includes('1 of 3 different cards'));
@@ -366,6 +407,27 @@ class DeckPageUiTests(unittest.TestCase):
           const prices = cards.querySelector('#sec-owned');
           assert(prices.textContent.includes('Price table: 3 missing, about A$3.75 at the cheapest printings'));
           assert(!prices.querySelector('table').textContent.includes('Forest'));
+        """)
+
+    def test_real_game_actions_use_the_exact_saved_list_and_respect_the_packed_box(self):
+        self.run_js("""
+          const data = makePage();
+          data.played = {games:0, can_record:true};
+          data.version = 'owned';
+          const items = () => deckMoreItems(data).filter(item => item?.label);
+          const start = () => items().find(item => item.label === 'Start a real game');
+          assert.equal(start().href, '#/play?id=casual%2Ftest&version=owned&action=start&sha=' + data.play_list.sha256);
+          const record = () => deckOverviewPlayed(data).querySelector('.deck-played-log');
+          assert.equal(record().getAttribute('href'), '#/play?id=casual%2Ftest&version=owned&action=record&sha=' + data.play_list.sha256);
+          data.play_list.packed_match = false;
+          assert(!start());
+          assert.equal(record().textContent, 'View recorded games');
+          data.play_list = null;
+          data.summary.id = 'product/fdn-beginner-box/cats';
+          assert(!start());
+          data.summary.id = 'commander/trial';
+          data.summary.trial = 'Trial_TST';
+          assert(!start());
         """)
 
     def test_head_and_overview(self):
@@ -384,7 +446,7 @@ class DeckPageUiTests(unittest.TestCase):
           // No "build on your computer" sentence; More holds the rest.
           assert(!main.textContent.includes('on your computer'));
           const more = head.querySelectorAll('[role=menuitem]').map((i) => i.textContent);
-          for (const words of ['Game log', 'History', 'Copy decklist', 'Download decklist', 'Print play sheet'])
+          for (const words of ['Start a real game', 'History', 'Export & print'])
             assert(more.includes(words), words);
           // The library's cover picker (cover.js) for a deck text the viewer may change, never a product.
           assert(more.includes('Change library picture…'));
@@ -606,9 +668,9 @@ class DeckPageUiTests(unittest.TestCase):
           page.matchups = {ai: null, running: [], forge: {ready: true}, cards: null,
             results: [result(angels, '2026-10-01T10:00:00', .4), result(otters, '2026-10-02T10:00:00', .6),
                       result(angels, '2026-10-04T10:00:00', .45)]};
-          // Play a matchup only for a viewer who may start runs.
+          // Starting a matchup requires permission to start runs.
           runsAllowed = () => false;
-          assert(!deckMatchupsPart(page).querySelectorAll('a').some((a) => a.textContent === 'Play a matchup'));
+          assert(!deckMatchupsPart(page).querySelectorAll('a').some((a) => a.textContent === 'Simulate a 1v1 matchup'));
           runsAllowed = () => true;
           const part = deckMatchupsPart(page); main.append(part);
           // The matchup screens' rows (deckResultParts): one per opponent, best first, the newest of a pair's
@@ -625,7 +687,7 @@ class DeckPageUiTests(unittest.TestCase):
           deckScreen = null;
           const unplayed = part.querySelector('.mu-not-played').textContent;
           assert.equal(unplayed, 'Not played yet against: Rabbits.');   // same format, a whole deck, not met
-          assert(part.querySelectorAll('a').some((a) => a.textContent === 'Play a matchup'
+          assert(part.querySelectorAll('a').some((a) => a.textContent === 'Simulate a 1v1 matchup'
             && a.getAttribute('class').includes('btn-primary')));
           // Asked for only when the tab opens: a page drawn without its matchups fetches them.
           let asked = null; api = async (path) => { asked = path; return {matchups: page.matchups}; };
@@ -679,11 +741,11 @@ class DeckPageUiTests(unittest.TestCase):
           const rows = panel('cards').querySelectorAll('.card-row').filter((r) => r.textContent.includes('Bolt'));
           assert.equal(rows.length, 2);
           const [first, side] = rows;
-          assert(!first.textContent.includes('issing') && first.textContent.includes('1 in Gruul Ramp'), first.textContent);
+          assert(!first.textContent.includes('issing') && first.textContent.includes('1 held by Gruul Ramp'), first.textContent);
           assert(side.textContent.includes('Missing') && !side.textContent.includes('Gruul Ramp'), side.textContent);
           assert(side.classList.contains('is-missing')); assert(!first.classList.contains('is-missing'));
           same(panel('cards').querySelector('.deck-filter').querySelectorAll('button').map((b) => b.textContent),
-               ['All', 'Missing1', 'In other decks1']);
+               ['All', 'Missing1', 'Held elsewhere1']);
           // Some copies missing: "1 of 2 missing".
           const part = lineMarks([{lines: [{name: 'Bolt', qty: 2}]}], new Map([['Bolt', {need: 2, missing: 1, coming: 0, held: []}]]));
           const mark = [...part.values()][0];
@@ -693,8 +755,8 @@ class DeckPageUiTests(unittest.TestCase):
           const gone = {need: 1, missing: 1, coming: 0, held: []};
           assert.equal(markChips(gone).filter((c) => c.classList.contains('status')).length, 0);
           same(markChips(gone).map((c) => c.textContent), ['Missing']);
-          same(markChips(gone, true).map((c) => c.textContent), ['Missing · need 1, have 0']);
-          same(markChips(mark, true).map((c) => c.textContent), ['1 of 2 missing · need 2, have 1']);
+          same(markChips(gone, true).map((c) => c.textContent), ['Missing · need 1, here 0']);
+          same(markChips(mark, true).map((c) => c.textContent), ['1 of 2 missing · need 2, here 1']);
         """)
 
     def test_guide_viewer_has_each_card_once(self):
@@ -745,7 +807,7 @@ class DeckPageUiTests(unittest.TestCase):
           // It's left More, which keeps the rest.
           let page = makePage();
           let seen = buttons(page);
-          assert(!seen.more.includes('Build decks')); assert(seen.more.includes('Game log'));
+          assert(!seen.more.includes('Build decks')); assert(seen.more.includes('Start a real game'));
           // The list shown is the list built.
           page.version = 'owned';
           assert.equal(buttons(page).build.getAttribute('href'), '#/assembly?deck=casual%2Ftest&version=owned');
@@ -769,6 +831,8 @@ class DeckPageUiTests(unittest.TestCase):
           assert(!classes(seen.build).includes('btn-primary'));
           // Only for those who see home's inventory, and only on a home deck, as More's item was.
           page = makePage(); state.may = {see_inventory: ['user2']};
+          assert.equal(buttons(page).build, null);
+          state.may = {see_inventory: ['home', 'user2'], see_home_records: false};
           assert.equal(buttons(page).build, null);
           page.summary = {...page.summary, id: 'user2/casual/elves'};
           assert.equal(buttons(page).build, null);

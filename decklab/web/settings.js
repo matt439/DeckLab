@@ -22,32 +22,50 @@ const SIM_MODE_WORDS = [["admins", "Only admins"], ["everyone", "Anyone"], ["pau
 
 /** Static help contains no account, inventory or saved-deck reads. */
 function showTerminology() {
-  setTitle("What these words mean");
+  setTitle(routeFor("help").title);
   const words = [
     ["Idea", "A deck plan. It reserves no cards and has no sleeves or deck box."],
     ["Building", "A deck you are assembling. You can choose its kit, but it reserves no cards yet."],
-    ["Built", "A physical deck put together. Its selected built list reserves cards so other decks cannot also count them as free."],
+    ["Built", "A physical deck whose copies are held for it."],
     ["Planned list", "The list you want, including cards you may still need to get."],
-    ["Play-now list", "An alternative list using owned cards or cards on the way. Incoming cards are not ready to play until they arrive; check availability."],
-    ["Owned vs needed", "How many copies a deck needs, how many its space owns, what is in use and what is on the way. Counts are shown only when you may see that collection."],
-    ["Tables out of date", "A saved owned-vs-needed table no longer matches the current collection or lists. Review and update it; this does not buy, move or change cards."],
-    ["Simulations", "Optional computer games played by Forge. Collection, deck building and manual practice work without installing it."]
+    ["Alternative list", "Another version of the deck. Check which copies are free now and which are on the way before bringing it to play."],
+    ["Packed in this box", "The recorded list in a physical deck box. Its copies are held for that deck until its build changes."],
+    ["Substitute card", "A card you choose instead of another in a deck list."],
+    ["Physical placeholder", "A marker you pack instead of the actual card."],
+    ["Check copies at home", "A private checklist for ticking off physical copies, setting them aside and selecting copies to buy."],
+    ["Use recorded collection", "Calculate shortages for the chosen list from the recorded collection. Copies you have yet to enter may need a manual check."],
+    ["Availability needs updating", "A saved count is out of date. Updating it recalculates availability from the recorded collection."],
+    ["Simulate", "Play optional computer games to compare decks or test a change."]
   ];
   const main = clear($("#main"));
-  add(main, [pageHead({title: "What these words mean"}),
+  add(main, [pageHead({ title: routeH1("help") }),
     el("section", {class: "panel"}, el("dl", {}, words.map(([term, meaning]) =>
       [el("dt", {}, el("strong", {text: term})), el("dd", {text: meaning})])),
     el("p", {}, el("a", {href: "#/library", text: "Back to Decks"})))]);
   afterRender();
 }
 
+function focusSettingsPart(part) {
+  const target = byId(`settings-${part}`);
+  if (!target) return;
+  target.setAttribute("tabindex", "-1");
+  target.focus({ preventScroll: true });
+  target.scrollIntoView?.({ block: "start" });
+}
+
+function settingsGroup(part, title, panels) {
+  return el("section", { id: `settings-${part}`, class: "settings-group", "aria-labelledby": `settings-${part}-title` },
+    el("h2", { id: `settings-${part}-title`, text: title }),
+    el("div", { class: "settings-parts" }, panels));
+}
+
 function showSettings(params, token) {
-  setTitle("Settings");
+  setTitle(routeFor("settings").title);
   const main = clear($("#main"));
   if (!isAdminProfile()) {
     add(main, [pageHead({ title: routeH1("settings") }),
       el("div", { class: "box box-info" },
-        el("p", { text: "Deck Lab's settings are for admins. Your theme is in the menu under your initial, top right." }))]);
+        el("p", { text: "Administration is for admins. Your theme is in the menu under your initial, top right." }))]);
     afterRender();
     return;
   }
@@ -60,31 +78,29 @@ function showSettings(params, token) {
   } });
   const check = el("button", { type: "button", class: "btn btn-secondary", id: "build-check", text: "Check for updates",
     onclick: () => showFooter() });
-  add(main, [pageHead({ title: routeH1("settings"),
-      description: "Settings for everyone who uses Deck Lab. Only admins see this page." }),
-    el("div", { class: "settings-parts" },
+  const groups = [
+    ["deck-settings", "Decks & simulations", [
       el("section", { class: "panel settings-part", id: "settings-simulations", "aria-labelledby": "settings-sim-title" },
-        el("h2", { id: "settings-sim-title", text: "Simulations" }),
+        el("h3", { id: "settings-sim-title", text: "Simulations" }),
         el("p", { class: "sub", text: "Forge plays matchups and tests changes on the PC. Saved results always show." }),
         el("div", { class: "settings-fields", id: "sim-settings" },
           el("div", { class: "field" }, el("span", { id: "sim-mode-label", text: "Who can start them" }), mode),
           el("label", { class: "field", for: "sim-workers" }, el("span", { text: "Forge workers at once" }), workers),
           el("p", { class: "sub", id: "sim-since" })),
         el("div", { id: "sim-loading" }, loadingBox("Loading the simulations setting…", { small: true }))),
-      commanderNightSettings(),
+      commanderNightSettings()]],
+    ["buying", "Buying", [
       typeof settingsPostagePanel === "function" ? settingsPostagePanel() : null,
-      typeof settingsPricingPanel === "function" ? settingsPricingPanel() : null,
+      typeof settingsPricingPanel === "function" ? settingsPricingPanel() : null]],
+    ["people", "Members & visits", [
       settingsMembersPanel(),
-      settingsMaintenancePanel(token),
-      settingsErrorReferences(),
-      typeof settingsDataSources === "function" ? settingsDataSources() : null,
       el("section", { class: "panel settings-part", id: "settings-visits", "aria-labelledby": "settings-visits-title" },
-        el("h2", { id: "settings-visits-title", text: "Visits" }),
+        el("h3", { id: "settings-visits-title", text: "Visits" }),
         el("p", { class: "sub", text: `Who has opened Deck Lab, and which pages. The last ${VISIT_DAYS} days unless it says otherwise.` }),
-        el("div", { class: "visits-list", id: "visits-list" }, loadingBox("Loading visits…", { small: true }))),
+        el("div", { class: "visits-list", id: "visits-list" }, loadingBox("Loading visits…", { small: true })))]],
+    ["service", "Service & data", [
       el("section", { class: "panel settings-part", id: "settings-about", "aria-labelledby": "settings-about-title" },
-        el("h2", { id: "settings-about-title", text: "About Deck Lab" }),
-        el("p", {}, el("a", { href: "#/help", text: "What these words mean" })),
+        el("h3", { id: "settings-about-title", text: "About Deck Lab" }),
         // Not a live region: the version line is rewritten on every check. The spinner goes with the first answer.
         el("div", { class: "build-footer" }, el("span", { id: "build-version" },
           el("span", { class: "spinner spinner-small", "aria-hidden": "true" }), " Checking the version…")),
@@ -94,14 +110,20 @@ function showSettings(params, token) {
         // Filled only when a hand-maintained fact group is due a review (loadReferenceFacts).
         el("p", { id: "settings-reference", role: "status", hidden: true }),
         el("div", { class: "actions" }, check),
-        settingsRestartPart()))]);
+        settingsRestartPart()),
+      settingsMaintenancePanel(token),
+      typeof settingsDataSources === "function" ? settingsDataSources() : null,
+      settingsErrorReferences()]],
+  ].filter(([, , panels]) => panels.some(Boolean));
+  add(main, [pageHead({ title: routeH1("settings") }),
+    el("nav", { class: "actions settings-jumps", "aria-label": "Administration sections" },
+      groups.map(([part, title]) => el("button", { type: "button", class: "btn btn-secondary",
+        text: title, onclick: () => focusSettingsPart(part) }))),
+    ...groups.map(([part, title, panels]) => settingsGroup(part, title, panels))]);
   byId("sim-settings").hidden = true;
   afterRender();
   const part = params && params.get("part");
-  if (part === "about" || part === "postage" || part === "prices") {
-    const target = byId(`settings-${part}`);
-    if (target && target.scrollIntoView) target.scrollIntoView();
-  }
+  if (part) focusSettingsPart(part);
   if (state.simulations) renderSimulations(state.simulations);
   if (state.status) renderVersionStatus(state.status);
   settingsSimulations(token);
@@ -135,7 +157,7 @@ function settingsMaintenancePanel(token) {
         loadSettingsMaintenance(token);
     } });
   return el("section", { class: "panel settings-part", id: "settings-maintenance", "aria-labelledby": "settings-maintenance-title" },
-    el("h2", { id: "settings-maintenance-title", text: "Database maintenance" }),
+    el("h3", { id: "settings-maintenance-title", text: "Database maintenance" }),
     el("p", { class: "sub", text: "The nightly jobs' recorded results. Refreshing only reads them." }),
     el("div", { class: "settings-fields", id: "settings-maintenance-content" }, loadingBox("Loading maintenance history.", { small: true })),
     el("div", { class: "actions" }, button));

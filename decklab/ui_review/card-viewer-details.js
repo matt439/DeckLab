@@ -23,7 +23,7 @@ run('card-viewer-details',async review=>{
         const address=`#/card?${q}`;
         if(mode==='overpage'){
           await page.goto(review.pageUrl('/#/help',theme),{waitUntil:'domcontentloaded'});
-          await page.getByRole('heading',{name:'What these words mean',exact:true}).waitFor();
+          await page.getByRole('heading',{name:'Help',exact:true}).waitFor();
           await page.evaluate(hash=>{location.hash=hash;},address);
         }else await page.goto(review.pageUrl('/'+address,theme),{waitUntil:'domcontentloaded'});
         const dialog=page.locator('dialog.viewer[open]');await dialog.waitFor({state:'visible'});
@@ -42,7 +42,7 @@ run('card-viewer-details',async review=>{
         }
         result.metrics=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth,
           copies:document.querySelector('.viewer-copies')?.innerText||null,underlay:document.querySelector('#main h1')?.innerText}));
-        assert.equal(result.metrics.overflow,false);if(mode==='overpage')assert.equal(result.metrics.underlay,'What these words mean');
+        assert.equal(result.metrics.overflow,false);if(mode==='overpage')assert.equal(result.metrics.underlay,'Help');
         result.png=`${mode}-${width}-${theme}.png`;await page.screenshot({path:path.join(review.out,result.png),fullPage:false,animations:'disabled'});
         await dialog.getByRole('button',{name:'Close',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('dialog.viewer[open]'));
         await page.waitForFunction(expected=>location.hash===expected,mode==='overpage'?'#/help':'#/library');

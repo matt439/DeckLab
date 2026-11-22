@@ -102,7 +102,8 @@ function shopOrderSheet(view, seed = null) {
   };
   inputs.seller.addEventListener("input", suggestReference);
   inputs.ordered_on.addEventListener("input", suggestReference);
-  form.append(metadata, el("p", {class: "field-hint", text: "The reference identifies this delivery. Use a date and short label; change it for separate shipments."}));
+  form.append(el("p", {class: "field-hint", text: "Enter an order you've already placed. Saving records what is on the way and applies any reviewed queue reductions."}),
+    metadata, el("p", {class: "field-hint", text: "The reference identifies this delivery. Use a date and short label for each shipment."}));
   field(form, "notes", "Delivery notes (optional)", "input", {type: "text", maxlength: 2000});
 
   const singles = el("section", {class: "shop-order-section"}, el("h3", {text: "Cards"}));
@@ -422,7 +423,8 @@ function shopOrderSheet(view, seed = null) {
       if (!alive()) return;
       preview = null; sheet.close();
       toast(answer.tables && answer.tables.error ? `Order recorded. Deck tables need attention: ${answer.tables.error}` : "Order recorded under On the way.");
-      route();
+      if (parseHash().params.get("view") === "orders") route();
+      else location.hash = "#/shopping?view=orders";
     } catch (failure) {
       if (alive()) {
         invalidate(); if (failure.status === 409) view.stale = true;

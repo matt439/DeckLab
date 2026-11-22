@@ -1,6 +1,6 @@
 """The Stats tab's "One card away" panel (E9-S25, deck-near-combos.js) under Node: the combos a Commander deck
 is one card away from, free pieces first, each missing card's availability only when the server sent it, what
-it would do to the bracket against the deck's aim, and Add to Considering (POST /api/deck/considering) for
+it would do to the bracket against the deck's aim, and a link to review the card in the editor for
 whoever may change the deck.
 
 Runs the real page scripts in tests/fixtures/workspace_ui_runner.js; nothing is sent to a server.
@@ -22,10 +22,6 @@ SETUP = PAGE + """
     page.stats = {commander: {bracket: {near_combos: Object.assign({checked: true, total: matches.length, matches,
       prices: {rate: 1.5, rate_date: '2026-10-27', price_date: '2026-10-26'}}, extra)}}};
     return page; };
-  const writes = [];
-  api = async (path, opts) => { writes.push([path, JSON.parse(opts.body)]); return {saved: true}; };
-  route = () => {}; toast = () => {};
-  const settle = async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); };
 """
 
 
@@ -46,10 +42,10 @@ class NearCombosUiTests(unittest.TestCase):
           const items = part.querySelectorAll('.near-combo');
           assert.equal(items.length, 3);
           assert(items[0].textContent.startsWith('Add Spare: with Elf, Infinite mana.'), items[0].textContent);
-          assert(items[0].textContent.includes('Free in the pool'));
+          assert(items[0].textContent.includes('Free now'));
           assert(!items[0].textContent.includes('Bracket'), items[0].textContent);
           assert(items[1].textContent.includes('On the way'));
-          assert(items[2].textContent.includes('To buy'));
+          assert(items[2].textContent.includes('Short in collection'));
           assert(items[2].textContent.includes('About A$1.50.'));
           assert(items[2].textContent.includes('Adding it puts the deck at Bracket 3 or higher, above the Bracket 2 it aims for.'),
             items[2].textContent);
@@ -62,15 +58,15 @@ class NearCombosUiTests(unittest.TestCase):
           page.summary.read_only = true;
           const part = nearCombosPanel(page);
           const text = part.textContent;
-          assert(!text.includes('Free in the pool') && !text.includes('To buy'), text);
-          assert.equal(part.querySelectorAll('button').length, 0);
+          assert(!text.includes('Free now') && !text.includes('Short in collection'), text);
+          assert.equal(part.querySelectorAll('a').find(a => a.getAttribute('href')?.includes('focus=considering')), undefined);
           assert(text.includes('On the Considering list.'));
           // No answer (an older server, a deck without a commander): no panel.
           const none = makePage(); none.stats = {commander: {bracket: {}}};
           assert.equal(nearCombosPanel(none), null);
         """)
 
-    def test_add_to_considering_is_a_save_and_long_lists_fold(self):
+    def test_considering_handoff_and_long_lists_fold(self):
         self.run_js("""
             const many = Array.from({length: 10}, (_, i) => near(`Card ${i}`));
             const part = nearCombosPanel(withNear(many, {total: 140}));
@@ -78,31 +74,9 @@ class NearCombosUiTests(unittest.TestCase):
             assert(part.textContent.includes('Showing the 10 most serious of 140.'));
             buttonText(part, 'Show all 10').click();
             assert.equal(part.querySelectorAll('.near-combo').length, 10);
-            buttonText(part, 'Add to Considering').click();
-            await settle();
-            assert.equal(writes.length, 1);
-            assert.equal(writes[0][0], '/api/deck/considering');
-            assert.deepEqual({action: writes[0][1].action, line: writes[0][1].line, sha256: writes[0][1].sha256},
-              {action: 'add', line: {name: 'Card 0', qty: 1}, sha256: 'a'.repeat(64)});
-        """)
-
-    def test_a_refused_add_turns_the_button_back_on(self):
-        self.run_js("""
-            const toasts = [];
-            toast = (text) => toasts.push(text);
-            api = async () => { throw new ApiError(409, "The deck was saved since."); };
-            const part = nearCombosPanel(withNear([near('Spare')]));
-            const button = buttonText(part, 'Add to Considering');
-            button.click();
-            assert.equal(button.disabled, true);
-            await settle();
-            assert.equal(button.disabled, false);
-            assert.deepEqual(toasts, ['The deck was saved since.']);
-            // A save that went through leaves it off (the deck is drawn again from the saved deck).
-            api = async () => ({saved: true});
-            button.click();
-            await settle();
-            assert.equal(button.disabled, true);
+            const link = part.querySelectorAll('a').find(a => a.getAttribute('href')?.includes('focus=considering'));
+            assert.equal(link.textContent, 'Consider in editor');
+            assert.equal(link.getAttribute('href'), '#/edit?id=casual%2Ftest&v=target&focus=considering&consider=Card%200');
         """)
 
 

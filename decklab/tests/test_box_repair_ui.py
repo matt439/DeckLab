@@ -46,7 +46,7 @@ class BoxRepairUiTests(unittest.TestCase):
           const {sheet}=await missingOne();const calls=[];apiWrite=async(path,body)=>{calls.push(body);return body.confirm?repairAnswer():repairPreview();};
           previewButton(sheet).click();await settle();repairSave(sheet).click();await settle();
           assert.equal(calls.length,2);assert.equal(calls[1].confirm,true);assert.equal(calls[1].result_sha256,'e'.repeat(64));
-          assert(button(sheet.dialog,'Done'));assert(!dateButton(sheet));assert(sheet.body.textContent.includes('Tables out of date'));
+          assert(button(sheet.dialog,'Done'));assert(!dateButton(sheet));assert(sheet.body.textContent.includes('Availability needs updating'));
           assert(sheet.body.textContent.includes('The recorded box now matches this check'));
         ''')
 

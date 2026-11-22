@@ -12,13 +12,15 @@ function deckStandinWords(row) {
   return `${row.using || "Any card"} stands for ${row.for}`;
 }
 
-function deckStandinsSection(data) {
-  const standins = deckStandinsOf(data);
+function deckStandinsSection(data, packed = false) {
+  const space = data.summary.space || deckSpaceOf(data.summary.id);
+  const standins = packed ? (seesInventory(space) ? data.packed_placeholders : null) : deckStandinsOf(data);
   if (!standins || (!(standins.rows || []).length && !(standins.warnings || []).length)) return null;
-  return el("section", { class: "deck-section deck-standins", id: "sec-standins", "aria-labelledby": "h-standins" },
-    el("h2", { id: "h-standins", text: "Stand-ins" }),
+  return el("section", { class: packed ? "deck-standins" : "deck-section deck-standins", id: "sec-standins", "aria-labelledby": "h-standins" },
+    el(packed ? "h3" : "h2", { id: "h-standins", text: packed ? "Physical placeholders" : "Physical placeholder choices" }),
     (standins.rows || []).length ? [
-      el("p", { class: "sub", text: "Tell your opponent what each stand-in represents. Tap a card for its picture and rules." }),
+      el("p", { class: "sub", text: packed ? "Tell your opponent what each placeholder represents. Tap a card for its picture and rules."
+        : `Spare cards chosen to represent cards from the ${listName(standins.version, true)} when you pack it.` }),
       el("div", {}, standins.rows.map(row => cardRow(row.card, {
         qty: row.qty, name: deckStandinWords(row),
         meta: row.card ? `Picture and rules for ${row.for}` : "Picture and rules unavailable",

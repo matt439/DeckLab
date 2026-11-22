@@ -4,7 +4,7 @@ import csv
 from dataclasses import replace
 
 from decklab.lib import cards, decks, inventory, pool, spaces
-from decklab.lib.decks import standins
+from decklab.lib.decks import assembled, standins
 
 from . import common, guard
 from .card_lookup import _line_json
@@ -20,6 +20,25 @@ def project(deck, version):
     """Presentation-only mappings and desired-card pictures; never alter the logical list."""
     answer = standins.project(deck, version)
     sections = deck.target if version == "target" else deck.owned
+    return _with_cards(answer, sections)
+
+
+def project_packed(deck):
+    """Use the recorded recipe even when an edited list no longer names a placeholder's card."""
+    if deck.status != "built":
+        return None
+    installed = standins.installed_for(deck)
+    if installed is None:
+        return None
+    version = assembled.version(deck)
+    if installed["version"] != version:
+        raise standins.StandInsError("The physical placeholders belong to a different packed list")
+    sections = assembled.sections(deck)
+    rows = standins.validate_rows(installed["cards"], sections)
+    return _with_cards({"version": version, "rows": rows, "warnings": []}, sections)
+
+
+def _with_cards(answer, sections):
     pictured = {}
     for section, lines in (sections or {}).items():
         for line in lines:

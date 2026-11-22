@@ -43,10 +43,11 @@ const TYPE_PRIORITY = [["Creature", "Creatures"], ["Land", "Lands"], ["Planeswal
   ["Battle", "Battles"], ["Instant", "Instants"], ["Sorcery", "Sorceries"],
   ["Artifact", "Artifacts"], ["Enchantment", "Enchantments"]];
 // The deck page's tabs: [name in the address, words].
-const DECK_TABS = [["overview", "Overview"], ["cards", "Cards"], ["stats", "Stats"], ["practice", "Practice"],
-  ["matchups", "Testing"]];  // Testing keeps its key: ?tab=matchups (and tab=testing)
+const DECK_TABS = [["overview", "Overview"], ["cards", "Cards"], ["stats", "Check deck"], ["practice", "Practice"],
+  ["matchups", "Simulate"]];  // ?tab=matchups and the older tab=testing link both work
 // The Cards tab's filters: [name in the address, words, what a card's marks must have].
-const CARD_FILTERS = [["all", "All"], ["missing", "Missing"], ["coming", "On the way"], ["held", "In other decks"]];
+const CARD_FILTERS = [["all", "All"], ["missing", "Missing"], ["coming", "On the way"],
+  ["held", "Held elsewhere"], ["lent", "Lent out"]];
 const KEY_CARDS = 6;                    // the Overview's big pictures
 const CARDS_VIEW_KEY = "deck.cardsView"; // localStorage: "list" or "pictures", the Cards tab's last choice
 
@@ -238,11 +239,7 @@ function deckTabParts(name, data, screen) {
   if (name === "cards") return cardsParts(data, screen);
   if (name === "stats") return [statsSection(data)];
   if (name === "practice") return [manualHandsSection(data), practiceSection(data)];
-  // deck-tools.js, field.js, field-group.js, gauntlet.js, variant.js; a Commander deck's popular decks first (E3-S33)
-  if (data.summary.kind === "commander") {
-    return [gauntletSection(data), deckMatchupsPart(data), fieldSection(data), groupSection(data), variantTestsSection(data), crosscheckSection(data)];
-  }
-  return [deckMatchupsPart(data), fieldSection(data), groupSection(data), gauntletSection(data), variantTestsSection(data), crosscheckSection(data)];
+  return [gauntletSection(data), deckMatchupsPart(data), fieldSection(data), groupSection(data), variantTestsSection(data), crosscheckSection(data)];
 }
 
 /** Write the tab (and the Cards filter) into the address in place: Back still leaves the deck in one step. */
@@ -320,7 +317,7 @@ function deckBuildHref(data) {
 function deckBuildLink(data) {
   const s = data.summary;
   // A trial is a precon not owned: Build decks never offers it (AGENTS.md).
-  if (s.trial || !seesInventory(HOME_SPACE) || deckSpaceOf(s.id) !== HOME_SPACE) return null;
+  if (s.trial || !seesHomeInventory(state.may) || deckSpaceOf(s.id) !== HOME_SPACE) return null;
   const built = s.status === "built";
   if (!built && deckNeedsMainCards(data)) return null;
   return el("a", { class: `btn${built || s.read_only ? "" : " btn-primary"} deck-build`, href: deckBuildHref(data),
@@ -370,6 +367,16 @@ function deckPageColours(data) {
   return "WUBRG".split("").filter((c) => found.has(c));
 }
 
+/** The Game log link, with a saved list identity when it starts or records play. */
+function deckGameHref(data, action = null) {
+  const version = data.version === "owned" ? "owned" : "target";
+  const href = `#/play?id=${encodeURIComponent(data.summary.id)}&version=${version}`;
+  if (!action || action === "pods") return action ? `${href}&action=${action}` : href;
+  const list = data.play_list;
+  if (!state.profile || !/^[a-f0-9]{64}$/.test(list?.sha256 || "") || list.packed_match === false) return null;
+  return `${href}&action=${action}&sha=${list.sha256}`;
+}
+
 /** The More menu's items. */
 function deckMoreItems(data) {
   const s = data.summary;
@@ -377,42 +384,25 @@ function deckMoreItems(data) {
   const retire = typeof canRetireDeck === "function" && canRetireDeck(data);
   const rename = typeof canRenameDeck === "function" && canRenameDeck(data);
   const token = routeToken, profile = state.profile?.id;
-  const audit = data.scan_audit;
-  const auditHere = () => {
-    const { path, params } = parseHash();
-    return profile && profile === state.profile?.id && token === routeToken && deckScreen?.data === data
-      && s.space === ownSpace() && path === "deck" && addressDeckId(params.get("id")) === s.id;
-  };
   // POST /api/deck/cover refuses products and pairings, so only a deck text the viewer may change.
   const cover = typeof openCoverPicker === "function" && !s.read_only
     && !/^(product|pairing)\//.test(s.id) && canEditDeck(s);
+  const start = deckGameHref(data, "start");
+  const log = !s.trial && !s.id.startsWith(BOX_PREFIX) ? deckGameHref(data) : null;
+  const game = start ? { label: "Start a real game", href: start } : log && { label: "View recorded games", href: log };
   return [
-    { label: routeH1("play"), href: `#/play?id=${id}` },
+    game,
     !s.read_only ? { label: "History", href: `#/history?id=${id}&v=${data.version}` } : null,
     // compare.js: the other deck is chosen from the decks this viewer sees.
     typeof openCompareChooser === "function" ? { label: "Compare with…", onclick: () => {
       if (token === routeToken && profile === state.profile?.id) openCompareChooser(data);
     } } : null,
-    audit && s.space === ownSpace() ? { label: "Scan to audit", onclick: () => {
-      if (!auditHere()) return;
-      startCardAudit({ title: "Audit " + s.title, space: s.space, mode: "deck", scan: audit.scan,
-        rows: audit.rows, current: auditHere,
-        instructions: "Scan the main deck, commanders, companion and sideboard together in any order. "
-          + "Set token cards aside. Copies count by physical card name across all printings."
-          + (audit.rows.some(row => row.manual) ? " Count unnamed stand-ins by hand." : "") });
-    } } : null,
-    "sep",
-    { label: "Copy decklist", onclick: () => { if (token === routeToken && profile === state.profile?.id) copyDeck(data); } },
-    { label: "Copy with categories", onclick: () => { if (token === routeToken && profile === state.profile?.id) copyDeck(data, {categories: true}); } },
-    { label: "Download decklist", onclick: () => { if (token === routeToken && profile === state.profile?.id) downloadDeck(data); } },
-    { label: "Print play sheet", onclick: () => printDeck(data) },
-    { label: "Download play sheet", onclick: () => {
-      if (token === routeToken && profile === state.profile?.id) downloadPlaySheet(data);
+    { label: "Export & print", onclick: () => {
+      if (token === routeToken && profile === state.profile?.id && deckScreen?.data === data) openDeckExportSheet(data);
     } },
-    typeof offersProxies === "function" && offersProxies(data)
-      ? { label: "Print proxies", onclick: () => printProxies(data) } : null,
-    typeof offersBoxLabel === "function" && offersBoxLabel(data)
-      ? { label: "Print box label", onclick: () => printBoxLabel(data) } : null,
+    !("owned" in data) && offersBoxLabel(data) ? { label: "Print box label", onclick: () => {
+      if (token === routeToken && profile === state.profile?.id && deckScreen?.data === data) printBoxLabel(data);
+    } } : null,
     cover ? "sep" : null,
     // The library package's cover picker (cover.js), when it's there. A save (or its Undo) draws the page
     // again, so the head shows the new picture; the library is read again when it next opens.
@@ -468,14 +458,12 @@ function overviewParts(data) {
     deckOverviewPlayed(data),
     el("div", { class: "deck-overview-panels" }, deckOverviewStrength(data), deckOverviewCurve(data), deckOverviewSwap(data)),
     verdict ? el("section", { class: "deck-section deck-overview-stats", "aria-label": "At a glance" }, verdict,
-      el("button", { type: "button", class: "btn btn-quiet deck-more-link", text: "All the stats",
+      el("button", { type: "button", class: "btn btn-quiet deck-more-link", text: "Check deck",
         onclick: () => openDeckTab("stats", { to: "deck-panel-stats" }) })) : null,
     keyCardsPart(data, total),
     deckTokensChip(data),
     deckKit(data),
     productStorageSection(data),
-    deckStandinsSection(data),
-    deckSwapsSection(data),
     deckOpponentsSection(data),
     deckSideboardSection(data),
     guideSection(data)];
@@ -571,29 +559,39 @@ function cardMarks(data) {
     const labels = rowLabels(r);
     marks.set(r.name, { missing: r.missing, need: r.need,
       coming: labels.on_the_way.reduce((n, [, qty]) => n + qty, 0),
-      sources: rowIncomingSources(r), held: labels.in_use,
+      sources: rowIncomingSources(r), held: labels.in_use, lent: r.missing ? labels.lent_out || 0 : 0,
       printing: ownPrintingWords(r, false), printingFull: ownPrintingWords(r) });    // E2-S30's quiet note
   }
   return marks;
 }
 
-/** The marks of each line shown: line -> {missing, need, coming, sources, held}.
- * A card in two sections (the main deck and the sideboard) has one owned row, so its copies are shared out:
- * the copies there are fill the first section first, so the missing ones fall on the last (the sideboard),
- * and its "on the way" and "in another deck" marks go on its first line only. */
+/** A shared row can cover multiple sections. Allocate copies here first, then arrivals. */
 function lineMarks(groups, marks) {
-  const byLine = new Map(), left = new Map(), marked = new Set();
+  const byLine = new Map(), left = new Map();
   for (const group of groups) {
     for (const line of group.lines) {
       const mark = marks.get(line.name);
       if (!mark) continue;
-      if (!left.has(line.name)) left.set(line.name, Math.max(0, mark.need - mark.missing));
-      const here = Math.min(line.qty, left.get(line.name));
-      left.set(line.name, left.get(line.name) - here);
-      const first = !marked.has(line.name);
-      marked.add(line.name);
-      byLine.set(line, { missing: line.qty - here, need: line.qty,
-        coming: first ? mark.coming : 0, sources: first ? mark.sources : [], held: first ? mark.held : [],
+      const first = !left.has(line.name);
+      if (first) left.set(line.name, { here: Math.max(0, mark.need - mark.missing - mark.coming), coming: mark.coming,
+        sources: (mark.sources || []).map(source => ({ ...source })) });
+      const remaining = left.get(line.name);
+      const here = Math.min(line.qty, remaining.here);
+      const coming = Math.min(line.qty - here, remaining.coming);
+      remaining.here -= here;
+      remaining.coming -= coming;
+      let toPlace = coming;
+      const sources = [];
+      for (const source of remaining.sources) {
+        if (!toPlace) break;
+        const quantity = Math.min(source.quantity, toPlace);
+        if (!quantity) continue;
+        sources.push({ ...source, quantity });
+        source.quantity -= quantity;
+        toPlace -= quantity;
+      }
+      byLine.set(line, { missing: line.qty - here - coming, need: line.qty,
+        coming, sources, held: first ? mark.held : [], lent: first ? mark.lent : 0,
         printing: first ? mark.printing : null, printingFull: first ? mark.printingFull : null });
     }
   }
@@ -606,6 +604,7 @@ function markPasses(mark, filter) {
   if (!mark) return false;
   if (filter === "missing") return mark.missing > 0;
   if (filter === "coming") return mark.coming > 0;
+  if (filter === "lent") return mark.lent > 0;
   return mark.held.length > 0;
 }
 
@@ -615,6 +614,7 @@ function markCopies(mark, filter, line) {
   if (!mark) return 0;
   if (filter === "missing") return mark.missing;
   if (filter === "coming") return mark.coming;
+  if (filter === "lent") return mark.lent;
   return mark.held.reduce((n, [, qty]) => n + qty, 0);
 }
 
@@ -626,7 +626,7 @@ function markChips(mark, full = false) {
   const chips = [];
   if (mark.missing > 0 && full) {
     chips.push(status("crit", `${mark.missing >= mark.need ? "Missing" : `${mark.missing} of ${mark.need} missing`} · ` +
-      `need ${mark.need}, have ${Math.max(0, mark.need - mark.missing)}`));
+      `need ${mark.need}, here ${Math.max(0, mark.need - mark.missing - mark.coming)}`));
   } else if (mark.missing > 0 && mark.missing >= mark.need) {
     chips.push(el("span", { class: "sr-only", text: "Missing" }));
   } else if (mark.missing > 0) {
@@ -636,7 +636,12 @@ function markChips(mark, full = false) {
     if (mark.sources && mark.sources.length) chips.push(...mark.sources.map(incomingSourceChip));
     else chips.push(status("info", `${mark.coming} on the way`));
   }
-  for (const [deck, n] of mark.held) chips.push(status("warn", `${n} in ${deck}`));
+  for (const [deck, n] of mark.held) {
+    const chip = status("warn", `${n} held by ${deck}`);
+    chip.classList.add("chip-wrap");
+    chips.push(chip);
+  }
+  if (mark.lent) chips.push(status("warn", `${mark.lent} lent out`));
   // Which printing the space has of the one the list names: only "another" on the list, both in the viewer.
   const printing = full ? mark.printingFull : mark.printing;
   if (printing) chips.push(status("plain", printing));
@@ -710,8 +715,10 @@ function cardsParts(data, screen) {
   // The list's own heading, for a screen reader's outline: the type groups under it are h3s (E11-S55). The
   // switch above the tabs already shows which list it is.
   const heading = el("h2", { class: "sr-only", text: listName(data.version) });
-  return [heading, screen.cardsBar, list, deckConsideringSection(data), deckEdhrecSection(data), deckSwapsSection(data), tokensSection(data),
-    deckPrintingsSection(data), ownedSection(data)];
+  const improvements = [deckConsideringSection(data), deckEdhrecSection(data), deckSwapsSection(data)].filter(Boolean);
+  const improve = improvements.length ? el("section", { class: "deck-section", "aria-labelledby": "h-improve" },
+    el("h2", { id: "h-improve", text: "Improve deck" }), improvements) : null;
+  return [heading, screen.cardsBar, list, improve, tokensSection(data), ownedSection(data)];
 }
 
 /** The remembered List or Pictures choice; the first time, pictures where the screen is wide. */
@@ -737,7 +744,6 @@ function redrawCards(screen) {
   // A list with no cards (a new idea with an empty decklist): no toolbar, one line and the editor to fill it.
   if (!all.length) {
     clear(screen.cardsBar);
-    add(screen.cardsBar, [deckUpgradeChecklistButton(screen)]);
     add(clear(screen.cardsHost), [emptyBox("This list has no cards yet.")]);
     return;
   }
@@ -750,9 +756,9 @@ function redrawCards(screen) {
       [["list", "List"], ["pictures", "Pictures"]].map(([mode, words]) => el("button", { type: "button",
         "aria-pressed": String(view.mode === mode), text: words,
         onclick: () => { local.set(CARDS_VIEW_KEY, mode); choose({ mode }); } }))),
-    cardsGroupingToggle(data, () => redrawCards(screen)), deckUpgradeChecklistButton(screen)]);
+    cardsGroupingToggle(data, () => redrawCards(screen))]);
   const shown = new Set(), parts = [];
-  const filterWords = { missing: "missing", coming: "on the way", held: "in other decks" }[view.filter];
+  const filterWords = { missing: "missing", coming: "on the way", held: "held elsewhere", lent: "lent out" }[view.filter];
   for (const group of groups) {
     const lines = group.lines.filter((l) => markPasses(marks.get(l), view.filter));
     if (!lines.length) continue;
@@ -771,7 +777,7 @@ function redrawCards(screen) {
   add(clear(screen.cardsHost), [view.filter === "all" ? null : el("p", { class: "result-count", role: "status" },
     `${shown.size} of ${names} different cards. `,
     el("button", { type: "button", class: "btn btn-quiet", text: "Show all", onclick: () => choose({ filter: "all" }) })),
-  deckQueueMissing(screen), deckSwapFinder(screen), parts]);
+  deckSwapFinder(screen), parts]);
 }
 
 /** One decklist line as cards-ui.js's cardRow, in the "deck" viewer group (a tap opens the viewer, which
@@ -1008,14 +1014,14 @@ function deckKit(data) {
     if (!deckBuildLink(data)) {
       return el("section", { class: "deck-section deck-kit", "aria-labelledby": "h-kit" },
         el("h2", { id: "h-kit", text: "Sleeves and deck box" }),
-        el("p", { class: "sub" }, "An idea has no sleeves or deck box. ",
-          el("a", { href: editHref(s.id, data.version), text: "Edit this deck" }),
-          ", set Status to Building and save. Then choose its sleeves and deck box here."));
+        el("p", { class: "sub" }, "Set Status to Building in ",
+          el("a", { href: editHref(s.id, data.version), text: "Edit cards" }),
+          " and save. Then choose its sleeves and deck box here."));
     }
     return el("section", { class: "deck-section deck-kit", "aria-labelledby": "h-kit" },
       el("h2", { id: "h-kit", text: "Sleeves and deck box" }),
-      el("p", { class: "sub" }, "An idea has no sleeves or deck box: choose them once you start building it, or when you mark it built in ",
-        el("a", { href: deckBuildHref(data), text: routeH1("assembly") }), "."));
+      el("p", { class: "sub" }, "Choose sleeves and a deck box when you start building, or when you finish packing this deck in ",
+        el("a", { href: deckBuildHref(data), text: "Build deck" }), "."));
   }
   const box = el("section", { class: "deck-section deck-kit", "aria-labelledby": "h-kit" },
     el("h2", { id: "h-kit", text: "Sleeves and deck box" }));

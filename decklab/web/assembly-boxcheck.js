@@ -24,8 +24,8 @@ function packBoxCheckButton(view, deck) {
   if (!deck.box_check || deck.completion?.status !== "built" || !/^(casual|commander)\/[^/]+$/.test(deck.id)
       || ownSpace() !== HOME_SPACE || !seesHomeInventory(state.may)) return null;
   const data = view.data, recipe = JSON.stringify(view.selected.map(packSelectedChoice));
-  const button = el("button", { type: "button", class: "btn btn-quiet pack-box-check", text: "Check box",
-    "aria-label": deck.title + ": check box", onclick: () => {
+  const button = el("button", { type: "button", class: "btn pack-box-check", text: "Count by hand",
+    "aria-label": deck.title + ": count packed cards by hand", onclick: () => {
       if (!assemblyActive(view) || view.hash !== location.hash || view.data !== data || !data.decks.includes(deck)
           || !button.isConnected || !view.results.contains(button) || view.previewing || view.reviewing || view.saving
           || view.boxCheckRefresh?.data === data || document.querySelector("dialog[open]")
@@ -40,7 +40,7 @@ function packBoxCheckButton(view, deck) {
 }
 
 function packBoxRowWords(row) {
-  return (row.name || "Unspecified stand-in") + (row.kind === "marker" ? " (marked for " + row.for + ")" : "");
+  return (row.name || "Unnamed physical placeholder") + (row.kind === "marker" ? " (marked for " + row.for + ")" : "");
 }
 
 /** Each deficit/excess belongs to its original physical row; explicit extras never net against it. */
@@ -83,7 +83,7 @@ function packReviewBoxCheck(view, deck) {
   let leavingForRepair = false, editorReading = false, sourceSha = evidence?.meta.expect;
   let stage = "edit", pending = false, saved = false, repaired = false, needsRefresh = false, refreshed = false, review = null;
   view.reviewing = true; packProgress(view);
-  const ctx = openAssemblySheet(view, "Check " + deck.title + " box", { wide: true, onClose: () => {
+  const ctx = openAssemblySheet(view, "Count " + deck.title + " by hand", { wide: true, onClose: () => {
     if (!owner()) return;
     if (leavingForRepair) { view.reviewing = false; view.boxCheckRefresh = null; packProgress(view); return; }
     if (saved || needsRefresh) afterClose();
@@ -100,9 +100,9 @@ function packReviewBoxCheck(view, deck) {
     && event?.currentTarget?.isConnected && part.contains(event.currentTarget);
   const error = el("p", { class: "form-error", role: "alert", tabindex: "-1" });
   const editing = el("div"), reviewing = el("div", { hidden: true }), editorChoices = el("div", { class: "box-editor-choices" });
-  ctx.sheet.body.append(el("p", { text: "Review the recorded physical cards and installed stand-in markers in every section. Count the cards actually in the box, then review any differences." }),
-    el("p", { class: "sub", text: "Pictures are representative name-only art. They do not confirm a printing, finish or physical quantity. Saving records a historical date; the counts and differences stay only in this review." }),
-    el("p", { class: "sub", hidden: !Object.keys(printingOffers).length, text: "Cards you own in more than one printing ask which printing is in the box. What you choose is saved to the deck's Printings in box with the check date." }),
+  ctx.sheet.body.append(el("p", { text: "Count the cards and physical placeholders in the box, then review any differences against the packed record." }),
+    el("p", { class: "sub", text: "Card art represents names only. Save check date records the date and any printings you choose. Counts and differences stay in this review unless you open a separate correction." }),
+    el("p", { class: "sub", hidden: !Object.keys(printingOffers).length, text: "Where you own multiple printings, choose which you found in the box to record them with the date." }),
     el("p", { class: "sub", text: "Every count starts unreviewed. Tick a tile to fill its full recorded quantity, or enter a whole count. Use 0 when none were found." }), editing, reviewing, error);
   function local(input, valid = () => true) {
     acceptedValues.set(input, input.value);
@@ -155,19 +155,22 @@ function packReviewBoxCheck(view, deck) {
     boxCollectionAfterSheet(ctx.sheet, () => owner() && leavingForRepair, go);
   }
   function differences() {
-    clear(reviewing).append(el("h3", { text: "Review differences" }),
+    const canCorrect = evidence.meta.editable && (review.missing.length || review.extra.length);
+    add(clear(reviewing), [el("h3", { text: "Review differences" }),
       el("p", { text: plural(review.expected_cards, "recorded physical card") + "; " + plural(review.found_cards, "card") + " found, including extras." }),
-      el("p", { class: "sub", text: "Saving the check date keeps the deck's lists, collection, kit and reservations as recorded. To record what the box really holds instead, use Correct the recorded box below." }));
+      el("p", { class: "sub", text: "Save check date records today's check and any printings you chose." }),
+      canCorrect ? el("p", { class: "sub",
+        text: "Correct the recorded box reviews a separate change to the packed contents and their reservations." }) : null]);
     const printingSummary = boxCheckPrintingSummary(review.printings);
     if (printingSummary) reviewing.append(printingSummary);
-    if (printingSummary && evidence.meta.editable && (review.missing.length || review.extra.length)) reviewing.append(el("p", { class: "sub",
+    if (printingSummary && canCorrect) reviewing.append(el("p", { class: "sub",
       text: "Correct the recorded box doesn't save printing choices: check the box again after correcting it, or use the deck page's Printings in box…." }));
     reviewing.append(el("p", { class: "sub", text: "Review collection copies closes this local box review and discards its counts and extras. It does not save a check date or change the collection. A missing card may still be in storage or another box." }));
     repairButtons.length = 0;
     for (const [key, label] of [["missing", "Missing"], ["extra", "Extra"]]) reviewing.append(el("section", {},
       el("h4", { text: label }), review[key].length ? el("ul", {}, review[key].map(row => {
         const item = el("li", {}, el("span", { text: row.section + ": " + row.quantity + " x " + packBoxRowWords(row) }));
-        if (row.name === null) item.append(el("p", { class: "sub", text: "Identify this physical stand-in first. Its represented card is not a collection lookup." }));
+        if (row.name === null) item.append(el("p", { class: "sub", text: "Identify this physical placeholder first. Look up the physical card in Collection once you know what it is." }));
         else if (boxCollectionDifference(deck, evidence, row, key)) {
           const button = el("button", { type: "button", class: "btn btn-secondary box-collection-open", text: "Review collection copies",
             "aria-label": "Review collection copies: " + row.name + " (" + row.section + ", " + key + ")", onclick: event => {
@@ -195,7 +198,7 @@ function packReviewBoxCheck(view, deck) {
         return item;
       })) : el("p", { text: "None recorded in this review." })));
     clear(editorChoices); reviewing.append(editorChoices);
-    if (evidence.meta.editable && (review.missing.length || review.extra.length)) {
+    if (canCorrect) {
       const repairHost = el("section", { class: "box-repair" }); reviewing.append(repairHost);
       boxRepairOffer(deck, evidence, review, { host: repairHost,
         here: () => here() && !pending && !needsRefresh && !leavingForRepair && !repaired && ["review", "saved"].includes(stage)
@@ -269,7 +272,7 @@ function packReviewBoxCheck(view, deck) {
         const choice = offer ? boxCheckPrintingControl(physical.name, offer, input => local(input)) : null;
         if (choice) { printingShown.add(physical.name); printingControls.push(choice); }
         tiles.append(el("div", {}, cardTile(card, { name: packBoxRowWords(physical), qty: physical.quantity, check: row.tick,
-          meta: physical.name ? "Representative art; printing and finish unconfirmed" : "Unspecified physical stand-in" }),
+          meta: physical.name ? "Representative art; printing and finish unconfirmed" : "Unnamed physical placeholder" }),
           el("label", { class: "field" }, el("span", { text: "Found (0 means reviewed and missing)" }), row.input),
           choice ? choice.node : null));
         expected.push(row);

@@ -42,7 +42,7 @@ class BoxCollectionUiTests(unittest.TestCase):
           const {sheet}=await openBox();allFound(sheet);found(sheet,2,'1');found(sheet,4,'0');found(sheet,5,'0');extraCard(sheet,'Opt','2');reviewButton(sheet).click();
           same(repairs(sheet).map(node=>node.getAttribute('aria-label')),['Review collection copies: Recorded Elf (Deck, missing)',
             'Review collection copies: Named physical marker (Deck, missing)','Review collection copies: Opt (Sideboard, extra)']);
-          assert(sheet.body.textContent.includes('Identify this physical stand-in first'));assert(sheet.body.textContent.includes('discards its counts and extras'));
+          assert(sheet.body.textContent.includes('Identify this physical placeholder first'));assert(sheet.body.textContent.includes('discards its counts and extras'));
           assert(sheet.body.textContent.includes('does not save a check date'));assert(!repairs(sheet).some(node=>node.textContent.includes('Missing spell')));
         ''')
 

@@ -9,12 +9,13 @@ from decklab.tests.test_workspace_ui import NODE, RUNNER, WEB
 SETUP = SHELL + r"""
   let switches = [{owner:'home',thing:'decks',public:false},{owner:'shared',thing:'accessories',public:false}];
   let sent = [], refreshes = [], previews = [], failSave = false, failRefresh = false, failPreview = false;
+  let pendingPreview = null;
   let previewAnswer = {available:true,counts:{decks:3},mentions:[{id:'casual/shop',title:'Shop Deck'}],more_mentions:0};
   const otherApi = api;
   api = async (path) => {
     if (path === '/api/visibility') return {switches};
     if (path.startsWith('/api/visibility/preview?')) {previews.push(path); if(failPreview) throw new Error('preview down');
-      return previewAnswer;}
+      return pendingPreview || previewAnswer;}
     if (path === '/api/me') {refreshes.push(path); if(failRefresh) throw new Error('refresh down');
       return {profile:state.profile.id,may:{...state.may,visibility:switches}};}
     if (path === '/api/profiles') {refreshes.push(path); return {profiles:PROFILES,admins:['Admin']};}
@@ -47,14 +48,16 @@ class VisibilityUiTests(unittest.TestCase):
     def test_page_explains_public_readonly_deck_text_and_defaults_private(self):
         self.run_js(r"""
           await openVisibility();
-          assert(main.textContent.includes('read-only to everyone signed in'));
-          assert(main.textContent.includes('Nothing becomes public on the internet'));
-          assert(main.textContent.includes('Play-now list hints'));
+          assert(main.textContent.includes('read-only access to everyone signed in to Deck Lab'));
+          assert(main.textContent.includes('visitors on the home network, even without a chosen profile'));
+          assert(main.textContent.includes('Away from home, sign-in is required'));
+          assert(main.textContent.includes('alternative list and notes can reveal cards you own or ordered'));
           assert(main.textContent.includes('write-up as written'));
           assert(main.textContent.includes('Shared sleeves'));
           for(const node of main.querySelectorAll('[data-visibility-owner]')) {
             assert.equal(node.querySelector('[data-public=false]').getAttribute('aria-pressed'),'true');
             assert.equal(node.querySelector('[data-public=true]').getAttribute('aria-pressed'),'false');
+            assert(node.querySelector('[role=group]').getAttribute('aria-describedby').includes('public-audience'));
           }
           assert.equal(sent.length,0);
         """)
@@ -98,7 +101,9 @@ class VisibilityUiTests(unittest.TestCase):
           assert(text.includes('Make decks Public?'));
           assert(text.includes('3 decks'));
           assert(text.includes('mention orders or purchases: Shop Deck'));
-          assert(text.includes('Nothing changes until you confirm'));
+          assert(text.includes('visitors on the home network, even without a chosen profile'));
+          assert(text.includes('Choose Private to remove this read access later'));
+          assert.equal(document.activeElement, sheet().querySelector('[data-action=cancel]'));
           assert.equal(sent.length,0);
           await answer('cancel');
           assert.equal(sent.length,0,'Keep private writes nothing');
@@ -117,6 +122,7 @@ class VisibilityUiTests(unittest.TestCase):
           await openVisibility(); failPreview=true;
           row('home','decks').querySelector('[data-public=true]').fire('click'); await flush();
           assert(sheet().textContent.includes("couldn't work out what this would show"));
+          assert(sheet().textContent.includes('visitors on the home network, even without a chosen profile'));
           await answer('confirm');
           assert.equal(sent.length,1);
           assert.equal(row('home','decks').querySelector('[data-public=true]').getAttribute('aria-pressed'),'true');
@@ -130,6 +136,19 @@ class VisibilityUiTests(unittest.TestCase):
           assert(sheet().textContent.includes('Server says unknown.'));
           await answer('cancel');
           assert.equal(sent.length,2);
+        """)
+
+    def test_a_late_preview_cannot_open_over_another_page(self):
+        self.run_js(r"""
+          await openVisibility();
+          let resolvePreview;
+          pendingPreview = new Promise(resolve => { resolvePreview = resolve; });
+          row('home','decks').querySelector('[data-public=true]').fire('click'); await flush();
+          assert.equal(previews.length,1);
+          location.hash='#/library';
+          resolvePreview(previewAnswer); await flush();
+          assert.equal(document.querySelectorAll('dialog').length,0);
+          assert.equal(sent.length,0);
         """)
 
     def test_only_server_offered_controls_appear_and_empty_ready_list_has_no_buttons(self):

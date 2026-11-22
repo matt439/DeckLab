@@ -54,7 +54,7 @@ class AssemblySectionsUiTests(unittest.TestCase):
     def test_version_change_discards_counts_from_the_previous_sideboard(self):
         self.run_js("""
           drawAssembly(withSections(),routeToken); await settle(); scopeMode('custom');
-          main.querySelector('.pack-version').querySelectorAll('button').find(n => n.textContent==='Play-now list').click();
+          main.querySelector('.pack-version').querySelectorAll('button').find(n => n.textContent==='Alternative list').click();
           assert.equal(recipe().version,'owned'); assert(!('sideboard' in recipe()));
           assert.equal(scopeSelect().value,'all');
           assert(main.querySelector('.pack-sideboard-choice').textContent.includes('1 of 1 intended sideboard cards'));
@@ -128,7 +128,7 @@ class AssemblySectionsUiTests(unittest.TestCase):
           drawAssembly(data,routeToken); await settle();
           assert.equal(builtButton().textContent,'Mark main deck built');
           ticks()[0].click(); await settle(); assert(builtBlocked());
-          assert(main.textContent.includes('Take these out of the deck and put them back in storage'));
+          assert(main.textContent.includes('Return these from Elves to storage'));
           ticks()[1].click(); await settle(); assert(!builtBlocked());
           builtButton().click(); await settle(); same(body.decks,[{id:deck.id,version:'target',sideboard:{}}]);
         """)
@@ -140,7 +140,7 @@ class AssemblySectionsUiTests(unittest.TestCase):
           drawAssembly(data,routeToken); await settle(); checkCards(); await settle(); builtButton().click(); await settle();
           const sheet=[...assemblySheets][0]; assert(sheet);
           assert(sheet.body.textContent.includes('Main deck only: 60 main-deck cards + 0 of 5 intended sideboard cards'));
-          assert(sheet.body.textContent.includes('Put back 2 cards from the previous assembly'));
+          assert(sheet.body.textContent.includes('Return 2 cards from the previous build to storage'));
           assert(sheet.body.textContent.includes('3 x Beta (Sideboard)'));
           sheet.body.querySelectorAll('button');
           sheet.close(); await settle();
@@ -158,18 +158,42 @@ class AssemblySectionsUiTests(unittest.TestCase):
           assert(main.querySelector('.pack-remaining-intent').textContent.includes('1 to get; 2 on the way'));
         """)
 
+    def test_saved_build_refreshes_box_actions_even_while_holding_checked_pulls(self):
+        self.run_js("""
+          state.may = {see_home_records:true};
+          const data = withSections(plan());
+          mockApi(async () => {
+            const next = completed(data);
+            next.decks[0].take_apart = { reason:'Review the newly packed contents' };
+            next.decks[0].box_check = { editable:true, checked_on:'2026-11-22' };
+            next.box_check_cards = {Alpha:'fresh'};
+            return {saved:true,built:data.completion.decks,plan:next,warnings:[],tables:{}};
+          });
+          const view = drawAssembly(data,routeToken); await settle(); checkCards(); await settle();
+          builtButton().click(); await settle();
+          same(checked(),['true']);
+          assert.equal(view.data.box_check_cards.Alpha,'fresh');
+          const box = main.querySelector('.pack-current-box');
+          assert(box.textContent.includes('Packed in this box'));
+          assert(box.querySelector('.pack-box-check'));
+          assert(box.querySelector('.pack-take-apart'));
+        """)
+
     def test_assembled_overview_is_inventory_gated_and_distinguishes_unknown_availability(self):
         self.run_js("""
           const assembled={version:'owned',main_count:60,sideboard_count:1,sideboard_intended:3,changed:true,
             remaining:[{...intention,assembled:1,remaining:2,missing:null,on_the_way:null}]};
-          const data={summary:{id:'casual/a',assembled},version:'target'};
+          const data={summary:{id:'casual/a',assembled},versions:['target','owned'],version:'target'};
           assert.equal(deckAssemblySection(data),null);
           const node=deckAssemblySection({...data,owned:{},assembled});
           assert(node.textContent.includes('60 main-deck cards + 1 of 3 sideboard'));
-          assert(node.textContent.includes('box differs from the intended list'));
+          assert(node.textContent.includes('packed cards differ from the planned list'));
           assert(node.textContent.includes('availability needs checking'));
           assert(!node.textContent.includes('0 to get'));
           assert.equal(node.querySelector('a').getAttribute('href'),'#/assembly?deck=casual%2Fa&version=owned');
+          const withoutAlternative=deckAssemblySection({...data,versions:['target'],owned:{},assembled});
+          assert(withoutAlternative.textContent.includes('Alternative list'));
+          assert.equal(withoutAlternative.querySelector('a').getAttribute('href'),'#/assembly?deck=casual%2Fa&version=target');
         """)
 
     def test_banner_keeps_intended_missing_cards_separate_from_the_built_main_deck(self):
@@ -178,7 +202,9 @@ class AssemblySectionsUiTests(unittest.TestCase):
             owned:{rows:[],totals:{missing:2,aud_missing:1,unpriced:[]}},
             assembled:{main_count:60,sideboard_count:0,sideboard_intended:3,remaining_count:3}};
           const node=availabilityBanner(data,{view:{tab:'overview'}});
-          assert(node.querySelector('.deck-avail-head').textContent.includes('Intended list: 2 missing'));
-          assert(node.querySelector('.deck-avail-assembled').textContent.includes('In the box: 60 main-deck cards + 0 of 3 sideboard'));
-          delete data.owned; assert.equal(availabilityBanner(data,{view:{tab:'overview'}}),null);
+          assert(node.querySelector('.deck-avail-head').textContent.includes('Planned list'));
+          assert(node.textContent.includes('2 missing from recorded copies'));
+          assert(node.querySelector('.deck-avail-assembled').textContent.includes('Packed in this box: 60 main-deck cards + 0 of 3 sideboard'));
+          delete data.owned;
+          assert.equal(availabilityBanner(data,{view:{tab:'overview'}}).textContent,'Planned list');
         """)

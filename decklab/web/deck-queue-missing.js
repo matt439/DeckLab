@@ -1,22 +1,21 @@
-/* Queue missing cards… (E5-S25): on a home deck's Cards tab under the Missing filter, a home admin puts the
- * Planned list's missing cards on the purchase queue in one reviewed change.
+/* A home admin's reviewed purchase queue addition from Find and buy cards (E5-S25).
  *
  * The sheet asks POST /api/shopping/queue/missing for the review (nothing is written): each missing card with
  * the copies already queued for this deck and the copies to add, any nonfoil printing. Save sends the reviewed
- * cards and the buyer's selection with the chosen state (To buy or Long-term) to POST /api/shopping/queue's add_many, with the revision
+ * cards and the buyer's selection with the chosen state (Ready to buy or Long-term) to POST /api/shopping/queue's add_many, with the revision
  * the review read; the server works them out again and refuses (409) when anything moved on, and the sheet
  * then asks for a new review. A card whose identical request is already queued raises that row, which keeps its
  * own state: the review names it (joins), the row says so, a note warns when it isn't the chosen state, and the
  * save sends it back so the server checks it still holds. Never offered to User1, members, products or pairings; the server checks anyway.
  * Token cards are never queued here.
  *
- * Shopping's Build decks together (E5-S28) opens the same sheet for its chosen decks (openQueueCombinedSheet):
+ * Shopping's combined shortages (E5-S28) open the same sheet for the chosen decks (openQueueCombinedSheet):
  * POST /api/shopping/queue/combined reviews the decks' combined shortfall less the copies queued for any of them,
  * and add_combined saves it with "for" naming the decks. */
 "use strict";
 
-const QUEUE_MISSING_STATES = [["ready", "To buy"], ["long_term", "Long-term"]];
-const QUEUE_MISSING_JOINS = { ready: "To buy", waiting_for_stock: "Waiting for stock",
+const QUEUE_MISSING_STATES = [["ready", "Ready to buy"], ["long_term", "Long-term"]];
+const QUEUE_MISSING_JOINS = { ready: "Ready to buy", waiting_for_stock: "Waiting for stock",
   waiting_for_reprint: "Waiting for a reprint", deferred: "Deferred", long_term: "Long-term" };
 
 function queueMissingJoins(state) {
@@ -30,31 +29,17 @@ function deckQueueMissingOffered(data) {
   return isAdminProfile() && Boolean(state.may) && Boolean(state.may.orders) && seesHomeInventory(state.may) && Boolean(data.owned);
 }
 
-/** Copy this list's shortages; a home admin can also review the Planned list for purchase. */
-function deckQueueMissing(screen) {
-  const data = screen.data;
-  if (screen.view.filter !== "missing" || !data.owned || !seesInventory(data.summary.space || deckSpaceOf(data.summary.id))) return null;
-  const profile = state.profile?.id, token = routeToken;
-  const current = (button) => button.isConnected && profile === state.profile?.id && token === routeToken;
-  return el("div", { class: "toolbar deck-queue-missing" },
-    el("button", { type: "button", class: "btn", text: "Copy missing cards",
-      onclick: (e) => { if (current(e.currentTarget)) copyDeck(data, {missing: true}, e.currentTarget); } }),
-    deckQueueMissingOffered(data) ? el("button", { type: "button", class: "btn",
-      text: data.version === "owned" ? "Review Planned list shortages" : "Queue missing cards…",
-      onclick: (e) => { if (current(e.currentTarget) && deckQueueMissingOffered(data)) openQueueMissingSheet(data.summary, e.currentTarget); } }) : null);
-}
-
 function openQueueMissingSheet(summary, root) {
   const ctx = { id: summary.id, title: summary.title, state: "ready", answer: null, seq: 0 };
   ctx.view = { root, token: routeToken, profile: state.profile.id };
-  return queueMissingOpen(ctx, `Queue missing cards: ${summary.title}`);
+  return queueMissingOpen(ctx, `Review Planned shortages: ${summary.title}`);
 }
 
 /** Queue these (E5-S28): the sheet for decks built together; onSaved(saved) runs after a save. */
 function openQueueCombinedSheet(decks, onSaved, view) {
   const ctx = { decks: decks.map((deck) => deck.id), title: decks.map((deck) => deck.title).join(" + "),
     state: "ready", answer: null, seq: 0, onSaved, view };
-  return queueMissingOpen(ctx, `Queue these: ${ctx.title}`);
+  return queueMissingOpen(ctx, `Review combined shortages: ${ctx.title}`);
 }
 
 function queueMissingOpen(ctx, title) {
@@ -112,7 +97,7 @@ function drawQueueMissing(ctx) {
   if (!adding.length) {
     add(clear(ctx.area), [
       emptyBox(a.rows.length ? `Every missing card is already on the purchase queue for ${ctx.decks ? "these decks" : "this deck"}.`
-        : ctx.decks ? "Nothing to buy: these decks can all be built at the same time." : "Nothing is missing from the Planned list."),
+        : ctx.decks ? "Nothing to queue for these decks after counting incoming copies." : "Nothing is missing from the Planned list after counting incoming copies."),
       done.length ? el("ul", { class: "card-list" }, done.map((r) => queueMissingRow(r))) : null]);
     return;
   }
@@ -136,6 +121,7 @@ function drawQueueMissing(ctx) {
       : `The ${listName("target", true)}'s missing copies, less those already queued for this deck. ` +
         "Each is any nonfoil printing, with this deck as its source." }),
     el("div", { class: "toolbar" }, el("span", { text: "Queue them as" }), choices),
+    el("p", { class: "sub", text: "Selected copies go on the shared purchase queue. Record them under Orders & deliveries after you buy them." }),
     warning, el("ul", { class: "card-list" }, rows),
     done.length ? el("details", {}, el("summary", { text: `Already queued (${num(done.length)})` }),
       el("ul", { class: "card-list" }, done.map((r) => queueMissingRow(r)))) : null]);

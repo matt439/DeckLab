@@ -32,11 +32,11 @@ class MemberToolsUiTests(unittest.TestCase):
             {name:'Llanowar Elves',quantity:3,decks:[{id:'user2/casual/a',title:'My plan'}]}]};};
           apiWrite=()=>{throw new Error('No saved plan or queue');};navigator.clipboard={writeText:async text=>copies.push(text)};
           const sheet=await openMemberNeeds();assert(sheet.body.textContent.includes('3 Llanowar Elves'));
-          assert(sheet.body.textContent.includes('My plan'));assert(sheet.body.textContent.includes("isn't saved"));
+          assert(sheet.body.textContent.includes('My plan'));assert(sheet.body.textContent.includes("recorded collection"));
           assert(sheet.body.querySelector('a').getAttribute('href').includes('user2'));
-          button(sheet.foot,'Copy list').click();await flush();same(copies,['3 Llanowar Elves']);
+          button(sheet.foot,'Copy combined shortages').click();await flush();same(copies,['3 Llanowar Elves']);
           assert.equal(calls.length,1);assert(calls[0].startsWith('/api/space/needed?space=user2'));
-          state.profile=PROFILES[0];button(sheet.foot,'Copy list').click();await flush();assert.equal(copies.length,1);
+          state.profile=PROFILES[0];button(sheet.foot,'Copy combined shortages').click();await flush();assert.equal(copies.length,1);
           closeAllSheets();assert(!sheet.dialog.isConnected);
         """)
 
@@ -55,12 +55,12 @@ class MemberToolsUiTests(unittest.TestCase):
     def test_partial_or_empty_counts_never_offer_a_copy_of_incomplete_rows(self):
         self.run_js("""
           as('user2',MAY.user2);api=async()=>({ready:false,check_collection:true,reason:'Your collection needs checking.',rows:[{name:'Unproven',quantity:1}]});
-          let sheet=await openMemberNeeds();assert(sheet.body.textContent.includes('needs checking'));assert(!button(sheet.foot,'Copy list'));
+          let sheet=await openMemberNeeds();assert(sheet.body.textContent.includes('needs checking'));assert(!button(sheet.foot,'Copy combined shortages'));
           assert.equal(sheet.body.querySelector('a').getAttribute('href'),'#/collection?space=user2&view=rows');
           api=async()=>({ready:false,check_decks:[{id:'user2/casual/mine',title:'My deck'}]});
           button(sheet.foot,'Try again').click();await flush();
           assert.equal(sheet.body.querySelector('a').getAttribute('href'),deckHref('user2/casual/mine','target'));
           api=async()=>({ready:true,rows:[],decks:[]});
           button(sheet.foot,'Try again').click();await flush();
-          assert(sheet.body.textContent.includes('no saved Planned decks'));assert(!button(sheet.foot,'Copy list'));
+          assert(sheet.body.textContent.includes('no saved Planned decks'));assert(!button(sheet.foot,'Copy combined shortages'));
         """)

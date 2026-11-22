@@ -9,7 +9,7 @@ from decklab.tests.test_workspace_ui import NODE, RUNNER, WEB
 
 @unittest.skipUnless(NODE, "Node.js isn't installed")
 class ShoppingInteractionTests(unittest.TestCase):
-    def run_js(self, scenario):
+    def run_js(self, scenario, task=None):
         setup = """
           clear(main);
           state.profiles = [{id: "user1", name: "User1", plays_as: "wife"}, {id: "matt", name: "Matt", plays_as: "user"}];
@@ -25,10 +25,15 @@ class ShoppingInteractionTests(unittest.TestCase):
             set: "", collector_number: "", finish: "", listed_aud: "", listed_at: "", in_stock: "", checked: "",
             notes: "", card: null, deck: null, ...extra});
         """
+        if task:
+            setup += f'location.hash = "#/shopping?view={task}";\n'
         result = subprocess.run([NODE, str(RUNNER)], input=json.dumps([str(WEB), setup + scenario]),
                                 capture_output=True, text=True, encoding="utf-8", timeout=20)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "ok")
+
+    def run_orders_js(self, scenario):
+        return ShoppingInteractionTests.run_js(self, scenario, task="orders")
 
     def test_shared_route_and_one_empty_state(self):
         self.run_js("""
@@ -39,7 +44,7 @@ class ShoppingInteractionTests(unittest.TestCase):
           await route();
           same(reads, ["/api/shopping"]);
           // Nothing at all: one line and the one action, no empty columns.
-          assert(main.textContent.includes("Nothing to buy, and nothing on the way."));
+          assert(main.textContent.includes("Nothing is ready to buy."));
           assert.equal(main.querySelectorAll(".shop-section").length, 0);
           assert.equal(main.querySelector(".empty").querySelector("a").getAttribute("href"), "#/wishlist");
           assert.equal(main.querySelector(".desktop-handoff"), null);
@@ -49,7 +54,7 @@ class ShoppingInteractionTests(unittest.TestCase):
         """)
 
     def test_deliveries_are_titled_by_seller_and_topic_with_pictures_checks_and_receive(self):
-        self.run_js("""
+        self.run_orders_js("""
           const card = name => ({name, type_line: "Creature", mana_cost: "", img: `/img/x/${name}/normal`,
             img_small: `/img/x/${name}/small`});
           const items = n => Array.from({length: n}, (_, i) => ({name: `Card ${i}`, quantity: i ? 1 : 2, card: card(`c${i}`)}));
@@ -64,7 +69,7 @@ class ShoppingInteractionTests(unittest.TestCase):
           const cards = main.querySelectorAll(".shop-delivery");
           same(cards.map(c => c.querySelector(".shop-delivery-title").textContent), ["eBay · Goblins", "Example Games", "eBay · A Walk in the Woods"]);
           // "On the way" once: the section says it, the cards don't.
-          assert.equal(main.textContent.split("On the way").length - 1, 1);
+          assert.equal(main.querySelector(".shop-list-pane").textContent.split("On the way").length - 1, 1);
           // A strip of 8 pictures at most (7 and "+N" past 8), 6 on a phone (5 and "+N" past 6), chosen by CSS; each
           // "+N" counts the copies not shown, and each picture opens the viewer over the strip.
           const strip = cards[1].querySelectorAll(".shop-thumb");
@@ -116,7 +121,7 @@ class ShoppingInteractionTests(unittest.TestCase):
         """)
 
     def test_order_history_searches_card_names_and_both_token_faces_locally(self):
-        self.run_js("""
+        self.run_orders_js("""
           state.may = {admin: false, orders: false, receipts: false, see_inventory: ["home"]};
           const reads = [];
           api = async path => {
@@ -175,7 +180,7 @@ class ShoppingInteractionTests(unittest.TestCase):
         """)
 
     def test_a_member_sees_delivery_details_not_receive_or_done(self):
-        self.run_js("""
+        self.run_orders_js("""
           state.may = {admin: false, receipts: false, orders: false, see_inventory: ["home"]};
           drawShopping({...empty, orders: [order({components: [component({items: []})]})],
             checks: [{order_id: "2026-10-08-order", component_id: "cards", status: "received", text: "Follow up"}]});
@@ -191,7 +196,7 @@ class ShoppingInteractionTests(unittest.TestCase):
           drawShopping({...empty, to_buy: [row("<b>Alpha</b>", {quantity: 2, state: "waiting_for_stock",
             printing: "exact", set: "fdn", collector_number: "2", finish: "foil", listed_aud: "0.50",
             listed_at: "Card shop", in_stock: "no", checked: "2026-10-08"}), row("Beta")]});
-          const toBuy = main.querySelector("#shop-to-buy").closest("section");
+          const toBuy = main.querySelector("#shop-waiting").closest("section");
           assert(toBuy.textContent.includes("<b>Alpha</b>"));
           assert.equal(main.querySelector("b"), null);
           assert(toBuy.textContent.includes("Waiting for stock"));
@@ -200,6 +205,7 @@ class ShoppingInteractionTests(unittest.TestCase):
           assert(toBuy.textContent.includes("Out of stock when checked"));
           // "Ready" is the normal case: no chip for it.
           assert(!toBuy.textContent.includes("Ready to buy"));
+          assert(!main.querySelector('#shop-to-buy').closest('section').textContent.includes('Alpha'));
           assert(!main.textContent.includes("A$1.00"));
         """)
 
@@ -272,11 +278,11 @@ class ShoppingInteractionTests(unittest.TestCase):
           // delivery): each part shown, with its count; the long-term plan without one.
           const jumps = main.querySelector(".shop-jumps");
           same(jumps.querySelectorAll("a").map((a) => [a.getAttribute("href"), a.textContent]),
-            [["#shop-decks", "Decks missing cards"], ["#shop-by-shop", "By shop"], ["#shop-long-term", "Long-term plan"]]);
+            [["#shop-waiting", "Waiting / later"], ["#shop-decks", "Decks missing cards"], ["#shop-by-shop", "By shop"]]);
         """)
 
     def test_done_marks_a_follow_up_after_its_undo_time(self):
-        self.run_js("""
+        self.run_orders_js("""
           const writes = [];
           apiWrite = async (path, body) => { writes.push([path, body]); return {resolved: true}; };
           drawShopping({...empty, orders: [order({id: "2026-09-29-exampleshop", seller: "Example Shop", status: "received",
@@ -338,7 +344,7 @@ class ShoppingInteractionTests(unittest.TestCase):
         """)
 
     def test_two_dones_share_one_toast_and_one_undo(self):
-        self.run_js("""
+        self.run_orders_js("""
           const writes = [];
           apiWrite = async (path, body) => { writes.push(body.check); return {resolved: true}; };
           const checks = ["One", "Two", "Three"].map(text => ({order_id: "2026-09-29-exampleshop", component_id: "cards",

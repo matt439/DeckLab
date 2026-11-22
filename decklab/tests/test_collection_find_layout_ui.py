@@ -77,9 +77,9 @@ class CollectionFindLayoutUiTests(unittest.TestCase):
         self.run_js(r"""
           drawFind({prices: {rows: {'fdn|1|nonfoil': {aud: 123.45}}}});
           const words = casualRows().map(node => node.textContent);
-          for (const fact of ['4 owned', '3 free', '2 on the way', '1 in decks']) assert(words[0].includes(fact), fact);
+          for (const fact of ['4 owned', '3 free now', '2 on the way', '1 held']) assert(words[0].includes(fact), fact);
           assert(/(?:0 owned|None owned yet)/.test(words[1])); assert(words[1].includes('2 on the way'));
-          assert(words[2].includes('all in decks')); assert(!words[2].includes('2 in decks'));
+          assert(words[2].includes('2 held')); assert(!words[2].includes('0 free now'));
           assert(words[3].includes('3 owned')); assert(/not tracked/i.test(words[3]));
           assert(!/0 free|0 in decks|3 free/i.test(words[3]));
           assert(words[4].includes('Name not matched')); assert(words[4].includes('1 owned'));
@@ -88,7 +88,7 @@ class CollectionFindLayoutUiTests(unittest.TestCase):
           for (const text of words) assert(!/123[.]45|A\$|No price|\$0[.]00/.test(text));
         """)
 
-    def test_held_count_is_only_omitted_when_the_free_summary_already_says_all_in_decks(self):
+    def test_held_incoming_and_unverified_facts_are_separate(self):
         self.run_js(r"""
           drawFind({cards: [
             record('All held', {owned: 2, incoming: 1, held: 2, free_now: 0}),
@@ -97,10 +97,10 @@ class CollectionFindLayoutUiTests(unittest.TestCase):
             record('Overallocated', {owned: 2, incoming: 0, held: 3, free_now: 0})
           ]});
           same(casualRows().map(node => node.querySelector('.col-find-meta').textContent), [
-            '2 owned \u00b7 all in decks \u00b7 1 on the way',
-            '4 owned \u00b7 3 free \u00b7 2 on the way \u00b7 1 in decks',
-            '4 owned \u00b7 2 on the way \u00b7 2 in decks',
-            '2 owned \u00b7 all in decks \u00b7 3 in decks'
+            '1 on the way \u00b7 2 held',
+            '3 free now \u00b7 2 on the way \u00b7 1 held',
+            '2 on the way \u00b7 2 held \u00b7 Availability to check',
+            '3 reserved \u00b7 Availability to check'
           ]);
         """)
 
@@ -111,19 +111,19 @@ class CollectionFindLayoutUiTests(unittest.TestCase):
           const allLent = record('All lent', {owned: 1, incoming: 0, held: 0, lent: 1, free_now: 0, holders: []});
           drawFind({cards: [loan, mixed, allLent]}, 'availability=lent');
           same(casualRows().map(node => node.querySelector('.col-find-meta').textContent), [
-            '2 owned \u00b7 1 lent out \u00b7 1 free',
-            '4 owned \u00b7 1 in decks \u00b7 1 lent out \u00b7 2 free',
-            '1 owned \u00b7 1 lent out \u00b7 0 free'
+            '1 free now \u00b7 1 lent out',
+            '2 free now \u00b7 1 held \u00b7 1 lent out',
+            '1 lent out'
           ]);
           assert.equal(main.querySelector('[data-value=lent]').getAttribute('aria-pressed'), 'true');
           assert(captionFor(opener(0)).textContent.includes('1 lent out'));
           assert.equal(captionFor(opener(0)).querySelector('.col-viewer-decks'), null);
           const lab = main.querySelector('.col-find-lab').querySelectorAll('.card-tile');
-          assert(lab[1].textContent.includes('1 in decks \u00b7 1 lent out \u00b7 2 free'));
-          assert.equal(viewerUseWords({owned: 2, lent: 1, free: 1, decks_complete: true}), 'In no decks \u00b7 1 lent out \u00b7 1 free');
+          assert(lab[1].textContent.includes('2 free now \u00b7 1 held \u00b7 1 lent out'));
+          assert.equal(viewerUseWords({owned: 2, lent: 1, free: 1, decks_complete: true}), 'In no decks \u00b7 1 lent out \u00b7 1 free now');
           assert.equal(gsCounts({owned: 2, decks: 0, lent: 1, free: 1, decks_complete: true}),
-            'in no decks \u00b7 1 lent out \u00b7 1 free');
-          assert.equal(gsCounts({owned: 2, in_use: 0, lent: 1, free: 1}), '1 free \u00b7 1 lent out');
+            'in no decks \u00b7 1 lent out \u00b7 1 free now');
+          assert.equal(gsCounts({owned: 2, in_use: 0, lent: 1, free: 1}), '1 free now \u00b7 1 lent out');
         """)
 
     def test_identity_pips_use_loaded_identity_and_keep_unknown_distinct_from_colourless(self):
@@ -197,7 +197,7 @@ class CollectionFindLayoutUiTests(unittest.TestCase):
           open.click(); assert.equal(inspections.length, 1); assert.equal(inspections[0].card.name, known.name);
           assert.equal(inspections[0].trigger, open);
           assert.equal(captionFor(open).querySelector('.col-viewer-edit'), null);
-          assert.equal(button(main, 'Add card'), null); assert.equal(changes, 0);
+          assert.equal(button(main, 'Add cards'), null); assert.equal(changes, 0);
         """)
 
     def test_existing_edit_and_active_page_guards_apply_to_casual_actions(self):
@@ -362,7 +362,7 @@ class CollectionFindLayoutUiTests(unittest.TestCase):
           button(beyond.results, 'Go to the first page').click();
           assert.equal(new URLSearchParams(asked[0].split('?')[1]).get('page'), null);
           drawFind({cards: [], total: 0, editable: false});
-          assert(main.textContent.includes('No cards recorded yet.')); assert.equal(button(main, 'Add card'), null);
+          assert(main.textContent.includes('No cards recorded yet.')); assert.equal(button(main, 'Add cards'), null);
         """)
 
 

@@ -12,7 +12,7 @@ class ShoppingLayoutUiTests(unittest.TestCase):
     run_js = test_shopping_ui.ShoppingInteractionTests.run_js
     run_queue_js = test_shopping_queue_manage_ui.ShoppingQueueManagementInteractionTests.run_queue_js
 
-    def test_existing_sections_belong_to_the_two_panes_and_history_stays_below(self):
+    def test_existing_sections_belong_to_their_shopping_tasks(self):
         self.run_js(r"""
           state.may={admin:true,orders:true,receipts:true};
           const pending=order(),past=order({id:'past',status:'received',components:[component({status:'received'})]});
@@ -22,10 +22,12 @@ class ShoppingLayoutUiTests(unittest.TestCase):
             decks_missing:[{id:'casual/otters',title:'Otters',kind:'casual',status:'idea',missing:2}],
             missing_cards:{ready:true,rows:[{name:'Missing',missing:2,decks:[],queue:[],card:null}],warnings:[],errors:[]}});
           const left=main.querySelector('.shop-list-pane'),right=main.querySelector('.shop-detail-pane');
-          for(const id of ['shop-on-the-way','shop-follow-ups','shop-by-shop'])assert(left.contains(main.querySelector('#'+id)),id);
-          for(const id of ['shop-to-buy','shop-missing-cards','shop-decks','shop-long-term'])assert(right.contains(main.querySelector('#'+id)),id);
+          for(const id of ['shop-on-the-way','shop-follow-ups'])assert(left.contains(main.querySelector('#'+id)),id);
+          for(const id of ['shop-to-buy','shop-missing-cards','shop-decks','shop-long-term','shop-by-shop'])
+            assert(right.contains(main.querySelector('#'+id)),id);
           assert.equal(main.querySelectorAll('.shop-layout').length,1);assert.equal(right.hidden,false);
-          assert(!left.contains(main.querySelector('.shop-history')));assert(!right.contains(main.querySelector('.shop-history')));
+          assert(left.hidden);assert(left.contains(main.querySelector('.shop-history')));
+          assert.equal(right.querySelector('.shop-research').getAttribute('open'),null);
           same(right.querySelectorAll('.shop-queue-edit').map(node=>Number(node.dataset.queueRow)),[1,2]);
           assert.equal(left.querySelectorAll('.shop-queue-edit').length,0,'shop research stays read-only');
           assert(main.querySelector('.shop-jumps'));assert.equal(view.data.to_buy,queued);
@@ -122,7 +124,7 @@ class ShoppingLayoutUiTests(unittest.TestCase):
             assert(main.querySelector('.shop-layout'));assert.equal(main.querySelector('.shop-empty').hidden,true);
             assert.equal(main.querySelector('.shop-detail-pane').hidden,false);
             if(data.to_buy.length){
-              assert(main.querySelector('.shop-list-pane').contains(main.querySelector('#shop-by-shop')));
+              assert(main.querySelector('.shop-detail-pane').contains(main.querySelector('#shop-by-shop')));
               assert(main.querySelector('.shop-detail-pane').contains(main.querySelector('#shop-long-term')));
             }else assert(main.querySelector('.shop-detail-pane').contains(main.querySelector('#shop-missing-cards')));
           }
@@ -151,6 +153,7 @@ class ShoppingLayoutUiTests(unittest.TestCase):
 
     def test_delivery_only_hides_the_detail_pane_and_keeps_read_only_delivery_details(self):
         self.run_js(r"""
+          location.hash='#/shopping?view=orders';
           state.may={admin:false,orders:false,receipts:false};drawShopping({...empty,queue_revision:'q1',orders:[order()]});
           const left=main.querySelector('.shop-list-pane'),right=main.querySelector('.shop-detail-pane');
           assert(left.querySelector('.shop-delivery'));assert.equal(right.hidden,true);
@@ -160,15 +163,20 @@ class ShoppingLayoutUiTests(unittest.TestCase):
           assert.equal(main.querySelector('.shop-empty').hidden,true);
         """)
 
-    def test_admin_new_order_and_member_add_primary_permissions_are_unchanged(self):
+    def test_order_and_queue_actions_appear_in_their_own_tasks_with_the_existing_permissions(self):
         self.run_js(r"""
           for(const [may,newOrder,addCard] of [[{admin:true,orders:true},true,true],[{admin:false,orders:true},false,true],
               [{admin:false,orders:false},false,false]]){
-            clear(main);state.may=may;drawShopping({...empty,queue_revision:'q1'});
-            const orderButton=main.querySelector('.shop-order-add'),addButton=main.querySelector('.shop-queue-add');
-            assert.equal(!!orderButton,newOrder);assert.equal(!!addButton,addCard);
-            if(orderButton)assert(orderButton.getAttribute('class').split(' ').includes('btn-primary'));
-            if(addButton)assert.equal(addButton.getAttribute('class').split(' ').includes('btn-primary'),!newOrder);
+            clear(main);state.may=may;location.hash='#/shopping?view=orders';drawShopping({...empty,queue_revision:'q1'});
+            const orderButton=main.querySelector('.shop-order-add');
+            assert.equal(!!orderButton,newOrder);assert(!main.querySelector('.shop-queue-add'));
+            if(orderButton)assert(orderButton.matches('.btn-primary'));
+            const links=main.querySelector('.shop-tasks').querySelectorAll('a');
+            assert.equal(links[1].getAttribute('aria-current'),'page');
+            location.hash=links[0].getAttribute('href');clear(main);drawShopping({...empty,queue_revision:'q1'});
+            const addButton=main.querySelector('.shop-queue-add');
+            assert.equal(!!addButton,addCard);assert(!main.querySelector('.shop-order-add'));
+            if(addButton)assert(addButton.matches('.btn-primary'));
           }
           clear(main);state.may={admin:true,orders:true};drawShopping(empty);
           assert.equal(main.querySelector('.shop-order-add'),null);assert.equal(main.querySelector('.shop-queue-add'),null);
@@ -176,12 +184,11 @@ class ShoppingLayoutUiTests(unittest.TestCase):
 
 
 class ShoppingLayoutStyleTests(unittest.TestCase):
-    def test_fixed_list_pane_starts_after_1280_and_stacked_layout_keeps_jump_links(self):
+    def test_active_task_fills_the_layout_and_inactive_task_is_hidden(self):
         css=(WEB/'shopping.css').read_text(encoding='utf-8')
         initial=re.search(r'\.shop-layout \{([^}]+)\}',css).group(1)
         self.assertNotIn('grid-template-columns',initial)
-        wide='\n'.join(re.findall(r'@media \(min-width: 1281px\) \{\n(.*?)\n\}',css,re.S))
-        self.assertIn('grid-template-columns: 560px minmax(0, 1fr)',wide)
+        self.assertIn('.shop-main[hidden], .shop-side[hidden], .shop-research[hidden] { display: none; }',css)
         self.assertIn('.shop-jumps { display: none; }',css.split('@media (min-width: 1281px)',1)[1])
-        self.assertNotRegex(css,r'@media \(min-width: (?:1000|1600)px\) \{\n\s*\.shop-layout')
+        self.assertNotRegex(css,r'@media \(min-width: (?:1000|1281|1600)px\) \{\n\s*\.shop-layout')
         self.assertIn('min-width: 0',re.search(r'\.shop-main, \.shop-side \{([^}]+)\}',css).group(1))

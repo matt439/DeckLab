@@ -84,7 +84,7 @@ class LifeCounterUiTests(unittest.TestCase):
           clear(main); drawPlay(data,'');
           const quick=main.querySelector('.play-quick');
           document.getElementById('play-quick-deck-1').value='2';           // Gamma has a Commander: 40 life
-          named(quick,'Life counter').click();
+          named(quick,'Start a 1v1 game').click();
           assert.ok(counter()); same(totals(),['40','40']);
           assert.match(counter().textContent,/Matt.*Alpha/); assert.match(counter().textContent,/User1.*Gamma/);
           assert.equal(counter().querySelectorAll('.life-small').filter(r=>!r.hidden).length,2);   // commander damage each
@@ -109,7 +109,7 @@ class LifeCounterUiTests(unittest.TestCase):
           store.set(STORE+LIFE_KEY,'{not json'); assert.equal(lifeSaved(data),null);
           // Storage that throws (a private window) still counts.
           window.localStorage={getItem(){throw Error('blocked');},setItem(){throw Error('blocked');},removeItem(){throw Error('blocked');}};
-          clear(main); drawPlay(data,''); named(main,'Life counter').click();
+          clear(main); drawPlay(data,''); named(main,'Start a 1v1 game').click();
           press('Matt: 1 life less (hold for 5)').click(); same(totals(),['19','20']);
           closeLifeCounter();
         """)
@@ -118,7 +118,7 @@ class LifeCounterUiTests(unittest.TestCase):
         self.run_js("""
           clear(main); drawPlay(data,'');
           document.getElementById('play-quick-name-1').value='Sam';
-          named(main.querySelector('.play-quick'),'Life counter').click();
+          named(main.querySelector('.play-quick'),'Start a 1v1 game').click();
           for(let n=0;n<3;n++) press('Sam: 5 life less').click();
           press('Sam: 1 more life (hold for 5)').click(); same(totals(),['20','6']);
           for(let n=0;n<5;n++) press('Sam: 1 life less (hold for 5)').click();
@@ -139,7 +139,7 @@ class LifeCounterUiTests(unittest.TestCase):
 
     def test_end_game_names_the_winner_and_back_to_the_game_carries_on(self):
         self.run_js("""
-          clear(main); drawPlay(data,''); named(main,'Life counter').click();
+          clear(main); drawPlay(data,''); named(main,'Start a 1v1 game').click();
           named(counter(),'End game').click();
           const end=counter().querySelector('.life-end'); assert.equal(end.hidden,false);
           named(end,'Keep playing').click(); assert.equal(end.hidden,true);
@@ -159,7 +159,7 @@ class LifeCounterUiTests(unittest.TestCase):
     def test_a_viewer_who_may_not_record_these_decks_only_counts(self):
         self.run_js("""
           for (const id in decks) decks[id].can_record=false;
-          clear(main); drawPlay(data,''); named(main,'Life counter').click();
+          clear(main); drawPlay(data,''); named(main,'Start a 1v1 game').click();
           for(let n=0;n<4;n++) press('User1: 5 life less').click();
           assert.equal(document.body.querySelector('.play-form'),null);
           const end=counter().querySelector('.life-end');
@@ -174,7 +174,7 @@ class LifeCounterUiTests(unittest.TestCase):
           let resolve=null; const released=[];
           navigator.wakeLock={request:()=>new Promise(r=>{resolve=r;})};
           const lock=name=>({release:()=>{released.push(name);}});
-          clear(main); drawPlay(data,''); named(main,'Life counter').click();
+          clear(main); drawPlay(data,''); named(main,'Start a 1v1 game').click();
           closeLifeCounter();                        // closed before the lock arrives
           resolve(lock('late')); await tick();
           same(released,['late']);

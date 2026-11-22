@@ -75,7 +75,11 @@ class SectionScanUiTests(unittest.TestCase):
           api = async () => detail({rows: [...rows, token], scan: {available:false}, excluded_names: ['Forest']});
           const writes = [];
           apiWrite = async (...args) => { writes.push(args); };
-          chooseSection('white').click(); await flush(); action('Scan to audit').click();
+          chooseSection('white').click(); await flush();
+          const lookup = action('Look up cards');
+          assert(document.getElementById(lookup.getAttribute('aria-describedby')).textContent.includes('temporary difference report'));
+          lookup.click();
+          assert(openDialog().textContent.includes('Closing clears the counted cards'));
           action('Finish audit').click();
           assert.equal(document.activeElement, countInput('Counted for ' + label));
           countInput('Counted for ' + label).value = '2';
@@ -84,10 +88,11 @@ class SectionScanUiTests(unittest.TestCase):
           assert(openDialog().textContent.includes('Missing (5)'));
           assert(openDialog().textContent.includes('Extra (1)'));
           assert(openDialog().textContent.includes(label));
+          assert(openDialog().textContent.includes('Closing clears the counted cards'));
           action('Back to scanning').click();
           assert.equal(countInput('Counted for ' + label).value, '2');
           action('Finish audit').click(); action('Done').click();
-          assert(action('Start audit'));
+          assert(action('Count by hand'));
           same(writes, []);
         """)
 
@@ -102,7 +107,8 @@ class SectionScanUiTests(unittest.TestCase):
           const starts = [];
           globalThis.startCardAudit = spec => { starts.push(spec); };
           chooseSection('white').click(); await flush();
-          const trigger = action('Scan to audit');
+          const trigger = action('Scan');
+          const manual = action('Count by hand');
           trigger.click();
           const [spec] = starts;
           assert.equal(spec.title, 'Storage box · Row 1 · White creatures');
@@ -113,9 +119,9 @@ class SectionScanUiTests(unittest.TestCase):
           assert.equal(spec.rows[2].manualLabel, token.manualLabel);
           assert(spec.instructions.includes('both faces') && spec.instructions.includes('estimates'));
           const child = colOpenSheet('Read cards');
-          assert(spec.current()); trigger.click(); assert.equal(starts.length, 1);
+          assert(spec.current()); trigger.click(); manual.click(); assert.equal(starts.length, 1);
           child.close(); assert(spec.current());
-          action('Start audit').click(); assert(!spec.current()); trigger.click(); assert.equal(starts.length, 1);
+          manual.click(); assert(!spec.current()); trigger.click(); assert.equal(starts.length, 1);
           action('Close').click();
           chooseSection('black').click(); await flush(); assert(!spec.current());
         """)
@@ -128,9 +134,9 @@ class SectionScanUiTests(unittest.TestCase):
             detail({section: unknown, editable:false, expect:null});
           let spec;
           globalThis.startCardAudit = value => {spec = value;};
-          chooseSection('unfiled').click(); await flush(); assert(!action('Scan to audit'));
+          chooseSection('unfiled').click(); await flush(); assert(!action('Look up cards') && !action('Scan'));
           action('Close').click(); chooseSection('green').click(); await flush();
-          assert(!action('Start audit')); action('Scan to audit').click();
+          assert(!action('Count by hand')); action('Look up cards').click();
           same(spec.rows, []); same(spec.scan, {available:false}); assert(spec.current());
           location.hash = '#/library'; assert(!spec.current());
           location.hash = '#/collection?view=map'; assert(spec.current());

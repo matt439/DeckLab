@@ -1,4 +1,4 @@
-/* Review a saved Commander's Play-now shortages before applying one local edit (E2-S34). */
+/* Review a saved Commander's Alternative list shortages before applying one local edit (E2-S34). */
 "use strict";
 
 function editorPlayNowSource(ed) {
@@ -18,7 +18,7 @@ async function openEditorPlayNow() {
   const startsFromPlanned = noOwnedList();
   const source = editorPlayNowSource(ed);
   const sha = ed.sha256, signature = listSignature(source), raw = sendList(source);
-  const sheet = openSheet({ title: "Draft a Play-now list", wide: true });
+  const sheet = openSheet({ title: "Draft an Alternative list", wide: true });
   const owns = editorWriteOwner(ed, sheet);
   const remainsCurrent = () => ed.sha256 === sha && noOwnedList() === startsFromPlanned
     && signature === listSignature(editorPlayNowSource(ed));
@@ -39,7 +39,7 @@ async function openEditorPlayNow() {
       if (!(error instanceof ApiError)) throw error;
       if (owns()) {
         if (!remainsCurrent()) stale();
-        else clear(sheet.body).append(loadFailed("The Play-now draft", error, ask));
+        else clear(sheet.body).append(loadFailed("The Alternative list draft", error, ask));
       }
       return;
     }
@@ -128,7 +128,7 @@ function applyEditorPlayNow(ed, rows) {
   if (starting) drawEditor();
   changed({ list: !starting });
   const after = ed.snap;
-  showToast("Play-now draft ready to check and save.", { undo: () => {
-    if (editor === ed && ed.snap === after && undoLast()) toast("Play-now draft undone.");
+  showToast("Alternative list draft ready to check and save.", { undo: () => {
+    if (editor === ed && ed.snap === after && undoLast()) toast("Alternative list draft undone.");
   } });
 }

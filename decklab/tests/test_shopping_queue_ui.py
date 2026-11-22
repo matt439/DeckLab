@@ -66,7 +66,7 @@ class ShoppingQueueInteractionTests(unittest.TestCase):
           assert.equal(main.querySelector("#shop-long-term"), null);
           const immediate = main.querySelector("#shop-to-buy").closest("section");
           assert(immediate.textContent.includes("Izzet Otters"));
-          assert(!immediate.textContent.includes("Ready to buy"));
+          assert.equal(immediate.querySelector("h2").textContent, "Ready to buy");
           same(card, before);
           same(writes, [["/api/shopping/queue", {row: 3, state: "long_term", expect: "queue-v1"}],
             ["/api/shopping/queue", {row: 3, state: "ready", expect: "queue-v2"}]]);

@@ -97,7 +97,7 @@ function ccDraw(ctx, answer) {
       ccRefresh(ctx);
     } }, el("option", { value: "", text: "Choose an opponent…" }),
     choices.map((choice) => el("option", { value: choice.id,
-      text: choice.title + (choice.version === "owned" ? " (Play-now list)" : "") })));
+      text: choice.title + (choice.version === "owned" ? ` (${listName(choice.version)})` : "") })));
   select.value = ctx.opponent || "";
   const games = el("select", { id: "cc-games", "aria-label": "Games per simulator", disabled: playing,
     onchange: () => { if (ccHere(ctx) && !ctx.busy && !playing && games.isConnected && ctx.content.contains(games)) ctx.games = Number(games.value); } },

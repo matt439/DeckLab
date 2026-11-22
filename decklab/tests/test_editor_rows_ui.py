@@ -91,7 +91,7 @@ class EditorRowInteractionTests(unittest.TestCase):
           moveLine=(uid,section)=>calls.push(['move',uid,section]);removeLine=uid=>calls.push(['remove',uid]);
           const button=rowMenuButton(line);button.click();
           same(items.filter(item=>typeof item==='object').map(item=>item.text.replace(/\u2026/g,'.')),
-            ['Stand-ins.','Change printing.','Category.','Move to the Commander section','Move to the sideboard','Move to the companion','Remove']);
+            ['Find substitute cards','Change printing.','Category.','Move to the Commander section','Move to the sideboard','Move to the companion','Remove']);
           for (const item of items) if(typeof item==='object') item.onclick();
           same(calls,[['swap',line.uid],['print',line.uid],['category',line.uid],['move',line.uid,'Commander'],
             ['move',line.uid,'Sideboard'],['move',line.uid,'Companion'],['remove',line.uid]]);

@@ -23,12 +23,10 @@ function deckActions(data) {
       return el("div", { class: "deck-actions" },
         el("a", { class: "btn btn-primary", href: editHref(s.id, data.version), text: "Add cards" }));
     }
-    // With two lists the button names the one it edits; on a phone it says just "Edit" (the rest stays in its
-    // accessible name), so the deck's title keeps the head's row.
-    const which = data.versions.length > 1 ? ` the ${listName(data.version, true)}` : "";
+    const which = data.versions.length > 1 ? ` in the ${listName(data.version, true)}` : "";
     return el("div", { class: "deck-actions" },
-      el("a", { class: "btn btn-primary", href: editHref(s.id, data.version), "aria-label": which ? `Edit${which}` : null },
-        "Edit", which ? el("span", { class: "deck-edit-which", text: which }) : null));
+      el("a", { class: "btn btn-primary", href: editHref(s.id, data.version), "aria-label": which ? `Edit cards${which}` : null,
+        text: "Edit cards" }));
   }
   if (!s.read_only) {
     if (!canBuildDecks()) return null;
@@ -208,32 +206,39 @@ function tableChangeWords(c) {
   return `${c.card}: the table says ${side(c.was)}; now ${side(c.now)}.`;
 }
 
-/** The deck page's note when the deck's own owned-vs-needed table is out of date, with "Update the table". */
+/** Update the saved deck table from the inventory, which the deck page already reads live. */
 function staleTableBox(data) {
   const t = data.table;
-  if (!t || !t.has_table || !t.stale || !state.profile || !canEditDeck(data.summary)) return null;
+  if (!t?.has_table || !t.stale) return null;
+  if (!state.profile || !canEditDeck(data.summary)) {
+    return el("p", { class: "sub stale-own", text: "The saved availability needs updating. A deck editor can refresh its saved table." });
+  }
   const n = t.changes.length;
   const deck = { id: data.summary.id, title: data.summary.title, sha256: t.sha256 };
   const error = el("p", { class: "form-error", role: "alert" });
-  const button = el("button", { type: "button", class: "btn", text: "Update the table" });
+  const button = el("button", { type: "button", class: "btn", text: "Update saved availability" });
+  const profile = state.profile, token = routeToken;
+  const current = () => profile === state.profile && token === routeToken && button.isConnected && deckScreen?.data === data;
   button.addEventListener("click", async () => {
+    if (!current() || button.disabled) return;
     busy(button, "Updating...");
     error.textContent = "";
     try {
       await apiWrite("/api/tables/update", { decks: [{ id: deck.id, sha256: deck.sha256 }] });
-      toast("The deck's table is updated and saved in Deck Lab.");
+      if (!current()) return;
+      toast("Saved availability updated.");
       route();
     } catch (e) {
       if (!(e instanceof ApiError)) throw e;
+      if (!current()) return;
       unbusy(button);
-      error.textContent = e.status === 409 ? `${e.message} Reload the page to see it.` : `The table couldn't be updated: ${e.message}`;
+      error.textContent = e.status === 409 ? `${e.message} Reload the page to see the latest counts.` : `Availability couldn't be saved. ${e.message}`;
     }
   });
-  return el("div", { class: "box box-stale stale-own" },
-    el("h3", { text: "The deck's owned-vs-needed table is out of date" }),
-    el("p", { text: `The numbers above are current. In the saved table for ${data.summary.title}, ${n === 1 ? "1 card's row differs" : `${n} cards' rows differ`}. `
+  return el("details", { class: "box box-stale stale-own" },
+    el("summary", { text: "Saved availability needs updating" }),
+    el("p", { text: `${plural(n, "saved card row")} differ${n === 1 ? "s" : ""} from the current records. `
       + tableAvailabilityCauses(deckSpaceOf(deck.id) === HOME_SPACE) }),
-    el("details", { class: "more" }, el("summary", { text: "What's different" }),
-      el("ul", { class: "sources-list" }, t.changes.map((c) => el("li", { text: tableChangeWords(c) })))),
-    el("div", { class: "stale-own-actions" }, el("div", { class: "actions" }, button), error));
+    el("ul", { class: "sources-list" }, t.changes.map((c) => el("li", { text: tableChangeWords(c) }))),
+    el("div", { class: "actions" }, button), error);
 }

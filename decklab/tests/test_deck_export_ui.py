@@ -17,12 +17,17 @@ class DeckExportUiTests(unittest.TestCase):
           const dialog=document.querySelector('dialog[open]');assert(dialog);assert.equal(dialog.querySelector('textarea').value,expected);
         ''')
 
-    def test_more_menu_has_explicit_category_copy_and_old_menu_cannot_export_for_another_profile(self):
+    def test_export_groups_name_the_list_and_a_stale_dialog_cannot_copy(self):
         self.run_js(r'''
-          const data=makePage(),items=deckMoreItems(data),chosen=items.find(item=>item?.label==='Copy with categories');assert(chosen);
-          const calls=[];copyDeck=(...args)=>calls.push(args);chosen.onclick();assert.equal(calls.length,1);same(calls[0][1],{categories:true});
-          state.profile={id:'user2',space:'user2'};chosen.onclick();assert.equal(calls.length,1);
-          items.find(item=>item?.label==='Copy decklist').onclick();assert.equal(calls.length,1);
+          const data=makePage();data.version='owned';location.hash='#/deck?id=casual%2Ftest&v=owned';drawDeck(data);
+          const item=deckMoreItems(data).find(item=>item?.label==='Export & print');assert(item);item.onclick();
+          const dialog=document.querySelector('dialog[open]');
+          same(dialog.querySelectorAll('h3').map(h=>h.textContent),
+            ['Decklist · Alternative list','Play sheet · Alternative list','Missing cards · Planned list']);
+          const chosen=buttonText(dialog,'Copy with categories'), copies=buttonText(dialog,'Copy decklist');
+          const calls=[];copyDeck=(...args)=>calls.push(args);chosen.click();assert.equal(calls.length,1);same(calls[0][1],{categories:true});
+          state.profile={id:'user2',space:'user2'};chosen.click();assert.equal(calls.length,1);
+          copies.click();assert.equal(calls.length,1);
         ''')
 
     def test_late_clipboard_failure_cannot_relay_private_list_to_a_new_frame_profile_or_route(self):

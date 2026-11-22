@@ -35,8 +35,8 @@ class DeckKitUiTests(unittest.TestCase):
           const page = withKit(); page.version = 'owned'; page.summary.status = 'idea';
           clear(main); drawDeck(page);
           const kit = panel('overview').querySelector('.deck-kit');
-          assert(kit.textContent.includes('An idea has no sleeves or deck box: choose them once you start building it'));
-          assert(kit.textContent.includes('when you mark it built in Build decks.'));
+          assert(kit.textContent.includes('Choose sleeves and a deck box when you start building'));
+          assert(kit.textContent.includes('finish packing this deck in Build deck.'));
           assert.equal(kit.querySelector('a').getAttribute('href'), '#/assembly?deck=casual%2Ftest&version=owned');
           assert.equal(kit.querySelectorAll('button').length, 0, 'the hint does not choose kit early');
           assert.equal(kit.querySelectorAll('.deck-kit-tile').length, 0);
@@ -53,11 +53,11 @@ class DeckKitUiTests(unittest.TestCase):
           for (const version of ['target', 'owned']) {
             page.version = version;
             const kit = deckKit(page);
-            assert(kit.textContent.includes('set Status to Building and save'));
+            assert(kit.textContent.includes('Set Status to Building in Edit cards and save'));
             assert(kit.textContent.includes('Then choose its sleeves and deck box here.'));
             assert.equal(kit.querySelector('a').getAttribute('href'),
               `#/edit?id=user2%2Fcasual%2Ftest&v=${version}`);
-            assert(!kit.textContent.includes('Build decks'));
+            assert(!kit.textContent.includes('Build deck'));
             assert.equal(kit.querySelectorAll('button').length, 0);
             assert.equal(kit.querySelectorAll('.deck-kit-tile').length, 0);
           }

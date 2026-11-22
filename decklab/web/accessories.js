@@ -299,8 +299,10 @@ function updateAccessories(view) {
     const mine = owned.filter((item) => item.kind === kind);
     if (!mine.length) continue;
     const id = `acc-${owner}-${kind}-title`;
-    view.lists.append(el("section", { class: "acc-section", "aria-labelledby": `${ownerId} ${id}` },
-      el("h3", { id, text: `${words.title} (${mine.length})` }),
+    const folded = kind === "playmat" && view.filter === "all";
+    const heading = el("h3", { id, text: `${words.title} (${mine.length})` });
+    view.lists.append(el(folded ? "details" : "section", { class: "acc-section", "aria-labelledby": `${ownerId} ${id}` },
+      folded ? el("summary", {}, heading) : heading,
       el("ul", { class: "acc-grid" }, mine.map((item) => accCard(view, item)))));
     }
   }
@@ -584,23 +586,21 @@ function openAccessorySheet({ kind = "sleeves", onSaved, onLatest, row = null, s
     el("label", { class: "field", for: link.id }, el("span", { text: "Link to the product or its picture" }), link),
     ctx.find);
   add(ctx.form, [
-    !editing ? el("p", { class: "sub", text: "Add sleeves, a deck box or a playmat. Paste a shop link and Deck Lab finds its picture." }) : null,
-    ctx.linkField, accPhotoControls(ctx), ctx.message, ctx.picture, accFields(ctx, row, row ? row.kind : kind),
+    accFields(ctx, row, row ? row.kind : kind), ctx.message,
+    el("details", { class: "acc-photo-settings pack-fold" }, el("summary", { text: "Picture and product link" }),
+      ctx.linkField, accPhotoControls(ctx), ctx.picture),
     editing && removeBlocked ? el("p", { id: `acc-why-${sheet.heading.id}`, class: "field-hint acc-why", text: removeBlocked }) : null]);
   sheet.body.append(ctx.form);
   ctx.onRemove = editing ? onRemove : null;
   ctx.removeBlocked = removeBlocked;
   accSheetFoot(ctx);
   drawPicture(ctx);
-  accSheetFocus(ctx, link);
+  accSheetFocus(ctx);
   return sheet;
 }
 
-/** Where the sheet starts: Add on the link field; Edit on Name, except on a touch screen, where focusing an input
- * pops the keyboard up and scrolls the sheet past its picture: there the heading takes focus and the sheet opens
- * at its top. */
-function accSheetFocus(ctx, link) {
-  if (!ctx.editing) { link.focus(); return; }
+/** Start on Name with a pointer or on the heading when text focus would open the touch keyboard. */
+function accSheetFocus(ctx) {
   if (!coarsePointer()) { ctx.inputs.name.focus(); return; }
   const heading = ctx.sheet.heading;
   heading.setAttribute("tabindex", "-1");

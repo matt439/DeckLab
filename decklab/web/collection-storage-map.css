@@ -63,6 +63,9 @@
 }
 .col-map-empty[open] > summary { margin-bottom: var(--s-1); }
 .col-map-detail > :last-child, .col-map-history > :last-child, .col-map-audit-form > :last-child { margin-bottom: 0; }
+.col-map-check { margin-block: var(--s-4); }
+.col-map-check-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--s-3); }
+.col-map-check-options p { margin: var(--s-1) 0 0; }
 .col-map-differences, .col-map-counts {
   list-style: none; margin: 0 0 var(--s-3); border-block-start: 1px solid var(--border);
 }

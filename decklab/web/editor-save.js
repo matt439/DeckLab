@@ -278,7 +278,8 @@ function checkWarnings(a) {
   const owned = ed && ed.mode === "edit" && ed.version === "owned";
   return warnings.map((w, i) => {
     const forOwned = w.startsWith(OWNED_PREFIX);
-    return { text: owned && forOwned ? capitalise(w.slice(OWNED_PREFIX.length)) : w,
+    const detail = forOwned ? w.slice(OWNED_PREFIX.length) : w;
+    return { text: forOwned ? owned ? capitalise(detail) : `${listName("owned")}: ${detail}` : detail,
       names: (cards && Array.isArray(cards[i]) ? cards[i] : []).filter((n) => typeof n === "string"),
       mine: owned === forOwned };
   });

@@ -382,19 +382,14 @@ class ShellTests(unittest.TestCase):
         self.assertNotIn("max-width: 599px)", re.sub(r"@media \(max-width: 599px\), ", "", _css("shell.css")))
         # The same 56 px at both densities, so --shell-top has one value (but the phone on its side's).
         self.assertNotRegex(_css("tokens.css"), r"--shell-top: calc\(48px")
-        self.assertIn("const TAB_COUNT = 4;", _text("shell.js"))
+        self.assertIn('main.map((r) => navLink(r, "tab", true))', _text("shell.js"))
 
-    def test_build_decks_is_a_pill_only_from_1000_px(self):
-        # E11-S61: a route's pill (core.js) shows from 1000 px only, where the top bar's More leaves it out; a phone
-        # on its side's top bar (from 600 px) has no room for a fifth pill, so there it stays in More.
-        shell = _css("shell.css")
-        self.assertIn(".nav-items > li.nav-wide { display: none; }", shell)
-        lab = _block(shell, "(min-width: 1000px)")
-        self.assertIn(".nav-items > li.nav-wide { display: flex; }", lab)
-        self.assertIn(".nav-more-menu > a.nav-narrow { display: none; }", lab)
-        self.assertNotIn("nav-wide", _block(shell, "(orientation: landscape) and (max-height: 500px)"))
-        self.assertIn("box-shadow: inset 0 -2px var(--accent)", _block(shell, "(max-width: 999px)"))
-        self.assertRegex(_text("core.js"), r'path: "assembly",[^}]*nav: "more",\s*pill: true')
+    def test_optional_tasks_live_in_more_at_both_densities(self):
+        routes = _text("core.js")
+        for path in ("assembly", "matchups", "play", "help"):
+            self.assertRegex(routes, rf'path: "{path}",[^}}]*nav: "more"')
+        self.assertNotIn("nav-wide", _css("shell.css"))
+        self.assertNotIn("nav-narrow", _css("shell.css"))
 
     def test_no_page_hides_the_tab_bar(self):
         shell = _css("shell.css")
@@ -429,9 +424,9 @@ class ShellTests(unittest.TestCase):
                  "(min-width: 600px) and (max-width: 999px) and (orientation: portrait)")
         self.assertIn("padding-left: max(env(safe-area-inset-left), (100% - 640px) / 2);", _block(_css("shell.css"), query))
 
-    def test_the_matchups_tab_dot(self):
+    def test_the_more_tab_simulations_dot(self):
         self.assertIn(".tab.has-run::after {", _block(_css("shell.css"), SHELL_CASUAL))
-        self.assertIn('link.classList.toggle("has-run", runs.length > 0)', _function(_scripts(), "drawRunsPill"))
+        self.assertIn('more.classList.toggle("has-run", runs.length > 0)', _function(_scripts(), "drawRunsPill"))
 
 
 class DeckColourTests(unittest.TestCase):

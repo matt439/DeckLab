@@ -118,9 +118,9 @@ class EditorEdhrecUiTests(unittest.TestCase):
           assert(note.includes('1 idea already in this draft isn\'t listed.'), note);
           assert(note.includes('1 USD = 1.43 AUD (ECB rate of 2026-10-27), prices pulled 2026-10-28'), note);
           const sides = ac.list.querySelectorAll('.ac-side').map((n) => n.textContent);
-          assert(sides[0].includes('64% of decks') && sides[0].includes('2 free') && sides[0].includes('1 on the way'), sides[0]);
-          assert(sides[1].includes('To buy · ~A$0.39'), sides[1]);
-          assert(sides[2].includes('In other decks') && !sides[2].includes('deck:'), sides[2]);
+          assert(sides[0].includes('64% of decks') && sides[0].includes('1 free now') && sides[0].includes('1 on the way'), sides[0]);
+          assert(sides[1].includes('Short · ~A$0.39'), sides[1]);
+          assert(sides[2].includes('Owned, currently held') && !sides[2].includes('deck:'), sides[2]);
           // The typed name narrows them here, without asking again; so do the filters.
           ac.input.value = 'elvish'; ac.input.fire('input'); await settle();
           same(names(ac), ['Elvish Mystic']);
@@ -177,7 +177,7 @@ class EditorEdhrecUiTests(unittest.TestCase):
           tick(ac); await settle();
           same(names(ac), ['Elvish Mystic', 'Pick Your Poison', 'Bojuka Bog']);
           const sides = ac.list.querySelectorAll('.ac-side').map((n) => n.textContent).join(' | ');
-          for (const words of ['free', 'To buy', 'In other decks', 'on the way', 'A$']) assert(!sides.includes(words), sides);
+          for (const words of ['free', 'Short', 'Owned, currently held', 'on the way', 'A$']) assert(!sides.includes(words), sides);
           assert(ac.note.textContent.includes("This deck's collection isn't yours to see"));
           assert(!ac.note.textContent.includes('1 USD'));
         """)
@@ -238,7 +238,7 @@ class EditorEdhrecUiTests(unittest.TestCase):
           same(names(ac), ['Elvish Mystic', 'Pick Your Poison', 'Llanowar Elves', 'Bojuka Bog'],
             'nothing in the new deck yet, so every idea is listed');
           const sides = ac.list.querySelectorAll('.ac-side').map((n) => n.textContent);
-          assert(sides[0].includes('2 free'), sides[0]);
+          assert(sides[0].includes('1 free now'), sides[0]);
           // Picking one adds it to the draft only.
           ac.list.querySelectorAll('.ac-add')[0].click();
           same(editor.lists.Deck.map((l) => l.name), ['Elvish Mystic']);

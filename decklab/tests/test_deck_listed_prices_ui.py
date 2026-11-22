@@ -1,5 +1,5 @@
-"""The listed printing's price beside the cheapest one (E5-S31) on the deck page's banner, the Cards tab's
-price table and the editor's missing list, through the real scripts. No network, no writes."""
+"""The listed printing's price beside the cheapest one (E5-S31) in the Cards tab's buying estimates and the editor's
+missing list, through the real scripts. No network, no writes."""
 import json
 import subprocess
 import unittest
@@ -27,31 +27,29 @@ class ListedPriceUiTests(unittest.TestCase):
                                 capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_banner_says_cheapest_printings_and_lists_material_differences(self):
+    def test_buying_estimates_say_cheapest_printings_and_list_material_differences(self):
         self.run_js(r"""
           // No material difference: only the cheapest total, said to be for the cheapest printings.
-          let banner = bannerOf(makePage());
-          assert(banner.textContent.includes('3 missing, about A$3.75 at the cheapest printings'), banner.textContent);
-          assert.equal(banner.querySelector('.deck-avail-listed'), null);
+          let estimates = ownedSection(makePage());
+          assert(estimates.textContent.includes('3 missing, about A$3.75 at the cheapest printings'), estimates.textContent);
+          assert.equal(estimates.querySelector('.deck-avail-listed'), null);
           // A card with no price: the qualifier stays on the figure.
           const unpriced = makePage(); unpriced.owned.totals = {...unpriced.owned.totals, unpriced: ['Bolt']};
-          assert(bannerOf(unpriced).textContent.includes('about A$3.75 at the cheapest printings, and more'),
-            bannerOf(unpriced).textContent);
+          assert(ownedSection(unpriced).textContent.includes('about A$3.75 at the cheapest printings for priced cards'));
           // One: named with its printing and price.
-          banner = bannerOf(withListed([dear("Y'shtola, Night's Blessed", 'FIC 207 foil', 560)], 563.75));
-          assert.equal(banner.querySelector('.deck-avail-listed').textContent,
+          estimates = ownedSection(withListed([dear("Y'shtola, Night's Blessed", 'FIC 207 foil', 560)], 563.75));
+          assert.equal(estimates.querySelector('.deck-avail-listed').textContent,
             "As listed: Y'shtola, Night's Blessed (FIC 207 foil) about A$560.00.");
           // More than three fold into "and N more", with the total as listed.
           const many = ['A', 'B', 'C', 'D', 'E'].map((n, i) => dear(n, `SET ${i}`, 50 - i));
           many[0].missing = 2;
-          banner = bannerOf(withListed(many, 300));
-          assert.equal(banner.querySelector('.deck-avail-listed').textContent,
+          estimates = ownedSection(withListed(many, 300));
+          assert.equal(estimates.querySelector('.deck-avail-listed').textContent,
             'As listed: 2 A (SET 0) about A$50.00; B (SET 1) about A$49.00; C (SET 2) about A$48.00 and 2 more. ' +
             'About A$300.00 in all as listed.');
-          // A price error leaves no A$ figure at all.
           const offline = withListed([dear('A', 'SET 0', 50)]); offline.owned.price_error = 'offline';
-          banner = bannerOf(offline);
-          assert(!banner.textContent.includes('A$'), banner.textContent);
+          assert.equal(ownedSection(offline).querySelector('.deck-avail-listed'), null);
+          assert(!bannerOf(makePage()).textContent.includes('A$'), 'pricing stays with the buying task');
         """)
 
     def test_banner_shows_nothing_to_a_viewer_who_may_not_see_the_collection(self):

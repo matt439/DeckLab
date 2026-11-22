@@ -593,6 +593,22 @@ function showEditor(params, token) {
         el("p", { text: view.why_not })));
       return;
     }
+    if (params.get("focus") === "considering") {
+      const address = parseHash().params, proposal = address.get("consider");
+      address.delete("focus");
+      address.delete("consider");
+      history.replaceState(history.state, "", `#/edit?${address}`);
+      openSavedDeckEditor(view, version, () => {
+        const ed = editor, hash = location.hash;
+        // The loader restores the page's scroll and focus after drawing the editor.
+        requestAnimationFrame(() => {
+          if (editorKeyboardCurrent(ed) && location.hash === hash && !document.querySelector("dialog[open]")) {
+            editorFocusConsidering(ed, proposal);
+          }
+        });
+      });
+      return;
+    }
     openSavedDeckEditor(view, version);
     openSwapsFromRoute(params, view.id);      // editor-swaps.js: the deck page's swap= and tab=notes
     if (params.has("cut")) editorCutFromRoute(params);

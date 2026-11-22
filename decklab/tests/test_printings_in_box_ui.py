@@ -26,7 +26,7 @@ class PrintingsInBoxUiTests(unittest.TestCase):
           assert(section.textContent.includes('Llanowar Elves'));assert(section.textContent.includes('FDN 227 ×2'));
           assert(section.textContent.includes('Printings in box out of date'));assert(button(section,'Printings in box…'));
           assert.equal(mount({editable:false}).section.querySelectorAll('button').length,0);
-          assert(mount({recorded:[]}).section.textContent.includes('Not recorded yet'));
+          assert(mount({recorded:[]}).section.textContent.includes('No exact printings recorded'));
         ''')
 
     def test_sheet_saves_every_count_and_refuses_more_than_the_box_holds(self):

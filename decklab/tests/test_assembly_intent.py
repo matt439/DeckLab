@@ -4,7 +4,7 @@ import json
 from unittest import mock
 
 from decklab.lib import access, api, decks, inventory, pool
-from decklab.lib.api import assembly_intent, guard
+from decklab.lib.api import assembly_intent, guard, play_records
 from decklab.lib.decks import assembled, standins
 from decklab.lib.inventory import ops_decks
 from decklab.tests.test_api_permissions import PermissionTestCase
@@ -161,6 +161,11 @@ class AssemblyIntentPrivacyTests(PermissionTestCase):
                 if not remote:
                     stack.enter_context(access.viewing(profile))
                 view = api.deck_view("casual/assembled", omit={"matchups"})
+                log = play_records.play_overview("casual/assembled")
+                choice = next(row for row in log["lists"] if row["id"] == "casual/assembled")
+                self.assertEqual(view["play_list"]["sha256"], choice["sha256"])
+                self.assertEqual("packed_match" in view["play_list"], sees)
+                self.assertEqual("packed_match" in log["decks"]["casual/assembled"], sees)
                 summary = next(row for row in api.decks_index()["decks"] if row["id"] == "casual/assembled")
                 self.assertEqual("assembled" in view, sees)
                 self.assertEqual("assembled" in summary, sees)
@@ -169,10 +174,14 @@ class AssemblyIntentPrivacyTests(PermissionTestCase):
                     self.assertEqual(view["assembled"], summary["assembled"])
                     self.assertEqual(view["assembled"]["sideboard_count"], 0)
                     self.assertEqual(view["assembled"]["remaining_count"], 2)
+                    self.assertIs(view["play_list"]["packed_match"], False)
+                    self.assertEqual(log["decks"]["casual/assembled"]["packed_match"], {"target": False})
 
     def test_hidden_projection_is_not_computed_even_when_its_snapshot_is_broken(self):
         with access.using(None), access.viewing("user2"), \
-                mock.patch.object(assembly_intent, "project", side_effect=AssertionError("private build read")):
+                mock.patch.object(assembly_intent, "project", side_effect=AssertionError("private build read")), \
+                mock.patch.object(play_records, "packed_list_matches", side_effect=AssertionError("private packed list read")):
             self.assertNotIn("assembled", api.deck_view("casual/assembled", omit={"matchups"}))
+            self.assertNotIn("packed_match", play_records.play_overview("casual/assembled")["decks"]["casual/assembled"])
             summaries = api.decks_index()["decks"]
             self.assertNotIn("assembled", next(row for row in summaries if row["id"] == "casual/assembled"))

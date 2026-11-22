@@ -18,7 +18,7 @@ function boxRepairPreviewValid(answer, deck, evidence, review) {
 
 function boxRepairPreviewParts(answer) {
   const parts = [el("h4", { text: "The corrected box record" }),
-    el("p", { text: plural(answer.card_count, "card") + " in " + (answer.version === "owned" ? "the Play-now list's" : "the Planned list's") + " recorded build." })];
+    el("p", { text: `${plural(answer.card_count, "card")} packed in this box. Based on the ${listName(answer.version)}.` })];
   for (const section of BOX_CHECK_SECTIONS) {
     const rows = answer.sections[section]; if (!rows?.length) continue;
     parts.push(el("section", {}, el("h5", { text: section }),
@@ -38,7 +38,7 @@ function boxRepairPreviewParts(answer) {
     + " Change them on the deck page if the box holds different ones." }));
   if (tokens.no_longer_made?.length) parts.push(el("p", { class: "sub", text: "The corrected cards no longer make: " + tokens.no_longer_made.join(", ") + "." }));
   if (tokens.newly_made?.length) parts.push(el("p", { class: "sub", text: "The corrected cards now also make: " + tokens.newly_made.join(", ") + "." }));
-  parts.push(el("p", { class: "sub", text: "Saving changes only the recorded box and its check date. The Planned and Play-now lists, the collection, sleeves, deck box and token cards stay as they are." }));
+  parts.push(el("p", { class: "sub", text: "Saving updates the recorded contents, the check date and which cards this box reserves." }));
   return parts;
 }
 

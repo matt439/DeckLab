@@ -67,8 +67,8 @@ class CollectionHintsUiTests(unittest.TestCase):
           for (const root of surfaces(cv).slice(1)) {
             const links = root.querySelector('.col-packing-hints').querySelectorAll('a');
             same(links.map(node => node.getAttribute('href')), ids.map((id, i) => deckHref(id, versions[i])));
-            same(links.map(node => node.textContent), ['1 \u00d7 Deck 0 (Planned list)', '1 \u00d7 Deck 1 (Play-now list)',
-              '1 \u00d7 Deck 2 (Play-now list)', '1 \u00d7 Deck 3 (Planned list)', '1 \u00d7 Deck 4 (Planned list)']);
+            same(links.map(node => node.textContent), ['1 \u00d7 Deck 0 (Planned list)', '1 \u00d7 Deck 1 (Alternative list)',
+              '1 \u00d7 Deck 2 (Alternative list)', '1 \u00d7 Deck 3 (Planned list)', '1 \u00d7 Deck 4 (Planned list)']);
             assert(!root.textContent.includes('without a named hint'));
             assert(!root.textContent.includes('Edit copies'));
           }
@@ -254,7 +254,7 @@ class CollectionHintsUiTests(unittest.TestCase):
           assert.equal(trigger.getAttribute('data-viewer'), 'collection-lab-rows');
           const group = viewerGroup(trigger), words = group.items[group.index].caption;
           assert(words.textContent.includes('Saved packing-list hints:'));
-          assert(words.textContent.includes('Play-now list')); assert(words.textContent.includes('may differ from the boxes and current deck lists'));
+          assert(words.textContent.includes('Alternative list')); assert(words.textContent.includes('may differ from the boxes and current deck lists'));
           const link = words.querySelector('a'); assert.equal(link.getAttribute('href'), deckHref('casual/saved', 'owned'));
           document.body.append(words);
           let afterClose; colAfterViewer = go => { afterClose = go; };

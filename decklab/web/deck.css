@@ -55,7 +55,6 @@
   .deck-head-actions .menu-button .menu-caret, .deck-more-words { display: none; }
   .deck-more-dots { display: inline; font-weight: var(--fw-bold); }
   /* Edit says just "Edit"; a longer button (Try a change, Save as a new deck) goes under the title instead. */
-  .deck-edit-which { display: none; }
   .deck-page-head:has(.deck-actions-wide) > .deck-title-row { grid-column: 1 / -1; }
   .deck-page-head:has(.deck-actions-wide) > .deck-head-actions { grid-column: 1 / -1; grid-row: auto; justify-content: flex-start; }
 }
@@ -70,7 +69,6 @@
 }
 @media (max-width: 1280px) {
   /* Edit's list stays in its accessible name, so the title keeps its width beside three buttons. */
-  .deck-page-head:has(.deck-build) .deck-edit-which { display: none; }
 }
 @media (min-width: 1000px) {
   /* Art supplies identity beside a readable title; actions never overlap either. */
@@ -98,17 +96,13 @@
 .deck-avail-text { flex: 1 1 260px; min-width: 0; }
 .deck-avail-head { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-1) var(--s-3); }
 .deck-avail-head b { font-size: var(--fs-md); font-weight: var(--fw-semibold); }
-.deck-avail-more { color: var(--ink-2); font-size: var(--fs-sm); }
+.deck-avail-more { color: var(--ink-2); font-size: var(--fs-sm); margin: var(--s-1) 0; }
 .deck-avail-sources { margin: var(--s-2) 0 0; overflow-wrap: anywhere; }
-.deck-avail .btn { flex: none; }
+.deck-avail .btn { flex: none; max-inline-size: 100%; overflow-wrap: anywhere; }
 .deck-avail-plain { padding: 0; }
 .deck-lists { display: grid; gap: var(--s-2); flex: 1 1 100%; min-width: 0; }
 .deck-lists-row { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
-.deck-lists-info { width: var(--tap); padding: 0; font-weight: var(--fw-bold); font-style: italic; }
-.deck-lists-about { margin: 0; color: var(--ink-2); font-size: var(--fs-sm); max-width: 70ch; }
-@media (min-width: 1000px) {
-  .deck-avail .deck-lists { flex: 0 1 auto; }
-}
+.deck-avail > :is(.deck-arrival-details, .stale-own) { flex: 1 1 100%; }
 
 /* --------------------------------------------------------------- the tabs */
 
@@ -132,6 +126,9 @@
 
 .deck-section { padding-top: var(--s-5); scroll-margin-top: calc(var(--shell-top) + var(--tap) + var(--s-2)); }
 .deck-section > h2 { margin-bottom: var(--s-3); }
+#sec-stats > .panel { margin-bottom: var(--s-4); }
+.deck-check-detail { margin-top: var(--s-4); }
+.deck-check-detail > details > .panel { margin-top: var(--s-2); }
 .deck-section .sub { color: var(--ink-2); font-size: var(--fs-sm); }
 .deck-section > h3 { margin-top: var(--s-4); }
 .deck-section-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: var(--s-2); margin-bottom: var(--s-3); }
@@ -216,6 +213,9 @@
 .queue-missing-check { display: grid; place-items: center; min-width: var(--tap); min-height: var(--tap); cursor: pointer; }
 .queue-missing-sheet .sheet-foot { flex: none; }
 .queue-missing-sheet .sheet-body { min-height: 0; }
+.deck-buying-sheet :is(.sheet-head, .sheet-foot) { flex: none; }
+.deck-buying-sheet .sheet-body { min-height: 0; }
+.deck-buying-sheet .btn { max-inline-size: 100%; overflow-wrap: anywhere; }
 @media (min-width: 1000px) {
   .deck-tiles { grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); }
 }

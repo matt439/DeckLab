@@ -46,7 +46,7 @@ operator interface. Never place the secret in a URL, web storage or browser code
   choices stay out of Activity, public deck views and the home-only data export.
 - Accessories and their saved pictures follow their owner, with shared home kit
   available to the home profiles. Another owner's Public kit remains read-only.
-- Owner-controlled Public switches grant read-only access to signed-in viewers.
+- Owner-controlled Public switches grant read-only access to signed-in viewers and to visitors on the home listener without a chosen profile. Remote access requires Cloudflare Access sign-in.
   Publishing a deck does not publish its private inventory counts, token packing,
   table state or kit. Public read access never grants a write.
 - Activity and game views filter through the requesting space and per-row owner

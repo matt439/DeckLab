@@ -28,7 +28,7 @@ function comparePreconHref(id, precon, version = "target") {
 function compareBaseline(data) { return ["revision", "precon"].includes(data.comparison?.kind); }
 function compareVersionLinks(sides, index) {
   const side = sides[index], versions = (side.versions || []).filter(version => ["target", "owned"].includes(version));
-  if (!sides.some(compareBaseline) || side.comparison?.kind === "precon" || versions.length < 2) return null;
+  if (side.comparison?.kind === "precon" || versions.length < 2) return null;
   return el("div", { class: "segmented", role: "group", "aria-label": `${compareBaselineLabel(side) || side.summary.title}: list` },
     versions.map(version => {
       const chosen = sides.map(compareSideOf); chosen[index] = { ...chosen[index], version };

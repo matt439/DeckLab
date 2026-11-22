@@ -37,7 +37,8 @@ function viewerCopiesPart(card) {
   const owner = viewerState, profile = state.profile, profileId = profile?.id, profileSpace = profile?.space || HOME_SPACE;
   const token = routeToken, hash = location.hash;
   const content = el("div", { class: "viewer-copies-body" });
-  const fold = el("details", { class: "viewer-copies" }, el("summary", { text: "Your copies" }), content);
+  const copies = space === ownSpace() ? "Your copies" : `Recorded copies in ${spaceName(space)}`;
+  const fold = el("details", { class: "viewer-copies" }, el("summary", { text: copies }), content);
   let pending = false, loaded = false;
   const here = () => viewerState === owner && state.profile === profile && profileId === state.profile?.id
     && profileSpace === (state.profile?.space || HOME_SPACE) && routeToken === token && location.hash === hash
@@ -58,7 +59,7 @@ function viewerCopiesPart(card) {
       loaded = true;
     } catch (error) {
       if (!here()) return;
-      clear(content).append(el("p", { text: "Your copies couldn't load." }),
+      clear(content).append(el("p", { text: `${copies} couldn't load.` }),
         el("button", { type: "button", class: "btn viewer-retry", text: "Try again", onclick: read }));
     } finally { pending = false; }
   };

@@ -140,6 +140,15 @@ run('small-swaps', async review => {
         'Looking at suggestions issued a save or simulation request');
       if(spec.mode === 'ready') {
         const testing = spec.width === 393 || spec.width === 1280;
+        let releasePopular;
+        if (testing) {
+          const pendingPopular = new Promise(resolve => { releasePopular = resolve; });
+          await page.route('**/api/variant/estimate?*', async route => {
+            const against = new URL(route.request().url()).searchParams.get('against');
+            if (against === 'gauntlet') await pendingPopular;
+            await route.fulfill({json:{against,available:true,opponents:2}});
+          });
+        }
         if(spec.width === 820) {
           const previous = await page.evaluate(({id}) => {
             const key = draftKey({mode:'edit',profile:'matt',id,version:'target'});
@@ -163,7 +172,14 @@ run('small-swaps', async review => {
         await page.waitForURL(url => url.hash.startsWith('#/edit?'));
         if(testing) {
           // The explicit test action only opens the normal test review; it cannot press its Start button.
-          await page.getByRole('heading',{name:/Test this change|Test a change/}).last().waitFor();
+          await page.getByRole('heading',{name:/Simulate this change|Test a change/}).last().waitFor();
+          const field = page.locator('.vt-sheet input[value="field"]');
+          await page.locator('.vt-sheet input[value="field"]:checked').waitFor();
+          await field.click();
+          releasePopular();
+          await page.locator('.vt-sheet input[value="gauntlet"]').waitFor();
+          assert(await field.isChecked(), 'Delayed popular-deck estimate replaced the chosen Household field');
+          result.keptHouseholdField = true;
         } else await page.locator('.edit-row').first().waitFor();
         const saved = await page.evaluate(() => Object.entries(localStorage).map(([,value]) => {
           try {return JSON.parse(value);} catch {return null;}

@@ -58,8 +58,30 @@ run('crosscheck', async review => {
       context=await review.context({...spec,height:900,coarse:spec.width<1000});
       const page=await context.newPage();
       review.observe(page,result.page_errors,result.http_errors);
+      const failureText='Failed to load resource: the server responded with a status of 503 (Service Unavailable)';
+      let expectedFailureConsole=0;
+      if(spec.state==='failed' && review.options.strictConsole) page.on('console',message=>{
+        const source=message.location().url;
+        if(message.type()!=='error' || message.text()!==failureText || !source.startsWith(review.origin+'/api/crosscheck?')) return;
+        const url=new URL(source);
+        if(url.searchParams.get('id')===HOME && url.searchParams.get('version')==='target') expectedFailureConsole++;
+      });
       const gate=new Promise(resolve=>{release=resolve;});
       let reads=0,simulationState=spec.state;
+      // The adjacent Choose decks panel makes this read on entry. The base fixture
+      // has no group simulator, so give it an empty group for the same synthetic list.
+      await page.route(/\/api\/field\/group\?/, async route=>{
+        const request=route.request(),url=new URL(request.url());
+        assert.equal(url.origin,review.origin);
+        assert.equal(url.pathname,'/api/field/group');
+        assert.equal(request.method(),'GET');
+        assert.equal(url.searchParams.get('id'),HOME);
+        assert.equal(url.searchParams.get('version'),'target');
+        assert(!url.searchParams.has('opponents'));
+        return route.fulfill({status:200,json:{deck:response(spec.state).deck,format:'Constructed',
+          status:'none',job:null,notice:null,error:null,choices:[],chosen:[],opponents:[],budgets:{},
+          default_budget:'standard',max_opponents:12,forge:{ready:true}}});
+      });
       await page.route('**/api/crosscheck**',async route=>{
         const request=route.request(),url=new URL(request.url());
         assert.equal(url.origin,review.origin);
@@ -136,12 +158,18 @@ run('crosscheck', async review => {
         assert.deepEqual(result.synthetic_writes,['start','stop']);
         result.explicitStartAndStop=true;
       }
-      if(spec.state==='failed') for(const error of result.http_errors)
-        if(error.status===503 && new URL(error.url,review.origin).pathname==='/api/crosscheck') error.category='expected_failure_state';
-      // The existing read-only Safari fixture refuses group-run tooling on Testing.
-      // This is retained explicitly, independently of the intercepted new feature.
-      for(const error of result.http_errors)
-        if(error.status===403 && new URL(error.url,review.origin).pathname==='/api/field/group') error.category='expected_fixture_gap';
+      if(spec.state==='failed') {
+        const expected=result.http_errors.filter(error=>{
+          const url=new URL(error.url,review.origin);
+          return error.status===503 && url.pathname==='/api/crosscheck' && url.searchParams.get('id')===HOME
+            && url.searchParams.get('version')==='target';
+        });
+        assert.equal(expected.length,1,'Expected exactly one synthetic cross-check failure');
+        expected[0].category='expected_failure_state';
+        const index=result.page_errors.indexOf('Console error: '+failureText);
+        if(expectedFailureConsole===1 && index>=0)
+          result.expected_console_error=result.page_errors.splice(index,1)[0];
+      }
       assert.equal(result.page_errors.length,0,'Uncaught cross-check page error');
       assert(!result.http_errors.some(error=>error.category==='unexpected_http_error'),'Unexpected cross-check HTTP failure');
       result.reads=reads;result.status='captured';

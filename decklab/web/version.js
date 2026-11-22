@@ -117,17 +117,26 @@ function reloadDeckLab() {
  * cardData: the server's one sentence when the card data or the rate stopped refreshing (an admin's only). */
 function showVersionWarning(messages, reload = false, database = [], restart = false, cardData = []) {
   const signature = JSON.stringify([messages, reload, database, restart, cardData]);
-  if (signature === versionWarning) return;
+  const admin = Boolean(state.profile) && isAdminProfile();
+  const host = $("#build-warning");
+  if (!host) return;
+  if (signature === versionWarning) {
+    for (const link of host.querySelectorAll("[data-warning-admin]")) link.hidden = !admin;
+    return;
+  }
   versionWarning = signature;
-  const host = clear($("#build-warning"));
+  clear(host);
   host.hidden = !messages.length && !database.length && !cardData.length;
   if (host.hidden) return;
-  if (database.length) host.append(el("h2", { class: "box-head", text: "Deck Lab's database" }),
-    ...database.map((text) => el("p", { text })));
+  if (database.length) host.append(el("details", { class: "warning-details" },
+    el("summary", { text: "Database needs attention" }), ...database.map((text) => el("p", { text })),
+    el("a", { href: "#/settings?part=maintenance", "data-warning-admin": "", hidden: !admin, text: "Open database maintenance" })));
   if (cardData.length) host.append(el("details", { class: "warning-details" },
-    el("summary", { text: "Card data may be out of date" }), cardData.map((text) => el("p", { text }))));
-  if (messages.length) host.append(el("h2", { class: "box-head", text: "Deck Lab version" }),
-    ...messages.map((text) => el("p", { text })));
+    el("summary", { text: "Card data may be out of date" }), cardData.map((text) => el("p", { text })),
+    el("a", { href: "#/settings?part=data-sources", "data-warning-admin": "", hidden: !admin, text: "Open data sources" })));
+  if (messages.length === 1) host.append(el("p", { text: messages[0] }));
+  else if (messages.length > 1) host.append(el("details", { class: "warning-details" },
+    el("summary", { text: "Deck Lab version needs attention" }), messages.map((text) => el("p", { text }))));
   if (reload) host.append(el("button", { type: "button", class: "btn", text: "Reload page",
     // The editor's existing beforeunload guard protects unsaved work.
     onclick: reloadDeckLab }));
@@ -186,7 +195,7 @@ function pricingWords(p) {
   const shops = Array.isArray(p.shops) ? p.shops.map((shop) => shop && shop.name).filter(Boolean) : [];
   return `Prices are estimates in ${p.currency}${p.currency_default ? " (the default)" : ""}, from Scryfall's US prices ` +
     `at the ECB's rate. Price-check shops: ${shops.length ? shops.join(", ") : "none (the nightly shop check is off)"}. ` +
-    `Change them under Prices above; config.json on the PC ("currency" and "shops") applies where nothing is chosen there.`;
+    `The config.json values on the PC ("currency" and "shops") are used until set in Buying → Prices.`;
 }
 
 /** The footer's one quiet line: "Prices 2026-10-12 · 1 USD = 1.4237 AUD", or what the card data is doing. */
@@ -198,6 +207,13 @@ function footerLine(s) {
   return parts.join(" · ");
 }
 
+/** Change the status audience immediately when a person is picked or leaves. */
+function resetVersionAudience() {
+  state.status = null;
+  showVersionWarning([]);
+  if (versionMonitoring) showFooter();
+}
+
 /** Also called after the card-data loading screen completes. One request/timer serves every page. */
 async function showFooter() {
   clearTimeout(versionTimer);
@@ -205,13 +221,17 @@ async function showFooter() {
   if (versionHidden || document.visibilityState === "hidden") return;
   const button = $("#build-check");
   if (button) button.disabled = true;
+  const profile = state.profile;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   versionRequest = (async () => {
     try {
-      renderVersionStatus(await api("/api/status", { signal: controller.signal, poll: true }));
+      const status = await api("/api/status", { signal: controller.signal, poll: true });
+      if (state.profile !== profile) return;
+      renderVersionStatus(status);
       loadSimulations();
     } catch (error) {
+      if (state.profile !== profile) return;
       const version = $("#build-version");
       if (version) version.textContent = "Version check unavailable";
       showVersionWarning(["Can't check whether Deck Lab is up to date. " + error.message]);
@@ -221,7 +241,7 @@ async function showFooter() {
       const again = $("#build-check");       // the Settings page may have been drawn meanwhile
       if (again) again.disabled = false;
       if (versionMonitoring && !versionHidden && document.visibilityState !== "hidden") {
-        versionTimer = setTimeout(showFooter, VERSION_POLL_MS);
+        versionTimer = setTimeout(showFooter, state.profile === profile ? VERSION_POLL_MS : 0);
       }
     }
   })();

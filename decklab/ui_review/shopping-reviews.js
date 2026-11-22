@@ -6,7 +6,8 @@ const {run}=require('./common.js');
 
 async function checkOrderPasteWidths(page) {
   const initial=page.viewportSize();
-  await page.getByRole('button',{name:'New order',exact:true}).click();
+  await page.getByRole('link',{name:/^Orders & deliveries/}).click();
+  await page.getByRole('button',{name:'Record an order',exact:true}).click();
   const dialog=page.locator('dialog[open]').last();
   await dialog.getByText('Paste a card list',{exact:true}).click();
   const widths=[];
@@ -99,6 +100,7 @@ run('shopping-reviews',async review=>{
         if(await reveal.isVisible())await reveal.click();
         assert((await page.locator('#main').innerText()).includes('Lowest in kept 90 days'));
       }else{
+        await page.getByText('Shop research and baskets',{exact:true}).click();
         await page.getByRole('button',{name:'Record this order from MTGMate',exact:true}).click();
         const dialog=page.locator('dialog[open]').last();
         assert.equal(await dialog.locator('[data-order-field=seller]').inputValue(),'MTGMate');

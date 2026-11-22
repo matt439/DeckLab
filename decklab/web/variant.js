@@ -169,12 +169,17 @@ function vtDraw(page, data) {
   const started = t.created ? new Date(t.created) : null;
   const when = started && !Number.isNaN(started.getTime())
     ? started.toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit", hour12: false }) : null;
+  const baseId = /^[a-f0-9]{64}$/.test(base.card_sha || "") ? base.card_sha.slice(0, 8) : null;
+  const changedId = /^[a-f0-9]{64}$/.test(t.variant?.card_sha || "") ? t.variant.card_sha.slice(0, 8) : null;
+  const opponentList = typeof t.against === "object" && t.against?.version ? listName(t.against.version, true) : null;
   clear(page.host);
   add(page.host, [
     crumb(deckHref(base.id, base.version), base.title || "The deck"),
     el("h1", { class: "vt-title", text: `Your change to ${base.title || "the deck"} (${vtListWords(base.version)})` }),
     vtChips((t.variant || {}).changes),
-    el("p", { class: "sub vt-by", text: [`Against ${vtAgainst(t)}`, t.by ? `started by ${t.by}${when ? `, ${when}` : ""}` : null]
+    el("p", { class: "sub vt-by", text: ["Forge simulation · 1v1", `Against ${vtAgainst(t)}${opponentList ? ` (${opponentList})` : ""}`,
+      baseId && changedId ? `List ${baseId} → ${changedId}` : null,
+      t.by ? `started by ${t.by}${when ? `, ${when}` : ""}` : null]
       .filter(Boolean).join(" · ") }),
     el("div", { class: "vt-grid" },
       vtLive(data) ? vtLivePanel(page, data) : vtVerdictPanel(page, data),
@@ -544,7 +549,7 @@ function vtVerdictPanel(page, data) {
       (vtPopular(t) ? " against popular decks." : typeof t.against === "string" ? " against the field." : " against one deck.") }) : null,
     vtHowItWorks(data),
     el("div", { class: "actions vt-actions" },
-      canMore ? el("button", { type: "button", class: "btn btn-primary", text: "Play more", "data-run": true,
+      canMore ? el("button", { type: "button", class: "btn btn-primary", text: "Simulate more games", "data-run": true,
         onclick: () => vtMore(page) }) : null,
       vtMayEdit(data) ? el("button", { type: "button", class: "btn", text: "Back to the editor",
         onclick: (event) => vtEditorHandoff(page, data, event.currentTarget) }) : null,
@@ -761,7 +766,7 @@ function variantTestsSection(data) {
         ? el("a", { class: "btn", href: editHref(s.id, version), text: "Try a change" }) : null));
       return;
     }
-    body.append(el("ul", { class: "vt-test-list" }, tests.map(vtTestItem)));
+    body.append(el("ul", { class: "vt-test-list" }, tests.map(test => vtTestItem(test, version))));
   }).catch((e) => {
     if (e.status === 501) section.remove();
     else clear(body).append(loadFailed("The tests", e, () => {
@@ -777,7 +782,7 @@ function variantTestsSection(data) {
 /** One test in the deck page's list: while it plays, "Testing: −1 A, +1 B (40%)"; once it's over, the swap-test
  * result (the change, the difference in points, its verdict pill, its range, what it was against and how many
  * games a deck), how long ago it played, and "saved" when the list today is the tested change. */
-function vtTestItem(t) {
+function vtTestItem(t, version) {
   const href = `#/variant?test=${t.test}`;
   const saved = t.saved ? el("span", { class: "vt-saved", text: "saved" }) : null;
   if (t.running) {
@@ -788,8 +793,10 @@ function vtTestItem(t) {
   const how = t.needs_recheck ? "needs a new check" : { stopped: "stopped early", error: "couldn't finish" }[t.verdict]
     || (t.delta == null ? "not settled" : null);
   const facts = [`against ${against}`, t.games_per_opponent ? `${thousands(t.games_per_opponent)} games a deck` : null, how];
+  const basis = version ? `Forge simulation · 1v1 · ${listName(version)}` : "Forge simulation · 1v1";
   return el("li", { class: "vt-test-item" },
-    el("a", { href, class: "vt-test-link" }, swapResult({ changes: t.changes, delta: t.delta, low: t.low, high: t.high,
+    el("a", { href, class: "vt-test-link" }, el("span", { class: "sub", text: basis }),
+      swapResult({ changes: t.changes, delta: t.delta, low: t.low, high: t.high,
       verdict: t.verdict, gamesText: facts.filter(Boolean).join(" · ") })),
     freshnessBadge(t.when, { size: "row" }), saved);
 }
@@ -885,7 +892,7 @@ function closeVariantTestSheets() {
 async function vtOpenTestSheet() {
   const ed = editor;
   if (!ed || !vtTestState(ed).ok) return;
-  const sheet = openSheet("Test this change", { wide: true, onClose: () => vtTestSheets.delete(sheet) });
+  const sheet = openSheet("Simulate this change", { wide: true, onClose: () => vtTestSheets.delete(sheet) });
   vtTestSheets.add(sheet);
   sheet.dialog.classList.add("vt-sheet");
   const token = routeToken, hash = location.hash;
@@ -893,8 +900,9 @@ async function vtOpenTestSheet() {
     state.profile?.id === ed.profile;
   const kind = currentKind();
   const savedSample = vtSavedSampleChoice(ed);
-  const sampleCaption = el("span", { text: "Saved sample from Testing" });
+  const sampleCaption = el("span", { text: "Saved popular-deck sample" });
   const pick = { against: savedSample || "field", mode: null, estimate: null };
+  let preferredChecked = Boolean(savedSample), explicitOpponent = false;
   const againstHost = el("div", { class: "vt-sheet-part" });
   const howHost = el("div", { class: "vt-sheet-part" });
   const problem = el("p", { class: "vt-error", role: "status", hidden: true });
@@ -919,10 +927,10 @@ async function vtOpenTestSheet() {
   const others = (library.decks || []).filter((d) => !d.error && d.id !== ed.id && (d.kind === "commander") === (kind === "commander")
     && !d.id.startsWith(BOX_PREFIX));
   const select = el("select", { id: "vt-against", "aria-label": "The deck to test against",
-    onchange: () => { pick.against = select.value; refresh(); } },
+    onchange: () => selectAgainst(select.value) },
   others.map((d) => el("option", { value: d.id, text: d.title })));
-  const radio = (name, value, text, checked, onchange) => el("label", { class: "vt-choice" },
-    el("input", { type: "radio", name, value, checked: checked || null, onchange }), el("span", {}, text));
+  const radio = (name, value, text, checked, choose) => el("label", { class: "vt-choice" },
+    el("input", { type: "radio", name, value, checked: checked || null, onclick: choose, onchange: choose }), el("span", {}, text));
   // The standard sample is offered when its estimate says it's available. The handed-off sample stays
   // visible when unavailable so its estimate can explain the problem.
   let field = { opponents: 0, available: true }, popular = null;
@@ -934,22 +942,33 @@ async function vtOpenTestSheet() {
   const named = (value) => value !== "field" && value !== VT_POPULAR && value !== savedSample;
   let asked = 0, fieldAsked = 0, starting = false;
   const sampleReady = () => pick.estimate?.available && pick.estimate.against === savedSample && pick.estimate.opponents > 0;
-  const canStart = () => runsAllowed() && !starting && (pick.against !== savedSample || sampleReady());
+  const canStart = () => runsAllowed() && !starting && (preferredChecked || explicitOpponent)
+    && (pick.against !== "field" || field.available)
+    && (pick.against !== savedSample || sampleReady());
   sheetActions(sheet, [{ text: "Start", kind: "primary", value: "start", onclick: start, disabled: !canStart() },
     { text: "Cancel", onclick: () => sheet.close() }]);
   const startButton = sheet.foot.querySelector('[data-action="start"]');
   const syncStart = () => { startButton.disabled = !canStart(); };
 
+  function selectAgainst(value) {
+    // Activating the already-selected radio is a choice too. A changed radio can fire both events.
+    if (explicitOpponent && pick.against === value) return;
+    explicitOpponent = true;
+    pick.against = value;
+    select.disabled = !named(value);
+    refresh();
+  }
+
   function drawAgainst() {
-    const choose = (value) => () => { pick.against = value; select.disabled = !named(value); refresh(); };
+    const choose = (value) => () => selectAgainst(value);
     add(clear(againstHost), [
-      radio("vt-against", "field", field.available ? `The field (${size(field)})` : "The field (not available yet)",
-        pick.against === "field", choose("field")),
-      popular ? radio("vt-against", VT_POPULAR, `Popular decks (${size(popular)}, a sample)`,
+      popular ? radio("vt-against", VT_POPULAR, `Against popular decks (${size(popular)})`,
         pick.against === VT_POPULAR, choose(VT_POPULAR)) : null,
       savedSample ? radio("vt-against", savedSample, sampleCaption, pick.against === savedSample, choose(savedSample)) : null,
+      radio("vt-against", "field", field.available ? `Household field (${size(field)})` : "Household field (unavailable)",
+        pick.against === "field", choose("field")),
       others.length ? radio("vt-against", "deck", "One deck:", named(pick.against),
-        () => { pick.against = select.value; select.disabled = false; refresh(); }) : null,
+        () => selectAgainst(select.value)) : null,
       others.length ? select : null]);
     select.disabled = !named(pick.against);
     const fieldInput = againstHost.querySelector('input[value="field"]');
@@ -976,14 +995,16 @@ async function vtOpenTestSheet() {
   estimateFor(VT_POPULAR).then((est) => {
     if (!current() || !est?.available || !est.opponents) return;
     popular = est;
-    if (pick.against === "field" && !field.available) {       // nothing else to offer first
+    if (!savedSample && !explicitOpponent) {
       pick.against = VT_POPULAR;
       drawAgainst();
       refresh();
       return;
     }
     drawAgainst();
-  }).catch(() => {});
+  }).catch(() => {}).finally(() => {
+    if (current()) { preferredChecked = true; syncStart(); }
+  });
   function drawHow(est) {
     const times = est || {};
     const maxAhead = (times.max && times.max.ahead) || 1600;
@@ -1009,12 +1030,14 @@ async function vtOpenTestSheet() {
       pick.estimate = est;
       showProblem(null);
       if (against === "field" && !est.available) {
-        if (popular) { pick.against = VT_POPULAR; drawAgainst(); refresh(); return; }
-        if (others.length) { pick.against = others[0].id; drawAgainst(); refresh(); return; }
-        showProblem(est.problem || "There's no deck to test against.");
+        if (!explicitOpponent) {
+          const fallback = popular ? VT_POPULAR : others[0]?.id;
+          if (fallback) { pick.against = fallback; drawAgainst(); refresh(); return; }
+        }
+        showProblem(est.problem || "The household field is unavailable.");
       } else if (against === savedSample) {
-        sampleCaption.textContent = sampleReady() ? `Saved sample from Testing (${size(est)})`
-          : "Saved sample from Testing";
+        sampleCaption.textContent = sampleReady() ? `Saved popular-deck sample (${size(est)})`
+          : "Saved popular-deck sample";
         if (!sampleReady()) showProblem(est.problem || "This saved sample is unavailable.");
       } else if (against === VT_POPULAR && !est.available) {
         showProblem(est.problem || "There are no popular decks to test against.");

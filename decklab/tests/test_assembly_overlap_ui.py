@@ -87,14 +87,14 @@ class AssemblyOverlapUiTests(unittest.TestCase):
           window.matchMedia('(min-width: 1000px)').matches=false;drawAssembly(data,routeToken);await settle();const v=packingProgressView;
           const notice=v.results.querySelector('.pack-overlap');assert(notice);assert.equal(notice.getAttribute('role'),'note');
           assert.equal(notice.querySelectorAll('button').length,0);assert.equal(notice.querySelectorAll('a').length,0);
-          assert(!notice.textContent.includes('Not a participant'));assert(notice.textContent.includes('Play-now list'));
+          assert(!notice.textContent.includes('Not a participant'));assert(notice.textContent.includes('Alternative list'));
           assert(notice.textContent.includes('4 needed; 0 assigned; 0 waiting; 4 missing'));
           const ids=v.ticks.map(t=>t.id),scope=v.progress.scope,selected=JSON.stringify(v.selected),captions=v.packViewerEntries.map(e=>e.caption);
           assert.equal(v.ticks.length,3);assert.equal(v.bar.progress.copies.textContent,'0 / 5');
           for(const tick of v.ticks){const pill=tick.tile.querySelector('.pack-overlap-pill');
             if(tick.node.getAttribute('data-pack-tick').startsWith('return|'))assert(!pill);
             else{assert(pill&&pill.parentNode===tick.tile);assert(!tick.tile.querySelector('.card-tile-open').contains(pill));
-              assert(!tick.node.contains(pill));assert(pill.textContent.includes('Play-now list'));}}
+              assert(!tick.node.contains(pill));assert(pill.textContent.includes('Alternative list'));}}
           const calls=[];mockApi((path,body)=>{calls.push([path,body]);throw new Error('view only');});v.switcher.panels[1].button.click();
           same(v.ticks.map(t=>t.id),ids);assert.equal(v.progress.scope,scope);assert.equal(JSON.stringify(v.selected),selected);
           same(v.packViewerEntries.map(e=>e.caption),captions);same(calls,[]);assert(!packCanFinish(v));
@@ -107,7 +107,7 @@ class AssemblyOverlapUiTests(unittest.TestCase):
           drawAssembly(data,routeToken);await settle();const v=packingProgressView,pill=v.ticks[0].tile.querySelector('.pack-overlap-pill');
           const short=pill.querySelector('.pack-overlap-short'),full=pill.querySelector('.pack-overlap-full');
           assert.equal(short.textContent,'Also needed');assert.equal(short.getAttribute('aria-hidden'),'true');
-          assert.equal(full.textContent,'Also needed by '+other+' (Play-now list)');assert.equal(full.getAttribute('aria-hidden'),null);
+          assert.equal(full.textContent,'Also needed by '+other+' (Alternative list)');assert.equal(full.getAttribute('aria-hidden'),null);
           assert.equal(pill.getAttribute('title'),full.textContent);assert.equal(pill.children.filter(n=>n.getAttribute('aria-hidden')!=='true').length,1);
           assert(pill.parentNode===v.ticks[0].tile);assert(!v.ticks[0].tile.querySelector('.card-tile-open').contains(pill));
           assert(v.results.querySelector('.pack-overlap').textContent.includes(other));assert.equal(pill.querySelectorAll('button').length,0);

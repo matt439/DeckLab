@@ -31,7 +31,7 @@ class BoxEditorUiTests(unittest.TestCase):
         self.run_js(r'''
           const {sheet}=await openBox();allFound(sheet);found(sheet,2,'1');found(sheet,4,'0');found(sheet,5,'0');reviewButton(sheet).click();
           same(listActions(sheet).map(node=>node.getAttribute('aria-label')),['Review a deck list: Recorded Elf (Deck, missing)',
-            'Review a deck list: Named physical marker (Deck, missing)']);assert(sheet.body.textContent.includes('Identify this physical stand-in first'));
+            'Review a deck list: Named physical marker (Deck, missing)']);assert(sheet.body.textContent.includes('Identify this physical placeholder first'));
           assert(!listActions(sheet).some(node=>node.getAttribute('aria-label').includes('Missing spell')));
           assert.equal(boxEditorObservation({id:'casual/a',title:'Elves'},{meta:boxMeta()},{section:'Deck',kind:'marker',name:null,for:'Target',quantity:1},'missing'),null);
         ''')

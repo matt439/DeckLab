@@ -12,7 +12,7 @@ function ownedSection(data) {
   if (data.sections && !Object.values(data.sections).some(lines => lines.length)) return null;
   const o = data.owned;
   const section = el("section", { class: "deck-section deck-prices", id: "sec-owned", "aria-labelledby": "h-owned" },
-    el("h2", { id: "h-owned", text: "Prices" }));
+    el("h2", { id: "h-owned", text: `Buying estimates · ${listName(data.version)}` }));
   if (!o) {
     section.append(el("div", { class: "box box-warn", text: "What's owned and needed couldn't be worked out. The warnings at the top say why." }));
     return section;
@@ -27,22 +27,25 @@ function ownedSection(data) {
       (o.rows.some((r) => r.listed_printing) ? '"As listed" is the printing and finish your list names. ' : "") +
       "Check a shop such as MTGMate before buying.",
   t.unpriced && t.unpriced.length ? ` No price for: ${t.unpriced.join(", ")}.` : "");
-  if (!t.missing) {
+  const availability = deckAvailability(o);
+  if (!availability.confirmed) {
+    section.append(el("p", { class: "box box-warn", text: "Availability needs checking before using the quantities or estimates here." }));
+  } else if (!t.missing) {
     section.append(el("p", { class: "deck-prices-none" },
       "Nothing to buy: every card this list counts is owned or on the way. Basic lands aren't counted."));
   }
-  const coming = deckAvailability(o).coming;
+  const coming = availability.coming;
   if (t.missing || coming) {
-    const cost = t.missing && !o.price_error ? `, about ${ansMoney(t.aud_missing, o)} at the cheapest printings` : "";
+    const cost = t.missing && availability.aud != null
+      ? `, about ${ansMoney(availability.aud, o)} at the cheapest printings${availability.priced ? "" : " for priced cards"}` : "";
     const summary = t.missing ? `${t.missing} missing${cost}` : `${coming} on the way`;
     const details = el("details", { class: "more deck-price-table" },
       el("summary", { text: `Price table: ${summary}` }),
-      el("p", { class: "sub", text: "On the way counts as owned. Copies in built decks or intact products aren't free. " +
-        "Basic lands aren't counted." }));
+      el("p", { class: "sub", text: "Incoming copies reduce shortages. Cards held elsewhere and loans reduce what you can use. Basic lands are outside this count." }));
     details.append(ownedTable(o, { frame: details, owner: section, data }), priceNote);
+    add(details, [asListedLine(o)]);
     section.append(details);
   }
-  add(section, [staleTableBox(data)]);    // editor-deckpage.js: the deck's own table is out of date (null otherwise)
   if (o.conflicts && o.conflicts.length) section.append(conflictsBox(o.conflicts));
   if (o.unresolved && o.unresolved.length) {
     section.append(el("div", { class: "box box-warn" }, el("h3", { text: "Names that aren't Scryfall cards" }),

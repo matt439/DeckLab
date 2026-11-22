@@ -37,7 +37,7 @@ def combined_view(decks=None):
     """GET /api/shopping/combined?decks=ID,ID[,...]: the combined shortfall.
 
     Answers {ready, decks: [{id, title, kind, status, player, missing_alone}], rows: [{name,
-    missing, missing_alone, need, available, on_the_way: [{source, copies}], held_elsewhere,
+    missing, missing_alone, need, available, on_the_way: [{source, copies}], held_elsewhere, lent_out (if any),
     decks: [{id, title, need, missing_alone}], card}], totals: {cards, copies, copies_alone,
     on_the_way (every copy on the way the decks count on)}, errors, warnings}. ready is False, with no rows, when the pool or a chosen
     deck couldn't be fully counted: a partial answer would understate the shortfall."""
@@ -165,7 +165,7 @@ def _count(summaries, load_supply, *, include_incoming=False):
                     "missing_alone": alone[deck["id"]][row["name"]]["missing"]}
                    for deck in chosen if row["name"] in alone[deck["id"]]]
         held = [(holder, holder.cards[row["name"]]) for holder in supply.in_use
-                if holder.id not in own and holder.cards.get(row["name"])]
+                if holder.id not in own and holder.why != "lent out" and holder.cards.get(row["name"])]
         rows.append({
             "name": _canonical(row["name"]),
             "need": row["need"],
@@ -174,6 +174,7 @@ def _count(summaries, load_supply, *, include_incoming=False):
             "missing_alone": sum(deck["missing_alone"] for deck in wanting),
             "on_the_way": waiting,
             "held_elsewhere": [{"title": _holder_title(holder, sees), "copies": copies} for holder, copies in held],
+            **({"lent_out": row["lent_out"]} if row.get("lent_out") else {}),
             "decks": wanting,
             "card": None,
         })

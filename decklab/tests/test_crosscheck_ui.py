@@ -52,6 +52,8 @@ class CrosscheckUiTests(unittest.TestCase):
           const node=mount();same(calls,[]);same(writes,[]);
           answers=[base()];buttonText(node,'Choose a deck to test against').click();await settle();
           assert(calls[0].startsWith('/api/crosscheck?id=casual%2Ftest&version=target'));
+          same(node.querySelector('#cc-opponent').children.map(option=>option.textContent),
+            ['Choose an opponent…','Blue Deck','Elves (Alternative list)']);
           assert(buttonText(node,'Run both simulators').disabled);same(writes,[]);
         """)
 

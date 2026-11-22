@@ -321,6 +321,22 @@ def load_golden(name, adapted=False):
     """A golden as recorded, normalised (as every dump compared with it is) by gate_p4.EXPECTED_P4:
     the differences phase 4 makes on purpose (no git, deck ids, hidden inventory)."""
     expected = expected_p4(json.loads(golden_path(name, adapted).read_text(encoding="utf-8")))
+    for view in [expected, *(expected.get("by_viewer") or {}).values()]:
+        for page in (view.get("deck_view") or {}).values():
+            if not isinstance(page, dict):
+                continue
+            owned = page.get("owned")
+            if isinstance(owned, dict):
+                owned.setdefault("availability_confirmed", not owned.get("warnings") and not owned.get("unresolved"))
+            stats = page.get("stats")
+            if not isinstance(stats, dict) or "counts" not in stats:
+                continue
+            # Each casual list in these historical fixtures is under 60 and meets its copy limits.
+            # The deck-rule tests cover the remaining cases, including sideboards and copy limits.
+            count = stats["counts"]["deck"]
+            words = "card" if count == 1 else "cards"
+            stats.setdefault("casual_problems",
+                             [f"{count} {words}; a casual deck has at least 60."] if stats["kind"] == "constructed" else None)
     if SCENARIOS.get(name) is built_decks_and_kits:
         # This historical fixture has one ordinary built deck, with a single physical list
         # and no markers. Require its exact audit projection in raw and adapted readers.

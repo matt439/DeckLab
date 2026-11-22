@@ -32,19 +32,115 @@ function openDeckUpgradeChecklist(data, seed = []) {
   return openUpgradeChecklist(() => deckScreen === screen, data, seed);
 }
 
-function deckUpgradeChecklistButton(screen) {
-  if (!deckUpgradeChecklistOffered(screen.data)) return null;
-  return el("button", { type: "button", class: "btn", text: "Card checklist", onclick: event => {
-    if (event.currentTarget.isConnected && deckScreen === screen && screen.view.tab === "cards") {
-      openDeckUpgradeChecklist(screen.data);
-    }
+function deckFindAndBuyButton(screen) {
+  const data = screen.data;
+  if (!deckUpgradeChecklistOffered(data) && !deckBuyingCanCount(data)) return null;
+  return findAndBuyButton(() => deckScreen === screen, data);
+}
+
+function findAndBuyButton(currentPage, deck = null) {
+  if (!deck && !state.profile?.id) return null;
+  return el("button", { type: "button", class: "btn deck-find-and-buy", text: "Find and buy cards", "aria-haspopup": "dialog",
+    onclick: event => openFindAndBuy(currentPage, deck, event.currentTarget) });
+}
+
+function deckBuyingCanCount(data) {
+  return "owned" in data && seesInventory(data.summary.space || deckSpaceOf(data.summary.id));
+}
+
+/** The two sources stay independent. The chooser itself never changes a checklist, collection or queue. */
+function openFindAndBuy(currentPage, deck, trigger) {
+  const profile = state.profile, token = routeToken, hash = location.hash;
+  const pageCurrent = () => profile === state.profile && token === routeToken
+    && hash === location.hash && currentPage();
+  if (!trigger.isConnected || !pageCurrent()) return null;
+  const current = () => pageCurrent() && !sheet.closed && sheet.dialog.isConnected;
+  let next = null;
+  const sheet = colOpenSheet("Find and buy cards", { onClose: () => {
+    if (next && pageCurrent()) next();
   } });
+  sheet.dialog.classList.add("deck-buying-sheet");
+  sheet.heading.setAttribute("tabindex", "-1");
+  const focusHeading = () => {
+    sheet.body.scrollTop = 0;
+    sheet.heading.focus({ preventScroll: true });
+  };
+  const closeThen = action => {
+    next = action;
+    sheet.close();
+  };
+  const choose = (label, description, onclick) => el("div", {},
+    el("button", { type: "button", class: "btn", text: label, onclick: event => {
+      if (current() && sheet.dialog.contains(event.currentTarget)) onclick();
+    } }), el("p", { class: "sub", text: description }));
+  function drawChoices() {
+    sheet.heading.textContent = "Find and buy cards";
+    const manual = !deck || deckUpgradeChecklistOffered(deck);
+    const recorded = deck ? deckBuyingCanCount(deck) : memberOwnSpace();
+    add(clear(sheet.body), [
+      deck ? el("p", { text: `${deck.summary.title} · ${listName(deck.version)}` }) : null,
+      manual ? choose("Check copies at home",
+        "Save a private checklist for the copies you check, set aside or decide to buy.",
+        () => closeThen(() => openUpgradeChecklist(pageCurrent, deck))) : null,
+      recorded ? choose("Use recorded collection", deck
+        ? "Count shortages for this list using the recorded collection and incoming copies."
+        : "Count shortages for all your saved Planned lists together, with each copy allocated once.",
+      () => deck ? drawRecorded() : closeThen(openMemberNeeds)) : null,
+      !deck && seesHomeInventory(state.may)
+        ? el("a", { href: "#/shopping", class: "btn", text: "Open shared Shopping" }) : null
+    ]);
+    sheetActions(sheet, [{ text: "Close", onclick: () => sheet.close() }]);
+    focusHeading();
+  }
+  function drawRecorded() {
+    sheet.heading.textContent = "Missing for this list";
+    const owned = deck.owned;
+    const availability = deckAvailability(owned);
+    const counts = deckBuyingCounts(deck.summary, availability);
+    const rows = counts ? owned.rows.filter(row => row.missing > 0) : [];
+    add(clear(sheet.body), [
+      el("p", { text: `${deck.summary.title} · ${listName(deck.version)}` }),
+      el("p", { class: "sub", text: "Calculated from the recorded collection when this deck loaded. Incoming copies reduce the shortage. Ordinary basic lands are excluded." }),
+      counts ? el("p", { text: counts }) : el("p", { class: "box box-warn", text: "Availability needs checking before you use these quantities." }),
+      counts && availability.missing && availability.aud != null ? el("p", { class: "sub", text:
+        `About ${ansMoney(availability.aud, owned)} for ${availability.priced ? "the missing copies" : "the missing copies with prices"}.` }) : null,
+      counts && availability.missing ? asListedLine(owned) : null,
+      !counts ? el("button", { type: "button", class: "btn", text: "Refresh availability",
+        onclick: () => { if (current()) closeThen(() => route()); } }) : null,
+      rows.length ? el("ul", { class: "card-list" }, rows.map(row =>
+        el("li", { text: `${row.missing} × ${row.name}` }))) : null,
+      deckUpgradeChecklistOffered(deck) ? choose("Check copies at home",
+        "Check any unrecorded copies before using a shop list.",
+        () => closeThen(() => openDeckUpgradeChecklist(deck))) : null,
+      deckQueueMissingOffered(deck) ? choose("Review Planned list for the shared queue",
+        "Review current Planned shortages and decide which copies to queue for home. Save records buying intent.",
+        () => closeThen(() => openQueueMissingSheet(deck.summary, trigger))) : null
+    ]);
+    sheetActions(sheet, [{ text: "Back", onclick: () => { if (current()) drawChoices(); } },
+      counts && rows.length ? { text: "Copy missing for this list", kind: "primary", onclick: event => {
+        if (current()) copyDeck(deck, { missing: true }, event.currentTarget);
+      } } : null]);
+    focusHeading();
+  }
+  drawChoices();
+  return sheet;
+}
+
+function deckBuyingCounts(summary, availability) {
+  if (!availability?.confirmed) return null;
+  const { here, coming, held, lent, missing } = availability;
+  const packed = summary.status === "built" || summary.read_only;
+  return [here ? `${here} ${packed ? "here for this list" : "free now"}` : null,
+    coming ? `${coming} on the way` : null,
+    held ? `${held} held in other decks or products` : null,
+    lent ? `${lent} lent out` : null,
+    missing ? `${missing} missing` : "No recorded shortages"].filter(Boolean).join(" · ");
 }
 
 async function openUpgradeChecklist(currentPage = () => true, deck = null, seed = []) {
   const profile = state.profile, token = routeToken, hash = location.hash;
   if (!profile?.id || parseHash().path !== (deck ? "deck" : "library") || !currentPage()) return null;
-  const sheet = colOpenSheet(deck ? "Card checklist" : "Check cards for a deck");
+  const sheet = colOpenSheet("Check copies at home");
   const query = deck ? `?deck=${encodeURIComponent(deck.summary.id)}` : "";
   const path = `/api/profiles/${encodeURIComponent(profile.id)}/deck-checklist${query}`;
   const current = () => !sheet.closed && sheet.dialog.isConnected && state.profile === profile
@@ -221,7 +317,8 @@ function drawUpgradeChecklist(view, saved, seed = []) {
   title.addEventListener("input", edit);
   names.addEventListener("input", edit);
   add(root, [deck ? el("p", { text: deck.summary.title }) : null,
-    el("p", { class: "sub", text: "Your private checklist works with just card names. Save it to pick up on another device." }),
+    el("p", { class: "sub", text: "Save to your private checklist and resume on another device. The list tracks your decisions separately from the collection, purchases and shared queue." }),
+    deck && deckPicker ? el("p", { class: "sub", text: `The picker uses the ${listName(deck.version, true)}. Your saved checklist is shared across this deck's lists.` }) : null,
     deckPicker, deck ? null : field("Deck name (optional)", title), field("Card names, one copy per line", names),
     el("div", { class: "actions" }, addButton), progress, message, reload, totals, buyField, list]);
   clear(sheet.body).append(root);

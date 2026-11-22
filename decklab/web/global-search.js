@@ -239,7 +239,9 @@ function gsItem(box, group, item) {
   const meta = group.id === "collection" ? gsCounts(item)
     : [gsUse(item), (item.card && item.card.type_line) || ""].filter(Boolean).join(" · ");
   return el("button", { type: "button", class: "gs-item gs-pick", disabled: item.card ? null : true,
-    onclick: (e) => { if (item.card) openCard(item.card, e.currentTarget); } },
+    onclick: (e) => {
+      if (item.card && e.currentTarget.isConnected) openCard(item.card, e.currentTarget, {inventorySpace: ownSpace()});
+    } },
   el("span", { class: "gs-name", text: item.name }), meta ? el("span", { class: "gs-meta", text: meta }) : null);
 }
 
@@ -254,7 +256,7 @@ function gsUse(item) {
   if (item.decks_complete === false) parts.push("deck check incomplete");
   else if (!item.decks && item.decks_complete === true) parts.push("in no decks");
   if (item.lent > 0) parts.push(`${num(item.lent)} lent out`);
-  parts.push(item.free ? `${num(item.free)} free` : "none free");
+  parts.push(item.free ? `${num(item.free)} free now` : "none free now");
   return parts.join(" · ");
 }
 
@@ -263,7 +265,7 @@ function gsUse(item) {
 function gsCounts(item) {
   const parts = item.basic || item.free == null ? [`${item.owned} owned`, item.basic ? "in decks not tracked" : null]
     : item.decks != null ? [gsUse(item)]
-      : [`${item.free} free`, item.in_use ? `${item.in_use} in decks` : null,
+      : [`${num(item.free)} free now`, item.in_use ? `${num(item.in_use)} held` : null,
         item.lent > 0 ? `${num(item.lent)} lent out` : null];
   if (item.incoming) parts.push(`${item.incoming} on the way`);
   return parts.filter(Boolean).join(" · ");
@@ -295,7 +297,7 @@ async function gsAllCards(box, trigger, q) {
     const answer = await api(`/api/search?${new URLSearchParams({ q, group: "cards", limit: String(GS_SEE_ALL) })}`);
     if (!current()) return;
     const found = ((answer.groups || [])[0] || { items: [] }).items.map((item) => item.card).filter(Boolean);
-    if (found.length) openCardViewer(found, 0, { trigger });
+    if (found.length) openCardViewer(found, 0, { trigger, inventorySpace: ownSpace() });
   } catch (error) {
     if (current()) toast(error.message || "The cards couldn't be loaded.");
   }

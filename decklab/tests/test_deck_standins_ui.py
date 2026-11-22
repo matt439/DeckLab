@@ -101,6 +101,19 @@ class DeckStandinsUiTests(unittest.TestCase):
           assert.equal(printed, 2);
         """)
 
+    def test_the_box_keeps_its_actual_placeholders_while_viewing_another_list(self):
+        self.run_js("""
+          const page = withStandins();
+          page.summary.status = 'built';
+          page.assembled = { version:'owned', intended_version:'target', changed:true, main_count:60, sideboard_count:0 };
+          page.packed_placeholders = { ...page.standins, version:'owned', rows:[page.standins.rows[0]] };
+          const box = deckAssemblySection(page);
+          assert(box.textContent.includes('Packed in this box'));
+          assert(box.textContent.includes('Alternative list · 60 main-deck cards'));
+          assert(box.textContent.includes('Physical marker stands for Elf'));
+          assert(!box.textContent.includes('Any card stands for Bolt'));
+        """)
+
     def test_absent_empty_and_warning_only_projections(self):
         self.run_js("""
           const page = makePage();
@@ -129,7 +142,7 @@ class DeckStandinsUiTests(unittest.TestCase):
           printDeck(page);
           let sheet = document.querySelector('.print-sheet');
           assert(!sheet.textContent.includes('Physical marker'));
-          assert(!sheet.textContent.includes('Stand-ins'));
+          assert(!sheet.textContent.includes('Physical placeholders'));
           window.fire('afterprint');
           // The id is the authoritative fallback when an older summary omits space.
           delete page.summary.space;

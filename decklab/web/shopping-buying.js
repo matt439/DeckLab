@@ -76,8 +76,8 @@ function shopMissingCards(view) {
   if (warnings.length) add(content, [warningsBox(warnings, "Missing-card counts need review")]);
   if (rows.length) content.append(el("div", {class: "shop-missing-rows"},
     rows.map(item => shopMissingCard(item, view.data.to_buy || []))));
-  return shopSection("shop-missing-cards", "Missing cards across decks", rows.length,
-    "Every home deck's Planned shortfall, added up; a shared copy may count twice. Shop lines are saved checks.", content);
+  return shopSection("shop-missing-cards", "Missing by deck", rows.length,
+    "Each Planned list is checked separately against the recorded collection. The same loose copy can cover more than one list here. Shop lines are saved checks.", content);
 }
 
 /** Group copies of the current queue without changing saved state, order or row identifiers. */

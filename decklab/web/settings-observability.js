@@ -7,7 +7,7 @@ function settingsErrorReferences() {
   const list = el("div", {}, el("p", {class: "sub", text: "Show the most recent reported references."}));
   const refresh = el("button", {type: "button", class: "btn btn-secondary", text: "Show references"});
   const panel = el("section", {class: "panel settings-part", id: "settings-errors"},
-    el("h2", {text: "Page-error references"}),
+    el("h3", {text: "Page-error references"}),
     el("p", {class: "sub", text: "Reported errors only. References contain no person, deck, message or file details."}), refresh, list);
   const owner = {profile: state.profile, token: routeToken, hash: location.hash, main: $("#main")};
   const here = () => state.profile === owner.profile && routeToken === owner.token && location.hash === owner.hash
@@ -52,7 +52,7 @@ function settingsDataSources() {
   const list = el("div", {}, el("p", {class: "sub", text: "Show each download's last good fetch and last failure."}));
   const refresh = el("button", {type: "button", class: "btn btn-secondary", id: "settings-data-sources-show", text: "Show data sources"});
   const panel = el("section", {class: "panel settings-part", id: "settings-data-sources", "aria-labelledby": "settings-data-sources-title"},
-    el("h2", {id: "settings-data-sources-title", text: "Data sources"}),
+    el("h3", {id: "settings-data-sources-title", text: "Data sources"}),
     el("p", {class: "sub", text: "When Deck Lab last fetched each download it relies on, and when a fetch last failed. The server log on the PC says why."}),
     list, el("div", {class: "actions"}, refresh));
   const owner = {profile: state.profile, token: routeToken, hash: location.hash, main: $("#main")};

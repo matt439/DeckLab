@@ -23,7 +23,8 @@ def _counts(sections):
     return result
 
 
-def _recipe(sections):
+def recipe_counts(sections):
+    """Count each printing and finish in its section, independent of line order and grouping."""
     result = Counter()
     for section, lines in sections.items():
         for line in lines:
@@ -34,7 +35,7 @@ def _recipe(sections):
 def _availability(deck, version, p, result):
     if result is None and p is not None:
         result = pool.owned_vs_needed(deck.deck_id, version, pool=p, prices=False)
-    if result is None or result.get("warnings") or result.get("unresolved"):
+    if result is None or result.get("availability_confirmed") is False or result.get("warnings") or result.get("unresolved"):
         return None
     return {row["name"]: {"missing": row["missing"],
                            "on_the_way": sum(qty for _, qty in pool.row_labels(row)["on_the_way"])}
@@ -114,4 +115,4 @@ def project(deck, p=None, result=None, *, version="target", sections=None, stand
             "sideboard_count": sum(actual_counts.get("Sideboard", {}).values()),
             "sideboard_intended": sum(intended_counts.get("Sideboard", {}).values()),
             "remaining_count": sum(row["remaining"] for row in remaining), "remaining": remaining,
-            "changed": _recipe(actual) != _recipe(intended) or bool(remaining)}
+            "changed": recipe_counts(actual) != recipe_counts(intended) or bool(remaining)}

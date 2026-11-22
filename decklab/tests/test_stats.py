@@ -731,14 +731,17 @@ class TestDeckRules(unittest.TestCase):
         self.assertEqual((result["kind"], result["problems"], result["commander"]), ("constructed", [], None))
 
     def test_casual_size_and_copies(self):
-        result = self.rules("Deck\n3 Llanowar Elves\n1 Llanowar Elves (FDN) 227\n8 Seven Dwarves\n"
-                            "30 Forest\n\nSideboard\n2 Llanowar Elves\n1 Mystery Card\n4 Mystery Card\n")
+        text = ("Deck\n3 Llanowar Elves\n1 Llanowar Elves (FDN) 227\n8 Seven Dwarves\n"
+                "30 Forest\n\nSideboard\n2 Llanowar Elves\n1 Mystery Card\n4 Mystery Card\n")
+        result = self.rules(text)
         # "(deck and sideboard together)" only for a card with copies in the sideboard.
         self.assertEqual(result["problems"], [
             "42 cards; a casual deck has at least 60.",
             "6 copies of Llanowar Elves (deck and sideboard together); a deck can have at most 4.",
             "5 copies of Mystery Card (deck and sideboard together); a deck can have at most 4.",
             "8 copies of Seven Dwarves; a deck can have at most 7."])
+        self.assertEqual(stats.deck_stats(decks.parse_decklist(text), "constructed")["casual_problems"],
+                         result["problems"])
 
     def test_a_card_that_allows_only_one(self):
         # "A deck can have only one card named Once More with Feeling."

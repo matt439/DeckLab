@@ -1,6 +1,8 @@
 /* A physical count against the deck or storage section as it was when scanning started. */
 "use strict";
 
+const CARD_AUDIT_TEMPORARY = "Closing clears the counted cards and this difference report.";
+
 function cardAuditLabel(row, mode) {
   if (row.manualLabel) return row.manualLabel;
   if (mode === "deck" || row.manual) return row.canonical_name || row.name;
@@ -55,7 +57,8 @@ function startCardAudit(target) {
     return { row, input, node: el("label", { class: "field" },
       el("span", { text: label }), el("span", { class: "sub", text: `${num(row.quantity)} expected` }), input) };
   });
-  const ctx = openAuditScan({ ...target, finish, manualDescription: () =>
+  const instructions = [target.instructions, CARD_AUDIT_TEMPORARY].filter(Boolean).join(" ");
+  const ctx = openAuditScan({ ...target, instructions, finish, manualDescription: () =>
     fields.some(({ input, row }) => input.value.trim() !== (row.quantity === 0 ? "0" : ""))
       ? "Closing clears your hand counts." : "" });
   if (ctx && fields.length) {
@@ -107,6 +110,7 @@ function showCardAuditResult(ctx, result, skipped) {
   const noDiff = !result.missing.length && !result.extra.length;
   clear(sheet.body);
   add(sheet.body, [heading, el("p", { text: `${num(result.observed)} counted · ${num(result.expected)} expected` }),
+    el("p", { class: "sub", text: CARD_AUDIT_TEMPORARY }),
     skipped ? el("p", { class: "box box-warn", text: `${plural(skipped, "photo")} skipped. Only identified cards and hand counts are included.` }) : null,
     result.estimated ? el("p", { class: "sub", text: "Some expected loose counts are estimates because the copies held elsewhere are uncertain." }) : null,
     noDiff ? el("p", { class: skipped || result.estimated ? "box box-info" : "box box-good",

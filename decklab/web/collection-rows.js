@@ -58,14 +58,14 @@ function drawCollectionRows(data, space, token = null) {
   cv.priceNote = el("p", { class: "price-note col-price-note" });
   cv.list = el("div", { class: "col-row-list" });
   cv.preview = el("aside", { class: "col-preview", role: "region", "aria-label": "Selected collection row" });
-  const tools = el("div", { class: "toolbar col-row-tools" },
+  cv.rowTools = el("div", { class: "toolbar col-row-tools" },
     el("label", { class: "field col-row-search", for: search.id }, el("span", { class: "sr-only", text: "Search the list" }), search),
     el("button", { type: "button", class: "btn col-row-filter-toggle", text: "Filter and sort",
       onclick: () => colRowFilters(cv) }),
     el("div", { class: "filter-chips filter-chips-scroll col-row-filter-options" }, cv.storageChoice, colLocationFilter(cv)));
+  cv.rowActions = el("div", { class: "actions col-row-actions" }, colBulkButton(cv), colBulkSelectionTools(cv), cv.count);
   const root = el("div", { class: "collection-page col-rows-page" }, colHead(cv),
-    cv.unsupported ? null : [cv.boxNote, cv.forecastNote, cv.unrecordedChoice, tools,
-      el("div", { class: "actions col-row-actions" }, colBulkButton(cv), colBulkSelectionTools(cv), cv.count),
+    cv.unsupported ? null : [cv.boxNote, cv.forecastNote, cv.unrecordedChoice, cv.rowTools, cv.rowActions,
       colLocationBatchTools(cv), cv.storageGuide,
       el("div", { class: "col-row-layout" }, cv.list, cv.preview), cv.priceNote]);
   cv.root = root;
@@ -116,6 +116,7 @@ function drawColRowList(cv) {
   const pageFocus = pager && focused.matches("button") ? {
     label: pager.getAttribute("aria-label"), action: focused.getAttribute("aria-label") } : null;
   const rows = cv.rows || [];
+  cv.rowTools.hidden = cv.rowActions.hidden = cv.preview.hidden = !rows.length;
   const unrecorded = rows.filter(colUnrecorded).length;
   cv.unrecordedLabel.textContent = `Condition or language not recorded: ${plural(unrecorded, "row")}`;
   cv.unrecordedChoice.hidden = !unrecorded;
@@ -147,9 +148,7 @@ function drawColRowList(cv) {
   };
   clear(cv.list);
   if (!rows.length) {
-    cv.list.append(el("div", { class: "empty" }, el("p", { text: "No cards recorded yet." }),
-      cv.editable && !cv.unsupported ? el("button", { type: "button", class: "btn col-mutate", text: "Start with physical cards",
-        onclick: () => openCollectionStartSheet(cv) }) : null));
+    cv.list.append(colFindEmpty(cv, false));
   } else if (!shown.length) {
     // Emptied by the search or the filters: the one way back is to clear them.
     cv.list.append(emptyBox("No rows match the search and filters.", el("button", { type: "button", class: "btn",
@@ -453,6 +452,7 @@ function colDrawPreview(cv, row) {
 /** One casual row opens the existing viewer/edit flow; it has no table roles or nested controls. */
 function colCasualRow(cv, row) {
   const key = colKey(row), card = cv.pictures[key], price = colPrice(cv, row);
+  const estimate = price == null ? colUnknown("No price") : `~${ansMoney(price, cv.prices)} each`;
   const condition = row.condition ? COL_CONDITIONS.find(([value]) => value === row.condition)?.[2] || row.condition : null;
   const language = row.language ? COL_LANGUAGES.find(([value]) => value === row.language)?.[1] || row.language : null;
   const details = [row.condition === "NM" ? null : condition || "Condition not recorded",
@@ -460,6 +460,7 @@ function colCasualRow(cv, row) {
   const caption = el("span", { class: "col-viewer-words" },
     el("span", { class: "col-viewer-counts", text: `${plural(Number(row.quantity), "copy", "copies")} \u00b7 ${colPrinting(row)}` }),
     el("span", { class: "col-viewer-note", text: colStorageWords(cv, row) }),
+    price != null ? el("span", { class: "col-viewer-note" }, "Reference price ", estimate) : null,
     colPackingHints(cv, row),
     card?.exact === false ? el("span", { class: "col-viewer-note", text: "Picture of another printing" }) : null,
     row.notes ? el("span", { class: "col-viewer-note", text: row.notes }) : null,
@@ -472,7 +473,7 @@ function colCasualRow(cv, row) {
     el("span", { class: card?.img_small ? "col-casual-picture" : "col-casual-picture thumb-missing", "aria-hidden": "true" }, card?.img_small
       ? el("img", { src: card.img_small, alt: "", loading: "lazy", decoding: "async", width: 56, height: 78 }) : null),
     el("span", { class: "col-casual-name", text: row.name }),
-    el("span", { class: "col-casual-price" }, price == null ? colUnknown("No price") : `~${ansMoney(price, cv.prices)} each`),
+    cv.sort.key === "price" ? el("span", { class: "col-casual-price" }, estimate) : null,
     el("span", { class: "col-casual-meta", text: [plural(Number(row.quantity), "copy", "copies"), colPrinting(row), ...details].join(" \u00b7 ") }),
     el("span", { class: "col-casual-storage", text: colStorageWords(cv, row) }));
   if (card) viewerItem(node, card, "collection-casual-rows", caption);

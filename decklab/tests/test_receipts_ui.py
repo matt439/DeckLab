@@ -238,8 +238,8 @@ class ReceiptBoardTests(unittest.TestCase):
           assert(text.includes('Deck tables updated: Alpha Deck.'));
           assert(text.includes('Not updated: Beta Deck (the receipt changes it itself), Gamma Deck (its Sleeves or Deck box would change).'));
           // The skipped tables wait on the Decks page's list, which exists: a link to it, not words about a button.
-          assert(text.includes("They're on the Decks page's Tables out of date list, where Update all refreshes them."));
-          const later=main.querySelectorAll('a').filter((a)=>a.textContent==='Tables out of date');
+          assert(text.includes("On Decks, open Availability needs updating and choose Update all."));
+          const later=main.querySelectorAll('a').filter((a)=>a.textContent==='Availability needs updating');
           assert.equal(later.length,1);assert.equal(later[0].getAttribute('href'),'#/library?tables=1');
           assert(!text.includes('Update their tables'));
           assert(!main.querySelector('.rcpt-tick'));
@@ -254,8 +254,8 @@ class ReceiptBoardTests(unittest.TestCase):
             tables:{written:[],skipped:[],error:'Cannot refresh from an incomplete card pool'}});
           await applyDelivery(view);
           assert(main.textContent.includes("The deck tables weren't updated: Cannot refresh"));
-          assert(main.textContent.includes("They're on the Decks page's Tables out of date list"));
-          assert.equal(main.querySelectorAll('a').find((a)=>a.textContent==='Tables out of date').getAttribute('href'),
+          assert(main.textContent.includes("On Decks, open Availability needs updating"));
+          assert.equal(main.querySelectorAll('a').find((a)=>a.textContent==='Availability needs updating').getAttribute('href'),
                        '#/library?tables=1');
         """)
 

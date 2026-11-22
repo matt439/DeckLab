@@ -6,14 +6,20 @@
 
 const PRECON_SEARCH_MS = 250;       // wait this long after typing before searching
 
+function ownedPreconHref(space, file = null) {
+  const hash = colHash(space), query = new URLSearchParams({open: "precon"});
+  if (file) query.set("precon", file);
+  return `${hash}${hash.includes("?") ? "&" : "?"}${query}`;
+}
+
 /** "Add a precon": find a published precon (MTGJSON's lists), see its cards, then add them to this
  * collection and make its built deck, in one save (lib/api/precons.py). */
-function openPreconSheet(cv) {
+function openPreconSheet(cv, file = null) {
   if (!colActive(cv) || cv.busy || !cv.editable) return null;
   const whose = colWhose(cv.space);
   const sheet = colOpenSheet(`Add a precon to ${whose}`, { wide: true, onClose: () => {
     clearTimeout(ctx.timer);
-    if (ctx.dropReceipt && colActive(cv)) colReload(cv, ctx.dropReceipt.words, ctx.dropReceipt.stale, ctx.dropReceipt.filing);
+    if (ctx.dropReceipt && colActive(cv)) colReload(cv, ctx.dropReceipt.words, ctx.dropReceipt.stale, ctx.dropReceipt.filing, true);
   } });
   const ctx = { cv, sheet, whose, seq: 0, busy: false, preview: null, timer: null };
   const input = el("input", { id: `precon-q-${sheet.heading.id}`, type: "search", autocomplete: "off",
@@ -32,8 +38,12 @@ function openPreconSheet(cv) {
     el("label", { class: "field precon-search", for: input.id }, el("span", { class: "sr-only", text: "Find a precon" }), input));
   add(sheet.body, [ctx.searchField, ctx.message, ctx.area]);
   sheetActions(sheet, [{ text: "Cancel", value: "cancel", onclick: () => sheet.close() }]);
-  searchPrecons(ctx);
-  input.focus();
+  if (typeof file === "string" && /^[A-Za-z0-9_]{1,120}$/.test(file)) {
+    previewPrecon(ctx, {name: "Published precon", file});
+  } else {
+    searchPrecons(ctx);
+    input.focus();
+  }
   return ctx;
 }
 
@@ -96,6 +106,7 @@ async function previewPrecon(ctx, deck, keptTitle = null) {
     if (seq !== ctx.seq || ctx.sheet.closed || !colActive(cv)) return;
     ctx.preview = preview;
     ctx.keptTitle = keptTitle;
+    ctx.sheet.heading.textContent = preview.deck.name;
     clear(ctx.message);
     drawPreconPreview(ctx);
   } catch (error) {

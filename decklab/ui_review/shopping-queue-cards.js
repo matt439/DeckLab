@@ -149,6 +149,7 @@ run('shopping-queue-cards', async review => {
         body: JSON.stringify({name: NAMES[0], available: true, updated: '2026-11-10', rulings: []})}));
       await page.route('**/api/cards/decks?*', route => route.fulfill({status: 200, contentType: 'application/json',
         body: JSON.stringify({name: NAMES[0], holds: [], wants: [], owned: 0, free: 0, incoming: 0, basic: false})}));
+      await page.route('**/api/cards/combos?*', route => route.fulfill({json: {checked: true, combos: [], total: 0}}));
       await page.route('**/img/synthetic/**', route => route.fulfill({status: 200, contentType: 'image/svg+xml',
         body: '<svg xmlns="http://www.w3.org/2000/svg" width="244" height="340"><rect width="244" height="340" fill="#496658"/><text x="20" y="60" fill="white" font-size="20">Synthetic card</text></svg>'}));
       await page.goto(review.pageUrl('/#/shopping', spec.theme), {waitUntil: 'domcontentloaded'});

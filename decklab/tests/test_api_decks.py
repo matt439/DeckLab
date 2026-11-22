@@ -171,7 +171,7 @@ class DeckViewTests(ApiTestCase):
         view = api.deck_view("casual/gruul-test")
         self.assertEqual(set(view), {"summary", "version", "versions", "sections", "stats", "owned", "practice",
                                      "matchups", "guide", "tokens", "table", "warnings", "info", "usual_opponents", "standins", "swaps",
-                                     "box_checked_on", "considering", "played", "keep_rule"})
+                                     "box_checked_on", "considering", "played", "play_list", "keep_rule"})
         self.assertIsNone(view["box_checked_on"])
         self.assertEqual(view["considering"]["lines"], [])        # E2-S23: none written in this deck
         self.assertEqual(view["usual_opponents"], [])
@@ -286,6 +286,7 @@ class DeckViewTests(ApiTestCase):
             if type(row.get("missing")) is int and row["missing"] > 0:
                 row["shop_snapshot"] = dict(ABSENT_MISSING_SNAPSHOT)
                 row["shop_snapshots"] = [dict(each) for each in ABSENT_MISSING_SNAPSHOTS]
+        expected["availability_confirmed"] = not expected["warnings"] and not expected["unresolved"]
         expected["warnings"] = [api._strip_paths(w) for w in expected["warnings"]]    # no paths
         self.assertEqual(owned, json.loads(json.dumps(expected)))
         self.assertEqual((owned["rate"], owned["rate_date"], owned["price_date"]), (2.0, "2026-09-28", "2026-09-28"))

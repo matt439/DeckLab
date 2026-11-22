@@ -1,5 +1,5 @@
 """Free pool cards for each of a saved deck's roles (E9-S26, E3-S42): GET /api/deck/role-cards, the Stats tab's
-"Free cards by role". Writes nothing: a card is added to the deck in the editor, as any other.
+"Find cards by role". Writes nothing: a card is added to the deck in the editor, as any other.
 
 What fits is lib/decks/role_pool.py's. The answer counts the deck's space's inventory, so it follows
 GET /api/deck/replacements' reading rule (swaps._deck): a deck the viewer may not see is the missing deck's
@@ -35,12 +35,12 @@ def role_cards(deck_id=None, version=None):
     commanders' colour identity, WUBRG order), "tags_available" (False when the card data holds no role
     tag at all: then every role is untagged and lists nothing), "roles": [{"role", "tag" (its Scryfall
     oracle tag), "tagged" (whether the card data holds that tag's cards), "cards": [{"name", "card",
-    "free" (copies free for this deck: owned and on the way, less other built decks' and intact products'),
-    "here" (of those, copies not on the way)}], "more" (candidates not listed)}] in cards.ROLES' order,
+    "free" (copies available to this deck including incoming, after other holds and loans),
+    "here" (of those, copies physically free now)}], "more" (candidates not listed)}] in cards.ROLES' order,
     "warnings"}.
 
     Commander needs a commander; casual uses the selected list's non-land colours without Commander
-    legality or a target. The reading rule's404/403 comes first. Cards already in the selected list
+    legality or a target. The reading rule's 404/403 comes first. Cards already in the selected list
     are never offered."""
     summary, deck = _deck(deck_id)          # a hidden deck's 404 comes before any 400
     version = version or "target"

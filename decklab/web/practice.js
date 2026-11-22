@@ -30,7 +30,7 @@ function orList(items) {
 function practiceSection(data) {
   const body = el("div", { class: "practice" });
   const section = el("section", { class: "deck-section", id: "sec-practice", "aria-labelledby": "h-practice" },
-    el("h2", { id: "h-practice", text: "Practice games" }), body);
+    el("h2", { id: "h-practice", text: "Draw and mana check" }), body);
   const token = routeToken;
   if (data.summary.id.startsWith(BOX_PREFIX)) {
     // A half's 20 cards are never played alone, and would give numbers no real game has.
@@ -160,12 +160,12 @@ function drawPractice(body, result, data) {
   }
   add(clear(body), [
     warningsBox(result.warnings, "About these practice games"),     // null when there are none
+    el("p", { class: "sub", text: `Deck Lab draw and mana model · ${listName(data.version)} · First ${result.turns} turns played alone.` }),
     el("div", { class: "setup-pick" },
       el("div", { class: "segmented", role: "group", "aria-label": "Which practice games to show" }, buttons)),
+    setupText,
     panels,
-    // The setup's sentence (it follows the choice), how the games work and what the numbers mean are
-    // folded together; the lists of rules and cards stay their own disclosures under it.
-    practiceIntro(result, data, setupText, ...practiceAbout(result)),
+    practiceIntro(result, data, ...practiceAbout(result)),
     practiceFinePrint(result)]);
   choose(ids.includes(remembered) ? remembered : ids[0]);
 }

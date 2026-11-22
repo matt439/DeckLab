@@ -157,6 +157,7 @@ run('shopping-baskets-layout', async review => {
           tables: {written: [], skipped: []}, watchlist_reduced: [{name: NAMES[0], quantity: 3, left: 1}]})});
       });
       await page.goto(review.pageUrl('/#/shopping', spec.theme), {waitUntil: 'domcontentloaded'});
+      await page.getByText('Shop research and baskets', {exact: true}).click();
       const root = page.locator('#shop-baskets').locator('..').locator('..');
       await page.locator('.shop-plan').waitFor(); await page.evaluate(() => document.fonts.ready);
       if (spec.root200) await page.evaluate(() => {document.documentElement.style.fontSize = '200%';});

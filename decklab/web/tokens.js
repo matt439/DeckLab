@@ -598,7 +598,6 @@ function drawTokens(data, token, space = HOME_SPACE) {
       primary: view.canEdit ? el("button", { type: "button", class: "btn btn-primary tok-mutate", text: "Add a token card",
         "data-focus": "add", onclick: () => addToken(view) }) : null,
       more: [view.canEdit ? { label: "Scan token cards…", onclick: () => openTokenScan(view) } : null,
-        view.canEdit ? { label: "Plan packed token cards…", onclick: () => openTokenPlan(view) } : null,
         { label: "Refresh", onclick: () => refreshTokens(view) }] }),
     tokSpacePicker(space),
     unsupported ? el("p", { class: "box box-info", text: `${spaceName(space)}'s tokens can't be shown until Deck Lab's server is updated.` })
@@ -610,7 +609,11 @@ function drawTokens(data, token, space = HOME_SPACE) {
       el("div", { class: "segmented tok-filter", role: "group", "aria-label": "Show" }, view.filterButtons),
       view.count),
     view.lists,
-    unsupported ? null : diceTokensPanel(view),
+    unsupported ? null : el("details", { class: "panel pack-extra tok-advanced" }, el("summary", { text: "Advanced" }),
+      view.canEdit ? el("div", { class: "tok-redistribute" },
+        el("button", { type: "button", class: "btn", text: "Review token allocation", onclick: () => openTokenPlan(view) }),
+        el("p", { class: "sub", text: "Preview how token cards can be shared across built decks and intact products." })) : null,
+      diceTokensPanel(view)),
   ]);
   $("#main").append(root);
   updateTokens(view);

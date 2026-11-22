@@ -22,11 +22,15 @@ function showAssembly(params, token) {
   const query = new URLSearchParams();
   const id = params.get("deck") || params.get("id");
   if (id) { query.set("deck", id); query.set("version", params.get("version") || "target"); }
+  const selectedIds = !id && params.get("decks") ? params.get("decks").split(",", PACK_MAX) : [];
   return load(`/api/assembly?${query}`, token, data => {
     if (token !== routeToken || profile !== state.profile?.id || hash !== location.hash) return;
     const restore = returning && packProductReviewReturn === returning;
     if (restore) packProductReviewReturn = null;
-    return drawAssembly(data, token, restore ? returning.recipe : null);
+    const choices = data.choices.filter(choice => !choice.error && choice.versions?.includes("target"));
+    const recipe = [...new Set(selectedIds)].filter(id => choices.some(choice => choice.id === id))
+      .map(id => ({ id, version: "target" }));
+    return drawAssembly(data, token, restore ? returning.recipe : recipe.length ? recipe : null, Boolean(restore));
   });
 }
 
@@ -36,10 +40,10 @@ function packGroupOf(choice) {
   return ["built", "building"].includes(choice.status) ? choice.status : "idea";
 }
 
-function drawAssembly(data, token, restoredRecipe = null) {
+function drawAssembly(data, token, initialRecipe = null, returningFromProduct = Boolean(initialRecipe)) {
   const sortKey = `packing-order.${state.profile?.id || "guest"}`;
   const view = { token, hash: location.hash, profile: state.profile?.id, choices: data.choices.filter(item => !item.error && item.versions?.length),
-    selected: (restoredRecipe || data.selections || data.decks).map(packSelectedChoice), seq: 0, timer: null,
+    selected: (initialRecipe || data.selections || data.decks).map(packSelectedChoice), seq: 0, timer: null,
     sortKey, order: local.get(sortKey) === "storage" ? "storage" : "name", storageRule: packStorageRule(null) };
   view.root = el("div", { class: "pack-page" });
   view.results = el("div", { class: "pack-results", "aria-live": "polite" });
@@ -78,10 +82,8 @@ function drawAssembly(data, token, restoredRecipe = null) {
   view.planMain = el("div", { class: "pack-main" }, view.chooserLaunch, view.messageSlot, view.progressNote, view.sortControl, view.results);
   add(view.root, [
     pageHead({ crumb: fromDeck ? [deckHref(fromDeck.id, parseHash().params.get("version")), fromDeck.title || "The deck"] : null,
-      title: routeH1("assembly"), description: "Choose the decks you want to play, then pull their cards. Each physical copy is counted once.",
-      // The plan's sleeves and token cards come from these pages.
-      more: [mayDo("see_accessories") ? { label: routeFor("accessories").label, href: "#/accessories" } : null,
-        { label: routeFor("tokens").label, href: "#/tokens" }] }),
+      title: fromDeck ? (data.decks[0]?.completion?.status === "built" ? "Review build" : "Build deck") : routeH1("assembly"),
+      description: fromDeck ? null : "Choose decks to pack together. Each physical copy is counted once." }),
     el("div", { class: "pack-layout" }, view.chooserSlot, view.planMain)]);
   $("#main").append(view.root);
   view.run = () => packRun(view);
@@ -89,9 +91,9 @@ function drawAssembly(data, token, restoredRecipe = null) {
   packInitSwitcher(view);
   packInitSteps(view);
   drawPackPicks(view);
-  if (restoredRecipe) {
+  if (initialRecipe) {
     // Fresh choices are useful immediately; allocations are never replayed from the departed plan or GET default.
-    view.productReturnRefresh = true;
+    view.productReturnRefresh = returningFromProduct;
     view.sortControl.hidden = true;
     packRun(view);
   } else renderAssemblyPlan(view, data);
@@ -304,7 +306,7 @@ function assemblyTick(text, count = 1, context = null, key = text) {
 const PACK_TILE_SIZES = "(max-width: 599px) 50vw, 300px";
 
 /** A card to pull as a picture tile with a tick on its corner; id is its key for the saved ticks. */
-function packTile(view, name, { qty, meta, caption, id, finishes = [], overlap = null, printing = null }) {
+function packTile(view, name, { qty, meta, caption, id, label = name, finishes = [], overlap = null, printing = null }) {
   const card = (view.cards || {})[name] || null;
   // These are the selected list's finishes; allocation still counts interchangeable copies by name.
   const special = finishes.some(item => ["foil", "etched"].includes(item.finish));
@@ -315,11 +317,11 @@ function packTile(view, name, { qty, meta, caption, id, finishes = [], overlap =
     ? [el("span", { class: "chip chip-plain chip-foil", text: `List: ${finishWords}` })] : [];
   const description = finishWords ? `${caption}. Deck list: ${finishWords}` : caption;
   const tick = el("button", { type: "button", class: "tile-tick pack-tick", "aria-pressed": "false",
-    "aria-label": `${qty > 1 ? `${qty} × ` : ""}${name}: done`, "data-pack-tick": id, "data-pack-count": qty,
+    "aria-label": `${qty > 1 ? `${qty} × ` : ""}${label}: done`, "data-pack-tick": id, "data-pack-count": qty,
     "data-pack-context": JSON.stringify(finishes.map(f => [f.finish, f.quantity]).sort()) });
-  const tile = cardTile(card, { qty, name: frontName(name), meta, finish, chips, state: tick, sizes: PACK_TILE_SIZES,
+  const tile = cardTile(card, { qty, name: frontName(label), meta, finish, chips, state: tick, sizes: PACK_TILE_SIZES,
     onclick: card ? event => packOpenCard(view, event.currentTarget) : null,
-    viewerGroup: "packing", caption: description, label: finishWords ? `${name}. ${description}` : card ? null : name });
+    viewerGroup: "packing", caption: description, label: finishWords ? `${label}. ${description}` : card ? null : label });
   packRegisterCard(view, tile, card, description);
   const pill = packOverlapPill(view, name, overlap);
   if (pill) tile.append(pill);
@@ -487,32 +489,38 @@ function packRuleGroups(view, sorted, container, heading) {
 /** A Ref's name in a sentence: its label when it's in the accessories list, else the text as written. */
 function assemblyKitName(ref) { return ref.state === "linked" ? ref.label : `“${ref.value}”`; }
 
-/** A deck panel's sleeves: a 64 px picture and "Sleeve with Dragon Shield Matte (black): 75 needed, 100
- * owned", and the kit's warnings (too few sleeves, a deck box too small) in a box under it. A deck with
- * none recorded gets Choose sleeves (accessories.js kitPicker) when it's being built or built and the visitor
- * may choose, else a link to the deck. view (optional): the plan, worked out again once sleeves are chosen. */
+/** Show sleeves and the box together before pulling cards. The existing kit picker owns assignment. */
 function assemblyKit(deck, need, view = null) {
   if (!mayDo("see_accessories")) return null;      // kit isn't shown to someone who sees none
-  const kit = deck.kit, sleeves = kit && kit.sleeves;
-  let words = `Sleeves: ${deck.sleeves || "Not recorded"}`;
-  let action = null;
-  if (sleeves && sleeves.state === "linked") {
-    words = `Sleeve with ${sleeves.label}: ${need} needed, ${sleeves.quantity} owned`;
-  } else if (sleeves && sleeves.state === "text") {
-    words = `Sleeves: ${assemblyKitName(sleeves)} (not in the accessories list)` + (need ? `, ${need} needed` : "");
-  } else {
-    const choice = view && (view.choices || []).find(c => c.id === deck.id);
-    const holds = Boolean(choice) && holdsKit(choice.status);
-    action = holds && mayDo("accessories") && typeof kitPicker === "function"
-      ? el("button", { type: "button", class: "btn", text: "Choose sleeves", onclick: () => kitPicker({ holder: deck.id,
-        field: "sleeves", need, title: deck.title, onPicked: () => { if (view && view.run) view.run(); } }) })
-      : String(deck.id).startsWith("product/") ? el("a", { class: "btn btn-quiet", href: "#/accessories", text: "Choose sleeves" })
-        : el("a", { class: "btn btn-quiet", href: deckHref(deck.id, deck.version), text: holds ? "Choose on the deck page" : "Open the deck" });
-  }
-  return el("div", { class: "assembly-kit" },
-    el("div", { class: "pack-kit-row" }, accessoryThumb(sleeves || { label: "Sleeves" }, 64), el("p", { text: words }), action),
-    kit && kit.warnings && kit.warnings.length
-      ? el("div", { class: "box box-warn" }, el("ul", {}, kit.warnings.map((w) => el("li", { text: w })))) : null);
+  const kit = deck.kit;
+  const choice = view?.choices.find(c => c.id === deck.id);
+  const canChoose = choice && holdsKit(choice.status) && deck.completion?.editable !== false && kit?.editable !== false
+    && mayDo("accessories");
+  const rows = [["sleeves", "Sleeves"], ["deck_box", "Deck box"]].map(([field, title]) => {
+    const ref = kit?.[field];
+    const name = ref ? assemblyKitName(ref) : (field === "sleeves" ? deck.sleeves : null) || "Not recorded";
+    let fit = null;
+    if (ref?.state === "linked") {
+      if (field === "sleeves" && need != null) fit = `${need} needed, ${ref.quantity} owned`;
+      else if (ref.capacity != null) fit = `holds ${plural(ref.capacity, "card")}`;
+    }
+    const change = canChoose && !ref ? el("button", { type: "button", class: "btn", text: field === "sleeves" ? "Choose sleeves" : "Choose a deck box",
+      onclick: event => {
+        if (!event.currentTarget.isConnected || !assemblyActive(view) || view.hash !== location.hash
+            || !view.data?.decks.includes(deck) || view.previewing || view.saving || view.reviewing) return;
+        kitPicker({ holder: deck.id, field, need, title: deck.title, onPicked: () => {
+          if (assemblyActive(view) && view.hash === location.hash && view.data?.decks.includes(deck)) view.run();
+        } });
+      } }) : null;
+    return el("div", { class: "pack-kit-row" }, accessoryThumb(ref || { label: title }, 64),
+      el("p", { text: [`${title}: ${name}`, fit].filter(Boolean).join(" · ") }), change);
+  });
+  return el("div", { class: "assembly-kit" }, rows,
+    !canChoose && deck.completion?.editable && (!kit?.sleeves || !kit?.deck_box)
+      ? el("p", { class: "sub", text: "Review sleeves and box at Finish building." }) : null,
+    String(deck.id).startsWith("product/") ? el("a", { class: "btn btn-quiet", href: deckHref(deck.id, deck.version),
+      text: "Review this product’s kit" }) : null,
+    warningsBox(kit?.warnings || [], "Sleeves or box to check"));
 }
 
 /** One step of a deck's plan: a numbered heading (number null: an optional step, with none) and its
@@ -547,9 +555,10 @@ function packDeck(view, deck) {
     caption: `${b.quantity} for ${deck.title}`, id: `basic|${b.name}` }));
   const markers = (deck.standins?.rows || []).filter(row => !row.using).map((row, index) => ({
     name: row.for, qty: row.qty, meta: "Use any spare card",
-    caption: `Use or keep ${row.qty} spare cards to stand for ${row.for}`, id: `standin|${row.for}|${index}` }));
+    caption: `Pack ${plural(row.qty, "spare card")} for ${row.for} in ${deck.title}`, id: `standin|${row.for}|${index}` }));
   const returns = (deck.returns || []).map(r => ({ name: r.name, qty: r.quantity, meta: r.untracked ? null : packLocationMeta(view, r.name),
-    caption: `Take ${r.quantity} out of ${deck.title}`, id: `return|${r.name}` }));
+    label: r.untracked ? r.name.replace(/^Spare stand-in for /, "Physical placeholder for ") : r.name,
+    caption: `Return ${r.quantity} from ${deck.title} to storage`, id: `return|${r.name}` }));
   const kept = steps.filter(s => s.keep);
   const waiting = steps.filter(s => s.waiting || s.missing);
   const tokenParts = [...(assemblyTokenTasks(deck.tokens, view.data.tokens, view) || []),
@@ -562,7 +571,9 @@ function packDeck(view, deck) {
   };
   // Tokens are never required: no number in the sequence, and nothing here counts towards finishing.
   const tokenStep = () => {
-    const node = packStep(null, "Tokens (optional)", tokenParts);
+    if (!tokenParts.some(Boolean)) return null;
+    const node = packStep(null, "Tokens (optional)", tokenParts,
+      el("a", { class: "btn btn-quiet", href: "#/tokens", text: "Manage token cards" }));
     if (node) packRegisterStep(view, deck, "tokens", null, node);
     return node;
   };
@@ -572,35 +583,47 @@ function packDeck(view, deck) {
   };
   const kitNode = assemblyKit(deck, need, view);
   const keptNode = kept.length ? el("details", { class: "pack-fold" },
-    el("summary", { text: `Already in this deck (${plural(kept.reduce((s, k) => s + k.keep, 0), "card")})` }),
+    el("summary", { text: `Keep in this box (${plural(kept.reduce((s, k) => s + k.keep, 0), "card")})` }),
     el("ul", { class: "pack-plain" }, kept.map(k => el("li", { text: `${k.keep} × ${k.name}` })))) : null;
   return el("section", { class: "panel pack-deck", "data-pack-deck": `${deck.id}:${deck.version}` },
     el("div", { class: "pack-deck-head" },
       el("h2", {}, el("a", { href: deckHref(deck.id, deck.version), text: deck.title })),
-      el("p", { class: "sub", text: listName(deck.version) }),
+      el("p", { class: "sub", text: `Packing the ${listName(deck.version, true)}` }),
       deck.build_scope ? el("p", { class: "sub pack-build-scope", text: packScopeWords(deck) }) : null,
-      deck.completion?.already_built ? status("good", "Built") : null,
-      packTakeApartButton(view, deck), packBoxCheckButton(view, deck)),
+      packCurrentBox(view, deck)),
     packBulkControl(view, deck),
     packStandinsPart(view, deck),
-    step("sleeves", "Sleeves", kitNode, sleeves && need ? el("ul", { class: "pack-list" },
+    step("sleeves", "Sleeves and deck box", kitNode, sleeves && need ? el("ul", { class: "pack-list" },
       assemblyTick(`Get out ${need} ${assemblyKitName(sleeves)} sleeves`, 1, [sleeves.id || sleeves.value, need], "sleeves")) : null),
     cardStep("pull", "Pull from storage", packFilesBasics(view) ? [...pulls, ...basics] : pulls, pulls.length ? packLocationNote(view) : null),
     cardStep("move", "Move from other decks", moves, el("p", { class: "sub", text: "Change their sleeves as you move them." })),
     !packFilesBasics(view) ? cardStep("basic", "Basic lands", basics) : null,
-    cardStep("standin", "Spare-card stand-ins", markers),
+    cardStep("standin", "Physical placeholders", markers),
     !packFilesBasics(view) ? tokenStep() : null,
-    cardStep("return", "Put back", returns, el("p", { class: "sub", text: `Take these out of the deck and put them back in storage${view.storageRule.sleeved ? "" : ", unsleeved"}.` })),
+    cardStep("return", "Return to storage", returns, el("p", { class: "sub", text: `Return these from ${deck.title} to storage${view.storageRule.sleeved ? "" : ", unsleeved"}.` })),
     packFilesBasics(view) ? tokenStep() : null,
     step("box", "Pack", box ? el("ul", { class: "pack-list" },
       assemblyTick(`Pack into ${assemblyKitName(box)}`, 1, [box.id || box.value], "box")) : null),
     keptNode,
     remainingIntentPart(deck.remaining_intent),
     waiting.length ? el("details", { class: "pack-fold pack-waiting" },
-      el("summary", { text: `Still waiting (${plural(waiting.reduce((s, w) => s + w.waiting + w.missing, 0), "card")})` }),
+      el("summary", { text: `Copies to check (${plural(waiting.reduce((s, w) => s + w.waiting + w.missing, 0), "card")})` }),
       el("ul", { class: "pack-plain" }, waiting.flatMap(w => [
-        w.waiting ? el("li", { class: "assembly-pending", text: `Wait for ${w.waiting} × ${w.name}` }) : null,
-        w.missing ? el("li", { class: "assembly-pending", text: `Unavailable: ${w.missing} × ${w.name}` }) : null]))) : null);
+        w.waiting ? el("li", { class: "assembly-pending", text: `On the way: ${w.waiting} × ${w.name}` }) : null,
+        w.missing ? el("li", { class: "assembly-pending", text: `To check: ${w.missing} × ${w.name}` }) : null]))) : null);
+}
+
+function packCurrentBox(view, deck) {
+  if (deck.completion?.status !== "built") return null;
+  const info = packTakeApartContents(deck.take_apart);
+  const version = info?.version || deck.completion.built_version;
+  const count = info ? plural(info.card_count, "physical card") : "";
+  const checked = boxCheckDate(deck.box_check?.checked_on);
+  return el("div", { class: "pack-current-box" },
+    el("h3", { text: "Packed in this box" }),
+    version ? el("p", { text: [listName(version), count].filter(Boolean).join(" · ") }) : null,
+    checked ? el("p", { class: "sub" }, "Last checked ", el("time", { datetime: checked, text: checked })) : null,
+    el("div", { class: "actions" }, packBoxCheckButton(view, deck), packTakeApartButton(view, deck)));
 }
 
 function renderAssemblyPlan(view, data) {
@@ -629,13 +652,13 @@ function renderAssemblyPlan(view, data) {
   }
   const standins = data.decks.reduce((sum, deck) => sum + (deck.standins?.rows || []).reduce((n, row) => n + row.qty, 0), 0);
   const statusText = data.list_issue || (!data.counts_confirmed ? "Resolve the inventory warnings before relying on this plan."
-    : data.ready ? standins ? `Ready to pack with ${plural(standins, "stand-in")}. Check the physical cards below.`
+    : data.ready ? standins ? `Ready to pack with ${plural(standins, "physical placeholder")}. Check the cards before finishing.`
       : "Every card is here. Pull them below."
     : [data.totals.waiting ? `${plural(data.totals.waiting, "copy", "copies")} still on the way` : null,
       data.totals.missing ? `${plural(data.totals.missing, "copy", "copies")} not available for this plan` : null]
       .filter(Boolean).join("; ") + ".");
   add(view.results, [el("p", { class: data.ready ? "box box-good" : "box box-warn", text: statusText }),
-    warningsBox(data.warnings, "Inventory needs attention"), packOverlapNotice(view), assemblyTakeAlong(view, data),
+    warningsBox(data.warnings, "Inventory needs attention"), packOverlapNotice(view),
     // Decks in the same sleeves (one design may sleeve several decks): a note, never a block.
     (data.sleeve_notes || []).length ? el("div", { class: "pack-sleeve-notes" },
       note(...data.sleeve_notes.map((n) => n.note))) : null]);
@@ -647,12 +670,13 @@ function renderAssemblyPlan(view, data) {
   if (completion) view.results.append(completion);
   const held = data.rows.filter(row => row.missing).map(row => ({ ...row,
     held_elsewhere: (row.held_elsewhere || []).filter(holder => !packIntactProduct(holder)) })).filter(row => row.held_elsewhere.length);
-  if (held.length) view.results.append(el("section", { class: "panel pack-extra" }, el("h2", { text: "Copies reserved elsewhere" }),
+  if (held.length) view.results.append(el("section", { class: "panel pack-extra" }, el("h2", { text: "Held in another deck" }),
     el("p", { text: "These decks keep their cards. Add a donor deck with its revised saved list to plan a transfer." }),
     el("ul", {}, held.map(row => el("li", {}, `${row.name}: `,
       row.held_elsewhere.map((holder, index) => [index ? "; " : "", `${holder.quantity} in `,
         el("a", { href: deckHref(holder.id), text: holder.title })]))))));
   add(view.results, [packIntactProductsPart(view, data)]);
+  add(view.results, [assemblyTakeAlong(view, data)]);
   add(view.results, [assemblyTokenProblems(data.token_problems), assemblySharedTokens(data), assemblyTokenPanel(data)]);
   view.results.append(el("p", { class: "sub", text: data.note }));
   view.bar = packBuildBar(view);
@@ -675,8 +699,9 @@ function packCompletion(view, data) {
     "aria-describedby": message.id, onclick: event => packFinishClick(view, event.currentTarget) }) : null;
   view.finish = { message, error, button, label, data };
   packFinishError(view);
+  if (!count && !view.finishError && !data.buildWarnings?.length && !data.tableRefreshError) return null;
   return el("section", { class: "panel pack-completion" }, el("h2", { text: "Finish building" }),
-    count ? el("p", { class: "sub", text: "Marking built saves these lists and reserves their cards: "
+    count ? el("p", { class: "sub", text: "Marking built records the cards now in each box and reserves them for these decks: "
       + completion.decks.map(d => {
         const scope = data.decks.find(deck => deck.id === d.id)?.build_scope;
         return `${d.title} (${listName(d.version)}${scope ? `; ${scope.label}` : ""})`;
@@ -744,11 +769,13 @@ async function packMarkBuilt(view) {
     const buildWarnings = [...(answer.warnings || [])];
     if (answer.tables?.error) buildWarnings.push(`The decks were marked built, but their availability tables could not be updated: ${answer.tables.error}`);
     const kept = { ...data, completion: updated.completion, buildWarnings, tableRefreshError: !!answer.tables?.error,
+      box_check_cards: updated.box_check_cards, take_along: updated.take_along,
       decks: data.decks.map(deck => {
         const saved = updated.decks.find(d => d.id === deck.id);
         return { ...deck, ...(saved ? { completion: saved.completion, standins: saved.standins,
           kit: saved.kit, sleeves: saved.sleeves, sleeves_need: saved.sleeves_need,
-          build_scope: saved.build_scope, remaining_intent: saved.remaining_intent } : {}) };
+          build_scope: saved.build_scope, remaining_intent: saved.remaining_intent,
+          take_apart: saved.take_apart, box_check: saved.box_check } : {}) };
       }) };
     view.buildKit = {};
     view.boxPrintings = {};

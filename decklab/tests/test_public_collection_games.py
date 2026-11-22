@@ -251,9 +251,13 @@ class PublicGameTests(MixedFixture, ApiTestCase):
 class PublicIncomingUiTests(unittest.TestCase):
     def test_anonymous_incoming_counts_have_no_dangling_source_words(self):
         code = """
-          const row = {labels:{on_the_way:[[null,2]],in_use:[],incoming_sources:[{quantity:2}]}};
+          const row = {need:2,missing:0,labels:{on_the_way:[[null,2]],in_use:[],incoming_sources:[{quantity:2}]}};
           assert.equal(incomingSourceChip({quantity:2}).textContent, '2 on the way');
-          assert.equal(incomingBannerSources({rows:[row]}).textContent, 'On the way: 2');
+          assert.equal(incomingBannerSources({rows:[row]}), null);
+          const banner = availabilityBanner({version:'target',versions:['target'],summary:{status:'building'},
+            sections:{Deck:[{name:'Llanowar Elves',qty:2}]},owned:{rows:[row],totals:{missing:0}}});
+          assert(banner.textContent.includes('On the way 2'));
+          assert(!banner.textContent.includes('Arrival details') && !banner.textContent.includes('2 from'));
           assert.equal(incomingSourceChip({quantity:1,source:'Example order'}).textContent,
             '1 on the way · Example order');
         """

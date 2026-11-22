@@ -116,7 +116,7 @@ class ShoppingBasketOrderTests(unittest.TestCase):
           assert.equal(JSON.stringify(view.data), before);
           action('Save order').click(); await tick();
           same(writes[1], ['/api/shopping/order/apply', {preview: 'normal-order-review'}]);
-          assert.equal(sheet.closed, true); assert.equal(routes, 1); same(messages, ['Order recorded under On the way.']);
+          assert.equal(sheet.closed, true); assert.equal(routes, 0); assert.equal(location.hash, '#/shopping?view=orders'); same(messages, ['Order recorded under On the way.']);
         """)
 
     def test_seed_does_not_follow_a_new_queue_revision_and_manual_printing_edits_still_need_normal_preview(self):

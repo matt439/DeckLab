@@ -1,12 +1,6 @@
-/* Shopping (UI-REVIEW.md WP10): grouped shortcuts to the parts on a stacked page, the deliveries on the way, each a disclosure titled "seller · topic" with a strip
-of its cards' pictures, its arrival checks inside it and Receive delivery as its main action; follow-ups left
-open on deliveries that have arrived, each with Done (POST /api/shopping/check, an admin's); the cards we've
-decided to buy; the decks still missing cards (a link to each deck's missing cards, kept apart from the queue:
-AGENTS.md, the queue is only what's been decided); the long-term plan, grouped by deck; and the order history,
-folded. A personal wishlist stays a separate place for cards someone likes.
-
-Every picture opens the card viewer over its own list (cards-ui.js viewerGroup), so a phone can swipe through a
-delivery's cards or the long-term plan. */
+/* What to buy groups ready and waiting queue copies, calculated shortages and shop research.
+ * Orders & deliveries owns orders already placed, their receipts, follow-ups and history.
+ * Card pictures open the viewer over their own delivery or queue list. */
 "use strict";
 
 const SHOPPING_STATES = {
@@ -213,19 +207,21 @@ function shopChecks(checks) {
     el("ul", {}, checks.map((check) => el("li", { text: check.text }))));
 }
 
-/** One navigation surface on a stacked page: the four main destinations, then optional sections.
- * A count is part of its link's words, never a separate badge or hit target. */
+/** In-page links for the selected task. A count is part of its link, never a separate hit target. */
 function shopJumps(parts) {
   const shown = parts.filter((p) => p.count);
   if (shown.length < 2) return null;
-  const mainIds = new Set(["shop-on-the-way", "shop-to-buy", "shop-decks", "shop-missing-cards"]);
+  const mainIds = new Set(["shop-on-the-way", "shop-to-buy", "shop-waiting", "shop-decks", "shop-missing-cards"]);
   const primary = shown.filter((p) => mainIds.has(p.id));
   const secondary = shown.filter((p) => !mainIds.has(p.id));
   const list = (items, className) => el("ul", { class: className }, items.map((p) => el("li", {},
     el("a", { href: `#${p.id}`, onclick: (e) => {
       e.preventDefault();
+      if (!e.currentTarget.isConnected) return;
       const target = document.getElementById(p.id);
       if (target) {
+        const details = target.closest("details");
+        if (details) details.open = true;
         target.setAttribute("tabindex", "-1");
         target.focus({ preventScroll: true });
         target.scrollIntoView({ block: "start" });
@@ -787,13 +783,22 @@ function shopSection(id, title, count, description, ...content) {
     description ? el("p", { class: "shop-description", text: description }) : null, content);
 }
 
+function shopTaskLinks(task, waiting) {
+  return el("nav", { class: "segmented shop-tasks", "aria-label": "Shopping tasks" },
+    el("a", { href: "#/shopping?view=buy", "aria-current": task === "buy" ? "page" : null, text: "What to buy" }),
+    el("a", { href: "#/shopping?view=orders", "aria-current": task === "orders" ? "page" : null,
+      "aria-label": waiting ? `Orders & deliveries, ${plural(waiting, "order")} on the way` : null },
+    "Orders & deliveries", waiting ? el("span", { class: "shop-task-count", "aria-hidden": "true", text: String(waiting) }) : null));
+}
+
 function drawShopping(data) {
   if (typeof noteDeliveries === "function") noteDeliveries(data);     // the top bar's badge (shell.js)
   if (!data.to_buy) data.to_buy = [];
+  const task = parseHash().params.get("view") === "orders" ? "orders" : "buy";
   const view = { data, expanded: new Set(), queuePresentations: [], queueOrder: "state", busy: false, stale: false, root: null, redraw: null,
     token: routeToken, profile: state.profile && state.profile.id };
   view.addButton = mayDo("orders") && data.queue_revision ? el("button", { type: "button",
-    class: `btn ${isAdminProfile() ? "" : "btn-primary "}shop-queue-add shop-queue-write`,
+    class: "btn btn-primary shop-queue-add shop-queue-write",
     "aria-label": "Add card to the purchase queue", onclick: () => shopQueueSheet(view) },
     el("span", {class: "shop-queue-add-label", text: "Add card"})) : null;
   view.addHome = view.addButton ? el("span", {class: "shop-add-home"}, view.addButton) : null;
@@ -804,95 +809,99 @@ function drawShopping(data) {
   const onArrival = (order) => checks.filter((check) => check.order_id === order.id && check.status === "pending");
   const decks = data.decks_missing || [];
   const emptyCombined = el("div", { class: "shop-empty-combined" });
-  const pageEmpty = el("div", { class: "empty shop-empty" }, el("p", { text: "Nothing to buy, and nothing on the way." }),
+  const pageEmpty = el("div", { class: "empty shop-empty" }, el("p", { text: "Nothing is ready to buy." }),
     el("a", { class: "btn", href: "#/wishlist", text: "Open your wishlist" }), emptyCombined);
   const buySlot = el("div", { class: "shop-queue-slot" });
   const deckSlot = el("div", { class: "shop-queue-slot" });
   const longSlot = el("div", { class: "shop-long-slot" });
   const missingSlot = el("div", { class: "shop-buying-slot shop-missing-slot" });
-  const storeSlot = el("div", { class: "shop-buying-slot shop-store-slot" });
+  const storeSlot = el("details", { class: "shop-research" });
   const matchSlot = el("div", { class: "shop-match-slot", role: "status", "aria-live": "polite" });
   view.matchSlot = matchSlot;
   const jumpSlot = el("div");
 
-  // The list pane owns deliveries, follow-ups and the current shop research. Buying stays in the detail
-  // pane; below 1281 px they stack, with links to each part. Keep delivery/Undo/history nodes across writes.
+  // Keep delivery, Undo and history nodes across queue redraws.
   const main = [
     shopSection("shop-on-the-way", "On the way", waiting.length, null,
       waiting.length ? [el("div", { class: "shop-deliveries" }, waiting.map((order) => shopDelivery(order, onArrival(order), view))),
-        typeof shopStorageFill === "function" ? shopStorageFill(view) : null]        // shopping-storage.js (E8-S25)
-        : emptyBox("Nothing is on the way.", isAdminProfile() && mayDo("orders") && data.queue_revision
-          ? el("button", { type: "button", class: "btn shop-queue-write", text: "Record an order", onclick: () => shopOrderSheet(view) })
-          : null)),
+        typeof shopStorageFill === "function" ? shopStorageFill(view) : null]
+        : emptyBox("Nothing is on the way.")),
     followUps.length ? shopSection("shop-follow-ups", "Follow-ups", followUps.length,
       "Checks left open on deliveries that have arrived.",
       el("ul", { class: "shop-followups" }, followUps.map((check) => shopFollowUp(check, orders.find((o) => o.id === check.order_id))))) : null,
-    storeSlot,
+    history.length ? shopOrderHistory(history, view) : null,
   ];
-  const sideNode = el("div", { class: "shop-side shop-detail-pane" }, matchSlot, buySlot, missingSlot, deckSlot, longSlot);
+  const sideNode = el("div", { class: "shop-side shop-detail-pane" }, matchSlot, buySlot, longSlot, missingSlot, deckSlot, storeSlot);
   // Redraw only buying controls and their counts. Deliveries and pending follow-up Undo keep their nodes.
   view.redraw = () => {
     shopReturnQueueAdd(view);
     view.queueControls = view.queueAddSlot = null;
     view.queuePresentations = [];
     shopNormalizeChoice(view);
-    const immediate = queue.filter((card) => card.state !== "long_term");
+    const ready = queue.filter((card) => card.state === "ready");
+    const waitingIntent = queue.filter((card) => !["ready", "long_term"].includes(card.state));
     const later = queue.filter((card) => card.state === "long_term");
     const planned = new Map();
     for (const row of later) if (row.deck) planned.set(row.deck.id, (planned.get(row.deck.id) || 0) + (row.quantity || 0));
     clear(buySlot);
-    if (immediate.length) buySlot.append(shopSection("shop-to-buy", "To buy", immediate.length,
-      "Cards we've decided to buy, with the shop price recorded when checked.",
-      shopQueueControls(view), shopQueueGroups(immediate, view)));
+    if (ready.length) buySlot.append(shopSection("shop-to-buy", "Ready to buy", ready.length,
+      "Shared purchase queue copies ready to order.",
+      shopQueueControls(view), shopQueueGroups(ready, view)));
     clear(deckSlot);
     if (decks.length) deckSlot.append(shopSection("shop-decks", "Decks still missing cards", decks.length,
-      "Not a shopping list: open a deck to see its missing cards and decide what to buy.", shopDecksMissing(decks, planned)));
+      "Open a deck to review its shortages and decide what to buy.", shopDecksMissing(decks, planned)));
     clear(longSlot);
-    if (later.length) longSlot.append(shopSection("shop-long-term", "Long-term plan", 0,
-      `${plural(later.reduce((sum, r) => sum + (r.quantity || 0), 0), "card")} for decks to build later. Add them to an order when the shop has them, to share its postage.`,
-      shopLongTerm(later, view)));
+    if (waitingIntent.length || later.length) longSlot.append(shopSection("shop-waiting", "Waiting / later", waitingIntent.length + later.length,
+      "Shared queue copies waiting for stock, a reprint or a later purchase.",
+      !ready.length && waitingIntent.length ? shopQueueControls(view) : null,
+      waitingIntent.length ? shopQueueGroups(waitingIntent, view) : null,
+      later.length ? el("div", { class: "shop-later" }, el("h3", { id: "shop-long-term", text: "Long-term plan" }),
+        shopLongTerm(later, view)) : null));
     const combined = typeof shopCombinedSection === "function" ? shopCombinedSection(view) : null;   // shopping-combined.js
     clear(missingSlot); add(missingSlot, [shopMissingCards(view), combined]);
-    clear(storeSlot); add(storeSlot, [shopByShop(view), shopBaskets(view)]);
+    const research = task === "buy" ? [shopByShop(view), shopBaskets(view)].filter(Boolean) : [];
+    clear(storeSlot); storeSlot.hidden = !research.length;
+    if (research.length) add(storeSlot, [el("summary", { text: "Shop research and baskets" }), research]);
     clear(jumpSlot);
     const missing = data.missing_cards;
     const missingShown = missing && (!missing.ready || (missing.rows || []).length || (missing.errors || []).length || (missing.warnings || []).length);
-    // Build decks together counts as content only once decks are chosen; until then an empty page keeps its own state.
+    // A combined calculation counts as content after a choice; until then the empty state offers the entry.
     const chosen = combined && shopCombinedChosen(view);
-    sideNode.hidden = !immediate.length && !decks.length && !later.length && !missingShown && !chosen;
-    pageEmpty.hidden = Boolean(waiting.length || followUps.length || immediate.length || later.length || decks.length || missingShown || chosen);
+    const hasBuying = Boolean(queue.length || decks.length || missingShown || chosen || research.length);
+    sideNode.hidden = task !== "buy" || !hasBuying;
+    pageEmpty.hidden = task !== "buy" || hasBuying;
     clear(emptyCombined); if (combined && !pageEmpty.hidden) add(emptyCombined, [shopCombinedStart(view)]);
-    const jumps = shopJumps([
+    const jumps = shopJumps(task === "orders" ? [
       { id: "shop-on-the-way", label: "On the way", count: waiting.length, number: waiting.length },
-      { id: "shop-to-buy", label: "To buy", count: immediate.length, number: immediate.length },
+      { id: "shop-follow-ups", label: "Follow-ups", count: followUps.length, number: followUps.length },
+    ] : [
+      { id: "shop-to-buy", label: "Ready to buy", count: ready.length, number: ready.length },
+      { id: "shop-waiting", label: "Waiting / later", count: waitingIntent.length + later.length, number: 0 },
       { id: "shop-decks", label: "Decks missing cards", count: decks.length, number: decks.length },
       { id: "shop-missing-cards", label: "Missing cards", count: missingShown, number: (missing?.rows || []).length },
-      { id: "shop-combined", label: "Build together", count: combined && pageEmpty.hidden ? 1 : 0, number: 0 },
+      { id: "shop-combined", label: "Combined shortages", count: combined && hasBuying ? 1 : 0, number: 0 },
       { id: "shop-by-shop", label: "By shop", count: queue.length, number: 0 },
       { id: "shop-baskets", label: "Baskets", count: Boolean(data.baskets) && seesHomeInventory(state.may), number: 0 },
-      { id: "shop-follow-ups", label: "Follow-ups", count: followUps.length, number: followUps.length },
-      { id: "shop-long-term", label: "Long-term plan", count: later.length, number: 0 },
     ]);
     if (jumps) jumpSlot.append(jumps);
     shopApplyMatches(view);
   };
   view.redraw();
-  const layout = el("div", { class: "shop-layout" }, el("div", { class: "shop-main shop-list-pane" }, main), sideNode);
+  const layout = el("div", { class: "shop-layout" },
+    el("div", { class: "shop-main shop-list-pane", hidden: task !== "orders" }, main), sideNode);
   const layoutSlot = el("div");
   if (pageEmpty.hidden) layoutSlot.append(layout);
   const root = el("div", { class: "shop-page" },
-    pageHead({ title: routeH1("shopping"), description: "What's on the way, what to check and what to buy.",
-      primary: mayDo("orders") && data.queue_revision ? [
-        isAdminProfile() ? el("button", { type: "button", class: "btn btn-primary shop-order-add shop-queue-write",
-          text: "New order", onclick: () => shopOrderSheet(view) }) : null,
-        view.addHome,
-      ] : null,
+    pageHead({ title: routeH1("shopping"),
+      primary: task === "buy" ? view.addHome : isAdminProfile() && mayDo("orders") && data.queue_revision
+        ? el("button", { type: "button", class: "btn btn-primary shop-order-add shop-queue-write",
+          text: "Record an order", onclick: () => shopOrderSheet(view) }) : null,
       more: [{ label: routeFor("wishlist").label, href: "#/wishlist" }, { label: "Refresh", onclick: () => route() }] }),
+    shopTaskLinks(task, waiting.length),
     warningsBox(data.warnings, "Some shopping records need attention"),
     jumpSlot,
     pageEmpty,
-    layoutSlot,
-    history.length ? shopOrderHistory(history, view) : null);
+    layoutSlot);
   view.root = root;
   $("#main").append(root);
   const redraw = view.redraw;
@@ -901,9 +910,9 @@ function drawShopping(data) {
     if (!pageEmpty.hidden) layout.remove();
     else if (!layout.parentNode) layoutSlot.append(layout);
     shopSyncQueueControls(view);
-    registerShoppingKeyboardHelp(view);
+    if (task === "orders") registerShoppingKeyboardHelp(view);
   };
-  registerShoppingKeyboardHelp(view);
+  if (task === "orders") registerShoppingKeyboardHelp(view);
   shopSyncQueueControls(view);
   shopWatchQueueDensity(view);
   return view;

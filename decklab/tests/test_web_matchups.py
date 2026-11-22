@@ -251,8 +251,8 @@ class AdaptivePlayTests(unittest.TestCase):
                  for mode, d in (("assess", data), ("fixed", data), ("ahead", fresh), ("fixed", fresh))]
         texts = _run_page(calls)
         self.assertIn("How long to playQuick lookSettle itPrecise", texts[0])
-        for text, words in zip(texts, ("Play more", "Play 800 more games", "Play with today's engine",
-                                       "Play 800 games with today's engine")):
+        for text, words in zip(texts, ("Simulate more games", "Simulate 800 more games", "Simulate with today's engine",
+                                       "Simulate 800 games with today's engine")):
             self.assertIn(words, text)
             self.assertIn("Swap sides", text)
 
@@ -293,7 +293,7 @@ class AdaptivePlayTests(unittest.TestCase):
         script = _scripts(MATCHUP_SCRIPTS)
         box = _function(script, "playBox")
         self.assertIn("runModeChoice(data)", box)
-        self.assertIn('text: "Play"', box)
+        self.assertIn('text: "Start 1v1 simulation"', box)
         play = _function(script, "play")
         self.assertIn("mode: asked.mode", play)
         self.assertIn('if (asked.mode === "fixed") body.games = asked.games;', play)
@@ -392,9 +392,9 @@ class ReviewFixTests(unittest.TestCase):
             ".map(n=>n.getAttribute('aria-label'))]); })()"])
         entries = json.loads(entries)
         self.assertEqual([(row[0], row[1]) for row in entries], [("casual/c", .7), ("casual/b", .4)])
-        self.assertIn("play-now", entries[0][3])
+        self.assertIn("alternative list", entries[0][3])
         self.assertEqual(entries[1][2], f"#/matchup?key={'2' * 64}")
-        self.assertIn("play-now", labels)
+        self.assertIn("alternative list", labels)
         unknown_words, unknown_labels = json.loads(unknown)
         self.assertIn("?", unknown_words)
         self.assertRegex(unknown_labels[-1].lower(), r"not known|no winner")
@@ -433,7 +433,7 @@ class ReviewFixTests(unittest.TestCase):
                              (("casual/a", "A"), ("casual/b", "B"))]}
         s = {"id": "casual/a", "kind": "casual", "title": "A"}
         href, = _run_page([f"(() => {{ {self.STUB} const parts = deckResultParts({json.dumps(m)}, {json.dumps(s)}, "
-                           f"'play-now list', {json.dumps(library)}, 'owned'); "
+                           f"'alternative list', {json.dumps(library)}, 'owned'); "
                            "return walk(parts[1]).find((n) => n.tag === 'a').getAttribute('href'); })()"])
         self.assertEqual(href, "#/matchup?a=casual%2Fa&av=owned&b=casual%2Fb&bv=target")
 
@@ -535,11 +535,11 @@ class RunsPillTests(unittest.TestCase):
             ".map((n) => n.getAttribute('aria-label')).join(' | '); })()",
             f"(() => {{ {walk} return [{parts}].flat(Infinity).filter(Boolean).flatMap(walk).filter((n) => n.tag === 'a')"
             ".map((n) => n.getAttribute('href')).join(' '); })()"], self.NAMES)[1:]
-        self.assertIn("Forge playing: Gruul Ramp vs Izzet Otters (play-now)game 640 of ~1,100 · about 6 min left", text)
+        self.assertIn("Forge playing: Gruul Ramp vs Izzet Otters (alternative list)game 640 of ~1,100 · about 6 min left", text)
         self.assertIn("WaitingField run of Gruul Rampnext", text)
-        self.assertIn("Every run on Testing", text)
+        self.assertIn("Every run in Simulate", text)
         self.assertEqual(ring, "58 | Games played: 640 of ~1,100")
-        self.assertEqual(stops, "Stop the Forge run: Gruul Ramp vs Izzet Otters (play-now)")
+        self.assertEqual(stops, "Stop the Forge run: Gruul Ramp vs Izzet Otters (alternative list)")
         self.assertEqual(links, "#/matchup?key=k #/matchups")
         # Alone, its Stop is just "Stop the Forge run"; before a tenth of it has played there's no time left yet.
         alone, early = _run_page([
@@ -761,8 +761,9 @@ class PageScriptTests(unittest.TestCase):
         empty = dict(answer, opponents=[dict(o, games=0, rate=None, lead=None, residual=None) for o in answer["opponents"]],
                      average=None, rating=None)
         none, = _run_page([style, draw.format(answer=json.dumps(empty))][1:], ("core.js", *MATCHUP_SCRIPTS, "field.js"))
-        self.assertTrue(none.startswith("No games against the field yet.Play the field to see how this list does "
-                                        "against the 2 other Constructed decks of the house."), none)
+        self.assertTrue(none.startswith("Planned list · Forge simulation · 1v1, best of one"), none)
+        self.assertIn("No games against the field yet.Play the field to see how this list does "
+                      "against the 2 other Constructed decks of the house.", none)
         self.assertEqual(none.count("Against each deck"), 0)
 
 

@@ -20,17 +20,23 @@ async function checkPlayNowShortages(review, page, context, spec) {
   await page.route('**/api/shopping/queue/missing', route => route.fulfill({json:{
     ready:true, deck:{id,title:base.summary.title}, revision:'fixture', rows, totals:{copies:5,cards:2}}}));
   await page.goto(review.pageUrl('/#/deck?id='+encodeURIComponent(id)+'&v=owned&tab=cards&filter=missing',spec.theme));
-  const copy = page.getByRole('button',{name:'Copy missing cards',exact:true});
+  const buy = page.getByRole('button',{name:'Find and buy cards',exact:true});
+  await buy.waitFor();
+  const widths = await page.evaluate(() => [innerWidth, document.documentElement.scrollWidth]);
+  assert.deepEqual(widths, [spec.width, spec.width], 'Alternative Cards must fit its viewport before opening the buying sheet');
+  await buy.click();
+  await page.getByRole('button',{name:'Use recorded collection',exact:true}).click();
+  const copy = page.getByRole('button',{name:'Copy missing for this list',exact:true});
   await copy.waitFor();
   await page.evaluate(() => Object.defineProperty(navigator,'clipboard',{value:{writeText:async text => { window.copiedMissing = text; }}}));
   await copy.click();
   assert.equal(await page.evaluate(() => window.copiedMissing), '3 Opt\n');
   assert.equal(await page.getByRole('button',{name:'Queue missing cards…',exact:true}).count(),0);
-  await page.getByRole('button',{name:'Review Planned list shortages',exact:true}).click();
+  await page.getByRole('button',{name:'Review Planned list for the shared queue',exact:true}).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('checkbox',{name:'Queue Elvish Mystic'}).uncheck();
   assert(!await dialog.getByRole('checkbox',{name:'Queue Opt'}).count());
-  assert(await dialog.getByRole('button',{name:'Queue 1 copy (To buy)',exact:true}).isEnabled());
+  assert(await dialog.getByRole('button',{name:'Queue 1 copy (Ready to buy)',exact:true}).isEnabled());
   const cancel = dialog.getByRole('button',{name:'Cancel',exact:true});
   if (spec.coarse) {
     const point = await cancel.evaluate(button => {
@@ -129,6 +135,12 @@ run('composition', async review => {
     try {
       review.select('matt',spec.case); context = await review.context(spec); page = await context.newPage();
       review.observe(page,result.page_errors,result.http_errors);
+      const failureText = 'Failed to load resource: the server responded with a status of 503 (Service Unavailable)';
+      let libraryFailureConsole = 0;
+      if (spec.case === 'library-failed' && review.options.strictConsole) page.on('console', message => {
+        if (message.type() === 'error' && message.text() === failureText
+          && message.location().url === `${review.origin}/api/decks`) libraryFailureConsole++;
+      });
       const deckPath = '/api/deck/edit?id=commander%2Fwoodland-council';
       const digest = value => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
       const before = digest(await review.readFixture(context,deckPath));
@@ -189,6 +201,14 @@ run('composition', async review => {
         assert.equal(v.label, 'Followed');
         assert(v.scrollWidth <= v.clientWidth && v.pageWidth <= v.viewport,
           'Commander verdict overflows at 320px with doubled text');
+      }
+      if (spec.case === 'library-failed' && review.options.strictConsole) {
+        const expected = result.http_errors.filter(e => e.url === '/api/decks' && e.status === 503 && e.category === 'expected_failure_state');
+        assert.equal(expected.length, 1, 'The unavailable-library fixture must reply with one 503');
+        assert.equal(libraryFailureConsole, expected.length, 'The console diagnostic must match the fixture response');
+        const message = `Console error: ${failureText}`, index = result.page_errors.indexOf(message);
+        assert(index >= 0, 'The fixture diagnostic was not recorded');
+        result.expected_console_errors = result.page_errors.splice(index, 1);
       }
       assert.equal(result.page_errors.length,0,'Uncaught page error');
       assert(!result.http_errors.some(r => r.category === 'unexpected_http_error'),'Unexpected fixture HTTP failure');

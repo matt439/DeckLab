@@ -134,6 +134,7 @@ function closeAllSheets() {
 async function chooseProfile(profile) {
   closeAllSheets();
   state.profile = profile;
+  resetVersionAudience();
   session.set("profile", profile.id);
   local.set("lastProfile", profile.id);
   if (!state.remote) {
@@ -192,6 +193,7 @@ async function switchProfile(ask = true) {
   if (path === "edit" || path === "new") history.replaceState(history.state, "", "#/library");
   session.remove("profile");
   state.profile = null;
+  resetVersionAudience();
   clearArrivalNotices();
   hideShell();
   route();

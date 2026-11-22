@@ -79,7 +79,7 @@ class QuickEditorUiTests(unittest.TestCase):
           input('f-archetype', 'Elves and ramp');
           const player = document.getElementById('f-player').parentNode;
           same(player.querySelectorAll('button').map(node => node.textContent), ['User1']);
-          button(document.getElementById('f-built_version').parentNode, 'Play-now list').click();
+          button(document.getElementById('f-built_version').parentNode, 'Alternative list').click();
           main.querySelector('[data-focus="field:sleeves:green"]').click();
           main.querySelector('[data-focus="field:deck_box:box"]').click();
           same(draftBody().fields, {archetype:'Elves and ramp',built_version:'owned',sleeves:'green',deck_box:'box'});

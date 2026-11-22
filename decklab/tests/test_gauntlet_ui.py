@@ -181,12 +181,12 @@ class GauntletUiTests(unittest.TestCase):
 
     # ------------------------------------------------------------------ E3-S33: the standard sample and headline
 
-    def test_a_commander_decks_matchups_tab_leads_with_popular_decks(self):
+    def test_simulate_tab_leads_with_popular_decks(self):
         self.run_js("""
           answers=[base()];
           const ids=()=>panel('matchups').children.map(n=>n.getAttribute('id'));
           open('#/deck?id=casual%2Ftest&v=target&tab=matchups');await settle();
-          same(ids(),['sec-matchups','sec-field','sec-group','sec-gauntlet','sec-tests','sec-crosscheck']);
+          same(ids(),['sec-gauntlet','sec-matchups','sec-field','sec-group','sec-tests','sec-crosscheck']);
           clear(main);location.hash='#/deck?id=commander%2Ftest&v=target&tab=matchups';
           const page=makePage();page.summary={...page.summary,id:'commander/test',kind:'commander'};
           drawDeck(page,deckViewOf(parseHash().params));await settle();

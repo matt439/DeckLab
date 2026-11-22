@@ -2,8 +2,7 @@
  * from EDHREC, grouped by EDHREC's categories with the share of its decks playing each, and the date the
  * PC fetched them. A viewer who sees the deck's space's collection gets each card marked in the deck, free,
  * in use (every copy in another deck, which is never named) or to buy with its estimate (E11-S53: in the answer's currency); anyone else
- * the list alone (the server sends no marks). Whoever may change the deck adds a card to its Considering
- * list from here (POST /api/deck/considering, deck-considering.js), one save each.
+ * the list alone (the server sends no marks). An editable suggestion opens the ordinary Considering draft.
  *
  * EDHREC is asked only when the sheet is opened (and then only when the PC's copy is a week old): the Cards
  * tab shows just a button, so a failure or a slow answer never touches the rest of the page.
@@ -19,7 +18,7 @@
  * Consider button (no deck to add to). */
 "use strict";
 
-const EDHREC_FILTERS = [["new", "Not in the deck"], ["free", "Free"], ["to_buy", "To buy"], ["all", "All"], ["cuts", "Cuts"]];
+const EDHREC_FILTERS = [["new", "Outside planned list"], ["free", "Free now"], ["to_buy", "Short in collection"], ["all", "All"], ["cuts", "Cuts"]];
 const EDHREC_PAGE_GROUPS = [["budget", "Budget"], ["bracket", "Commander Brackets"], ["theme", "Themes"]];
 const edhrecSheets = new Set();
 
@@ -39,14 +38,15 @@ function deckEdhrecSection(data) {
       el("button", { type: "button", class: "btn btn-quiet", text: "Review cuts…", onclick: () => openDeckCuts(data) })));
 }
 
-/** "In the deck", "Free in the pool", "2 free", "Owned, all in other decks", "To buy · ~A$1.20", with
- * copies on the way and Considering said; for a viewer with no marks only what the deck's list shows. */
+function edhrecFreeNow(card) { return Math.max(0, (card.free || 0) - (card.on_the_way || 0)); }
+
+/** The planned list, physical/incoming availability, and Considering are distinct scopes. */
 function edhrecMarkWords(c, marks, answer = null) {
   const words = [];
-  if (c.in_deck) words.push("In the deck");
-  else if (marks && c.status === "free") words.push(c.free > 1 ? `${num(c.free)} free` : "Free in the pool");
-  else if (marks && c.status === "in_use") words.push("Owned, all in other decks");
-  else if (marks && c.status === "to_buy") words.push(c.aud_each != null ? `To buy · ~${ansMoney(c.aud_each, answer)}` : "To buy · no price");
+  if (c.in_deck) words.push("In planned list");
+  else if (marks && c.status === "free" && edhrecFreeNow(c) > 0) words.push(`${num(edhrecFreeNow(c))} free now`);
+  else if (marks && c.status === "in_use") words.push("Owned, currently held");
+  else if (marks && c.status === "to_buy") words.push(c.aud_each != null ? `Short · ~${ansMoney(c.aud_each, answer)}` : "Short · no price estimate");
   if (marks && c.on_the_way) words.push(`${num(c.on_the_way)} on the way`);
   if (c.considering) words.push("Considering");
   return words;
@@ -55,22 +55,18 @@ function edhrecMarkWords(c, marks, answer = null) {
 function edhrecPasses(c, filter) {
   if (filter === "all") return true;
   if (filter === "new") return !c.in_deck;
+  if (filter === "free") return !c.in_deck && c.status === "free" && edhrecFreeNow(c) > 0;
   return !c.in_deck && c.status === filter;
 }
 
 function openEdhrecSheet(data, lead = null, options = {}) {
-  const ctx = { data, id: data ? data.summary.id : null, lead, filter: options.cuts ? "cuts" : lead ? "all" : "new", answer: null, changed: false,
+  const ctx = { data, id: data ? data.summary.id : null, lead, filter: options.cuts ? "cuts" : lead ? "all" : "new", answer: null,
     cutEditor: options.editor || null,
     seq: 0, page: "", pages: null };
   const sheet = openSheet("EDHREC ideas", { wide: true, onClose: () => {
     edhrecSheets.delete(ctx);
     if (ctx.closingForRoute) return;
-    if (ctx.afterClose) { ctx.afterClose(); return; }
-    const here = parseHash();
-    if (ctx.changed && here.path === "deck" && addressDeckId(here.params.get("id") || "") === ctx.id) {
-      invalidateLibrary();
-      route();                                  // the Considering list, drawn again from the saved deck
-    }
+    if (ctx.afterClose) ctx.afterClose();
   } });
   ctx.sheet = sheet;
   edhrecSheets.add(ctx);
@@ -95,7 +91,6 @@ async function loadEdhrec(ctx) {
     const answer = await api(`/api/deck/edhrec?${address}` + (ctx.page ? `&page=${encodeURIComponent(ctx.page)}` : ""));
     if (seq !== ctx.seq || !edhrecCutsHere(ctx)) return;
     ctx.answer = answer;
-    ctx.sha = answer.sha256;
     ctx.pages = Array.isArray(answer.pages) ? answer.pages : null;
     clear(ctx.message);
     drawEdhrecPicker(ctx);
@@ -184,27 +179,9 @@ function edhrecRow(ctx, c, marks) {
   const share = c.inclusion != null ? `${c.inclusion}% of decks` : null;
   const row = cardRow(c.card || null, { name: c.name, meta: [share, ...edhrecMarkWords(c, marks, ctx.answer)].filter(Boolean).join(" · "),
     viewerGroup: "deck-edhrec", caption: c.name });
-  if (!ctx.answer.may_add || c.in_deck) return row;
-  const button = el("button", { type: "button", class: "btn btn-quiet", text: c.considering ? "Considering" : "Consider",
-    disabled: c.considering || null, "aria-label": `Add ${c.name} to the Considering list`,
-    onclick: () => considerEdhrecCard(ctx, c, button) });
-  return el("div", { class: "deck-considering-row edhrec-row" }, row, button);
-}
-
-/** One card added to the deck's Considering list: one save, from the sha the last save left. */
-async function considerEdhrecCard(ctx, c, button) {
-  if (button.disabled) return;
-  button.disabled = true;
-  try {
-    const answer = await apiWrite("/api/deck/considering", { id: ctx.id, sha256: ctx.sha, action: "add", line: { name: c.name, qty: 1 } });
-    if (answer && typeof answer.sha256 === "string") ctx.sha = answer.sha256;
-    ctx.changed = true;
-    c.considering = true;
-    button.textContent = "Considering";
-    toast(`Added ${c.name} to Considering.`);
-  } catch (e) {
-    if (!(e instanceof ApiError)) throw e;
-    button.disabled = false;
-    toast(e.message + (e.status === 409 ? " Close this and reload the deck, then try again." : ""));
-  }
+  if (!ctx.answer.may_add || !ctx.data || c.in_deck || c.considering) return row;
+  const link = el("a", { class: "btn btn-quiet", text: "Consider in editor", href: consideringEditHref(ctx.data, c.name),
+    "aria-label": `Consider ${c.name} in the editor` });
+  link.addEventListener("click", event => { if (!edhrecCutsHere(ctx, link)) event.preventDefault(); });
+  return el("div", { class: "deck-considering-row edhrec-row" }, row, link);
 }

@@ -3,15 +3,15 @@ the phone's top bar and bottom tab bar with its More sheet, the shopping badge, 
 choice. core.js's routes table (ROUTES) says what each page is called, where it sits and who sees it.
 
   From 1000 px (the lab, and a phone on its side): a sticky 56 px top bar: the logo, round nav pills
-  Decks · Testing (Forge's simulations, at #/matchups) · Collection · Shopping (a count of deliveries waiting) ·
+  Decks · Collection · Shopping (a count of deliveries waiting) ·
   More ▾ (the rest), the page's section marked with aria-current on --accent-soft; a slot for the run activity (#shell-status: Forge's
   turning ring while a run plays), the global search (#global-search, global-search.js: E11-S31), then the avatar.
   Under 1000 px (casual: the phone, and the iPad in portrait; design/visual-design.md section 6 decision 5):
   a 56 px header (the way back, or the logo; the page's title once its heading has scrolled away; the run
-  activity; the avatar) and a tab bar fixed to the bottom (Decks, Testing, Collection, Shopping, More; a
+  activity; the avatar) and a tab bar fixed to the bottom (Decks, Collection, Shopping, More; a
   member's has no Shopping) above the safe-area inset, under every page's own bar. More opens a sheet with the rest.
   The avatar menu: Theme (Auto, Light, Dark), Switch person and "This is my device" (on the home network
-  only: over the tunnel the login is the person), and Settings and About for an admin.
+  only: over the tunnel the login is the person), and Administration for an admin.
 
 "This is my device" is a localStorage flag holding the profile's id: that profile is chosen without the
 "Who are you?" screen when Deck Lab opens, and isn't forgotten after AWAY_MINUTES in the background
@@ -35,9 +35,9 @@ const ICONS = {
   wishlist: "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z",
   activity: "M3 12h4l3-7 4 14 3-7h4",
   settings: "M4 7h10M18 7h2M4 17h2M10 17h10M16 5v4M8 15v4",
+  help: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4m.1 3h.01",
   more: "M5 12h.01M12 12h.01M19 12h.01",
 };
-const TAB_COUNT = 4;                    // the tab bar's pages before More: Decks, Testing, Collection, Shopping
 const MY_DEVICE = "myDevice";           // local storage: the id of the profile whose device this is
 const DELIVERIES_MS = 60000;            // how long a count of deliveries waiting is good for
 let shellDeliveries = { at: 0, count: 0, request: null };
@@ -175,26 +175,22 @@ function drawShell() {
   if (nav) {
     nav.hidden = false;
     const moreMenu = el("div", { class: "menu nav-more-menu", id: "nav-more-menu", role: "menu", hidden: true },
-      more.map((r) => el("a", { role: "menuitem", href: `#/${r.path}`, "data-route": r.path, onclick: () => closeMenus(),
-        class: r.pill ? "nav-narrow" : null }, shellIcon(r.icon), el("span", { text: r.label }))));
+      more.map((r) => el("a", { role: "menuitem", href: `#/${r.path}`, "data-route": r.path, onclick: () => closeMenus() },
+        shellIcon(r.icon), el("span", { text: r.label }))));
     const moreButton = el("button", { type: "button", class: "nav-item nav-more", "aria-haspopup": "menu",
-      "aria-expanded": "false", "aria-controls": "nav-more-menu", "data-route-group": "more" },
+      "aria-expanded": "false", "aria-controls": "nav-more-menu", "aria-label": "More destinations", "data-route-group": "more" },
       "More", el("span", { class: "menu-caret", "aria-hidden": "true" }));
     clear(nav).append(el("ul", { class: "nav-items" },
       main.map((r) => el("li", {}, navLink(r, "nav-item"))),
-      // A "more" page with a pill (Build decks, E11-S61): its pill shows from 1000 px only (shell.css), where
-      // More leaves it out; a phone on its side's top bar has no room for a fifth pill, so there it's in More.
-      more.filter((r) => r.pill).map((r) => el("li", { class: "nav-wide" }, navLink(r, "nav-item"))),
       more.length ? el("li", { class: "menu-wrap" }, wireMenu(moreButton, moreMenu), moreMenu) : null));
   }
 
-  // The casual tab bar (under 1000 px): the first four main pages, then More (the rest, in a sheet).
-  const tabs = main.slice(0, TAB_COUNT), sheetRoutes = [...main.slice(TAB_COUNT), ...more, ...account];
+  const sheetRoutes = [...more, ...account];
   const bar = byId("tabbar");
   if (bar) {
-    add(clear(bar), [tabs.map((r) => navLink(r, "tab", true)),
+    add(clear(bar), [main.map((r) => navLink(r, "tab", true)),
       sheetRoutes.length ? el("button", { type: "button", class: "tab tab-more", "data-route-group": "sheet",
-        "aria-haspopup": "dialog", "aria-controls": "more-sheet", onclick: openMoreSheet },
+        "aria-haspopup": "dialog", "aria-controls": "more-sheet", "aria-label": "More destinations", onclick: openMoreSheet },
         shellIcon("more"), el("span", { class: "tab-label", text: "More" })) : null]);
     bar.hidden = false;
     watchTabbarHeight(bar);
@@ -244,7 +240,7 @@ function syncAccountMenu() {
     initial.setAttribute("class", `avatar avatar-${index % 4}`);
   }
   const button = byId("avatar-button");
-  if (button) button.setAttribute("aria-label", `${profile.name}: theme, ${state.remote ? "" : "switch person, "}settings`);
+  if (button) button.setAttribute("aria-label", `${profile.name}, account menu`);
   const name = byId("menu-name");
   if (name) name.textContent = profile.name;
   const device = byId("my-device");
@@ -255,7 +251,7 @@ function syncAccountMenu() {
   const admin = isAdminProfile();
   const visibility = byId("menu-visibility");
   if (visibility) visibility.hidden = !routeVisible(routeFor("visibility"));
-  for (const id of ["menu-settings", "menu-about", "admin-sep"]) {
+  for (const id of ["menu-settings", "admin-sep"]) {
     const node = byId(id);
     if (node) node.hidden = !admin;
   }
@@ -282,11 +278,7 @@ function syncShell(path = parseHash().path) {
   }
   for (const group of document.querySelectorAll("[data-route-group]")) {
     const more = group.dataset.routeGroup === "more";
-    const inside = more ? section.nav === "more"
-      : !navRoutes("main").slice(0, TAB_COUNT).some((r) => r.path === section.path);
-    // A page with its own pill from 1000 px marks the top bar's More only below that (shell.css).
-    group.classList.toggle("is-current", inside && !(more && section.pill));
-    group.classList.toggle("is-current-narrow", inside && more && Boolean(section.pill));
+    group.classList.toggle("is-current", section.nav === "more" || (!more && section.nav === "account"));
   }
   syncShellBack();
   syncShellTitle();
@@ -338,7 +330,7 @@ function openMoreSheet() {
  * profile is chosen (at most once a minute), and only for a visitor who may see home's shopping; the Shopping
  * page brings it up to date from its own answer (noteDeliveries). */
 async function loadDeliveries(force = false) {
-  if (!state.profile || !seesInventory(HOME_SPACE)) return showDeliveries(0);
+  if (!state.profile || !seesHomeInventory(state.may)) return showDeliveries(0);
   if (shellDeliveries.request) return shellDeliveries.request;
   if (!force && Date.now() - shellDeliveries.at < DELIVERIES_MS) return showDeliveries(shellDeliveries.count);
   shellDeliveries.request = (async () => {

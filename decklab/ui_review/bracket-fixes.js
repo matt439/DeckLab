@@ -60,7 +60,7 @@ run('bracket-fixes',async review=>{
             const buttons=root.getByRole('button',{name:'Test this swap',exact:true});assert.equal(await buttons.count(),3);
             assert.equal(await buttons.nth(0).isDisabled(),false);assert.equal(await buttons.nth(1).isDisabled(),true);assert.equal(await buttons.nth(2).isDisabled(),true);
             if(mode==='test'){
-              await buttons.first().click();await page.getByRole('heading',{name:'Test this change',exact:true}).waitFor();
+              await buttons.first().click();await page.getByRole('heading',{name:'Simulate this change',exact:true}).waitFor();
               await page.locator('dialog.vt-sheet[open] .vt-choice').first().waitFor({state:'visible'});
             }
           }

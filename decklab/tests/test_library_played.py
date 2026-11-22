@@ -96,6 +96,9 @@ class LibraryPlayedTests(MixedFixture, ApiTestCase):
                 "commander/pod-a": {"last": None, "games": 0},
                 "casual/gruul-test": {"last": "2026-10-08", "games": 2}})
             self.assertEqual(library_played.deck_played("commander/pod-a"), {"last": None, "games": 0, "since": None})
+            self.assertEqual(deck_page.deck_view("commander/pod-a")["played"], {
+                "last": None, "games": 0, "since": None, "can_record": True,
+                "pods": {"last": "2026-10-27", "three_player": 1, "four_player": 0}})
             lineup = commander_lineup.lineup_view()
             deck = next(row for group in lineup["groups"].values() for row in group if row["id"] == "commander/pod-a")
             self.assertEqual(deck["last_played"], "2026-10-27")

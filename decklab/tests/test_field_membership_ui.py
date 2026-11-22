@@ -58,7 +58,7 @@ class FieldMembershipUiTests(unittest.TestCase):
           assert(details.textContent.includes("The field rules choose this deck's other version"));
           const links=details.querySelectorAll('a');
           assert(links.some(link=>link.getAttribute('href')===deckHref('casual/manual','owned')
-            &&link.textContent.includes('Play-now list')));
+            &&link.textContent.includes('Alternative list')));
           assert(links.some(link=>link.getAttribute('href')===deckHref('casual/other','target')
             &&link.textContent.includes('Planned list')));
           assert(details.textContent.includes('This deck is included, but never plays itself'));
@@ -74,7 +74,7 @@ class FieldMembershipUiTests(unittest.TestCase):
             counts:{included:1,opponents:0,manual_excluded:0}});};
           const details=mount(data);expand(details);await settle();
           assert(calls[0].endsWith('version=owned'));
-          assert(details.textContent.includes('1 list included; 0 opponents for this play-now list'));
+          assert(details.textContent.includes('1 list included; 0 opponents for this alternative list'));
           assert(details.textContent.includes('This deck is included, but never plays itself'));
           assert(details.textContent.includes("This is the list you're viewing"));
           assert.equal(details.querySelectorAll('a').length,2);

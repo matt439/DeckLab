@@ -54,10 +54,10 @@ class GauntletBoardUiTests(unittest.TestCase):
           assert.equal(gbInitialView(new URLSearchParams()),'popular');
           const calls=[];api=async url=>{calls.push(url);return board('commander',[]);};
           open();await settle();
-          assert.equal(main.querySelector('h1').textContent,'Testing');
+          assert.equal(main.querySelector('h1').textContent,'Simulate');
           const views=main.querySelector('.mu-view').querySelectorAll('button').map(b=>b.textContent);
-          same(views,['Popular decks','Matchups','Rankings']);
-          assert.equal(button(main,'Popular decks').getAttribute('aria-pressed'),'true');
+          same(views,['Against popular decks','1v1 matchups','Field rankings']);
+          assert.equal(button(main,'Against popular decks').getAttribute('aria-pressed'),'true');
           same(calls,['/api/gauntlet/board?format=commander']);
           const formats=main.querySelector('.gb-format').querySelectorAll('button').map(b=>b.textContent);
           same(formats,['Commander','60-card']);
@@ -71,14 +71,14 @@ class GauntletBoardUiTests(unittest.TestCase):
           runGate=()=>({may:false,why:'Simulations are paused.'});
           open('view=popular&a=commander/c&av=target');
           assert.equal(pending.length,1);assert(pending[0].url.startsWith('/api/gauntlet/board'));
-          button(main,'Matchups').click();
+          button(main,'1v1 matchups').click();
           same(replaced,['#/matchups?view=matchups']);assert.equal(storage.get('decklab.testing.view'),'matchups');
-          assert.equal(document.activeElement,button(main,'Matchups'));
+          assert.equal(document.activeElement,button(main,'1v1 matchups'));
           assert(pending[0].signal.aborted);
           pending[0].resolve(board('commander',[tested('commander/c','Late answer',.5)]));await settle();
           assert(!main.textContent.includes('Late answer'));assert(!main.textContent.includes('cancelled'));
-          button(main,'Popular decks').click();
-          assert.equal(document.activeElement,button(main,'Popular decks'));
+          button(main,'Against popular decks').click();
+          assert.equal(document.activeElement,button(main,'Against popular decks'));
           same(replaced,['#/matchups?view=matchups','#/matchups?view=popular']);
           assert.equal(pending.length,2);
         """)
@@ -91,8 +91,8 @@ class GauntletBoardUiTests(unittest.TestCase):
             row('commander/o','Older',{state:'stale_older',older:{reason:'forge',overall:{rate:.45,low:.4,high:.5},
               updated:'2026-10-30T00:00:00Z',earlier:false,opponents:20,of:20}})]);
           open();await settle();
-          const pairing=button(main,'Play a matchup');
-          assert(pairing.classList.contains('btn-quiet'));assert(!pairing.classList.contains('btn-primary'));
+          const pairing=button(main,'Simulate a 1v1 matchup');
+          assert(pairing.hidden);
           assert(main.querySelector('.gb-scope').textContent.includes('Commander · 1v1 · 20 sampled opponents'));
           assert.equal(main.querySelector('.gb-help').querySelector('summary').textContent,'About these results');
           const rows=main.querySelectorAll('.gb-row');
@@ -100,10 +100,10 @@ class GauntletBoardUiTests(unittest.TestCase):
           assert(rows[1].querySelector('.gb-score-historical').textContent.includes('Before: 41%'));
           assert(rows[2].querySelector('.gb-score-historical').textContent.includes('older Forge'));
           assert(!rows[1].querySelector('.wr'));assert(!rows[2].querySelector('.wr'));
-          button(main,'Matchups').click();
-          assert(pairing.classList.contains('btn-primary'));assert(!pairing.classList.contains('btn-quiet'));
-          button(main,'Rankings').click();
-          assert(!pairing.classList.contains('btn-primary'));assert(pairing.classList.contains('btn-quiet'));
+          button(main,'1v1 matchups').click();
+          assert(!pairing.hidden);
+          button(main,'Field rankings').click();
+          assert(pairing.hidden);
           assert.equal(writes.length,0);
         """)
 

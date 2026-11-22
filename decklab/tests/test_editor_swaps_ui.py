@@ -66,9 +66,9 @@ class EditorSwapsUiTests(unittest.TestCase):
           // The ⋯ menu has the item only then.
           let items = null; openMenu = (anchor, list) => { items = list; };
           rowMenuButton(line("Lightning Bolt")).click();
-          assert(items.some((i) => i && i.text === "Stand-ins…"));
+          assert(items.some((i) => i && i.text === "Find substitute cards"));
           rowMenuButton(line("Forest")).click();
-          assert(!items.some((i) => i && i.text === "Stand-ins…"));
+          assert(!items.some((i) => i && i.text === "Find substitute cards"));
           // Not on the Planned list, nor while the check hasn't answered, nor without the collection.
           editor.version = "target";
           assert.equal(swapsAvailableFor(line("Lightning Bolt")), false);
