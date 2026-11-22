@@ -622,16 +622,17 @@ function colLocationSheetCurrent(ctx) {
 }
 
 /** Both scopes freeze every opened printing key and the two versions the review describes. */
-function openLocationBatch(cv, selected = false, opener = null) {
+function openLocationBatch(cv, selected = false, opener = null, exactRow = null) {
   if (!colActive(cv) || cv.busy || !colLocationCanWrite(cv) || document.querySelector("dialog[open]") || keyboardMenuOpen()) return null;
-  const rows = colShownRows(cv).filter(row => !selected || cv.bulkSelected?.has(colBulkKey(row)));
+  const rows = exactRow ? (cv.rows || []).filter(row => row === exactRow)
+    : colShownRows(cv).filter(row => !selected || cv.bulkSelected?.has(colBulkKey(row)));
   if (!rows.length) return null;
   if (rows.length > STORAGE_LOCATION_BATCH_MAX) {
     colSay(cv, `A storage-location batch can review at most ${num(STORAGE_LOCATION_BATCH_MAX)} rows. Narrow the search or selection first.`);
     return null;
   }
   const sheet = colOpenSheet("Set storage location"), id = key => `col-location-${key}-${sheet.heading.id}`;
-  const ctx = { cv, sheet, selected, opener, busy: false, action: "", text: "", keys: new Set(rows.map(colBulkKey)), rows: [] };
+  const ctx = { cv, sheet, selected, opener, exact: Boolean(exactRow), busy: false, action: "", text: "", rows: [] };
   colLocationBatchCapture(ctx, rows);
   const change = () => {
     if (!colLocationSheetCurrent(ctx)) { ctx.mode.value = ctx.action; ctx.input.value = ctx.text; return; }
@@ -707,7 +708,8 @@ function drawLocationBatch(ctx) {
 }
 
 function colLocationBatchRows(ctx) {
-  return colShownRows(ctx.cv).filter(row => ctx.keys.has(colBulkKey(row)) && (!ctx.selected || ctx.cv.bulkSelected?.has(colBulkKey(row))));
+  const rows = ctx.exact ? ctx.cv.rows || [] : colShownRows(ctx.cv);
+  return rows.filter(row => ctx.keys.has(colBulkKey(row)) && (!ctx.selected || ctx.cv.bulkSelected?.has(colBulkKey(row))));
 }
 
 function colLocationBatchRebase(ctx, words) {

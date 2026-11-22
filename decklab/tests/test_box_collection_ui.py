@@ -42,8 +42,8 @@ class BoxCollectionUiTests(unittest.TestCase):
           const {sheet}=await openBox();allFound(sheet);found(sheet,2,'1');found(sheet,4,'0');found(sheet,5,'0');extraCard(sheet,'Opt','2');reviewButton(sheet).click();
           same(repairs(sheet).map(node=>node.getAttribute('aria-label')),['Review collection copies: Recorded Elf (Deck, missing)',
             'Review collection copies: Named physical marker (Deck, missing)','Review collection copies: Opt (Sideboard, extra)']);
-          assert(sheet.body.textContent.includes('Identify this physical placeholder first'));assert(sheet.body.textContent.includes('discards its counts and extras'));
-          assert(sheet.body.textContent.includes('does not save a check date'));assert(!repairs(sheet).some(node=>node.textContent.includes('Missing spell')));
+          assert(sheet.body.textContent.includes('Identify this physical placeholder first'));assert(sheet.body.textContent.includes('resume this count'));
+          assert(sheet.body.textContent.includes('verify the total you own'));assert(!repairs(sheet).some(node=>node.textContent.includes('Missing spell')));
         ''')
 
     def test_handoff_closes_local_review_without_saving_or_changing_recipe_kit_ticks(self):
@@ -55,6 +55,7 @@ class BoxCollectionUiTests(unittest.TestCase):
           assert(Object.isFrozen(boxCollectionHandoff.difference));assert.equal(JSON.stringify(view.selected),before);assert.equal(view.buildKit,kit);
           assert.equal(JSON.stringify([...serverTicks]),ticksBefore);assert.equal(data.decks[0].box_check.checked_on,null);assert(!location.hash.includes('marker'));
           assert(!JSON.stringify(saved).includes('Named physical marker'));
+          assert.equal(pausedBoxCheck.rows[4].quantity,0);assert.equal(boxCollectionHandoff.returnHash,boxCheckAddress('casual/a','owned'));
         ''')
 
     def test_fresh_source_and_rows_are_read_once_before_name_chooser_and_receipt_is_consumed(self):

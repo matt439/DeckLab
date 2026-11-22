@@ -30,6 +30,16 @@ class AuditEvidenceTests(unittest.TestCase):
             with self.subTest(bad=bad), self.assertRaises(Invalid):
                 collection_audits.validate({**SUMMARY, **bad})
 
+    def test_named_extras_are_part_of_unlisted_total(self):
+        known = {"key": "dmr|23|foil", "name": "Savannah Lions", "set": "dmr", "collector_number": "23",
+                 "finish": "foil", "expected": 0, "observed": 1, "estimated": False}
+        summary = {**SUMMARY, "differences": [*SUMMARY["differences"], known], "mismatch_rows": 2}
+        collection_audits.validate(summary)
+        self.assertEqual(collection_audits.identified_extra(summary["differences"]), 1)
+        for bad in ({"observed": 2}, {"estimated": 0}, {"key": "wrong"}):
+            with self.subTest(bad=bad), self.assertRaises(Invalid):
+                collection_audits.validate({**summary, "differences": [*SUMMARY["differences"], {**known, **bad}]})
+
     def test_activity_only_shows_a_summary_to_the_collection_space(self):
         row = {"key": {"space_id": "user2"}, "op": "UPDATE", "after": {"space_id": "user2", **SUMMARY}}
         self.assertIsNone(collection_audit_row(row, ["home"]))
@@ -115,7 +125,8 @@ class AuditEvidenceDbTests(db_support.DbTestCase):
             detail = collection_storage_map.view("user2", ident)
             row, = detail["rows"]
             body = {"profile": "user2", "space": "user2", "section": ident, "expect": detail["expect"],
-                    "counts": {row["key"]: 3}, "extra": 1}
+                    "counts": {row["key"]: 3}, "extra": 1,
+                    "unlisted": [{"set": "fdn", "collector_number": "227", "finish": "foil", "quantity": 2}]}
             with inventory.pinned(backend.load()):
                 with self.connect("owner") as c, db.change("test", "test", "Collection changed", conn=c) as (cur, _):
                     _take_lock(cur)
@@ -126,7 +137,9 @@ class AuditEvidenceDbTests(db_support.DbTestCase):
                 self.assertEqual(caught.exception.status, 409)
             detail = collection_storage_map.view("user2", ident)
             saved = collection_storage_map.record(json.dumps({**body, "expect": detail["expect"]}))["section"]["audit"]
-            self.assertEqual((saved["expected"], saved["observed"], saved["missing"], saved["extra"]), (6, 4, 3, 1))
+            self.assertEqual((saved["expected"], saved["observed"], saved["missing"], saved["extra"],
+                              saved["unidentified_extra"]), (6, 6, 3, 3, 1))
+            self.assertEqual(saved["differences"][-1]["key"], "fdn|227|foil")
             self.assertEqual(collection_storage_map.view("user2", ident)["section"]["audit"], saved)
         with self.connect("ro") as c:
             self.assertEqual(c.execute("select quantity from collection_card where space_id = 'user2'").fetchone(), (6,))

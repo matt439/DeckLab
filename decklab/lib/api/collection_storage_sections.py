@@ -7,7 +7,7 @@ import re
 
 from decklab.lib import cards, inventory, tokens
 from decklab.lib.inventory import rules
-from decklab.lib.state import space_storage
+from decklab.lib.state import collection_audits, space_storage
 
 from . import collection_edit as collection, collection_locations
 from .common import ApiError
@@ -148,10 +148,11 @@ def _token_rows(space):
     for index, row in enumerate(token_list.rows):
         quantity = max(0, int(row["quantity"]) - packed[index])
         if quantity:
-            key = "token-" + digest(rules.token_identity(row))
+            key = collection_audits.token_key(row)
             entry = by_key.setdefault(key, {"key": key, "name": rules.token_label(row), "set": row["set"],
                                             "collector_number": row["front_collector_number"], "finish": row["finish"],
                                             "manualLabel": _token_scan_label(row),
+                                            "token": {field: row[field] for field in rules.TOKEN_ID_FIELDS},
                                             "description": " / ".join(filter(None, (row["front_details"], row["back_details"]))),
                                             "estimated": (row["front"], row["back"]) in packed_names, "quantity": 0})
             entry["quantity"] += quantity

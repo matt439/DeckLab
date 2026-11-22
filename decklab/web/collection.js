@@ -189,7 +189,7 @@ function showCollection(params, token) {
   setTitle(colTitle(space));
   if (params.get("view") === "rows") {
     return load(colPath("/api/collection/rows", space), token, (data) => drawCollectionRows(data, space, token),
-      { title: "The collection couldn't be loaded" });
+      { title: "The collection couldn't be loaded", back: storageAuditCorrectionBack("card") });
   }
   if (params.get("view") === "map") {
     return load(colPath(COL_STORAGE_MAP_API, space), token, (data) => drawCollectionStorageMap(data, space, token),

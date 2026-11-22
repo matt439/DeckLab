@@ -52,8 +52,10 @@ class SectionScanApiTests(fixtures.CollectionEditTestCase):
         self.assertEqual(detail["scan"], {"available": True})
         self.assertEqual({row["manualLabel"] for row in detail["rows"]},
                          {f"Goblin · #4 · 1/1 red / Treasure · #{number} · Artifact · TFDN · foil" for number in ("8", "9")})
+        self.assertEqual({row["token"]["back_collector_number"] for row in detail["rows"]}, {"8", "9"})
         self.assertNotIn("For testing", str(detail))
-        original = [{key: value for key, value in row.items() if key != "manualLabel"} for row in detail["rows"]]
+        original = [{key: value for key, value in row.items() if key not in ("manualLabel", "token")}
+                    for row in detail["rows"]]
         self.assertEqual(storage_map._digest("home", {**detail["section"], "rows": detail["rows"]}),
                          storage_map.sections.digest([1, "home", section["id"], section["container"], section["place"], original]))
 
@@ -72,7 +74,8 @@ class SectionScanUiTests(unittest.TestCase):
           const label = 'Goblin #4 / Treasure #9 · TFDN · foil';
           const token = {name: 'Goblin / Treasure', key: 'token-aa', set: 'tfdn', collector_number: '4',
             quantity: 1, finish: 'foil', manualLabel: label};
-          api = async () => detail({rows: [...rows, token], scan: {available:false}, excluded_names: ['Forest']});
+          api = async () => detail({rows: [...rows, token], scan: {available:false}, excluded_names: ['Forest'],
+            ready:false, editable:false, expect:null});
           const writes = [];
           apiWrite = async (...args) => { writes.push(args); };
           chooseSection('white').click(); await flush();
@@ -92,8 +95,112 @@ class SectionScanUiTests(unittest.TestCase):
           action('Back to scanning').click();
           assert.equal(countInput('Counted for ' + label).value, '2');
           action('Finish audit').click(); action('Done').click();
-          assert(action('Count by hand'));
+          assert(action('Look up cards') && !action('Count by hand'));
           same(writes, []);
+        """)
+
+    def test_complete_scan_saves_the_same_audit_and_retains_unlisted_printings(self):
+        self.run_js("""
+          const view = render();
+          const token = {name: 'Goblin / Treasure', key: 'token-aa', set: 'tfdn', collector_number: '4',
+            quantity: 1, finish: 'foil', manualLabel: 'Goblin / Treasure · TFDN · foil'};
+          const gold = {name:'Golden Pig', canonical_name:'Golden Pig', set:'fdn', collector_number:'88', finish:'nonfoil'};
+          const wrongFinish = {...rows[1], finish:'etched'};
+          const differences = [
+            {...rows[1], expected:2, observed:0},
+            {...wrongFinish, key:'fdn|1|etched', expected:0, observed:1},
+            {...gold, key:'fdn|88|nonfoil', expected:0, observed:1},
+          ];
+          const recorded = {...white, audit: {current:true, needs_review:true, expected:6, observed:6, mismatch_rows:3,
+            extra:2, missing:2, unidentified_extra:0, differences}};
+          api = async () => detail({rows:[...rows, token], section:{...white, quantity:6}, excluded_names:['Forest'],
+            scan:{available:false}});
+          let capture, writes = [];
+          const start = startCardAudit;
+          globalThis.startCardAudit = target => { capture = start(target); return capture; };
+          apiWrite = async (path, body) => { writes.push([path, body]); return {section:recorded, expect:'fresh'}; };
+          chooseSection('white').click(); await flush();
+          action('Look up cards').click();
+          addScanCard(capture, {...rows[0], canonical_name:'Alpha'});
+          addScanCard(capture, {...rows[0], canonical_name:'Alpha'});
+          addScanCard(capture, {...rows[0], canonical_name:'Alpha'});
+          addScanCard(capture, wrongFinish);
+          addScanCard(capture, gold);
+          addScanCard(capture, {name:'Forest', set:'fdn', collector_number:'99', finish:'nonfoil'});
+          countInput('Counted for ' + token.manualLabel).value = '1';
+          action('Finish audit').click();
+          assert(openDialog().textContent.includes('Review your count'));
+          assert(openDialog().textContent.includes('2 expected (estimate) · 0 counted'));
+          assert(openDialog().textContent.includes('2 cards unlisted'));
+          assert(openDialog().textContent.includes('Outside this audit') && openDialog().textContent.includes('1 × Forest'));
+          assert.equal(writes.length, 0);
+          action('Save audit').click(); await flush();
+          same(writes, [['/api/collection/storage-map', {space:'home', section:'white', expect:'proof',
+            counts:{'fdn|1|nonfoil':3, 'fdn|1|foil':0, 'token-aa':1}, extra:0, unlisted:[
+              {set:'fdn', collector_number:'1', finish:'etched', quantity:1},
+              {set:'fdn', collector_number:'88', finish:'nonfoil', quantity:1},
+            ]}]]);
+          assert(capture.sheet.closed);
+          assert(openDialog().textContent.includes('Audit saved.'));
+          assert(action('Keep for later') && action('Review collection copies'));
+          assert(view.mapSections.find(section => section.id === 'white').audit.needs_review);
+        """)
+
+    def test_skipped_photos_cannot_replace_the_saved_audit(self):
+        self.run_js("""
+          render();
+          api = async () => detail({section:empty, rows:[], scan:{available:false}, excluded_names:[]});
+          let capture;
+          const start = startCardAudit;
+          globalThis.startCardAudit = target => { capture = start(target); return capture; };
+          apiWrite = () => { throw new Error('unexpected write'); };
+          chooseSection('green').click(); await flush();
+          action('Look up cards').click();
+          drawScanResult(capture, {proposals:[], message:'Unreadable'});
+          action('Skip this photo').click();
+          action('Finish audit').click();
+          assert(openDialog().textContent.includes('1 photo skipped'));
+          assert(!action('Save audit'));
+          action('Done').click();
+          assert(action('Count by hand'));
+        """)
+
+    def test_section_scan_offers_only_a_printings_known_finishes(self):
+        self.run_js("""
+          render();
+          api = async () => detail({scan:{available:false}, excluded_names:[]});
+          let capture;
+          const start = startCardAudit;
+          globalThis.startCardAudit = target => { capture = start(target); return capture; };
+          chooseSection('white').click(); await flush();
+          action('Look up cards').click();
+          addScanCard(capture, {name:'Alpha', set:'fdn', collector_number:'9', finish:'nonfoil', finishes:['nonfoil']});
+          const select = openDialog().querySelector('[aria-label="Finish of Alpha"]');
+          same(select.querySelectorAll('option').map(option => option.value), ['nonfoil']);
+          select.value = 'foil'; select.fire('change');
+          assert.equal(capture.pending[0].finish, 'nonfoil');
+        """)
+
+    def test_stale_scan_reloads_its_section_and_requires_a_new_count(self):
+        self.run_js("""
+          render();
+          let reads = 0, writes = 0;
+          api = async () => detail({section:empty, rows:[], scan:{available:false}, excluded_names:[],
+            expect:'proof-' + ++reads});
+          apiWrite = async (path, body) => {
+            writes++;
+            assert.equal(body.expect, 'proof-1');
+            throw new ApiError(409, 'Someone else saved a count.');
+          };
+          chooseSection('green').click(); await flush();
+          action('Look up cards').click(); action('Finish audit').click();
+          const oldSave = action('Save audit');
+          oldSave.click(); await flush();
+          assert(openDialog().textContent.includes('Someone else saved a count.'));
+          action('Reload section').click(); await flush();
+          assert(action('Count by hand') && action('Look up cards'));
+          assert.equal(reads, 2);
+          oldSave.click(); assert.equal(writes, 1);
         """)
 
     def test_scan_captures_the_open_section_and_owns_child_sheets(self):

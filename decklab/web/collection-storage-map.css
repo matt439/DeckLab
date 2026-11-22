@@ -53,6 +53,8 @@
 .col-map-section-text, .col-map-section-facts { display: grid; }
 .col-map-section-facts { text-align: right; }
 .col-map-section-name { font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
+.col-map-needs-review { color: var(--warn-text); font-weight: var(--fw-semibold); }
+.col-map-row-label > .col-map-needs-review { display: block; font-size: var(--fs-sm); }
 .col-map-section-count {
   font-size: var(--fs-sm); font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
@@ -76,6 +78,9 @@
 }
 .col-map-count-row > span:first-child { grid-column: 1; }
 .col-map-differences li .sub, .col-map-count-row .sub { display: block; }
+.col-map-differences li > span:first-child { overflow-wrap: anywhere; }
+.col-map-correction { grid-column: 1 / -1; justify-self: start; }
+.col-map-unlisted-summary:not(:empty) { margin-block-start: var(--s-2); }
 .col-map-expected { grid-column: 1; color: var(--ink-2); font-size: var(--fs-sm); }
 .col-map-count-row input {
   grid-column: 2; grid-row: 1 / span 2; width: 5.5rem; min-height: var(--tap);

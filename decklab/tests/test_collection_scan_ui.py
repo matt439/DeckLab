@@ -38,6 +38,51 @@ class CollectionScanUiTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "ok")
 
+    def test_hand_count_picks_only_unlisted_paper_finishes_and_preserves_edits(self):
+        self.run_js("""
+          draw();
+          let current = true;
+          const results = [];
+          const settings = {
+            space: 'home', rows, excludedNames: ['Forest'],
+            current: () => current, finish: selected => results.push(selected)
+          };
+          const printings = [{set:'fdn', collector_number:'227', finishes:['nonfoil','foil']},
+            {set:'m19', collector_number:'314', finishes:['nonfoil']}];
+          api = async path => ({name:path.endsWith('Forest') ? 'Forest' : 'Llanowar Elves', printings});
+          apiWrite = () => { throw Error('The lookup must stay local'); };
+          const lookUp = async (ctx, name) => { ctx.name.value = name; await findScanName(ctx); };
+          const ctx = openStorageAuditUnlisted(settings);
+          assert(!ctx.live && !ctx.grid && !ctx.sheet.body.querySelector('input[type="file"]'));
+          assert.equal(foot(ctx, 'finish').textContent, 'Use these printings');
+          await lookUp(ctx, 'Forest');
+          assert(ctx.message.textContent.includes('outside this audit'));
+          assert.equal(ctx.result.querySelector('button'), null);
+          await lookUp(ctx, 'Llanowar Elves');
+          ctx.result.querySelector('button').click();
+          const pickFinish = pick(ctx, 'Finish of Llanowar Elves');
+          same(options(pickFinish), ['Foil']);
+          const count = pick(ctx, 'Copies of Llanowar Elves');
+          count.value = '2'; count.fire('change');
+          foot(ctx, 'finish').click();
+          assert(ctx.sheet.closed);
+          const exact = rows => rows.map(({name,set,collector_number,finish,quantity}) =>
+            [name,set,collector_number,finish,quantity]);
+          same(exact(results[0]), [['Llanowar Elves','fdn','227','foil',2]]);
+          const again = openStorageAuditUnlisted({...settings, initial: results[0]});
+          await lookUp(again, 'Llanowar Elves');
+          again.result.querySelector('button').click();
+          same(exact(again.pending), [['Llanowar Elves','fdn','227','foil',3]]);
+          button(again.sheet.body, 'Take out').click();
+          foot(again, 'finish').click();
+          same(results[1], []);
+          const stale = openStorageAuditUnlisted(settings);
+          current = false;
+          foot(stale, 'finish').click();
+          assert(!stale.sheet.closed);
+          assert.equal(results.length, 2);
+        """)
+
     def test_dismissal_protects_copies_and_unresolved_photos_until_discarded(self):
         self.run_js("""
           const ctx = openScanSheet(draw());

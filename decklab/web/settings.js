@@ -32,6 +32,7 @@ function showTerminology() {
     ["Packed in this box", "The recorded list in a physical deck box. Its copies are held for that deck until its build changes."],
     ["Substitute card", "A card you choose instead of another in a deck list."],
     ["Physical placeholder", "A marker you pack instead of the actual card."],
+    ["Check physical cards", "For loose cards in your collection, open Collection → Storage map and choose a section. For a built deck in your space, open Overview → Packed in this box."],
     ["Check copies at home", "A private checklist for ticking off physical copies, setting them aside and selecting copies to buy."],
     ["Use recorded collection", "Calculate shortages for the chosen list from the recorded collection. Copies you have yet to enter may need a manual check."],
     ["Availability needs updating", "A saved count is out of date. Updating it recalculates availability from the recorded collection."],

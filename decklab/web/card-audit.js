@@ -57,7 +57,8 @@ function startCardAudit(target) {
     return { row, input, node: el("label", { class: "field" },
       el("span", { text: label }), el("span", { class: "sub", text: `${num(row.quantity)} expected` }), input) };
   });
-  const instructions = [target.instructions, CARD_AUDIT_TEMPORARY].filter(Boolean).join(" ");
+  const persistence = target.review ? "Save the audit after reviewing the count." : CARD_AUDIT_TEMPORARY;
+  const instructions = [target.instructions, persistence].filter(Boolean).join(" ");
   const ctx = openAuditScan({ ...target, instructions, finish, manualDescription: () =>
     fields.some(({ input, row }) => input.value.trim() !== (row.quantity === 0 ? "0" : ""))
       ? "Closing clears your hand counts." : "" });
@@ -88,7 +89,8 @@ function startCardAudit(target) {
       colScanSay(capture, "warn", "The total is too large. Check the counts you entered.");
       return;
     }
-    showCardAuditResult(capture, result, skipped);
+    const review = target.review?.({ scanned, manualCounts, result, skipped }, capture);
+    showCardAuditResult(capture, result, skipped, review);
   }
 }
 
@@ -101,28 +103,30 @@ function cardAuditDifferences(title, items) {
       el("span", { text: `${num(item.expected)} expected${item.estimated ? " (estimate)" : ""} · ${num(item.observed)} counted` })))));
 }
 
-function showCardAuditResult(ctx, result, skipped) {
+function showCardAuditResult(ctx, result, skipped, review) {
   const { sheet } = ctx;
   const controls = [...sheet.body.children];
   const beforeDismiss = sheet.beforeDismiss;
   ctx.auditReview = true;
-  const heading = el("h3", { text: "Audit results", tabindex: "-1" });
+  const heading = el("h3", { text: review ? "Review your count" : "Audit results", tabindex: "-1" });
   const noDiff = !result.missing.length && !result.extra.length;
   clear(sheet.body);
-  add(sheet.body, [heading, el("p", { text: `${num(result.observed)} counted · ${num(result.expected)} expected` }),
+  add(sheet.body, [heading, ...(review ? review.content : [
+    el("p", { text: `${num(result.observed)} counted · ${num(result.expected)} expected` }),
     el("p", { class: "sub", text: CARD_AUDIT_TEMPORARY }),
     skipped ? el("p", { class: "box box-warn", text: `${plural(skipped, "photo")} skipped. Only identified cards and hand counts are included.` }) : null,
     result.estimated ? el("p", { class: "sub", text: "Some expected loose counts are estimates because the copies held elsewhere are uncertain." }) : null,
     noDiff ? el("p", { class: skipped || result.estimated ? "box box-info" : "box box-good",
       text: skipped || result.estimated ? "The counted quantities match the expected quantities shown." : "All expected cards accounted for. No extras." }) : null,
     cardAuditDifferences("Missing", result.missing), cardAuditDifferences("Extra", result.extra),
+    !noDiff && ctx.audit.followUpText ? el("p", { class: "sub", text: ctx.audit.followUpText }) : null]),
     result.outside.size ? el("section", {}, el("h3", { text: "Outside this audit" }),
       el("p", { class: "sub", text: "Loose quantities are unknown for these basic lands." }),
       el("ul", {}, [...result.outside].map(([name, qty]) => el("li", { text: `${num(qty)} × ${name}` })))) : null]);
-  const here = event => ctx.auditReview && colScanHere(ctx) && !sheet.body.hidden &&
+  const here = event => ctx.auditReview && !ctx.busy && colScanHere(ctx) && !sheet.body.hidden &&
     event.currentTarget.isConnected && sheet.foot.contains(event.currentTarget) &&
     [...document.querySelectorAll("dialog[open]")].at(-1) === sheet.dialog;
-  sheet.beforeDismiss = () => true;
+  sheet.beforeDismiss = () => !ctx.busy;
   sheetActions(sheet, [
     { text: "Back to scanning", value: "back", onclick: event => {
       if (!here(event)) return;
@@ -133,7 +137,13 @@ function showCardAuditResult(ctx, result, skipped) {
       drawScanFoot(ctx);
       sheet.foot.querySelector('[data-action="finish"]')?.focus();
     } },
-    { text: "Done", value: "done", kind: "primary", onclick: event => { if (here(event)) sheet.close(); } },
+    !noDiff && ctx.audit.followUp ? { text: ctx.audit.followUp.label, value: "follow-up", onclick: event => {
+      if (!here(event)) return;
+      boxCollectionAfterSheet(sheet, ctx.current, ctx.audit.followUp.run);
+    } } : null,
+    review?.save ? { text: "Save audit", value: "save-audit", kind: "primary", onclick: event => {
+      if (here(event)) review.save();
+    } } : { text: "Done", value: "done", kind: "primary", onclick: event => { if (here(event)) sheet.close(); } },
   ]);
   sheet.body.scrollTop = 0;
   heading.focus();

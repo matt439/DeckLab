@@ -3827,7 +3827,7 @@ Evidence:
 
 The bulk scanning slice (2026-11-20) adds live camera capture and selectable grid slots to Collection, plus elapsed-time reporting through the completed import. Individual photos and manual entry still use the same review flow. [Guide](../README.md#scan-a-stack-or-binder-page) · [Live capture](../web/collection-scan-live.js) · [Grid capture](../web/collection-scan-grid.js) · [Import timing tests](../tests/test_collection_scan_rate_ui.py)
 
-The scan audit (2026-11-22) compares physical counts in the viewer's own space. A built deck uses its saved physical card names across all sections. A storage section uses loose copies by set, collector number and finish, with hand counts for printed tokens. The final report names missing and extra cards and flags skipped photos. Counts can be corrected in the open sheet and expire when it closes. [Scan audit guide](../README.md#scan-to-audit-a-deck-or-storage-section)
+The scan audit (2026-11-22) compares physical counts in the viewer's own space. A built deck uses its saved physical card names across all sections and shows a temporary comparison. A storage section uses loose copies by set, collector number and finish, with hand counts for printed tokens. The report names missing and extra cards and flags skipped photos. Correct the observations in the open sheet. A complete storage scan can save the same dated audit as a hand count (`E8-S28`). [Scan audit guide](../README.md#scan-to-audit-a-deck-or-storage-section)
 
 Gap: Real phone and webcam capture, printed card and token photos, reflection through sleeves and binder pockets, and end-to-end physical throughput await a hands-on check.
 
@@ -4408,8 +4408,9 @@ Built (2026-11-12): Build decks' name-keyed location lookup moved to `lib/api/st
 As a collection owner, I want to see how big each storage section is and count one section at a time, so I can check the physical cards against Deck Lab.
 
 - Given a storage setup, the Storage map shows every physical section in order and sizes its bar by expected loose copies. Colour and type dividers such as White creatures open inside their physical section. Recorded locations take precedence. Small and empty dividers can be reached by keyboard and touch.
-- Given a section with a saved audit, opening it shows the latest date, differences and whether the expected checklist changed. Opening or starting a count writes nothing.
-- Given a completed count, review missing, surplus and unlisted copies before saving. Save checks the current section and audit revision and records the result privately. Use the ordinary inventory edits for corrections.
+- Given a section with a saved audit, opening it shows the latest date, differences and whether the expected checklist changed. An outstanding difference is visible on the section and its collapsed row until a clean recount. Opening or starting a count writes nothing.
+- Given a completed hand count or scan, review missing, surplus, identified extras and the count of any unidentified copies before saving. Save checks the current section and audit revision and records the result privately.
+- Given a saved difference with an exact identity, open the relevant collection or token record to check its location or verified owned total. Save any correction through the ordinary inventory editor, then return to the same section. Keep unresolved differences in the latest audit for a later recount.
 
 Built (2026-11-22): [Storage audit guide](../README.md#audit-a-storage-section). The map and count review use the same section server endpoint with a section receipt. Migration `0031` stores one latest audit per section in its own space. Fixture tests cover classification, allocation, stale counts, private access and isolated PostgreSQL persistence. Chromium exercises the proportional map and count flow with synthetic data.
 ---

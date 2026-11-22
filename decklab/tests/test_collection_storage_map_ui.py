@@ -105,7 +105,7 @@ class StorageMapUiTests(unittest.TestCase):
           action('Review count').click(); assert.equal(document.activeElement, countInput(nonfoil));
           countInput(nonfoil).value = '-1'; action('Review count').click();
           assert.equal(writes.length, 0);
-          countInput(nonfoil).value = '0'; countInput('Unlisted cards counted').value = '1';
+          countInput(nonfoil).value = '0'; countInput('Unidentified copies').value = '1';
           action('Unentered counts match').click();
           assert.equal(countInput(nonfoil).value, '0');
           assert.equal(countInput(foil).value, '2');
@@ -123,10 +123,11 @@ class StorageMapUiTests(unittest.TestCase):
           assert(openDialog().textContent.includes('Audit saved.'));
           assert(openDialog().textContent.includes('Last audited'));
           assert(openDialog().textContent.includes('3 expected · 0 counted'));
-          assert(chooseSection('white').textContent.includes('Differences found'));
+          assert(chooseSection('white').textContent.includes('Needs review'));
+          assert(physicalRows()[0].querySelector('summary').textContent.includes('Needs review · 1 section'));
           assert(chooseSection('black').textContent.includes('Never audited'));
           assert.equal(physicalRows()[0].getAttribute('open'), '');
-          action('Close').click();
+          action('Keep for later').click();
           assert.equal(document.activeElement, chooseSection('white'));
         """)
 
@@ -150,7 +151,7 @@ class StorageMapUiTests(unittest.TestCase):
           chooseSection('white').click(); await flush();
           action('Count by hand').click(); action('Unentered counts match').click();
           action('Review count').click();
-          assert(openDialog().textContent.includes('The count matched.'));
+          assert(openDialog().textContent.includes('The count matched the estimates shown.'));
           assert(!openDialog().textContent.includes('null'));
           action('Save audit').click(); await flush();
           assert.equal(writes, 1); assert.equal(reads, 2);
@@ -172,4 +173,65 @@ class StorageMapUiTests(unittest.TestCase):
           assert(!loading.textContent.includes('Count by hand'));
           old.click(); assert.equal(reads, 1);
           colCloseSheets(); chooseSection('white').click(); assert.equal(reads, 2);
+        """)
+
+    def test_saved_manual_audit_keeps_named_extras_and_can_be_rechecked(self):
+        self.run_js("""
+          const named = {name: 'Beta', set: 'fdn', collector_number: '2', finish: 'etched', quantity: 1};
+          const difference = {...named, key: 'fdn|2|etched', expected: 0, observed: 1};
+          const recorded = {...white, audit: {current: false, needs_review: true, expected: 5, observed: 6,
+            mismatch_rows: 1, extra: 1, unidentified_extra: 0, differences: [difference]}};
+          render();
+          api = async () => detail({excluded_names: ['Island']});
+          let picker; const writes = [];
+          globalThis.openStorageAuditUnlisted = options => { picker = options; };
+          apiWrite = async (path, body) => {
+            writes.push(body);
+            return writes.length === 1 ? {section: recorded, expect: 'next-proof'} :
+              {section: {...white, audit: {current: true, needs_review: false, expected: 5, observed: 5,
+                mismatch_rows: 0, extra: 0, differences: []}}, expect: 'latest-proof'};
+          };
+          physicalRows()[0].setAttribute('open', '');
+          chooseSection('white').click(); await flush();
+          action('Count by hand').click();
+          action('Identify unlisted printings').click();
+          same(picker.excludedNames, ['Island']); assert(picker.current());
+          picker.finish([named]);
+          assert(openDialog().textContent.includes('Beta'));
+          action('Unentered counts match').click(); action('Review count').click();
+          assert(openDialog().textContent.includes('0 expected · 1 counted')); assert.equal(writes.length, 0);
+          action('Save audit').click(); await flush();
+          same(writes[0].unlisted, [{set: 'fdn', collector_number: '2', finish: 'etched', quantity: 1}]);
+          assert.equal(writes[0].extra, 0);
+          assert(chooseSection('white').textContent.includes('Needs review'));
+          assert(chooseSection('white').textContent.includes('Changed since audit'));
+          assert(action('Keep for later')); assert(action('Review collection copies'));
+          action('Count by hand').click(); action('Unentered counts match').click();
+          action('Review count').click(); action('Save audit').click(); await flush();
+          assert.equal(writes[1].expect, 'next-proof'); assert(!writes[1].unlisted);
+          assert(chooseSection('white').textContent.includes('Count matched'));
+          assert(!physicalRows()[0].querySelector('summary').textContent.includes('Needs review'));
+        """)
+
+    def test_stale_reload_refreshes_the_collapsed_rows_follow_up_status(self):
+        self.run_js("""
+          const reviewed = {...white, audit: {current:false, mismatch_rows:1, extra:0, needs_review:true,
+            expected:5, observed:3, missing:2, differences:[{...rows[1], expected:2, observed:0}]}};
+          const matching = {...white, audit: {current:true, mismatch_rows:0, extra:0, needs_review:false,
+            expected:5, observed:5, differences:[]}};
+          render({sections:[reviewed, red, black, empty, unknown]});
+          let reads = 0;
+          api = async () => detail({section:++reads === 1 ? reviewed : matching});
+          apiWrite = async () => { throw new ApiError(409, "An audit was saved elsewhere."); };
+          physicalRows()[0].setAttribute('open', '');
+          chooseSection('white').click(); await flush();
+          assert(physicalRows()[0].querySelector('summary').textContent.includes('Needs review'));
+          action('Count by hand').click(); action('Unentered counts match').click();
+          action('Review count').click(); action('Save audit').click(); await flush();
+          action('Reload section').click(); await flush();
+          assert(openDialog().textContent.includes('The count matched.'));
+          action('Close').click();
+          assert.equal(document.activeElement, chooseSection('white'));
+          assert(chooseSection('white').textContent.includes('Count matched'));
+          assert(!physicalRows()[0].querySelector('summary').textContent.includes('Needs review'));
         """)
