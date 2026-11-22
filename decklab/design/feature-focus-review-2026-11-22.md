@@ -1,0 +1,210 @@
+# Deck Lab feature and focus review
+
+22 November 2026 · Reviewed source `821f5c8`
+
+**Recommendation.** Use **What do I need to get this deck onto the table?** to organise Deck Lab. Start with the deck, give people a way to check what they have even if their collection is incomplete, and provide an explicit path through deciding what to buy, recording what they ordered, and assembling the deck. Keep **Against popular decks** as the leading simulation feature, reachable from a deck or a proposed change. The change in its place in the product needs a decision. The current plan explicitly calls it the lead feature. [Project purpose](../../AGENTS.md) · [Current plan](../../TODO.md#now) · [Testing lead feature decision](../README.md#the-gauntlet)
+
+I would pause expansion while the household tries a simpler version of those paths. The strongest candidates for consolidation are the two checklist entry points, the repeated ways to start collection entry, and the overlapping paths into buying, recording games and simulating games. I found no basis to delete saved data or retire a capability outright. The biggest immediate reduction comes from asking people to make fewer choices before they can act.
+
+[Main findings](#where-the-app-loses-focus) · [Full feature inventory](#feature-inventory-and-dispositions) · [Change order](#what-to-change-first) · [Household tests](#household-acceptance)
+
+## Where the app loses focus
+
+| Priority | Current behaviour | Recommended change |
+|---|---|---|
+| 1 · Physical readiness | **Play-now** may use cards on the way. **Build from cards free tonight** means physically available now. **In its box** is a separate snapshot that drives reservations. A **stand-in** can mean an owned substitute in a saved list or a physical placeholder in a box. The app has explanations, but the player meets the labels first. | Put the list being viewed and the physical verdict together. Use **Planned list**, **Alternative list**, and **Packed in this box** as working labels to test. Show **Free now**, **On the way**, **Held in another deck**, **Lent out**, and **To check** only when each applies. Use **Substitute card** for a list change and **Physical placeholder** for a packing choice. |
+| 2 · Buying a card | **Check cards for a deck**, deck **Card checklist**, personal **Cards to get**, **Missing cards**, **To buy**, **Wishlist** and **New order** are all legitimate tools. Their labels provide little guidance about what is calculated, saved privately, shared, or already ordered. **To buy** currently includes waiting/deferred items. | Start at **Find and buy cards** on a deck. Offer **Check copies at home** and **Use recorded collection** inside it. Keep the checklist's saved counts and the live calculation visible as different sources. Put purchase queue, buying research and received orders behind the relevant step. |
+| 3 · Physical builds and testing compete for navigation | The phone bar gives **Testing** a permanent slot. The shared packing workspace is under **More** on a phone or portrait iPad, with a useful direct deck link. **Build together** in Shopping calculates shared shortages. **Build decks** takes people through physical packing. | Keep **Build deck / Review build** on each deck. Give Decks an explicit **Pack decks together** action where supported. Rename Shopping's job **Check what these decks share** or **Combined shortages** and point from it to packing. Try **Decks · Collection · Shopping · More** for home and **Decks · Collection · More** for personal spaces, with **Simulate** in More and on the deck or change that is being tested. |
+| 4 · Collection startup asks for choices too early | The empty Collection screen shows its three tabs, search/filter controls, availability chips, **Add card**, **More**, and introductory actions. **Start with physical cards** then offers methods already available on the surrounding page. | Give an empty collection one **Add cards** entry with **Enter one**, **Scan**, **Import a list**, and **Add a precon** inside. Let the player begin with a small pile. Put trade, lending, storage setup, export and discovery behind the task each supports. |
+| 5 · Play can mean three different things | **Practice**, real counters and Game log, and **Testing** each have separate ways to play against something. **Four-player pods** in Testing and **Start a pod** in Game log perform different jobs. A deck's real-game summary shows 1v1 results, while real pod results sit in their own history. | Use **Deal a practice hand**, **Start a real game**, and **Simulate a matchup/pod** at entry. Keep **Record a game** and **Play another with these seats** together in the real workflow. Put source, player count, and list version on results before the percentage. |
+| 6 · Explanations and alerts are poorly placed | The static glossary covers key terms, but its only in-app link is in admin **Settings → About**. Global warnings occupy the same early screen space as the next action when they apply. On a phone, shell More, page More and row ⋯ can all be present. | Give all profiles a **Help** link. Explain consequences at the switch or button, with a single sentence. Keep status warnings actionable and near the affected calculation where possible, including their existing dismissal/reappearance behaviour. Route the user by the task they are doing, with overflow for occasional actions. |
+
+[Navigation and route registry](../web/core.js#L512) · [Phone shell](../web/shell.js#L168) · [Deck availability](../web/deck-availability.js#L155) · [Collection controls](../web/collection.js#L321) · [Shopping sections and New order](../web/shopping.js#L839) · [Game log](../web/play.js#L90) · [Glossary and Settings](../web/settings.js#L23)
+
+### Give each buying label one job
+
+| What the person is doing | What that should mean on screen |
+|---|---|
+| Deciding which copies they have | **Check cards at home** is a private, saved per-copy checklist. It accepts a deck-linked list or names entered before a deck exists. Checking or setting a copy aside here leaves the recorded inventory and the shared queue as they were. |
+| Looking for shortages in the recorded collection | **Missing for this list** is calculated for the named list. Show the calculation's scope, whether it is current, and whether incoming or held copies affect it. For a partial collection, offer a manual check where a result would otherwise imply an unrecorded card must be bought. |
+| Comparing decks to finish | **Compare which decks to finish** compares separate deck plans. **Enough to build these decks together?** allocates each copy once. State which calculation is showing before a list can be copied or queued. |
+| Saving a card they like | **Wishlist** is personal. It can keep a printing and note. It is useful for preferences before a buying decision. |
+| Deciding to buy | **Shared purchase queue** is explicitly reviewed intent for home. Use **Ready to buy** and **Waiting / later** as distinct scopes. Copying a shop list is a lightweight option for members without a household queue. |
+| Recording a purchase or delivery | **Record an order** means already ordered. **Receive delivery** checks what arrived and posts the accepted rows to inventory. Keep part receipts, discrepancies and follow-ups available from the order. |
+
+If you own one loose copy that two unbuilt decks want, each deck's own shortage can be zero while building both requires one more copy. The Shopping page explains its calculation, but the two destinations need to make that difference clear before someone chooses one. The same distinction applies to a copy still in the mail. It can cover a plan, while **Free now** should answer whether you can pull it today. The Stats role picker can currently include incoming in its free total. [Single-deck calculation](../lib/api/shopping_missing.py#L1) · [Simultaneous allocation](../lib/api/shopping_combined.py#L3) · [Role availability](../lib/api/role_cards.py#L33)
+
+[Partial-collection design](playing-with-a-partial-collection.md) · [Checklist behaviour](../HISTORY.md#check-cards-for-a-deck-2026-11-20-e5-s43) · [Shopping and deliveries](../README.md#shopping-and-deliveries) · [Wishlists](../README.md#wishlists)
+
+## Feature inventory and dispositions
+
+The 77 entries cover user-visible capabilities and the operator tools supporting them. Each row covers one task or a group of closely related actions. **Surface** means visible in the normal flow. **Context** means reachable from the object or action that needs it. **Advanced** means a separate choice for people seeking the capability. **Maintain** means preserve an operational or safety function. **Hold** means pause expansion and assess use or qualification. **Consolidate** means unify the path or wording while preserving distinct effects.
+
+### Find and create decks
+
+| Capability today | Disposition |
+|---|---|
+| Deck library, tile and desktop split views, personal/all-visible views, Commander, 60-card, products and pairings, status and readiness chips, open missing cards | **Surface** deck choice and next step. Keep Mine / All visible with scope named. Show enough on a tile to tell idea, buildable and in its box apart. |
+| Deck title, colour and archetype filters, deck status, availability, box-check filters, readiness/name/updated/last-played/strength sorts | **Context** beside library search. Keep title and readiness easy to reach. Place audit and simulated strength sorts with details. |
+| Global search with deck matches, own card counts and card-catalogue results, Collection Find cards and in-editor search | **Consolidate** matching language and result labels. Global finds a deck/card, Collection finds usable copies, editor finds cards to add. Keep the current scope apparent. |
+| Card image and rules viewer, faces, printing/finish, rulings and sources, catalogue links, owned copies, use by visible decks, locations and printing picker | **Context** from any visible card and from search. Reuse this viewer and mark what is in the viewer's collection, known at a shop, or catalogue-only. |
+| New blank deck, casual and Commander creation, single or paired commander choice, public precon trial, starting with another deck/list/revision or cards in the collection | **Surface** New deck with **Start empty**, **Import a list** and **Build from my cards**. Put precon, copy and revision choices where they make sense. State when a trial adds neither owned copies nor reservations. |
+| Import review from typed/pasted lists and Moxfield/Archidekt public links, interrupted fetch fallback, add/replace, sections, printing and unrecognised-line review | **Surface** from creation and editing. Make one import review the default and keep the paste fallback. |
+| Collection-driven lists of buildable commanders and precons, free-tonight eligibility, first Commander draft, published-precon evidence | **Context** under **Build from my cards** or opening a precon rather than in Collection upkeep. Keep the caveats and separate usable-now cards from incoming. |
+| Covers, art selection and display preferences for deck cards | **Context** under library/display or deck management. |
+| Rename with old-link continuity, retire/restore, retire a trial, protect kits and built holds | **Context** under Manage deck. Preserve revision histories and links. |
+
+[Library](../web/library.js#L292) · [Global search](../web/global-search.js#L38) · [Card viewer and deck library](../README.md#cards-and-the-card-viewer) · [Creation and import](../web/editor-import.js#L309) · [21 November additions](../HISTORY.md#deck-building-reviews-and-commander-pods-2026-11-21)
+
+### Understand, edit and improve a deck
+
+| Capability today | Disposition |
+|---|---|
+| Overview with game plan/mulligan guide, key cards, physical kit and box state, Commander table note, prior games, strength and shortcuts | **Surface** the deck's next physical action, list and succinct game plan. Keep evidence relevant to the next choice within reach. |
+| Planned and Play-now lists, sections and optional sideboard/companion, Considering as a separate list, Cards displays by list/pictures/type/category, quantities and availability filters | **Surface** the list in view and the facts about it. **Context** for Considering, alternate displays and optional sideboard. Keep all three scopes explicit in changes and exports. |
+| Owned vs needed, free copies, copies held by another built deck or intact product, lent and incoming copies, substitutions, exact printings, stale availability and update-all | **Surface** counts and owner-visible reasons at the card or deck. **Maintain** the refresh/recovery. Say **Availability needs updating** with a next action where **Tables out of date** appears. |
+| Full and Quick edit, add/remove/change quantities or sections, printing/finish, undo/redo, Check and Save | **Surface** a single obvious **Edit cards** route and keep quick editing in context. Leave the same local review/conflict safeguards in all editors. |
+| Editor drafts, cross-device kept drafts, recover, rebase and conflicts, explicit checks, write reviews, separate Played by/kit transfer and clear intent | **Maintain** loss prevention and scope/ownership checks. Show where the draft is saved and make one plain recovery action prominent when needed. |
+| Deck details (status, person, notes/play guide, colour, archetype, bracket, sleeve/box), categories and category suggestions | **Context**. Keep status/physical kit near assembly and optional metadata under Deck details. |
+| Deck composition and rules checks, land and curve, colours/sources, Commander legality and minimum vs target bracket, Game Changers/ban changes, check the usual night's guidance | **Context** under **Check deck**, with blocking rules and a compact summary visible. 60-card casual keeps its local rules. Keep social fit, legality and simulation results distinct. |
+| Detailed mana/dual-land breakdowns, role coverage and ranges, answers by speed/target, tribes and keywords, draw odds including both cards, combos/near-combos and bracket fixes | **Advanced** under the corresponding check, with list version and sources. |
+| EDHREC ideas and cuts, manual Considering, recommend small or owned swaps, complete a Play-now draft from free copies, find early interaction against a precon baseline | **Consolidate** around **Improve deck** with a common review/Undo/save path. State the evidence and scope of each suggestion. Hold additional engines and reports until players can find and apply the existing ones. |
+| Compare two decks or a deck to a revision/stock precon, choose lists, highlight card/printing, curve, mana, role and shared-copy differences, compare real and simulated evidence | **Context** from the deck, with the comparison basis visible. Keep choosing between purchases in the buying flow. |
+| Saved revisions with diffs and prior versions, reopen as draft, save a new deck from a version, explicit restore and recover | **Context** under History, separate from undoing a collection change. |
+| Clipboard/download for a decklist, print or download a standalone play sheet, print missing-card proxies and box labels/QR | **Context**. Group exports by purpose and name the output scope. **Print proxies** uses Planned shortages even when Play-now is open. Put box labels beside the packed box. |
+
+[Deck header, actions and tabs](../web/deck.js#L283) · [Proxy scope](../web/deck-print.js#L117) · [Stats and role counts](../web/stats.js#L685) · [Editors and versions](../README.md#editing-on-every-device) · [History](../web/history.js#L314) · [Compare](../web/compare.js#L306) · [Deck-building stories](stories.md#e2-build-and-edit-a-deck)
+
+### Record, find and organise physical cards
+
+| Capability today | Disposition |
+|---|---|
+| Collection **Find cards** with art, name/rules/Scryfall search, filters for colour/type/role/mana value, free/held/lent/incoming scopes, spare copies | **Surface** **Find cards** and **Free now**. Make the route from a card to its exact copy and storage location direct. |
+| Exact Card list with set, collector number, finish, quantity, condition, language, notes, location, dated reference prices, search/sort/pagination | **Context** when a copy or printing matters. Expose the fields that help someone find or acquire that copy, with rarely used columns and prices on demand. |
+| Add, edit and remove copies, in-use warnings, bulk condition/language and location changes, fill blanks, review affected rows and recover in Activity | **Surface** Add cards. **Context** for bulk and maintenance. Keep review and correction safeguards wherever a path changes inventory. |
+| Reviewed CSV/text imports and supported exports from other collection apps, example/templates, duplicate/source checks, row-level issues and batch import source records | **Context** within Add cards. Preserve a reviewed import with clear quantities and a good path to fix rejected rows. |
+| Single photo, live stack/phone/webcam, binder grid and scanner image files, exact printing and finish review, pending batch and copies-per-hour receipt | **Context** within **Scan**. All capture methods should land in one pending review. Hold more capture variants until the physical trial measures exact-printing accuracy and end-to-end throughput. |
+| Add an owned precon, choose included tokens or known bonus cards, intact versus broken up, create a saved deck where supported | **Context** from Add cards or a precon deck. Use distinct **I own this precon** and **Try a precon** choices. Explain inventory effect before saving. |
+| Trades, loose-card loan/return, surplus/spares and recorded use checks | **Context** on the card or under Manage collection. Keep their impact visible when counting usable copies. |
+| Storage containers, capacities, sections, default destinations and filing rules, per-printing locations, sort by storage order | **Context** under Storage. Keep physical **where to find it / where to put it** close to the card, packing slip and receipt. |
+| Storage map with expected copies and empty rows, manual section audit with saved date/differences, and scan-to-audit for a section or built deck | **Consolidate** in the physical section or box, with **Count by hand** and **Scan**. Today the Storage map can save a manual audit and scan observations are discarded when the report closes. Explain that difference at entry or use one review before an explicit save or correction. |
+| Collection CSV, member's web download **Download my space (zip)**, saved imports and review receipts | **Context** under Collection management. Name the contents of the member's download. The operator's departure export has its own scope and workflow. |
+
+[Collection navigation and actions](../web/collection.js#L321) · [First-use choices](../web/collection.js#L661) · [Collection and physical play](../README.md#collection-and-physical-play) · [Storage map](../web/collection-storage-map.js#L197) · [Scan audit reports](../web/card-audit.js#L101) · [Storage updates](../HISTORY.md#phone-scrolling-and-physical-storage-rows-2026-11-22)
+
+### Assemble decks and manage kit
+
+| Capability today | Disposition |
+|---|---|
+| Single- or multi-deck home packing plan, allocation per copy, planned/alternative/previous physical list, pull/move/return/storage ordering, separate basics, tokens, and optional sideboard | **Surface** the single-deck build from the deck. **Context** for packing several decks together and selecting exact parts. Keep the source and destination beside each physical action. |
+| Shared resumable packing ticks, bulk confirm/undo, exact physical printing choices, physical stand-ins, finish/assembled snapshot, capacity/kit checks, take apart and free held copies | **Maintain** the physical contract with an explicit review at finish or take-apart. Expose consequences at the physical action. |
+| Manual box check/date, exact printings recorded in the box, scan for differences, correct recorded physical build and resolve unexpected shortages | **Context** from **Packed in this box**. State whether the current review records a check, repairs the box record, or just shows differences. |
+| Owned intact products, subdecks and stored/sleeved contents, switch out of intact storage, product kit and token assignments, release or hold copies | **Context** under the owned product. Keep linked inventory and reservations. Put intact-product choices in product management. |
+| Per-deck token and reminder needs, exact/stand-in token cards, quantities, held/incoming, double-sided matching, opponent needs and optional observed peaks | **Context** at packing and on the deck. Keep token signals that help someone bring what they need. |
+| Token/reminder catalogue with add/edit/remove, scan and printing search, packed token assignments and whole-collection token allocation review | **Context** under Collection / Tokens. Put the global token redistribution tool under Advanced and keep its whole-plan preview. |
+| Sleeves, deck boxes, playmats, quantities/capacity, owners and shared kit, choosing/transferring kit, conflicts, cropped photos from device or link, labels | **Context** for sleeves and box when packing. **Advanced** for the full catalogue and photo management. Keep ownership and capacity. Put expansion of playmat management and photo tools on hold. |
+| Dice/counter ownership and settings, need estimates, overlaps, take-along list and printable reminders | **Context** for a simple pack reminder. **Hold** demand/capacity modelling expansion. Review whether separate dice/counter inventory and detailed photo workflows still justify their upkeep. |
+
+[Build decks and packing](../README.md#collection-and-physical-play) · [Physical deck checks](../web/assembly-boxcheck.js#L86) · [Accessories](../README.md#accessories) · [Tokens](../README.md#tokens) · [Packing counter reminders](../web/assembly-takealong.js#L38)
+
+### Decide what to buy, order and receive
+
+| Capability today | Disposition |
+|---|---|
+| Standalone and deck-linked private checklists with copy states, set-aside and Buy quantities, copy list, and personal member **Cards to get** across saved decks | **Consolidate** within **Find and buy cards**. Preserve both reviewed manual counts and recorded-inventory calculation. Describe the source before showing buy quantities. |
+| Per-deck shortages, combined shortages across decks, build-together allocation, deck prioritisation/compare, price estimate from shortage list, copy or select reviewed queue rows | **Surface** from the deck, **Context** for comparing multiple decks. Explain individually measured shortages versus shared-copy allocation before exporting. |
+| Wishlist with exact printing/finish, notes, suggested ideas, found/short status and removal/recovery | **Context** as personal saves from the card. Explain visibility and effect beside the add action. |
+| Home shared purchase queue, buy/state/purpose/printing and quantity changes, free/incoming coverage, duplicate checks, waiting/long-term rows, order reconciliation and undo | **Surface** decisions already ready to buy. **Context** for waiting/deferred reasons, provenance and bulk changes. A suggestion never becomes a queue entry without explicit review. |
+| Dated retailer checks, exact match/stock/finish and incomplete coverage, buying target, back-in-stock/reprint/manual refresh, source and FX evidence, price history | **Context** on the buying row. Put one usable estimate or observation first and show its date and printing. Keep histories and detailed diagnostics under price details. |
+| Shop-grouped plans, stock/copy limitations, basket comparisons and postage, thresholds, optional extra copies/tokens, reference review | **Advanced** until the person has selected cards they intend to buy. **Hold** more basket modes or notifications until two real buying sessions show what affects the decision. |
+| Record confirmed order from pasted/imported or edited rows, identify products/tokens/copies, allocate across queue entries, review, handle conflicts, edit/split/cancel/remove with restoration choices | **Context** under **Orders & deliveries**, visible when already ordered. Keep dry reviews, stale-row recovery and order history. |
+| On the way, part-by-part receipt, condition/printing discrepancies and accepted quantities, delivery checks and follow-ups, receipts/history/search by card, destinations, undo | **Surface** **Receive delivery** when an order is due. **Context** for past deliveries and reconciliation. Keep any write effect and remaining rows clear in the review. |
+| Projected storage fill after arrivals, unknown/partial sources, capacity warnings and distribution | **Context** in the delivery or storage view when it informs preparation. Move detailed forecasting away from the main buying decision. |
+
+[Shopping jump sections and queue filters](../web/shopping.js#L839) · [Shopping, orders and receipts](../README.md#shopping-and-deliveries) · [Wishlists](../README.md#wishlists) · [Shopping story ledger](stories.md#e5-decide-what-to-buy) · [Receipt story ledger](stories.md#e6-record-orders-and-receive-cards)
+
+### Practice, play and learn from real games
+
+| Capability today | Disposition |
+|---|---|
+| Opening hands with draw-next, London/free Commander mulligan, land-only keep advice, list choice | **Context** as **Deal a practice hand** on a deck. Keep the hand rules and scope available inline. |
+| Practice games that estimate draw and mana consistency, land drops, colour access, commander or first expensive play, casting categories, stranded spells and one-basic swap | **Context** for a succinct mana check. **Advanced** for full charts and experiments. Name it as a model of draws and mana. |
+| Real 1v1 life counter and three-/four-player pod counters, life/poison/commander damage, timer, undo/resume, optional result handoff | **Context** in **At the table**, linked from the deck and More. Start counter and record result should be separately discoverable. |
+| 1v1 or pod game records, quick or detailed save, notes/mulligans, result edit/delete and recovery, selected/frozen lists, real Head to head, pod history and placement summaries, repeat seats | **Context** alongside the real counter. Preserve scoped history, record basis and replay with reviewed deck choices. Keep real/simulated results visibly distinct wherever compared. |
+| Tonight's pairs, social Commander lineup with table target and notes, lists for actual play | **Consolidate** discovery under **Choose decks for tonight**. Show what is physically playable, then context about the opponents. |
+| 60-card sideboard plans by opponent, post-board review, plan use at the table, stale plans, optional simulated preview | **Context** on the relevant deck, **Advanced** for simulated testing. Drop the repeated global entry when the in-deck path proves discoverable. |
+
+[Practice](../web/practice.js#L30) · [Game log](../web/play.js#L74) · [Real pods](../web/play-pods.js#L96) · [Commander lineup](../web/commander-lineup.js#L20) · [Sideboard plans](../web/deck-sideboard.js#L75)
+
+### Simulate and evaluate deck changes
+
+| Capability today | Disposition |
+|---|---|
+| Paired tests of a card change with frozen baseline/opponent set, sideboard test, verdict/ranges, earlier tests and reruns, explicit save/apply and one-card buying review | **Context** at the change. Preserve the link from the decision to test scope, uncertainty, physical availability and the optional reviewed purchase. |
+| Direct Forge 1v1 pairings, saved matchup matrix and individual results, card evidence and possible replacements, exact-list real comparison, per-turn traces, AI caveats, previous engine/list results | **Advanced** under Simulate. Put player count, list identity, status and AI limits in the result summary. |
+| Household field, membership settings and exclusions, rankings/ranges, chosen opponent groups, prior and stale results and estimates | **Advanced**. Show the exact opponent set, sample and list. Hold new rankings unless players actually use them to make a deck choice. |
+| Against popular decks / gauntlet, screened public opponents, repeatable standard sample, custom colour/style/tier or same-commander samples, coverage, no-double-counting, fit and pilot warnings, history and prior builds | **Context** as the leading simulation choice from a deck or card change. **Advanced** for catalogue controls and evidence details. Commander head-to-head evidence is 1v1. |
+| Stock precon trial, compare play evidence, keep/retire a trial, hand off to recording an owned copy | **Context** from **Try a precon** in precon discovery. Consolidate the duplicate Testing doorway when the buying/deck entry is easy to find. |
+| Forge four-player Commander with saved lineups or published precon opponents, preview/estimated time, rotated starts, saved results/ranges, Stop/resume | **Advanced** with **Simulate a four-player pod**. Keep seat/results detail and the distinction from a real counter. |
+| Optional Forge/XMage cross-check, separate engine outcomes, coverage/refusals and CLI engine choice | **Advanced**, **Hold** broader expansion pending installed-engine qualification and a real decision it helps. Preserve separate scores and visible unsupported cases. |
+| Run permissions and worker cap, run progress, budget/time estimates, stop/resume and recovery, engine/override/pilot validation, game replays, overnight/batch and stage tooling | **Maintain** the operational controls for functionality already offered. Keep technical experiments and diagnostics in the operator workflow. |
+
+[Testing entry points](../web/matchups-overview.js#L521) · [Card-change results and buying](../web/variant.js#L275) · [Forge and gauntlet](../README.md#matchups-forge) · [Pods](../README.md#four-player-commander-pods) · [XMage cross-check](cross-simulator.md) · [Live and engine acceptance](../../TODO.md#deck-lab-testing-and-forge)
+
+### Account, sharing and recovery
+
+| Capability today | Disposition |
+|---|---|
+| Home profile chooser, home versus member spaces, home shared collection, administrator/member rights, remote Access sign-in, profile switch, shared-device expiry and remembered-device choice | **Maintain** identity and access boundaries. Explain chosen space and where member sign-in happens, especially on the home Wi-Fi. |
+| Theme and remembered preferences, portable preferences where supported, reload, Home Screen launch, keyboard and screen-reader support, responsive shell, search shortcuts and glossary | **Maintain** accessibility and preferences. Give every profile the same Help entry and keep controls understandable at their point of use. Keyboard shortcuts can stay in the account menu. |
+| Who sees what, owner-controlled private/public by collection and tokens, deck lists/write-ups, games and kit, with audience preview/notes and masked associated details | **Maintain** private by default and explicit read-only sharing. The current UI and audience code include visitors on the home network. Align the older signed-in-only documentation and explain the actual audience before applying a grant. |
+| Personal inventories, builds, wishlists, games and own kit, home-only shared Shopping and packing where authorised, personal plan export and separate member departure | **Maintain** current space/owner boundaries. Explain why a particular action belongs to the active space and provide the relevant alternative when one exists. |
+| Activity by date/kind/actor with attribution and linked subjects, reviewed Undo for eligible collection/import/trade/receipt, token, order/queue, wishlist, accessory/photo and product changes | **Context** as **Changes & undo**, with a link after consequential writes. Preserve permission and dependency checks and recorded reversals. Use deck History for deck revisions and Game log for played games. |
+| Admin invitation or email change, separate Cloudflare policy step, remaining member onboarding or departure checks | **Maintain** under Members. Name both invite steps before saving. Hold per-deck sharing, bespoke member landing and approval inbox expansion. |
+| Settings for sim policy, Commander-night norms, pricing currency/source checks, postage, service/data health, error references, visit counts, version/update and guarded restart | **Consolidate** a grouped Administration view, with pricing, postage and venue settings linked from the affected workflow where the viewer has rights. |
+
+[Account navigation](../web/shell.js#L143) · [Sharing controls](../web/visibility.js#L40) · [Audience rules](../lib/permissions.py#L276) · [Member tools](../web/member-tools.js#L9) · [Activity](../README.md#activity) · [Settings panels](../web/settings.js#L44)
+
+### Operate and verify Deck Lab
+
+| Capability today | Disposition |
+|---|---|
+| Self-host setup, configuration, doctor/preflight, launcher, Windows Task Scheduler and Linux systemd services, watchdog, manual operation, network/firewall help, logs, server smoke | **Maintain** for the owner. **Hold** installer, bootstrap wizard and update UX expansion until support demand is clear. |
+| Optional Cloudflare tunnel, email Access, off page, keep awake, Wake-on-LAN gate and schedule | **Maintain** service access and qualify deployed status separately. Keep setup and troubleshooting in self-hosting docs. |
+| PostgreSQL roles, setup/migrate/profile sync, CLI reads/writes/previews/actors and revision checks, scoped exports and departure, restricted read-only SQL | **Maintain** as operator functions and preserve privacy and audit protections. |
+| Backups, retention, digest and verified restore, integrity checks, export, nightly schedules, disk/storage and shrink detection, source/status health, Visits retention | **Maintain** recovery and observability. Surface an actionable warning only to the person who can use it. Visits measure route openings and some deck-route IDs. |
+| Card data, images and cache, scheduled source freshness and trusted references, version and restart checks, releases/ZIP/hash and update channels, browser asset policy | **Maintain** supply and uptime. Keep detailed dates, warnings and operator controls available when they affect a result. |
+| Forge fork/engine tooling and qualification, CI, database/fixture/browser/Safari verification, public-repo privacy auditing and dependency controls | **Maintain** verification and public/private separation. Developer tooling stays outside the product navigation. |
+| Pokémon full-art singles inventory and wishlist | **Hold outside Deck Lab.** The project documents it separately from the Magic web app. |
+| Dormant resumable collection-batch backend candidate | **Hold outside the current product.** Its design records no registered route or live save/resume. Qualify the existing physical scanning workflow before reconsidering. |
+
+[Self-hosting](../../SELF-HOSTING.md) · [Database and operations](../README.md#database) · [Member export and departure](../README.md#member-export-and-departure) · [Design scope](README.md) · [Dormant collection batch backend](dormant-collection-backend-release.md)
+
+## What to change first
+
+1. **Simplify one deck page and its buying path.** Make the active list, physically usable copies and next action visible. Bring manual checklist and calculated shortages into a single entry. Make the names and effects consistent from export through queue review. Use the receipt workflow's useful pattern of showing precise effects before a write.
+2. **Reduce choices in the navigation and entry screens.** Test the proposed main navigation, one Add cards decision, and two Shopping destinations **What to buy** and **Orders & deliveries**. Give every profile Help. Retire repeated buttons into the new entry points once the new routes are discoverable. Keep existing addresses and retain direct links between related tasks.
+3. **Hold expansion and validate the capability groups.** Keep the existing simulation and administrative tools accessible. Pause new analysis views, catalogue/detail dashboards, storage forecasts, scanner modes and ancillary kit features until the core walkthroughs work. If an advanced feature still has no recurring task after showing users where it lives, review hiding or retiring its UI. Start with playmat/photo management, detailed dice/counter ownership, collection price sorting, alternate shop-plan views and separate historical rankings. Saved histories, privacy, data integrity and operator recovery have independent value.
+
+Continue the already recorded deferrals for household purchase/simulation approvals (`E5-S15`, `E3-S13`), new sharing/landing or player options (`E10-S41`, `E10-S18`, `E4-S19`), standalone installer/setup/updater work (`E11-S50`, `E11-S51`, `E11-S52`, `E11-S57`) and more Forge experiments (`FG#3`). The next checklist slices for sleeved cards and transfers are proposals. Try the current linked checklist during a real deck change first. Keep existing safety, deployment and hardware acceptance work in its owner rows. [Open-work index](../../TODO.md) · [Checklist story](stories.md#e5-s44) · [User-testing session](user-testing-user2.md)
+
+### Household acceptance
+
+Give players a goal on a phone and the portrait iPad, without naming the screen or button. Use a well-recorded collection and a partially recorded one. Record their first click, whether they finish unprompted, unnecessary backtracking, and what they predict will change before a save. Compare the current paths with the simplified ones. A stronger signal than fewer clicks is that the same person can do the task again and still picks the right list and action.
+
+| Give the player this task | Verify |
+|---|---|
+| Bring a planned Commander deck tonight. One card is in another deck, one is incoming, and the box currently has a different list and a physical placeholder. | They find the physical build, choose the intended list and explain which copies they can use tonight. They can identify what will be held after finishing. |
+| Upgrade a deck with incomplete records. Find one copy in a box, set it aside, leave one unchecked and copy only the two copies deliberately chosen to buy. | They get the intended quantities and know the effect on the private checklist, collection, shared queue and order records. Then give two decks one shared free copy and ask which shortage list covers building both. |
+| Record a purchase that has already been placed, then check in one part of its delivery. | The player can distinguish queue intent, incoming copies and received copies. They find the remaining part and know what changed. |
+| Add a held pile of cards or start from an owned precon. | They choose an entry method without needing to learn the storage model first. If evaluating scanning, use the existing known-stack trial and report correctly recorded physical copies per hour and exact-printing errors after review. |
+| Start a real Commander pod, record it, and play a second game with the same seats. In a separate task, find simulation evidence for a possible card change. | They reach the right tool unprompted and can explain which results are real, simulated 1v1, or simulated four-player. Ask what result would change their purchase decision. |
+
+[Previous household walkthrough](ui-ux-review-2026-11-20.md#verification-and-the-next-household-session) · [Structured scanner trial](scanning-spike.md#compare-cards-per-hour) · [Device and simulation acceptance](../../TODO.md#now)
+
+## Coverage and evidence
+
+- **Web surface.** Checked all 22 canonical routes and the capabilities behind nested sheets and tabs. Decks covers library, deck, edit, new, history, compare and variant. Testing covers matchups, matchup and Forge pods. Collection covers collection, tokens and accessories. Shopping covers shopping and receipt. Physical and recorded play includes assembly and play. Account and support includes wishlist, activity, visibility, settings and help. Role-gated routes and desktop/phone layouts were considered alongside the personal-space alternatives. [Route registry](../web/core.js#L512)
+- **Design and backlog.** Reconciled all 11 story epics with the route map, user and operator guides, and the changes through 22 November. The story audit counts 418 stories, with 372 built, 23 partial, six missing and 17 declined. Stories include guardrails, alternatives and developer work, so the count describes the design ledger. The current TODO has 22 decision/acceptance rows, nine deferred, one waiting and no rows marked OPEN. The assessment treats the 20 November fixes as landed. [Story summary](stories.md#summary) · [Current TODO](../../TODO.md) · [Shipped changes](../HISTORY.md)
+- **Browser evidence.** Twelve guarded Chromium suites passed with cleanup and strict console checks on the reviewed source. They covered smoke capture, editor, shell, first use, member tools, task and receipt layouts, UI priorities, Shopping navigation, real life counters, Forge pods and small swaps. Visually checked representative phone and desktop captures, including the expanded Shopping menu, empty Collection, member shortages, receipt, candidate swap, and real/simulated pod interfaces. The guarded runs used disposable synthetic data and mocked or fixture-backed results where needed.
+- **Limits.** This review establishes what the current source offers and where its interface puts those choices. It has no measured household feature usage, physical phone/iPad, Safari or VoiceOver observation, scanner throughput, live shop/engine qualification or household task completion. Page openings alone cannot tell whether a tool is unwanted or simply hard to find. No live household records were used. [Existing Visits limits](more-menus-review.md#how-it-was-checked) · [Guarded browser tooling](../ui_review/README.md)
