@@ -227,7 +227,9 @@ function shopBasketTokenAddons(view, basket) {
 function shopBasket(view, basket) {
   const head = el("div", {class: "shop-basket-head"}, el("h3", {text: basket.shop}), shopSnapshotWhen(basket.fetched_at));
   if (!basket.read) return el("article", {class: "shop-basket", "data-basket": basket.key, "data-basket-read": "false"}, head,
-    el("p", {class: "note", text: `${basket.shop}'s saved check couldn't be read, so no stock is claimed there.`}));
+    dismissibleWarning(el("div", {class: "note"},
+      el("p", {text: `${basket.shop}'s saved check couldn't be read, so no stock is claimed there.`})),
+    `Dismiss ${basket.shop} warning`));
   const rows = basket.rows || [], addOns = basket.add_ons || [];
   const copy = rows.length ? el("button", {type: "button", class: "btn btn-quiet shop-basket-copy", text: "Copy this shop's list",
     "aria-label": `Copy this shop's list for ${basket.shop}`, "data-copy-shop": basket.shop,

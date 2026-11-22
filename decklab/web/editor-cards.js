@@ -422,11 +422,13 @@ function listMessage(ac, text, { kind = "", action = null } = {}) {
   ac.list.hidden = false;
   ac.rendered = null;
   resetSearchMore(ac);
-  clear(ac.list).append(el("li", { class: "ac-message" + (kind ? ` ac-message-${kind}` : ""), role: "presentation" },
+  const row = el("li", { class: "ac-message" + (kind ? ` ac-message-${kind}` : ""), role: "presentation" },
     kind === "loading" ? el("span", { class: "spinner spinner-small", "aria-hidden": "true" }) : null,
-    el("span", { text }), action));
+    el("span", { text }), action);
+  clear(ac.list).append(row);
   ac.more.hidden = true;
   ac.live.textContent = ac.liveMessage = text;
+  return row;
 }
 
 /** The results; nothing (no empty box) until a name is typed or a filter is set. */

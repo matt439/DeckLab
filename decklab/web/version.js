@@ -121,17 +121,18 @@ function showVersionWarning(messages, reload = false, database = [], restart = f
   versionWarning = signature;
   const host = clear($("#build-warning"));
   host.hidden = !messages.length && !database.length && !cardData.length;
+  if (host.hidden) return;
   if (database.length) host.append(el("h2", { class: "box-head", text: "Deck Lab's database" }),
     ...database.map((text) => el("p", { text })));
   if (cardData.length) host.append(el("details", { class: "warning-details" },
     el("summary", { text: "Card data may be out of date" }), cardData.map((text) => el("p", { text }))));
-  if (!messages.length) return;
-  host.append(el("h2", { class: "box-head", text: "Deck Lab version" }),
+  if (messages.length) host.append(el("h2", { class: "box-head", text: "Deck Lab version" }),
     ...messages.map((text) => el("p", { text })));
   if (reload) host.append(el("button", { type: "button", class: "btn", text: "Reload page",
     // The editor's existing beforeunload guard protects unsaved work.
     onclick: reloadDeckLab }));
   if (restart) host.append(el("a", { class: "btn btn-secondary", href: "#/settings?part=about", text: "Restart Deck Lab…" }));
+  dismissibleWarning(host, "Dismiss status warnings");
 }
 
 /** Whether the footer shows the build line (version, Check for updates, Last checked): not to a member. */

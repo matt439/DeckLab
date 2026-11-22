@@ -165,6 +165,31 @@ class VersionInteractionTests(unittest.TestCase):
           assert.doesNotMatch(warning.textContent, /uncommitted/);
         """)
 
+    def test_dismissed_status_warning_stays_hidden_until_the_warning_changes(self):
+        self.run_js("""
+          const warning = document.querySelector("#build-warning");
+          const close = () => warning.querySelector('[aria-label="Dismiss status warnings"]');
+          const stale = {...answer(), cards: {ready: true,
+            freshness: {stale: true, warning: "Card data has stopped refreshing."}}};
+          renderVersionStatus(stale);
+          assert.equal(warning.hidden, false);
+          assert.equal(close().getAttribute("type"), "button");
+          close().click();
+          renderVersionStatus(stale);
+          assert.equal(warning.hidden, true);
+          state.profile = {id: "matt", role: "admin"};
+          renderVersionStatus(stale);
+          assert.equal(warning.hidden, true);
+
+          const newWarning = {...stale, build: {...currentBuild, restart_required: true}};
+          renderVersionStatus(newWarning);
+          assert.equal(warning.hidden, false);
+          assert.match(warning.textContent, /Restart Deck Lab on the PC/);
+          renderVersionStatus(answer());
+          assert.equal(warning.hidden, true);
+          assert.equal(close(), null);
+        """)
+
     def test_why_runs_cant_start_shows_beside_each_run_control(self):
         # WP2: no page-wide notice for anyone; each Play or Start (data-run) is disabled with the reason under
         # its row, and goes back to how its page left it when runs are allowed again.

@@ -29,11 +29,12 @@
 .col-availability { max-width: 100%; overflow-x: auto; flex-wrap: nowrap; }
 .col-availability > button { white-space: nowrap; flex: none; }
 .col-filter-extra { grid-column: 1 / -1; display: none; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s-3); }
-/* Expanded filters enter page flow so a short landscape window can reach the results. */
+/* Expanded filters scroll with the results. */
 .col-filters.is-open { position: static; }
 .col-filters.is-open .col-filter-extra { display: grid; }
-.col-find-colour-note { display: none; grid-column: 1 / -1; margin: 0; }
-.col-filters.is-open .col-find-colour-note { display: block; }
+.col-filter-help { display: none; grid-column: 1 / -1; min-width: 0; gap: var(--s-1); }
+.col-filter-help p { margin: 0; }
+.col-filters.is-open .col-filter-help { display: grid; }
 .col-find-lab { display: none; }
 .col-find-rows { list-style: none; margin: 0; padding: 0; background: var(--surface);
   border: 1px solid var(--border); border-radius: var(--r-panel); overflow: hidden; }
@@ -64,7 +65,7 @@ button.col-find-open { cursor: pointer; }
   .col-filter-toggle { display: none; }
   .col-filter-extra { display: grid; grid-area: extra; grid-template-columns: repeat(3, minmax(0, 1fr)) 120px; }
   .col-filter-row { grid-area: row; }
-  .col-find-colour-note { display: block; grid-area: note; }
+  .col-filter-help { display: grid; grid-area: note; }
   .col-find-lab { display: block; }
   .col-find-casual { display: none; }
 }
@@ -337,6 +338,9 @@ button.col-find-open { cursor: pointer; }
 .col-row-lab, .col-preview { display: none; }
 .col-row-tools { position: sticky; top: var(--shell-top); z-index: 5; background: var(--page);
   display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s-2); padding-block: var(--s-2); }
+@media (max-width: 599px), (max-width: 999px) and (max-height: 500px) {
+  .col-filters, .col-row-tools { position: static; }
+}
 .col-row-tools .col-row-search { min-width: 0; }
 .col-row-tools .col-row-search input { min-height: 48px; }
 .col-row-filter-toggle { min-height: var(--tap); white-space: nowrap; }

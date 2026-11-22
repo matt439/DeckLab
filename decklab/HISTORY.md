@@ -1,5 +1,11 @@
 # Deck Lab: history
 
+## More room for Collection results and dismissible warnings (2026-11-22)
+
+On phones, the Find cards and Card list search bars scroll away with the page. Find cards shows its search syntax under the filter button on smaller screens.
+
+Use × to dismiss warning banners, including EDHREC source notices and unreadable Shopping checks. The same status warning stays dismissed through background refreshes. A changed warning appears again.
+
 ## Scan a built deck or storage section for discrepancies (2026-11-22, E7-S32)
 
 **Scan to audit** compares cards in hand with a built deck's saved physical list or a storage section's expected loose copies. The report identifies each missing or extra card, including a wrong printing or finish in a storage section. The player can return to the scan and correct a count. Closing the report discards the observations. [Scan audit guide](README.md#scan-to-audit-a-deck-or-storage-section)

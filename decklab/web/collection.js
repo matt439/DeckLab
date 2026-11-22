@@ -522,7 +522,7 @@ function colFilters(cv) {
     onsubmit: (event) => event.preventDefault() });
   cv.filterCount = el("span", { class: "col-filter-count", "aria-hidden": "true" });
   const toggle = el("button", { type: "button", class: "btn col-filter-toggle", "aria-expanded": "false",
-    "aria-controls": "col-filter-extra", onclick: () => {
+    "aria-controls": "col-filter-extra col-filter-help", onclick: () => {
       if (colActive(cv)) toggle.setAttribute("aria-expanded", String(form.classList.toggle("is-open")));
     } }, el("span", { class: "sr-only", text: "Filter cards" }),
     svgEl("svg", { viewBox: "0 0 20 20", width: 20, height: 20, "aria-hidden": "true", focusable: "false" },
@@ -539,9 +539,9 @@ function colFilters(cv) {
       field("type", "Type", select("type", [["", "Any"], ...(data.types || []).map((v) => [v, v])])),
       field("role", "Role", select("role", [["", "Any"], ...(data.roles || []).map((v) => [v, capitalise(v)])])),
       field("mv", "Mana value", mv)),
-    el("p", { class: "sub col-find-colour-note",
-      text: "Colour identity, as the pips show it: cards within the chosen colours, colourless ones included." }),
-    el("p", { class: "sub col-find-search-note", text: 'Search terms: o:"draw a card", t:creature, -o:discard, -t:land; mana value mv<=2, mv>=5 or mv=3.' })]);
+    el("div", { id: "col-filter-help", class: "col-filter-help" },
+      el("p", { class: "sub col-find-colour-note", text: "Colour identity matches cards within the chosen colours, including colourless cards." }),
+      el("p", { class: "sub col-find-search-note", text: 'Search terms include o:"draw a card", t:creature, -o:discard and -t:land. For mana value, use mv<=2, mv>=5 or mv=3.' }))]);
   return form;
 }
 

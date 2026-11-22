@@ -141,6 +141,13 @@ function edhrecSourceLine(a) {
     src.url ? el("a", { href: src.url, target: "_blank", rel: "noopener noreferrer", text: "Open on EDHREC" }) : null);
 }
 
+function edhrecSourceWarning(view, answer) {
+  const warning = answer.source?.stale;
+  if (!warning || view.dismissedSourceWarning === answer) return null;
+  return dismissibleWarning(el("div", { class: "box box-warn" }, el("p", { text: warning })),
+    "Dismiss EDHREC warning", () => { view.dismissedSourceWarning = answer; });
+}
+
 function drawEdhrec(ctx) {
   if (ctx.answer?.cuts) return drawEdhrecCuts(ctx);
   ctx.sheet.heading.textContent = "EDHREC ideas";
@@ -164,7 +171,7 @@ function drawEdhrec(ctx) {
   }).filter(Boolean);
   add(clear(ctx.area), [
     edhrecSourceLine(a),
-    a.source && a.source.stale ? el("p", { class: "box box-warn", text: a.source.stale }) : null,
+    edhrecSourceWarning(ctx, a),
     marks ? null : el("p", { class: "box box-info", text: "This deck's collection isn't yours to see, so nothing here says what's owned." }),
     bar,
     rate ? el("p", { class: "sub", text: rate }) : null,

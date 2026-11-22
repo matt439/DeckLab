@@ -59,6 +59,7 @@ function editorEdhrecToggle(ac) {
   return el("label", { class: "choice ac-edhrec", title: "What other decks with this commander commonly play, from EDHREC" },
     el("input", { type: "checkbox", checked: ac.mode === "edhrec" || null, onchange: (e) => {
       ac.mode = e.target.checked ? "edhrec" : "search";
+      if (e.target.checked && ac.edhrec === ac.dismissedEdhrecFailure) ac.edhrec = null;
       refilter(ac);
       const again = ac.filters.querySelector(".ac-edhrec input");
       if (again) again.focus();
@@ -141,7 +142,7 @@ function drawEditorEdhrecNote(ac, answer = null, inDeck = 0) {
     : marks && answer.rate != null ? estimateRateWords(answer) : null;
   add(clear(note), [
     edhrecSourceLine(answer),
-    answer.source && answer.source.stale ? el("p", { class: "box box-warn", text: answer.source.stale }) : null,
+    edhrecSourceWarning(ac, answer),
     marks ? null : el("p", { class: "sub", text: "This deck's collection isn't yours to see, so nothing here says what's owned." }),
     rate ? el("p", { class: "sub", text: rate }) : null,
     inDeck ? el("p", { class: "sub", text: `${plural(inDeck, "idea")} already in this draft ${inDeck === 1 ? "isn't" : "aren't"} listed.` }) : null]);
@@ -175,6 +176,7 @@ async function editorEdhrecLookUp(ac, q, more = false) {
   const typed = () => parseQuery(ac.input.value).q;
   const asked = editorEdhrecAnswer(ac);
   ac.edhrecDraft = editorEdhrecDraftKey(ed);       // the commander changing while EDHREC is asked asks again
+  if (ac.dismissedEdhrecFailure === asked) return;
   const current = () => editorSearchCurrent(ac) && seq === ac.seq && typed() === q && scope === editorSearchScope(ac)
     && ac.mode === "edhrec" && ac.edhrec === asked && asked.key === editorEdhrecKey(ac);
   if (more) { ac.morePending = true; ac.more.setAttribute("aria-disabled", "true"); }
@@ -188,13 +190,20 @@ async function editorEdhrecLookUp(ac, q, more = false) {
     ac.edhrecDraft = editorEdhrecDraftKey(ed);     // another commander asks again
     drawEditorEdhrecNote(ac);
     const again = !(e && (e.status === 400 || e.status === 404));
-    listMessage(ac, `EDHREC ideas couldn't be loaded. ${(e && e.message) || ""}`.trim(), { kind: "problem",
+    const row = listMessage(ac, `EDHREC ideas couldn't be loaded. ${(e && e.message) || ""}`.trim(), { kind: "problem",
       action: again ? el("button", { type: "button", class: "btn btn-quiet", text: "Try again", onclick: () => {
         if (!editorSearchCurrent(ac) || ac.mode !== "edhrec") return;
         ac.edhrec = null;
         schedule(ac, 0);
         ac.input.focus({ preventScroll: true });
       } }) : null });
+    if (row) dismissibleWarning(row, "Dismiss EDHREC warning", () => {
+      if (!editorSearchCurrent(ac) || ac.mode !== "edhrec" || ac.edhrec !== asked || asked.key !== editorEdhrecKey(ac)
+          || !row.isConnected || !ac.list.contains(row)) return;
+      ac.dismissedEdhrecFailure = asked;
+      ac.list.hidden = true;
+      ac.live.textContent = ac.liveMessage = "";
+    });
     return;
   }
   if (!current()) return;

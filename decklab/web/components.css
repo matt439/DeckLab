@@ -397,6 +397,18 @@
 .box-good h2, .box-good h3 { color: var(--good-ink); }
 .box ul { padding-left: var(--s-5); }
 .box li + li { margin-top: var(--s-1); }
+.warning-dismissible:has(> .warning-dismiss) {
+  position: relative;
+  min-block-size: calc(var(--tap) + 2px);
+  padding-inline-end: calc(var(--tap) + var(--s-2));
+  overflow-wrap: anywhere;
+}
+.warning-dismissible > :nth-last-child(2) { margin-bottom: 0; }
+.warning-dismiss {
+  position: absolute; inset-block-start: 0; inset-inline-end: 0;
+  min-width: var(--tap); min-height: var(--tap); padding: 0;
+  font-size: var(--fs-xl); line-height: 1;
+}
 /* A box whose heading carries its status icon (matchups.js markedBox): the chips' icons, a little bigger, so
    the box's kind never rests on its colour alone. */
 .box-head { display: flex; align-items: flex-start; gap: var(--s-2); }
@@ -528,7 +540,7 @@ summary::before {
   transform: rotate(-45deg); transition: transform .15s;
 }
 details[open] > summary::before { transform: rotate(45deg); }
-.box:has(> .warning-details:only-child) { padding-block: 0; }
+.box:has(> .warning-details:only-child, > .warning-details:first-child + .warning-dismiss:last-child) { padding-block: 0; }
 .warning-details > summary {
   display: flex; align-items: center; min-height: var(--tap); font-weight: var(--fw-semibold);
 }
